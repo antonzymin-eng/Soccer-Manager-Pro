@@ -2,8 +2,8 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.14\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–F COMPLETE; S0 GATE G PENDING OWNER IMAGE REVIEW\
+**Version:** 1.15\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–G COMPLETE; H OPEN; I BLOCKED ON OWNER-APPROVED H IMAGES\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -967,7 +967,9 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-No additional polished screen comes next.
+**Current next step: S0 Gate H.** Foundation/S0 low-fidelity work below is complete through G.
+The original first sequence remains for traceability; high-fidelity work is now authorized by the
+September 30 owner approval recorded in validation protocol §9.1.
 
 1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
 2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
@@ -977,9 +979,10 @@ No additional polished screen comes next.
 6. **F4 — write scripts, severity ledger and the review mechanism.** S0 uses owner image review under the September 30 decision; the earlier anonymous S0 slots are superseded.
 7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
 8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
-9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.10 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
+9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.11 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
 10. **S0 Gate F — COMPLETE September 30, 2026.** The complete vehicle and critical-state evidence are in `docs/design/s0-prototype/`; the owner's September 30 review decision removes the pre-F tester prerequisite.
-11. **S0 Gate G — PENDING OWNER IMAGE REVIEW.** Record Anton Zymin's review of the versioned wireframes/state images and explicit approval. No high fidelity or P5b release before G → H → I.
+11. **S0 Gate G — PASS September 30, 2026.** Anton Zymin approved prototype v0.4 at `13c2c09`, all 18 PDFs, and accepted the owner decisions with carried-Major reasons/release conditions. Durable record: `ux-validation-protocol.md` §9.1.
+12. **S0 Gate H — OPEN.** Produce/review high-fidelity images and resolve the packet §12.5 follow-ups. I remains blocked until separate owner approval of H images; #470 remains blocked on I.
 
 The existing Main Menu visual is revisited at Gate H unless earlier low-fidelity findings show it should be retired.
 
@@ -1069,3 +1072,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.12 | September 30, 2026 | Owner-directed S0 image review replaces independent tester recruitment, attestations and sessions. S0 F closes on the existing complete vehicle; G awaits explicit owner image approval and finding dispositions. H images also receive owner review before I. S1 participant mechanism and Gate-J production verification retained. |
 | 1.13 | September 30, 2026 | Makes S0 G closure explicit: complete image coverage, every finding disposition, C-DEC-1 decision and written rationale/release condition for accepted Majors. G opens H; H needs separate owner image approval before I. Packet v0.9 adds missing interaction views and visual fixes. |
 | 1.14 | September 30, 2026 | Syncs current packet pointer to v0.10 after image-review cleanup; pending owner decisions and H/I follow-ups remain in the packet. Gate rules unchanged. |
+| 1.15 | September 30, 2026 | Records G PASS and H OPEN after actual owner decisions/image approval pinned to v0.4 / 13c2c09. I/#470 remain blocked until separate H approval. Current packet pointer and next-step sequence updated; gate rules unchanged. |

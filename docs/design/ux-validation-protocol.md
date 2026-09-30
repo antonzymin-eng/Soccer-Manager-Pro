@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.17\
-**Status:** F4 + S0 GATES A–F COMPLETE — S0 G pending owner image review\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.14 §F4 and Gates E–G\
+**Version:** 0.18\
+**Status:** F4 + S0 GATES A–G COMPLETE — H OPEN; I BLOCKED ON OWNER-APPROVED H IMAGES\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.15 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -422,21 +422,66 @@ the statistics-failure/disclosure/stress views.
 Use the interactive prototype and 80-check Gate-E evidence to support questions about behavior;
 an image approval alone supplies no runtime or independent usability evidence.
 
-| Review field | Required record |
+| Review field | Recorded owner review |
 |---|---|
-| Review ID | Stable ID, for example `UX-GG-S0-OWNER-20260930-01` |
-| Reviewer | Anton Zymin |
-| Date | Actual review date |
-| Prototype / image version | Version and reviewed commit |
-| Images reviewed | All 18 paths in journey packet §9.4, including interaction outcomes; version/hash record |
-| Complete task / state coverage | S0-T1–T7 plus substitution, using packet §§9–12 |
-| Supporting interaction evidence | Gate-E run ID and any additional walkthrough |
-| Findings | IDs, severity, disposition and retest where needed |
-| Carried Majors | Written owner acceptance rationale and release condition for each Major, or none |
-| C-DEC-1 | Explicit owner decision on incomplete-statistics presentation and its reference |
-| Full-time statistics access | Explicit owner choice on S0-G-008; proposed disabled-reopening / retained-open-panel behavior, or revised toggle |
-| Image approval | Owner's actual approval statement/reference, or pending |
-| Gate G | PASS only with actual image approval, every finding disposition recorded, C-DEC-1 decided, no unresolved Blocker and no unaccepted Major |
+| Review ID | `UX-GG-S0-OWNER-20260930-03` |
+| Reviewer | Anton Zymin, project owner |
+| Date | September 30, 2026; explicit acceptance received at 11:38:46 PDT (18:38:46 UTC) |
+| Prototype / image version | v0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868` (`13c2c09`) |
+| Images reviewed | All 18 paths listed below; fingerprints in the pinned `walkthrough.json` |
+| Complete task / state coverage | S0-T1–T7 plus substitution; packet §§9–12 and all §9.4 images |
+| Supporting interaction evidence | `UX-GE-S0-20260930-04`, 80 passing scripted browser checks; no independent usability/runtime claim |
+| Findings | S0-G-001–007 and S0-G-009–012 fixed/retested; S0-G-008 `ACCEPT FOR CURRENT GATE`; earlier B/E ledgers apply; three minor leftovers enter H backlog (packet §12.5) |
+| Carried Majors | S0-B-002 and S0-B-004 `ACCEPT FOR CURRENT GATE`; verbatim rationale and release conditions below; neither is closed as a production finding |
+| C-DEC-1 | ACCEPTED — labelled partial live figures; report partial figures behind incomplete disclosure, score/result/Return outside |
+| Full-time statistics access | S0-G-008 ACCEPTED — no reopening at full time; retain previously open frozen panel; note points to report, View match report primary |
+| Image approval | Owner explicitly accepted the proposed decisions and approved v0.4 / `13c2c09` / all 18 PDFs; statement below |
+| Gate G | PASS — complete owner image approval and dispositions; explicit C-DEC-1/full-time decision; no unresolved Blocker or unaccepted Major |
+| Gate H / I | H OPEN for high-fidelity production/review; H is not passed. I remains blocked until the owner separately approves H images. PR #470 remains blocked on I. |
+
+**Owner confirmation, verbatim:**
+
+> I accept the proposed owner decisions and approve v0.4 at `13c2c09`, all 18 PDFs.
+
+**Accepted owner decisions, verbatim.** The owner adopted the proposed wording through the
+confirmation above; Claude's proposal alone was not recorded as approval.
+
+> Owner decisions, September 30, 2026 (Anton Zymin):
+>
+> - **C-DEC-1 — Accepted.** Partial live figures stay visible and labelled. In the report, partial figures sit behind the incomplete-statistics disclosure; score, result and Return stay outside it.
+> - **S0-G-008 — Accepted: `ACCEPT FOR CURRENT GATE`.** Statistics can't be reopened at full time. A note points to the match report, and "View match report" stays the primary action.
+> - **S0-B-002 (Major) — Accepted for G.** Reason: this is a simulated design review; no production adapter is needed to judge the design. Release condition: the Gate-I handoff specifies the adapter that reads the engine's command logs (`Driver.Log`/`FailedCommands`) to show Pending/Applied/Refused/Not applied, and Gate J verifies it. That feedback does not ship without the adapter.
+> - **S0-B-004 (Major) — Accepted for S0.** Reason: shirt numbers are the only player identity S0 has. Release condition: recheck at the Gate-H image review. It closes when player names are available (S1 or client work). If H shows players can't be identified, it reopens as a Blocker.
+> - **Image approval:** I approve prototype v0.4 at commit `13c2c09`, all 18 PDFs listed in the packet's §9.4, for Gate G. This approves low-fidelity design only: it supplies no runtime or independent usability evidence, and it does not approve H or I.
+
+**Reviewed images at the pinned commit** (paths are relative to the repository root):
+
+| Image path | SHA-256 at `13c2c09` |
+|---|---|
+| [`docs/design/s0-prototype/evidence/mentality-dialog.pdf`](s0-prototype/evidence/mentality-dialog.pdf) | `b5d0078ba87a4505df773abc528e1bb591cff3d918951dd492f3a0677d651c72` |
+| [`docs/design/s0-prototype/evidence/mm.pdf`](s0-prototype/evidence/mm.pdf) | `ce49faa20c6f47979c3cb794efff27bd19fe32acda0384287e6e0d02b37eb053` |
+| [`docs/design/s0-prototype/evidence/mv-0.pdf`](s0-prototype/evidence/mv-0.pdf) | `7979e1ccb4a005ab46f5ec079d6eff0564df834e8ac1d6a6c47b987781e9b76c` |
+| [`docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf`](s0-prototype/evidence/mv-ft-not-applied.pdf) | `0211872f6d215aa34e4117bd63e3fa38c869992325f9c4c1d8d4d07fbc6351bd` |
+| [`docs/design/s0-prototype/evidence/mv-ft.pdf`](s0-prototype/evidence/mv-ft.pdf) | `52daf84ea4b3b2e84b593a29bd547a6b276f19bbec8c241a21d6bbe6a700b571` |
+| [`docs/design/s0-prototype/evidence/mv-l.pdf`](s0-prototype/evidence/mv-l.pdf) | `b6fae8521d0388ee6ae717cb7b32fef63ac95d646adfbe3da1362b53d43d6e74` |
+| [`docs/design/s0-prototype/evidence/mv-live-applied.pdf`](s0-prototype/evidence/mv-live-applied.pdf) | `edb263e4614c074fd46e527201a2995066f72e042828a837cd87f88fbf965f37` |
+| [`docs/design/s0-prototype/evidence/mv-live-pending.pdf`](s0-prototype/evidence/mv-live-pending.pdf) | `964054d13292ce0b96e9f03d53fe407a5641a9064751f440a18f6e622e105b31` |
+| [`docs/design/s0-prototype/evidence/mv-live-refused.pdf`](s0-prototype/evidence/mv-live-refused.pdf) | `4ccb71d73190d0857f17126f316c473de80236b8299db951447245998b1b9cf0` |
+| [`docs/design/s0-prototype/evidence/mv-live-statistics.pdf`](s0-prototype/evidence/mv-live-statistics.pdf) | `411ea5ff9b7a12603a4779a071d7028822bccf75189d7ba2a1cce92572563791` |
+| [`docs/design/s0-prototype/evidence/mv-p.pdf`](s0-prototype/evidence/mv-p.pdf) | `31764ec1927b1f4586119aaf9939021ceb11d7a9e5b9572635f563d6f57db9bd` |
+| [`docs/design/s0-prototype/evidence/mv-paused-pending.pdf`](s0-prototype/evidence/mv-paused-pending.pdf) | `1c8bf7efc8d9c683c722213c72b68793b25e8bb94f49ab403a0a37b23c8df952` |
+| [`docs/design/s0-prototype/evidence/pr.pdf`](s0-prototype/evidence/pr.pdf) | `c3f3e8a6286fbaece9df18085c857909166d9e2a53c145852db85c7d0ff9fe44` |
+| [`docs/design/s0-prototype/evidence/report-incomplete.pdf`](s0-prototype/evidence/report-incomplete.pdf) | `f7e582d2f4474f6f54089f7480a6a9a1f81236508d94114961cd85dda74a614c` |
+| [`docs/design/s0-prototype/evidence/report-partial-open.pdf`](s0-prototype/evidence/report-partial-open.pdf) | `32d417d70d67af860503098186419766a4628002ffd2c9d61ce4404d37bab908` |
+| [`docs/design/s0-prototype/evidence/stress-fault-1366.pdf`](s0-prototype/evidence/stress-fault-1366.pdf) | `2dddfbd394fcd379f4e39856446b63d22329e014f33352b62ca2409996fc2f33` |
+| [`docs/design/s0-prototype/evidence/substitution-dialog.pdf`](s0-prototype/evidence/substitution-dialog.pdf) | `c2242dd8ae17cc3c7107be77e7e4ef091d515aac238a80628c901dcac8ae7d82` |
+| [`docs/design/s0-prototype/evidence/ts.pdf`](s0-prototype/evidence/ts.pdf) | `9b6d966d9914348dd7da04f4d57e29b00986d2b4e16c7b95c433ba3f2d79c4d0` |
+
+**Recording boundary:** this approval record changes documents only. The entire
+`docs/design/s0-prototype/` tree, including all seven source files, all 18 PDFs and the run-04
+fingerprint record, remains byte-identical to `13c2c09`. The approved image/source version stays
+v0.4 even though the recording documents advance. Prototype-version review guidance is frozen
+with that tree; current gate status is this record and the journey packet §12.3.
 
 Tester sessions and attestations are not required for S0. Gate F must still supply the complete
 interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
@@ -518,7 +563,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G remains pending actual owner image approval. S1 requires its two independent completions.
+S0 Gate G passed September 30, 2026 on the owner record in §9.1; H is open and I awaits separately approved H images. S1 requires its two independent completions.
 
 ---
 
@@ -543,3 +588,4 @@ S0 Gate G remains pending actual owner image approval. S1 requires its two indep
 | 0.15 | September 30, 2026 | Records the owner-directed S0 image-review route and §9.1 review/approval template. S0 tester slots superseded; F complete, G pending actual image approval. Participant-session templates retained for S1/optional research; image approval supplies no independent usability/runtime evidence. |
 | 0.16 | September 30, 2026 | Expands S0 image-review coverage to 18 views and supporting 79-check run. Requires every finding disposition, explicit C-DEC-1/full-time-statistics decisions and written acceptance rationale/release condition for carried Majors; H approval remains separate before I. |
 | 0.17 | September 30, 2026 | Updates execution pointer and supporting evidence to the 80-check review-cleanup run. S0-G-008 stays an undecided owner choice; no image approval or Major acceptance inferred. |
+| 0.18 | September 30, 2026 | Fills §9.1 with explicit owner confirmation and adopted statement verbatim, review ID/date/full commit, 18 paths/hashes, run 04 and carried-Major reasons/release conditions. G PASS; H OPEN; I/#470 blocked. Documents-only recording preserves the full prototype/evidence tree. |

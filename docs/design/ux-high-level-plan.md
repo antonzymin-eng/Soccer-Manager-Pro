@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.6\
+**Version:** 1.7\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -342,7 +342,7 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 Gates A–F are complete. The owner-directed image review replaces S0 tester prerequisites; G awaits explicit image approval and H/I remain unpassed. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 Gates A–G are complete. The owner approved the low-fidelity images and decisions in validation protocol §9.1. H is open; H/I remain unpassed and I awaits separately owner-approved H images. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
 
 ---
 
@@ -357,3 +357,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.4 | September 28, 2026 | Status-note sync only: S0 Gate B completes in `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and Gate C is next. No plan content changes. |
 | 1.5 | September 30, 2026 | Status-note sync only: S0 C–E complete and F prototype ready; formal F pending both pre-F participant attestations. Strategy and gate definitions unchanged. |
 | 1.6 | September 30, 2026 | Mirrors the owner-directed S0 image-review method and A–F complete / G pending image approval status; S0 tester prerequisite removed in execution authority. |
+| 1.7 | September 30, 2026 | Status sync after explicit owner G approval of v0.4 at 13c2c09: S0 A–G complete; H open; I blocked on separately approved H images. Strategy/gate definitions unchanged. |

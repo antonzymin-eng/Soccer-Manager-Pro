@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **PR #473 second image-review cleanup.**
+> **Last Updated:** September 30, 2026 — **S0 Gate G owner approval recorded; Gate H OPEN (PR #473).**
+>
+> Anton Zymin explicitly accepted the proposed owner decisions and approved prototype version 0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868`, all 18 PDFs. `docs/design/ux-validation-protocol.md` v0.18 §9.1 preserves the actual owner confirmation and adopted statement verbatim, review ID/date, all 18 paths/hashes and run `UX-GE-S0-20260930-04` (80 checks). C-DEC-1 and S0-G-008 are accepted; S0-B-002/S0-B-004 have written owner reasons and release conditions and remain open for production/identity follow-up.
+>
+> `docs/design/ux-s0-pm1-journey.md` v0.11 marks G PASS and H OPEN. H backlog records the stray leader dot, 1-based bench-slot labels and submission-copy polish alongside existing choice/pitch-consistency obligations. Detailed plan v1.15 and high-level plan v1.7 synchronize current status. I remains blocked until separately owner-approved H images; #470 remains blocked on I. This documents-only recording preserves the entire reviewed prototype/evidence tree, including all seven source files, all 18 PDFs and the run-04 hashes, byte-for-byte against `13c2c09`. It supplies no H/I approval, runtime or independent usability evidence. Issue counts unchanged; no production/spec change. Parent-head CI, including the Linux functional gate, passed; recording-head CI must run afresh before merge.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 second image-review cleanup.**
 >
 > `docs/design/ux-s0-pm1-journey.md` v0.10 records S0-G-008 as a pending owner decision without a preselected finding disposition. Prototype version 0.4 separates dropdown labels from visible focus outlines, removes the promise of visible leader lines, shortens refusal feedback without inventing a reason and uses player-facing substitution help. S0-G-009–012 record those fixes; H must reconcile Mentality choices and substituted pitch identity, and I must allocate engine-owned direction when Stage-1 ends-swap lands.
 >

@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.10\
-**Status:** S0 GATES A–F COMPLETE — G PENDING OWNER IMAGE REVIEW (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.14 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.17\
+**Version:** 0.11\
+**Status:** S0 GATES A–G COMPLETE — H OPEN; I BLOCKED ON OWNER-APPROVED H IMAGES (§12.3)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.15 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.18\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -529,9 +529,9 @@ Ledger fields per `ux-detailed-plan.md` §12. Owner is the UX workstream owner (
 | ID | Severity | Finding | Disposition | Release condition / retest |
 |---|---|---|---|---|
 | S0-B-001 | Major | Gate A's A-10 treated Formation as a verified pre-match choice; no simulation system reads it (§7.1). | `FIX NOW` — Formation removed from S0; Mentality chosen (B-DEC-3). | Done in this revision. If a formation consumer lands, Formation re-enters at Gate A. |
-| S0-B-002 | Major | No frame read-back of the active tactic; outcome evidence exists only in the command logs (A-38), which no #38 adapter projects. | `ACCEPT FOR CURRENT GATE`. §7.5 defines the states from A-38. | Gate I must name the adapter that projects `Log`/`FailedCommands` to the Match View; Gate J verifies it. |
+| S0-B-002 | Major | No frame read-back of the active tactic; outcome evidence exists only in the command logs (A-38), which no #38 adapter projects. | `ACCEPT FOR CURRENT GATE`; owner accepted for G September 30, 2026. Reason and acceptance statement: validation protocol §9.1. §7.5 defines the states from A-38. | Gate I specifies the production adapter reading `Driver.Log`/`FailedCommands` for Pending/Applied/Refused/Not applied; Gate J verifies it. Feedback does not ship without the adapter. The finding remains open through that verification. |
 | S0-B-003 | Minor (S0) | Substitutions apply immediately; the owner's stoppage rule is not implemented. | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION` for the future state; today's behavior designed. | When the owning engine change lands, §7.5 returns to Gate B (§13). |
-| S0-B-004 | Major (usability risk) | The neutral demo has no player names. Substitution relies on shirt numbers and bench slots (A-40). | `ACCEPT FOR CURRENT GATE`; measured at Gate G. | Before Gate H: either choose an S0 squad source (Gate-A addendum) or accept shirt-number identity on Gate G evidence. |
+| S0-B-004 | Major (usability risk) | The neutral demo has no player names. Substitution relies on shirt numbers and bench slots (A-40). | `ACCEPT FOR CURRENT GATE`; owner accepted for S0 September 30, 2026. Reason and acceptance statement: validation protocol §9.1. | Recheck identification at H. Closes when player names are available through S1/client work. If H shows players cannot be identified, reopens as a Blocker. |
 | S0-B-005 | Minor | PR #361's closing plan note said Match View → Post-Match Report should be driven by `FullTime`, "not an invented button". A player-facing "View match report" control is in tension with that note. Reusing the existing `ShowPostMatchReport` edge does **not** by itself resolve the tension, because the note concerns what drives the transition, not whether the edge is new. | `ACCEPT FOR CURRENT GATE`; B-DEC-5 owner-confirmed September 28, 2026. B-DEC-5 separates the two concerns: `FullTime` remains the authoritative lifecycle trigger and sole source of report availability, and the control is limited to acknowledgement/navigation within MV-FT. | Confirmed. Gate I must carry the contract into the binding. If Gate G shows participants missing or stalling on the full-time moment, only MV-FT's presentation returns to Gate C; the lifecycle contract stands. |
 | S0-B-006 | Minor | No quit/exit control exists in the Gate-A inventory. The desktop window close is the only exit. | `DEFER TO P2/P3` — requires a Gate-A addendum naming the host quit seam. | Before Gate I. |
 | S0-B-007 | Minor | No half-time interval exists in the engine. The second half follows directly. | `ACCEPT FOR CURRENT GATE`. | Re-evaluate at Gate G if participants expect a break. |
@@ -603,7 +603,7 @@ No production accumulator or causal explanation is introduced.
 
 ## 9.2 Progressive disclosure and statistics failure decision
 
-**C-DEC-1 (Gate-C design choice; owner confirmation not claimed):** retain partial figures in the open live statistics area, under the persistent
+**C-DEC-1 (owner-accepted September 30, 2026; protocol §9.1):** retain partial figures in the open live statistics area, under the persistent
 “Statistics stopped at minute N” notice. Keep that notice visible even when statistics are closed.
 The report first shows “Statistics incomplete — stopped at minute N”; partial figures are hidden
 behind **Show partial statistics — incomplete**, with a table caption repeating the cutoff and
@@ -681,10 +681,10 @@ The data itself is unchanged. Labels may move slightly to avoid overlap; the cap
 description no longer promise visible leader lines. This is presentation deconfliction, not changed player positions. Synthetic possession/territory now vary
 by minute, so the minute-18 cutoff differs visibly from final figures. Numeric column headers and
 values share right alignment. The waiting surface has one lock explanation and a separate blank
-pitch placeholder. Full-time statistics remain a proposed disabled-reopening choice, pending S0-G-008.
+pitch placeholder. Full-time statistics use the owner-accepted disabled-reopening choice S0-G-008; an already-open frozen panel remains visible.
 
 **Gate C: PASS.** Hierarchy, primary actions, comparisons, density, disclosure, focus and reflow are
-specified and inspectable without color/art/polish. The lack of player names remains S0-B-004's Gate-G risk.
+specified and inspectable without color/art/polish. The lack of player names remains S0-B-004's owner-accepted S0 risk, with recheck at H (protocol §9.1).
 
 ---
 
@@ -857,35 +857,36 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 |---|---|---|
 | S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.4 run 04; former tester prerequisite superseded |
-| Gate G image approval | Anton Zymin | PENDING — reviewer assignment supplies no image approval |
-| Gate H high-fidelity image review | Anton Zymin | Not started; follows G |
-| Gate I implementation handoff | UX / Unity client | Not started; follows owner-approved H images |
+| Gate G image approval | Anton Zymin | PASS — September 30, 2026 explicit owner approval of v0.4 / `13c2c09` / all 18 PDFs, protocol §9.1 |
+| Gate H high-fidelity image review | Anton Zymin | OPEN — G approval recorded; high-fidelity production/review may begin; separate approval still required |
+| Gate I implementation handoff | UX / Unity client | BLOCKED — awaits separately owner-approved H images; #470 remains blocked on I |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
 conducting all reviews of images". This changes S0's review method under detailed-plan F4.2;
 the former S0-F-001 prerequisite is superseded. No tester availability, independence or session
-completion is claimed. C-DEC-1 and carried design findings remain subjects for the owner's review.
+completion is claimed. The later explicit owner acceptance/approval is recorded in protocol §9.1.
 
 **Gate F: PASS.** The executable complete-task and critical-state requirements are satisfied by
 the vehicle/evidence above; the owner has removed the remaining tester prerequisite.
 
-**Gate G: PENDING OWNER IMAGE REVIEW.** Review all 18 images in §9.4. Record the version,
-images reviewed, every finding disposition, C-DEC-1 decision, written rationale/release condition
-for each carried Major and actual image approval using protocol §9.1.
-Image review does not establish interactive task success by independent players. The 80-check
-Gate-E record supplies the existing interaction evidence; Gate J still verifies production behavior.
-H (high fidelity) and I (implementation handoff) remain unopened. **PR #470 remains draft/blocked
-on S0 Gate I**; the review-method change alone does not release it.
+**Gate G: PASS, September 30, 2026.** Anton Zymin explicitly accepted the proposed owner
+statements and approved prototype v0.4 at `13c2c09`, all 18 §9.4 images. The complete record is
+[validation protocol §9.1](ux-validation-protocol.md#91-s0-owner-image-review): image/source pin,
+C-DEC-1 and S0-G-008 decisions, every finding disposition, and written rationale/release condition
+for carried Majors S0-B-002/S0-B-004. The entire prototype/evidence tree stays unchanged.
+Image review supplies no runtime or independent usability evidence; the existing 80-check run remains
+supporting scripted interaction evidence. **Gate H is OPEN**, not passed; high-fidelity images need
+separate owner approval before I. **PR #470 remains draft/blocked on S0 Gate I.**
 
 ## 12.4 Image-review findings and required owner decisions
 
 Claude's September 30 review covered the earlier nine PDFs. The resulting findings below are
-recorded against S0, owned by the UX workstream (Anton Zymin). Fixed findings await owner review
-of their replacement images; no Major is accepted by the agent.
+recorded against S0, owned by the UX workstream (Anton Zymin). The owner approved the replacement images on September 30, 2026. Carried Major acceptances
+are the owner's explicit decisions in protocol §9.1; the production findings remain open.
 
 | ID | Severity | Finding | Disposition | Release condition / retest |
 |---|---|---|---|---|
-| S0-G-001 | Major (review coverage) | Earlier nine PDFs omitted dialogs, request outcomes and healthy live statistics | `FIX NOW` | Fixed: §9.4 supplies all 18 images; run 04 exercises and exports the missing states. Owner must review the expanded set before G. |
+| S0-G-001 | Major (review coverage) | Earlier nine PDFs omitted dialogs, request outcomes and healthy live statistics | `FIX NOW` | Fixed: §9.4 supplies all 18 images; run 04 exercises and exports the missing states. Owner approved the expanded set at `13c2c09`; protocol §9.1. |
 | S0-G-002 | Moderate | Raw Restart: KickOff and loose-holder captions misrepresented open play | `FIX NOW` | Fixed: both captions omitted from the player-facing pitch; source capture unchanged; absence asserted at full time and inspected across regenerated views. |
 | S0-G-003 | Moderate | Missing goals, penalty areas and attacking direction | `FIX NOW` | Fixed: pitch geometry and fixed Stage-0 direction added; source grounding in §9.4; rendered live/full-time views inspected. |
 | S0-G-004 | Minor | A10/H4 marker-label overlap in the 200% stress view | `FIX NOW` | Fixed: stable nearest-clear label layout; pairwise bounding-box separation asserted in all geometry checks, including every 200% fixture. |
@@ -897,36 +898,37 @@ of their replacement images; no Major is accepted by the agent.
 | S0-G-011 | Minor | Circular refusal wording implied an explanation the engine does not supply | `FIX NOW` | Fixed: “Refused. Current Mentality unchanged.”; status and requested value retained, unchanged applied value asserted. No reason invented. |
 | S0-G-012 | Minor | Substitution help used developer-facing engine language | `FIX NOW` | Fixed: describes when the substitution takes effect in player language; the current no-stoppage behavior remains explicit. |
 
-**S0-G-008 is an owner decision, not a finding with an agent-selected disposition.** Before G,
-choose whether full-time statistics can be reopened. The current proposal disables the toggle, retains
-an already-open frozen panel and states “Final statistics are available in the match report.” The report
-acknowledgement remains the primary action. Record `ACCEPT FOR CURRENT GATE` if accepting that proposal,
-or `FIX NOW` if requesting a revised toggle; no choice is recorded yet.
+**S0-G-008 — `ACCEPT FOR CURRENT GATE`, owner-accepted September 30, 2026.** Statistics
+cannot be reopened at full time. Retain an already-open frozen panel; the note points to the match
+report, and View match report remains primary. Acceptance statement: protocol §9.1.
 
 | Gate-G decision record | Current value / required owner action |
 |---|---|
 | Review ID | `UX-GG-S0-OWNER-20260930-03` |
 | Reviewer | Anton Zymin |
 | Review version | Prototype v0.4; all 18 §9.4 image paths; source fingerprints in run 04 |
-| Owner review date / statement | PENDING |
-| Image approval | PENDING — Claude's review and generated evidence supply no owner approval |
-| Finding dispositions | S0-G-001–007 and S0-G-009–012 fixed/retested above; S0-G-008 pending owner choice; earlier B/E ledgers still apply |
-| C-DEC-1 | PENDING explicit owner decision: retain labelled partial live figures; hide report partial figures behind incomplete disclosure while score/result/return remain outside |
-| Carried Majors | S0-B-002 (production feedback adapter) and S0-B-004 (shirt-number identity) need written owner acceptance rationale and release condition for G, or resolution; earlier Gate-B disposition is not new Gate-G acceptance |
-| Full-time statistics access | PENDING owner decision on S0-G-008 |
-| Gate G | PENDING — requires complete review, all dispositions, C-DEC-1, required Major acceptances and actual image approval |
-| Next gate | G opens H only. H requires separate owner approval of high-fidelity images before I. #470 remains blocked on I. |
+| Owner review date / statement | September 30, 2026; verbatim owner confirmation and accepted decisions in protocol §9.1 |
+| Image approval | APPROVED by Anton Zymin — prototype v0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868`, all 18 §9.4 PDFs |
+| Finding dispositions | S0-G-001–007 and S0-G-009–012 fixed/retested above; S0-G-008 `ACCEPT FOR CURRENT GATE`; earlier B/E ledgers still apply |
+| C-DEC-1 | ACCEPTED — labelled partial live figures; report partial figures behind incomplete disclosure, score/result/Return outside; protocol §9.1 |
+| Carried Majors | S0-B-002 accepted for G and S0-B-004 accepted for S0; verbatim owner reasons/release conditions in protocol §9.1 and §7.9 ledger references; findings remain open for H/I/J follow-up |
+| Full-time statistics access | S0-G-008 `ACCEPT FOR CURRENT GATE` — no reopening; retained-open panel and report note; protocol §9.1 |
+| Gate G | PASS — owner approval/decisions recorded; no unresolved Blocker or unaccepted Major |
+| Next gate | H OPEN. H remains unpassed and requires separate owner approval of high-fidelity images before I. #470 remains blocked on I. |
 
 ---
 
 ## 12.5 H/I follow-ups from image review
 
-These obligations remain open; they supply no approval of G, H or I.
+These obligations remain open after G approval. H is open for work; no H/I approval is supplied.
 
 | Gate | Follow-up | Closure evidence |
 |---|---|---|
 | H | Review Mentality choice presentation: the live dropdown shows one selected option while setup exposes all seven choices and effects. | Owner-approved high-fidelity images show a deliberate, understandable choice/consequence presentation in both contexts. |
 | H | Applied substitution feedback must agree with the pitch. Current captured markers do not update, despite the simulated count/feedback. | Replacement images show a coherent post-swap projection, or a clearly labelled illustrative scenario with consistent identity; unchanged captured markers may not imply a real applied swap. Recheck S0-B-004 identity. |
+| H / S0-H-001 (Minor) | Remove the stray dot from the near-zero-length displaced-label leader in the 200% stress view. `FIX NOW` at H. | H stress images retain separated markers without an unexplained leader dot. |
+| H / S0-H-002 (Minor) | Display bench slots as 1–7, keeping engine indices 0–6 internal. `FIX NOW` at H. | H substitution images use 1-based player-facing labels; I maps display labels to unchanged engine indices. |
+| H / S0-H-003 (Minor) | Polish “Submission requests the change; feedback confirms the outcome” into player language. `FIX NOW` at H. | Owner-approved H dialog copy preserves Submit/Cancel and requested-versus-applied meaning without developer phrasing. |
 | I | The prototype direction label is fixed to the verified Stage-0 home +X convention. Stage 0 deliberately does not swap ends. | The handoff identifies the engine-owned direction projection required when Stage-1 ends-swap lands; shipping text follows that projection and is not inferred from minute or hardcoded. |
 
 ---
@@ -945,3 +947,4 @@ These obligations remain open; they supply no approval of G, H or I.
 | 0.8 | September 30, 2026 | Records explicit owner instruction to conduct image reviews instead of testers. S0-F-001 prerequisite superseded; F passes existing complete vehicle. G awaits actual owner image approval, including failure/stress views and carried design findings. H/I remain unopened; #470 blocked. |
 | 0.9 | September 30, 2026 | Image-review correction: 18 PDFs cover dialogs, queued/applied/refused/not-applied requests and healthy/partial statistics. Removes raw pitch restart/holder captions, adds grounded pitch/direction markings and collision-free label placement with leaders, fixes temporal statistics/header alignment/waiting copy. Records S0-G-001–008 dispositions and explicit pending C-DEC-1/full-time-statistics/carried-Major/image decisions. Run 03 has 79 checks; successful run 02 archived. G opens H only; H approval separately precedes I. |
 | 0.10 | September 30, 2026 | Second image-review cleanup: S0-G-008 moved to pending owner decisions; dropdown focus spacing measured; leader-line promise removed; concise refusal and player-facing substitution copy. Records H choice/identity consistency and I engine-direction obligations. Prototype v0.4 run 04 has 80 checks; run 03 retained. Owner choices and G/H/I approval remain pending. |
+| 0.11 | September 30, 2026 | Records actual owner acceptance of C-DEC-1/S0-G-008 and carried Majors, with durable rationale/release-condition references, and approval of v0.4 / 13c2c09 / all 18 PDFs. G PASS; H OPEN; I/#470 blocked. Carries stray dot, 1-based bench labels and dialog copy into H. Prototype/evidence unchanged. |
