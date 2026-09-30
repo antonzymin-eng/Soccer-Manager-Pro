@@ -47,10 +47,17 @@ async function geometry(page, label) {
       if (!el.getClientRects().length) continue;
       if (el.scrollWidth > el.clientWidth + 2) failures.push('clipped ' + el.tagName + ': ' + el.textContent.slice(0, 50));
     }
+    const markers = [...document.querySelectorAll('.agent')].map(el => ({ label: el.textContent, box: el.getBoundingClientRect() }));
+    for (let i = 0; i < markers.length; i++) for (let j = i + 1; j < markers.length; j++) {
+      const a = markers[i], b = markers[j];
+      if (Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left) > .5 &&
+          Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top) > .5)
+        failures.push('overlapping markers: ' + a.label + ' / ' + b.label);
+    }
     return failures;
   });
   assert.deepEqual(issues, [], label);
-  record('geometry: ' + label, 'No document horizontal overflow or clipped critical labels/cells/buttons. Vertical scrolling permitted.');
+  record('geometry: ' + label, 'No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted.');
 }
 async function exportWireframe(page, name) {
   await page.emulateMedia({ media: 'screen' });
@@ -87,7 +94,7 @@ async function journey(query, viewport, keyboard, label) {
   if (keyboard) { await keyTo(page, 'input[value="3"]'); await page.keyboard.press('ArrowDown'); }
   else await page.locator('input[value="4"]').click();
   await activate(page, '#start', keyboard);
-  await has(page, 'waiting for the first frame');
+  await has(page, 'controls unavailable until the first frame.');
   assert(await page.locator('#pause').isDisabled());
   await page.clock.runFor(2000);
   await has(page, 'Current Mentality: Positive');
@@ -194,6 +201,7 @@ async function fixtures() {
   assert(await fault.locator('#return').isEnabled());
   const score = await fault.locator('.score').innerText();
   await fault.locator('summary').click();
+  await exportWireframe(fault, 'report-partial-open');
   await has(fault, 'partial figures through minute 18 — not full-match totals');
   record('statistics failure', `Final frame score ${score} remained visible, partial table hidden by default, frozen minute 18 stated, return enabled.`);
   await fault.close();
@@ -222,11 +230,12 @@ async function fixtures() {
   await has(pending, 'Not applied — match ended');
   await has(pending, 'Current Mentality: Balanced');
   await focused(pending, 'report');
+  await exportWireframe(pending, 'mv-ft-not-applied');
   record('end race', 'Normal MM→TS→MV journey reached minute 89; paused request stayed Pending; resume/next live tick reached the whistle before application. Not applied, Balanced retained, report focused.');
   await pending.close();
   const waiting = await open('?state=MV-0&fixture=waiting');
   await waiting.clock.runFor(10000);
-  await has(waiting, 'waiting for the first frame');
+  await has(waiting, 'controls unavailable until the first frame.');
   assert(await waiting.locator('#pause').isDisabled());
   record('no match frame', 'Waiting fixture remained non-live, score/clock withheld, all match actions disabled with persistent reason.');
   await waiting.close();
@@ -287,6 +296,77 @@ async function fixtures() {
   record('full time while staging', 'Unsubmitted chooser closed at full time; no change requested; report received focus.');
   await endDialog.close();
 }
+async function reviewImages() {
+  const p = await open('?state=MV-L');
+  await p.locator('#tactic').click();
+  await p.locator('#new-mentality').selectOption('5');
+  await exportWireframe(p, 'mentality-dialog');
+  await p.locator('#cancel-change').click();
+  await p.locator('#substitute').click();
+  await p.locator('#outgoing').selectOption('3');
+  await p.locator('#incoming').selectOption('2');
+  await exportWireframe(p, 'substitution-dialog');
+  await p.locator('#cancel-change').click();
+  await p.locator('#tactic').click();
+  await p.locator('#new-mentality').selectOption('5');
+  await p.locator('#submit-change').click();
+  await has(p, 'Pending'); await focused(p, 'request-feedback');
+  await exportWireframe(p, 'mv-live-pending');
+  await p.locator('#pause').click();
+  await has(p, 'waiting; resume to continue');
+  await exportWireframe(p, 'mv-paused-pending');
+  await p.locator('#pause').click();
+  await p.clock.runFor(1000);
+  await has(p, 'Applied at minute 25');
+  await p.locator('#substitute').click();
+  await p.locator('#outgoing').selectOption('3');
+  await p.locator('#incoming').selectOption('2');
+  await p.locator('#submit-change').click();
+  await p.clock.runFor(1000);
+  await has(p, 'Substitutions used: 1 / 5');
+  await exportWireframe(p, 'mv-live-applied');
+  await p.locator('#stats').click();
+  await exportWireframe(p, 'mv-live-statistics');
+  await p.clock.runFor(64000);
+  await has(p, 'Full time');
+  assert(await p.locator('#stats').isDisabled());
+  assert(await p.locator('table').count(), 'Previously open statistics remain visible at full time');
+  record('image interaction coverage', 'Exports both staged dialogs, live/paused Pending, Mentality plus substitution Applied and healthy live statistics, from exercised controls. Full-time Not applied and incomplete report disclosures exported by their existing fixtures.');
+  await p.close();
+  const refused = await open('?state=MV-L&fixture=refusal');
+  await refused.locator('#tactic').click();
+  await refused.locator('#new-mentality').selectOption('5');
+  await refused.locator('#submit-change').click();
+  await refused.clock.runFor(1000);
+  await has(refused, 'Refused'); await has(refused, 'Current Mentality: Balanced');
+  await exportWireframe(refused, 'mv-live-refused');
+  await refused.close();
+  const start = await open('?review=1&state=MV-0');
+  const copy = await start.locator('main').innerText();
+  assert.equal(copy.split('controls unavailable until the first frame').length - 1, 1);
+  assert.equal(await start.locator('.pitch-lines').count(), 0);
+  record('starting copy', 'One lock explanation; placeholder has no pitch markings crossing its text.');
+  await start.close();
+  const ended = await open('?review=1&state=MV-FT');
+  assert(await ended.locator('#stats').isDisabled());
+  await has(ended, 'Final statistics are available in the match report.');
+  const caption = await ended.locator('main').innerText();
+  assert(!caption.includes('Restart:') && !caption.includes('Possession: loose ball'));
+  await has(ended, 'Home attacks right');
+  assert.equal(await ended.locator('.pitch-lines .goal').count(), 2);
+  record('pitch presentation', 'Raw restart/holder captions omitted; two goals, penalty/goal areas and Home-right/Away-left direction shown, matching fixed Stage-0 source convention.');
+  record('full-time statistics proposal', 'Statistics cannot be reopened at full time; an already-open panel remains visible. Report destination explicit. This existing behavior remains a proposed owner decision, not approval.');
+  await ended.close();
+  const partial = await open('?review=1&state=PR&fixture=fault');
+  await partial.locator('summary').click();
+  const cutoff = await partial.getByRole('row', { name: /^Possession %/ }).locator('td').allTextContents();
+  const ordinary = await open('?review=1&state=PR');
+  const final = await ordinary.getByRole('row', { name: /^Possession %/ }).locator('td').allTextContents();
+  assert.notDeepEqual(cutoff, final);
+  assert(await partial.locator('thead th').nth(1).evaluate(el => getComputedStyle(el).textAlign === 'right'));
+  record('partial statistics and alignment', `Synthetic minute-18 possession ${cutoff.join('/')} differs from final ${final.join('/')}; numeric Home/Away headers and cells right-aligned.`);
+  await partial.close(); await ordinary.close();
+}
 (async () => {
   fs.mkdirSync(evidence, { recursive: true });
   browser = await chromium.launch({ executablePath: process.env.UX_BROWSER, args: ['--no-sandbox'] });
@@ -306,8 +386,11 @@ async function fixtures() {
   }
   await contrast();
   await fixtures();
+  await reviewImages();
   const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
   const hashes = Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
-  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-02', supersedes: 'UX-GE-S0-20260930-01: Gate-E pass withdrawn after reproduced focus/disclosure Majors; 71 checks were insufficient', journey: 'S0', prototype: 's0-prototype v0.2', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, results }, null, 2) + '\n');
-  console.log(`PASS: ${results.length} recorded checks; seven wireframe PDFs plus two resilience PDFs.`);
+  const imageHashes = Object.fromEntries(fs.readdirSync(evidence).filter(file => file.endsWith('.pdf')).sort().map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(evidence, file))).digest('hex')]));
+  assert.equal(Object.keys(imageHashes).length, 18);
+  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-03', supersedes: 'UX-GE-S0-20260930-02: successful 74-check interaction run retained; run 03 adds image coverage, marker separation and visual corrections', journey: 'S0', prototype: 's0-prototype v0.3', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, imageHashes, results }, null, 2) + '\n');
+  console.log(`PASS: ${results.length} recorded checks; 18 review PDFs including dialogs, request outcomes and statistics disclosures.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

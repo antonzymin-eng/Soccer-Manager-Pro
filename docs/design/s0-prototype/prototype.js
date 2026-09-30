@@ -6,7 +6,7 @@
   const fixture = params.get('fixture') || 'ordinary';
   const captured = fixture === 'scoreline';
   const reference = captured ? window.S0Reference : window.S0Scenario;
-  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.2 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
+  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.3 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
   const app = document.getElementById('app');
   const announcement = document.getElementById('announcement');
   const t = text => params.has('pseudo') ? `[${text} ${'~'.repeat(Math.ceil(text.length * .4))}]` : text;
@@ -78,11 +78,64 @@
       ${state.requests.length > 3 ? `<details id="earlier-feedback"><summary id="earlier-feedback-toggle">${text(`Earlier change feedback (${state.requests.length - 3})`)}</summary>${state.requests.slice(0, -3).map(entry).join('')}</details>` : ''}</div>` : '';
   }
   function pitch() {
-    if (state.screen === 'MV-0') return `<div class="pitch"><p class="pitch-waiting">${text('Match starting — waiting for the first frame')}</p></div>`;
+    if (state.screen === 'MV-0') return `<div class="pitch pitch-empty"><p class="pitch-waiting">${text('Pitch appears after the first frame.')}</p></div>`;
     const frame = sample();
-    const marks = frame.agents.filter(a => !a.sentOff).map(a => `<span class="agent ${a.id >= 11 ? 'away' : ''}" style="left:${Math.max(2, Math.min(98, a.x / 105 * 100))}%;top:${Math.max(3, Math.min(97, a.y / 68 * 100))}%">${a.id >= 11 ? 'A' : 'H'}${a.id % 11 + 1}</span>`).join('');
-    return `<div class="pitch" role="img" aria-label="${text('Captured pitch snapshot. Home markers H, away markers A, ball dot; not an interactive selector.')}">${marks}<span class="ball" style="left:${frame.ball[0] / 105 * 100}%;top:${frame.ball[1] / 68 * 100}%" aria-hidden="true">●</span></div>
-      <p>${text(`Captured reference pitch — simulated substitutions do not replace these markers. Possession: ${frame.possessing < 0 ? 'loose ball' : `${frame.possessing < 11 ? 'Home' : 'Away'} shirt ${frame.possessing % 11 + 1}`}. Restart: ${frame.restart}.`)}</p>`;
+    // Three metres of goal margin plus a one-metre touchline margin in the drawing.
+    const position = (x, y) => `left:${(x + 3) / 111 * 100}%;top:${(y + 1) / 70 * 100}%`;
+    const marks = frame.agents.filter(a => !a.sentOff).map(a => `<span class="agent ${a.id >= 11 ? 'away' : ''}" data-x="${a.x}" data-y="${a.y}" style="${position(a.x, a.y)}">${a.id >= 11 ? 'A' : 'H'}${a.id % 11 + 1}</span>`).join('');
+    const field = `<svg class="pitch-lines" viewBox="-3 -1 111 70" preserveAspectRatio="none" aria-hidden="true">
+      <rect x="0" y="0" width="105" height="68"/><path d="M52.5 0V68"/><circle cx="52.5" cy="34" r="9.15"/>
+      <rect x="0" y="13.84" width="16.5" height="40.32"/><rect x="88.5" y="13.84" width="16.5" height="40.32"/>
+      <rect x="0" y="24.84" width="5.5" height="18.32"/><rect x="99.5" y="24.84" width="5.5" height="18.32"/>
+      <rect class="goal" x="-2" y="30.34" width="2" height="7.32"/><rect class="goal" x="105" y="30.34" width="2" height="7.32"/>
+      <circle cx="11" cy="34" r=".25"/><circle cx="94" cy="34" r=".25"/>
+    </svg>`;
+    return `<p class="pitch-direction">${text('Home attacks right → • Away attacks left ←')}</p>
+      <div class="pitch" role="img" aria-label="${text('Captured pitch snapshot. Home H attacks right; away A attacks left. Goals and penalty areas shown. Displaced labels have leaders to their captured positions; ball dot.')}">${field}${marks}<span class="ball" style="${position(frame.ball[0], frame.ball[1])}" aria-hidden="true">●</span></div>
+      <p>${text('Captured reference pitch — simulated substitutions do not replace these markers. Displaced labels use leader lines to captured positions.')}</p>`;
+  }
+  function layoutPitchMarkers() {
+    const field = document.querySelector('.pitch:not(.pitch-empty)');
+    if (!field) return;
+    const width = field.clientWidth, height = field.clientHeight;
+    const placed = [];
+    const ns = 'http://www.w3.org/2000/svg';
+    field.querySelector('.marker-leaders')?.remove();
+    const leaders = document.createElementNS(ns, 'svg');
+    leaders.classList.add('marker-leaders');
+    leaders.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    leaders.setAttribute('preserveAspectRatio', 'none');
+    leaders.setAttribute('aria-hidden', 'true');
+    field.prepend(leaders);
+    for (const marker of field.querySelectorAll('.agent')) {
+      const source = { x: (Number(marker.dataset.x) + 3) / 111 * width,
+        y: (Number(marker.dataset.y) + 1) / 70 * height };
+      const halfWidth = marker.offsetWidth / 2, halfHeight = marker.offsetHeight / 2;
+      const clamp = (x, y) => ({ x: Math.max(halfWidth + 3, Math.min(width - halfWidth - 3, x)),
+        y: Math.max(halfHeight + 3, Math.min(height - halfHeight - 3, y)) });
+      const clear = p => placed.every(r => Math.abs(p.x - r.x) >= halfWidth + r.w + 4 || Math.abs(p.y - r.y) >= halfHeight + r.h + 4);
+      let target = clamp(source.x, source.y);
+      // Stable DOM/agent order; search nearest rings without moving the source data.
+      for (let ring = 1; !clear(target) && ring <= 60; ring++) {
+        const candidates = [];
+        for (let i = -ring; i <= ring; i++) {
+          candidates.push(clamp(source.x + i * 8, source.y - ring * 8), clamp(source.x + i * 8, source.y + ring * 8));
+          candidates.push(clamp(source.x - ring * 8, source.y + i * 8), clamp(source.x + ring * 8, source.y + i * 8));
+        }
+        candidates.sort((a, b) => (a.x - source.x) ** 2 + (a.y - source.y) ** 2 - (b.x - source.x) ** 2 - (b.y - source.y) ** 2);
+        const available = candidates.find(clear);
+        if (available) { target = available; break; }
+      }
+      marker.style.left = `${target.x}px`; marker.style.top = `${target.y}px`;
+      placed.push({ ...target, w: halfWidth, h: halfHeight });
+      if (Math.hypot(target.x - source.x, target.y - source.y) > 2) {
+        const line = document.createElementNS(ns, 'line');
+        for (const [name, value] of Object.entries({ x1: source.x, y1: source.y, x2: target.x, y2: target.y })) line.setAttribute(name, value);
+        const dot = document.createElementNS(ns, 'circle');
+        dot.setAttribute('cx', source.x); dot.setAttribute('cy', source.y); dot.setAttribute('r', 2);
+        leaders.append(line, dot);
+      }
+    }
   }
   function render() {
     const oldFocus = document.activeElement?.id;
@@ -116,16 +169,17 @@
         <div class="row context"><span>${text(period)}</span><span>${text(waiting ? 'Clock awaiting first frame' : `Minute ${state.minute}`)}</span><span>${text(`Selected speed ${M.speeds[state.speed]}×${state.screen === 'MV-P' ? ' • Paused' : ''}`)}</span><span>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</span></div>
         ${reason ? `<p class="reason">${text(reason)}</p>` : ''}${ended ? button('report', 'View match report', false, true) : ''}</div>
         <div class="layout"><section class="stack"><div class="row">${button('slower', 'Slower', locked || state.speed === 0)}${button('pause', state.screen === 'MV-P' ? 'Resume' : 'Pause', locked)}${button('faster', 'Faster', locked || state.speed === 3)}</div>
-        <p>${text(locked ? reason : state.speed === 0 ? 'Already at real time — slower is unavailable.' : state.speed === 3 ? 'Already at the fastest speed — faster is unavailable.' : 'Speed steps: 1×, 3×, 5×, 10×.')}</p>
+        ${!locked ? `<p>${text(state.speed === 0 ? 'Already at real time — slower is unavailable.' : state.speed === 3 ? 'Already at the fastest speed — faster is unavailable.' : 'Speed steps: 1×, 3×, 5×, 10×.')}</p>` : ''}
         ${pitch()}${params.has('captions') ? `<p class="caption-reservation">${text('Future caption region — layout stress fixture only (audio runtime unavailable)')}</p>` : ''}</section>
         <aside class="stack"><section class="panel stack"><h2>${text('Home team changes')}</h2><p>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</p>${button('tactic', 'Change Mentality', locked || pendingTactic)}
         ${pendingTactic ? `<p>${text('Mentality request pending — another request is unavailable until resolved.')}</p>` : ''}
         ${button('substitute', 'Make substitution', locked || state.usedBench.length >= 5 || state.requests.some(r => r.kind === 'substitution' && r.status === 'Pending'))}
         <p>${text(`Substitutions used: ${state.usedBench.length} / 5${state.usedBench.length >= 5 ? ' — all substitutions used' : ''} (simulated requests)`)}</p>${feedback()}</section>
-        <section class="panel stack"><h2>${text('Match statistics')}</h2>${healthNotice()}${button('stats', state.statsOpen ? 'Close statistics' : 'Open statistics', locked)}
+        <section class="panel stack"><h2>${text('Match statistics')}</h2>${healthNotice()}${button('stats', state.statsOpen ? 'Close statistics' : 'Open statistics', locked)}${ended ? `<p>${text('Final statistics are available in the match report.')}</p>` : ''}
         ${state.statsOpen ? statTable(state.faultMinute !== null) : ''}</section></aside></div></section>`;
     }
     bindActions();
+    layoutPitchMarkers();
     const earlier = document.getElementById('earlier-feedback');
     if (earlier) earlier.open = earlierOpen;
     if (oldFocus && !dialog.open) {
@@ -191,6 +245,7 @@
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
+  window.addEventListener('resize', layoutPitchMarkers);
   render();
   document.getElementById('page-heading')?.focus();
   setInterval(() => {

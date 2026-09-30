@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
+**Last Updated:** September 30, 2026 — **Complete S0 image-review coverage / PR #473.** Journey packet v0.9, detailed plan v1.13, validation protocol v0.16 and prototype v0.3. Eighteen PDF views, 79 checks, seven source/18 image fingerprints; successful prior run archived. Nine new PDFs plus `walkthrough-v0.2.json` inventoried below. Pitch/collision/statistics/alignment/waiting presentation corrected; Gate-G decisions remain pending; H approval separately precedes I. No production/spec change.
+
+**Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
 
 **Last Updated (prior):** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
 
@@ -3521,12 +3523,12 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | File | Purpose |
 |------|---------|
 | `docs/design/ux-high-level-plan.md` | UX strategy v1.6; S0 owner image review; current status delegated to execution authority |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.12: F0–F4 and S0 A–F complete; G pending owner image approval; H/I unpassed; P5b gated on I |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.13: S0 A–F complete; G requires owner review, all dispositions, C-DEC-1 and Major acceptance rationale; H approval separately precedes I |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.15: S0 owner image-review record in §9.1; tester prerequisites superseded; S1 participant templates retained |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.8: A/B audit/flow, C wireframes, D state matrix, E resilience evidence, F complete vehicle; G pending owner image approval; #470 blocked on I |
+| `docs/design/ux-validation-protocol.md` | Validation operating packet v0.16: S0 18-image review record with explicit decisions; tester prerequisite superseded; S1 participant templates retained |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.9: complete 18-image coverage, 79-check evidence, findings S0-G-001–008 and pending owner decisions; #470 blocked on I |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
@@ -3538,7 +3540,17 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/s0-prototype/capture-reference.sh` | Temporary .NET capture project runner using existing generated shim projects |
 | `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and vector PDF export |
 | `docs/design/s0-prototype/evidence/walkthrough-v0.1.json` | Unchanged archived 71-check initial run; Gate-E pass withdrawn, superseded by v0.2 run 02 |
-| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.2 run 02 identity, 74 executed checks, browser version and source SHA-256 hashes |
+| `docs/design/s0-prototype/evidence/mentality-dialog.pdf` | Requested Mentality staging with consequence/Submit/Cancel |
+| `docs/design/s0-prototype/evidence/substitution-dialog.pdf` | Outgoing shirt/incoming bench staging with Submit/Cancel |
+| `docs/design/s0-prototype/evidence/mv-live-pending.pdf` | Live Pending request beside unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-paused-pending.pdf` | Paused Pending request waiting for resume |
+| `docs/design/s0-prototype/evidence/mv-live-applied.pdf` | Applied Mentality and substitution/count evidence |
+| `docs/design/s0-prototype/evidence/mv-live-refused.pdf` | Refused request and unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-live-statistics.pdf` | Healthy statistics open during live play |
+| `docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf` | Full-time not-applied result reached by normal whistle-race journey |
+| `docs/design/s0-prototype/evidence/report-partial-open.pdf` | Incomplete report disclosure open on minute-18 partial figures |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.2.json` | Preserved successful 74-check run 02/source fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.3 run 03 identity, 79 executed checks, browser version, seven source and 18 PDF SHA-256 hashes |
 | `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
 | `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
 | `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |

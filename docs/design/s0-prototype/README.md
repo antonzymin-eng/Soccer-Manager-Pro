@@ -1,4 +1,4 @@
-# S0 low-fidelity prototype v0.2
+# S0 low-fidelity prototype v0.3
 
 **Created:** September 30, 2026\
 **Purpose:** executable Gates C–F design evidence for the [S0 journey packet](../ux-s0-pm1-journey.md).
@@ -64,7 +64,9 @@ With Playwright available, run the recorded walkthrough from the repository root
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs
 ```
 
-The runner emits `evidence/walkthrough.json` and nine PDFs (seven wireframes plus two resilience views). The v0.2 run has 74 checks; the original
+The successful 74-check v0.2 run is preserved as `evidence/walkthrough-v0.2.json`. Current evidence includes SHA-256 fingerprints for all seven source files and all 18 PDFs.
+
+The runner emits `evidence/walkthrough.json` and 18 PDFs (journey states, dialogs, request outcomes and statistics disclosure/stress views). The v0.3 run has 79 checks; the original
 71-check v0.1 evidence is archived and its Gate-E pass withdrawn after review found two Majors.
 Keyboard navigation rejects unexpected body focus; submits and both speed limits assert immediate
 focus destinations. Earlier feedback is tested over live timer ticks, not only frozen review frames.
@@ -77,12 +79,15 @@ Automated/self-walkthrough evidence supplies no Gate-G participant results.
 
 C–F are complete in the journey packet. Under the owner decision of September 30, 2026,
 Anton Zymin conducts the S0 image reviews; tester recruitment, attestations and sessions are not
-prerequisites. Gate G awaits explicit owner approval of the seven wireframes and failure/stress
-images using validation protocol §9.1. H/I follow that approval; draft PR #470 stays blocked on Gate I.
-The 74-check interaction evidence remains distinct from image approval and real-client verification.
+prerequisites. Gate G awaits all finding dispositions, C-DEC-1, the full-time-statistics decision,
+written rationale/release conditions for carried Majors and explicit owner approval of all 18 images
+in journey packet §9.4, using validation protocol §9.1. G opens H only. H needs separate owner
+approval of high-fidelity images before I; draft PR #470 stays blocked on Gate I.
+The 79-check interaction evidence remains distinct from image approval and real-client verification.
 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 30, 2026 | Initial low-fidelity S0 vehicle, captured reference data and reproducible walkthrough. |
 | 0.2 | September 30, 2026 | Fixes live focus/disclosure; coherent ordinary synthetic 2–1 versus captured 19–9 fixtures; reachable whistle race; 74 checks; archives insufficient original E run; clarifies text-scale method and formal F prerequisites. |
 | 0.2 review-route update | September 30, 2026 | Owner-directed S0 image review replaces tester prerequisites; prototype sources, PDFs and 74-check run unchanged. |
+| 0.3 | September 30, 2026 | Complete 18-image review coverage; pitch markings/direction and label leaders; raw restart/holder caption removed; changing partial statistics, aligned headers and simplified waiting state. 79-check run 03; explicit G decisions and separate H image approval before I. |

@@ -12,7 +12,13 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **Owner-directed S0 image review; tester prerequisite superseded.**
+> **Last Updated:** September 30, 2026 — **PR #473 image review: missing interaction views added; visual defects fixed.**
+>
+> **What:** Prototype v0.3, journey packet v0.9, detailed plan v1.13 and protocol v0.16. All 18 PDF views now cover dialogs, request states and healthy/partial statistics. Raw restart/holder captions removed; grounded pitch markings and direction added; marker labels separated with leaders; temporal synthetic figures/header alignment/start copy fixed. S0-G-001–008 record fixes and the pending full-time-statistics choice.
+>
+> **Validation and boundary:** 79 Chromium checks pass, including pairwise marker separation in every geometry fixture, immediate focus and live disclosure regressions. Seven source and 18 PDF hashes recorded; successful 74-check run 02 preserved. PDFs rendered and visually inspected. G still needs actual owner image review, all dispositions, C-DEC-1 and written acceptance rationale/release condition for carried Majors. G opens H; H requires separate image approval before I. #470 remains blocked. No production/spec/scene/schema/RNG change; counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review; tester prerequisite superseded.**
 >
 > **Decision and status:** Anton Zymin will conduct S0 image reviews. Detailed plan v1.12, validation protocol v0.15, high-level plan v1.6 and journey packet v0.8 record that owner review replaces S0 independent recruitment, attestations and sessions. Gate F passes the existing complete prototype; Gate G remains pending actual image approval and finding dispositions. H images receive owner review before I; #470 remains blocked on I.
 >
