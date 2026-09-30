@@ -2,9 +2,11 @@
 (() => {
   'use strict';
   const M = window.S0Model;
-  const reference = window.S0Reference;
   const params = new URLSearchParams(location.search);
   const fixture = params.get('fixture') || 'ordinary';
+  const captured = fixture === 'scoreline';
+  const reference = captured ? window.S0Reference : window.S0Scenario;
+  if (captured) document.querySelector('.prototype-notice').textContent = 'Design prototype v0.2 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; choices do not change the recorded match. Unity binding remains pending UX Gate I.';
   const app = document.getElementById('app');
   const announcement = document.getElementById('announcement');
   const t = text => params.has('pseudo') ? `[${text} ${'~'.repeat(Math.ceil(text.length * .4))}]` : text;
@@ -34,7 +36,7 @@
   if (fixture === 'limit') state.usedBench = [0, 1, 2, 3, 4];
   if (fixture === 'pending-end') state.requests = [{ kind: 'mentality', value: 5, status: 'Pending', minute: 89 }];
   function seedHistory() {
-    if (fixture === 'events') state.requests = Array.from({ length: 15 }, (_, i) => ({ kind: 'mentality', value: state.mentality, status: 'Applied', minute: i + 1 }));
+    if (fixture === 'events' && state.minute >= 15) state.requests = Array.from({ length: 15 }, (_, i) => ({ kind: 'mentality', value: state.mentality, status: 'Applied', minute: i + 1 }));
   }
   seedHistory();
   if (state.screen === 'MV-FT' || state.screen === 'PR') state = M.reduce(state, { type: 'FULL_TIME' });
@@ -52,10 +54,10 @@
     const data = sample(partial ? state.faultMinute : state.minute);
     const rows = [['Goals recorded', 'goals'], ['Possession %', 'possession'], ['Territorial %', 'territory'],
       ['Fouls', 'fouls'], ['Yellow cards', 'yellow'], ['Red cards', 'red'], ['Offsides', 'offsides'],
-      ['Corners', 'corners'], ['Throw-ins', 'throwIns'], ['Goal kicks', 'goalKicks'], ['Substitutions', 'substitutions']];
+      ['Corners', 'corners'], ['Throw-ins', 'throwIns'], ['Goal kicks', 'goalKicks']];
     if (data.home.xgAvailable && data.away.xgAvailable) rows.push(['Expected goals (xG)', 'xg']);
     const format = value => Number.isInteger(value) ? value : value.toFixed(1);
-    return `<table><caption>${text(partial ? `Partial figures through minute ${state.faultMinute} — not full-match totals` : 'Captured statistics snapshot')}</caption>
+    return `<table><caption>${text((captured ? 'Captured statistics snapshot' : 'Synthetic prototype statistics') + (partial ? ` — partial figures through minute ${state.faultMinute} — not full-match totals` : ''))}</caption>
       <thead><tr><th scope="col">${text('Statistic')}</th><th scope="col">${escape(identity('Home'))}</th><th scope="col">${escape(identity('Away'))}</th></tr></thead>
       <tbody>${rows.map(([label, key]) => `<tr><th scope="row">${text(label)}</th><td>${format(data.home[key])}</td><td>${format(data.away[key])}</td></tr>`).join('')}</tbody></table>
       <p>${text('Possession shares include loose-ball time; the two teams need not total 100%.')}</p>`;
@@ -72,18 +74,19 @@
       const paused = r.status === 'Pending' && state.screen === 'MV-P' ? ' — waiting; resume to continue' : '';
       return `<p class="feedback">${text(`${change} — ${r.status}${r.status === 'Applied' ? ` at minute ${r.minute}` : ''}${refusal}${paused}`)}</p>`;
     };
-    return state.requests.length ? `<div class="stack">${state.requests.slice(-3).map(entry).join('')}
-      ${state.requests.length > 3 ? `<details><summary>${text(`Earlier change feedback (${state.requests.length - 3})`)}</summary>${state.requests.slice(0, -3).map(entry).join('')}</details>` : ''}</div>` : '';
+    return state.requests.length ? `<div id="request-feedback" tabindex="-1" class="stack" aria-label="${text('Change request feedback')}">${state.requests.slice(-3).map(entry).join('')}
+      ${state.requests.length > 3 ? `<details id="earlier-feedback"><summary id="earlier-feedback-toggle">${text(`Earlier change feedback (${state.requests.length - 3})`)}</summary>${state.requests.slice(0, -3).map(entry).join('')}</details>` : ''}</div>` : '';
   }
   function pitch() {
     if (state.screen === 'MV-0') return `<div class="pitch"><p class="pitch-waiting">${text('Match starting — waiting for the first frame')}</p></div>`;
     const frame = sample();
     const marks = frame.agents.filter(a => !a.sentOff).map(a => `<span class="agent ${a.id >= 11 ? 'away' : ''}" style="left:${Math.max(2, Math.min(98, a.x / 105 * 100))}%;top:${Math.max(3, Math.min(97, a.y / 68 * 100))}%">${a.id >= 11 ? 'A' : 'H'}${a.id % 11 + 1}</span>`).join('');
     return `<div class="pitch" role="img" aria-label="${text('Captured pitch snapshot. Home markers H, away markers A, ball dot; not an interactive selector.')}">${marks}<span class="ball" style="left:${frame.ball[0] / 105 * 100}%;top:${frame.ball[1] / 68 * 100}%" aria-hidden="true">●</span></div>
-      <p>${text(`Possession: ${frame.possessing < 0 ? 'loose ball' : `${frame.possessing < 11 ? 'Home' : 'Away'} shirt ${frame.possessing % 11 + 1}`}. Restart: ${frame.restart}.`)}</p>`;
+      <p>${text(`Captured reference pitch — simulated substitutions do not replace these markers. Possession: ${frame.possessing < 0 ? 'loose ball' : `${frame.possessing < 11 ? 'Home' : 'Away'} shirt ${frame.possessing % 11 + 1}`}. Restart: ${frame.restart}.`)}</p>`;
   }
   function render() {
     const oldFocus = document.activeElement?.id;
+    const earlierOpen = document.getElementById('earlier-feedback')?.open || false;
     if (!reference?.snapshots?.length) {
       app.innerHTML = '<h1>Prototype data unavailable</h1><p>The captured reference file must be present beside this page.</p>';
       return;
@@ -95,7 +98,7 @@
         <fieldset><legend>${text('Home Mentality — choose one')}</legend>${M.mentalities.map((m, i) => `<label><input type="radio" name="mentality" value="${i}" ${state.draft === i ? 'checked' : ''}><span>${text(m)} — ${text(M.consequences[i])}</span></label>`).join('')}</fieldset>
         <p>${text(`Ready to start with ${M.mentalities[state.draft]}.`)}</p><div class="row">${button('start', 'Start match', false, true)}${button('back', 'Back')}</div></section>`;
     } else if (state.screen === 'PR') {
-      const score = fixture === 'scoreline' ? [12, 10] : sample(90).score;
+      const score = sample(90).score;
       app.innerHTML = `<section class="entry stack"><h1 id="page-heading" tabindex="-1">${text('Post-Match Report')}</h1><p class="context">${text('Full time — Home result: ' + (score[0] > score[1] ? 'Win' : score[0] < score[1] ? 'Loss' : 'Draw'))}</p>
         <div class="scoreboard"><span class="identity">${escape(identity('Home'))}</span><span class="score">${score[0]} – ${score[1]}</span><span class="identity away">${escape(identity('Away'))}</span></div>
         ${healthNotice(true)}${state.faultMinute === null ? statTable() : `<details><summary>${text('Show partial statistics — incomplete')}</summary>${statTable(true)}</details>`}
@@ -104,7 +107,7 @@
       const waiting = state.screen === 'MV-0';
       const ended = state.screen === 'MV-FT';
       const locked = waiting || ended;
-      const score = fixture === 'scoreline' ? [12, 10] : sample().score;
+      const score = sample().score;
       const period = waiting ? 'Waiting for first frame' : ended ? 'Full time' : state.minute < 45 ? 'First half' : 'Second half';
       const reason = waiting ? 'Match starting — controls unavailable until the first frame.' : ended ? 'Match ended — playback and team changes are unavailable.' : '';
       const pendingTactic = state.requests.some(r => r.kind === 'mentality' && r.status === 'Pending');
@@ -118,19 +121,26 @@
         <aside class="stack"><section class="panel stack"><h2>${text('Home team changes')}</h2><p>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</p>${button('tactic', 'Change Mentality', locked || pendingTactic)}
         ${pendingTactic ? `<p>${text('Mentality request pending — another request is unavailable until resolved.')}</p>` : ''}
         ${button('substitute', 'Make substitution', locked || state.usedBench.length >= 5 || state.requests.some(r => r.kind === 'substitution' && r.status === 'Pending'))}
-        <p>${text(`Substitutions used: ${state.usedBench.length} / 5${state.usedBench.length >= 5 ? ' — all substitutions used' : ''}`)}</p>${feedback()}</section>
+        <p>${text(`Substitutions used: ${state.usedBench.length} / 5${state.usedBench.length >= 5 ? ' — all substitutions used' : ''} (simulated requests)`)}</p>${feedback()}</section>
         <section class="panel stack"><h2>${text('Match statistics')}</h2>${healthNotice()}${button('stats', state.statsOpen ? 'Close statistics' : 'Open statistics', locked)}
         ${state.statsOpen ? statTable(state.faultMinute !== null) : ''}</section></aside></div></section>`;
     }
     bindActions();
-    if (oldFocus && !dialog.open) document.getElementById(oldFocus)?.focus({ preventScroll: true });
+    const earlier = document.getElementById('earlier-feedback');
+    if (earlier) earlier.open = earlierOpen;
+    if (oldFocus && !dialog.open) {
+      const target = document.getElementById(oldFocus);
+      const fallback = ['tactic', 'substitute'].includes(oldFocus) ? 'request-feedback' : 'pause';
+      const recovery = target && !target.disabled ? target : document.getElementById(state.screen === 'MV-FT' ? 'report' : fallback);
+      recovery?.focus({ preventScroll: true });
+    }
   }
   function on(id, handler) { document.getElementById(id)?.addEventListener('click', handler); }
   function navigate(action) { send(action); document.getElementById('page-heading')?.focus(); }
   function bindActions() {
     on('open-setup', () => navigate({ type: 'OPEN_SETUP' }));
     on('back', () => navigate({ type: 'CANCEL_SETUP' }));
-    on('start', () => { initialTicks = 0; navigate({ type: 'START' }); seedHistory(); render(); });
+    on('start', () => { initialTicks = 0; navigate({ type: 'START' }); });
     on('report', () => navigate({ type: 'REPORT' }));
     on('return', () => navigate({ type: 'RETURN' }));
     on('pause', () => send({ type: 'PAUSE' }, state.screen === 'MV-L' ? 'Paused. Selected speed retained.' : 'Resumed.'));
@@ -182,10 +192,16 @@
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
   render();
+  document.getElementById('page-heading')?.focus();
   setInterval(() => {
     if (params.has('review')) return;
     if (state.screen === 'MV-0' && fixture !== 'waiting') {
-      if (++initialTicks >= 2) send({ type: 'FIRST_FRAME' }, 'First frame received. Match live.');
+      if (++initialTicks >= 2) {
+        state = M.reduce(state, { type: 'FIRST_FRAME' });
+        if (fixture === 'events') { state.minute = 15; seedHistory(); }
+        render();
+        announcement.textContent = t('First frame received. Match live.');
+      }
     } else if (state.screen === 'MV-L') {
       if (fixture === 'fault' && state.minute >= 18) state.faultMinute = 18;
       send({ type: 'ADVANCE', minutes: M.speeds[state.speed], refuse: fixture === 'refusal' });

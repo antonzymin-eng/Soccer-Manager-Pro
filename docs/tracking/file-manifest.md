@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
+**Last Updated:** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
+
+**Last Updated (prior):** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
 
 **Last Updated (prior):** September 28, 2026 — **Blanket Error-log suppression removed from 12 CI engine scenarios.** **Modified tests (12):** `MatchEngineDisciplineTests`, `MatchEngineShotOutcomeTests`, `MatchEngineShotSpeedTests`, `MatchEnginePlayDevelopmentTests`, `MatchEngineGoalkeeperSaveTests`, `MatchEngineKeeperClaimTests`, `MatchEngineKeeperContactTests`, `MatchEngineKeeperConversionTests`, `MatchEngineCloseChanceTests`, `MatchEngineInPossGateTests` (all v1.0→v1.1), `MatchEngineSnapshotRestoreTests` v1.14→v1.15 (`RoundTrip_GkHeadingEnabled_WithCommittedSave_IsDeterministic`) and `SeasonLoopScenarioTests` v1.0→v1.1 (`sim_season_multi_fixture`). **Modified tracking (4):** `CHANGELOG.md`; `CHANGELOG-src.md` v2.159→v2.160; `match-engine-design.md` v2.18→v2.19 (§5.Z.7 item 3 closed); this manifest. No production file changed by this landing; depends on PR #467 (merged).
 
@@ -3517,22 +3519,24 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | File | Purpose |
 |------|---------|
 | `docs/design/ux-high-level-plan.md` | UX strategy v1.5; current status delegated to execution authority; C–E complete, F vehicle ready with formal attestations pending |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.10: F0–F4 and S0 A–E complete; F prototype ready / formal F pending both participant attestations; G/H/I unpassed, P5b gated on I; unchanged gate definitions and participant rules |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.11: F0–F4 and S0 A–E complete; F prototype ready / formal F pending both participant attestations; G/H/I unpassed, P5b gated on I; unchanged gate definitions and participant rules |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.13: status sync to S0 C–E complete / F vehicle ready; participant availability and explicit independence/distinctness remain due before F, actual independent completions bind G; unchanged scripts, matrix and ledger rules |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.6: A/B audits/flow plus C monochrome hierarchy/focus/reflow, D full state matrix, E executed resilience evidence and F vehicle/attestation boundary; real capture and statistics-failure decision; C–E PASS, formal F pending, #470 blocked on I |
+| `docs/design/ux-validation-protocol.md` | F4 validation operating packet v0.14: status sync to S0 C–E complete / F vehicle ready; participant availability and explicit independence/distinctness remain due before F, actual independent completions bind G; unchanged scripts, matrix and ledger rules |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.7: A/B audits/flow plus C monochrome hierarchy/focus/reflow, D full state matrix, E executed resilience evidence and F vehicle/attestation boundary; real capture and statistics-failure decision; C–E PASS, formal F pending, #470 blocked on I |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/attestation boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
 | `docs/design/s0-prototype/model.js` | Pure simulated S0 transitions, pending/applied/refused/end race; no production API |
 | `docs/design/s0-prototype/prototype.js` | Semantic controls, focus recovery/staging dialogs, health/disclosure and fixtures |
+| `docs/design/s0-prototype/scenario-data.js` | Explicitly synthetic 2–1 ordinary-session score/statistics fixture; captured pitch only |
 | `docs/design/s0-prototype/reference-data.js` | 91 captured frame/#37 snapshots from main c37213ab, no synthetic analytics accumulator |
 | `docs/design/s0-prototype/capture-reference.cs` | Reproducible console caller of the unchanged reference composition; non-certifying |
 | `docs/design/s0-prototype/capture-reference.sh` | Temporary .NET capture project runner using existing generated shim projects |
-| `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and screenshot capture |
-| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E run identity, 71 executed checks, browser version and source SHA-256 hashes |
+| `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and vector PDF export |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.1.json` | Unchanged archived 71-check initial run; Gate-E pass withdrawn, superseded by v0.2 run 02 |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Gate-E v0.2 run 02 identity, 74 executed checks, browser version and source SHA-256 hashes |
 | `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
 | `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
 | `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |

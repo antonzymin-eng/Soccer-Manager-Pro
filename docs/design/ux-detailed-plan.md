@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.10\
+**Version:** 1.11\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 GATES A–E COMPLETE; F PROTOTYPE READY / FORMAL F PENDING PARTICIPANT ATTESTATIONS\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
@@ -962,7 +962,7 @@ No additional polished screen comes next.
 6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
 7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
 8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
-9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.6 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
+9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.7 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
 10. **S0 Gate F — PROTOTYPE READY; FORMAL OPENING/PASS PENDING ATTESTATIONS.** The complete vehicle is `docs/design/s0-prototype/`; §12 records the remaining pre-F S0-P1/P2 availability and independence/distinctness requirement.
 11. Record those two anonymous attestations, formally close F, then run Gate G with two actual independent completions. No high fidelity or P5b release before G → H → I.
 
@@ -1047,3 +1047,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.8 | September 21, 2026 | Review closeout pointer sync after `ux-s0-pm1-journey.md` advances to v0.4. The execution sequence and Gate-A result are unchanged; the v0.4 packet only corrects maintained authority pointers and distinguishes `UNWIRED` existing-contract binding gaps from `FUTURE-BLOCKED` missing contract/state/runtime capabilities. Gate B remains next. |
 | 1.9 | September 28, 2026 | S0 Gate B closes through `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and §14 advances to Gate C. The Gate-B re-check corrects a Gate-A overstatement: `TeamTactic.Formation` is serialized and parsed but read by no simulation system, so S0's one pre-match choice is Mentality (read by the Decision Tree risk multiplier and the engine's defensive-line bias). Gate A's verdict and zero-`UNKNOWN` result stand. The project owner explicitly confirmed B-DEC-1/2/5 (home side, existing AI manager for the opponent, full time as the authoritative transition with the report control as acknowledgement only) on September 28, 2026. P5b remains gated on Gate I. |
 | 1.10 | September 30, 2026 | Status sync to S0 packet v0.6: C–E complete with executed prototype evidence; F deliverable ready, formal opening/pass pending both pre-F participant attestations. Gate definitions/participant rules unchanged; G/H/I remain unpassed and #470 blocked. |
+| 1.11 | September 30, 2026 | Pointer sync to S0 packet v0.7 after PR #473 review: initial Gate-E pass withdrawn, focus/disclosure Majors fixed and retested in 74-check v0.2 run. F attestation prerequisites and G/H/I sequencing unchanged. |

@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.6\
+**Version:** 0.7\
 **Status:** S0 GATES A–E COMPLETE — F PROTOTYPE READY; FORMAL F OPENING/PASS PENDING PARTICIPANT ATTESTATIONS (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.10 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.13\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.11 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.14\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -576,7 +576,7 @@ navigation, comparison, progressive disclosure, focus sequence and reflow. Carry
 
 # 9. Gate C — low-fidelity information design
 
-**Vehicle:** [interactive prototype v0.1](s0-prototype/index.html), [review/reproduction guide](s0-prototype/README.md).
+**Vehicle:** [interactive prototype v0.2](s0-prototype/index.html), [review/reproduction guide](s0-prototype/README.md).
 Seven monochrome wireframes and the executable vehicle cover §8's eight inputs. They use system text,
 boxes, spacing, checked selection and solid/dashed marker outlines; no `touchline` polish or final art.
 
@@ -592,21 +592,25 @@ boxes, spacing, checked selection and solid/dashed marker outlines; no `touchlin
 | [MV-FT](s0-prototype/evidence/mv-ft.pdf) | Full time + final score → report acknowledgement → frozen pitch → locked controls/reason | View match report → `ShowPostMatchReport()` | request still pending resolves as Not applied — match ended; report cannot be reached from another state |
 | [PR](s0-prototype/evidence/pr.pdf) | Full time/home result + frame score → statistics health → core comparison → return | Return to main menu → `ReturnToMainMenu()` | no ratings, causality, shots, replay, rematch or save; optional maps omitted from this S0 cut |
 
-The final score always comes from the frame; Goals recorded in #37 is labelled separately. Possession
+The final score always comes from the selected fixture frame; Goals recorded in #37 is labelled separately. Possession
 shares include loose-ball time: Home + Away need not equal 100%, and the prototype does not normalize
 them. xG has no row when unavailable, rather than an invented zero. Live and final statistics use the
-same captured #37 owner output. No client accumulator or causal explanation is introduced.
+same selected fixture. Ordinary sessions use a synthetic 2–1 scenario, labelled in the banner and table.
+The `scoreline` fixture uses unmodified captured #37 output. The prototype omits the captured
+Substitutions row so it cannot contradict the simulated request count; the captured pitch is labelled
+as unchanged by simulated swaps. This is a vehicle limitation, not removal of the shipping row in §7.7.
+No production accumulator or causal explanation is introduced.
 
 ## 9.2 Progressive disclosure and statistics failure decision
 
-**C-DEC-1:** retain partial figures in the open live statistics area, under the persistent
+**C-DEC-1 (Gate-C design choice; owner confirmation not claimed):** retain partial figures in the open live statistics area, under the persistent
 “Statistics stopped at minute N” notice. Keep that notice visible even when statistics are closed.
 The report first shows “Statistics incomplete — stopped at minute N”; partial figures are hidden
 behind **Show partial statistics — incomplete**, with a table caption repeating the cutoff and
 “not full-match totals”. Score/result and Return stay outside that disclosure. This is the Gate-C
 choice left open by §7.4 B-7. See [incomplete report](s0-prototype/evidence/report-incomplete.pdf).
 
-The reference capture is healthy; the fault fixture deliberately freezes its statistics snapshot at
+The reference capture is healthy; the fault fixture deliberately freezes its synthetic statistics snapshot at
 minute 18 while score/time continue. Its cutoff models A-42's observed-tick count. It is simulated
 fault evidence, not a claim that the captured run faulted. No retry is offered because A-42's
 observer is disarmed, not restartable through an audited S0 UI seam.
@@ -632,9 +636,12 @@ remain in labelled disclosure, preserving the active task's space under many ind
 | PR | partial-statistics disclosure if present → Return to main menu |
 
 Each named screen transition focuses its heading. Dialog Tab/Shift-Tab wrap inside; Escape/Cancel
-closes staging and restores its invoker. Full time cancels an open, unsubmitted chooser and focuses
+closes staging and restores its enabled invoker. Submit disables the pending request’s invoker and
+focuses the labelled request-feedback region. At 1×/10×, newly disabled Slower/Faster instead focus
+Pause/Resume. These destinations keep the user in the active task region. Full time cancels an open, unsubmitted chooser and focuses
 the report action. It does not discard a queued command silently: pending feedback becomes not applied.
-Live refresh restores the same logical focus target when it remains; it does not advance selection.
+Live refresh preserves earlier-feedback disclosure state and restores its summary focus, or the same
+logical focus target when it remains; it does not advance selection.
 No global gameplay shortcut or Escape-as-history-Back is introduced.
 
 At 1366-wide, preserve the scoreboard, playback/current tactic and blockers; keep secondary statistics
@@ -694,16 +701,23 @@ confirmation/success/failure states have a disposition; the design is not happy-
 
 ## 11.1 Run identity and reference truth
 
+The initial v0.1 Gate-E PASS is **withdrawn**: its 71 checks missed focus loss after submit/speed
+boundaries and earlier-feedback collapse during live ticks. [Archived original evidence](s0-prototype/evidence/walkthrough-v0.1.json)
+is retained unchanged; the old source hashes identify the superseded PR commit. The current verdict
+uses **74 checks** in run `UX-GE-S0-20260930-02`, including direct focus assertions that fail on body
+focus and a live-timer disclosure regression. No participant results are claimed.
+
 | Run field | Value |
 |---|---|
-| Gate-E run ID | `UX-GE-S0-20260930-01` |
+| Gate-E run ID | `UX-GE-S0-20260930-02` |
 | Journey | S0 |
-| Prototype/version | `s0-prototype v0.1` |
+| Prototype/version | `s0-prototype v0.2` |
 | Date | September 30, 2026 (UTC; September 29 in the owner's timezone) |
 | Runner | Codex scripted/self-walkthrough; no independent participant claim |
 | Evidence | [executed checks + source hashes](s0-prototype/evidence/walkthrough.json); [reproducible runner](s0-prototype/verify.cjs) |
 | Real-data source | `main` `c37213abf2b2b8f6ded68b125bd7c0cc524927fa`; existing `MatchClientHost`, no harness/source modification |
-| Capture | seed `0x00C11E7B6D0C`; neutral agents; home Human / away AI; 91 snapshots, ticks 1–324000, MatchEnded true, statistics observer healthy; frame score **19–9**, xG unavailable |
+| Ordinary session | Explicitly synthetic 2–1 score/statistics fixture, with captured reference pitch positions; no seed/realism claim |
+| Capture / unusual-score fixture | seed `0x00C11E7B6D0C`; neutral agents; home Human / away AI; 91 snapshots, ticks 1–324000, MatchEnded true, statistics observer healthy; frame score **19–9**, xG unavailable |
 
 The unusually high recorded score is evidence as captured, not a tuned/football-realism claim. The
 capture checked the two reference surfaces actually consumed: frame projection and coherent result +
@@ -713,37 +727,37 @@ succeeded on .NET 8; existing ActionSelector CS0649 warnings were emitted. No Un
 
 ## 11.2 Complete protocol matrix
 
-Every row below is for **s0-prototype v0.1** and the identified run. Results distinguish executed
+Every row below is for **s0-prototype v0.2** and the identified run. Results distinguish executed
 prototype evidence from future shipping obligations. Relevant task traversal uses S0-T1–T7 plus the
 PM-1 substitution path; additional condition fixtures inspect failures/limits without claiming they
 are participant task completions.
 
 | Condition | Result | Prototype/version | Evidence / reason |
 |---|---|---|---|
-| Ordinary case | PASS | v0.1 | mouse journeys at all three widths and keyboard journey: cancel/re-enter, choose/start, read state, speed/tactic/substitution, stats open/close, full time/report/return; captured real frames/#37 values |
-| Color-independent meaning | PASS | v0.1 | monochrome complete journeys; checked radio selection, literal Paused/Pending/Applied/Refused/Full time text, Home H/Away A marker identity, dashed disabled controls and persistent reasons |
-| Contrast | PASS | v0.1 | actual computed foreground/background pairs and ratios in `computed contrast`; each ≥4.5:1; 3px #161616 focus outline against white; disabled text #444 on #eee, not low opacity |
-| Long player/club/competition names | PASS | v0.1 | labelled long-identity stress fixture complete journey and 1366/1920/2560 + pseudo/200% geometry; actual S0 uses shirt/slot identity, not named squads |
-| Empty/large lists | N/A | v0.1 | no variable catalogue, sort/filter or career lists; S0's bounded chooser has 11 starting slots / 7 bench slots and fixed stat rows. Ordinary and limit checks exercise those bounds; genuinely empty frame is checked separately |
-| Many status indicators | PASS | v0.1 | `events` fixture, 15 feedback records; latest three visible, earlier disclosed; all-width pseudo/200% geometry and complete journey |
-| Pseudo-locale | PASS | v0.1 | approximately 40% bracketed expansion; complete fault/pseudo/200% journey and every applicable all-width fixture; equivalent stress content, not #49 localization runtime proof |
-| Alternate date/currency formatting | N/A | v0.1 | S0 contains no dates/currencies or management account surfaces |
-| No save | PASS | v0.1 | complete MM→TS→MV→PR→MM journey has no save/Continue/Load control or persistence promise |
-| Save/load failure where relevant | N/A | v0.1 | no save/load action or contract is admitted in S0; general failure remains separately tested |
-| No match frame yet | PASS | v0.1 | `no match frame`: waiting fixture stays non-live after clock advance, score/clock withheld, actions disabled with reason |
-| Disabled action with reason | PASS | v0.1 | waiting/full-time lock reasons, real-time/fastest boundary reasons, five-substitution limit; geometry at all widths |
-| Error/failure state (general) | PASS | v0.1 | `refused command`: last applied Mentality remains Balanced, persistent refusal, retry through ordinary staging; statistics failure preserves score/Return |
-| Missing art | PASS | v0.1 | every complete journey uses no external art/fonts; neutral pitch and explicit Home/Away/shirt identity remain usable |
-| Event-heavy match | PASS | v0.1 | `events` complete journey plus dense feedback/restart context with stats open; fixed scoreboard/action regions survive all-width pseudo/200% fixture |
-| Unusual scoreline | PASS | v0.1 | real 19–9 capture and synthetic 12–10 stress fixture complete journey; score identity/columns preserved at all widths |
-| Full-time/frozen state | PASS | v0.1 | all complete journeys lock controls; `end race` resolves pending as not applied, report only available from MV-FT |
-| Small desktop — 1366-wide | PASS | v0.1 | 1366×768 full mouse/keyboard journeys; all stress fixtures; [expanded-text fault view](s0-prototype/evidence/stress-fault-1366.pdf); no horizontal overflow/clipped critical labels |
-| Reference — 1920×1080 | PASS | v0.1 | complete journey, all seven wireframes, and stress fixtures; playback region above pitch keeps high-frequency controls early |
-| Expanded — 2560-wide | PASS | v0.1 | complete journey/stress fixtures; capped content and compact rail, no extreme stretched control widths |
-| Max supported text scale | PASS (prototype value) | v0.1 | explicitly tested **200%** with pseudo-locale and all-width failure/chooser fixtures plus complete journey. Shipping maximum remains unallocated; Gate I must name it and Gate J must retest that actual value |
-| Keyboard only | PASS | v0.1 | complete 1366 journey by Tab/arrows/Enter/Escape; cancel restores invoker; each chooser's Tab wrap inspected through 12 advances; headings/full-time focus deterministic |
-| Mouse only | PASS | v0.1 | complete mouse journey at every width, including selectors, chooser cancel/submit, disclosures and return |
-| Audio muted/caption path | PASS (prototype scope) | v0.1 | all journeys are silent; no information depends on sound. Future-caption reservation combined with every all-width pseudo/200% fixture; runtime #51 remains future-blocked, not a working caption consumer |
+| Ordinary case | PASS | v0.2 | mouse journeys at all three widths and keyboard journey: cancel/re-enter, choose/start, read state, speed/tactic/substitution, stats open/close, full time/report/return; synthetic 2–1 ordinary scenario and captured pitch; raw #37 values exercised by unusual-score journey |
+| Color-independent meaning | PASS | v0.2 | monochrome complete journeys; checked radio selection, literal Paused/Pending/Applied/Refused/Full time text, Home H/Away A marker identity, dashed disabled controls and persistent reasons |
+| Contrast | PASS | v0.2 | actual computed foreground/background pairs and ratios in `computed contrast`; each ≥4.5:1; 3px #161616 focus outline against white; disabled text #444 on #eee, not low opacity |
+| Long player/club/competition names | PASS | v0.2 | labelled long-identity stress fixture complete journey and 1366/1920/2560 + pseudo/200% geometry; actual S0 uses shirt/slot identity, not named squads |
+| Empty/large lists | N/A | v0.2 | no variable catalogue, sort/filter or career lists; S0's bounded chooser has 11 starting slots / 7 bench slots and fixed stat rows. Ordinary and limit checks exercise those bounds; genuinely empty frame is checked separately |
+| Many status indicators | PASS | v0.2 | `events` fixture, 15 feedback records; latest three visible; earlier disclosure remains open with summary focus over five live ticks and pause/resume; all-width geometry and complete journey; every Applied timestamp ≤ clock |
+| Pseudo-locale | PASS | v0.2 | approximately 40% bracketed expansion; complete fault/pseudo/200% journey and every applicable all-width fixture; equivalent stress content, not #49 localization runtime proof |
+| Alternate date/currency formatting | N/A | v0.2 | S0 contains no dates/currencies or management account surfaces |
+| No save | PASS | v0.2 | complete MM→TS→MV→PR→MM journey has no save/Continue/Load control or persistence promise |
+| Save/load failure where relevant | N/A | v0.2 | no save/load action or contract is admitted in S0; general failure remains separately tested |
+| No match frame yet | PASS | v0.2 | `no match frame`: waiting fixture stays non-live after clock advance, score/clock withheld, actions disabled with reason |
+| Disabled action with reason | PASS | v0.2 | waiting/full-time lock reasons, real-time/fastest boundary reasons, five-substitution limit; geometry at all widths |
+| Error/failure state (general) | PASS | v0.2 | `refused command`: last applied Mentality remains Balanced, persistent refusal, retry through ordinary staging; statistics failure preserves score/Return |
+| Missing art | PASS | v0.2 | every complete journey uses no external art/fonts; neutral pitch and explicit Home/Away/shirt identity remain usable |
+| Event-heavy match | PASS | v0.2 | `events` complete journey plus dense feedback/restart context with stats open; fixed scoreboard/action regions survive all-width pseudo/200% fixture |
+| Unusual scoreline | PASS | v0.2 | unmodified real 19–9 capture complete journey, separate from ordinary 2–1 scenario; each goals table agrees with score; score identity/columns preserved at all widths |
+| Full-time/frozen state | PASS | v0.2 | all complete journeys lock controls; `end race` starts at MM, reaches minute 89, pauses/submits/resumes, then resolves Pending as not applied on the live whistle tick; no direct-state load is claimed as a journey; report only available from MV-FT |
+| Small desktop — 1366-wide | PASS | v0.2 | 1366×768 full mouse/keyboard journeys; all stress fixtures; [expanded-text fault view](s0-prototype/evidence/stress-fault-1366.pdf); no horizontal overflow/clipped critical labels |
+| Reference — 1920×1080 | PASS | v0.2 | complete journey, all seven wireframes, and stress fixtures; playback region above pitch keeps high-frequency controls early |
+| Expanded — 2560-wide | PASS | v0.2 | complete journey/stress fixtures; capped content and compact rail, no extreme stretched control widths |
+| Max supported text scale | PASS (prototype value) | v0.2 | explicitly tested **200% base font** (16px → 32px; browser zoom stays 100%) with pseudo-locale and all-width failure/chooser fixtures plus complete journey. Shipping maximum remains unallocated; Gate I must name it and Gate J must retest that actual value |
+| Keyboard only | PASS | v0.2 | complete 1366 journey by Tab/arrows/Enter/Escape; cancel restores invoker; both submits immediately focus request feedback; 1×/10× boundaries focus Pause/Resume; live earlier-feedback focus survives refresh; `keyTo` rejects unexpected body focus; each chooser's Tab wrap inspected through 12 advances; headings/full-time focus deterministic |
+| Mouse only | PASS | v0.2 | complete mouse journey at every width, including selectors, chooser cancel/submit, disclosures and return |
+| Audio muted/caption path | PASS (prototype scope) | v0.2 | all journeys are silent; no information depends on sound. Future-caption reservation combined with every all-width pseudo/200% fixture; runtime #51 remains future-blocked, not a working caption consumer |
 
 ## 11.3 Findings, disposition and retest
 
@@ -755,7 +769,8 @@ Owner for each row is **Anton Zymin, UX workstream**. All findings concern **S0*
 | S0-E-002 / E | Major | initial native-modal traversal let focus leave the dialog cycle | `FIX NOW` | explicit first/last Tab/Shift-Tab wrap; complete keyboard journey and 12-cycle chooser probes PASS |
 | S0-E-003 / E | Minor | first reference wireframe placed playback controls after the tall pitch, below the initial viewport | `FIX NOW` | playback region moved above pitch; final screenshots and complete journeys PASS |
 | S0-E-004 / E | Minor | shipping maximum text scale is not yet allocated by the owning client/a11y contract | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION` | Gate I names actual maximum; Gate J repeats these checks at that value; current prototype evidence is 200% only |
-| S0-F-001 / F | Blocker (formal opening) | S0-P1/P2 availability and explicit independence/distinctness cells remain Due before S0 Gate F in protocol §4.1 | `FIX NOW` | owner records both attestations without names; no attestations or sessions fabricated by this work |
+| S0-E-005 / E | Major | v0.1 submit disabled its restored invoker; speed extremes disabled their focused control, leaving body focus | `FIX NOW` | v0.2 focuses request feedback / Pause-Resume; immediate submit and both speed-boundary assertions PASS, without Tab recovery from body |
+| S0-E-006 / E | Major | v0.1 rebuilt earlier-feedback disclosure closed every live tick and lost summary focus | `FIX NOW` | v0.2 preserves open state and logical summary ID; live five-tick and pause/resume regression PASS |
 
 S0-B-002's command-outcome adapter, S0-B-004's shirt-number usability risk, S0-B-003's future
 stoppage timing, and A-42's production health projection remain the existing later-gate obligations.
@@ -774,7 +789,8 @@ runtime and pinned-host acceptance remain explicit implementation/Gate-J work, n
 The [prototype](s0-prototype/index.html) supplies the four-context journey through all seven states,
 cancel/back before start, repeated entry/return, current speed and pause, Mentality staging/outcomes,
 substitution selection/cancel/outcomes, live statistics open/close, full time and report. Its visible
-banner states that all actions are simulated and captured reference output is not changed by choices.
+banner states that all actions are simulated, ordinary score/statistics are synthetic, and captured
+pitch positions are not changed by choices. The unusual-score fixture consumes the unmodified capture.
 Reviewer-only URL fixtures expose waiting, refusal, statistics failure, substitution limit, end-race,
 expanded text, dense feedback and resolution/scale cases; no debug controls enter the product surface.
 
@@ -796,7 +812,9 @@ records both anonymous sessions per §7; the prototype supplies no click-by-clic
 ## 12.2 What remains real versus simulated/future
 
 Real reference evidence: existing frame and coherent #37 snapshot ownership, roster cues, ended state,
-and the actual healthy 90-minute capture. Simulated prototype behavior: compressed timeline, staged
+and the actual healthy 90-minute capture used by the unusual-score fixture. Synthetic ordinary-session
+score/statistics are an explicit UX fixture, not #37 validation or a tuned engine result. Simulated
+prototype behavior: compressed timeline, staged
 choices, queue/outcome feedback, substitution count/legality presentation, observer-fault injection
 and caption-region fixture. Future production work: all P5b adapters/UGUI binding, font/localization/
 a11y application, actual maximum scale and runtime audio/captions. No prototype operation writes a
@@ -804,7 +822,15 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 
 ## 12.3 Assessment and next gate
 
-**Gate-F deliverable: READY. Formal Gate-F opening/pass: PENDING S0-F-001.** The executable complete-task
+| Formal F prerequisite | Owner | Status / evidence |
+|---|---|---|
+| S0-P1 availability and independence | Anton Zymin | Due; protocol §4.1 attestation cell unchanged |
+| S0-P2 availability, independence and distinctness from P1 | Anton Zymin | Due; protocol §4.1 attestation cell unchanged |
+
+Former S0-F-001 is reclassified here as prerequisite tracking. It is not a usability finding, severity
+rating, or `FIX NOW` design defect. No availability or independence fact is inferred from authorization.
+
+**Gate-F deliverable: READY. Formal Gate-F opening/pass: PENDING the participant prerequisites above.** The executable complete-task
 and critical-state requirements are satisfied by the vehicle/evidence above. The current execution
 plan's F4 mechanism and validation protocol §4.1 also require owner-attested availability plus explicit
 independence/distinctness for **both** anonymous real-person slots **before Gate F opens**. The request
@@ -828,3 +854,4 @@ draft/blocked on S0 Gate I**; this docs-only vehicle does not release it or perf
 | 0.4 | September 21, 2026 | Review closeout: repins the maintained execution/validation authority headers to `ux-detailed-plan.md` v1.8 / `ux-validation-protocol.md` v0.11 and makes the Gate-A verdict taxonomy explicit. `UNWIRED` means an existing contract lacks production presentation/binding; `FUTURE-BLOCKED` means the required contract/state/runtime capability itself is absent. This prevents the A-07/A-11 contract gaps from being laundered later as P5b-only binding work. Gate A remains PASS; Gate B remains next. |
 | 0.5 | September 28, 2026 | **S0 Gate B complete; B-DEC-1/2/5 owner-confirmed September 28, 2026.** Adds §7 Gate B: seven journey states over the four typed screens using only the five existing `ClientScreenFlow` moves; per-state entry/goal/information/actions/alternate/back/completion; the requested/applied/refused/not-applied intervention feedback model over `MatchSession.Driver.Log`/`FailedCommands`; blocked-path table with owner-sourced reasons; #37 statistic set (no shots row; xG only when available); S0-T1–T7 + PM-1 substitution coverage; findings S0-B-001–009. Gate-A re-check at `main` `ee37aa60` **corrects A-10**: `TeamTactic.Formation` has no simulation consumer, so S0's pre-match choice is Mentality; adds A-38–A-42 (command-outcome logs, AI opponent mode, shirt-number identity, substitution legality inputs, statistics health). A-42 / S0-B-009 were added before merge in response to automated review of PR #472: the flow now surfaces an analytics-observer fault in place of presenting frozen statistics as current. B-DEC-1/2/5 explicitly owner-confirmed September 28, 2026; B-DEC-5 states full time as the authoritative transition and the report control as acknowledgement only. Adds §8 Gate C inputs. No `src/` change; P5b remains gated on Gate I. |
 | 0.6 | September 30, 2026 | Adds Gates C/D information design and state matrix; seven monochrome wireframes and a complete interactive prototype under `s0-prototype/`; real 91-snapshot MatchClientHost capture; executed Gate-E resilience matrix with fixed/retested overflow and modal-focus findings. C–E PASS; F deliverable READY but formal opening/pass awaits both pre-F participant attestations (S0-F-001). Statistics-failure decision retains labelled live partial figures and hides report partial figures behind disclosure. No production/spec/Unity changes; G requires real independent sessions, H/I unopened, #470 remains blocked. |
+| 0.7 | September 30, 2026 | PR #473 review correction: withdraws initial E pass; fixes submit/speed focus and live feedback disclosure Majors; 74-check run 02 passes with direct focus and live-timer assertions. Coherent synthetic 2–1 ordinary session; raw 19–9 capture reserved for unusual-score checks; normal-play whistle race; removes contradictory captured substitution row; distinguishes base-font scaling from zoom. Moves tester attestations from findings to formal F prerequisites. C-DEC-1 remains a Gate-C design choice, not an owner-confirmed decision; no gate rule requires its confirmation. F/G/H/I remain unpassed, #470 blocked. |

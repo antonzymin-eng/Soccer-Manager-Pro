@@ -17,17 +17,23 @@ async function open(query = '', viewport = { width: 1920, height: 1080 }) {
   const page = await browser.newPage({ viewport });
   page.on('pageerror', error => { throw error; });
   await page.clock.install({ time: new Date('2026-09-30T04:00:00Z') });
-  await page.clock.pauseAt(new Date('2026-09-30T04:00:00Z'));
+  await page.clock.pauseAt(new Date('2026-09-30T04:00:01Z'));
   await page.goto(base + query);
   return page;
 }
 async function has(page, phrase) { assert((await page.locator('main').innerText()).includes(phrase), phrase); }
 async function keyTo(page, selector) {
+  assert(await page.evaluate(() => document.activeElement !== document.body) || selector === '#open-setup',
+    'Unexpected body focus before keyboard navigation to ' + selector);
   for (let index = 0; index < 150; index++) {
     if (await page.locator(selector).evaluate(el => el === document.activeElement)) return;
     await page.keyboard.press('Tab');
   }
   throw new Error('Keyboard could not reach ' + selector);
+}
+async function focused(page, id) {
+  assert.equal(await page.evaluate(() => document.activeElement.id), id, 'focus destination: ' + id);
+  assert(await page.locator('#' + id).evaluate(el => el.isConnected && !el.disabled), 'valid focus target');
 }
 async function activate(page, selector, keyboard) {
   if (keyboard) { await keyTo(page, selector); await page.keyboard.press('Enter'); }
@@ -94,6 +100,7 @@ async function journey(query, viewport, keyboard, label) {
   if (keyboard) { await page.keyboard.press('ArrowDown'); await keyTo(page, '#submit-change'); await page.keyboard.press('Enter'); }
   else { await page.locator('#new-mentality').selectOption('5'); await page.locator('#submit-change').click(); }
   await has(page, 'Pending');
+  await focused(page, 'request-feedback');
   await has(page, 'Current Mentality: Positive');
   await page.clock.runFor(2000);
   await has(page, 'Pending');
@@ -109,10 +116,15 @@ async function journey(query, viewport, keyboard, label) {
   await has(page, 'Substitutions used: 0 / 5');
   await activate(page, '#substitute', keyboard);
   await activate(page, '#submit-change', keyboard);
+  await focused(page, 'request-feedback');
   await page.clock.runFor(1000);
+  await focused(page, 'request-feedback');
   await has(page, 'Substitutions used: 1 / 5');
   await activate(page, '#stats', keyboard);
   await has(page, 'Possession %');
+  assert.equal(await page.getByRole('rowheader', { name: 'Substitutions', exact: true }).count(), 0,
+    'Captured zero must not contradict the simulated applied count');
+  await has(page, 'Captured reference pitch — simulated substitutions do not replace these markers');
   assert.equal(await page.locator('th').filter({ hasText: /shots|xG/i }).count(), 0);
   await geometry(page, label + ' live statistics');
   await activate(page, '#stats', keyboard);
@@ -182,7 +194,7 @@ async function fixtures() {
   assert(await fault.locator('#return').isEnabled());
   const score = await fault.locator('.score').innerText();
   await fault.locator('summary').click();
-  await has(fault, 'Partial figures through minute 18 — not full-match totals');
+  await has(fault, 'partial figures through minute 18 — not full-match totals');
   record('statistics failure', `Final frame score ${score} remained visible, partial table hidden by default, frozen minute 18 stated, return enabled.`);
   await fault.close();
   const refusal = await open('?state=MV-L&fixture=refusal');
@@ -193,9 +205,24 @@ async function fixtures() {
   await has(refusal, 'Refused'); await has(refusal, 'Current Mentality: Balanced');
   record('refused command', 'Persistent inline refusal; last applied value remained Balanced; Change Mentality enabled again.');
   await refusal.close();
-  const pending = await open('?review=1&state=MV-FT&fixture=pending-end');
+  const pending = await open();
+  await pending.locator('#open-setup').click();
+  await pending.locator('#start').click();
+  await pending.clock.runFor(91000); // First frame at 2 seconds, then 89 live minutes.
+  await has(pending, 'Minute 89');
+  await pending.locator('#pause').click();
+  await pending.locator('#tactic').click();
+  await pending.locator('#new-mentality').selectOption('5');
+  await pending.locator('#submit-change').click();
+  await focused(pending, 'request-feedback');
+  await pending.clock.runFor(2000);
+  await has(pending, 'Pending'); await has(pending, 'Minute 89');
+  await pending.locator('#pause').click();
+  await pending.clock.runFor(1000);
   await has(pending, 'Not applied — match ended');
-  record('end race', 'Pending request resolved as not applied; no success claimed.');
+  await has(pending, 'Current Mentality: Balanced');
+  await focused(pending, 'report');
+  record('end race', 'Normal MM→TS→MV journey reached minute 89; paused request stayed Pending; resume/next live tick reached the whistle before application. Not applied, Balanced retained, report focused.');
   await pending.close();
   const waiting = await open('?state=MV-0&fixture=waiting');
   await waiting.clock.runFor(10000);
@@ -205,6 +232,7 @@ async function fixtures() {
   await waiting.close();
   const boundary = await open('?review=1&state=MV-L');
   for (let i = 0; i < 3; i++) await boundary.locator('#faster').click();
+  await focused(boundary, 'pause');
   await has(boundary, 'Selected speed 10×');
   assert(await boundary.locator('#faster').isDisabled());
   await has(boundary, 'Already at the fastest speed');
@@ -212,8 +240,44 @@ async function fixtures() {
   await has(boundary, 'Selected speed 10× • Paused');
   await boundary.locator('#slower').click();
   await has(boundary, 'Selected speed 5× • Paused');
-  record('speed boundaries', 'Fastest control clamped at 10× with reason; pause retained rung; changing rung while paused retained pause.');
+  for (let i = 0; i < 2; i++) { await keyTo(boundary, '#slower'); await boundary.keyboard.press('Enter'); }
+  await focused(boundary, 'pause');
+  assert(await boundary.locator('#slower').isDisabled());
+  for (let i = 0; i < 3; i++) { await keyTo(boundary, '#faster'); await boundary.keyboard.press('Enter'); }
+  await focused(boundary, 'pause');
+  record('speed boundaries', 'Mouse and keyboard reach 1×/10×; newly disabled Slower/Faster recover focus to Pause/Resume immediately. Pause retains rung.');
   await boundary.close();
+  const history = await open('?state=MV-L&fixture=events');
+  await keyTo(history, '#earlier-feedback-toggle');
+  await history.keyboard.press('Enter');
+  await focused(history, 'earlier-feedback-toggle');
+  await history.clock.runFor(5000);
+  assert(await history.locator('#earlier-feedback').evaluate(el => el.open));
+  await focused(history, 'earlier-feedback-toggle');
+  await keyTo(history, '#pause'); await history.keyboard.press('Enter');
+  await has(history, 'Paused');
+  assert(await history.locator('#earlier-feedback').evaluate(el => el.open));
+  await history.keyboard.press('Enter');
+  await history.clock.runFor(1000);
+  assert(await history.locator('#earlier-feedback').evaluate(el => el.open));
+  record('live earlier feedback', 'Keyboard-opened disclosure remains open and summary keeps focus over five live ticks; stays open across pause/resume and another tick. Timer not frozen by review=1.');
+  await history.close();
+  const chronology = await open('?fixture=events');
+  await chronology.locator('#open-setup').click(); await chronology.locator('#start').click();
+  await chronology.clock.runFor(2000);
+  await has(chronology, 'Minute 15');
+  const minutes = await chronology.locator('.feedback').allTextContents();
+  assert(minutes.every(line => Number(line.match(/minute (\d+)/)[1]) <= 15));
+  record('dense feedback chronology', 'Synthetic prior changes are seeded at the first live frame, minute 15; all 15 Applied timestamps are at or before the visible clock. Waiting state has no future Applied records.');
+  await chronology.close();
+  for (const [fixture, expected] of [['ordinary', '2 – 1'], ['scoreline', '19 – 9']]) {
+    const score = await open('?review=1&state=PR&fixture=' + fixture);
+    assert.equal(await score.locator('.score').innerText(), expected);
+    const goals = score.getByRole('row', { name: /^Goals recorded/ });
+    assert.deepEqual(await goals.locator('td').allTextContents(), expected.split(' – '));
+    await score.close();
+  }
+  record('score/statistics coherence', 'Synthetic ordinary scenario finishes 2–1; unmodified unusual capture finishes 19–9. Each scoreboard agrees with its goals table; source types labelled explicitly.');
   const endDialog = await open('?state=MV-L');
   for (let i = 0; i < 3; i++) await endDialog.locator('#faster').click();
   await endDialog.locator('#tactic').click();
@@ -242,8 +306,8 @@ async function fixtures() {
   }
   await contrast();
   await fixtures();
-  const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'verify.cjs'];
+  const files = ['index.html', 'prototype.css', 'model.js', 'prototype.js', 'reference-data.js', 'scenario-data.js', 'verify.cjs'];
   const hashes = Object.fromEntries(files.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
-  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-01', journey: 'S0', prototype: 's0-prototype v0.1', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, results }, null, 2) + '\n');
+  fs.writeFileSync(path.join(evidence, 'walkthrough.json'), JSON.stringify({ created: '2026-09-30', purpose: 'Executed S0 scripted resilience evidence; not participant results', runId: 'UX-GE-S0-20260930-02', supersedes: 'UX-GE-S0-20260930-01: Gate-E pass withdrawn after reproduced focus/disclosure Majors; 71 checks were insufficient', journey: 'S0', prototype: 's0-prototype v0.2', textScaleMethod: 'scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%', date: '2026-09-30 (UTC)', runner: 'Codex scripted/self-walkthrough', browser: browser.version(), hashes, results }, null, 2) + '\n');
   console.log(`PASS: ${results.length} recorded checks; seven wireframe PDFs plus two resilience PDFs.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

@@ -1,4 +1,4 @@
-# S0 low-fidelity prototype v0.1
+# S0 low-fidelity prototype v0.2
 
 **Created:** September 30, 2026\
 **Purpose:** executable Gates C–F design evidence for the [S0 journey packet](../ux-s0-pm1-journey.md).
@@ -10,14 +10,17 @@ identities and five named navigation moves. It does not consume or modify Unity 
 
 Every action and command result is simulated. Clock progression is compressed to one match minute per
 second at the 1× selection for practical prototype sessions. Pause retains the selected rung. Captured
-snapshots supply pitch, score and #37 statistics; tactical/substitution choices do not recompute the
-recorded match or its statistics. The displayed substitution count is explicitly prototype request state.
+pitch positions come from the unmodified capture. The ordinary 2–1 score/statistics scenario is
+explicitly synthetic. `fixture=scoreline` uses the unmodified 19–9 capture for real-data validation; tactical/substitution choices do not recompute the
+selected scenario or its statistics. The captured Substitutions row is omitted from this vehicle;
+the pitch states that simulated swaps do not replace its captured markers. The shipping statistic
+set in packet §7.7 is unchanged. The displayed substitution count is explicitly prototype request state.
 No shipping speed, timing, telemetry, performance or determinism certificate follows from this prototype.
 
 ## Vehicles and provenance
 
 `model.js` contains pure simulated transitions. `prototype.js` renders semantic controls and owns only
-presentation state. `prototype.css` provides monochrome hierarchy/reflow. `reference-data.js` records
+presentation state. `scenario-data.js` supplies the labelled synthetic ordinary fixture. `prototype.css` provides monochrome hierarchy/reflow. `reference-data.js` records
 unmodified `MatchClientHost.Project()` / `BuildReport()` output from the existing reference composition.
 Its header object records source SHA, seed and manager modes. It is not a synthetic second accumulator.
 
@@ -44,12 +47,13 @@ For example, open `index.html?review=1&state=MV-L&fixture=fault&pseudo=1&scale=2
 | `review=1` | freeze timer for wireframe inspection; navigation/controls still work |
 | `fixture` | `ordinary`, `waiting`, `fault`, `refusal`, `limit`, `pending-end`, `long-names`, `scoreline`, `events` |
 | `pseudo=1` | bracketed labels with approximately 40% expansion; equivalent stress content, not #49 runtime |
-| `scale=2` | explicit 200% text stress value; shipping maximum remains unallocated |
+| `scale=2` | 200% base-font stress (16px → 32px), browser zoom stays 100%; shipping maximum unallocated |
 | `captions=1` | future-caption region coexistence fixture only; #51 runtime remains future-blocked |
 
-The fault fixture exposes values captured through minute 18 beneath an incomplete notice; score/time
+The fault fixture exposes synthetic values through minute 18 beneath an incomplete notice; score/time
 continue from later frames. The report hides those partial values until disclosure. The unusual-score
-fixture is synthetic and marked by its reviewer URL, not a claimed real match result. Long identity text
+fixture selects the actual 19–9 reference capture and labels that source in the banner.
+The ordinary 2–1 scenario is chosen for practical sessions, not as an engine realism result. Long identity text
 is a labelled stress fixture; the ordinary demo uses Home/Away and shirt numbers, with no invented names.
 
 ## Verification
@@ -60,7 +64,11 @@ With Playwright available, run the recorded walkthrough from the repository root
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-prototype/verify.cjs
 ```
 
-The runner emits `evidence/walkthrough.json` and seven reference-size wireframe PDFs. It traverses
+The runner emits `evidence/walkthrough.json` and nine PDFs (seven wireframes plus two resilience views). The v0.2 run has 74 checks; the original
+71-check v0.1 evidence is archived and its Gate-E pass withdrawn after review found two Majors.
+Keyboard navigation rejects unexpected body focus; submits and both speed limits assert immediate
+focus destinations. Earlier feedback is tested over live timer ticks, not only frozen review frames.
+The end-race test reaches minute 89 from MM, submits while paused, then resumes to the whistle. It traverses
 S0-T1–T7 plus substitution, tests semantic outcomes, and inspects layout/focus/failure fixtures. See the
 journey packet's Gate-E matrix for limits, N/A reasons and remaining implementation obligations.
 Automated/self-walkthrough evidence supplies no Gate-G participant results.
@@ -75,3 +83,4 @@ independent sessions. H/I remain unopened; draft PR #470 stays blocked on Gate I
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 30, 2026 | Initial low-fidelity S0 vehicle, captured reference data and reproducible walkthrough. |
+| 0.2 | September 30, 2026 | Fixes live focus/disclosure; coherent ordinary synthetic 2–1 versus captured 19–9 fixtures; reachable whistle race; 74 checks; archives insufficient original E run; clarifies text-scale method and formal F prerequisites. |

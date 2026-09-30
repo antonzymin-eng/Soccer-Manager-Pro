@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **S0 UX Gates C–E complete; Gate-F vehicle ready, formal F pending participant attestations.**
+> **Last Updated:** September 30, 2026 — **PR #473 review corrections: focus/disclosure Majors fixed; initial E claim withdrawn and retested.**
+>
+> **What:** Packet v0.7, prototype v0.2, detailed plan v1.11 and validation protocol v0.14. Submitting a request focuses persistent feedback; speed extremes focus Pause/Resume. Earlier-feedback disclosure preserves open state and focus through live refresh. Ordinary score/statistics are explicitly synthetic 2–1; the captured 19–9 case remains unchanged for raw-data/unusual-score checks. The captured substitution row is omitted, pitch limitation labelled, dense-history timestamps coherent, and the whistle can beat a queued request during a normal journey.
+>
+> **Evidence:** Run `UX-GE-S0-20260930-02` has 74 Chromium checks with direct focus assertions, live-timer disclosure regression, and normal-play end race; original 71-check evidence archived, original E pass withdrawn. Nine PDFs regenerated and visually inspected. Text scale means doubled base font, not browser zoom. Cross-document current-version annotations corrected and consistency check included.
+>
+> **Boundary:** Tester availability/independence is tracked as formal F prerequisites rather than a usability Blocker. No attestation/session, F/G/H/I pass or production/spec change; #470 stays blocked. C-DEC-1 remains a Gate-C design choice; owner confirmation is not claimed.
+>
+> **Last Updated (prior):** September 30, 2026 — **S0 UX Gates C–E complete; Gate-F vehicle ready, formal F pending participant attestations.**
 >
 > **What:** S0 packet v0.6 adds low-fidelity hierarchy/focus/reflow, all seven wireframes, the full state matrix, the statistics-failure presentation decision, and a complete executable design prototype. The existing reference `MatchClientHost` was called without modifying its harness: 91 snapshots on `main` `c37213ab`, seed `0x00C11E7B6D0C`, home Human/away AI, through tick 324000, healthy #37 observer, final frame score 19–9. The captured output is preserved; simulated prototype choices do not rerun the match or mutate production.
 >

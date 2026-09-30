@@ -29,6 +29,8 @@
       case 'ADVANCE': {
         if (s.screen !== 'MV-L') return s;
         let next = { ...s, minute: Math.min(90, s.minute + action.minutes) };
+        // At the whistle, pending requests lose the race; never report an application at full time.
+        if (next.minute === 90) return reduce(next, { type: 'FULL_TIME' });
         next.requests = s.requests.map(request => {
           if (request.status !== 'Pending') return request;
           if (action.refuse) return { ...request, status: 'Refused', minute: next.minute };
@@ -39,7 +41,7 @@
           }
           return { ...request, status: 'Applied', minute: next.minute };
         });
-        return next.minute === 90 ? reduce(next, { type: 'FULL_TIME' }) : next;
+        return next;
       }
       case 'FULL_TIME': return s.screen.startsWith('MV-') ? { ...s, screen: 'MV-FT', minute: 90,
         requests: s.requests.map(r => r.status === 'Pending' ? { ...r, status: 'Not applied — match ended' } : r) } : s;
