@@ -90,9 +90,9 @@ Automated/self-walkthrough evidence supplies no Gate-G participant results.
 ## Gate boundary
 
 C–F are complete for v0.5. The owner-approved v0.4 images/decisions remain pinned in validation
-protocol §9.1; v0.5 awaits owner delta approval of only the new full-time fault image in §9.1.1.
-The other 18 PDFs match approved v0.4 apart from version text and carry forward. H is paused for
-this revision until that delta is approved. The owner conducts S0 image reviews; no tester prerequisite
+protocol §9.1; the owner approved the v0.5 full-time fault delta at `0e8bd2b` in §9.1.1.
+The other 18 PDFs match approved v0.4 apart from version text and carry forward. G is PASS and H is OPEN
+for high-fidelity work and owner image review. The owner conducts S0 image reviews; no tester prerequisite
 returns. H then needs its own separate image approval before I; #470 remains blocked on I.
 Scripted evidence supplies no runtime or independent usability evidence.
 
@@ -105,3 +105,4 @@ Scripted evidence supplies no runtime or independent usability evidence.
 | 0.4 | September 30, 2026 | Adds dropdown label/focus spacing and measured clearance; removes leader-line promise; shortens refusal and player-facing substitution wording. Regenerates 18 images; 80-check run 04; successful run 03 archived. Pending decisions and H/I obligations stay explicit. |
 | 0.5 | September 30, 2026 | Codex corrections: fault activates on cutoff crossing; full-time fault notice states final score; normal-text focus check omits pseudo and verifies actual labels/fonts. 85-check run 05 and 19 PDFs stored separately; approved v0.4 images/evidence preserved. Current revision awaits G re-review. |
 | 0.5 copy delta | September 30, 2026 | Suppresses the final-statistics report promise only when faulted; three focused checks and one regenerated PDF. Immutable run05 remains historical; separate delta record holds current hashes. Single-image owner approval pending; disabled Close statistics carried to H. |
+| 0.5 delta approval | September 30, 2026 | Records actual owner approval pinned to 0e8bd2b; G PASS, H OPEN, I/#470 blocked on separately approved H images. Markdown-only record; sources, PDFs and evidence unchanged. |

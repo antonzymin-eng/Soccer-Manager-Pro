@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.20\
-**Status:** F4 + S0 A–F COMPLETE — G DELTA REVIEW PENDING FOR v0.5; H PAUSED; I BLOCKED\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.17 §F4 and Gates E–G\
+**Version:** 0.21\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.18 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -487,7 +487,7 @@ Tester sessions and attestations are not required for S0. Gate F must still supp
 interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
 the high-fidelity images before the Gate-I handoff. Gate J verifies the real client.
 
-#### 9.1.1 v0.5 single-image delta review — pending
+#### 9.1.1 v0.5 single-image delta review — approved
 
 Codex review found premature/direct-state fault initialization, one-tick-late normal fault activation,
 full-time wording claiming continued play, and a normal-text check that used `pseudo=0` despite
@@ -499,12 +499,63 @@ normal-text coverage and the fault timeline are superseded by the actual run-05 
 | Review ID | `UX-GG-S0-OWNER-20260930-04` |
 | Reviewer | Anton Zymin |
 | Revision / evidence | Prototype v0.5; baseline `UX-GE-S0-20260930-05` at `a859ea1`, 85 passing checks (unchanged historical record). Focused `UX-GE-S0-20260930-05-DELTA-01`: three passing checks and current seven-source/19-image fingerprints in `s0-prototype/evidence/v0.5/full-time-fault-delta.json`. No new full evidence run. |
-| Candidate image / carry-forward | Only `s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` needs delta approval. Text extraction verifies the other 18 paths in packet §9.4 match approved v0.4 apart from version text; carry those forward. This correction preserves those 18 v0.5 PDFs byte-for-byte and all original approved PDFs. |
+| Approved image / carry-forward | Anton Zymin approved `s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. Text extraction verifies the other 18 paths in packet §9.4 match approved v0.4 apart from version text; carry those forward. This correction preserves those 18 v0.5 PDFs byte-for-byte and all original approved PDFs. |
 | Findings | S0-G-013–016 `FIX NOW`, fixed/retested; previous dispositions remain. S0-H-004 adds disabled Close statistics presentation to H backlog. |
 | Owner decisions | C-DEC-1 / S0-G-008 and S0-B-002 / S0-B-004 acceptance conditions remain as actually adopted above |
-| Owner review date / reviewed commit / statement | PENDING — no approval inferred from the instruction to resolve comments |
-| Gate G for v0.5 | PENDING owner delta approval of the one new full-time statistics-fault image; v0.4 approval remains pinned above |
-| H / I | H paused for the corrected revision until G delta review passes. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
+| Owner review date / reviewed commit / statement | September 30, 2026, 13:43 America/Los_Angeles (20:43 UTC); `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`; actual reply: “approved”. Scope is the corrected single-image delta presented immediately before that reply, with the other 18 carried forward. |
+| Gate G for v0.5 | PASS — actual owner delta approval recorded; prior v0.4 approval and accepted decisions remain pinned above |
+| H / I | H OPEN for high-fidelity work and separate owner image review; H is not passed. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
+
+**Actual owner confirmation (verbatim):**
+
+> approved
+
+The preceding review request identified the corrected full-time statistics-fault PDF at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`,
+said the other 18 carry forward from approved v0.4, and stated that this delta approval resumes H.
+This record applies that scope; it does not create a broader owner statement or H/I approval.
+The earlier C-DEC-1/S0-G-008 decisions and S0-B-002/S0-B-004 reasons/release conditions remain as adopted in §9.1.
+
+**Pinned v0.5 image set:** the one new image is approved by this delta; the other 18 are carried forward.
+
+| Image path | Review basis | SHA-256 at reviewed commit |
+|---|---|---|
+| [`docs/design/s0-prototype/evidence/v0.5/mentality-dialog.pdf`](s0-prototype/evidence/v0.5/mentality-dialog.pdf) | Carried from approved v0.4; version text only | `62703007c3b7898414f96cc445970373bf67fe1b2a1e05f5507ce5c7dd97c5ac` |
+| [`docs/design/s0-prototype/evidence/v0.5/mm.pdf`](s0-prototype/evidence/v0.5/mm.pdf) | Carried from approved v0.4; version text only | `ca250ec4314275f3719f3c86ec3475eb543b8a1e85ca605d66deeee64da64195` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-0.pdf`](s0-prototype/evidence/v0.5/mv-0.pdf) | Carried from approved v0.4; version text only | `97a84b504ffaea95fba53615afa440420045fbc6b578f31cf56dc04b84ee279c` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf`](s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf) | Carried from approved v0.4; version text only | `1042e2edb6c1aead93cc7bc84eb24e64ec058fac2f9e8823ea779c8012ee5a75` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf`](s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf) | Owner-approved delta | `0a2b1af953f0262979a19fab831aa4d0f8ca45d574c7bbb5bbb9bb4fc90a0751` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft.pdf`](s0-prototype/evidence/v0.5/mv-ft.pdf) | Carried from approved v0.4; version text only | `c3dd83cc75f11e8afc01549abae87a47511ebe3368c53843a90ab1ad7564bf44` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-l.pdf`](s0-prototype/evidence/v0.5/mv-l.pdf) | Carried from approved v0.4; version text only | `b0275702b8933ef5e11e9ab074273788463fc29ef58a808ac7c5ca41caa5e06a` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-applied.pdf`](s0-prototype/evidence/v0.5/mv-live-applied.pdf) | Carried from approved v0.4; version text only | `6ec218138a3d6e003322f63254ae239364d66b48f681426963b67720f0cb763a` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-pending.pdf`](s0-prototype/evidence/v0.5/mv-live-pending.pdf) | Carried from approved v0.4; version text only | `8f43b54767a8e6862622a5729ab0bc46074a7dfe1cfc64e38842f46db12868de` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-refused.pdf`](s0-prototype/evidence/v0.5/mv-live-refused.pdf) | Carried from approved v0.4; version text only | `9d3d49a042730754ed8ea46256c51a0ad015f4d1b39bc01908547545417053aa` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-statistics.pdf`](s0-prototype/evidence/v0.5/mv-live-statistics.pdf) | Carried from approved v0.4; version text only | `f2c585e18c207532cca9f61a87993a6445961ffbd3b61877102765d01ac322a7` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-p.pdf`](s0-prototype/evidence/v0.5/mv-p.pdf) | Carried from approved v0.4; version text only | `5bda7dd0fb201e3bdb510ce6a0b1cc9c6297e74dfe21f24d5cf43391ecf0e37d` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-paused-pending.pdf`](s0-prototype/evidence/v0.5/mv-paused-pending.pdf) | Carried from approved v0.4; version text only | `343e36bdb0efe91f0ae09d50a5deecd12d294b56f6c03783b952ee739954a5fd` |
+| [`docs/design/s0-prototype/evidence/v0.5/pr.pdf`](s0-prototype/evidence/v0.5/pr.pdf) | Carried from approved v0.4; version text only | `b57b6a6e13c36cd185f7116c6774047fde1d410b10da68f9bc930fa1ea092f79` |
+| [`docs/design/s0-prototype/evidence/v0.5/report-incomplete.pdf`](s0-prototype/evidence/v0.5/report-incomplete.pdf) | Carried from approved v0.4; version text only | `6fdf901c556c5eb84a92b04cb3cd4e22ec7d988c889d1601e37236e0b84c76d7` |
+| [`docs/design/s0-prototype/evidence/v0.5/report-partial-open.pdf`](s0-prototype/evidence/v0.5/report-partial-open.pdf) | Carried from approved v0.4; version text only | `f9ac7f8d853c5fa267d80ab8d1c896a6f04f01129db7db827957cef0208455e9` |
+| [`docs/design/s0-prototype/evidence/v0.5/stress-fault-1366.pdf`](s0-prototype/evidence/v0.5/stress-fault-1366.pdf) | Carried from approved v0.4; version text only | `11fc5c15e84eb792e1b15039f53278f9b895a24c44d62b338936529d642cd6b5` |
+| [`docs/design/s0-prototype/evidence/v0.5/substitution-dialog.pdf`](s0-prototype/evidence/v0.5/substitution-dialog.pdf) | Carried from approved v0.4; version text only | `82445da4c7e8f975c4bd2137843583ad5fdbe96885780046cf70e02dc1a1be4e` |
+| [`docs/design/s0-prototype/evidence/v0.5/ts.pdf`](s0-prototype/evidence/v0.5/ts.pdf) | Carried from approved v0.4; version text only | `ef89daa7e2a57b97d787a166c6f431db4097e41fe3e00b38997e44f6590db374` |
+
+**Pinned prototype sources:**
+
+| Source path | SHA-256 at reviewed commit |
+|---|---|
+| `docs/design/s0-prototype/index.html` | `18869864ca1fe8eb233a94e48aa23de6d5626f05e9292e8c4e9a39954b60cf41` |
+| `docs/design/s0-prototype/prototype.css` | `60aaede3535622638dcdce0abd89c366b00404663c9df02f9c11e4e2ae557d87` |
+| `docs/design/s0-prototype/model.js` | `bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c` |
+| `docs/design/s0-prototype/prototype.js` | `dfd9c8cd639bc0c34bc0bc8d92039c74ef9ac68165dade8dab5d4b99b78b18d5` |
+| `docs/design/s0-prototype/reference-data.js` | `fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69` |
+| `docs/design/s0-prototype/scenario-data.js` | `05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866` |
+| `docs/design/s0-prototype/verify.cjs` | `18bf2d1642cd0f9d2116d6a4d016785085976037aa14012f96476b1451f0851a` |
+
+Supporting evidence: `UX-GE-S0-20260930-05-DELTA-01` (three focused checks), delta JSON SHA-256 `d6e61c51b157736199ec5dff21910c24bf046b67aaf352d77da84cada9e8de7e`; baseline run `UX-GE-S0-20260930-05` (85 checks) remains historical at `a859ea1`.
+
+**Recording boundary:** this approval-recording change edits Markdown documents only. All seven prototype
+sources, all 19 v0.5 PDFs, the focused delta JSON, and all earlier evidence remain byte-identical to
+the reviewed commit `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. No image regeneration or new test run accompanies the record.
 
 ### 9.2 S1 participant decision record
 
@@ -582,7 +633,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 owner delta review. H is paused for that revision; I/#470 remain blocked. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H is OPEN for high-fidelity work and separate owner image review; I/#470 remain blocked. S1 requires its two independent completions.
 
 ---
 
@@ -610,3 +661,4 @@ S0 Gate G passed for pinned v0.4 in §9.1; corrected v0.5 awaits the §9.1.1 own
 | 0.18 | September 30, 2026 | Fills §9.1 with explicit owner confirmation and adopted statement verbatim, review ID/date/full commit, 18 paths/hashes, run 04 and carried-Major reasons/release conditions. G PASS; H OPEN; I/#470 blocked. Documents-only recording preserves the full prototype/evidence tree. |
 | 0.19 | September 30, 2026 | Preserves the completed v0.4 approval verbatim and original image hashes; dates its immutable recording boundary. Adds pending v0.5 correction-review record with 85-check run 05 / 19 separate PDFs. No approval inferred from fixing Codex comments. |
 | 0.20 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
+| 0.21 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
