@@ -1,11 +1,11 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** September 28, 2026  
-**Version:** 0.12\
-**Status:** F4 + S0 GATES A–B COMPLETE (B owner-confirmed September 28, 2026) — Gate C next; anonymous participant requirements unchanged\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.9 §F4 and Gates E–G\
-**Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4  
+**Last Updated:** September 30, 2026\
+**Version:** 0.21\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.18 §F4 and Gates E–G\
+**Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
 ---
@@ -23,13 +23,20 @@ produce comparable evidence rather than an informal design review.
 F4 is **complete** at this revision. The project owner assigned **Anton Zymin** as the
 `ux-detailed-plan.md` §10.1 UX-workstream accountable owner on September 11, 2026 and then directed
 that participant names be omitted. The protocol therefore uses stable anonymous slots and never
-stores participant names or contact details. The UX owner attests that two distinct real people are
-available for the applicable anonymous slots before a journey reaches Gate F. Gate G still requires
-both people to complete the round; anonymity is not a waiver or provisional bypass.
+stores participant names or contact details. For S1, the UX owner attests that two distinct real
+people are available for the applicable anonymous slots before Gate F and both complete Gate G. For S0, the September 30 owner decision
+supersedes those participant prerequisites with owner image review (§9.1).
 
 ---
 
 ## 2. Four-layer validation sequence
+
+**S0 review route, owner-directed September 30, 2026:** Anton Zymin conducts the image review
+in place of independent tester sessions. The former S0-P1/P2 recruitment, availability and
+independence prerequisites are superseded. Sections 3/5 retain the complete task and scripted
+interaction coverage; the participant mechanism and session templates below apply to S1 and
+optional future research. For S0, use §9.1. No owner image approval is inferred from this decision.
+This amendment supersedes the earlier S0 participant requirements throughout this protocol.
 
 Run the layers in this order for each journey:
 
@@ -37,13 +44,13 @@ Run the layers in this order for each journey:
    explicitly marked `FUTURE-BLOCKED`.
 2. **Scripted heuristic/self-walkthrough** — run the complete task against the resilience matrix in
    §5 before showing the prototype to a participant.
-3. **Independent task-based participant test** — run the Gate-G round using the neutral moderator
-   script in §6. The designer/implementer does not count as a participant.
+3. **Design validation** — S0 uses the owner image review in §9.1; S1 uses the independent
+   Gate-G round and neutral moderator script in §6. The designer/implementer is not an S1 participant.
 4. **Implementation verification** — after implementation, verify the real client against the
    validated handoff and host/cert requirements at Gate J.
 
-A later layer never repairs a skipped earlier layer. In particular, self-walkthrough evidence never
-substitutes for the two-participant Gate-G round.
+A later layer never repairs a skipped earlier layer. Self-walkthrough evidence does not replace
+S0 owner image approval or the S1 two-participant Gate-G round.
 
 ---
 
@@ -148,15 +155,16 @@ rights or the domain/client owners' authority defined in §10.1.
 
 ### 4.1 Privacy-safe recruitment slots
 
-`ux-detailed-plan.md` F4.2 requires two independent participants for both S0 and S1; the
+`ux-detailed-plan.md` F4.2 requires two independent participants for S1; the S0 rows below are
+superseded historical slots under the September 30 owner image-review decision. For S1, the
 designer/implementer does not count. Personal names and contact details are intentionally excluded
 from repository evidence. Each stable slot instead records the preferred profile, recruiting channel,
 a privacy-safe owner availability attestation and an explicit independence/distinctness attestation before its journey reaches Gate F.
 
 | Slot | Journey | Preferred profile | Recruiting channel | Repository identity | Availability attestation | Independence/distinctness attestation | Status |
 |---|---|---|---|---|---|---|---|
-| S0-P1 | S0 | Experienced football/management-sim player | Owner/team personal or relevant community network | **S0-P1 — anonymous; name omitted** | Due before S0 Gate F | Due before S0 Gate F | READY — slot defined |
-| S0-P2 | S0 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **S0-P2 — anonymous; name omitted** | Due before S0 Gate F | Due before S0 Gate F | READY — slot defined |
+| S0-P1 | S0 | Historical experienced-player slot | Historical recruitment route | **S0-P1 — superseded** | Not required | Not required | SUPERSEDED — owner image review |
+| S0-P2 | S0 | Historical newcomer slot | Historical recruitment route | **S0-P2 — superseded** | Not required | Not required | SUPERSEDED — owner image review |
 | S1-P1 | S1 | Experienced football/management-sim player | Owner/team personal or relevant community network | **S1-P1 — anonymous; name omitted** | Due before S1 Gate F | Due before S1 Gate F | READY / FUTURE S1 |
 | S1-P2 | S1 | Football-literate newcomer to management sims, where practical | Owner/team personal or relevant community network | **S1-P2 — anonymous; name omitted** | Due before S1 Gate F | Due before S1 Gate F | READY / FUTURE S1 |
 
@@ -165,12 +173,15 @@ football/product context to attempt the task without being coached through the U
 handles, email addresses or other identifying details to this packet. The slot ID, profile,
 independence attestation and owner availability attestation are the repository record.
 
-**F4 exit:** closed under `ux-detailed-plan.md` v1.5's explicit timing relaxation. §4.0 assigns the accountable UX owner and §4.1 defines the two anonymous S0 slots,
+**Historical F4 exit (S0 prerequisites superseded September 30, 2026):** closed under `ux-detailed-plan.md` v1.5's explicit timing relaxation. §4.0 assigns the accountable UX owner and §4.1 defines the two anonymous S0 slots,
 profiles, recruiting channels and attestation mechanism. Anonymity alone does not move the availability check; v1.5 separately moves it from F4 exit to pre-Gate-F. Before S0 reaches Gate F, Anton Zymin records
 `AVAILABLE — owner attested <date>` in both availability cells and `INDEPENDENT/DISTINCT — owner attested <date>` in both independence/distinctness cells without naming either person. The latter attests that each slot is a real person independent of the UX author/designer and distinct from the other slot. If either participant is unavailable or either independence/distinctness attestation is missing, Gate F does not open and Gate G cannot pass; there is no provisional
 bypass to Gate H/I.
 
 ### 4.2 Scheduling rule
+
+S0 image review is conducted by Anton Zymin after the complete Gate-F vehicle is ready.
+The participant scheduling rule below applies to S1.
 
 The participant round is booked for the first practical session after the applicable journey prototype
 passes Gate F. One round is the default cap. A second round is required only when a Blocker/Major
@@ -251,7 +262,7 @@ profiles do not discharge F4.3's wider `disabled/error states` condition.
 
 ---
 
-## 6. Participant session script
+## 6. Participant session script (S1; optional S0 research)
 
 ### 6.1 Moderator opening
 
@@ -295,7 +306,8 @@ prototype could not honestly present it.
 
 ## 7. Evidence record
 
-Create one record per participant and one consolidated finding table per tested prototype version.
+For S1 or optional participant research, create one record per participant and one consolidated
+finding table per tested prototype version. S0 owner image review uses §9.1 instead.
 
 ### 7.1 Session header
 
@@ -402,12 +414,157 @@ Do not downgrade severity merely because a participant eventually found a workar
 
 ## 9. Gate-G decision record
 
+### 9.1 S0 owner image review
+
+The completed v0.4 record below covers the original 18 images retained at the paths below: seven journey states, both staging
+dialogs, live/paused Pending, Applied, Refused, healthy live statistics, full-time Not applied and
+the statistics-failure/disclosure/stress views.
+Use the interactive prototype and 80-check Gate-E evidence to support questions about behavior;
+an image approval alone supplies no runtime or independent usability evidence.
+
+| Review field | Recorded owner review |
+|---|---|
+| Review ID | `UX-GG-S0-OWNER-20260930-03` |
+| Reviewer | Anton Zymin, project owner |
+| Date | September 30, 2026; explicit acceptance received at 11:38:46 PDT (18:38:46 UTC) |
+| Prototype / image version | v0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868` (`13c2c09`) |
+| Images reviewed | All 18 paths listed below; fingerprints in the pinned `walkthrough.json` |
+| Complete task / state coverage | S0-T1–T7 plus substitution; packet §§9–12 and all §9.4 images |
+| Supporting interaction evidence | `UX-GE-S0-20260930-04`, 80 passing scripted browser checks; no independent usability/runtime claim |
+| Findings | S0-G-001–007 and S0-G-009–012 fixed/retested; S0-G-008 `ACCEPT FOR CURRENT GATE`; earlier B/E ledgers apply; three minor leftovers enter H backlog (packet §12.5) |
+| Carried Majors | S0-B-002 and S0-B-004 `ACCEPT FOR CURRENT GATE`; verbatim rationale and release conditions below; neither is closed as a production finding |
+| C-DEC-1 | ACCEPTED — labelled partial live figures; report partial figures behind incomplete disclosure, score/result/Return outside |
+| Full-time statistics access | S0-G-008 ACCEPTED — no reopening at full time; retain previously open frozen panel; note points to report, View match report primary |
+| Image approval | Owner explicitly accepted the proposed decisions and approved v0.4 / `13c2c09` / all 18 PDFs; statement below |
+| Gate G | PASS — complete owner image approval and dispositions; explicit C-DEC-1/full-time decision; no unresolved Blocker or unaccepted Major |
+| Gate H / I | H OPEN for high-fidelity production/review; H is not passed. I remains blocked until the owner separately approves H images. PR #470 remains blocked on I. |
+
+**Owner confirmation, verbatim:**
+
+> I accept the proposed owner decisions and approve v0.4 at `13c2c09`, all 18 PDFs.
+
+**Accepted owner decisions, verbatim.** The owner adopted the proposed wording through the
+confirmation above; Claude's proposal alone was not recorded as approval.
+
+> Owner decisions, September 30, 2026 (Anton Zymin):
+>
+> - **C-DEC-1 — Accepted.** Partial live figures stay visible and labelled. In the report, partial figures sit behind the incomplete-statistics disclosure; score, result and Return stay outside it.
+> - **S0-G-008 — Accepted: `ACCEPT FOR CURRENT GATE`.** Statistics can't be reopened at full time. A note points to the match report, and "View match report" stays the primary action.
+> - **S0-B-002 (Major) — Accepted for G.** Reason: this is a simulated design review; no production adapter is needed to judge the design. Release condition: the Gate-I handoff specifies the adapter that reads the engine's command logs (`Driver.Log`/`FailedCommands`) to show Pending/Applied/Refused/Not applied, and Gate J verifies it. That feedback does not ship without the adapter.
+> - **S0-B-004 (Major) — Accepted for S0.** Reason: shirt numbers are the only player identity S0 has. Release condition: recheck at the Gate-H image review. It closes when player names are available (S1 or client work). If H shows players can't be identified, it reopens as a Blocker.
+> - **Image approval:** I approve prototype v0.4 at commit `13c2c09`, all 18 PDFs listed in the packet's §9.4, for Gate G. This approves low-fidelity design only: it supplies no runtime or independent usability evidence, and it does not approve H or I.
+
+**Reviewed images at the pinned commit** (paths are relative to the repository root):
+
+| Image path | SHA-256 at `13c2c09` |
+|---|---|
+| [`docs/design/s0-prototype/evidence/mentality-dialog.pdf`](s0-prototype/evidence/mentality-dialog.pdf) | `b5d0078ba87a4505df773abc528e1bb591cff3d918951dd492f3a0677d651c72` |
+| [`docs/design/s0-prototype/evidence/mm.pdf`](s0-prototype/evidence/mm.pdf) | `ce49faa20c6f47979c3cb794efff27bd19fe32acda0384287e6e0d02b37eb053` |
+| [`docs/design/s0-prototype/evidence/mv-0.pdf`](s0-prototype/evidence/mv-0.pdf) | `7979e1ccb4a005ab46f5ec079d6eff0564df834e8ac1d6a6c47b987781e9b76c` |
+| [`docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf`](s0-prototype/evidence/mv-ft-not-applied.pdf) | `0211872f6d215aa34e4117bd63e3fa38c869992325f9c4c1d8d4d07fbc6351bd` |
+| [`docs/design/s0-prototype/evidence/mv-ft.pdf`](s0-prototype/evidence/mv-ft.pdf) | `52daf84ea4b3b2e84b593a29bd547a6b276f19bbec8c241a21d6bbe6a700b571` |
+| [`docs/design/s0-prototype/evidence/mv-l.pdf`](s0-prototype/evidence/mv-l.pdf) | `b6fae8521d0388ee6ae717cb7b32fef63ac95d646adfbe3da1362b53d43d6e74` |
+| [`docs/design/s0-prototype/evidence/mv-live-applied.pdf`](s0-prototype/evidence/mv-live-applied.pdf) | `edb263e4614c074fd46e527201a2995066f72e042828a837cd87f88fbf965f37` |
+| [`docs/design/s0-prototype/evidence/mv-live-pending.pdf`](s0-prototype/evidence/mv-live-pending.pdf) | `964054d13292ce0b96e9f03d53fe407a5641a9064751f440a18f6e622e105b31` |
+| [`docs/design/s0-prototype/evidence/mv-live-refused.pdf`](s0-prototype/evidence/mv-live-refused.pdf) | `4ccb71d73190d0857f17126f316c473de80236b8299db951447245998b1b9cf0` |
+| [`docs/design/s0-prototype/evidence/mv-live-statistics.pdf`](s0-prototype/evidence/mv-live-statistics.pdf) | `411ea5ff9b7a12603a4779a071d7028822bccf75189d7ba2a1cce92572563791` |
+| [`docs/design/s0-prototype/evidence/mv-p.pdf`](s0-prototype/evidence/mv-p.pdf) | `31764ec1927b1f4586119aaf9939021ceb11d7a9e5b9572635f563d6f57db9bd` |
+| [`docs/design/s0-prototype/evidence/mv-paused-pending.pdf`](s0-prototype/evidence/mv-paused-pending.pdf) | `1c8bf7efc8d9c683c722213c72b68793b25e8bb94f49ab403a0a37b23c8df952` |
+| [`docs/design/s0-prototype/evidence/pr.pdf`](s0-prototype/evidence/pr.pdf) | `c3f3e8a6286fbaece9df18085c857909166d9e2a53c145852db85c7d0ff9fe44` |
+| [`docs/design/s0-prototype/evidence/report-incomplete.pdf`](s0-prototype/evidence/report-incomplete.pdf) | `f7e582d2f4474f6f54089f7480a6a9a1f81236508d94114961cd85dda74a614c` |
+| [`docs/design/s0-prototype/evidence/report-partial-open.pdf`](s0-prototype/evidence/report-partial-open.pdf) | `32d417d70d67af860503098186419766a4628002ffd2c9d61ce4404d37bab908` |
+| [`docs/design/s0-prototype/evidence/stress-fault-1366.pdf`](s0-prototype/evidence/stress-fault-1366.pdf) | `2dddfbd394fcd379f4e39856446b63d22329e014f33352b62ca2409996fc2f33` |
+| [`docs/design/s0-prototype/evidence/substitution-dialog.pdf`](s0-prototype/evidence/substitution-dialog.pdf) | `c2242dd8ae17cc3c7107be77e7e4ef091d515aac238a80628c901dcac8ae7d82` |
+| [`docs/design/s0-prototype/evidence/ts.pdf`](s0-prototype/evidence/ts.pdf) | `9b6d966d9914348dd7da04f4d57e29b00986d2b4e16c7b95c433ba3f2d79c4d0` |
+
+**Historical recording boundary:** approval-recording commit `d99a1a9` changed documents only;
+at that commit the full prototype/evidence tree was byte-identical to `13c2c09`. The approved
+version remains v0.4 at that pinned commit. Its 18 PDF files and root run-04 evidence are still
+unchanged. Later Codex corrections advance source files to v0.5 and put all new evidence in
+`evidence/v0.5/`; the v0.4 approval is not extended to those files.
+
+Tester sessions and attestations are not required for S0. Gate F must still supply the complete
+interactive task. Gate H follows the owner-approved low-fidelity images; the owner also reviews
+the high-fidelity images before the Gate-I handoff. Gate J verifies the real client.
+
+#### 9.1.1 v0.5 single-image delta review — approved
+
+Codex review found premature/direct-state fault initialization, one-tick-late normal fault activation,
+full-time wording claiming continued play, and a normal-text check that used `pseudo=0` despite
+presence-based pseudo-localization. These are fixed/retested in v0.5; the prior run-04 claims about
+normal-text coverage and the fault timeline are superseded by the actual run-05 checks.
+
+| Field | Current correction-review record |
+|---|---|
+| Review ID | `UX-GG-S0-OWNER-20260930-04` |
+| Reviewer | Anton Zymin |
+| Revision / evidence | Prototype v0.5; baseline `UX-GE-S0-20260930-05` at `a859ea1`, 85 passing checks (unchanged historical record). Focused `UX-GE-S0-20260930-05-DELTA-01`: three passing checks and current seven-source/19-image fingerprints in `s0-prototype/evidence/v0.5/full-time-fault-delta.json`. No new full evidence run. |
+| Approved image / carry-forward | Anton Zymin approved `s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. Text extraction verifies the other 18 paths in packet §9.4 match approved v0.4 apart from version text; carry those forward. This correction preserves those 18 v0.5 PDFs byte-for-byte and all original approved PDFs. |
+| Findings | S0-G-013–016 `FIX NOW`, fixed/retested; previous dispositions remain. S0-H-004 adds disabled Close statistics presentation to H backlog. |
+| Owner decisions | C-DEC-1 / S0-G-008 and S0-B-002 / S0-B-004 acceptance conditions remain as actually adopted above |
+| Owner review date / reviewed commit / statement | September 30, 2026, 13:43 America/Los_Angeles (20:43 UTC); `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`; actual reply: “approved”. Scope is the corrected single-image delta presented immediately before that reply, with the other 18 carried forward. |
+| Gate G for v0.5 | PASS — actual owner delta approval recorded; prior v0.4 approval and accepted decisions remain pinned above |
+| H / I | H OPEN for high-fidelity work and separate owner image review; H is not passed. I remains blocked until separately owner-approved H images; #470 remains blocked on I. |
+
+**Actual owner confirmation (verbatim):**
+
+> approved
+
+The preceding review request identified the corrected full-time statistics-fault PDF at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`,
+said the other 18 carry forward from approved v0.4, and stated that this delta approval resumes H.
+This record applies that scope; it does not create a broader owner statement or H/I approval.
+The earlier C-DEC-1/S0-G-008 decisions and S0-B-002/S0-B-004 reasons/release conditions remain as adopted in §9.1.
+
+**Pinned v0.5 image set:** the one new image is approved by this delta; the other 18 are carried forward.
+
+| Image path | Review basis | SHA-256 at reviewed commit |
+|---|---|---|
+| [`docs/design/s0-prototype/evidence/v0.5/mentality-dialog.pdf`](s0-prototype/evidence/v0.5/mentality-dialog.pdf) | Carried from approved v0.4; version text only | `62703007c3b7898414f96cc445970373bf67fe1b2a1e05f5507ce5c7dd97c5ac` |
+| [`docs/design/s0-prototype/evidence/v0.5/mm.pdf`](s0-prototype/evidence/v0.5/mm.pdf) | Carried from approved v0.4; version text only | `ca250ec4314275f3719f3c86ec3475eb543b8a1e85ca605d66deeee64da64195` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-0.pdf`](s0-prototype/evidence/v0.5/mv-0.pdf) | Carried from approved v0.4; version text only | `97a84b504ffaea95fba53615afa440420045fbc6b578f31cf56dc04b84ee279c` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf`](s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf) | Carried from approved v0.4; version text only | `1042e2edb6c1aead93cc7bc84eb24e64ec058fac2f9e8823ea779c8012ee5a75` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf`](s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf) | Owner-approved delta | `0a2b1af953f0262979a19fab831aa4d0f8ca45d574c7bbb5bbb9bb4fc90a0751` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-ft.pdf`](s0-prototype/evidence/v0.5/mv-ft.pdf) | Carried from approved v0.4; version text only | `c3dd83cc75f11e8afc01549abae87a47511ebe3368c53843a90ab1ad7564bf44` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-l.pdf`](s0-prototype/evidence/v0.5/mv-l.pdf) | Carried from approved v0.4; version text only | `b0275702b8933ef5e11e9ab074273788463fc29ef58a808ac7c5ca41caa5e06a` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-applied.pdf`](s0-prototype/evidence/v0.5/mv-live-applied.pdf) | Carried from approved v0.4; version text only | `6ec218138a3d6e003322f63254ae239364d66b48f681426963b67720f0cb763a` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-pending.pdf`](s0-prototype/evidence/v0.5/mv-live-pending.pdf) | Carried from approved v0.4; version text only | `8f43b54767a8e6862622a5729ab0bc46074a7dfe1cfc64e38842f46db12868de` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-refused.pdf`](s0-prototype/evidence/v0.5/mv-live-refused.pdf) | Carried from approved v0.4; version text only | `9d3d49a042730754ed8ea46256c51a0ad015f4d1b39bc01908547545417053aa` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-live-statistics.pdf`](s0-prototype/evidence/v0.5/mv-live-statistics.pdf) | Carried from approved v0.4; version text only | `f2c585e18c207532cca9f61a87993a6445961ffbd3b61877102765d01ac322a7` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-p.pdf`](s0-prototype/evidence/v0.5/mv-p.pdf) | Carried from approved v0.4; version text only | `5bda7dd0fb201e3bdb510ce6a0b1cc9c6297e74dfe21f24d5cf43391ecf0e37d` |
+| [`docs/design/s0-prototype/evidence/v0.5/mv-paused-pending.pdf`](s0-prototype/evidence/v0.5/mv-paused-pending.pdf) | Carried from approved v0.4; version text only | `343e36bdb0efe91f0ae09d50a5deecd12d294b56f6c03783b952ee739954a5fd` |
+| [`docs/design/s0-prototype/evidence/v0.5/pr.pdf`](s0-prototype/evidence/v0.5/pr.pdf) | Carried from approved v0.4; version text only | `b57b6a6e13c36cd185f7116c6774047fde1d410b10da68f9bc930fa1ea092f79` |
+| [`docs/design/s0-prototype/evidence/v0.5/report-incomplete.pdf`](s0-prototype/evidence/v0.5/report-incomplete.pdf) | Carried from approved v0.4; version text only | `6fdf901c556c5eb84a92b04cb3cd4e22ec7d988c889d1601e37236e0b84c76d7` |
+| [`docs/design/s0-prototype/evidence/v0.5/report-partial-open.pdf`](s0-prototype/evidence/v0.5/report-partial-open.pdf) | Carried from approved v0.4; version text only | `f9ac7f8d853c5fa267d80ab8d1c896a6f04f01129db7db827957cef0208455e9` |
+| [`docs/design/s0-prototype/evidence/v0.5/stress-fault-1366.pdf`](s0-prototype/evidence/v0.5/stress-fault-1366.pdf) | Carried from approved v0.4; version text only | `11fc5c15e84eb792e1b15039f53278f9b895a24c44d62b338936529d642cd6b5` |
+| [`docs/design/s0-prototype/evidence/v0.5/substitution-dialog.pdf`](s0-prototype/evidence/v0.5/substitution-dialog.pdf) | Carried from approved v0.4; version text only | `82445da4c7e8f975c4bd2137843583ad5fdbe96885780046cf70e02dc1a1be4e` |
+| [`docs/design/s0-prototype/evidence/v0.5/ts.pdf`](s0-prototype/evidence/v0.5/ts.pdf) | Carried from approved v0.4; version text only | `ef89daa7e2a57b97d787a166c6f431db4097e41fe3e00b38997e44f6590db374` |
+
+**Pinned prototype sources:**
+
+| Source path | SHA-256 at reviewed commit |
+|---|---|
+| `docs/design/s0-prototype/index.html` | `18869864ca1fe8eb233a94e48aa23de6d5626f05e9292e8c4e9a39954b60cf41` |
+| `docs/design/s0-prototype/prototype.css` | `60aaede3535622638dcdce0abd89c366b00404663c9df02f9c11e4e2ae557d87` |
+| `docs/design/s0-prototype/model.js` | `bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c` |
+| `docs/design/s0-prototype/prototype.js` | `dfd9c8cd639bc0c34bc0bc8d92039c74ef9ac68165dade8dab5d4b99b78b18d5` |
+| `docs/design/s0-prototype/reference-data.js` | `fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69` |
+| `docs/design/s0-prototype/scenario-data.js` | `05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866` |
+| `docs/design/s0-prototype/verify.cjs` | `18bf2d1642cd0f9d2116d6a4d016785085976037aa14012f96476b1451f0851a` |
+
+Supporting evidence: `UX-GE-S0-20260930-05-DELTA-01` (three focused checks), delta JSON SHA-256 `d6e61c51b157736199ec5dff21910c24bf046b67aaf352d77da84cada9e8de7e`; baseline run `UX-GE-S0-20260930-05` (85 checks) remains historical at `a859ea1`.
+
+**Recording boundary:** this approval-recording change edits Markdown documents only. All seven prototype
+sources, all 19 v0.5 PDFs, the focused delta JSON, and all earlier evidence remain byte-identical to
+the reviewed commit `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. No image regeneration or new test run accompanies the record.
+
+### 9.2 S1 participant decision record
+
 After both sessions, complete the record for the journey under test.
 
 | Check | Result |
 |---|---|
-| Journey | S0 / S1 |
-| Prescribed task set | S0-T1–T7 / S1-T1–T8 |
+| Journey | S1 |
+| Prescribed task set | S1-T1–T8 |
 | Two independent participants completed the round | PASS / FAIL |
 | Both session records carry matching independence/distinctness attestations | PASS / FAIL |
 | Gate F passed with the complete prescribed task set | PASS / FAIL |
@@ -475,8 +632,8 @@ semantics and evidence-backed interaction states.
 
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
-Neither F4 nor Gate A passes Gate E, F or G: both S0 availability attestations are still due before
-Gate F, and Gate G remains unavailable until two distinct independent participants complete the entire round.
+Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H is OPEN for high-fidelity work and separate owner image review; I/#470 remain blocked. S1 requires its two independent completions.
 
 ---
 
@@ -496,3 +653,12 @@ Gate F, and Gate G remains unavailable until two distinct independent participan
 | 0.10 | September 21, 2026 | Pointer-only review sync after the Gate-A packet and execution authority advance to `ux-s0-pm1-journey.md` v0.3 / `ux-detailed-plan.md` v1.7. No validation task, participant rule, Gate-E/G evidence requirement, severity rule or pass/fail policy changes. |
 | 0.11 | September 21, 2026 | Review closeout pointer sync to `ux-detailed-plan.md` v1.8 / `ux-s0-pm1-journey.md` v0.4. Validation tasks, participant rules, Gate-E/G evidence requirements, severity and pass/fail policy remain unchanged. |
 | 0.12 | September 28, 2026 | Pointer/status sync for S0 Gate B (`ux-s0-pm1-journey.md` v0.5 §7, `ux-detailed-plan.md` v1.9). Gate B maps S0-T1–T7 to flow steps without changing any task, participant rule, Gate-E/G evidence requirement, severity or disposition; S0-T2's pre-match choice is now concretely Mentality because Formation has no simulation consumer. |
+| 0.13 | September 30, 2026 | Status/pointer sync to detailed plan v1.10 and S0 packet v0.6. C–E complete; F vehicle ready but both pre-F availability/independence/distinctness attestations remain due. Participant cells and G requirements unchanged. |
+| 0.14 | September 30, 2026 | Execution pointer sync to detailed plan v1.11; packet v0.7 corrects E evidence and retests v0.2. Tester attestations are formal F prerequisites, not usability findings. Participant cells, tasks and gate rules unchanged. |
+| 0.15 | September 30, 2026 | Records the owner-directed S0 image-review route and §9.1 review/approval template. S0 tester slots superseded; F complete, G pending actual image approval. Participant-session templates retained for S1/optional research; image approval supplies no independent usability/runtime evidence. |
+| 0.16 | September 30, 2026 | Expands S0 image-review coverage to 18 views and supporting 79-check run. Requires every finding disposition, explicit C-DEC-1/full-time-statistics decisions and written acceptance rationale/release condition for carried Majors; H approval remains separate before I. |
+| 0.17 | September 30, 2026 | Updates execution pointer and supporting evidence to the 80-check review-cleanup run. S0-G-008 stays an undecided owner choice; no image approval or Major acceptance inferred. |
+| 0.18 | September 30, 2026 | Fills §9.1 with explicit owner confirmation and adopted statement verbatim, review ID/date/full commit, 18 paths/hashes, run 04 and carried-Major reasons/release conditions. G PASS; H OPEN; I/#470 blocked. Documents-only recording preserves the full prototype/evidence tree. |
+| 0.19 | September 30, 2026 | Preserves the completed v0.4 approval verbatim and original image hashes; dates its immutable recording boundary. Adds pending v0.5 correction-review record with 85-check run 05 / 19 separate PDFs. No approval inferred from fixing Codex comments. |
+| 0.20 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
+| 0.21 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |

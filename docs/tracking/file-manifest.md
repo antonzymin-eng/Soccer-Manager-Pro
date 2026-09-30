@@ -1,6 +1,23 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
+**Last Updated:** September 30, 2026 — **S0 v0.5 owner delta approval recorded / H OPEN (PR #473).** Anton Zymin replied “approved” to the corrected full-time fault image at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`, with the other 18 carried forward from approved v0.4 apart from version text. Protocol v0.21 §9.1.1 records actual confirmation/date, image/source/evidence pins, 19 paths/hashes and retained decisions/release conditions. Packet v0.14, detailed plan v1.18 and high-level plan v1.10 mark G PASS/H OPEN. H backlog S0-H-001–004 remains; I/#470 stay blocked on separately approved H images. Eight Markdown documents only; all prototype sources, PDFs and evidence preserved byte-for-byte. No new tests, image generation, production/spec change or issue-count change.
+
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 full-time fault copy delta.** Suppress the final-statistics report note when faulted; healthy copy retained. Focused run `UX-GE-S0-20260930-05-DELTA-01` passes three checks and regenerates only `mv-ft-statistics-fault.pdf`; run05 stays unchanged at a859ea1. New delta JSON records current seven-source/19-image hashes and the 18 unchanged PDFs. Text comparison confirms those 18 match approved v0.4 apart from version text. Packet v0.13, protocol v0.20, detailed plan v1.17 and high-level plan v1.9 narrow pending G approval to the single new image. S0-H-004 carries disabled Close statistics into H. v0.4 approval/decisions preserved; H paused pending delta approval, I/#470 blocked. No new approval, production/spec change or issue-count change.
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 Codex corrections / prototype version 0.5.** Fault timing, ended-state notice and real normal-text checks fixed; 85-check run05 plus 19 revision PDFs stored under evidence/v0.5. Original v0.4 images/run04 preserved. High-level plan v1.8, detailed plan v1.16, packet v0.12 and protocol v0.19 record current G re-review pending / H paused while preserving the earlier owner approval. Twenty new evidence files inventoried; no production/spec change, issue counts unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **S0 Gate G owner approval / H OPEN.** High-level plan v1.7, detailed plan v1.15, journey packet v0.11 and validation protocol v0.18 record actual owner approval of prototype version 0.4 at 13c2c09, all 18 PDFs, with explicit decisions and carried-Major reasons/release conditions. Seven existing documents updated; no paths added. Full prototype/evidence tree remains byte-identical to the reviewed commit. H polish backlog recorded; I/#470 blocked on separately approved H images. No production/spec change; counts unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 second image-review cleanup.** Journey packet v0.10, detailed plan v1.14, validation protocol v0.17 and prototype version 0.4. S0-G-008 is an undecided owner choice; focus spacing, leader-line caption, refusal and substitution wording corrected. Eighteen PDFs regenerated; 80-check run 04 and source/image fingerprints; successful run 03 archived and inventoried. H choice/identity consistency and I engine-direction obligations recorded. G remains pending actual owner decisions/approval; issue counts and production/spec files unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **Complete S0 image-review coverage / PR #473.** Journey packet v0.9, detailed plan v1.13, validation protocol v0.16 and prototype v0.3. Eighteen PDF views, 79 checks, seven source/18 image fingerprints; successful prior run archived. Nine new PDFs plus `walkthrough-v0.2.json` inventoried below. Pitch/collision/statistics/alignment/waiting presentation corrected; Gate-G decisions remain pending; H approval separately precedes I. No production/spec change.
+
+**Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
+
+**Last Updated (prior):** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
+
+**Last Updated (prior):** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
 
 **Last Updated (prior):** September 28, 2026 — **Blanket Error-log suppression removed from 12 CI engine scenarios.** **Modified tests (12):** `MatchEngineDisciplineTests`, `MatchEngineShotOutcomeTests`, `MatchEngineShotSpeedTests`, `MatchEnginePlayDevelopmentTests`, `MatchEngineGoalkeeperSaveTests`, `MatchEngineKeeperClaimTests`, `MatchEngineKeeperContactTests`, `MatchEngineKeeperConversionTests`, `MatchEngineCloseChanceTests`, `MatchEngineInPossGateTests` (all v1.0→v1.1), `MatchEngineSnapshotRestoreTests` v1.14→v1.15 (`RoundTrip_GkHeadingEnabled_WithCommittedSave_IsDeterministic`) and `SeasonLoopScenarioTests` v1.0→v1.1 (`sim_season_multi_fixture`). **Modified tracking (4):** `CHANGELOG.md`; `CHANGELOG-src.md` v2.159→v2.160; `match-engine-design.md` v2.18→v2.19 (§5.Z.7 item 3 closed); this manifest. No production file changed by this landing; depends on PR #467 (merged).
 
@@ -3516,13 +3533,66 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | Strategy, milestone cut and dependency posture (v1.4, Sep 28, 2026); mirrors `ux-detailed-plan.md` §10.2's effort bands rather than duplicating them and carries the current P4b partial-host evidence correction |
-| `docs/design/ux-detailed-plan.md` | **The single UX execution authority** (v1.9, Sep 28, 2026): work packages F0–F4, journey slices S0–S2, the one authoritative Gates A–J definition, validation severity, QA handoff, change control, §17's acceptance record, and the privacy-safe anonymous-participant rule; F0–F4 + S0 Gate A complete, S0 Gate B next; B8 completed-vs-open host evidence and the missing pre-match per-player-tactic handoff are explicit |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.10: v0.4 approval retained; v0.5 delta approved at 0e8bd2b; G PASS/H OPEN |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.18: G PASS/H OPEN; I/#470 blocked |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.12, Sep 28, 2026): four-layer sequence, S0-T1–T7 and S1-T1–T8 participant tasks, Anton Zymin as UX-workstream owner, privacy-safe anonymous participant slots with pre-Gate-F owner availability plus explicit independence/distinctness attestations, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3's general error condition and standalone Gate-E color-independent-meaning and F3-001 contrast conditions, auditable per-condition Gate-E results/evidence, moderator script, the full `ux-detailed-plan.md` §12 finding ledger, severity with §12's closed five-value disposition vocabulary, Gate-G no-skip semantics for prescribed tasks, and the journey-parameterized Gate-G/Gate-J records; F4 + S0 Gate A complete, Gate B next |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D journey packet (v0.5, Sep 28, 2026): reconciled Gate-A dependency/control audit for PM-1 (PASS, zero `UNKNOWN`; P5b the dominant binding gap; pre-match per-player tactics blocked on the missing `MatchSetup` handoff) plus §7 **Gate B task flow** — seven journey states over the five existing `ClientScreenFlow` moves, requested/applied/refused/not-applied intervention feedback over the session command logs, blocked-path reasons, #37 statistic set, S0-T1–T7 coverage and findings S0-B-001–009 (S0-B-009: statistics-observer failure state). Gate-A A-10 corrected (Formation has no simulation consumer; the pre-match choice is Mentality) and A-38–A-42 added; Gate C inputs are the next authorized UX work |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.21: pinned v0.4 owner record unchanged; approved v0.5 delta at 0e8bd2b, retained baseline/delta checks and 19 image pins; S1 templates retained |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.14: Codex/copy findings S0-G-013–016 fixed; v0.5 85-check evidence and 19 images; earlier approval preserved, G PASS/H OPEN |
+| `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
+| `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
+| `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
+| `docs/design/s0-prototype/model.js` | Pure simulated S0 transitions, pending/applied/refused/end race; no production API |
+| `docs/design/s0-prototype/prototype.js` | Semantic controls, focus recovery/staging dialogs, health/disclosure and fixtures |
+| `docs/design/s0-prototype/scenario-data.js` | Explicitly synthetic 2–1 ordinary-session score/statistics fixture; captured pitch only |
+| `docs/design/s0-prototype/reference-data.js` | 91 captured frame/#37 snapshots from main c37213ab, no synthetic analytics accumulator |
+| `docs/design/s0-prototype/capture-reference.cs` | Reproducible console caller of the unchanged reference composition; non-certifying |
+| `docs/design/s0-prototype/capture-reference.sh` | Temporary .NET capture project runner using existing generated shim projects |
+| `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and vector PDF export |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.1.json` | Unchanged archived 71-check initial run; Gate-E pass withdrawn, superseded by v0.2 run 02 |
+| `docs/design/s0-prototype/evidence/mentality-dialog.pdf` | Requested Mentality staging with consequence/Submit/Cancel |
+| `docs/design/s0-prototype/evidence/substitution-dialog.pdf` | Outgoing shirt/incoming bench staging with Submit/Cancel |
+| `docs/design/s0-prototype/evidence/mv-live-pending.pdf` | Live Pending request beside unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-paused-pending.pdf` | Paused Pending request waiting for resume |
+| `docs/design/s0-prototype/evidence/mv-live-applied.pdf` | Applied Mentality and substitution/count evidence |
+| `docs/design/s0-prototype/evidence/mv-live-refused.pdf` | Refused request and unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-live-statistics.pdf` | Healthy statistics open during live play |
+| `docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf` | Full-time not-applied result reached by normal whistle-race journey |
+| `docs/design/s0-prototype/evidence/report-partial-open.pdf` | Incomplete report disclosure open on minute-18 partial figures |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.2.json` | Preserved successful 74-check run 02/source fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.3.json` | Preserved successful 79-check run 03/source and image fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Preserved approved-v0.4 run04, 80 checks and original source/18 image hashes at 13c2c09; superseded temporal/normal-text claims documented |
+| `docs/design/s0-prototype/evidence/v0.5/mentality-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mm.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-0.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-l.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-refused.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-statistics.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-p.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-paused-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/pr.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-incomplete.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-partial-open.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/stress-fault-1366.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/substitution-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/ts.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/walkthrough.json` | Historical v0.5 run05 at a859ea1: 85 checks and source/image fingerprints |
+| `docs/design/s0-prototype/evidence/v0.5/full-time-fault-delta.json` | Focused full-time fault-copy delta: three checks, current source/image fingerprints and 18 preserved images |
+| `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
+| `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
+| `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |
+| `docs/design/s0-prototype/evidence/mv-l.pdf` | Live Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-p.pdf` | Paused Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-ft.pdf` | Full-time wireframe |
+| `docs/design/s0-prototype/evidence/pr.pdf` | Post-Match Report wireframe |
+| `docs/design/s0-prototype/evidence/report-incomplete.pdf` | Faulted statistics report/disclosure evidence |
+| `docs/design/s0-prototype/evidence/stress-fault-1366.pdf` | 1366-wide expanded-text/200% statistics-failure and caption-reservation evidence |
 | `docs/design/ux-foundation.md` | Superseded stub — historical design reference, explicitly **not** execution authority; retained so older citations resolve |
 
 Registered September 11, 2026 with the F4 packet's landing. The first five rows are **retrospective**:

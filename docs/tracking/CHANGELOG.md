@@ -12,7 +12,58 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 28, 2026 — **S0 UX Gate B: PM-1 task flow defined; one Gate-A overstatement corrected.**
+> **Last Updated:** September 30, 2026 — **S0 v0.5 owner delta approval recorded / H OPEN (PR #473).** Anton Zymin replied “approved” to the corrected full-time fault image at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`, with the other 18 carried forward from approved v0.4 apart from version text. Protocol v0.21 §9.1.1 records actual confirmation/date, image/source/evidence pins, 19 paths/hashes and retained decisions/release conditions. Packet v0.14, detailed plan v1.18 and high-level plan v1.10 mark G PASS/H OPEN. H backlog S0-H-001–004 remains; I/#470 stay blocked on separately approved H images. Eight Markdown documents only; all prototype sources, PDFs and evidence preserved byte-for-byte. No new tests, image generation, production/spec change or issue-count change.
+>
+
+> **Last Updated (prior):** September 30, 2026 — **PR #473 full-time fault copy delta.** Suppress the final-statistics report note when faulted; healthy copy retained. Focused run `UX-GE-S0-20260930-05-DELTA-01` passes three checks and regenerates only `mv-ft-statistics-fault.pdf`; run05 stays unchanged at a859ea1. New delta JSON records current seven-source/19-image hashes and the 18 unchanged PDFs. Text comparison confirms those 18 match approved v0.4 apart from version text. Packet v0.13, protocol v0.20, detailed plan v1.17 and high-level plan v1.9 narrow pending G approval to the single new image. S0-H-004 carries disabled Close statistics into H. v0.4 approval/decisions preserved; H paused pending delta approval, I/#470 blocked. No new approval, production/spec change or issue-count change.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 Codex P2 comments fixed and retested.**
+>
+> Prototype version 0.5 fixes the fault fixture at its cutoff: direct first-frame views no longer start faulted, normal MM entry activates exactly at minute 18, and fast ticks crossing that minute retain cutoff-18 figures. Full-time notices state statistics are incomplete and final score remains available. The normal clearance test omits the pseudo parameter and asserts actual plain/expanded labels and 16/32px text. New regression evidence covers normal/direct entry at 0/17/18/21, 10× crossing, frozen figures through full time/report, and real normal-text focus clearance.
+>
+> Run `UX-GE-S0-20260930-05` passes 85 checks; 19 PDFs and seven source/19 image hashes are stored separately under `docs/design/s0-prototype/evidence/v0.5/`, including the new full-time statistics-fault view. Original 18 approved PDFs/root run04 remain byte-identical to `13c2c09`. `docs/design/ux-s0-pm1-journey.md` v0.12 records S0-G-013–015 and current G re-review pending; high-level plan v1.8, detailed plan v1.16 and validation protocol v0.19 preserve the actual v0.4 approval/owner statements while pausing H for the corrected revision. No new approval inferred from fixing comments. I/#470 remain blocked; H polish backlog unchanged. No production/spec change; issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **S0 Gate G owner approval recorded; Gate H OPEN (PR #473).**
+>
+> Anton Zymin explicitly accepted the proposed owner decisions and approved prototype version 0.4 at `13c2c095bea6876ffd010dfad1df23fb4f137868`, all 18 PDFs. `docs/design/ux-validation-protocol.md` v0.18 §9.1 preserves the actual owner confirmation and adopted statement verbatim, review ID/date, all 18 paths/hashes and run `UX-GE-S0-20260930-04` (80 checks). C-DEC-1 and S0-G-008 are accepted; S0-B-002/S0-B-004 have written owner reasons and release conditions and remain open for production/identity follow-up.
+>
+> `docs/design/ux-s0-pm1-journey.md` v0.11 marks G PASS and H OPEN. H backlog records the stray leader dot, 1-based bench-slot labels and submission-copy polish alongside existing choice/pitch-consistency obligations. Detailed plan v1.15 and high-level plan v1.7 synchronize current status. I remains blocked until separately owner-approved H images; #470 remains blocked on I. This documents-only recording preserves the entire reviewed prototype/evidence tree, including all seven source files, all 18 PDFs and the run-04 hashes, byte-for-byte against `13c2c09`. It supplies no H/I approval, runtime or independent usability evidence. Issue counts unchanged; no production/spec change. Parent-head CI, including the Linux functional gate, passed; recording-head CI must run afresh before merge.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 second image-review cleanup.**
+>
+> `docs/design/ux-s0-pm1-journey.md` v0.10 records S0-G-008 as a pending owner decision without a preselected finding disposition. Prototype version 0.4 separates dropdown labels from visible focus outlines, removes the promise of visible leader lines, shortens refusal feedback without inventing a reason and uses player-facing substitution help. S0-G-009–012 record those fixes; H must reconcile Mentality choices and substituted pitch identity, and I must allocate engine-owned direction when Stage-1 ends-swap lands.
+>
+> Regenerates all 18 PDFs with run `UX-GE-S0-20260930-04`: 80 browser checks, measured focus/label clearance at normal and pseudo/200% text across three widths, and seven source/18 image fingerprints. Successful run 03 is retained unchanged as `walkthrough-v0.3.json`. Detailed plan v1.14 and validation protocol v0.17 maintain current pointers. No owner choice, Major acceptance or image approval inferred. G opens H only; H images need separate approval before I; #470 stays blocked. No production/spec changes; active/archive issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 image review: missing interaction views added; visual defects fixed.**
+>
+> **What:** Prototype v0.3, journey packet v0.9, detailed plan v1.13 and protocol v0.16. All 18 PDF views now cover dialogs, request states and healthy/partial statistics. Raw restart/holder captions removed; grounded pitch markings and direction added; marker labels separated with leaders; temporal synthetic figures/header alignment/start copy fixed. S0-G-001–008 record fixes and the pending full-time-statistics choice.
+>
+> **Validation and boundary:** 79 Chromium checks pass, including pairwise marker separation in every geometry fixture, immediate focus and live disclosure regressions. Seven source and 18 PDF hashes recorded; successful 74-check run 02 preserved. PDFs rendered and visually inspected. G still needs actual owner image review, all dispositions, C-DEC-1 and written acceptance rationale/release condition for carried Majors. G opens H; H requires separate image approval before I. #470 remains blocked. No production/spec/scene/schema/RNG change; counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review; tester prerequisite superseded.**
+>
+> **Decision and status:** Anton Zymin will conduct S0 image reviews. Detailed plan v1.12, validation protocol v0.15, high-level plan v1.6 and journey packet v0.8 record that owner review replaces S0 independent recruitment, attestations and sessions. Gate F passes the existing complete prototype; Gate G remains pending actual image approval and finding dispositions. H images receive owner review before I; #470 remains blocked on I.
+>
+> **Evidence:** prototype v0.2, its nine PDFs and the 74-check run are unchanged. Image approval and tester/session evidence are not fabricated. No production/spec/scene/schema/RNG change; issue counts unchanged.
+>
+> **Last Updated (prior):** September 30, 2026 — **PR #473 review corrections: focus/disclosure Majors fixed; initial E claim withdrawn and retested.**
+>
+> **What:** Packet v0.7, prototype v0.2, detailed plan v1.11 and validation protocol v0.14. Submitting a request focuses persistent feedback; speed extremes focus Pause/Resume. Earlier-feedback disclosure preserves open state and focus through live refresh. Ordinary score/statistics are explicitly synthetic 2–1; the captured 19–9 case remains unchanged for raw-data/unusual-score checks. The captured substitution row is omitted, pitch limitation labelled, dense-history timestamps coherent, and the whistle can beat a queued request during a normal journey.
+>
+> **Evidence:** Run `UX-GE-S0-20260930-02` has 74 Chromium checks with direct focus assertions, live-timer disclosure regression, and normal-play end race; original 71-check evidence archived, original E pass withdrawn. Nine PDFs regenerated and visually inspected. Text scale means doubled base font, not browser zoom. Cross-document current-version annotations corrected and consistency check included.
+>
+> **Boundary:** Tester availability/independence is tracked as formal F prerequisites rather than a usability Blocker. No attestation/session, F/G/H/I pass or production/spec change; #470 stays blocked. C-DEC-1 remains a Gate-C design choice; owner confirmation is not claimed.
+>
+> **Last Updated (prior):** September 30, 2026 — **S0 UX Gates C–E complete; Gate-F vehicle ready, formal F pending participant attestations.**
+>
+> **What:** S0 packet v0.6 adds low-fidelity hierarchy/focus/reflow, all seven wireframes, the full state matrix, the statistics-failure presentation decision, and a complete executable design prototype. The existing reference `MatchClientHost` was called without modifying its harness: 91 snapshots on `main` `c37213ab`, seed `0x00C11E7B6D0C`, home Human/away AI, through tick 324000, healthy #37 observer, final frame score 19–9. The captured output is preserved; simulated prototype choices do not rerun the match or mutate production.
+>
+> **Validation:** Gate-E run `UX-GE-S0-20260930-01` records 71 executed browser checks: complete S0-T1–T7 plus substitution, keyboard/mouse, three desktop widths, equivalent pseudo-locale, 200% text, failure/disabled/end-race fixtures, computed contrast, and chooser focus. Expanded-text overflow and modal Tab wrapping were found, fixed and retested. The packet states each protocol-row result/N/A and the limits of prototype evidence. Shipping maximum scale remains unallocated. Capture compilation succeeded under the non-certifying .NET shim; Unity was not run.
+>
+> **Boundary:** C–E PASS; F deliverable READY, formal opening/pass PENDING both pre-F anonymous availability and independence/distinctness attestations. No participant evidence fabricated. G still requires two real independent completions; H/I unopened; #470 remains draft/blocked on Gate I. Status pointers sync in detailed plan v1.10, high-level plan v1.5, validation protocol v0.13, manifest and the existing open-issues UX entry. No source/spec/scene/schema/RNG change; no issue-count change.
+>
+> **Last Updated (prior):** September 28, 2026 — **S0 UX Gate B: PM-1 task flow defined; one Gate-A overstatement corrected.**
 >
 > **What:** `docs/design/ux-s0-pm1-journey.md` v0.5 adds §7, the S0 Gate B task flow. It has seven journey states (Main Menu, Tactics Setup, Match starting, Live, Paused, Full time, Post-Match Report) over the four typed screens, using only the five existing `ClientScreenFlow` moves. Every state has an entry trigger, a goal, information with a cited Gate-A owner, seam-bound actions, blocked paths with owner-sourced reasons, back/cancel behavior and a completion/return destination. A validation-task table maps S0-T1–T7 and the PM-1 substitution exit criterion onto steps. Status pointers move in `ux-detailed-plan.md` v1.9 (§14: Gate C next), `ux-validation-protocol.md` v0.12 and `ux-high-level-plan.md` v1.4.
 >
