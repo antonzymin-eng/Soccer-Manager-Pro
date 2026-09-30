@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.10\
+**Version:** 1.11\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -342,7 +342,7 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 A–F are complete. The owner's pinned v0.4 approval remains in validation protocol §9.1; v0.5 delta is owner-approved at `0e8bd2b` (§9.1.1), with the other 18 carried forward apart from version text. H is OPEN for high-fidelity work and owner image review; I awaits separately owner-approved H images. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 A–F are complete. The owner's pinned v0.4 approval remains in validation protocol §9.1; v0.5 delta is owner-approved at `0e8bd2b` (§9.1.1), with the other 18 carried forward apart from version text. H is OPEN with a separate v0.1 reference ready for owner review (23 image pairs, packet §13); I awaits separately owner-approved H images. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
 
 ---
 
@@ -361,3 +361,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.8 | September 30, 2026 | Status sync after Codex corrections: pinned v0.4 approval preserved; corrected v0.5 awaits G re-review, H paused for that revision, I/#470 blocked. |
 | 1.9 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 1.10 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 1.11 | September 30, 2026 | H v0.1 reference ready for separate owner review, 23 image pairs; G evidence preserved and I remains blocked. |

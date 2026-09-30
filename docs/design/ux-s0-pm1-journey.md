@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.14\
+**Version:** 0.15\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.18 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.21\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.19 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.22\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -869,7 +869,7 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 | S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.5 run 05; former tester prerequisite superseded |
 | Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; v0.5 PASS at `0e8bd2b`, single-image delta plus 18 carried images, protocol §9.1.1 |
-| Gate H high-fidelity image review | Anton Zymin | OPEN — high-fidelity work and separate owner image approval; H is not passed |
+| Gate H high-fidelity image review | Anton Zymin | OPEN — reference v0.1 / 23 image pairs ready; separate owner approval pending (§13); H is not passed |
 | Gate I implementation handoff | UX / Unity client | BLOCKED — awaits separately owner-approved H images; #470 remains blocked on I |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
@@ -960,7 +960,60 @@ H is OPEN for high-fidelity work and separate owner image review; no H/I approva
 
 ---
 
-# 13. Version history
+# 13. Gate H — high-fidelity reference
+
+**Status:** reference v0.1 ready for separate owner image review; H OPEN, I/#470 BLOCKED.
+**Base:** PR #473 head `b6c9c6a41be01fd3950f8e74755eda4672f124a2`, containing the owner-approved
+v0.5 delta record. The owner authorized starting H on that base before all #473 checks completed.
+That instruction authorizes H work, not H image approval or either PR's merge.
+
+The [H reference and complete 23-image index](s0-high-fidelity/README.md) applies the accepted
+touchline / Retro Dynamo Blue style. It reads the same immutable G model/capture/scenario, with a
+separate renderer, stylesheet and verification record. G's complete source/evidence tree remains
+byte-identical to the base. The current four screens/five moves and owner-approved C-DEC-1/S0-G-008
+behavior remain. No production, scene, schema, RNG, spec or client binding is changed.
+
+## 13.1 Carried findings and identity recheck
+
+| Finding / obligation | H v0.1 implementation and author verification | Owner review / production boundary |
+|---|---|---|
+| S0-H-001 stray leader dot | Leader endpoints have no circles; only materially displaced labels have lines. Stress geometry retains non-overlapping markers. | FIX implemented; confirm stress image; owner closure pending. |
+| S0-H-002 bench indices | Display Home shirt 12–18 and bench slot 1–7; seven option values stay 0–6. | FIX implemented; confirm substitution image; I maps labels to existing indices. |
+| S0-H-003 submit copy | “Choose a change, then submit it. Your team changes only when you see Applied.” Submit/Cancel preserved. | FIX implemented; confirm both staged dialogs; no application predicted on selection. |
+| S0-H-004 full-time statistics | Replace disabled statistics button with static retained/closed panel status. No reopen/close action at full time; report stays primary. | FIX implemented; confirm both retained panels and closed panel; S0-G-008 unchanged. |
+| Mentality choice consistency | Live requested choice/effect plus comparison of all seven identical setup labels/effects. | Confirm both contexts and expanded comparison; no new tactical semantics. |
+| Applied substitution / S0-B-004 | Explicit illustrative overlay changes H4 to H14 ↔ after Applied, matching shirt 4→14 feedback; Pending/Refused retain H4. 22 markers and used-choice exclusion checked. | Shirt-only identity rechecked in author images; owner must decide whether it identifies players sufficiently. S0-B-004 remains OPEN for production names. If owner cannot identify players at H, reopen as Blocker. |
+
+These are implementation/retest dispositions, not owner acceptance or H PASS. S0-B-002 still requires
+the I feedback adapter and J runtime verification. Engine-owned attack direction for future Stage-1
+ends-swap remains the I obligation in §12.5. This reference retains verified fixed Stage-0 direction.
+
+## 13.2 Components, art and copy
+
+The [reference README](s0-high-fidelity/README.md#design-and-boundaries) records shared component
+usage, states, copy roles and fallbacks. Text wordmark/menu treatment replaces unavailable key art;
+Home/Away text substitutes for crests; visible shirt markers identify players without portraits or
+invented names. Navy/blue structure, cream text, gold selection, distinct warning treatment and
+textual outcomes follow the accepted art direction. Offline system-font fallback is exercised;
+AP-03 shipping font/glyph/packaging proof remains separate. No asset or locale catalog is invented.
+
+## 13.3 Evidence and approval requirement
+
+`UX-H-S0-20260930-01`: 90 PASS checks, 23 PNG/PDF image pairs and source/image hashes in
+[s0-high-fidelity/evidence/v0.1/walkthrough.json](s0-high-fidelity/evidence/v0.1/walkthrough.json).
+All PDFs were rendered through Poppler and inspected. Coverage includes complete tasks, request
+states, both incomplete disclosures, fault timing, normal/expanded text, three desktop widths,
+keyboard recovery, substitution identity and undistorted pitch proportions. See the README for
+exact evidence limits; this supplies neither runtime nor independent usability evidence.
+
+**Owner H review is pending.** Approval must identify the reviewed H commit and the complete image
+set/hashes. Record the actual confirmation in validation protocol; do not infer it from G approval,
+starting H, passing checks or opening a PR. After that separate approval, I may begin. #470 remains
+blocked until the Gate-I handoff. Merge remains dependent on #473 and the applicable CI checks.
+
+---
+
+# 14. Version history
 
 | Version | Date | Notes |
 |---|---|---|
@@ -978,3 +1031,4 @@ H is OPEN for high-fidelity work and separate owner image review; no H/I approva
 | 0.12 | September 30, 2026 | Fixes Codex S0-G-013–015: fault-cutoff timing, full-time notice, actual normal-text clearance. Current v0.5 has 85 checks and 19 PDFs under evidence/v0.5; original 18 PDFs/run04 unchanged. G reopened for current-revision owner review; pinned v0.4 approval/decisions preserved; H paused, I/#470 blocked. |
 | 0.13 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 0.14 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 0.15 | September 30, 2026 | Starts separate H v0.1 on PR #473 / b6c9c6a: touchline, carried fixes, coherent illustrative substitution shirts, 90 checks and 23 image pairs. H owner review pending; G preserved, I/#470 blocked. |

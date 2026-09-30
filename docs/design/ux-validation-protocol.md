@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.21\
+**Version:** 0.22\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.18 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.19 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -557,6 +557,23 @@ Supporting evidence: `UX-GE-S0-20260930-05-DELTA-01` (three focused checks), del
 sources, all 19 v0.5 PDFs, the focused delta JSON, and all earlier evidence remain byte-identical to
 the reviewed commit `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. No image regeneration or new test run accompanies the record.
 
+#### 9.1.2 S0 Gate H reference — owner review pending
+
+H v0.1 is a separate high-fidelity reference based on PR #473 head b6c9c6a, as authorized by the
+owner September 30, 2026. This instruction supplies no H image approval. The actual G approvals
+and all source/image/evidence pins in §§9.1–9.1.1 remain unchanged.
+
+| Field | Current record |
+|---|---|
+| H reference | [s0-high-fidelity/README.md](s0-high-fidelity/README.md), complete 23-image PNG/PDF index |
+| Scripted support | UX-H-S0-20260930-01, 90 PASS checks, four H plus three shared source hashes and 46 image hashes in evidence/v0.1/walkthrough.json |
+| Author image inspection | All 23 PDFs rendered through Poppler and visually inspected; no owner or independent participant review claimed |
+| Finding/retest ledger | Journey packet §13.1; four Minor fixes, Mentality comparison and illustrative applied shirt identity |
+| Carried Major | S0-B-004 remains open for production names; author shirt-only recheck is pending owner assessment. If H cannot identify players, reopen Blocker. S0-B-002 adapter remains I/J obligation. |
+| Owner review commit / confirmation | PENDING — record reviewed commit and actual explicit confirmation after review |
+| Owner review scope | All 23 images and their pinned hashes; separate approval from G required |
+| H / I | H OPEN; I/#470 BLOCKED. No H approval inferred from work authorization, PR or checks. |
+
 ### 9.2 S1 participant decision record
 
 After both sessions, complete the record for the journey under test.
@@ -662,3 +679,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.19 | September 30, 2026 | Preserves the completed v0.4 approval verbatim and original image hashes; dates its immutable recording boundary. Adds pending v0.5 correction-review record with 85-check run 05 / 19 separate PDFs. No approval inferred from fixing Codex comments. |
 | 0.20 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 0.21 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 0.22 | September 30, 2026 | Adds pending separate H v0.1 review record: 23 image pairs, 90 scripted checks and carried finding/identity rechecks. G approvals preserved; H not passed, I/#470 blocked. |

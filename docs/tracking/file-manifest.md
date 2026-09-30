@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **S0 v0.5 owner delta approval recorded / H OPEN (PR #473).** Anton Zymin replied “approved” to the corrected full-time fault image at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`, with the other 18 carried forward from approved v0.4 apart from version text. Protocol v0.21 §9.1.1 records actual confirmation/date, image/source/evidence pins, 19 paths/hashes and retained decisions/release conditions. Packet v0.14, detailed plan v1.18 and high-level plan v1.10 mark G PASS/H OPEN. H backlog S0-H-001–004 remains; I/#470 stay blocked on separately approved H images. Eight Markdown documents only; all prototype sources, PDFs and evidence preserved byte-for-byte. No new tests, image generation, production/spec change or issue-count change.
+**Last Updated:** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
+
+Fresh H branch based on PR #473 / b6c9c6a adds an isolated touchline reference, four carried presentation fixes, seven-choice Mentality comparison and coherent illustrative Applied shirt markers. Run UX-H-S0-20260930-01 passes 90 checks; 23 PNG/PDF image pairs are rendered/inspected and hashed. G's entire source/evidence tree and owner approval pins remain unchanged. Packet v0.15, detailed plan v1.19, high-level plan v1.11 and protocol v0.22 record H OPEN / approval PENDING; I/#470 remain blocked. No production/spec/scene/schema/RNG change; issue counts unchanged. Fresh PR CI is not claimed by local checks.
+
+**Last Updated (prior):** September 30, 2026 — **S0 v0.5 owner delta approval recorded / H OPEN (PR #473).** Anton Zymin replied “approved” to the corrected full-time fault image at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`, with the other 18 carried forward from approved v0.4 apart from version text. Protocol v0.21 §9.1.1 records actual confirmation/date, image/source/evidence pins, 19 paths/hashes and retained decisions/release conditions. Packet v0.14, detailed plan v1.18 and high-level plan v1.10 mark G PASS/H OPEN. H backlog S0-H-001–004 remains; I/#470 stay blocked on separately approved H images. Eight Markdown documents only; all prototype sources, PDFs and evidence preserved byte-for-byte. No new tests, image generation, production/spec change or issue-count change.
 
 
 **Last Updated (prior):** September 30, 2026 — **PR #473 full-time fault copy delta.** Suppress the final-statistics report note when faulted; healthy copy retained. Focused run `UX-GE-S0-20260930-05-DELTA-01` passes three checks and regenerates only `mv-ft-statistics-fault.pdf`; run05 stays unchanged at a859ea1. New delta JSON records current seven-source/19-image hashes and the 18 unchanged PDFs. Text comparison confirms those 18 match approved v0.4 apart from version text. Packet v0.13, protocol v0.20, detailed plan v1.17 and high-level plan v1.9 narrow pending G approval to the single new image. S0-H-004 carries disabled Close statistics into H. v0.4 approval/decisions preserved; H paused pending delta approval, I/#470 blocked. No new approval, production/spec change or issue-count change.
@@ -3533,13 +3537,66 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.10: v0.4 approval retained; v0.5 delta approved at 0e8bd2b; G PASS/H OPEN |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.18: G PASS/H OPEN; I/#470 blocked |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.11: H v0.1 reference ready for separate owner review; G preserved |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.19: H reference ready / approval pending; I/#470 blocked |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.21: pinned v0.4 owner record unchanged; approved v0.5 delta at 0e8bd2b, retained baseline/delta checks and 19 image pins; S1 templates retained |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.14: Codex/copy findings S0-G-013–016 fixed; v0.5 85-check evidence and 19 images; earlier approval preserved, G PASS/H OPEN |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.22: G records preserved; separate H owner review pending, 23 image pairs / 90 checks |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.15: H components, art/copy roles, finding rechecks and review evidence; H OPEN |
+| `docs/design/s0-high-fidelity/README.md` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | H high-fidelity owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/index.html` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/prototype.css` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/prototype.js` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/verify.cjs` | Separate H design reference, reproduction or evidence; G base preserved |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
