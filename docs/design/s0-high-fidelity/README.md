@@ -2,7 +2,7 @@
 
 **Created:** September 30, 2026\
 **Last Updated:** October 1, 2026\
-**Status:** v0.2 images ready for separate owner review; H reopened for this revision, I on hold for v0.2 approval; #470 remains blocked.\
+**Status:** v0.2 images ready for separate owner review; H PASS / I OPEN remain valid for approved v0.1; #470 remains blocked on completed I.\
 **Prior approval preserved:** v0.1 at `4a6220c`, owner “images approved” September 30, 2026; recorded at `654c4f8` in [protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval). Its evidence and approval fingerprints remain unchanged.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
@@ -10,6 +10,12 @@ Open `index.html` locally. No build, server, account or network is needed. This 
 Retro Dynamo Blue reference for the approved four-screen S0 journey. It shares G's immutable model,
 reference capture and synthetic statistics fixture; the H renderer/styles and verifier are separate.
 The approved `s0-prototype/` sources, PDFs, hashes and owner records remain unchanged.
+
+Adopting v0.2 for Gate I requires separate owner approval. The earlier reopening/hold wording was
+an author interpretation, not a recorded owner decision. If v0.2 is declined or remains unapproved,
+I uses the approved v0.1 sources and images pinned to `4a6220cf4c394130c29f38716ed3abde1f60477b`
+([approval record](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval)), rather than
+the unapproved renderer at this branch tip.
 
 All commands/results are simulated. The ordinary 2–1 score/statistics fixture is synthetic;
 `fixture=scoreline` uses the unmodified 19–9 capture. Choices do not recompute either match. H adds an
@@ -70,6 +76,11 @@ image files. The verifier derives the established G journey tests, replacing pre
 assertions and adding H identity/choice/geometry assertions; v0.2 adds eight finding checks (S0-H-005–012) and an export-isolation/completeness check (S0-H-013).
 No G evidence is superseded or regenerated, and `evidence/v0.1/` is not rewritten.
 
+The fingerprints pin the exact reviewed artifact bytes, not identical output on every machine.
+Browser, installed fonts and font rendering can change pixels, wrapping and image height on a rerun
+even when the source hashes and checks agree. Run verification in a separate worktree and compare
+the checks and layout; keep the committed reviewed evidence unchanged.
+
 Mouse journeys cover 1366/1920/2560; keyboard covers 1366. Expanded/bracketed labels plus 200% root
 font (16→32px) run at all three widths, with browser zoom at 100%. Horizontal overflow, critical
 clipping, marker collision, modal focus, normal-text dropdown clearance, clock/fault boundaries,
@@ -127,3 +138,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | 0.1 | September 30, 2026 | Separate H touchline reference from PR #473 head b6c9c6a; carried presentation fixes, coherent illustrative shirt overlay, 90 checks and 23 image pairs. Owner H approval pending. |
 | 0.1 approval record | September 30, 2026 | Explicit owner “images approved” at 4a6220c; H PASS, I OPEN for handoff. Markdown-only record preserves all executable sources/images/evidence. |
 | 0.2 | October 1, 2026 | Implements Claude’s eight presentation fixes S0-H-005–012 from f7f44b5, then fixes capture-style leakage (S0-H-013) and regenerates all 23 PNG/PDF pairs in run UX-H-S0-20261001-02 (99 checks). Based on approval-recording head 654c4f8; the actual v0.1 approval, evidence and fingerprints are preserved. Separate v0.2 owner approval pending; I on hold for this revision. |
+| 0.2 documentation correction | October 1, 2026 | Clarifies that hashes pin reviewed bytes rather than cross-machine output; restores H PASS / I OPEN for pinned v0.1 without inferring a new owner decision. v0.2 adoption still awaits separate approval; all executable sources/images/evidence unchanged. |

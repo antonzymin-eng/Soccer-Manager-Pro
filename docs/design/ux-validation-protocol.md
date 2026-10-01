@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.24\
-**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS; I OPEN FOR HANDOFF\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.20 §F4 and Gates E–G\
+**Version:** 0.25\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.1 / v0.2 REVIEW PENDING; I OPEN FOR v0.1 HANDOFF\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.22 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -652,11 +652,18 @@ files and the walkthrough JSON remain byte-identical to the reviewed commit.
 
 #### 9.1.3 S0 Gate H v0.2 review candidate
 
-**Status:** separate owner approval PENDING for v0.2. H is reopened for this revision;
-I is on hold for v0.2 approval and #470 remains blocked on completed I.
+**Status:** separate owner approval PENDING for v0.2. H remains PASS for approved v0.1;
+I remains OPEN for handoff using that pinned baseline. #470 remains blocked on completed I.
 The actual v0.1 approval in §9.1.2 remains valid for its pinned commit and image set.
 It is preserved unchanged, including the confirmation, timestamp, 46 image hashes,
 seven executable-source hashes and walkthrough hash. It does not approve the v0.2 delta.
+
+**Gate-state correction:** the earlier v0.24 wording reopening H and holding I was an author
+interpretation, not a recorded owner decision. The actual owner confirmation remains “images approved”
+for v0.1 (§9.1.2). The revised v0.2 undergoes separate Gate-H review under the detailed plan §13;
+its adoption awaits owner approval. No owner instruction has superseded the approved v0.1 baseline
+or paused I. If v0.2 is declined or remains unapproved, I uses v0.1 sources and images pinned to
+`4a6220cf4c394130c29f38716ed3abde1f60477b`, rather than the unapproved files at the branch tip.
 
 | Field | Current record |
 |---|---|
@@ -752,7 +759,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). Current v0.2 approval is pending (§9.1.3); I is on hold for this revision and #470 remains blocked until I passes. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). Current v0.2 approval is pending (§9.1.3); I remains open using approved v0.1 and #470 remains blocked until I passes. S1 requires its two independent completions.
 
 ---
 
@@ -784,3 +791,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.22 | September 30, 2026 | Adds pending separate H v0.1 review record: 23 image pairs, 90 scripted checks and carried finding/identity rechecks. G approvals preserved; H not passed, I/#470 blocked. |
 | 0.23 | September 30, 2026 | Records actual “images approved” confirmation for H v0.1 at 4a6220c, full 46-image/seven-source hashes and unchanged evidence. H PASS; I OPEN for handoff; #470 still blocked on I. |
 | 0.24 | October 1, 2026 | Preserves the actual v0.1 owner approval/pins in §9.1.2 and adds §9.1.3 for corrected v0.2: 99 checks, 23 image pairs, isolated exports and PDF completeness checks. H reopened for v0.2 review; I on hold, #470 still blocked. Prior history rows unchanged. |
+| 0.25 | October 1, 2026 | Corrects the header and execution-plan pointer; distinguishes pending v0.2 adoption from the existing H PASS / I OPEN for pinned v0.1. Earlier reopening/hold wording was an author interpretation, not an owner decision. Prior approval and history preserved. |

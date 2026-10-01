@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.17\
-**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H v0.1 APPROVED / v0.2 REVIEW PENDING; I ON HOLD (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.21 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.24\
+**Version:** 0.18\
+**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.1 / v0.2 REVIEW PENDING; I OPEN FOR v0.1 HANDOFF (§12.3)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.22 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.25\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -962,7 +962,7 @@ owner-approved for v0.1 at `4a6220c` (§13); the production identity and I oblig
 
 # 13. Gate H — high-fidelity reference
 
-**Status:** v0.1 owner approval at `4a6220c` preserved; H reopened for v0.2 review, I on hold for this revision, #470 blocked on completed I.
+**Status:** H PASS for owner-approved v0.1 at `4a6220c`; v0.2 review pending. I OPEN for pinned v0.1 handoff; #470 blocked on completed I.
 **Base:** PR #473 head `b6c9c6a41be01fd3950f8e74755eda4672f124a2`, containing the owner-approved
 v0.5 delta record. The owner authorized starting H on that base before all #473 checks completed.
 That instruction authorizes H work, not H image approval or either PR's merge.
@@ -1024,8 +1024,10 @@ All 23 PNGs were inspected and all 23 PDFs rendered through Poppler. Each PDF is
 shares its PNG extent and contains every displayed statistics row label. The complete prior
 v0.1 evidence and protocol §9.1.2 approval/fingerprints remain unchanged.
 
-H is reopened for separate v0.2 approval, recorded as pending in protocol §9.1.3.
-I was opened on v0.1 approval and is now on hold for this revision. #470 remains blocked until I passes.
+Separate v0.2 approval is pending in protocol §9.1.3. H remains PASS for approved v0.1
+and I remains OPEN using that pinned baseline. The earlier reopening/hold wording was an author
+interpretation with no new owner decision behind it. If v0.2 is not approved, the handoff uses
+v0.1 sources/images at `4a6220c`; adopting v0.2 requires its own approval. #470 remains blocked until I passes.
 The original v0.2 run/exports are recoverable at `f7f44b5`; the current 99-check run replaces them.
 
 ## 13.4 Post-approval findings and v0.2 dispositions
@@ -1047,7 +1049,6 @@ These author fixes/retests do not supply owner approval of v0.2.
 | S0-H-010 | Pseudo-locale missed the header context and the comparison summary. | Both now pass through the pseudo transform. A new verifier walk asserts every product string in header, Match View, both dialogs, statistics and report is bracketed (wordmark, numbers, shirt markers exempt). | I still owns the #49 allocation; this only proves no string escaped the stress fixture. |
 | S0-H-011 | ↔ on the applied substitution marker was very small. | ↔ rendered at 1.25× marker text with the 2px white outline plus a dark halo; legend names the white-outlined ↔ marker. Verifier asserts glyph scale ≥1.2 and the outline. | Confirm H14 ↔ is recognisable at 1920. Illustrative overlay only. |
 | S0-H-012 | Comparison did not mark which Mentality was current or requested. | Dialog repeats “Current Mentality”; comparison tags Current (neutral) and Requested (gold outline), both on one row when equal; changing the dropdown moves only Requested. Verifier asserts tag placement before and after a change. | Confirm current versus requested is unambiguous; no new tactical semantics. |
-
 | S0-H-013 | The modal print clip persisted into later exports: five nonmodal PDFs were shorter than their PNGs, including two missing statistics tables. | All temporary styles removed in `finally`; exported grid/pitch geometry frozen only within capture. All 23 PDF page counts/extents and displayed statistics labels checked. | Fixed/retested; confirm regenerated v0.2 evidence. |
 
 These author fixes/retests await separate v0.2 owner acceptance; the actual v0.1 approval remains preserved.
@@ -1075,3 +1076,4 @@ These author fixes/retests await separate v0.2 owner acceptance; the actual v0.1
 | 0.15 | September 30, 2026 | Starts separate H v0.1 on PR #473 / b6c9c6a: touchline, carried fixes, coherent illustrative substitution shirts, 90 checks and 23 image pairs. H owner review pending; G preserved, I/#470 blocked. |
 | 0.16 | September 30, 2026 | Records explicit H image approval at 4a6220c: 23 views, carried Minor closures and H shirt identity recheck. H PASS; I OPEN for handoff, #470 blocked on completed I. Sources/images/evidence unchanged. |
 | 0.17 | October 1, 2026 | Preserves v0.1 approval and finding closures; adds current v0.2 evidence and post-approval ledger S0-H-005–013. Corrected run UX-H-S0-20261001-02: 99 checks, 23 PNG/PDF pairs, capture isolation and PDF completeness. H reopened for v0.2 review, I on hold. |
+| 0.18 | October 1, 2026 | Fixes the §13.4 table so S0-H-013 remains a finding row; corrects gate-state wording and authority pointers. H PASS / I OPEN remain valid for pinned v0.1; v0.2 adoption awaits separate approval. No source/image/evidence change. |
