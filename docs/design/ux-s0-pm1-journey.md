@@ -2,7 +2,7 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.18\
+**Version:** 0.19\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.1 / v0.2 REVIEW PENDING; I OPEN FOR v0.1 HANDOFF (§12.3)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.22 §5–§6\
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.25\
@@ -870,7 +870,7 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.5 run 05; former tester prerequisite superseded |
 | Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; v0.5 PASS at `0e8bd2b`, single-image delta plus 18 carried images, protocol §9.1.1 |
 | Gate H high-fidelity image review | Anton Zymin | v0.1 PASS preserved at 4a6220c, protocol §9.1.2; separate v0.2 review pending, §9.1.3 |
-| Gate I implementation handoff | UX / Unity client | ON HOLD for v0.2 approval; previously opened for approved v0.1, I not passed, #470 still blocked on completed I |
+| Gate I implementation handoff | UX / Unity client | OPEN — handoff from owner-approved v0.1 at `4a6220c`; v0.2 adoption awaits separate approval (protocol §9.1.3); I not passed, #470 blocked on completed I |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
 conducting all reviews of images". This changes S0's review method under detailed-plan F4.2;
@@ -1077,3 +1077,4 @@ These author fixes/retests await separate v0.2 owner acceptance; the actual v0.1
 | 0.16 | September 30, 2026 | Records explicit H image approval at 4a6220c: 23 views, carried Minor closures and H shirt identity recheck. H PASS; I OPEN for handoff, #470 blocked on completed I. Sources/images/evidence unchanged. |
 | 0.17 | October 1, 2026 | Preserves v0.1 approval and finding closures; adds current v0.2 evidence and post-approval ledger S0-H-005–013. Corrected run UX-H-S0-20261001-02: 99 checks, 23 PNG/PDF pairs, capture isolation and PDF completeness. H reopened for v0.2 review, I on hold. |
 | 0.18 | October 1, 2026 | Fixes the §13.4 table so S0-H-013 remains a finding row; corrects gate-state wording and authority pointers. H PASS / I OPEN remain valid for pinned v0.1; v0.2 adoption awaits separate approval. No source/image/evidence change. |
+| 0.19 | October 1, 2026 | Corrects the remaining stale Gate-I row in §12.3 to OPEN for approved v0.1, matching the header, protocol and plan. v0.2 adoption still requires separate approval; I is not passed and #470 remains blocked. No executable source/image/evidence change. |
