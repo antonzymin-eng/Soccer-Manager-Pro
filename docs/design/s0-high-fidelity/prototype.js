@@ -6,13 +6,18 @@
   const fixture = params.get('fixture') || 'ordinary';
   const captured = fixture === 'scoreline';
   const reference = captured ? window.S0Reference : window.S0Scenario;
-  if (captured) document.querySelector('.prototype-notice').textContent = 'Design reference H v0.1 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; substitutions use an illustrative lineup overlay, never a recomputed match. Unity binding remains pending UX Gate I.';
+  if (captured) document.querySelector('.prototype-notice').textContent = 'Design reference H v0.2 • Unmodified reference capture: unusual 19–9 match. All interactions are simulated; substitutions use an illustrative lineup overlay, never a recomputed match. Unity binding remains pending UX Gate I.';
   const app = document.getElementById('app');
+  // Programmatic focus targets show their ring only after keyboard input (S0-H-005).
+  const modality = mode => () => { document.documentElement.dataset.input = mode; };
+  window.addEventListener('keydown', modality('keyboard'), true);
+  window.addEventListener('pointerdown', modality('pointer'), true);
   const announcement = document.getElementById('announcement');
   const t = text => params.has('pseudo') ? `[${text} ${'~'.repeat(Math.ceil(text.length * .4))}]` : text;
   const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const text = value => escape(t(value));
   const button = (id, label, disabled = false, primary = false) => `<button id="${id}" type="button" ${disabled ? 'disabled' : ''} ${primary ? 'class="primary"' : ''}>${text(label)}</button>`;
+  document.querySelector('.header-context').textContent = t('One match · Home manager');
   const options = () => M.mentalities.map((value, index) => `<option value="${index}">${text(value)}</option>`).join('');
   let state = M.initial();
   let invoker = null;
@@ -44,7 +49,7 @@
   }
   seedHistory();
   if (state.screen === 'MV-FT' || state.screen === 'PR') state = M.reduce(state, { type: 'FULL_TIME' });
-  const identity = side => fixture === 'long-names' ? `${side} — ${t('Identity length stress fixture: a deliberately long football team identifier')}` : t(side);
+  const identity = side => t(fixture === 'long-names' ? `${side} — Identity length stress fixture: a deliberately long football team identifier` : side);
   function sample(minute = state.minute) {
     const samples = reference.snapshots;
     return samples.reduce((result, frame) => frame.minute <= minute + .001 ? frame : result, samples[0]);
@@ -72,11 +77,15 @@
       : `Statistics stopped at minute ${state.faultMinute}. The match continues; these figures are incomplete.`)}</p>`;
   }
   function feedback() {
+    // Every outcome carries an explicit label; colour and glyph only reinforce it (S0-H-007).
     const entry = r => {
       const change = r.kind === 'mentality' ? `Mentality: ${M.mentalities[r.value]}` : `Home shirt ${r.out + 1} → Home shirt ${12 + r.bench} (bench slot ${r.bench + 1})`;
-      const refusal = r.status === 'Refused' ? (r.kind === 'mentality' ? '. Current Mentality unchanged.' : '. Substitution count unchanged.') : '';
-      const paused = r.status === 'Pending' && state.screen === 'MV-P' ? ' — waiting; resume to continue' : '';
-      return `<p class="feedback ${r.status === 'Applied' ? 'success' : r.status === 'Pending' ? 'pending' : 'failure'}">${text(`${change} — ${r.status}${r.status === 'Applied' ? ` at minute ${r.minute}` : ''}${refusal}${paused}`)}</p>`;
+      const expired = r.status.startsWith('Not applied');
+      const [label, tone, detail] = r.status === 'Applied' ? ['Applied', 'success', `at minute ${r.minute}`]
+        : r.status === 'Refused' ? ['Refused', 'failure', r.kind === 'mentality' ? 'current Mentality unchanged' : 'substitution count unchanged']
+        : expired ? ['Not applied', 'expired', 'match ended before it could apply']
+        : ['Pending', 'pending', state.screen === 'MV-P' ? 'waiting; resume to continue' : 'waiting to be applied'];
+      return `<p class="feedback ${tone}" data-outcome="${label}"><span class="outcome">${text(label)}</span> <span class="outcome-detail">${text(`${change} — ${detail}`)}</span></p>`;
     };
     return state.requests.length ? `<div id="request-feedback" tabindex="-1" class="stack" aria-label="${text('Change request feedback')}">${state.requests.slice(-3).map(entry).join('')}
       ${state.requests.length > 3 ? `<details id="earlier-feedback"><summary id="earlier-feedback-toggle">${text(`Earlier change feedback (${state.requests.length - 3})`)}</summary>${state.requests.slice(0, -3).map(entry).join('')}</details>` : ''}</div>` : '';
@@ -92,7 +101,7 @@
       const replacement = a.id < 11 ? applied.find(r => r.out === a.id) : null;
       const shirt = replacement ? 12 + replacement.bench : a.id % 11 + 1;
       const label = `${a.id >= 11 ? 'Away' : 'Home'} shirt ${shirt}${replacement ? ' — illustrative applied substitution' : ''}`;
-      return `<span class="agent ${a.id >= 11 ? 'away' : ''} ${replacement ? 'replacement' : ''}" data-agent-id="${a.id}" data-x="${a.x}" data-y="${a.y}" title="${text(label)}" style="${position(a.x, a.y)}">${a.id >= 11 ? 'A' : 'H'}${shirt}${replacement ? ' ↔' : ''}</span>`;
+      return `<span class="agent ${a.id >= 11 ? 'away' : ''} ${replacement ? 'replacement' : ''}" data-agent-id="${a.id}" data-x="${a.x}" data-y="${a.y}" title="${text(label)}" style="${position(a.x, a.y)}">${a.id >= 11 ? 'A' : 'H'}${shirt}${replacement ? ' <span class="sub-mark">↔</span>' : ''}</span>`;
     }).join('');
     const field = `<svg class="pitch-lines" viewBox="-3 -1 111 70" preserveAspectRatio="none" aria-hidden="true">
       <rect x="0" y="0" width="105" height="68"/><path d="M52.5 0V68"/><circle cx="52.5" cy="34" r="9.15"/>
@@ -101,9 +110,8 @@
       <rect class="goal" x="-2" y="30.34" width="2" height="7.32"/><rect class="goal" x="105" y="30.34" width="2" height="7.32"/>
       <circle cx="11" cy="34" r=".25"/><circle cx="94" cy="34" r=".25"/>
     </svg>`;
-    return `<p class="pitch-direction">${text('Home attacks right → • Away attacks left ←')}</p>
-      <div class="pitch" role="img" aria-label="${text('Illustrative lineup on captured pitch positions. Home H attacks right; away A attacks left. Goals and penalty areas shown. Labels may move slightly to avoid overlap; ball dot.')}">${field}${marks}<span class="ball" style="${position(frame.ball[0], frame.ball[1])}" aria-hidden="true">●</span></div>
-      <p>${text('Illustrative lineup on captured positions. H/A identify Home/Away shirt numbers; ↔ marks an applied simulated substitution. Labels may move slightly to avoid overlap.')}</p>`;
+    return `<div class="pitch" role="img" aria-label="${text('Illustrative lineup on captured pitch positions. Home H attacks right; away A attacks left. Goals and penalty areas shown. Labels may move slightly to avoid overlap; ball dot.')}">${field}${marks}<span class="ball" style="${position(frame.ball[0], frame.ball[1])}" aria-hidden="true">●</span></div>
+      <p class="pitch-caption">${text('Illustrative lineup on captured positions. H/A identify Home/Away shirt numbers; a white-outlined ↔ marker is an applied simulated substitution. Labels may move slightly to avoid overlap.')}</p>`;
   }
   function layoutPitchMarkers() {
     const field = document.querySelector('.pitch:not(.pitch-empty)');
@@ -173,12 +181,13 @@
       const period = waiting ? 'Waiting for first frame' : ended ? 'Full time' : state.minute < 45 ? 'First half' : 'Second half';
       const reason = waiting ? 'Match starting — controls unavailable until the first frame.' : ended ? 'Match ended — playback and team changes are unavailable.' : '';
       const pendingTactic = state.requests.some(r => r.kind === 'mentality' && r.status === 'Pending');
-      app.innerHTML = `<section class="stack"><h1 id="page-heading" tabindex="-1">${text('Match View')}</h1>
-        <div class="panel stack"><div class="scoreboard"><span class="identity">${escape(identity('Home'))}</span><span class="score">${waiting ? '—' : `${score[0]} – ${score[1]}`}</span><span class="identity away">${escape(identity('Away'))}</span></div>
-        <div class="row context"><span>${text(period)}</span><span>${text(waiting ? 'Clock awaiting first frame' : `Minute ${state.minute}`)}</span><span>${text(`Selected speed ${M.speeds[state.speed]}×${state.screen === 'MV-P' ? ' • Paused' : ''}`)}</span><span>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</span></div>
-        ${reason ? `<p class="reason">${text(reason)}</p>` : ''}${ended ? button('report', 'View match report', false, true) : ''}</div>
-        <div class="layout"><section class="stack"><div class="row">${button('slower', 'Slower', locked || state.speed === 0)}${button('pause', state.screen === 'MV-P' ? 'Resume' : 'Pause', locked)}${button('faster', 'Faster', locked || state.speed === 3)}</div>
+      app.innerHTML = `<section class="stack match-view"><h1 id="page-heading" tabindex="-1">${text('Match View')}</h1>
+        <div class="panel stack"><div class="scoreboard"><span class="identity">${escape(identity('Home'))}</span><div class="score-block"><span class="score">${waiting ? '—' : `${score[0]} – ${score[1]}`}</span><p class="clock"><span>${text(period)}</span><span>${text(waiting ? 'Clock awaiting first frame' : `Minute ${state.minute}`)}</span></p></div><span class="identity away">${escape(identity('Away'))}</span></div>
+        <p class="match-meta context"><span>${text(`Selected speed ${M.speeds[state.speed]}×${state.screen === 'MV-P' ? ' • Paused' : ''}`)}</span><span>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</span></p>
+        ${reason ? `<div class="reason-row"><p class="reason">${text(reason)}</p>${ended ? button('report', 'View match report', false, true) : ''}</div>` : ''}</div>
+        <div class="layout"><section class="stack"><div class="control-bar">${button('slower', 'Slower', locked || state.speed === 0)}${button('pause', state.screen === 'MV-P' ? 'Resume' : 'Pause', locked)}${button('faster', 'Faster', locked || state.speed === 3)}
         ${!locked ? `<p>${text(state.speed === 0 ? 'Already at real time — slower is unavailable.' : state.speed === 3 ? 'Already at the fastest speed — faster is unavailable.' : 'Speed steps: 1×, 3×, 5×, 10×.')}</p>` : ''}
+        ${state.screen === 'MV-0' ? '' : `<p class="pitch-direction">${text('Home attacks right → • Away attacks left ←')}</p>`}</div>
         ${pitch()}${params.has('captions') ? `<p class="caption-reservation">${text('Future caption region — layout stress fixture only (audio runtime unavailable)')}</p>` : ''}</section>
         <aside class="stack"><section class="panel stack"><h2>${text('Home team changes')}</h2><p>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</p>${button('tactic', 'Change Mentality', locked || pendingTactic)}
         ${pendingTactic ? `<p>${text('Mentality request pending — another request is unavailable until resolved.')}</p>` : ''}
@@ -224,7 +233,7 @@
     const starters = Array.from({ length: 11 }, (_, i) => i).filter(i => !state.usedOut.includes(i) && !frame.agents[i].sentOff && frame.agents[i].benchSlot < 0);
     const bench = Array.from({ length: 7 }, (_, i) => i).filter(i => !state.usedBench.includes(i));
     dialog.innerHTML = `<h2 id="dialog-heading">${text(kind === 'mentality' ? 'Change Home Mentality' : 'Make Home substitution')}</h2>
-      ${kind === 'mentality' ? `<label for="new-mentality">${text('Requested Mentality')}</label><select id="new-mentality">${options()}</select><p id="choice-help" class="choice-help"></p><details id="mentality-comparison"><summary>Compare all seven Mentalities</summary><ul class="choice-comparison">${M.mentalities.map((m, i) => `<li><strong>${text(m)}</strong><span>${text(M.consequences[i])}</span></li>`).join('')}</ul></details>`
+      ${kind === 'mentality' ? `<p>${text(`Current Mentality: ${M.mentalities[state.mentality]}`)}</p><label for="new-mentality">${text('Requested Mentality')}</label><select id="new-mentality">${options()}</select><p id="choice-help" class="choice-help"></p><details id="mentality-comparison"><summary>${text('Compare all seven Mentalities')}</summary><ul class="choice-comparison">${M.mentalities.map((m, i) => `<li data-choice="${i}"><strong>${text(m)}</strong><span>${text(M.consequences[i])}</span><span class="choice-tags"></span></li>`).join('')}</ul></details>`
         : `<p>${text('Choose by shirt number and unused bench slot. The substitution takes effect when the request is applied; it does not wait for a stoppage.')}</p>
           <label for="outgoing">${text('Outgoing home player')}</label><select id="outgoing">${starters.map(i => `<option value="${i}">${text(`Home shirt ${i + 1}${i === 0 ? ' — goalkeeper' : ''}`)}</option>`).join('')}</select>
           <label for="incoming">${text('Incoming bench player')}</label><select id="incoming">${bench.map(i => `<option value="${i}">${text(`Home shirt ${12 + i} — bench slot ${i + 1}`)}</option>`).join('')}</select>`}
@@ -233,7 +242,16 @@
     if (kind === 'mentality') {
       const select = dialog.querySelector('select');
       select.value = state.mentality;
-      const explain = () => { document.getElementById('choice-help').textContent = t(`${M.mentalities[select.value]}: ${M.consequences[select.value]}`); };
+      const explain = () => {
+        document.getElementById('choice-help').textContent = t(`${M.mentalities[select.value]}: ${M.consequences[select.value]}`);
+        // Current is the applied value; Requested follows the dropdown and is not applied (S0-H-012).
+        dialog.querySelectorAll('.choice-comparison li').forEach(item => {
+          const index = Number(item.dataset.choice);
+          const requested = index === Number(select.value);
+          item.classList.toggle('requested', requested);
+          item.querySelector('.choice-tags').innerHTML = `${index === state.mentality ? `<span class="choice-tag">${text('Current')}</span>` : ''}${requested ? `<span class="choice-tag requested-tag">${text('Requested')}</span>` : ''}`;
+        });
+      };
       select.addEventListener('change', explain); explain();
     }
     document.getElementById('submit-change').addEventListener('click', () => {
