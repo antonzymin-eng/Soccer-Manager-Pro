@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
+**Last Updated:** October 1, 2026 — **S0 Gate H v0.2 reference after v0.1 image review.**
+
+H v0.1 image review (owner-requested, external reviewer concurring) found S0-H-005–012: two presentation/capture defects — pointer-visible focus boxes on headings and the outcome list, and modal images dimmed only to the fold — plus six clarity issues (outcome states distinguished only by wording, a dead column beside a pitch that overran 1080p at full time, button-shaped status chips, two strings escaping pseudo-locale, a tiny ↔ glyph, no Current/Requested marking in the Mentality comparison). None blocked player identification. H v0.2 fixes all eight in the H renderer/stylesheet only; the shared G model/capture/scenario and all G evidence are byte-identical, and `evidence/v0.1/` is retained unchanged, superseded and never approved (reproducible at `4a6220c`). Run UX-H-S0-20261001-01 passes 98 checks (v0.1's 90, with outcome-text assertions moved to the labelled format, plus one assertion per finding) and writes 23 PNG/PDF pairs to `evidence/v0.2/`; all 23 PNGs inspected at full size and all 23 single-page PDFs rendered through Poppler. Measured trade-off recorded rather than hidden: the pitch at 1920×1080 narrows from 990px to 951px so it fits the viewport in every Match View state; 1366×768 keeps a 704px floor and still scrolls. Packet v0.16 §13.4, protocol v0.23, detailed plan v1.20 and high-level plan v1.12 record H OPEN / v0.2 approval PENDING; I/#470 remain blocked. Docs/design reference only: no `src/`, spec, scene, schema or RNG change (no SNAPSHOT_SCHEMA_VERSION move, no RNG stream/domain tag/draw site/draw-order change); issue counts unchanged. Dotnet gate not run — no code or test project is touched; the H browser verifier is the relevant check and passed.
+
+**Last Updated (prior):** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
 
 Fresh H branch based on PR #473 / b6c9c6a adds an isolated touchline reference, four carried presentation fixes, seven-choice Mentality comparison and coherent illustrative Applied shirt markers. Run UX-H-S0-20260930-01 passes 90 checks; 23 PNG/PDF image pairs are rendered/inspected and hashed. G's entire source/evidence tree and owner approval pins remain unchanged. Packet v0.15, detailed plan v1.19, high-level plan v1.11 and protocol v0.22 record H OPEN / approval PENDING; I/#470 remain blocked. No production/spec/scene/schema/RNG change; issue counts unchanged. Fresh PR CI is not claimed by local checks.
 
@@ -3537,66 +3541,113 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.11: H v0.1 reference ready for separate owner review; G preserved |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.19: H reference ready / approval pending; I/#470 blocked |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.12: H v0.2 reference ready for separate owner review; v0.1 superseded unapproved; G preserved |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.20: H v0.2 reference ready / approval pending; I/#470 blocked |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.22: G records preserved; separate H owner review pending, 23 image pairs / 90 checks |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.15: H components, art/copy roles, finding rechecks and review evidence; H OPEN |
-| `docs/design/s0-high-fidelity/README.md` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.23: G records preserved; separate H v0.2 owner review pending, 23 image pairs / 98 checks |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.16: H components, art/copy roles, finding rechecks, §13.4 v0.1 review findings S0-H-005–012 and review evidence; H OPEN |
+| `docs/design/s0-high-fidelity/README.md` | Separate H design reference v0.2, reproduction or evidence; G base preserved |
 | `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mm.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mm.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/pr.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/pr.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | H high-fidelity owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json` | Separate H design reference, reproduction or evidence; G base preserved |
-| `docs/design/s0-high-fidelity/index.html` | Separate H design reference, reproduction or evidence; G base preserved |
-| `docs/design/s0-high-fidelity/prototype.css` | Separate H design reference, reproduction or evidence; G base preserved |
-| `docs/design/s0-high-fidelity/prototype.js` | Separate H design reference, reproduction or evidence; G base preserved |
-| `docs/design/s0-high-fidelity/verify.cjs` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | H v0.1 image; superseded by v0.2, never approved; retained |
+| `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json` | H v0.1 verification record (UX-H-S0-20260930-01, 90 checks); superseded, retained |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.pdf` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/walkthrough.json` | H v0.2 executed verification record (UX-H-S0-20261001-01, 98 checks, source/image hashes) |
+| `docs/design/s0-high-fidelity/index.html` | Separate H design reference v0.2, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/prototype.css` | Separate H design reference v0.2, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/prototype.js` | Separate H design reference v0.2, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/verify.cjs` | Separate H design reference v0.2, reproduction or evidence; G base preserved |
 | `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
 | `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
 | `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
