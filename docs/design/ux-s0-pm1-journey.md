@@ -1,11 +1,11 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** September 30, 2026\
-**Version:** 0.14\
-**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED (§12.3)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.18 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.21\
+**Last Updated:** October 1, 2026\
+**Version:** 0.21\
+**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I OPEN FOR v0.2 HANDOFF (§12.3)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.23 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.27\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -869,8 +869,8 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 | S0 reviewer assignment | Anton Zymin | Owner-directed September 30, 2026: testers not required; owner conducts image reviews |
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.5 run 05; former tester prerequisite superseded |
 | Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; v0.5 PASS at `0e8bd2b`, single-image delta plus 18 carried images, protocol §9.1.1 |
-| Gate H high-fidelity image review | Anton Zymin | OPEN — high-fidelity work and separate owner image approval; H is not passed |
-| Gate I implementation handoff | UX / Unity client | BLOCKED — awaits separately owner-approved H images; #470 remains blocked on I |
+| Gate H high-fidelity image review | Anton Zymin | v0.2 PASS at `a1044d5`, actual “images approved” October 1, 2026; protocol §9.1.3. Prior v0.1 approval preserved in §9.1.2 |
+| Gate I implementation handoff | UX / Unity client | OPEN — handoff from owner-approved v0.2 at `a1044d5` (protocol §9.1.3); I not passed, #470 blocked on completed I |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
 conducting all reviews of images". This changes S0's review method under detailed-plan F4.2;
@@ -886,10 +886,10 @@ statements and approved prototype v0.4 at `13c2c09`, the original 18 images reta
 C-DEC-1 and S0-G-008 decisions, every finding disposition, and written rationale/release condition
 for carried Majors S0-B-002/S0-B-004. The original 18 approved PDFs and run-04 record stay unchanged; their source version is pinned to `13c2c09`.
 Image review supplies no runtime or independent usability evidence; the existing 80-check run remains
-supporting scripted interaction evidence. **For current v0.5, Gate G is PASS and H is OPEN.** On September 30, 2026, Anton Zymin replied
+supporting scripted interaction evidence. **For current v0.5, Gate G is PASS; H is now PASS for the separately approved reference (§13).** On September 30, 2026, Anton Zymin replied
 “approved” to the corrected full-time fault image at `0e8bd2b`; protocol §9.1.1 records the delta
 approval. The other 18 carry forward from approved v0.4, apart from version text. The next
-high-fidelity images still need separate owner approval before I. **PR #470 remains draft/blocked on S0 Gate I.**
+high-fidelity v0.1 images have now received that separate owner approval at `4a6220c` (protocol §9.1.2). I is OPEN; **PR #470 remains blocked on the completed S0 Gate-I handoff.**
 
 ## 12.4 Image-review findings and required owner decisions
 
@@ -945,8 +945,8 @@ checks pass and only the new full-time fault PDF is regenerated. See the delta e
 
 ## 12.5 H/I follow-ups from image review
 
-These obligations remain open after the pinned v0.4 approval and v0.5 single-image delta approval.
-H is OPEN for high-fidelity work and separate owner image review; no H/I approval is supplied.
+The table records the obligations carried from G into H/I. H obligations are fixed/retested and
+owner-approved for v0.1 at `4a6220c` (§13); the production identity and I obligations remain open.
 
 | Gate | Follow-up | Closure evidence |
 |---|---|---|
@@ -960,7 +960,104 @@ H is OPEN for high-fidelity work and separate owner image review; no H/I approva
 
 ---
 
-# 13. Version history
+# 13. Gate H — high-fidelity reference
+
+**Status:** H PASS for owner-approved v0.2 at `a1044d5`; prior v0.1 approval preserved. I OPEN for pinned v0.2 handoff; #470 blocked on completed I.
+**Base:** PR #473 head `b6c9c6a41be01fd3950f8e74755eda4672f124a2`, containing the owner-approved
+v0.5 delta record. The owner authorized starting H on that base before all #473 checks completed.
+That instruction authorizes H work, not H image approval or either PR's merge.
+
+The [H reference and complete 23-image index](s0-high-fidelity/README.md) applies the accepted
+touchline / Retro Dynamo Blue style. It reads the same immutable G model/capture/scenario, with a
+separate renderer, stylesheet and verification record. G's complete source/evidence tree remains
+byte-identical to the base. The current four screens/five moves and owner-approved C-DEC-1/S0-G-008
+behavior remain. No production, scene, schema, RNG, spec or client binding is changed.
+
+## 13.1 Carried findings and identity recheck
+
+| Finding / obligation | H v0.1 implementation and author verification | Owner review / production boundary |
+|---|---|---|
+| S0-H-001 stray leader dot | Leader endpoints have no circles; only materially displaced labels have lines. Stress geometry retains non-overlapping markers. | FIX NOW — fixed/retested and owner-approved in H images. |
+| S0-H-002 bench indices | Display Home shirt 12–18 and bench slot 1–7; seven option values stay 0–6. | FIX NOW — fixed/retested and owner-approved; I maps labels to existing indices. |
+| S0-H-003 submit copy | “Choose a change, then submit it. Your team changes only when you see Applied.” Submit/Cancel preserved. | FIX NOW — fixed/retested and owner-approved; no application predicted on selection. |
+| S0-H-004 full-time statistics | Replace disabled statistics button with static retained/closed panel status. No reopen/close action at full time; report stays primary. | FIX NOW — fixed/retested and owner-approved; S0-G-008 unchanged. |
+| Mentality choice consistency | Live requested choice/effect plus comparison of all seven identical setup labels/effects. | Both contexts and expanded comparison owner-approved; no new tactical semantics. |
+| Applied substitution / S0-B-004 | Explicit illustrative overlay changes H4 to H14 ↔ after Applied, matching shirt 4→14 feedback; Pending/Refused retain H4. 22 markers and used-choice exclusion checked. | Shirt-only H identity recheck accepted in the owner-approved image set. S0-B-004 remains OPEN for production names under the existing release condition. |
+
+These implementation/retest dispositions have owner image approval for v0.1 recorded in protocol §9.1.2. That approval is preserved; the v0.2 delta is separately owner-approved at `a1044d5` (§9.1.3). S0-B-002 still requires
+the I feedback adapter and J runtime verification. Engine-owned attack direction for future Stage-1
+ends-swap remains the I obligation in §12.5. This reference retains verified fixed Stage-0 direction.
+
+## 13.2 Components, art and copy
+
+The [reference README](s0-high-fidelity/README.md#design-and-boundaries) records shared component
+usage, states, copy roles and fallbacks. Text wordmark/menu treatment replaces unavailable key art;
+Home/Away text substitutes for crests; visible shirt markers identify players without portraits or
+invented names. Navy/blue structure, cream text, gold selection, distinct warning treatment and
+textual outcomes follow the accepted art direction. Offline system-font fallback is exercised;
+AP-03 shipping font/glyph/packaging proof remains separate. No asset or locale catalog is invented.
+
+## 13.3 Evidence and approval requirement
+
+### Approved v0.1 historical record
+
+`UX-H-S0-20260930-01`: 90 PASS checks, 23 PNG/PDF image pairs and source/image hashes in
+[s0-high-fidelity/evidence/v0.1/walkthrough.json](s0-high-fidelity/evidence/v0.1/walkthrough.json).
+All PDFs were rendered through Poppler and inspected. Coverage includes complete tasks, request
+states, both incomplete disclosures, fault timing, normal/expanded text, three desktop widths,
+keyboard recovery, substitution identity and undistorted pitch proportions. See the README for
+exact evidence limits; this supplies neither runtime nor independent usability evidence.
+
+**Owner H review: PASS.** On September 30, 2026 at 19:41:55 America/Los_Angeles, Anton Zymin
+replied “images approved” following the complete 23-view index and H review criteria. The reviewed
+commit is `4a6220cf4c394130c29f38716ed3abde1f60477b`; protocol §9.1.2 pins all 46 image hashes,
+seven executable-source hashes and the immutable walkthrough JSON. No source/image/evidence
+regeneration accompanies this documents-only record. I is OPEN for the implementation handoff;
+I is not passed and #470 remains blocked until the handoff is completed. #473 has merged; reviewed
+H CI run 36778408822 succeeded, and the recording head requires fresh CI before merge.
+
+### Current approved v0.2 reference
+
+Run `UX-H-S0-20261001-02` passes 99 checks and regenerates all 23 PNG/PDF pairs in
+[evidence/v0.2/walkthrough.json](s0-high-fidelity/evidence/v0.2/walkthrough.json).
+All 23 PNGs were inspected and all 23 PDFs rendered through Poppler. Each PDF is one page,
+shares its PNG extent and contains every displayed statistics row label. The complete prior
+v0.1 evidence and protocol §9.1.2 approval/fingerprints remain unchanged.
+
+**Owner H v0.2 review: PASS.** Anton Zymin replied “images approved” on October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC).
+The reviewed commit is `a1044d525703a42f274b6643f9c96c3c46dc3592`; protocol §9.1.3 pins the actual confirmation,
+46 images, seven executable sources and immutable walkthrough hash. I remains OPEN and now uses
+this approved v0.2 baseline. The actual v0.1 approval remains preserved. This recording changes
+Markdown only; no images or browser evidence are regenerated. #470 remains blocked until I passes.
+The original v0.2 run/exports are recoverable at `f7f44b5`; the current 99-check run replaces them.
+
+## 13.4 Post-approval findings and v0.2 dispositions
+
+After the owner approved v0.1, review identified eight presentation/clarity findings.
+Claude implemented S0-H-005–012 at `f7f44b5`, based on the H commit preceding the
+approval record. Review then found capture leakage (S0-H-013) and the mistaken “never approved”
+claim. This revision integrates the visual fixes on approval-recording head `654c4f8`,
+corrects the capture defect, and preserves the actual earlier approval and version-history rows.
+The separate owner “images approved” confirmation at `a1044d5` accepts all nine fixes in the v0.2 images; author retests are supporting evidence.
+
+| ID | Finding | v0.2 fix and author verification | Owner review / production boundary |
+|---|---|---|---|
+| S0-H-005 | Programmatically focused page headings and the outcome list showed the 3px focus box for pointer users, reading as text fields or a selected item. | `[tabindex="-1"]` targets show the ring only after keyboard input; focus destinations unchanged. Pointer journey asserts no box on heading/outcome list; keyboard journey asserts the 3px ring on heading, button and outcome list. | Owner-approved in v0.2 images. Confirmed no boxed headings. I maps the rule to Unity focus visuals (keyboard/gamepad only). |
+| S0-H-006 | Staged-dialog images dimmed only the first 1080px; content below stayed bright (full-page capture of a viewport backdrop). | Modal images are single-viewport captures with single-page PDFs; verifier asserts all three are. Capture artifact only; no runtime defect existed. | Owner-approved in v0.2 images. Confirmed all three dialog images are fully dimmed. |
+| S0-H-007 | Pending, Applied, Refused and Not applied differed only by wording and a 3px bar; Pending matched info boxes, Refused matched Not applied. | Explicit outcome label on every row: Pending dashed blue, Applied green ✓, Refused rose ✕, Not applied dotted grey –. Verifier asserts four labels and four distinct treatments. | Owner-approved in v0.2 images. Confirmed the four states are distinct at a glance. Words remain primary; I allocates labels to #49 roles. |
+| S0-H-008 | ~320px dead column between pitch and rail at 1920; pitch bottom below a 1080 viewport in full-time states. | Pitch width = max(44rem, (viewport height − 30rem) × 111/70); Match View width = pitch + rail, rail 16px beside pitch; speed note and direction share the control row. Verifier: whole pitch visible without scrolling at 1920×1080 and 2560×1440 in waiting/live/paused/full time; 1366×768 keeps a 704px floor and scrolls. | Owner-approved in v0.2 images. Trade-off: at 1920×1080 the pitch is 951px wide (v0.1 990px) so it fits; the caption may need a short scroll. |
+| S0-H-009 | Status chips (period, minute, speed, Mentality) were bordered like secondary buttons; minute had no more weight than speed. | Period and minute sit directly under the score at 1.2rem; speed and current Mentality are unbordered plain text below. Verifier asserts no border/fill/focusability. | Owner-approved in v0.2 images. Confirmed time is easy to find and nothing looks clickable. |
+| S0-H-010 | Pseudo-locale missed the header context and the comparison summary. | Both now pass through the pseudo transform. A new verifier walk asserts every product string in header, Match View, both dialogs, statistics and report is bracketed (wordmark, numbers, shirt markers exempt). | Owner-approved in v0.2 images. I still owns the #49 allocation; the original scan covered the fault fixture; long-name coverage is corrected separately in S0-H-014. |
+| S0-H-011 | ↔ on the applied substitution marker was very small. | ↔ rendered at 1.25× marker text with the 2px white outline plus a dark halo; legend names the white-outlined ↔ marker. Verifier asserts glyph scale ≥1.2 and the outline. | Owner-approved in v0.2 images. Confirmed H14 ↔ is recognisable at 1920. Illustrative overlay only. |
+| S0-H-012 | Comparison did not mark which Mentality was current or requested. | Dialog repeats “Current Mentality”; comparison tags Current (neutral) and Requested (gold outline), both on one row when equal; changing the dropdown moves only Requested. Verifier asserts tag placement before and after a change. | Owner-approved in v0.2 images. Confirmed current versus requested is unambiguous; no new tactical semantics. |
+| S0-H-013 | The modal print clip persisted into later exports: five nonmodal PDFs were shorter than their PNGs, including two missing statistics tables. | All temporary styles removed in `finally`; exported grid/pitch geometry frozen only within capture. All 23 PDF page counts/extents and displayed statistics labels checked. | Owner-approved in v0.2 images. Fixed/retested; regenerated v0.2 evidence approved. |
+| S0-H-014 | Long-name pseudo fixture left Home/Away outside the transform; S0-H-010 tested only fault. | Transform the assembled identity once; scan fault and long-name fixtures across setup, live/full-time, statistics, dialogs and report. Check failed on the old renderer, passes after the fix; full scratch walkthrough 99/99 PASS. | Focused source/verification delta, protocol §9.1.4; approved a1044d5 images/source pins remain unchanged. No new owner approval inferred. |
+
+All S0-H-005–013 fixes are accepted in the owner-approved v0.2 images (protocol §9.1.3). Production obligations remain as listed; the actual v0.1 approval is preserved.
+
+---
+
+# 14. Version history
 
 | Version | Date | Notes |
 |---|---|---|
@@ -978,3 +1075,10 @@ H is OPEN for high-fidelity work and separate owner image review; no H/I approva
 | 0.12 | September 30, 2026 | Fixes Codex S0-G-013–015: fault-cutoff timing, full-time notice, actual normal-text clearance. Current v0.5 has 85 checks and 19 PDFs under evidence/v0.5; original 18 PDFs/run04 unchanged. G reopened for current-revision owner review; pinned v0.4 approval/decisions preserved; H paused, I/#470 blocked. |
 | 0.13 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 0.14 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 0.15 | September 30, 2026 | Starts separate H v0.1 on PR #473 / b6c9c6a: touchline, carried fixes, coherent illustrative substitution shirts, 90 checks and 23 image pairs. H owner review pending; G preserved, I/#470 blocked. |
+| 0.16 | September 30, 2026 | Records explicit H image approval at 4a6220c: 23 views, carried Minor closures and H shirt identity recheck. H PASS; I OPEN for handoff, #470 blocked on completed I. Sources/images/evidence unchanged. |
+| 0.17 | October 1, 2026 | Preserves v0.1 approval and finding closures; adds current v0.2 evidence and post-approval ledger S0-H-005–013. Corrected run UX-H-S0-20261001-02: 99 checks, 23 PNG/PDF pairs, capture isolation and PDF completeness. H reopened for v0.2 review, I on hold. |
+| 0.18 | October 1, 2026 | Fixes the §13.4 table so S0-H-013 remains a finding row; corrects gate-state wording and authority pointers. H PASS / I OPEN remain valid for pinned v0.1; v0.2 adoption awaits separate approval. No source/image/evidence change. |
+| 0.19 | October 1, 2026 | Corrects the remaining stale Gate-I row in §12.3 to OPEN for approved v0.1, matching the header, protocol and plan. v0.2 adoption still requires separate approval; I is not passed and #470 remains blocked. No executable source/image/evidence change. |
+| 0.20 | October 1, 2026 | Records actual owner “images approved” for all 23 H v0.2 views at a1044d5. §12.3/header/§13 agree: H PASS, I OPEN using v0.2; S0-H-005–013 accepted in images. Prior approval/history/evidence and all executable sources/images unchanged. |
+| 0.21 | October 1, 2026 | Adds S0-H-014 long-name pseudo-locale correction and focused validation delta; original fault-only coverage claim narrowed. Full scratch walkthrough 99/99 PASS; approved images, source pins and gate decisions preserved. |
