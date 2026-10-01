@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 0.22\
-**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H OPEN; I BLOCKED\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.19 §F4 and Gates E–G\
+**Version:** 0.23\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS; I OPEN FOR HANDOFF\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.20 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -557,22 +557,98 @@ Supporting evidence: `UX-GE-S0-20260930-05-DELTA-01` (three focused checks), del
 sources, all 19 v0.5 PDFs, the focused delta JSON, and all earlier evidence remain byte-identical to
 the reviewed commit `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`. No image regeneration or new test run accompanies the record.
 
-#### 9.1.2 S0 Gate H reference — owner review pending
+#### 9.1.2 S0 Gate H owner image approval
 
-H v0.1 is a separate high-fidelity reference based on PR #473 head b6c9c6a, as authorized by the
-owner September 30, 2026. This instruction supplies no H image approval. The actual G approvals
-and all source/image/evidence pins in §§9.1–9.1.1 remain unchanged.
+**Review ID:** UX-H-S0-OWNER-20260930-01.\
+**Owner:** Anton Zymin.\
+**Actual confirmation:** “images approved”.\
+**Confirmation time:** September 30, 2026 at 19:41:55 America/Los_Angeles (October 1, 2026 02:41:55 UTC).\
+**Reviewed commit:** `4a6220cf4c394130c29f38716ed3abde1f60477b` (PR #474, high-fidelity reference v0.1).
 
-| Field | Current record |
+The confirmation follows the complete 23-view review index and H criteria given in this conversation:
+readability, understandable Mentality/substitution choices, coherent feedback/markers, complete states,
+visual/stress quality and shirt-number player identification. It approves all 23 views in both PNG/PDF
+formats pinned below. No new owner statement or broader production/merge approval is inferred.
+The prior work-start instruction and the actual G approvals/pins in §§9.1–9.1.1 remain unchanged.
+
+| Field | Recorded result |
 |---|---|
-| H reference | [s0-high-fidelity/README.md](s0-high-fidelity/README.md), complete 23-image PNG/PDF index |
-| Scripted support | UX-H-S0-20260930-01, 90 PASS checks, four H plus three shared source hashes and 46 image hashes in evidence/v0.1/walkthrough.json |
-| Author image inspection | All 23 PDFs rendered through Poppler and visually inspected; no owner or independent participant review claimed |
-| Finding/retest ledger | Journey packet §13.1; four Minor fixes, Mentality comparison and illustrative applied shirt identity |
-| Carried Major | S0-B-004 remains open for production names; author shirt-only recheck is pending owner assessment. If H cannot identify players, reopen Blocker. S0-B-002 adapter remains I/J obligation. |
-| Owner review commit / confirmation | PENDING — record reviewed commit and actual explicit confirmation after review |
-| Owner review scope | All 23 images and their pinned hashes; separate approval from G required |
-| H / I | H OPEN; I/#470 BLOCKED. No H approval inferred from work authorization, PR or checks. |
+| H verdict | **PASS**, explicit separate owner image approval of v0.1 at 4a6220c |
+| Review scope | Complete 23-image set / 46 PNG/PDF files, all hashes below |
+| Finding closure | S0-H-001–004 fixed/retested and owner-approved in the image set; Mentality comparison and illustrative Applied identity approved |
+| S0-B-004 identity | H shirt-number recheck accepted for this reference; production player-name requirement remains OPEN with its prior release condition |
+| S0-B-002 feedback | Production adapter and runtime verification remain I/J obligations; image approval does not close them |
+| Scripted support | UX-H-S0-20260930-01, 90 PASS checks; no new run or image regeneration accompanies approval recording |
+| Evidence JSON | `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json`, SHA-256 `c66d32fa481cc2faf1ddee98a70649eeb2db757aae2f10514e258f86da8b30f3` |
+| I / #470 | I OPEN for implementation handoff; I is not passed. #470 remains blocked on the completed Gate-I handoff. |
+| PR boundary | #473 merged; reviewed H head CI run 36778408822 succeeded. Approval-recording head requires fresh CI before merge. No merge authorized here. |
+
+Owner image review supplies no independent participant or Unity/runtime evidence. This recording
+changes Markdown documents only. All four H executable sources, three shared G sources, 46 image
+files and the walkthrough JSON remain byte-identical to the reviewed commit.
+
+**Approved H image set:**
+
+| Path | SHA-256 |
+|---|---|
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | `b4cac7702d919e6b879a47687f8c6a177c572f11052e3fba75e599f283039dc7` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | `1d79d1e9a369cc5ca693afe2a3235a8069cb575fd6283ba889c351c40c2a5bd6` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.pdf` | `c57410b7c6f51c8f24cb9036a9f82528c18948e66a879cf17a1fc0228c2f331d` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.png` | `e668305e0f5e5c7ede797d4b653ddd3b994bb278ec0696eb54d9f0d5a27247c2` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.pdf` | `bf6041848b92c759ece422fcf5ed7b2f008e42e1d3bfeba3150ebefd7a072b72` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.png` | `d8e8ea02f14b42b5f050d9e6e31b394e1adb0ec8b98194253ff461d6f231f1ee` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.pdf` | `6a47d83d74c0786039c8284ad8d6685dae8bed955b87a65a34ff9a088bfecafd` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.png` | `653564b918441f88ef5bd2bc013333b9174b401dd30528fa5091a37d9b32b489` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.pdf` | `0db0bcfea0ce4599da04a5731494349f88a630cd3e50306037dd58e28bec802f` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.png` | `d796f56dd1bf0de26973e92af0715c03be4c0e578e9a0a61842d486efde4174a` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.pdf` | `e1b55c5d0088f93e1023b9d00ed6429ce47baebbd69154bead6a6f13067779ca` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.png` | `ce0db0003e68ee6f832e2b4271a380ed949c1013fa6e495703073ca47459be15` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.pdf` | `77b628fbdec404d650f1eb711ae07971a330a6aad9e57e6fc7900ded730bc44d` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.png` | `4c553bc26c1257c5109f6f24aa6ec276d07c16d2a0c39c4ead6c6d8bf3433e25` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.pdf` | `2aaf7f230d66b847ff3870a83ac8c4df5182f4701b518fb4a414c32aacf4ed2c` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.png` | `6058fe549a2c740bd3bf559f6d4a8bc6fa05ccb2323624f59e8764db865c43f4` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.pdf` | `114a092be507ca99c15c141cc344b577d32ba44fec64e0795f04d8689462014a` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.png` | `04e5eff508185b971edc605ded83d842cfbebef9bdec7b8ca7c0bb6366e5c5da` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.pdf` | `5f00d02a0f3d86c983ea6b90b30a94c778e4ed05c8cf314ad3cf8cc62a148331` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.png` | `4ad2efd52ea0ca9d57fd192be5290eaa9d0260fd30be094b6a872d4fc76a1b75` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.pdf` | `c13dcc14295bedc47e3166349d13668bbfafa3dce7749194c67e4e3756979a78` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.png` | `968ce5ce17d79773fbcd3075ea36558b01db06f5e4c3af0f736301b725ceeb92` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.pdf` | `1b514af0f73394df974bd0802112589f72b4b5862657930de917883bc3668cfa` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.png` | `2c97fc54911d38caca12faf876fcf60b17dcbc9f12daf7ae5e220bf149325608` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.pdf` | `85d7f269b20cd81eb7f7b5503bc373fa73e36c09de8862180f652ceb41a2a7e7` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.png` | `ad767498d002eecefae577b544169ea2b4fa392f1f694ea3777b767d95581b8f` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.pdf` | `d9ced5aa53a7499b06a5a5b31b8ce8c7065b2eca4e06dc1411e98cefb83819f9` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.png` | `c9b1afaf6b01c4930c1886126781a3e34e9ee00254d061f8cc4fd4f93f7938c1` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.pdf` | `83afb4a37dbbf94d11f07f10591752c864b2834153b92501c02cefac6d6ba6c1` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.png` | `298b1756a273f39fa69d3ba06eb0ddddb2f49b52bdc68bf07deb705b8788177d` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.pdf` | `9af9ee627f919aea44c2a0d540b843fda18296b2b25762a6b755bfa815fe277b` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.png` | `aec344102d5172ff134bd35e1b5e3e01d4e99a190773d3bb75039ca59f41099f` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.pdf` | `d23a53cf1d457dd4b7411a406d6f1dce69a90140a37d0b63ec0dbba0cba257fd` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.png` | `7ea41f19bc4f40dd78f180276b2d85e3aad76b810519277bb195b7e6cb6883ce` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.pdf` | `888ecd00df7bbeb34de7910ece495d565154113dabf9320250c4eb38d5c20f5d` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.png` | `379a793f302f4892bf9fd1c25733a9ad9652cbae202996b7a71e9efaaa6d125c` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.pdf` | `1b3b738bb56466e73d8e6842d968af4ab6cc432c3334db88c7ce60e4b7707386` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.png` | `3646a114422d3836188746f04d793459a1728b97adb893ffde2ed187f1d5641a` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.pdf` | `a6e7d7119887caff4572c00df8b41d23f9d8a6b397f7558672cad70a08b41d05` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.png` | `46c4caac41dbfad84c718a9ec8aa726d4b821bd560a3a61c274694a429cfce59` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.pdf` | `d7fad02b0fa1bfc06d53a0a1aa2b0492c35b7b85c24e961ba3acc95c840d4612` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.png` | `1b90a1a2ccea2f3a2701594b251668d74e3a4e10373c34ca0f7760b8a365ca60` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.pdf` | `d1d2db30697ee42c37ece5bc0edc9a7f5135f5699438d1d912dca55d811b7522` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.png` | `a5f0a97f5db0674089c8076dc78f6cd44ab311fc37e6961f660c1ac097e0c3b1` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | `b6c04d339ec668009e541ae4a29e5ce4dc7b33e944ff8323908d8c16e464a8e9` |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | `9e4dfd710ba943856e7df127f0fef3a9966e9f45207568362a1079f49d1dd225` |
+
+**Reviewed executable sources:**
+
+| Path | SHA-256 |
+|---|---|
+| `docs/design/s0-high-fidelity/index.html` | `b1fd01170d8dcb560d80bcae725884d878ef622b31ffe947b769b635bc536d56` |
+| `docs/design/s0-high-fidelity/prototype.css` | `89ba17f86ce4df7abaf5ff74517e5e672192b39977ff9a37a0da790ff148aedc` |
+| `docs/design/s0-high-fidelity/prototype.js` | `a96a7d6e989fbae1ff6cbf9de64f73a4e3cd9a39a9bc818e8c2af72236555cdd` |
+| `docs/design/s0-high-fidelity/verify.cjs` | `1831be61f6c7bffd50584443beadcde8bffbde84f67ea652d8afdbe8c564a16c` |
+| `docs/design/s0-prototype/model.js` | `bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c` |
+| `docs/design/s0-prototype/reference-data.js` | `fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69` |
+| `docs/design/s0-prototype/scenario-data.js` | `05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866` |
 
 ### 9.2 S1 participant decision record
 
@@ -650,7 +726,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H is OPEN for high-fidelity work and separate owner image review; I/#470 remain blocked. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H is PASS for the separately owner-approved v0.1 image set at `4a6220c` (§9.1.2). I is OPEN for handoff; #470 remains blocked until I passes. S1 requires its two independent completions.
 
 ---
 
@@ -680,3 +756,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.20 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 0.21 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
 | 0.22 | September 30, 2026 | Adds pending separate H v0.1 review record: 23 image pairs, 90 scripted checks and carried finding/identity rechecks. G approvals preserved; H not passed, I/#470 blocked. |
+| 0.23 | September 30, 2026 | Records actual “images approved” confirmation for H v0.1 at 4a6220c, full 46-image/seven-source hashes and unchanged evidence. H PASS; I OPEN for handoff; #470 still blocked on I. |

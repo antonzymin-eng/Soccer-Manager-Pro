@@ -1,7 +1,7 @@
 # S0 Gate H high-fidelity reference v0.1
 
 **Created:** September 30, 2026\
-**Status:** Images ready for separate owner review; H remains OPEN. I/#470 remain blocked.\
+**Status:** H PASS — all 23 views owner-approved at 4a6220c. I OPEN for handoff; #470 remains blocked on completed I.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
 Open `index.html` locally. No build, server, account or network is needed. This is the touchline /
@@ -68,8 +68,10 @@ whistle race and live feedback persistence are checked. Contrast samples are rec
 these are measured samples, not a full accessibility certificate. Vertical scrolling is allowed.
 The shipping maximum text scale, font/runtime application and cert-host checks remain deferred.
 
-All 23 PDFs were rendered through Poppler and visually inspected. H owner approval is still pending;
-scripted checks and author inspection cannot supply it. These files supply no Unity/runtime evidence.
+All 23 PDFs were rendered through Poppler and visually inspected. On September 30, 2026 at
+19:41:55 America/Los_Angeles, Anton Zymin replied “images approved” for all 23 views at
+`4a6220cf4c394130c29f38716ed3abde1f60477b`. [Protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval)
+pins the actual confirmation, all image/source hashes and unchanged supporting evidence. These files supply no Unity/runtime evidence.
 
 ## Owner review images
 
@@ -110,3 +112,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | September 30, 2026 | Separate H touchline reference from PR #473 head b6c9c6a; carried presentation fixes, coherent illustrative shirt overlay, 90 checks and 23 image pairs. Owner H approval pending. |
+| 0.1 approval record | September 30, 2026 | Explicit owner “images approved” at 4a6220c; H PASS, I OPEN for handoff. Markdown-only record preserves all executable sources/images/evidence. |

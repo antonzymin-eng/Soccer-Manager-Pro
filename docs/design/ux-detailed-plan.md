@@ -2,8 +2,8 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** September 30, 2026\
-**Version:** 1.19\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H OPEN; I BLOCKED\
+**Version:** 1.20\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS; I OPEN FOR HANDOFF\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -967,9 +967,9 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-**Current next step: owner review of the 23 S0 Gate H image pairs.** The v0.4 owner approval
+**Current next step: S0 Gate I implementation handoff from the owner-approved H reference.** The v0.4 owner approval
 is preserved in validation protocol §9.1; the v0.5 single-image delta is approved at `0e8bd2b`
-in §9.1.1, carrying the other 18 forward apart from version text. H is OPEN; H image approval remains required before I. The original first sequence remains for traceability.
+in §9.1.1, carrying the other 18 forward apart from version text. H is PASS for v0.1 at `4a6220c`, all 23 views (protocol §9.1.2); I is OPEN for handoff. The original first sequence remains for traceability.
 
 1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
 2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
@@ -983,9 +983,10 @@ in §9.1.1, carrying the other 18 forward apart from version text. H is OPEN; H 
 10. **S0 Gate F — COMPLETE September 30, 2026.** The complete vehicle and critical-state evidence are in `docs/design/s0-prototype/`; the owner's September 30 review decision removes the pre-F tester prerequisite.
 11. **S0 Gate G — PASS September 30, 2026.** Anton Zymin approved prototype v0.4 at `13c2c09`, all 18 PDFs, and accepted the owner decisions with carried-Major reasons/release conditions. Durable record: `ux-validation-protocol.md` §9.1.
 12. **S0 Gate G for v0.5 — PASS September 30, 2026.** Anton Zymin approved the corrected full-time statistics-fault image at `0e8bd2b`, carrying the other 18 forward from approved v0.4 apart from version text. Protocol §9.1.1 pins the image/source hashes and actual confirmation. Baseline 85-check run and focused three-check delta remain unchanged.
-13. **S0 Gate H — OPEN, REFERENCE READY.** Separate H v0.1 reference on PR #473 head b6c9c6a has 90 PASS checks and 23 PNG/PDF image pairs. Packet §13 records fixes/retests for §12.5 follow-ups; separate owner image approval remains pending. I remains blocked until separately owner-approved H images; #470 remains blocked on I.
+13. **S0 Gate H — PASS September 30, 2026.** Anton Zymin replied “images approved” to all 23 H v0.1 views at `4a6220c`. Protocol §9.1.2 records actual confirmation, all 46 image/seven executable-source hashes and preserved 90-check evidence. Packet §13 closes S0-H-001–004 and accepts the H shirt identity recheck; production names/feedback obligations remain.
+14. **S0 Gate I — OPEN.** Produce the implementation handoff from the approved H reference using the Gate-I requirements. I is not passed; #470 remains blocked until the handoff is complete.
 
-The existing Main Menu visual is revisited at Gate H unless earlier low-fidelity findings show it should be retired.
+The existing Main Menu reference was revisited at H; its admitted demo-only entry and art fallback are included in the approved image set.
 
 ---
 
@@ -1078,3 +1079,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.17 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
 | 1.18 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
 | 1.19 | September 30, 2026 | H v0.1 reference ready on PR #473 base: 23 image pairs / 90 checks, carried findings fixed/retested. H remains OPEN pending separate owner image approval; I/#470 blocked. |
+| 1.20 | September 30, 2026 | H v0.1 separately owner-approved at 4a6220c, all 23 views. H PASS; I OPEN for implementation handoff; #470 remains blocked until I passes. |

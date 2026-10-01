@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
+> **Last Updated:** September 30, 2026 — **H owner image approval recorded / Gate I OPEN (PR #474).** Anton Zymin replied “images approved” at 19:41:55 America/Los_Angeles to all 23 H v0.1 views at 4a6220cf4c394130c29f38716ed3abde1f60477b. Protocol v0.23 §9.1.2 records actual confirmation, 46 image hashes, seven executable-source hashes and walkthrough JSON hash. Packet v0.16, detailed plan v1.20 and high-level plan v1.12 record H PASS / I OPEN for handoff; #470 remains blocked on completed I. All sources, images and evidence remain unchanged; no new browser run. Carried Minor fixes and H shirt identity recheck accepted; production-name/feedback requirements remain open. Reviewed-head CI run 36778408822 passed; recording-head CI required before merge. Markdown-only record, no production/spec or issue-count change.
+>
+> **Last Updated (prior):** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
 >
 > Fresh H branch based on PR #473 / b6c9c6a adds an isolated touchline reference, four carried presentation fixes, seven-choice Mentality comparison and coherent illustrative Applied shirt markers. Run UX-H-S0-20260930-01 passes 90 checks; 23 PNG/PDF image pairs are rendered/inspected and hashed. G's entire source/evidence tree and owner approval pins remain unchanged. Packet v0.15, detailed plan v1.19, high-level plan v1.11 and protocol v0.22 record H OPEN / approval PENDING; I/#470 remain blocked. No production/spec/scene/schema/RNG change; issue counts unchanged. Fresh PR CI is not claimed by local checks.
 >
