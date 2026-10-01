@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.27\
-**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I OPEN FOR v0.2 HANDOFF\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.23 §F4 and Gates E–G\
+**Version:** 0.28\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.24 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -831,6 +831,14 @@ Verification should cover at minimum:
 - supported resolutions/data extremes;
 - required Unity-host/cert behavior.
 
+The S0 implementation handoff draft is [journey packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff-draft).
+Its I-Q01–19 Given/When/Then cases are PLANNED, not executed P5b evidence. Preserve
+S0-T1–T7, PM-1 substitution coverage and the carried finding IDs in each result; record
+PR/head, lane, dimensions, input mode, actual text-scale maximum/locale, observed result and
+artifact/log references. I is IN PROGRESS; S0-I-001 identity reconciliation and S0-I-002
+scale allocation must close before I passes. #470 remains blocked on completed I.
+No G/H approval record or walkthrough is superseded by this draft.
+
 The implementation is not validated by matching a screenshot alone. It must preserve the tested task
 semantics and evidence-backed interaction states.
 
@@ -853,7 +861,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I remains open using approved v0.2 and #470 remains blocked until I passes. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I is IN PROGRESS using approved v0.2; the §10 handoff draft has identity/scale blockers and #470 remains blocked until I passes. S1 requires its two independent completions.
 
 ---
 
@@ -888,3 +896,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.25 | October 1, 2026 | Corrects the header and execution-plan pointer; distinguishes pending v0.2 adoption from the existing H PASS / I OPEN for pinned v0.1. Earlier reopening/hold wording was an author interpretation, not an owner decision. Prior approval and history preserved. |
 | 0.26 | October 1, 2026 | Records actual “images approved” confirmation for H v0.2 at a1044d5, 46 image/seven source hashes and immutable walkthrough hash. H PASS; I OPEN using v0.2. Prior approvals/history/evidence unchanged; no merge/runtime approval inferred. |
 | 0.27 | October 1, 2026 | Records S0-H-014 focused source/verification delta: complete long-name identities pseudo-localized; coverage now includes fault and long-name fixtures. Focused check and full 99-check scratch run pass. Approved sources stay pinned to a1044d5; images/walkthrough/approval records unchanged. |
+| 0.28 | October 1, 2026 | §10 links the S0 Gate-I draft and its 19 planned P5b QA cases, run/head/lane/context evidence fields and carried task/finding IDs. I IN PROGRESS with identity/scale blockers; no P5b test execution or I PASS inferred. Execution-authority pointer updated; all actual G/H approvals/evidence preserved. |
