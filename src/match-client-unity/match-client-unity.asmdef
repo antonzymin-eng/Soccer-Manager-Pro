@@ -2,9 +2,11 @@
     "name": "TacticalDirector.MatchClientUnity",
     "rootNamespace": "TacticalDirector.MatchClientUnity",
     "references": [
+        "TacticalDirector.ClientApp",
         "TacticalDirector.MatchClientCore",
         "TacticalDirector.MatchViewer",
-        "TacticalDirector.MatchEngine"
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.UiFramework"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

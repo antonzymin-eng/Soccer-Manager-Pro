@@ -1,13 +1,12 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-16 (AR round 5 — Medium findings M24/M26/M27, plus M23's comment site; see the
-//           VersionHistory block at the foot of this file for the per-finding detail)
+// Modified: 2026-09-07 (P5b review — demo boot default-off; host wiring still validates; see VersionHistory 1.8)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
-// Purpose:  The Unity host for a live match (P4b). Owns a MatchSession, reads frames each Update,
-//           and binds them onto scene objects. Every render/camera/click decision is already made in
-//           match-client-core (P4a) — this type assigns transforms and forwards input, nothing more.
+// Purpose:  The Unity host for a live match (P4b). Binds a MatchSession, reads frames each Update,
+//           and binds them onto scene objects. Temporary demo self-boot is explicit opt-in only;
+//           every render/camera/click decision is already made in match-client-core (P4a).
 
 using System;
 using System.Globalization;
@@ -47,6 +46,15 @@ namespace TacticalDirector.MatchClientUnity
     /// was authored as a solid disc — is invisible from code and has no diagnostic short of eyeballing
     /// the rendered pitch.</para>
     ///
+    /// <para><b>P5b temporary lifecycle boundary.</b> <see cref="_autoBootDemoMatch"/> is explicit
+    /// opt-in and defaults false. <see cref="ValidateWiring"/> still runs unconditionally in
+    /// <see cref="Awake"/>, so an inert P5b host remains fail-loud for prefab/camera/palette/transform/
+    /// colour-property wiring. With demo boot off, only the demo-specific seed validation and scene/
+    /// session construction are skipped; <see cref="Start"/> and <see cref="Update"/> remain inert
+    /// because <see cref="_session"/> is null. This keeps the shell independent of P4b scene geography
+    /// while P5b withholds StartMatch. The next lifecycle slice replaces this temporary switch and the
+    /// internal demo construction with an <c>Attach(MatchSession)</c>-style seam.</para>
+    ///
     /// <para><b>M8 — Active Input Handling.</b> <see cref="HandleClick"/> uses the legacy
     /// <c>UnityEngine.Input</c> API. Project Settings → Player → Active Input Handling MUST be
     /// "Input Manager (Old)" or "Both" — under "Input System Package (New)" ONLY, every call in this
@@ -75,13 +83,21 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private Camera _matchCamera;
 
         /// <summary>
+        /// Temporary P4b demo self-boot. Default false so a P5b shell scene cannot start a hidden
+        /// match merely because this component exists. Enable only for an intentionally isolated
+        /// demo-host scene until the real lifecycle owner supplies a session through Attach.
+        /// </summary>
+        [Header("Demo boot (temporary; leave off in P5b shell scenes)")]
+        [SerializeField] private bool _autoBootDemoMatch = false;
+
+        /// <summary>
         /// The demo match's seed, as text. A <c>ulong</c> <c>[SerializeField]</c>'s round-trip
         /// through Unity's <c>SerializedProperty</c> for values above <c>long.MaxValue</c> is
         /// unverified in this environment (L5) — a string inspector field sidesteps the question
         /// entirely, at the cost of parsing it here instead of the type system doing it for free.
-        /// That parse lives in <see cref="ValidateWiring"/> (H5), not at the point of use.
+        /// When demo boot is enabled, that parse lives in <see cref="ValidateDemoSeed"/> (H5), not at
+        /// the point of use.
         /// </summary>
-        [Header("Demo boot (until a real squad source is wired)")]
         [SerializeField] private string _demoSeedText = "1";
 
         /// <summary>
@@ -108,12 +124,11 @@ namespace TacticalDirector.MatchClientUnity
         private Vector2[] _scratchAgentPositions;
         private AgentRenderModel[] _agentRenderModels;
 
-        // Both are resolved ONCE in ValidateWiring, before anything is constructed, from the two
-        // inspector fields above: the seed because parsing it lazily at the point of use threw out
-        // of Awake (H5), the property id because the per-frame path must not look a shader property
-        // up by string (M4). The id is an instance field rather than the static readonly one it
-        // replaces for the same reason the name became an inspector field — a static initialiser
-        // runs before deserialization and cannot see a serialized value.
+        // Resolved ONCE before use. _colorPropertyId is session-independent and therefore resolves
+        // during unconditional ValidateWiring even while demo boot is off; _demoSeed is demo-only and
+        // resolves in ValidateDemoSeed immediately before the temporary demo session is constructed.
+        // The property id is an instance field rather than the static readonly one it replaces because
+        // a static initialiser runs before deserialization and cannot see a serialized value.
         private ulong _demoSeed;
         private int _colorPropertyId;
 
@@ -126,12 +141,27 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Awake()
         {
-            // M1: everything that must hold before ANY prefab is instantiated — a null inspector
-            // reference would NullReferenceException inside Instantiate itself, and a mis-sized team
-            // palette or a scaled parent transform would silently misrender every marker rather than
-            // fail loud at the point of the mistake. Guards every step below it: a rejected client
-            // must not go on to construct a session or build a scene.
+            // Host wiring is independent of whether this particular scene is allowed to self-boot a
+            // demo. Keep it fail-loud in P5b shell scenes so an inert MatchClientBehaviour cannot sit
+            // silently miswired until Attach(MatchSession) arrives in the next lifecycle slice.
             ValidateWiring();
+            if (_wiringRejected)
+            {
+                return;
+            }
+
+            // P5b boundary: merely existing in a shell scene must not construct a MatchSession or
+            // scene objects. The temporary demo path is explicit opt-in until Attach(MatchSession)
+            // replaces internal lifecycle ownership.
+            if (!_autoBootDemoMatch)
+            {
+                return;
+            }
+
+            // The seed has meaning only for the temporary NeutralDemo path. Keeping this validation
+            // behind the opt-in means a P5b scene does not reject an unused demo field while all real
+            // host wiring above remains validated.
+            ValidateDemoSeed();
             if (_wiringRejected)
             {
                 return;
@@ -164,10 +194,10 @@ namespace TacticalDirector.MatchClientUnity
 
         /// <summary>
         /// Builds everything this binding owns, in the only order that works — the session first,
-        /// since the roster it reports is what sizes the per-agent arrays. Called once, from
-        /// <see cref="Awake"/> and only inside the guard documented there: nothing here may run
-        /// before <see cref="ValidateWiring"/> has passed, and nothing here may throw past
-        /// <see cref="Awake"/>.
+        /// since the roster it reports is what sizes the per-agent arrays. Called once from
+        /// <see cref="Awake"/> only when temporary demo boot is explicitly enabled, and only after
+        /// <see cref="ValidateWiring"/> and <see cref="ValidateDemoSeed"/> have passed; nothing here
+        /// may throw past <see cref="Awake"/>.
         /// </summary>
         private void BuildScene()
         {
@@ -204,9 +234,9 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Start()
         {
-            // Disabling a component during Awake defers Start rather than cancelling it, so the
-            // rejection has to be re-checked here: a rejected client must never start a match.
-            if (_wiringRejected)
+            // A null session is the normal default-off P5b state. A rejected or unconstructed client
+            // must never start a match; only explicit demo opt-in currently creates a session here.
+            if (_wiringRejected || _session == null)
             {
                 return;
             }
@@ -216,7 +246,8 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Update()
         {
-            if (_wiringRejected)
+            // Default-off demo boot leaves _session null and therefore makes this binding inert.
+            if (_wiringRejected || _session == null)
             {
                 return;
             }
@@ -283,7 +314,8 @@ namespace TacticalDirector.MatchClientUnity
         // ---- wiring validation (Awake, before anything is instantiated) -----------------------
 
         /// <summary>
-        /// M1: the wiring checks that must hold before ANY prefab is instantiated. A null inspector
+        /// M1: the session-independent wiring checks that must hold before ANY prefab is instantiated.
+        /// This runs on every <see cref="Awake"/>, including the default-off P5b path. A null inspector
         /// reference would throw inside <c>Instantiate</c> itself; a team palette shorter than
         /// <see cref="MatchEngineConstants.TEAM_COUNT"/> would index-out-of-range the first time an
         /// away-team agent is drawn; and a non-identity scale on this GameObject's own transform would
@@ -303,10 +335,9 @@ namespace TacticalDirector.MatchClientUnity
         /// is the complementary check that runs once a prefab HAS been instantiated (root neutrality,
         /// no world-space <c>LineRenderer</c>).
         ///
-        /// <para>It also RESOLVES the two inspector fields that are text rather than a usable value —
-        /// the demo seed and the shader colour-property id — because for both, "is this field valid"
-        /// and "what does it parse to" are the same question, and both answers are needed before
-        /// construction starts (H5).</para>
+        /// <para>The shader colour-property id also resolves here because it is host wiring, not a
+        /// demo-session concern. The demo seed is deliberately excluded and validated only by
+        /// <see cref="ValidateDemoSeed"/> when temporary demo boot is actually enabled.</para>
         /// </summary>
         private void ValidateWiring()
         {
@@ -359,23 +390,6 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            // H5: parsed HERE, ahead of every construction, rather than at the MatchSetup.NeutralDemo
-            // call site — a parse failure there threw out of Awake, which Unity answers by logging and
-            // carrying on, so Start and Update then ran forever against a null session with nothing
-            // naming the seed as the cause. Invariant culture with no permitted number styles, so the
-            // field means exactly "digits": a plain TryParse honours the host locale, under which a
-            // group separator would read "1.000" as the seed 1000 and silently play a different match.
-            if (!ulong.TryParse(_demoSeedText, NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
-            {
-                RejectWiring(
-                    nameof(_demoSeedText) + " must be an unsigned 64-bit integer written as digits only " +
-                    "(no sign, spaces, separators or exponent) — it is \"" + _demoSeedText +
-                    "\", which MatchSetup.NeutralDemo cannot be given.");
-                return;
-            }
-
-            _demoSeed = seed;
-
             if (string.IsNullOrEmpty(_colorPropertyName))
             {
                 RejectWiring(
@@ -390,6 +404,30 @@ namespace TacticalDirector.MatchClientUnity
             // actually carries the property is a separate question only an instantiated prefab can
             // answer — checked per marker in BuildAgentObjects.
             _colorPropertyId = Shader.PropertyToID(_colorPropertyName);
+        }
+
+        /// <summary>
+        /// H5 demo-only validation. The seed has no meaning while <see cref="_autoBootDemoMatch"/> is
+        /// false, so parsing it is intentionally gated behind that opt-in while all host wiring stays
+        /// validated by <see cref="ValidateWiring"/>.
+        /// </summary>
+        private void ValidateDemoSeed()
+        {
+            // Parsed immediately ahead of demo construction rather than at MatchSetup.NeutralDemo's
+            // call site — a parse failure there threw out of Awake, which Unity answers by logging and
+            // carrying on. Invariant culture with no permitted number styles means exactly "digits":
+            // a plain TryParse honours the host locale, under which a group separator could silently
+            // select a different seed.
+            if (!ulong.TryParse(_demoSeedText, NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
+            {
+                RejectWiring(
+                    nameof(_demoSeedText) + " must be an unsigned 64-bit integer written as digits only " +
+                    "(no sign, spaces, separators or exponent) — it is \"" + _demoSeedText +
+                    "\", which MatchSetup.NeutralDemo cannot be given.");
+                return;
+            }
+
+            _demoSeed = seed;
         }
 
         // ---- frame plumbing -------------------------------------------------------------------
@@ -684,11 +722,11 @@ namespace TacticalDirector.MatchClientUnity
         /// <see cref="Update"/>'s render calls, a rejection can fire AFTER
         /// <see cref="MatchSession.Start"/> — and without this, that thread went on ticking a full 90-minute match
         /// nobody would ever read a frame from, until the Play session itself ended. The stop is safe
-        /// on every path this method is reachable from: <see cref="ValidateWiring"/> runs before
-        /// <see cref="_session"/> exists (hence the null-conditional), and
-        /// <c>LiveMatchStreamer.Stop</c> returns immediately unless the streamer is Running, so a
-        /// session constructed but never started, or already stopped, is a no-op rather than a
-        /// throw.</para>
+        /// on every path this method is reachable from: <see cref="ValidateWiring"/> and
+        /// <see cref="ValidateDemoSeed"/> both run before <see cref="_session"/> exists (hence the
+        /// null-conditional), and <c>LiveMatchStreamer.Stop</c> returns immediately unless the streamer
+        /// is Running, so a session constructed but never started, or already stopped, is a no-op
+        /// rather than a throw.</para>
         /// </summary>
         private void RejectWiring(string reason)
         {
@@ -696,7 +734,7 @@ namespace TacticalDirector.MatchClientUnity
             _wiringRejected = true;
 
             // M24: BEFORE enabled = false, so the terminal state is reached with nothing still running
-            // behind it. Null-conditional because ValidateWiring rejects before _session is constructed.
+            // behind it. Null-conditional because validation may reject before _session is constructed.
             _session?.Stop();
 
             enabled = false;
@@ -1118,4 +1156,11 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | Radius + AgentMarkerLayerHeightM, not Radius alone — and now says   |
 // |         |            |        | explicitly why WithGroundLayerHeight is still not applied to the    |
 // |         |            |        | ball itself.                                                        |
+// | 1.8     | 2026-09-07 | —      | P5b lifecycle boundary: demo self-boot is explicit opt-in and       |
+// |         |            |        | defaults off. Awake always validates session-independent host       |
+// |         |            |        | wiring; only the demo seed and scene/session construction are       |
+// |         |            |        | skipped when off. Start/Update treat a null session as the normal   |
+// |         |            |        | inert state. Existing pre-1.8 serialized scenes therefore become   |
+// |         |            |        | inert unless the new flag is explicitly enabled; this is temporary |
+// |         |            |        | until Attach(MatchSession) lands.                                  |
 #endregion
