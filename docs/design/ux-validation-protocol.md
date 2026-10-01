@@ -1,8 +1,8 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** September 30, 2026\
-**Version:** 0.23\
+**Last Updated:** October 1, 2026\
+**Version:** 0.24\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS; I OPEN FOR HANDOFF\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.20 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
@@ -650,6 +650,32 @@ files and the walkthrough JSON remain byte-identical to the reviewed commit.
 | `docs/design/s0-prototype/reference-data.js` | `fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69` |
 | `docs/design/s0-prototype/scenario-data.js` | `05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866` |
 
+#### 9.1.3 S0 Gate H v0.2 review candidate
+
+**Status:** separate owner approval PENDING for v0.2. H is reopened for this revision;
+I is on hold for v0.2 approval and #470 remains blocked on completed I.
+The actual v0.1 approval in §9.1.2 remains valid for its pinned commit and image set.
+It is preserved unchanged, including the confirmation, timestamp, 46 image hashes,
+seven executable-source hashes and walkthrough hash. It does not approve the v0.2 delta.
+
+| Field | Current record |
+|---|---|
+| Base | Approval-recording head `654c4f8d663c437aed117292fc6c666acabd61e7` of PR #474 |
+| Revision source | Claude’s eight fixes at `f7f44b513f5b496ef0d9b2853c2920e49aeb6660`; approval-history and export repairs added on the current H base |
+| Candidate | [H v0.2 owner-review index](s0-high-fidelity/README.md#owner-review-images), all 23 PNG/PDF pairs |
+| Scripted support | `UX-H-S0-20261001-02`, 99 PASS checks, four H / three shared source hashes and 46 image hashes in [walkthrough.json](s0-high-fidelity/evidence/v0.2/walkthrough.json) |
+| Export evidence | All PDFs have one page, agree with PNG dimensions and contain every displayed statistics row label; export styles are removed after every capture |
+| Finding ledger | Packet §§13.1/13.4 preserves prior closures and records S0-H-005–013 fixes; v0.2 owner acceptance pending |
+| Author inspection | All 23 PNGs inspected and all 23 PDFs rendered through Poppler; no owner or runtime approval inferred |
+| Owner confirmation / reviewed commit | PENDING; record the actual confirmation and reviewed commit/image fingerprints after owner review |
+
+Claude’s branch began before `654c4f8` and therefore missed the actual “images approved”
+record. The revised documents retain that record and append new history versions.
+G’s source/evidence tree and §§9.1–9.1.1 approval records are unchanged; H v0.1 evidence is unchanged.
+The superseded initial v0.2 exports remain recoverable at `f7f44b5`; their 98-check run is not
+claimed as the corrected export evidence. Browser checks and author image inspection supply
+neither independent usability nor Unity/runtime evidence.
+
 ### 9.2 S1 participant decision record
 
 After both sessions, complete the record for the journey under test.
@@ -726,7 +752,7 @@ semantics and evidence-backed interaction states.
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H is PASS for the separately owner-approved v0.1 image set at `4a6220c` (§9.1.2). I is OPEN for handoff; #470 remains blocked until I passes. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). Current v0.2 approval is pending (§9.1.3); I is on hold for this revision and #470 remains blocked until I passes. S1 requires its two independent completions.
 
 ---
 
@@ -757,3 +783,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.21 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
 | 0.22 | September 30, 2026 | Adds pending separate H v0.1 review record: 23 image pairs, 90 scripted checks and carried finding/identity rechecks. G approvals preserved; H not passed, I/#470 blocked. |
 | 0.23 | September 30, 2026 | Records actual “images approved” confirmation for H v0.1 at 4a6220c, full 46-image/seven-source hashes and unchanged evidence. H PASS; I OPEN for handoff; #470 still blocked on I. |
+| 0.24 | October 1, 2026 | Preserves the actual v0.1 owner approval/pins in §9.1.2 and adds §9.1.3 for corrected v0.2: 99 checks, 23 image pairs, isolated exports and PDF completeness checks. H reopened for v0.2 review; I on hold, #470 still blocked. Prior history rows unchanged. |

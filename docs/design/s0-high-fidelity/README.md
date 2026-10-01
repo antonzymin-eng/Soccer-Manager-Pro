@@ -1,7 +1,9 @@
-# S0 Gate H high-fidelity reference v0.1
+# S0 Gate H high-fidelity reference v0.2
 
 **Created:** September 30, 2026\
-**Status:** H PASS — all 23 views owner-approved at 4a6220c. I OPEN for handoff; #470 remains blocked on completed I.\
+**Last Updated:** October 1, 2026\
+**Status:** v0.2 images ready for separate owner review; H reopened for this revision, I on hold for v0.2 approval; #470 remains blocked.\
+**Prior approval preserved:** v0.1 at `4a6220c`, owner “images approved” September 30, 2026; recorded at `654c4f8` in [protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval). Its evidence and approval fingerprints remain unchanged.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
 Open `index.html` locally. No build, server, account or network is needed. This is the touchline /
@@ -26,17 +28,23 @@ The text wordmark is the menu art fallback; team text replaces missing crests; s
 portraits. No fictional club, venue or player identity is invented. No network fonts or missing-image slots.
 
 Primary progression uses blue; selected setup choice has a checked radio and gold outline.
-Focus uses a separate 3px light-blue outline. Disabled controls have dashed borders and persistent
+Keyboard focus uses a separate 3px light-blue outline. Headings and the outcome list receive focus
+only for keyboard/screen-reader continuity, so they show that outline only after keyboard input;
+pointer users never see a field-like box on them (S0-H-005). Disabled controls have dashed borders and persistent
 reasons. Full-time statistics use static retained/closed text, with no disabled Close control;
 the accepted S0-G-008 no-reopening behavior is unchanged. Open partial figures retain their cutoff;
 report partial figures start behind disclosure. Full-time report remains primary.
 
-Mentality staging shows requested choice plus its effect, with an explicit comparison disclosure for
-all seven identical setup choices/effects. Submit/Cancel remain separate; changing selection is not
+Mentality staging shows the current value, the requested choice plus its effect, and an explicit comparison
+disclosure for all seven identical setup choices/effects tagged Current and Requested. Submit/Cancel remain separate; changing selection is not
 application. Bench labels are 1–7; option values remain 0–6. An Applied shirt 4 → shirt 14 change
-replaces H4 with H14 ↔; Pending/Refused keep H4. Consumed outgoing/bench options are unavailable.
+replaces H4 with a white-outlined H14 ↔ (enlarged glyph); Pending/Refused keep H4. Consumed outgoing/bench options are unavailable.
 
-Shared patterns: page heading/entry panel; scoreboard/context strips; pitch; playback controls;
+Outcomes carry an explicit label — Pending (dashed blue), Applied (green ✓), Refused (rose ✕), Not applied
+(dotted grey –) — with colour and glyph only reinforcing the word. Period and minute sit directly under
+the score; speed and current Mentality are plain text, never button-shaped.
+
+Shared patterns: page heading/entry panel; scoreboard/context lines; pitch; playback controls;
 team-action rail; outcome list; statistics table and incomplete banner/disclosure; staging modal.
 The four screen identities and five existing navigation moves are unchanged. Exact shipping bindings,
 focus/action/read mapping and localization allocation belong to Gate I after H approval.
@@ -50,62 +58,67 @@ shipped locale catalog. Future captions remain a clearly labelled stress fixture
 ## Reproduction and verification
 
 All reviewer parameters documented in [G's README](../s0-prototype/README.md#reviewer-fixtures) apply.
-With Playwright and Chromium available:
+With Playwright, Chromium and Poppler (`pdfinfo` / `pdftotext`) available:
 
 ```bash
 NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-high-fidelity/verify.cjs
 ```
 
-Run `UX-H-S0-20260930-01` records 90 PASS checks and 23 PNG/PDF pairs in `evidence/v0.1/`.
+Run `UX-H-S0-20261001-02` records 99 PASS checks and 23 PNG/PDF pairs in `evidence/v0.2/`.
 `walkthrough.json` fingerprints the four H executable sources, three shared G sources and all 46
 image files. The verifier derives the established G journey tests, replacing presentation-specific
-assertions and adding H identity/choice/geometry assertions. No G evidence is superseded or regenerated.
+assertions and adding H identity/choice/geometry assertions; v0.2 adds eight finding checks (S0-H-005–012) and an export-isolation/completeness check (S0-H-013).
+No G evidence is superseded or regenerated, and `evidence/v0.1/` is not rewritten.
 
 Mouse journeys cover 1366/1920/2560; keyboard covers 1366. Expanded/bracketed labels plus 200% root
 font (16→32px) run at all three widths, with browser zoom at 100%. Horizontal overflow, critical
 clipping, marker collision, modal focus, normal-text dropdown clearance, clock/fault boundaries,
 whistle race and live feedback persistence are checked. Contrast samples are recorded in JSON;
-these are measured samples, not a full accessibility certificate. Vertical scrolling is allowed.
+these are measured samples, not a full accessibility certificate. Vertical scrolling is allowed; at 1920×1080 and 2560×1440 the whole pitch is visible without scrolling in
+waiting, live, paused and full-time states, while 1366×768 keeps a 704px readable pitch floor and scrolls.
+Staged-dialog images are single-viewport captures, so the modal backdrop covers the entire image.
+All temporary export styles are removed in `finally`; pitch/grid geometry is frozen only during each export.
+The verifier checks all 23 PDF page counts, PNG/PDF dimensions and every displayed statistics row label.
+This prevents a modal clip leaking into later live/full-time statistics captures on the same page.
 The shipping maximum text scale, font/runtime application and cert-host checks remain deferred.
 
-All 23 PDFs were rendered through Poppler and visually inspected. On September 30, 2026 at
-19:41:55 America/Los_Angeles, Anton Zymin replied “images approved” for all 23 views at
-`4a6220cf4c394130c29f38716ed3abde1f60477b`. [Protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval)
-pins the actual confirmation, all image/source hashes and unchanged supporting evidence. These files supply no Unity/runtime evidence.
+All 23 PNGs were inspected at full size and all 23 single-page PDFs were rendered through Poppler and inspected. H owner approval of v0.2 is pending;
+scripted checks and author inspection cannot supply it. These files supply no Unity/runtime evidence.
 
 ## Owner review images
 
-Review all 23 views, including the expanded comparison, Applied shirt identity, both full-time
-statistics states and the small-desktop expanded-text fault case. PNG is convenient for image review;
+Review all 23 v0.2 views, including the expanded comparison, Applied shirt identity, both full-time
+statistics states and the small-desktop expanded-text fault case. The v0.1 images stay in
+`evidence/v0.1/` as the unchanged, owner-approved historical reference; current review is limited to v0.2. PNG is convenient for image review;
 PDF preserves the complete vector layout. `walkthrough.json` pins both formats.
 The small review PNGs are stored directly using evidence-local Git attributes; the repository
 large-binary guard still applies. No Unity asset/LFS rule is changed.
 
 | View | PNG | PDF |
 |---|---|---|
-| Main Menu / admitted demo entry | [PNG](evidence/v0.1/mm.png) | [PDF](evidence/v0.1/mm.pdf) |
-| Tactics Setup / all seven Mentalities | [PNG](evidence/v0.1/ts.png) | [PDF](evidence/v0.1/ts.pdf) |
-| Waiting for first frame | [PNG](evidence/v0.1/mv-0.png) | [PDF](evidence/v0.1/mv-0.pdf) |
-| Live Match View | [PNG](evidence/v0.1/mv-l.png) | [PDF](evidence/v0.1/mv-l.pdf) |
-| Paused Match View | [PNG](evidence/v0.1/mv-p.png) | [PDF](evidence/v0.1/mv-p.pdf) |
-| Full time / closed statistics | [PNG](evidence/v0.1/mv-ft.png) | [PDF](evidence/v0.1/mv-ft.pdf) |
-| Healthy post-match report | [PNG](evidence/v0.1/pr.png) | [PDF](evidence/v0.1/pr.pdf) |
-| Staged Mentality / requested choice and effect | [PNG](evidence/v0.1/mentality-dialog.png) | [PDF](evidence/v0.1/mentality-dialog.pdf) |
-| Live comparison / all seven choices and effects | [PNG](evidence/v0.1/mentality-comparison.png) | [PDF](evidence/v0.1/mentality-comparison.pdf) |
-| Shirt-number identity / bench labels 1–7 | [PNG](evidence/v0.1/substitution-dialog.png) | [PDF](evidence/v0.1/substitution-dialog.pdf) |
-| Live Pending request / unchanged current choice | [PNG](evidence/v0.1/mv-live-pending.png) | [PDF](evidence/v0.1/mv-live-pending.pdf) |
-| Paused Pending / resume instruction | [PNG](evidence/v0.1/mv-paused-pending.png) | [PDF](evidence/v0.1/mv-paused-pending.pdf) |
-| Applied Mentality and substitution / H14 replaces H4 | [PNG](evidence/v0.1/mv-live-applied.png) | [PDF](evidence/v0.1/mv-live-applied.pdf) |
-| Refused Mentality / unchanged current choice | [PNG](evidence/v0.1/mv-live-refused.png) | [PDF](evidence/v0.1/mv-live-refused.pdf) |
-| Healthy live statistics | [PNG](evidence/v0.1/mv-live-statistics.png) | [PDF](evidence/v0.1/mv-live-statistics.pdf) |
-| Whistle race / request not applied | [PNG](evidence/v0.1/mv-ft-not-applied.png) | [PDF](evidence/v0.1/mv-ft-not-applied.pdf) |
-| Healthy retained statistics at full time | [PNG](evidence/v0.1/mv-ft-statistics-open.png) | [PDF](evidence/v0.1/mv-ft-statistics-open.pdf) |
-| Faulted retained statistics at full time | [PNG](evidence/v0.1/mv-ft-statistics-fault.png) | [PDF](evidence/v0.1/mv-ft-statistics-fault.pdf) |
-| Incomplete report / disclosure closed | [PNG](evidence/v0.1/report-incomplete.png) | [PDF](evidence/v0.1/report-incomplete.pdf) |
-| Incomplete report / partial figures disclosed | [PNG](evidence/v0.1/report-partial-open.png) | [PDF](evidence/v0.1/report-partial-open.pdf) |
-| 1366 / pseudo-locale / 200% / fault / future caption reservation | [PNG](evidence/v0.1/stress-fault-1366.png) | [PDF](evidence/v0.1/stress-fault-1366.pdf) |
-| 1366 normal text / undistorted pitch | [PNG](evidence/v0.1/mv-live-1366.png) | [PDF](evidence/v0.1/mv-live-1366.pdf) |
-| 2560 normal text / undistorted pitch | [PNG](evidence/v0.1/mv-live-2560.png) | [PDF](evidence/v0.1/mv-live-2560.pdf) |
+| Main Menu / admitted demo entry | [PNG](evidence/v0.2/mm.png) | [PDF](evidence/v0.2/mm.pdf) |
+| Tactics Setup / all seven Mentalities | [PNG](evidence/v0.2/ts.png) | [PDF](evidence/v0.2/ts.pdf) |
+| Waiting for first frame | [PNG](evidence/v0.2/mv-0.png) | [PDF](evidence/v0.2/mv-0.pdf) |
+| Live Match View | [PNG](evidence/v0.2/mv-l.png) | [PDF](evidence/v0.2/mv-l.pdf) |
+| Paused Match View | [PNG](evidence/v0.2/mv-p.png) | [PDF](evidence/v0.2/mv-p.pdf) |
+| Full time / closed statistics | [PNG](evidence/v0.2/mv-ft.png) | [PDF](evidence/v0.2/mv-ft.pdf) |
+| Healthy post-match report | [PNG](evidence/v0.2/pr.png) | [PDF](evidence/v0.2/pr.pdf) |
+| Staged Mentality / requested choice and effect | [PNG](evidence/v0.2/mentality-dialog.png) | [PDF](evidence/v0.2/mentality-dialog.pdf) |
+| Live comparison / all seven choices and effects | [PNG](evidence/v0.2/mentality-comparison.png) | [PDF](evidence/v0.2/mentality-comparison.pdf) |
+| Shirt-number identity / bench labels 1–7 | [PNG](evidence/v0.2/substitution-dialog.png) | [PDF](evidence/v0.2/substitution-dialog.pdf) |
+| Live Pending request / unchanged current choice | [PNG](evidence/v0.2/mv-live-pending.png) | [PDF](evidence/v0.2/mv-live-pending.pdf) |
+| Paused Pending / resume instruction | [PNG](evidence/v0.2/mv-paused-pending.png) | [PDF](evidence/v0.2/mv-paused-pending.pdf) |
+| Applied Mentality and substitution / H14 replaces H4 | [PNG](evidence/v0.2/mv-live-applied.png) | [PDF](evidence/v0.2/mv-live-applied.pdf) |
+| Refused Mentality / unchanged current choice | [PNG](evidence/v0.2/mv-live-refused.png) | [PDF](evidence/v0.2/mv-live-refused.pdf) |
+| Healthy live statistics | [PNG](evidence/v0.2/mv-live-statistics.png) | [PDF](evidence/v0.2/mv-live-statistics.pdf) |
+| Whistle race / request not applied | [PNG](evidence/v0.2/mv-ft-not-applied.png) | [PDF](evidence/v0.2/mv-ft-not-applied.pdf) |
+| Healthy retained statistics at full time | [PNG](evidence/v0.2/mv-ft-statistics-open.png) | [PDF](evidence/v0.2/mv-ft-statistics-open.pdf) |
+| Faulted retained statistics at full time | [PNG](evidence/v0.2/mv-ft-statistics-fault.png) | [PDF](evidence/v0.2/mv-ft-statistics-fault.pdf) |
+| Incomplete report / disclosure closed | [PNG](evidence/v0.2/report-incomplete.png) | [PDF](evidence/v0.2/report-incomplete.pdf) |
+| Incomplete report / partial figures disclosed | [PNG](evidence/v0.2/report-partial-open.png) | [PDF](evidence/v0.2/report-partial-open.pdf) |
+| 1366 / pseudo-locale / 200% / fault / future caption reservation | [PNG](evidence/v0.2/stress-fault-1366.png) | [PDF](evidence/v0.2/stress-fault-1366.pdf) |
+| 1366 normal text / undistorted pitch | [PNG](evidence/v0.2/mv-live-1366.png) | [PDF](evidence/v0.2/mv-live-1366.pdf) |
+| 2560 normal text / undistorted pitch | [PNG](evidence/v0.2/mv-live-2560.png) | [PDF](evidence/v0.2/mv-live-2560.pdf) |
 
 ## Version history
 
@@ -113,3 +126,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 |---|---|---|
 | 0.1 | September 30, 2026 | Separate H touchline reference from PR #473 head b6c9c6a; carried presentation fixes, coherent illustrative shirt overlay, 90 checks and 23 image pairs. Owner H approval pending. |
 | 0.1 approval record | September 30, 2026 | Explicit owner “images approved” at 4a6220c; H PASS, I OPEN for handoff. Markdown-only record preserves all executable sources/images/evidence. |
+| 0.2 | October 1, 2026 | Implements Claude’s eight presentation fixes S0-H-005–012 from f7f44b5, then fixes capture-style leakage (S0-H-013) and regenerates all 23 PNG/PDF pairs in run UX-H-S0-20261001-02 (99 checks). Based on approval-recording head 654c4f8; the actual v0.1 approval, evidence and fingerprints are preserved. Separate v0.2 owner approval pending; I on hold for this revision. |
