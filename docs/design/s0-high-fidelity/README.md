@@ -23,6 +23,26 @@ explicitly illustrative substitution overlay: the applied incoming shirt occupie
 player's captured position. It is design evidence, not a new runtime projection. Home/Away and
 shirt numbers identify every choice; names and production roster identity still depend on S1/client work.
 
+## Post-approval validation delta
+
+S0-H-014 corrects only `fixture=long-names&pseudo=1`: Home/Away now sits inside the
+complete bracketed team identity. The shared coverage check scans fault and long-name fixtures.
+The current renderer/verifier hashes therefore differ from the approved source pins at `a1044d5`;
+[protocol §9.1.4](../ux-validation-protocol.md#914-s0-h-014-long-name-pseudo-locale-validation-delta)
+records this focused delta without changing the approval or any approved images/walkthrough.
+
+To validate that correction without replacing the approved exports:
+
+```bash
+NODE_PATH=/path/to/node_modules UX_BROWSER=/path/to/chrome node docs/design/s0-high-fidelity/verify.cjs --pseudo-locale-only
+```
+
+This mode needs Playwright/Chromium, writes only
+[`long-name-pseudo-delta.json`](evidence/v0.2/long-name-pseudo-delta.json), and checks the existing
+46 image hashes against the approved walkthrough. Run `UX-H-S0-20261001-03` passes;
+the full 99-check walkthrough also passes in a separate scratch copy. Ordinary/non-pseudo
+identity text is unchanged. Run full export verification in a separate worktree as described below.
+
 ## Design and boundaries
 
 Navy/blue structure, cream ink, gold selection and tabular data follow the accepted
@@ -141,3 +161,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | 0.2 | October 1, 2026 | Implements Claude’s eight presentation fixes S0-H-005–012 from f7f44b5, then fixes capture-style leakage (S0-H-013) and regenerates all 23 PNG/PDF pairs in run UX-H-S0-20261001-02 (99 checks). Based on approval-recording head 654c4f8; the actual v0.1 approval, evidence and fingerprints are preserved. Separate v0.2 owner approval pending; I on hold for this revision. |
 | 0.2 documentation correction | October 1, 2026 | Clarifies that hashes pin reviewed bytes rather than cross-machine output; restores H PASS / I OPEN for pinned v0.1 without inferring a new owner decision. v0.2 adoption still awaits separate approval; all executable sources/images/evidence unchanged. |
 | 0.2 approval record | October 1, 2026 | Owner “images approved” at a1044d5, all 23 views. Protocol §9.1.3 pins confirmation/time, 46 images, seven sources and walkthrough hash. H PASS / I OPEN using v0.2; all executable sources/images/evidence unchanged. |
+| 0.2 validation delta | October 1, 2026 | S0-H-014 localizes the complete long-name identity and extends coverage beyond fault. Focused run 03 and full 99-check scratch run pass; approved a1044d5 images/walkthrough/source pins unchanged. |

@@ -49,7 +49,7 @@
   }
   seedHistory();
   if (state.screen === 'MV-FT' || state.screen === 'PR') state = M.reduce(state, { type: 'FULL_TIME' });
-  const identity = side => fixture === 'long-names' ? `${side} — ${t('Identity length stress fixture: a deliberately long football team identifier')}` : t(side);
+  const identity = side => t(fixture === 'long-names' ? `${side} — Identity length stress fixture: a deliberately long football team identifier` : side);
   function sample(minute = state.minute) {
     const samples = reference.snapshots;
     return samples.reduce((result, frame) => frame.minute <= minute + .001 ? frame : result, samples[0]);

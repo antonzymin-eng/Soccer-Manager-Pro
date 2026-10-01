@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.26\
+**Version:** 0.27\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I OPEN FOR v0.2 HANDOFF\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.23 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
@@ -751,6 +751,32 @@ The superseded initial v0.2 exports remain recoverable at `f7f44b5`; their 98-ch
 is not the corrected approved export evidence. G’s source/evidence and §§9.1–9.1.2 approval
 records are unchanged.
 
+#### 9.1.4 S0-H-014 long-name pseudo-locale validation delta
+
+Codex review on PR #475 found that S0-H-010 exercised only `fixture=fault`:
+`fixture=long-names&pseudo=1` left Home/Away outside the bracketed identity.
+The expanded check reproduced 18 unlocalized identity occurrences before the renderer fix.
+The complete identity now passes through the pseudo transform once; ordinary output and
+non-pseudo long-name output are unchanged. Coverage scans both fault and long-name fixtures
+in TS, live/full-time Match View and the report, including live statistics and both dialogs.
+
+Run `UX-H-S0-20261001-03` passes the focused coverage check. A separate scratch-copy
+full walkthrough passes 99/99 checks, including long-name/expanded-text geometry at all
+three widths. Its regenerated exports are disposable verification output, not approved images.
+[Focused evidence](s0-high-fidelity/evidence/v0.2/long-name-pseudo-delta.json)
+SHA-256: `44dcb658d3fd93ed2ae593ebd55b3ae4f9d7e2cb44d969a512233045fd48dc60`. It pins current source hashes and the unchanged approved image hashes.
+
+This is a source/verification delta, not a new owner approval. The two current source hashes
+below differ from the approved source pins in §9.1.3; that approval remains tied to `a1044d5`.
+All 46 approved images, the approved walkthrough JSON and §§9.1–9.1.3 records are unchanged.
+H remains PASS and I remains OPEN using that approved baseline with this stress-fixture correction
+recorded separately. #470 still requires completed I; no merge/runtime approval is inferred.
+
+| Revised source | SHA-256 |
+|---|---|
+| `docs/design/s0-high-fidelity/prototype.js` | `562c6c26a7bbdd3cf018e6db32eeb7cbdd5652fd2f6a4bf815672c447a1e8178` |
+| `docs/design/s0-high-fidelity/verify.cjs` | `adfc03d2f3cdcb5aaae8bbc3d00ff5a2e3bc63c15a984567f6adb64dd1256dfd` |
+
 ### 9.2 S1 participant decision record
 
 After both sessions, complete the record for the journey under test.
@@ -861,3 +887,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.24 | October 1, 2026 | Preserves the actual v0.1 owner approval/pins in §9.1.2 and adds §9.1.3 for corrected v0.2: 99 checks, 23 image pairs, isolated exports and PDF completeness checks. H reopened for v0.2 review; I on hold, #470 still blocked. Prior history rows unchanged. |
 | 0.25 | October 1, 2026 | Corrects the header and execution-plan pointer; distinguishes pending v0.2 adoption from the existing H PASS / I OPEN for pinned v0.1. Earlier reopening/hold wording was an author interpretation, not an owner decision. Prior approval and history preserved. |
 | 0.26 | October 1, 2026 | Records actual “images approved” confirmation for H v0.2 at a1044d5, 46 image/seven source hashes and immutable walkthrough hash. H PASS; I OPEN using v0.2. Prior approvals/history/evidence unchanged; no merge/runtime approval inferred. |
+| 0.27 | October 1, 2026 | Records S0-H-014 focused source/verification delta: complete long-name identities pseudo-localized; coverage now includes fault and long-name fixtures. Focused check and full 99-check scratch run pass. Approved sources stay pinned to a1044d5; images/walkthrough/approval records unchanged. |

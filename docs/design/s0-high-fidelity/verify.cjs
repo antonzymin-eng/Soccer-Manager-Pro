@@ -1,5 +1,5 @@
 /* Created: 2026-09-30. Purpose: reproducible scripted Gate H walkthrough, never participant evidence.
-   v0.2 (2026-10-01): owner-review findings S0-H-005–012; v0.1 evidence is reproducible at 4a6220c. */
+   v0.2 (2026-10-01): findings S0-H-005–014; --pseudo-locale-only preserves approved exports. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -604,6 +604,11 @@ async function ownerReviewFindings() {
   await board.close();
   record('S0-H-009 status text', 'Period, minute, speed and current Mentality render as unbordered, unfilled, non-focusable text; period/minute sit directly under the score.');
 
+  await pseudoLocaleCoverage();
+
+  // S0-H-011 and S0-H-012 are asserted in highFidelityFindings with the substitution and comparison flows.
+}
+async function pseudoLocaleCoverage() {
   // S0-H-010: pseudo-locale reaches every product string (brand, numbers and shirt markers excepted).
   const misses = [];
   const scan = page => page.evaluate(() => {
@@ -620,8 +625,8 @@ async function ownerReviewFindings() {
     }
     return out;
   });
-  for (const state of ['TS', 'MV-L', 'MV-FT', 'PR']) {
-    const p = await open(`?review=1&state=${state}&pseudo=1&fixture=fault`);
+  for (const fixture of ['fault', 'long-names']) for (const state of ['TS', 'MV-L', 'MV-FT', 'PR']) {
+    const p = await open(`?review=1&state=${state}&pseudo=1&fixture=${fixture}`);
     if (state === 'MV-L') {
       await p.locator('#stats').click();
       misses.push(...await scan(p));
@@ -629,14 +634,13 @@ async function ownerReviewFindings() {
       misses.push(...await scan(p));
       await p.keyboard.press('Escape'); await p.locator('#substitute').click();
     }
-    if (state === 'PR') await p.locator('summary').click();
+    if (state === 'PR' && fixture === 'fault') await p.locator('summary').click();
     misses.push(...await scan(p));
     await p.close();
   }
   assert.deepEqual(misses, [], 'unlocalized product strings');
-  record('S0-H-010 pseudo-locale coverage', 'Header context, both dialogs, comparison summary/tags, scoreboard, rail, statistics and report strings are all bracketed in pseudo-locale; only the wordmark, numbers and shirt markers are exempt.');
+  record('S0-H-010 pseudo-locale coverage', 'Fault and long-name fixtures: header context, both dialogs, comparison summary/tags, scoreboard, rail, statistics and report strings are all bracketed in pseudo-locale; only the wordmark, numbers and shirt markers are exempt.');
 
-  // S0-H-011 and S0-H-012 are asserted in highFidelityFindings with the substitution and comparison flows.
 }
 async function highFidelityFindings() {
   const p = await open('?state=MV-L');
@@ -717,6 +721,21 @@ function fingerprints() {
   // Fixtures keep all state in their own document; fresh pages do not require separate
   // storage contexts. Reuse one context so Chromium's single-process headless build works too.
   context = await browser.newContext();
+  if (process.argv.includes('--pseudo-locale-only')) {
+    await pseudoLocaleCoverage();
+    const { hashes, imageHashes } = fingerprints();
+    const approved = JSON.parse(fs.readFileSync(path.join(evidence, 'walkthrough.json'), 'utf8'));
+    assert.deepEqual(imageHashes, approved.imageHashes, 'approved images must remain unchanged');
+    fs.writeFileSync(path.join(evidence, 'long-name-pseudo-delta.json'), JSON.stringify({
+      created: '2026-10-01', runId: 'UX-H-S0-20261001-03',
+      purpose: 'S0-H-014 focused source/verification delta; not a new owner image approval',
+      approvedBaseline: 'a1044d525703a42f274b6643f9c96c3c46dc3592',
+      approvedWalkthroughHash: crypto.createHash('sha256').update(fs.readFileSync(path.join(evidence, 'walkthrough.json'))).digest('hex'),
+      browser: browser.version(), hashes, unchangedApprovedImageHashes: imageHashes, results
+    }, null, 2) + '\n');
+    console.log(`PASS: ${results.length} focused check; approved images and walkthrough unchanged.`);
+    return;
+  }
   for (const state of ['MM', 'TS', 'MV-0', 'MV-L', 'MV-P', 'MV-FT', 'PR']) {
     const p = await open(`?review=1&state=${state}`);
     await geometry(p, 'wireframe ' + state);

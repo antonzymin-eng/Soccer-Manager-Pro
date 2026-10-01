@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 0.20\
+**Version:** 0.21\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I OPEN FOR v0.2 HANDOFF (§12.3)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.23 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.26\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.27\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -1047,10 +1047,11 @@ The separate owner “images approved” confirmation at `a1044d5` accepts all n
 | S0-H-007 | Pending, Applied, Refused and Not applied differed only by wording and a 3px bar; Pending matched info boxes, Refused matched Not applied. | Explicit outcome label on every row: Pending dashed blue, Applied green ✓, Refused rose ✕, Not applied dotted grey –. Verifier asserts four labels and four distinct treatments. | Owner-approved in v0.2 images. Confirmed the four states are distinct at a glance. Words remain primary; I allocates labels to #49 roles. |
 | S0-H-008 | ~320px dead column between pitch and rail at 1920; pitch bottom below a 1080 viewport in full-time states. | Pitch width = max(44rem, (viewport height − 30rem) × 111/70); Match View width = pitch + rail, rail 16px beside pitch; speed note and direction share the control row. Verifier: whole pitch visible without scrolling at 1920×1080 and 2560×1440 in waiting/live/paused/full time; 1366×768 keeps a 704px floor and scrolls. | Owner-approved in v0.2 images. Trade-off: at 1920×1080 the pitch is 951px wide (v0.1 990px) so it fits; the caption may need a short scroll. |
 | S0-H-009 | Status chips (period, minute, speed, Mentality) were bordered like secondary buttons; minute had no more weight than speed. | Period and minute sit directly under the score at 1.2rem; speed and current Mentality are unbordered plain text below. Verifier asserts no border/fill/focusability. | Owner-approved in v0.2 images. Confirmed time is easy to find and nothing looks clickable. |
-| S0-H-010 | Pseudo-locale missed the header context and the comparison summary. | Both now pass through the pseudo transform. A new verifier walk asserts every product string in header, Match View, both dialogs, statistics and report is bracketed (wordmark, numbers, shirt markers exempt). | Owner-approved in v0.2 images. I still owns the #49 allocation; this only proves no string escaped the stress fixture. |
+| S0-H-010 | Pseudo-locale missed the header context and the comparison summary. | Both now pass through the pseudo transform. A new verifier walk asserts every product string in header, Match View, both dialogs, statistics and report is bracketed (wordmark, numbers, shirt markers exempt). | Owner-approved in v0.2 images. I still owns the #49 allocation; the original scan covered the fault fixture; long-name coverage is corrected separately in S0-H-014. |
 | S0-H-011 | ↔ on the applied substitution marker was very small. | ↔ rendered at 1.25× marker text with the 2px white outline plus a dark halo; legend names the white-outlined ↔ marker. Verifier asserts glyph scale ≥1.2 and the outline. | Owner-approved in v0.2 images. Confirmed H14 ↔ is recognisable at 1920. Illustrative overlay only. |
 | S0-H-012 | Comparison did not mark which Mentality was current or requested. | Dialog repeats “Current Mentality”; comparison tags Current (neutral) and Requested (gold outline), both on one row when equal; changing the dropdown moves only Requested. Verifier asserts tag placement before and after a change. | Owner-approved in v0.2 images. Confirmed current versus requested is unambiguous; no new tactical semantics. |
 | S0-H-013 | The modal print clip persisted into later exports: five nonmodal PDFs were shorter than their PNGs, including two missing statistics tables. | All temporary styles removed in `finally`; exported grid/pitch geometry frozen only within capture. All 23 PDF page counts/extents and displayed statistics labels checked. | Owner-approved in v0.2 images. Fixed/retested; regenerated v0.2 evidence approved. |
+| S0-H-014 | Long-name pseudo fixture left Home/Away outside the transform; S0-H-010 tested only fault. | Transform the assembled identity once; scan fault and long-name fixtures across setup, live/full-time, statistics, dialogs and report. Check failed on the old renderer, passes after the fix; full scratch walkthrough 99/99 PASS. | Focused source/verification delta, protocol §9.1.4; approved a1044d5 images/source pins remain unchanged. No new owner approval inferred. |
 
 All S0-H-005–013 fixes are accepted in the owner-approved v0.2 images (protocol §9.1.3). Production obligations remain as listed; the actual v0.1 approval is preserved.
 
@@ -1080,3 +1081,4 @@ All S0-H-005–013 fixes are accepted in the owner-approved v0.2 images (protoco
 | 0.18 | October 1, 2026 | Fixes the §13.4 table so S0-H-013 remains a finding row; corrects gate-state wording and authority pointers. H PASS / I OPEN remain valid for pinned v0.1; v0.2 adoption awaits separate approval. No source/image/evidence change. |
 | 0.19 | October 1, 2026 | Corrects the remaining stale Gate-I row in §12.3 to OPEN for approved v0.1, matching the header, protocol and plan. v0.2 adoption still requires separate approval; I is not passed and #470 remains blocked. No executable source/image/evidence change. |
 | 0.20 | October 1, 2026 | Records actual owner “images approved” for all 23 H v0.2 views at a1044d5. §12.3/header/§13 agree: H PASS, I OPEN using v0.2; S0-H-005–013 accepted in images. Prior approval/history/evidence and all executable sources/images unchanged. |
+| 0.21 | October 1, 2026 | Adds S0-H-014 long-name pseudo-locale correction and focused validation delta; original fault-only coverage claim narrowed. Full scratch walkthrough 99/99 PASS; approved images, source pins and gate decisions preserved. |
