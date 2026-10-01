@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 1.14\
+**Version:** 1.15\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -346,7 +346,9 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 
 *Superseded status update, October 1, 2026: the actual H v0.1 approval remains preserved in protocol §9.1.2. H is reopened for separate review of corrected v0.2 (§9.1.3); I is on hold for this revision and #470 remains blocked on completed I.*
 
-*Status correction, October 1, 2026: the preceding reopening/hold was an author interpretation, not a new owner decision. H remains PASS for approved v0.1 and I remains OPEN using its sources/images pinned to `4a6220c`. Corrected v0.2 awaits separate approval before adoption (§9.1.3); if it is not approved, v0.1 remains the handoff baseline. #470 remains blocked on completed I.*
+*Prior status correction, October 1, 2026: the preceding reopening/hold was an author interpretation, not a new owner decision. H remains PASS for approved v0.1 and I remains OPEN using its sources/images pinned to `4a6220c`. Corrected v0.2 awaits separate approval before adoption (§9.1.3); if it is not approved, v0.1 remains the handoff baseline. #470 remains blocked on completed I.*
+
+*Status update after owner approval, October 1, 2026: Anton Zymin replied “images approved” at 12:35:32 America/Los_Angeles to all 23 H v0.2 views at `a1044d5` (protocol §9.1.3). H PASS / I OPEN now use approved v0.2; v0.1 approval remains preserved. #470 remains blocked on completed I.*
 
 ---
 
@@ -369,3 +371,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.12 | September 30, 2026 | Records separate H image approval at 4a6220c; H PASS and I OPEN for handoff, with production binding still gated on I. |
 | 1.13 | October 1, 2026 | Adds current H v0.2 review-pending / I-on-hold note while preserving the dated v0.1 approval and its history row. No strategy or gate definition change. |
 | 1.14 | October 1, 2026 | Supersedes the author-imposed reopening/hold note; preserves H PASS / I OPEN for approved v0.1 while v0.2 adoption awaits separate owner approval. No strategy or gate definition change. |
+| 1.15 | October 1, 2026 | Records separate owner image approval of H v0.2 at a1044d5; I OPEN using v0.2, prior approvals unchanged. No strategy/gate definition change. |

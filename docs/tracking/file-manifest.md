@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 1, 2026 — **PR #475 remaining Gate-I table correction.** Packet v0.19 §12.3 now states I OPEN for owner-approved v0.1 at 4a6220c, matching its header, the protocol and the detailed plan. v0.2 adoption still awaits separate approval; I is not passed and #470 remains blocked until I completes. Fixes the stale author-imposed hold missed by the preceding pass. All executable sources, images, 99-check evidence, actual approval records and prior history rows remain unchanged. Documentation consistency, tracking drift, direct header/table/plan agreement, relative links and whitespace pass. No browser/C# rerun for this Markdown-only correction; production/spec/schema/RNG/assembly/calibration and issue counts unchanged. CI does not run for this stacked target branch; fresh CI remains required before the eventual main merge.
+**Last Updated:** October 1, 2026 — **H v0.2 owner image approval recorded (PR #475).** Anton Zymin replied “images approved” on October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC) to all 23 views at a1044d525703a42f274b6643f9c96c3c46dc3592. Protocol v0.26 §9.1.3 pins actual confirmation/time, 46 image hashes, seven executable-source hashes and walkthrough SHA-256 89837fb0880f4fd7a6726e6cec538fee4a87cdc18a66185ce1ad160a473219fc. Packet v0.20, detailed plan v1.23, high-level plan v1.15 and H README record H PASS / I OPEN using approved v0.2. S0-H-005–013 accepted in images; production-name/feedback/runtime obligations remain. Original v0.1/G approvals, all prior history rows and all sources/images/evidence remain unchanged. Markdown-only recording; no browser run or image regeneration. No production/spec/schema/RNG/assembly/calibration change; issue counts unchanged. Hashes/status/table/links/whitespace, documentation consistency and tracking drift pass. No C# rerun; no Unity/runtime or merge approval inferred. CI only targets main, so fresh CI remains required before the eventual main merge; #470 stays blocked until I completes.
+
+**Last Updated (prior):** October 1, 2026 — **PR #475 remaining Gate-I table correction.** Packet v0.19 §12.3 now states I OPEN for owner-approved v0.1 at 4a6220c, matching its header, the protocol and the detailed plan. v0.2 adoption still awaits separate approval; I is not passed and #470 remains blocked until I completes. Fixes the stale author-imposed hold missed by the preceding pass. All executable sources, images, 99-check evidence, actual approval records and prior history rows remain unchanged. Documentation consistency, tracking drift, direct header/table/plan agreement, relative links and whitespace pass. No browser/C# rerun for this Markdown-only correction; production/spec/schema/RNG/assembly/calibration and issue counts unchanged. CI does not run for this stacked target branch; fresh CI remains required before the eventual main merge.
 
 **Last Updated (prior):** October 1, 2026 — **PR #475 review documentation corrections.** Fixes the validation-protocol header/plan pointer and the packet §13.4 table break. Corrects the author-imposed H reopening / I hold: H remains PASS and I OPEN for the owner-approved v0.1 sources/images at 4a6220c. No owner directive supersedes that baseline; v0.2 adoption requires separate approval, and v0.1 remains valid if v0.2 is not approved. Protocol v0.25, packet v0.18, detailed plan v1.22 and high-level plan v1.14 agree. README clarifies that fingerprints pin reviewed bytes; fonts/browser rendering can change rerun pixels/wrapping. All executable sources and G/H evidence, actual approval blocks and prior history rows remain unchanged. No production/spec/schema/RNG/assembly/calibration change; issue counts remain 33 active / 60 archived. Documentation consistency, tracking drift, relative links, table/header assertions and whitespace pass. No browser or C# rerun for this Markdown-only correction; prior 99-check run remains unchanged evidence. CI does not run for the stacked target branch; fresh CI remains required before the eventual main merge.
 
@@ -3545,14 +3547,14 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.14: H PASS / I OPEN for approved v0.1; v0.2 adoption pending |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.22: pinned v0.1 handoff remains open; v0.2 requires separate approval |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.15: H v0.2 owner-approved at a1044d5; I OPEN using v0.2 |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.23: H v0.2 PASS; I OPEN for pinned v0.2 handoff |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.25: corrected header/authority; actual v0.1 approval valid, v0.2 adoption pending |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.19: §12.3 Gate-I row/header agree; approved v0.1 handoff open, v0.2 adoption pending |
-| `docs/design/s0-high-fidelity/README.md` | H v0.2 review index/reproduction; reviewed-byte hash limits and approved v0.1 fallback baseline |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.26: actual v0.2 approval at a1044d5, 46 images/seven sources/walkthrough hash in §9.1.3 |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.20: H v0.2 PASS; I OPEN using v0.2; S0-H-005–013 accepted in images |
+| `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |
 | `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
 | `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
 | `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
@@ -3601,52 +3603,52 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
 | `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
 | `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json` | Separate H design reference, reproduction or evidence; G base preserved |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mm.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mm.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/pr.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/pr.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.png` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/ts.pdf` | H v0.2 owner-review image; approval pending |
-| `docs/design/s0-high-fidelity/evidence/v0.2/ts.png` | H v0.2 owner-review image; approval pending |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
 | `docs/design/s0-high-fidelity/evidence/v0.2/walkthrough.json` | H v0.2 executed verification record (UX-H-S0-20261001-02, 99 checks, source/image hashes) |
 | `docs/design/s0-high-fidelity/index.html` | Separate H v0.2 entry; G base preserved |
 | `docs/design/s0-high-fidelity/prototype.css` | H v0.2 visual fixes: keyboard focus, pitch fit and outcome/status treatments |

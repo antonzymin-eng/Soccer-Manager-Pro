@@ -2,7 +2,7 @@
 
 **Created:** September 30, 2026\
 **Last Updated:** October 1, 2026\
-**Status:** v0.2 images ready for separate owner review; H PASS / I OPEN remain valid for approved v0.1; #470 remains blocked on completed I.\
+**Status:** H v0.2 PASS — owner “images approved” October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC); reviewed `a1044d5`. I OPEN using v0.2; #470 blocked on completed I.\
 **Prior approval preserved:** v0.1 at `4a6220c`, owner “images approved” September 30, 2026; recorded at `654c4f8` in [protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval). Its evidence and approval fingerprints remain unchanged.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
@@ -11,11 +11,11 @@ Retro Dynamo Blue reference for the approved four-screen S0 journey. It shares G
 reference capture and synthetic statistics fixture; the H renderer/styles and verifier are separate.
 The approved `s0-prototype/` sources, PDFs, hashes and owner records remain unchanged.
 
-Adopting v0.2 for Gate I requires separate owner approval. The earlier reopening/hold wording was
-an author interpretation, not a recorded owner decision. If v0.2 is declined or remains unapproved,
-I uses the approved v0.1 sources and images pinned to `4a6220cf4c394130c29f38716ed3abde1f60477b`
-([approval record](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval)), rather than
-the unapproved renderer at this branch tip.
+The owner approved all 23 v0.2 views at `a1044d525703a42f274b6643f9c96c3c46dc3592`.
+[Protocol §9.1.3](../ux-validation-protocol.md#913-s0-gate-h-v02-owner-image-approval) records the
+actual confirmation/time, seven executable-source hashes, all 46 image hashes and walkthrough hash.
+Gate I now uses this approved v0.2 baseline. The earlier v0.1 approval remains intact.
+This Markdown-only recording leaves every executable source/image/evidence file unchanged.
 
 All commands/results are simulated. The ordinary 2–1 score/statistics fixture is synthetic;
 `fixture=scoreline` uses the unmodified 19–9 capture. Choices do not recompute either match. H adds an
@@ -93,14 +93,15 @@ The verifier checks all 23 PDF page counts, PNG/PDF dimensions and every display
 This prevents a modal clip leaking into later live/full-time statistics captures on the same page.
 The shipping maximum text scale, font/runtime application and cert-host checks remain deferred.
 
-All 23 PNGs were inspected at full size and all 23 single-page PDFs were rendered through Poppler and inspected. H owner approval of v0.2 is pending;
-scripted checks and author inspection cannot supply it. These files supply no Unity/runtime evidence.
+All 23 PNGs were inspected at full size and all 23 single-page PDFs were rendered through Poppler and inspected.
+The separate owner confirmation approves v0.2; scripted checks and author inspection supplied supporting
+evidence. These files supply no Unity/runtime evidence.
 
 ## Owner review images
 
-Review all 23 v0.2 views, including the expanded comparison, Applied shirt identity, both full-time
+All 23 v0.2 views are owner-approved, including the expanded comparison, Applied shirt identity, both full-time
 statistics states and the small-desktop expanded-text fault case. The v0.1 images stay in
-`evidence/v0.1/` as the unchanged, owner-approved historical reference; current review is limited to v0.2. PNG is convenient for image review;
+`evidence/v0.1/` as the unchanged, owner-approved historical reference; v0.2 is the current approved baseline. PNG is convenient for image review;
 PDF preserves the complete vector layout. `walkthrough.json` pins both formats.
 The small review PNGs are stored directly using evidence-local Git attributes; the repository
 large-binary guard still applies. No Unity asset/LFS rule is changed.
@@ -139,3 +140,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | 0.1 approval record | September 30, 2026 | Explicit owner “images approved” at 4a6220c; H PASS, I OPEN for handoff. Markdown-only record preserves all executable sources/images/evidence. |
 | 0.2 | October 1, 2026 | Implements Claude’s eight presentation fixes S0-H-005–012 from f7f44b5, then fixes capture-style leakage (S0-H-013) and regenerates all 23 PNG/PDF pairs in run UX-H-S0-20261001-02 (99 checks). Based on approval-recording head 654c4f8; the actual v0.1 approval, evidence and fingerprints are preserved. Separate v0.2 owner approval pending; I on hold for this revision. |
 | 0.2 documentation correction | October 1, 2026 | Clarifies that hashes pin reviewed bytes rather than cross-machine output; restores H PASS / I OPEN for pinned v0.1 without inferring a new owner decision. v0.2 adoption still awaits separate approval; all executable sources/images/evidence unchanged. |
+| 0.2 approval record | October 1, 2026 | Owner “images approved” at a1044d5, all 23 views. Protocol §9.1.3 pins confirmation/time, 46 images, seven sources and walkthrough hash. H PASS / I OPEN using v0.2; all executable sources/images/evidence unchanged. |
