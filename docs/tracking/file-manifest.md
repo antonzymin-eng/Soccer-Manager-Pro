@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 2, 2026 — **PR #476 published-catalogue QA allocation.** Journey packet v0.26 binds planned I-Q16 integration to the validated published catalogue, actual S0 packaging/loader path and matching content identities. Packaging output must be validated if transformed; negative fixtures are separate. Four Markdown files modified; no runtime API or executed QA claim. I IN PROGRESS, all three decisions open, #470 blocked. Approved sources/images/evidence unchanged.
+**Last Updated:** October 3, 2026 — **S0 Gate-I owner choices recorded.** Actual B/C/A approval: distinct demo squads, 100–200% scale and the client formatter. Journey v0.27 §14.10/Gate-A addendum A-44 and protocol v0.30 §10.1 record the instruction, ownership and remaining frame/reference, scale-application and formatter/L2 dependency contracts. Detailed plan v1.26/high-level plan v1.18 agree: I IN PROGRESS, #470 blocked; choices settled, handoff/J evidence still due. Seven Markdown documents modified; no new source/spec/image or prior G/H approval-record change.
+
+**Last Updated (prior):** October 2, 2026 — **PR #476 published-catalogue QA allocation.** Journey packet v0.26 binds planned I-Q16 integration to the validated published catalogue, actual S0 packaging/loader path and matching content identities. Packaging output must be validated if transformed; negative fixtures are separate. Four Markdown files modified; no runtime API or executed QA claim. I IN PROGRESS, all three decisions open, #470 blocked. Approved sources/images/evidence unchanged.
 
 **Last Updated (prior):** October 2, 2026 — **PR #476 formatter lifetime/build boundary correction.** Journey packet v0.25 fixes the S0 locale/catalogue for the shell lifetime, scopes cached labels to that context and removes the assumed revision/change signal. Client-owned build lint/tests block malformed candidate publication outside the generic localization core; missing translations use KD-5 only with valid base coverage. I-Q16 is aligned. Four Markdown files modified; I IN PROGRESS, #470 blocked. Prior head d97e0c2 CI run 36957363523 green with Unity skipped; fresh CI required on this head. No source/spec/assets or approval-record change.
 
@@ -3559,13 +3561,13 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.17: H v0.2 approved; I IN PROGRESS through journey handoff draft |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.25: H v0.2 PASS; I IN PROGRESS, review/reconcile handoff before release |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.18: H v0.2 approved; I IN PROGRESS through journey handoff draft |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.26: H v0.2 PASS; I IN PROGRESS, review/reconcile handoff before release |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.29: §10 Gate-I QA evidence handoff; original G/H approvals and S0-H-014 delta preserved |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.26: §14 Gate-I P5b handoff draft, identity/scale/dynamic-formatting blockers and 19 planned QA cases; I IN PROGRESS, #470 blocked |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.30: §10 Gate-I QA evidence handoff; original G/H approvals and S0-H-014 delta preserved |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.27: §14 Gate-I P5b handoff draft, identity/scale/dynamic-formatting blockers and 19 planned QA cases; I IN PROGRESS, #470 blocked |
 | `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |
 | `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
 | `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
