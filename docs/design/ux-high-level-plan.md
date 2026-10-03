@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 1.15\
+**Version:** 1.17\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -350,6 +350,8 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 
 *Status update after owner approval, October 1, 2026: Anton Zymin replied “images approved” at 12:35:32 America/Los_Angeles to all 23 H v0.2 views at `a1044d5` (protocol §9.1.3). H PASS / I OPEN now use approved v0.2; v0.1 approval remains preserved. #470 remains blocked on completed I.*
 
+
+*Status update, October 1, 2026: S0 Gate I is IN PROGRESS through journey packet §14, the P5b handoff draft. Identity reconciliation (S0-I-001), shipping text-scale allocation (S0-I-002) and dynamic UI formatting allocation (S0-I-003) remain open. H stays PASS for approved v0.2; #470 remains blocked on completed I. Execution and live blockers remain in the detailed plan and open issues.*
 ---
 
 ## Version History
@@ -372,3 +374,5 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.13 | October 1, 2026 | Adds current H v0.2 review-pending / I-on-hold note while preserving the dated v0.1 approval and its history row. No strategy or gate definition change. |
 | 1.14 | October 1, 2026 | Supersedes the author-imposed reopening/hold note; preserves H PASS / I OPEN for approved v0.1 while v0.2 adoption awaits separate owner approval. No strategy or gate definition change. |
 | 1.15 | October 1, 2026 | Records separate owner image approval of H v0.2 at a1044d5; I OPEN using v0.2, prior approvals unchanged. No strategy/gate definition change. |
+| 1.16 | October 1, 2026 | Status sync for S0 Gate-I handoff draft, IN PROGRESS with identity/scale-allocation blockers. H remains approved; #470 remains blocked on completed I. Strategy/scope and gate definitions unchanged. |
+| 1.17 | October 1, 2026 | PR #476 review status sync: identity, scale and dynamic UI formatting remain Gate-I allocation blockers. Strategy, scope and gate definitions unchanged. |
