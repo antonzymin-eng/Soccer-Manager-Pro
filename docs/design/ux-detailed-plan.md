@@ -2,8 +2,8 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** October 1, 2026\
-**Version:** 1.23\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I OPEN FOR v0.2 HANDOFF\
+**Version:** 1.25\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -967,7 +967,9 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-**Current next step: Gate-I implementation handoff using owner-approved H v0.2 at `a1044d5`.** The v0.4 owner approval
+**Current next step: review and complete the Gate-I handoff draft in journey packet §14.**
+I is IN PROGRESS on approved H v0.2 at `a1044d5`; S0-I-001 identity reconciliation,
+S0-I-002 shipping text-scale allocation and S0-I-003 dynamic UI formatting allocation remain open. #470 stays blocked; no I PASS is claimed. The v0.4 owner approval
 is preserved in validation protocol §9.1; the v0.5 single-image delta is approved at `0e8bd2b`
 in §9.1.1, carrying the other 18 forward apart from version text. H v0.1 approval at `4a6220c` remains preserved (protocol §9.1.2); the owner separately approved all 23 v0.2 views at `a1044d5` on October 1, 2026 (§9.1.3). I now uses the approved v0.2 sources/images; I is not passed and #470 remains blocked until I completes. The original first sequence remains for traceability.
 
@@ -985,7 +987,7 @@ in §9.1.1, carrying the other 18 forward apart from version text. H v0.1 approv
 12. **S0 Gate G for v0.5 — PASS September 30, 2026.** Anton Zymin approved the corrected full-time statistics-fault image at `0e8bd2b`, carrying the other 18 forward from approved v0.4 apart from version text. Protocol §9.1.1 pins the image/source hashes and actual confirmation. Baseline 85-check run and focused three-check delta remain unchanged.
 13. **S0 Gate H — PASS September 30, 2026.** Anton Zymin replied “images approved” to all 23 H v0.1 views at `4a6220c`. Protocol §9.1.2 records actual confirmation, all 46 image/seven executable-source hashes and preserved 90-check evidence. Packet §13 closes S0-H-001–004 and accepts the H shirt identity recheck; production names/feedback obligations remain.
 14. **S0 Gate H v0.2 — PASS October 1, 2026.** Anton Zymin replied “images approved” to all 23 v0.2 views at `a1044d5`. Protocol §9.1.3 pins actual confirmation/time, 46 images, seven sources and walkthrough hash. The unchanged run UX-H-S0-20261001-02 supplies 99 passing checks; prior v0.1 approval/evidence remain intact.
-15. **S0 Gate I — OPEN for approved v0.2.** Produce the handoff using the Gate-I requirements and the v0.2 sources/images pinned to `a1044d5`. I is not passed; #470 remains blocked until the handoff is complete.
+15. **S0 Gate I — IN PROGRESS for approved v0.2.** Journey packet §14 contains the P5b handoff draft and planned QA. Resolve S0-I-001 (illustrative incoming shirt versus production slot identity) S0-I-002 (shipping scale maximum/application) and S0-I-003 (dynamic UI formatting contract), review the mapping and record the final verdict. I is not passed; #470 remains blocked until the handoff is complete.
 
 The existing Main Menu reference was revisited at H; its admitted demo-only entry and art fallback are included in the approved image set.
 
@@ -1084,3 +1086,5 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.21 | October 1, 2026 | Current next step is separate review of corrected H v0.2 (99 checks, 23 image pairs); I on hold for this revision. Actual v0.1 approval and prior version-history rows preserved. |
 | 1.22 | October 1, 2026 | Corrects the author-imposed I hold: H PASS / I OPEN remain valid for pinned v0.1. Review of v0.2 is the proposed next action; its adoption requires separate approval. No new owner decision or gate pass inferred. |
 | 1.23 | October 1, 2026 | Records actual H v0.2 image approval at a1044d5; I remains OPEN and adopts v0.2 for handoff. Prior approvals/history preserved; #470 still blocked on completed I. |
+| 1.24 | October 1, 2026 | Starts S0 Gate I through journey packet §14 with the complete handoff draft and planned implementation QA; identifies identity and scale-allocation blockers. Current next step is review/reconciliation, I IN PROGRESS, #470 remains blocked. Gate definitions, actual H approval and historical sequence unchanged. |
+| 1.25 | October 1, 2026 | PR #476 review sync: adds dynamic UI formatting allocation S0-I-003 to the handoff completion conditions alongside identity/scale. I remains IN PROGRESS; #470 remains blocked; gate definitions and prior approvals unchanged. |
