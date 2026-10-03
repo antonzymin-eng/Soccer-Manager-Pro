@@ -1,8 +1,8 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** October 1, 2026\
-**Version:** 0.24\
+**Last Updated:** October 2, 2026\
+**Version:** 0.25\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT (§14)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.25 §5–§6\
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.29\
@@ -1320,9 +1320,14 @@ under S0-I-003 before Gate I can pass. It changes no existing localization API o
   `Statistics incomplete — stopped at minute {0}`. Allocate equivalent complete patterns for
   the other I-L04/I-L06/I-L07 sentences, including all four outcome states and substitutions.
   Status words remain explicit, and translators may reorder placeholders.
-- Validate every authored selected/base pattern against the role's exact argument indices/types
-  and escaped braces **before catalogue admission**. Reject malformed patterns at that boundary;
-  they cannot enter the shipping catalogue. Base coverage for every admitted role is mandatory.
+- **TO BUILD client-owned build-time catalogue lint/tests** validate every authored selected/base
+  S0 pattern against the role's exact argument indices/types and escaped braces before publication.
+  They consume the S0 role-to-key schema and candidate catalogue data outside the generic
+  `TacticalDirector.Localization` assembly. The #49 core and L2 loader gain no client role-schema
+  dependency. A malformed authored pattern in any locale fails the S0 content build; no candidate
+  catalogue artifact is published until corrected. Do not silently drop that key or locale and
+  describe it as a runtime fallback. Missing selected-locale keys are permitted only with valid
+  base coverage for every admitted role; missing or malformed base patterns also fail the build.
   An absent selected-locale key uses #49's planned KD-5 fallback inside the L2 localizer.
   `Resolve` returns only the resolved string: it exposes neither fallback provenance nor explicit
   base-locale lookup. The formatter cannot inspect which locale supplied a pattern or retry an
@@ -1335,17 +1340,24 @@ under S0-I-003 before Gate I can pass. It changes no existing localization API o
   no exception/key dump/blank label is an acceptable shipping result. Do not treat an arbitrary
   `LocaleId.Value` as a validated platform culture name; the composition must supply an admitted
   number-format provider/fallback explicitly.
-- Cache formatted labels in the host-free presenter by copy role, argument values and display
-  locale/catalogue revision. Re-format only when one of those inputs changes; unchanged render
-  frames reuse the label. Minute labels change at the displayed-minute boundary, score labels
-  when the score changes, and cutoff labels when the health/cutoff projection changes. Locale or
-  catalogue replacement invalidates the corresponding labels. Unity only binds cached strings;
-  composite formatting and argument-array construction stay off the unchanged per-frame path.
+- **Proposed S0 lifetime policy:** the shell composition binds one fixed display locale, immutable
+  admitted catalogue/localizer context and number-format provider at shell construction, covering
+  MM, TS, MV and PR. S0 has no settings UI and admits no in-place locale/catalogue replacement.
+  Neither `ILocalizer` nor #49 supplies a revision/change notification; none is assumed here.
+  Cache labels in each host-free presenter by copy role and argument values within that fixed
+  context. Re-format only when arguments change; unchanged render frames reuse the label. Minute
+  labels change at the displayed-minute boundary, score labels when the score changes, and cutoff
+  labels when the health/cutoff projection changes. Match teardown discards match/report caches;
+  full shell teardown discards remaining menu/setup presenters and the formatting context.
+  A different context requires a newly constructed shell with empty caches. A future live locale
+  switch returns to Gate A/I to allocate its change signal and invalidation contract before use.
+  Unity only binds cached strings; composite formatting and argument-array construction stay off
+  the unchanged per-frame path.
 
 This proposal provides a concrete route for dynamic UI sentences while keeping number formatting
 display-only. It is not implemented or approved by this PR. S0-I-003 must settle catalogue-pattern
-ownership, admission validation/coverage, L2 fallback and ERR-049-005 dependencies, culture/formatter
-admission and change-driven formatting, and name the consumed implementation
+client build-time validation/coverage ownership, L2 fallback and ERR-049-005 dependencies,
+culture/formatter admission, fixed-context lifetime and argument-driven formatting, and name the consumed implementation
 landing; if the owners select a different route, revise this mapping before I completion.
 
 | Role ID | Copy covered / dynamic arguments | Owning integration requirement |
@@ -1414,7 +1426,7 @@ under validation protocol §10. Retest the actual allocated maximum, not merely 
 | I-Q13 / T6,G-008 | statistics open or closed before ended frame, healthy or faulted | full time then report acknowledgement | retain/close as before, static status/no reopen; report available only from end; frame home result wins over analytics; Return outside disclosure | host-free + Unity |
 | I-Q14 / T6,T1 | final report with fault/history | Return, start another match | old session stopped/detached/cleared; fresh caches/observer/feedback/draft/disclosures; old callbacks cannot mutate new context | host-free + Unity |
 | I-Q15 / all,H-005 | keyboard-only journey, dialogs, latest/earlier outcome disclosure | traverse forward/back, submit, close, let live ticks run | logical order, modal wrap, recoverable visible focus, no root loss/tick reset/disclosure collapse; pointer headings unboxed | Unity |
-| I-Q16 / all,H-014,E-004,I-003 | all three dimensions, expanded pseudo text, 150% and 200% proposed stress scale plus actual allocated max; reordered/invalid/missing pattern admission fixtures; unchanged frames and locale/catalogue replacement | format dynamic roles and complete journey, both choosers, long-name/fault/history fixtures | exact role arguments; malformed catalogue admission rejected, complete base-key coverage, L2 KD-5 missing-selected-key fallback and ERR-049-005 terminal-path proof; locale number formatting; unchanged inputs reuse labels and locale/catalogue changes invalidate them; all product strings transformed incl Home/Away; whole labels/actions reachable, reflow/scroll, no horizontal clipping/distortion; record real max | host-free formatter + Unity |
+| I-Q16 / all,H-014,E-004,I-003 | all three dimensions, expanded pseudo text, 150% and 200% proposed stress scale plus actual allocated max; reordered/invalid/missing pattern build fixtures; unchanged frames, changed arguments, match teardown and fresh shell contexts | format dynamic roles and complete journey, both choosers, long-name/fault/history fixtures | exact role arguments; client-owned lint fails content build on any malformed authored pattern or missing base role, publishes no rejected candidate, permits absent translations with valid base coverage, L2 KD-5 missing-selected-key fallback and ERR-049-005 terminal-path proof; locale number formatting; fixed-context unchanged arguments reuse labels; changed arguments refresh; match teardown clears match caches; fresh shell has no previous-context labels; no runtime replacement signal assumed; all product strings transformed incl Home/Away; whole labels/actions reachable, reflow/scroll, no horizontal clipping/distortion; record real max | host-free formatter + Unity |
 | I-Q17 / all | no final art/network fonts, glyph failures, muted audio, color-independent inspection | read/play/choose/review | neutral text/geometry fallback, distinguish selection/focus/outcomes/locks without hue, no blank label or fabricated identity; measured contrast | Unity |
 | I-Q18 / T3,T6 | unusual real 19–9 capture equivalent, five-sub cap, dense chronological requests, mid-tick fault | render and traverse at small desktop/max scale | legible score/count/context, stable history, no synthetic 2–1/90-minute model/captured overlay in shipping source | host-free + Unity |
 | I-Q19 / release | exact P5b PR head on pinned host | compile, run scene/live inputs and cert capture | pinned Unity 6000.4.9f1 evidence before landing; satisfy B8/B9b/B10/P6 requirements with actual host run/head; no editor FPS used as certificate | Unity/cert |
@@ -1425,7 +1437,7 @@ under validation protocol §10. Retest the actual allocated maximum, not merely 
 |---|---|---|
 | S0-I-001 / Major | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`: H14 ↔ is illustrative; `RosterShirtNumbers.Assign` / `MatchRoster` / `MatchRenderProjection` preserve outgoing slot number. The engine already moves player ids on substitution and exposes `PlayerIdsByAgentId()`, but S0's no-squad setup yields only `NO_PLAYER_ID` and frames carry no id mapping. | UX + client/roster owner: choose (a) existing slot semantics with owner-reviewed affected H images/copy, or (b) distinct demo squads in `MatchSetup`, reusing #44's existing engine identity plus a verified frame/client player-id-to-label projection. No parallel identity store, Unity-only shirt formula or per-render boot-copy polling. Real shirt data is not supplied merely by player id; allocate a truthful player label/shirt source before promising 4→14. Amend Gate A and affected scope/reference, keep pitch/chooser/feedback/consumed choices consistent. I cannot pass unresolved; S0-B-004 remains open for production names. |
 | S0-I-002 / Minor | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`: 200% is the explicit proposal/prototype stress value; shipping text-scale maximum/application remains unallocated (S0-E-004, shared-system §9). | #49 + #38/P5b owner: allocate supported S0 maximum/application before I completion; Gate J executes it. No settings persistence/UI is inferred. |
-| S0-I-003 / Major | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`: no parameterized static-UI formatting adapter is allocated in existing source; Resolve is key-only and Render needs a producer request. §14.7 proposes a static-pattern/client formatter with admission-time validation. No production ILocalizer exists yet; L2 owns KD-5 fallback, Resolve exposes no base-locale lookup/provenance, and ERR-049-005 remains OPEN for the both-catalogues-missing terminal case. | #49 + #38/P5b owners: approve or replace the proposed role/key/argument/culture/admission contract and name its consumed landing plus L2 localizer, catalogue validation/base coverage and ERR-049-005 discharge dependencies before I passes; implement change-driven cached labels and verify I-Q16 at J. Runtime invalid-pattern base retry is not allocated by Resolve. Do not invent producer namespaces/draws or bypass localization through concatenation. |
+| S0-I-003 / Major | `BLOCKED BY DOMAIN/CLIENT IMPLEMENTATION`: no parameterized static-UI formatting adapter is allocated in existing source; Resolve is key-only and Render needs a producer request. §14.7 proposes a static-pattern/client formatter with client-owned build-time validation and a fixed shell locale/catalogue context; no revision/change signal exists. No production ILocalizer exists yet; L2 owns KD-5 fallback, Resolve exposes no base-locale lookup/provenance, and ERR-049-005 remains OPEN for the both-catalogues-missing terminal case. | #49 + #38/P5b owners: approve or replace the proposed role/key/argument/culture/build-validation/lifetime contract and name its consumed landing plus L2 localizer, client tooling validation/base coverage and ERR-049-005 discharge dependencies before I passes; implement argument-driven cached labels scoped to the fixed shell context and verify I-Q16 at J. Runtime invalid-pattern base retry is not allocated by Resolve. Do not invent producer namespaces/draws or bypass localization through concatenation. |
 | S0-B-002 / Major carried | `ACCEPT FOR CURRENT GATE`: actual owner acceptance preserved in protocol §9.1; outcome adapter absent on audited main. | client/P5b: implement §14.5 in consumed gate-compiled code, then Gate J passes I-Q06–10; feedback cannot ship without it |
 | S0-B-009 / Major | prior design fix retained; production analytics/health adapter is TO BUILD | client/#37: implement §14.6; forced mid-tick fault and continued score/navigation proof I-Q12 at J |
 | S0-B-003 / change control | owner next-stoppage substitution rule recorded, not implemented; immediate current behavior retained | substitution owner: return to A/B when new execution/feedback semantics land; do not describe current request as waiting for stoppage |
@@ -1472,3 +1484,4 @@ above has been run against P5b and no shipping/host acceptance is inferred from 
 | 0.22 | October 1, 2026 | Starts Gate I in §14 on main merge 53dceaa: P5b component/read/action/navigation/focus mapping, lifecycle ordering, correlated command outcomes and paused servicing, synchronized analytics faults, localization/assets/a11y roles and 19 planned QA cases. Source audit identifies S0-I-001 illustrative incoming shirt versus production slot-number conflict and S0-I-002 shipping scale allocation. I IN PROGRESS, not passed; #470 remains blocked. Approved G/H sources, images, evidence and approval records unchanged. |
 | 0.23 | October 1, 2026 | PR #476 review corrections: distinguishes main internal demo boot from #470-only opt-in; names existing #44 player-id seam and distinct-squad projection route; corrects shared-lock/non-atomic-read and log-before-ended-frame reasoning; records future paused save change control; allocates proposed static-pattern UI formatter with S0-I-003 owner approval blocker and QA. I remains IN PROGRESS; #470 blocked; existing approvals/evidence unchanged. |
 | 0.24 | October 1, 2026 | PR #476 second review: makes pattern validation admission-time only; names unimplemented L2 localizer, KD-5 access limits and open ERR-049-005 dependencies. Adds change-driven label caching and corresponding planned I-Q16 cases. I IN PROGRESS and #470 blocked; approvals, images and evidence unchanged. |
+| 0.25 | October 2, 2026 | PR #476 third review: fixes locale/catalogue for the S0 shell lifetime, clears caches on teardown and allocates no nonexistent revision signal. Client-owned build lint/tests fail publication on malformed patterns or missing base coverage, without client schemas in the localization core. Updates planned I-Q16 cases. I IN PROGRESS; #470 blocked; approvals/evidence unchanged. |
