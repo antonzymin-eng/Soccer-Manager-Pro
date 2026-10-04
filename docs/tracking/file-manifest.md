@@ -1,6 +1,67 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** September 28, 2026 — **Blanket Error-log suppression removed from 12 CI engine scenarios.** **Modified tests (12):** `MatchEngineDisciplineTests`, `MatchEngineShotOutcomeTests`, `MatchEngineShotSpeedTests`, `MatchEnginePlayDevelopmentTests`, `MatchEngineGoalkeeperSaveTests`, `MatchEngineKeeperClaimTests`, `MatchEngineKeeperContactTests`, `MatchEngineKeeperConversionTests`, `MatchEngineCloseChanceTests`, `MatchEngineInPossGateTests` (all v1.0→v1.1), `MatchEngineSnapshotRestoreTests` v1.14→v1.15 (`RoundTrip_GkHeadingEnabled_WithCommittedSave_IsDeterministic`) and `SeasonLoopScenarioTests` v1.0→v1.1 (`sim_season_multi_fixture`). **Modified tracking (4):** `CHANGELOG.md`; `CHANGELOG-src.md` v2.159→v2.160; `match-engine-design.md` v2.18→v2.19 (§5.Z.7 item 3 closed); this manifest. No production file changed by this landing; depends on PR #467 (merged).
+**Last Updated:** October 4, 2026 — **PR #470 foundation refreshed after landed Gate I.** Main fafb63fc merged #478's handoff PASS and explicit owner acceptance. The branch refresh is conflict-free and fast-forward-publishable, preserving its foundation behavior: ClientShellBehaviour plus four pure ClientApp wiring/visibility types, two host-free test files (ten cases), default-off demo boot with the isolated tracked demo explicitly opted in, and the sanctioned UiFramework renderer reference. New file inventory is backfilled; interactive client design v0.24, roadmap v0.27 and Unity README record the foundation-only scope, existing lifecycle consumer/renderer Attach ownership and #49 L2 dependency. The only new source edit is lifecycle wording/version-history in ClientShellBehaviour; no executable behavior is changed by this refresh. September 28 host compile/smoke/254-pass-one-fail figures remain historical. Fresh CI and Unity 6000.4.9f1 compilation on the exact refreshed PR head are still required before merge; no refreshed runtime/Console/cert result is claimed. Known two CS0618 warnings and Unity repo-root discovery failure remain recorded. P5b, B8/B9b/B10 and Gate J remain open. No schema/RNG/gameplay/calibration/performance change; 33 active / 60 archived unchanged.
+
+**Last Updated (prior):** October 4, 2026 — **Owner accepts S0 Gate-I handoff PASS.** Anton Zymin replied “I accept” at 15:07:45 America/Los_Angeles (22:07:45 UTC), explicitly accepting the verdict at PR #478 head a1eae56. Journey v0.33 §14.11 and protocol v0.35 §10.3 preserve Codex’s technical review and record the owner’s separate decision. Five Markdown paths modified; no contract, reference image, implementation, Gate-J, Unity or merge approval change. Main's #470 Gate-I release follows #478 landing; refresh, fresh CI and exact-head pinned Unity compile remain due. All I-Q01–19 stay PLANNED; #49 L2 and B8/B9b/B10 acceptance remain due. Prior histories/approval records/assets/evidence preserved; 33 active / 60 archived unchanged. No source/spec/schema/RNG/gameplay/calibration/performance change. Local documentation checks apply; fresh updated-head CI required.
+
+**Last Updated (prior):** October 4, 2026 — **S0 Gate-I technical handoff review PASS.** Reviewed PR #478 head e8ffd89: journey v0.31, binding contracts v0.3 and protocol v0.33. Journey v0.32 §14.11 now records all eleven deliverables, source checks, reference-delta dispositions and remaining owners; binding contracts v0.4, detailed plan v1.28, high-level plan v1.20 and protocol v0.34 agree. No additional product decision is needed for the supported handoff; exact name approval remains pinned to 96f16ba. Main's Gate-I block on #470 clears only when #478 lands; refresh/tracking, fresh CI and exact-head Unity 6000.4.9f1 compile remain prerequisites before #470 merges. #49 L2 precedes localized screens; runtime consumers, all I-Q01–19 and B8/B9b/B10/Gate-J evidence remain due. Ten Markdown paths modified, approved sources/assets/evidence and previous approval/history records preserved. No source/spec/schema/RNG/gameplay/calibration/performance change; 33 active / 60 archived unchanged. Reviewed-head CI run 37176192739 passed ten executed jobs, Unity skipped; updated-head CI still required.
+
+**Last Updated (prior):** October 3, 2026 — **S0 demo names explicitly approved.** Anton Zymin replied “Approved” at 21:06:28 America/Los_Angeles (October 4, 04:06:28 UTC) to the 36-name list at PR #478 head 96f16ba. The fixture table is unchanged; binding contracts v0.3, journey v0.31 and protocol v0.33 record the decision. Separate long-name/pseudo/200% stress fixtures and final contract/reference review remain due. Gate I IN PROGRESS; #470 blocked; all P5b QA PLANNED; 33 active / 60 archived unchanged. Six Markdown files modified; prior histories/approval records/assets/evidence preserved. No source/spec/schema/RNG/gameplay/calibration/performance change. Documentation checks apply; fresh updated-head CI required.
+
+**Last Updated (prior):** October 3, 2026 — **PR #478 review corrections.** Binding contracts v0.2, journey v0.30 and protocol v0.32 define flat substitution arguments/planned I-Q16 fixtures, renderer Attach ownership and one invariant S0 provider. Six Markdown files modified. Name-list acceptance and final handoff review remain due; I IN PROGRESS, #470 blocked, QA PLANNED, 33 active / 60 archived. Prior histories and approval/assets/evidence preserved; no source/spec/schema/RNG/gameplay/calibration/performance change. Local documentation/schema checks are the validation lane; fresh CI required.
+
+**Last Updated (prior):** October 3, 2026 — **S0 Gate-I contract-completion draft.** NEW binding contracts v0.1; journey v0.29, detailed plan v1.27, validation protocol v0.31 and high-level plan v1.19. Defines identity/fixture/history, scale/reflow, copy/provider/L2 consumption and affected reference contracts for final review. Ten Markdown paths only; no source, approved spec, approved images/evidence or executed P5b QA change. Gate I IN PROGRESS; #470 blocked; 33 active / 60 archived. No snapshot-schema or RNG stream/domain/draw-site/order change; calibration/performance baselines unaffected. Local documentation checks are the validation lane; fresh PR CI required.
+
+**Last Updated (prior):** October 3, 2026 — **PR #477 review corrections.** Journey v0.28 corrects the decision-record baseline, requires the S0 layout binding contract before I, and applies formatter-route change control only to a later owner reversal. The approved text-scale target is 100–200%. Current journey pointers advance; v0.27 history and earlier tracking entries are preserved. Gate I remains IN PROGRESS; #470 remains blocked. Four Markdown files modified; no source/spec/assets, approval decision or executed P5b QA change. No snapshot-schema change, RNG stream/domain/draw-site or draw-order change; calibration and performance baselines unaffected. Prior head 9695b4a CI run 37158595654 passed all ten executed jobs, Unity skipped; the corrected head requires fresh CI.
+
+**Last Updated (prior):** October 3, 2026 — **S0 Gate-I owner choices recorded.** Actual B/C/A approval: distinct demo squads, 100–200% scale and the client formatter. Journey v0.27 §14.10/Gate-A addendum A-44 and protocol v0.30 §10.1 record the instruction, ownership and remaining frame/reference, scale-application and formatter/L2 dependency contracts. Detailed plan v1.26/high-level plan v1.18 agree: I IN PROGRESS, #470 blocked; choices settled, handoff/J evidence still due. Seven Markdown documents modified; no new source/spec/image or prior G/H approval-record change.
+
+**Last Updated (prior):** October 2, 2026 — **PR #476 published-catalogue QA allocation.** Journey packet v0.26 binds planned I-Q16 integration to the validated published catalogue, actual S0 packaging/loader path and matching content identities. Packaging output must be validated if transformed; negative fixtures are separate. Four Markdown files modified; no runtime API or executed QA claim. I IN PROGRESS, all three decisions open, #470 blocked. Approved sources/images/evidence unchanged.
+
+**Last Updated (prior):** October 2, 2026 — **PR #476 formatter lifetime/build boundary correction.** Journey packet v0.25 fixes the S0 locale/catalogue for the shell lifetime, scopes cached labels to that context and removes the assumed revision/change signal. Client-owned build lint/tests block malformed candidate publication outside the generic localization core; missing translations use KD-5 only with valid base coverage. I-Q16 is aligned. Four Markdown files modified; I IN PROGRESS, #470 blocked. Prior head d97e0c2 CI run 36957363523 green with Unity skipped; fresh CI required on this head. No source/spec/assets or approval-record change.
+
+**Last Updated (prior):** October 1, 2026 — **PR #476 formatter dependency correction.** Journey packet v0.24 §14.7 allocates catalogue-admission pattern validation, names missing L2 localizer/KD-5/ERR-049-005 dependencies and removes unsupported runtime base-pattern retry. Adds cached labels invalidated by argument or locale/catalogue changes; I-Q16 covers admission, fallback and cadence. Four Markdown files modified: journey packet, open issues, changelog and this manifest. I remains IN PROGRESS with all three allocations open; #470 blocked. No source/spec or approved G/H evidence/record change.
+
+**Last Updated (prior):** October 1, 2026 — **PR #476 handoff review corrections.** Packet v0.23 repairs main-versus-#470 demo boot provenance, names existing engine player identity, corrects command-log publication/locking reasoning and records future paused-save change control. Proposes static-pattern client formatting and records S0-I-003 as an additional Gate-I owner-allocation blocker. Protocol v0.29 fixes journey §14 / protocol §10 reference; detailed plan v1.25 and high-level plan v1.17 agree. Seven existing Markdown files modified; no source/spec/asset or approved G/H evidence/record change. I IN PROGRESS; #470 remains blocked; planned QA stays unexecuted against P5b.
+
+**Last Updated (prior):** October 1, 2026 — **S0 Gate-I implementation handoff started.** Journey packet v0.22 §14 adds P5b component/read/action/navigation/focus, session lifecycle, command outcome and paused servicing, synchronized statistics-fault, localization/assets/a11y mapping and 19 planned QA cases. Detailed plan v1.24, protocol v0.28 and high-level plan v1.16 record I IN PROGRESS. S0-I-001 (H illustrative incoming shirt versus production slot identity) and S0-I-002 (shipping maximum scale/application) remain open; #470 stays blocked on completed I. Seven Markdown documents modified; no new file or source/asset/spec/evidence change. Original G/H sources, images, walkthroughs and approval blocks preserved.
+
+**Last Updated (prior):** October 1, 2026 — **PR #475 Codex review: S0-H-014 long-name pseudo-locale coverage.** The old fault-only scan missed Home/Away prefixes outside long-name brackets; the expanded check reproduced 18 unlocalized occurrences. Renderer now transforms the assembled identity once; fault and long-name coverage scans setup, live/full-time, statistics, dialogs and report. Focused run UX-H-S0-20261001-03 passes; full scratch-copy walkthrough 99/99 PASS. New long-name-pseudo-delta.json pins revised sources and unchanged approved images. Protocol v0.27 §9.1.4 and packet v0.21 distinguish this validation delta from owner approval at a1044d5: all 46 approved images, walkthrough and original approval/source pins remain unchanged. H PASS / I OPEN unchanged; #470 still blocked on completed I. No src/production/spec/assembly/calibration/perf baseline change; no snapshot-schema change, new RNG stream/domain/draw site or draw-order change. Root README, src/CLAUDE.md/CHANGELOG-src, roadmap, spec index and agent-guide title/counts are unaffected and skipped. Browser regression, evidence integrity, documentation consistency, links, binary guard, whitespace and drift pass. No C#/Unity run for this docs prototype fix. CI remains required on the combined #474 head before main; no merge performed.
+
+**Last Updated (prior):** October 1, 2026 — **H v0.2 owner image approval recorded (PR #475).** Anton Zymin replied “images approved” on October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC) to all 23 views at a1044d525703a42f274b6643f9c96c3c46dc3592. Protocol v0.26 §9.1.3 pins actual confirmation/time, 46 image hashes, seven executable-source hashes and walkthrough SHA-256 89837fb0880f4fd7a6726e6cec538fee4a87cdc18a66185ce1ad160a473219fc. Packet v0.20, detailed plan v1.23, high-level plan v1.15 and H README record H PASS / I OPEN using approved v0.2. S0-H-005–013 accepted in images; production-name/feedback/runtime obligations remain. Original v0.1/G approvals, all prior history rows and all sources/images/evidence remain unchanged. Markdown-only recording; no browser run or image regeneration. No production/spec/schema/RNG/assembly/calibration change; issue counts unchanged. Hashes/status/table/links/whitespace, documentation consistency and tracking drift pass. No C# rerun; no Unity/runtime or merge approval inferred. CI only targets main, so fresh CI remains required before the eventual main merge; #470 stays blocked until I completes.
+
+**Last Updated (prior):** October 1, 2026 — **PR #475 remaining Gate-I table correction.** Packet v0.19 §12.3 now states I OPEN for owner-approved v0.1 at 4a6220c, matching its header, the protocol and the detailed plan. v0.2 adoption still awaits separate approval; I is not passed and #470 remains blocked until I completes. Fixes the stale author-imposed hold missed by the preceding pass. All executable sources, images, 99-check evidence, actual approval records and prior history rows remain unchanged. Documentation consistency, tracking drift, direct header/table/plan agreement, relative links and whitespace pass. No browser/C# rerun for this Markdown-only correction; production/spec/schema/RNG/assembly/calibration and issue counts unchanged. CI does not run for this stacked target branch; fresh CI remains required before the eventual main merge.
+
+**Last Updated (prior):** October 1, 2026 — **PR #475 review documentation corrections.** Fixes the validation-protocol header/plan pointer and the packet §13.4 table break. Corrects the author-imposed H reopening / I hold: H remains PASS and I OPEN for the owner-approved v0.1 sources/images at 4a6220c. No owner directive supersedes that baseline; v0.2 adoption requires separate approval, and v0.1 remains valid if v0.2 is not approved. Protocol v0.25, packet v0.18, detailed plan v1.22 and high-level plan v1.14 agree. README clarifies that fingerprints pin reviewed bytes; fonts/browser rendering can change rerun pixels/wrapping. All executable sources and G/H evidence, actual approval blocks and prior history rows remain unchanged. No production/spec/schema/RNG/assembly/calibration change; issue counts remain 33 active / 60 archived. Documentation consistency, tracking drift, relative links, table/header assertions and whitespace pass. No browser or C# rerun for this Markdown-only correction; prior 99-check run remains unchanged evidence. CI does not run for the stacked target branch; fresh CI remains required before the eventual main merge.
+
+**Last Updated (prior):** October 1, 2026 — **S0 Gate H v0.2 corrected review candidate.** Integrates Claude’s eight presentation fixes from f7f44b5 on current H approval-recording head 654c4f8. Preserves the actual v0.1 approval in protocol §9.1.2, all prior history rows and the complete v0.1/G evidence. Fixes modal export-style leakage with temporary styles removed in finally, frozen export geometry, and checks for every PDF’s page count, PNG/PDF extent and displayed statistics labels. Run UX-H-S0-20261001-02 passes 99 checks and regenerates 23 PNG/PDF pairs; all PNGs inspected and all PDFs rendered. Packet v0.17, detailed plan v1.21, high-level plan v1.13 and protocol v0.24 distinguish approved v0.1 from pending v0.2. H reopened for this revision; I on hold, #470 blocked until I completes. No production/Unity/spec/schema change, no new RNG stream/domain tag/draw site/draw-order change; simulation and calibration unaffected. Issue counts unchanged. Local consistency, drift, links, approval audit and binary guard pass; fresh PR CI required. C# suite not rerun because only the isolated documentation reference/verifier changed; no runtime or new owner approval claimed.
+
+**Last Updated (prior):** September 30, 2026 — **H owner image approval recorded / Gate I OPEN (PR #474).** Anton Zymin replied “images approved” at 19:41:55 America/Los_Angeles to all 23 H v0.1 views at 4a6220cf4c394130c29f38716ed3abde1f60477b. Protocol v0.23 §9.1.2 records actual confirmation, 46 image hashes, seven executable-source hashes and walkthrough JSON hash. Packet v0.16, detailed plan v1.20 and high-level plan v1.12 record H PASS / I OPEN for handoff; #470 remains blocked on completed I. All sources, images and evidence remain unchanged; no new browser run. Carried Minor fixes and H shirt identity recheck accepted; production-name/feedback requirements remain open. Reviewed-head CI run 36778408822 passed; recording-head CI required before merge. Markdown-only record, no production/spec or issue-count change.
+
+**Last Updated (prior):** September 30, 2026 — **S0 Gate H reference ready for separate owner review.**
+
+Fresh H branch based on PR #473 / b6c9c6a adds an isolated touchline reference, four carried presentation fixes, seven-choice Mentality comparison and coherent illustrative Applied shirt markers. Run UX-H-S0-20260930-01 passes 90 checks; 23 PNG/PDF image pairs are rendered/inspected and hashed. G's entire source/evidence tree and owner approval pins remain unchanged. Packet v0.15, detailed plan v1.19, high-level plan v1.11 and protocol v0.22 record H OPEN / approval PENDING; I/#470 remain blocked. No production/spec/scene/schema/RNG change; issue counts unchanged. Fresh PR CI is not claimed by local checks.
+
+**Last Updated (prior):** September 30, 2026 — **S0 v0.5 owner delta approval recorded / H OPEN (PR #473).** Anton Zymin replied “approved” to the corrected full-time fault image at `0e8bd2b6b758b3d9768bf1b1f2551176e845e301`, with the other 18 carried forward from approved v0.4 apart from version text. Protocol v0.21 §9.1.1 records actual confirmation/date, image/source/evidence pins, 19 paths/hashes and retained decisions/release conditions. Packet v0.14, detailed plan v1.18 and high-level plan v1.10 mark G PASS/H OPEN. H backlog S0-H-001–004 remains; I/#470 stay blocked on separately approved H images. Eight Markdown documents only; all prototype sources, PDFs and evidence preserved byte-for-byte. No new tests, image generation, production/spec change or issue-count change.
+
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 full-time fault copy delta.** Suppress the final-statistics report note when faulted; healthy copy retained. Focused run `UX-GE-S0-20260930-05-DELTA-01` passes three checks and regenerates only `mv-ft-statistics-fault.pdf`; run05 stays unchanged at a859ea1. New delta JSON records current seven-source/19-image hashes and the 18 unchanged PDFs. Text comparison confirms those 18 match approved v0.4 apart from version text. Packet v0.13, protocol v0.20, detailed plan v1.17 and high-level plan v1.9 narrow pending G approval to the single new image. S0-H-004 carries disabled Close statistics into H. v0.4 approval/decisions preserved; H paused pending delta approval, I/#470 blocked. No new approval, production/spec change or issue-count change.
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 Codex corrections / prototype version 0.5.** Fault timing, ended-state notice and real normal-text checks fixed; 85-check run05 plus 19 revision PDFs stored under evidence/v0.5. Original v0.4 images/run04 preserved. High-level plan v1.8, detailed plan v1.16, packet v0.12 and protocol v0.19 record current G re-review pending / H paused while preserving the earlier owner approval. Twenty new evidence files inventoried; no production/spec change, issue counts unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **S0 Gate G owner approval / H OPEN.** High-level plan v1.7, detailed plan v1.15, journey packet v0.11 and validation protocol v0.18 record actual owner approval of prototype version 0.4 at 13c2c09, all 18 PDFs, with explicit decisions and carried-Major reasons/release conditions. Seven existing documents updated; no paths added. Full prototype/evidence tree remains byte-identical to the reviewed commit. H polish backlog recorded; I/#470 blocked on separately approved H images. No production/spec change; counts unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **PR #473 second image-review cleanup.** Journey packet v0.10, detailed plan v1.14, validation protocol v0.17 and prototype version 0.4. S0-G-008 is an undecided owner choice; focus spacing, leader-line caption, refusal and substitution wording corrected. Eighteen PDFs regenerated; 80-check run 04 and source/image fingerprints; successful run 03 archived and inventoried. H choice/identity consistency and I engine-direction obligations recorded. G remains pending actual owner decisions/approval; issue counts and production/spec files unchanged.
+
+**Last Updated (prior):** September 30, 2026 — **Complete S0 image-review coverage / PR #473.** Journey packet v0.9, detailed plan v1.13, validation protocol v0.16 and prototype v0.3. Eighteen PDF views, 79 checks, seven source/18 image fingerprints; successful prior run archived. Nine new PDFs plus `walkthrough-v0.2.json` inventoried below. Pitch/collision/statistics/alignment/waiting presentation corrected; Gate-G decisions remain pending; H approval separately precedes I. No production/spec change.
+
+**Last Updated (prior):** September 30, 2026 — **Owner-directed S0 image review.** `docs/design/ux-high-level-plan.md` v1.6, `ux-detailed-plan.md` v1.12, `ux-validation-protocol.md` v0.15, `ux-s0-pm1-journey.md` v0.8 and `s0-prototype/README.md` record the owner review route. S0 tester prerequisite superseded; A–F complete, G pending actual owner image approval; #470 remains blocked on I. Prototype/PDF/browser evidence unchanged; no new paths or production/spec changes.
+
+**Last Updated (prior):** September 30, 2026 — **S0 prototype review corrections / PR #473.** Packet `docs/design/ux-s0-pm1-journey.md` v0.7, `ux-detailed-plan.md` v1.11, `ux-validation-protocol.md` v0.14; prototype v0.2. Two focus/disclosure Majors fixed and retested; 74-check run 02 supersedes the insufficient 71-check run. Synthetic ordinary 2–1 scenario, raw 19–9 unusual-score capture, reachable whistle race, nine regenerated PDFs; tester attestations are formal F prerequisites. Maintained old currency pointers corrected; no production/spec change.
+
+**Last Updated (prior):** September 28, 2026 — **S0 UX Gate B task flow (docs only).** **Modified design docs (4):** `docs/design/ux-s0-pm1-journey.md` v0.4→v0.5 (§7 Gate B, §8 Gate C inputs, A-10 correction); `ux-detailed-plan.md` v1.8→v1.9; `ux-validation-protocol.md` v0.11→v0.12; `ux-high-level-plan.md` v1.3→v1.4. **Modified tracking (4):** `CHANGELOG.md`; `open-issues.md` (UX entry title amended + September 28 update; counts unchanged); `docs/agent-guides/project-reference.md` (UX index bullet); this manifest. No `src/` file changed.
+
+**Last Updated (prior):** September 28, 2026 — **Blanket Error-log suppression removed from 12 CI engine scenarios.** **Modified tests (12):** `MatchEngineDisciplineTests`, `MatchEngineShotOutcomeTests`, `MatchEngineShotSpeedTests`, `MatchEnginePlayDevelopmentTests`, `MatchEngineGoalkeeperSaveTests`, `MatchEngineKeeperClaimTests`, `MatchEngineKeeperContactTests`, `MatchEngineKeeperConversionTests`, `MatchEngineCloseChanceTests`, `MatchEngineInPossGateTests` (all v1.0→v1.1), `MatchEngineSnapshotRestoreTests` v1.14→v1.15 (`RoundTrip_GkHeadingEnabled_WithCommittedSave_IsDeterministic`) and `SeasonLoopScenarioTests` v1.0→v1.1 (`sim_season_multi_fixture`). **Modified tracking (4):** `CHANGELOG.md`; `CHANGELOG-src.md` v2.159→v2.160; `match-engine-design.md` v2.18→v2.19 (§5.Z.7 item 3 closed); this manifest. No production file changed by this landing; depends on PR #467 (merged).
 
 **Last Updated (prior):** September 28, 2026 — **Localization #49 L1 restart / PR #468 single-commit close-out.** **New source/test paths (34):** `src/localization.meta` plus 33 paths under `src/localization/`, including dependency-free `TacticalDirector.Localization`, `TacticalDirector.Localization.Tests`, immutable core seam/value contracts and `LocalizationCoreContractTests.cs`. **Modified normative/spec (7):** #49 `outline.md`, §§1/2/4/7, §9 approval checklist, and Code Standards #20 §3.5.2 v1.15→v1.16 (Tier-9 seating). **Modified tracking/planning/root (8):** README (37→38 production assemblies), `localization-implementation-plan.md` v2.6→v2.7, `spec-error-log.md` v2.68→v2.69, `docs/planning/audio-implementation-plan.md` v1.6→v1.7 (D49 now means L2 caption-rendering capability; the L1 core-assembly prerequisite is met), `open-issues.md` (audio entry's “#49 has no production assembly” annotated as superseded; active count unchanged), `CHANGELOG.md`, `CHANGELOG-src.md` v2.158→v2.159, and this manifest (per-spec #49 row now points at `src/localization/`). `LocaleId.cs` is normalized to a final newline. `ERR-049-002` / `ERR-049-004` resolve; `ERR-049-003` remains L3B/T1; `ERR-049-005` remains L2. The superseded first #468 attempt `47097f5a` failed Spec hygiene on missing same-commit seating and the stale README count. No save/snapshot schema, RNG stream/domain/draw site/order, gameplay `[GT]`, renderer/catalogue behavior, producer retrofit or simulation wiring change. Fresh current-head CI and a pinned Unity 6000.4.9f1 editor compile of both new asmdefs are required before merge.
 
@@ -3140,10 +3201,10 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 
 ---
 
-### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b LANDED August 15, 2026; P5b/P6 not yet built)
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b LANDED August 15, 2026; P5b foundation candidate on #470; full P5b/P6 open)
 
 Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4b … §5-P6).
-**P4b landed:** the `MonoBehaviour` render/camera/click binding. The UGUI screens (P5b) are still to
+**P4b landed:** the `MonoBehaviour` render/camera/click binding. #470 adds a candidate shell foundation; complete UGUI screens (P5b) are still to
 come — types that need a Unity host (`Camera`, `SpriteRenderer`/mesh prefabs, `GameObject`, UGUI).
 It adds a skin over `match-client-core`, never engine-facing logic — every render/camera/click
 *decision* was made in P4a/P5a; this file only assigns transforms and forwards input (§12 rule 1).
@@ -3157,8 +3218,10 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 
 | File | Purpose |
 |------|---------|
-| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references MatchClientCore + MatchViewer + MatchEngine |
+| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine on the #470 candidate |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
+| `ClientShellBehaviour.cs` | P5b foundation v1.2; thin facts/visibility/event binding; only Main Menu ↔ Tactics Setup, null source/dispatcher registrations; exact-head Unity compile pending |
+| `ClientShellBehaviour.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `MatchClientBehaviour.cs` | **P4b, LANDED August 15, 2026** — the PlayerLoop host: owns a `MatchSession`, reads `TryGetLatestFrame` each `Update` via the new `LiveFrameLatch`, and binds `AgentRenderModel`/`BallRenderModel`/`PitchMarking` onto scene objects (transforms, `MaterialPropertyBlock` colour, camera pose, a ground-click ray). States and enforces the prefab contract (neutral root; flat-vs-volumetric unit sizing; the colour-property name; no world-space `LineRenderer`) at instantiation, rejecting the client by name+reason rather than throwing into a live `MonoBehaviour`. Four AR rounds landed against it: round 1 (H1-H3 + 9M + 5L), round 2 (H4-H6, then M10-M13/L6-L8), round 3 (0H + M14-M18/L9-L11), round 4 (0H + M19-M22/L12-L13) — see this file's own `VersionHistory` block for the per-finding detail. Excluded from the `dotnet-ci` gate by design (above); reviewed by hand |
 
 ---
@@ -3187,8 +3250,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a
-resolution / v0.17, now v0.18). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b; current v0.24). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
@@ -3199,6 +3261,18 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientAppConstants.cs` | Four `[FIXED]` screen ids (1–4); 0 deliberately never allocated (zero-value safety) |
 | `ClientScreens.cs` | The ids as typed `ScreenId` values — the one place a screen identity is minted |
 | `ClientScreenFlow.cs` | The five-edge navigation graph as guarded moves over a privately-owned `NavigationShell`; catalogue-id validation refuses transposed registrations at construction |
+| `ClientShellRootSnapshot.cs` | P5b foundation immutable root id/active/ancestor facts; defensive ancestor copy |
+| `ClientShellRootSnapshot.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `ClientShellWiringFault.cs` | Typed structural wiring failures; no Unity dependency |
+| `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `ClientShellWiringValidator.cs` | Pure missing/duplicate/nested/contained/saved-active validation; real Unity consumer on #470 |
+| `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `ClientScreenVisibility.cs` | Exhaustive four-screen visibility projection; unknown ids fail loud |
+| `ClientScreenVisibility.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `tests/ClientShellWiringValidatorTests.cs` | Eight host-free validation/immutability cases; refreshed-head execution due in CI |
+| `tests/ClientShellWiringValidatorTests.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `tests/ClientScreenVisibilityTests.cs` | Two host-free exhaustive/unknown-id cases; refreshed-head execution due in CI |
+| `tests/ClientScreenVisibilityTests.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `tests/client-app-tests.asmdef` | `TacticalDirector.ClientApp.Tests` (Editor-only) |
 | `tests/ClientScreensTests.cs` | Id distinctness, zero-value safety, constant wiring (3) |
 | `tests/ClientScreenFlowTests.cs` | Legal edges, illegal invocations fail-loud, the two Replace-vs-Push locks, reusability, transposition guard, registration identity (12) |
@@ -3514,13 +3588,168 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | Strategy, milestone cut and dependency posture (v1.3, Sep 21, 2026); mirrors `ux-detailed-plan.md` §10.2's effort bands rather than duplicating them and carries the current P4b partial-host evidence correction |
-| `docs/design/ux-detailed-plan.md` | **The single UX execution authority** (v1.8, Sep 21, 2026): work packages F0–F4, journey slices S0–S2, the one authoritative Gates A–J definition, validation severity, QA handoff, change control, §17's acceptance record, and the privacy-safe anonymous-participant rule; F0–F4 + S0 Gate A complete, S0 Gate B next; B8 completed-vs-open host evidence and the missing pre-match per-player-tactic handoff are explicit |
+| `docs/design/ux-high-level-plan.md` | UX high-level plan v1.20: strategy/scope unchanged; technical Gate-I PASS status recorded, client/host acceptance due |
+| `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.28: S0 Gate-I technical handoff PASS; main release follows #478 landing, consumed client/localization work and Gate-J evidence due |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | F4 output — the repeatable validation operating packet (v0.11, Sep 21, 2026): four-layer sequence, S0-T1–T7 and S1-T1–T8 participant tasks, Anton Zymin as UX-workstream owner, privacy-safe anonymous participant slots with pre-Gate-F owner availability plus explicit independence/distinctness attestations, the scripted walkthrough matrix covering all nineteen F4.6 minimum profiles plus F4.3's general error condition and standalone Gate-E color-independent-meaning and F3-001 contrast conditions, auditable per-condition Gate-E results/evidence, moderator script, the full `ux-detailed-plan.md` §12 finding ledger, severity with §12's closed five-value disposition vocabulary, Gate-G no-skip semantics for prescribed tasks, and the journey-parameterized Gate-G/Gate-J records; F4 + S0 Gate A complete, Gate B next |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D journey packet (v0.4, Sep 21, 2026): reconciled Gate-A dependency/control audit for PM-1; PASS with zero `UNKNOWN` dependencies, P5b recorded as the dominant binding gap, P4b partial-host evidence bounded without claiming Gate-J acceptance, and pre-match per-player tactics explicitly blocked on the missing `MatchSetup` handoff rather than inferred from the value type; Gate B inputs are the next authorized UX work |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.35: §10.3 records technical Gate-I PASS at e8ffd89 and owner acceptance at a1eae56; all I-Q cases PLANNED; prior G/H approvals preserved |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.33: Gate-I PASS technical review at e8ffd89 in §14.11; eleven deliverables/reference dispositions and explicit owner acceptance at a1eae56; main release after #478 lands; implementation and QA due |
+| `docs/design/ux-s0-binding-contracts.md` | S0 binding contracts v0.4: reviewed authored fixture/current-frame identity/history, fixed scale/reflow, typed copy/provider/landing contracts; TO BUILD, Gate-I handoff PASS |
+| `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mentality-dialog.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mm.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-0.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-not-applied.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-fault.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft-statistics-open.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-ft.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-l.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-1366.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-2560.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-applied.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-pending.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-refused.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-live-statistics.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-p.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/mv-paused-pending.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/pr.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-incomplete.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/report-partial-open.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/stress-fault-1366.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/substitution-dialog.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/ts.png` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |
+| `docs/design/s0-high-fidelity/evidence/v0.1/walkthrough.json` | Separate H design reference, reproduction or evidence; G base preserved |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-comparison.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mentality-dialog.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mm.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-0.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-not-applied.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-fault.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft-statistics-open.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-ft.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-l.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-1366.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-2560.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-applied.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-pending.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-refused.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-live-statistics.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-p.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/mv-paused-pending.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/pr.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-incomplete.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/report-partial-open.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/stress-fault-1366.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/substitution-dialog.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.pdf` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/ts.png` | H v0.2 image owner-approved at a1044d5; immutable hash in protocol §9.1.3 |
+| `docs/design/s0-high-fidelity/evidence/v0.2/walkthrough.json` | H v0.2 executed verification record (UX-H-S0-20261001-02, 99 checks, source/image hashes) |
+| `docs/design/s0-high-fidelity/evidence/v0.2/long-name-pseudo-delta.json` | Focused S0-H-014 validation run 03: current source hashes, unchanged approved image/walkthrough hashes; not owner approval |
+| `docs/design/s0-high-fidelity/index.html` | Separate H v0.2 entry; G base preserved |
+| `docs/design/s0-high-fidelity/prototype.css` | H v0.2 visual fixes: keyboard focus, pitch fit and outcome/status treatments |
+| `docs/design/s0-high-fidelity/prototype.js` | H v0.2 renderer: complete long-name identity pseudo transform; outcome labels, clock and Current/Requested choices |
+| `docs/design/s0-high-fidelity/verify.cjs` | H v0.2 verifier: 99 checks with fault/long-name pseudo coverage, isolated captures and PDF completeness; focused --pseudo-locale-only mode preserves approved exports; full mode requires Poppler |
+| `docs/design/s0-prototype/README.md` | Prototype purpose, provenance, reviewer fixtures and reproduction/owner-review boundary |
+| `docs/design/s0-prototype/index.html` | Local-only monochrome complete-task design vehicle; simulation banner |
+| `docs/design/s0-prototype/prototype.css` | Low-fidelity layout, focus, disabled states, scale/reflow and caption reservation |
+| `docs/design/s0-prototype/model.js` | Pure simulated S0 transitions, pending/applied/refused/end race; no production API |
+| `docs/design/s0-prototype/prototype.js` | Semantic controls, focus recovery/staging dialogs, health/disclosure and fixtures |
+| `docs/design/s0-prototype/scenario-data.js` | Explicitly synthetic 2–1 ordinary-session score/statistics fixture; captured pitch only |
+| `docs/design/s0-prototype/reference-data.js` | 91 captured frame/#37 snapshots from main c37213ab, no synthetic analytics accumulator |
+| `docs/design/s0-prototype/capture-reference.cs` | Reproducible console caller of the unchanged reference composition; non-certifying |
+| `docs/design/s0-prototype/capture-reference.sh` | Temporary .NET capture project runner using existing generated shim projects |
+| `docs/design/s0-prototype/verify.cjs` | Reproducible browser walkthrough, geometry/focus/outcome assertions and vector PDF export |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.1.json` | Unchanged archived 71-check initial run; Gate-E pass withdrawn, superseded by v0.2 run 02 |
+| `docs/design/s0-prototype/evidence/mentality-dialog.pdf` | Requested Mentality staging with consequence/Submit/Cancel |
+| `docs/design/s0-prototype/evidence/substitution-dialog.pdf` | Outgoing shirt/incoming bench staging with Submit/Cancel |
+| `docs/design/s0-prototype/evidence/mv-live-pending.pdf` | Live Pending request beside unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-paused-pending.pdf` | Paused Pending request waiting for resume |
+| `docs/design/s0-prototype/evidence/mv-live-applied.pdf` | Applied Mentality and substitution/count evidence |
+| `docs/design/s0-prototype/evidence/mv-live-refused.pdf` | Refused request and unchanged current value |
+| `docs/design/s0-prototype/evidence/mv-live-statistics.pdf` | Healthy statistics open during live play |
+| `docs/design/s0-prototype/evidence/mv-ft-not-applied.pdf` | Full-time not-applied result reached by normal whistle-race journey |
+| `docs/design/s0-prototype/evidence/report-partial-open.pdf` | Incomplete report disclosure open on minute-18 partial figures |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.2.json` | Preserved successful 74-check run 02/source fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough-v0.3.json` | Preserved successful 79-check run 03/source and image fingerprints |
+| `docs/design/s0-prototype/evidence/walkthrough.json` | Preserved approved-v0.4 run04, 80 checks and original source/18 image hashes at 13c2c09; superseded temporal/normal-text claims documented |
+| `docs/design/s0-prototype/evidence/v0.5/mentality-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mm.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-0.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-not-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft-statistics-fault.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-ft.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-l.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-applied.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-refused.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-live-statistics.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-p.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/mv-paused-pending.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/pr.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-incomplete.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/report-partial-open.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/stress-fault-1366.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/substitution-dialog.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/ts.pdf` | v0.5 correction-review image; owner approval pending |
+| `docs/design/s0-prototype/evidence/v0.5/walkthrough.json` | Historical v0.5 run05 at a859ea1: 85 checks and source/image fingerprints |
+| `docs/design/s0-prototype/evidence/v0.5/full-time-fault-delta.json` | Focused full-time fault-copy delta: three checks, current source/image fingerprints and 18 preserved images |
+| `docs/design/s0-prototype/evidence/mm.pdf` | Main Menu wireframe |
+| `docs/design/s0-prototype/evidence/ts.pdf` | Tactics Setup wireframe |
+| `docs/design/s0-prototype/evidence/mv-0.pdf` | Awaiting-first-frame wireframe |
+| `docs/design/s0-prototype/evidence/mv-l.pdf` | Live Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-p.pdf` | Paused Match View wireframe |
+| `docs/design/s0-prototype/evidence/mv-ft.pdf` | Full-time wireframe |
+| `docs/design/s0-prototype/evidence/pr.pdf` | Post-Match Report wireframe |
+| `docs/design/s0-prototype/evidence/report-incomplete.pdf` | Faulted statistics report/disclosure evidence |
+| `docs/design/s0-prototype/evidence/stress-fault-1366.pdf` | 1366-wide expanded-text/200% statistics-failure and caption-reservation evidence |
 | `docs/design/ux-foundation.md` | Superseded stub — historical design reference, explicitly **not** execution authority; retained so older citations resolve |
 
 Registered September 11, 2026 with the F4 packet's landing. The first five rows are **retrospective**:

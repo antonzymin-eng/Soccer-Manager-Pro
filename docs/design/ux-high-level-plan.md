@@ -1,10 +1,10 @@
 # System XI — UX High-Level Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 21, 2026  
-**Version:** 1.3  
-**Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW  
-**Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop  
+**Last Updated:** October 4, 2026\
+**Version:** 1.20\
+**Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
+**Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
 
 ---
@@ -154,7 +154,7 @@ No speculative component catalogue.
 Define:
 
 - scripted heuristic/self-walkthrough checks;
-- independent participant test mechanism for S0/S1;
+- owner image-review mechanism for S0; independent participant mechanism for S1;
 - severity and disposition rules;
 - test-data extremes;
 - implementation verification procedure.
@@ -267,9 +267,9 @@ These are **effort bands, not release dates**. They assume one primary UX contri
 | F1 evidence/capability baseline | 3–4 working days | starts immediately after plan/tracking close-out |
 | F2 current-vs-target architecture | 0.5–1 day | uses existing PM-1 graph; no re-authoring |
 | F3 shared S0/S1 interaction audit | 1–2 days | only primitives actually needed |
-| F4 validation setup | 0.5–1 day | includes participant booking before S0-G |
+| F4 validation setup | 0.5–1 day | includes the S0 owner image-review record |
 | S0 A–E | 2–4 days | host-free |
-| S0 F–G | 2–4 days | prototype + one capped participant round |
+| S0 F–G | 2–4 days | prototype + owner image review |
 | S0 H–I | 2–3 days | produces P5b implementation handoff |
 | S0 J | external dependency | requires remaining Unity host/binding/cert work |
 | S1 A–E | 3–5 days | may overlap Unity S0 work; classification-driven |
@@ -342,7 +342,21 @@ The high-level plan is settled when:
 - effort/ownership are explicit;
 - repository tracking surfaces route agents to the plan.
 
-After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 21, 2026: F0–F4 and S0 Gate A are now complete; S0 Gate B is next. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+After those conditions are landed, F1 is the next UX action. No additional high-fidelity screen production precedes it. *Status note, September 30, 2026: F0–F4 and S0 A–F are complete. The owner's pinned v0.4 approval remains in validation protocol §9.1; v0.5 delta is owner-approved at `0e8bd2b` (§9.1.1), with the other 18 carried forward apart from version text. H is PASS for the separately owner-approved v0.1 reference at `4a6220c` (23 image pairs, packet §13 / protocol §9.1.2); I is OPEN for the implementation handoff. Execution status is tracked in `ux-detailed-plan.md` and `docs/tracking/open-issues.md`, not here.*
+
+*Superseded status update, October 1, 2026: the actual H v0.1 approval remains preserved in protocol §9.1.2. H is reopened for separate review of corrected v0.2 (§9.1.3); I is on hold for this revision and #470 remains blocked on completed I.*
+
+*Prior status correction, October 1, 2026: the preceding reopening/hold was an author interpretation, not a new owner decision. H remains PASS for approved v0.1 and I remains OPEN using its sources/images pinned to `4a6220c`. Corrected v0.2 awaits separate approval before adoption (§9.1.3); if it is not approved, v0.1 remains the handoff baseline. #470 remains blocked on completed I.*
+
+*Status update after owner approval, October 1, 2026: Anton Zymin replied “images approved” at 12:35:32 America/Los_Angeles to all 23 H v0.2 views at `a1044d5` (protocol §9.1.3). H PASS / I OPEN now use approved v0.2; v0.1 approval remains preserved. #470 remains blocked on completed I.*
+
+
+*Status update, October 1, 2026: S0 Gate I is IN PROGRESS through journey packet §14, the P5b handoff draft. Identity reconciliation (S0-I-001), shipping text-scale allocation (S0-I-002) and dynamic UI formatting allocation (S0-I-003) remain open. H stays PASS for approved v0.2; #470 remains blocked on completed I. Execution and live blockers remain in the detailed plan and open issues.*
+*Status update, October 3, 2026: Anton Zymin approved the recommended B/C/A choices: distinct demo squads, 100–200% text scaling and the client formatter. Journey §14.10 records the actual instruction and workstream ownership. Product directions are settled; binding/dependency contracts and affected reference reconciliation remain open. I stays IN PROGRESS and #470 blocked until final handoff completion. Earlier status updates remain dated history.*
+
+*Status update, October 3, 2026 — contract-completion draft: [S0 binding contracts](ux-s0-binding-contracts.md) §§2–5 define the proposed identity/fixture, scale/reflow, copy/provider/dependency and reference inputs against main `3429fafd`. Final review of the complete mapping and recorded verdict are next. I remains IN PROGRESS and #470 blocked; earlier approvals and status updates remain history.*
+
+*Status update, October 4, 2026: S0 Gate I passed the technical implementation-handoff review at e8ffd89 (journey §14.11). Identity/scale/copy decisions and reference reconciliation are complete; actual client/localization/host verification remains due. Main's #470 Gate-I block clears only after #478 lands; refresh, fresh CI and exact-head pinned Unity compile precede its merge. Earlier dated updates and owner approvals remain history.*
 
 ---
 
@@ -354,3 +368,20 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.1 | September 4, 2026 | External dependency-review revision: inherited existing client-plan authority; corrected P4b/#30 status; tied S0 to B8/B9b/B10; made Gate G binding; added prototype vehicle, role ownership, effort bands, and tracking/discoverability exit condition; removed duplicated gate definitions from the high-level plan. |
 | 1.2 | September 9, 2026 | Corrects §8's F1 effort band 1–2 → **3–4 working days**, matching the revision `ux-detailed-plan.md` made at its own v1.2 on September 6, 2026. This table had duplicated the band rather than citing it, was not updated with the detailed plan, and so contradicted the execution authority for three days — found by an external pre-merge review of PR #362. §8 now names `ux-detailed-plan.md` §10.2 as the authority it mirrors, so the next band revision has one place to land. §11's "F1 is the next UX action" carries a dated status note: F0–F3 are complete and F4 is next. `**Version:**` and `**Last Updated:**` are re-derived in the same commit — omitting that is exactly the desync this workstream had to correct in the detailed plan at v1.3. No band other than F1 differs between the two documents; all twelve were compared. |
 | 1.3 | September 21, 2026 | Reconciles current client evidence and UX phase status after PR #406 Gate A. P4b is no longer described as never having run: pinned-editor compilation and tracked-scene Play-mode boot/render smoke are recorded while click-to-command and cert-host performance evidence remain open. The dated §11 note advances to F0–F4 + S0 Gate A complete / Gate B next. Strategy, release cut, gate definitions and effort bands are unchanged. |
+| 1.4 | September 28, 2026 | Status-note sync only: S0 Gate B completes in `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and Gate C is next. No plan content changes. |
+| 1.5 | September 30, 2026 | Status-note sync only: S0 C–E complete and F prototype ready; formal F pending both pre-F participant attestations. Strategy and gate definitions unchanged. |
+| 1.6 | September 30, 2026 | Mirrors the owner-directed S0 image-review method and A–F complete / G pending image approval status; S0 tester prerequisite removed in execution authority. |
+| 1.7 | September 30, 2026 | Status sync after explicit owner G approval of v0.4 at 13c2c09: S0 A–G complete; H open; I blocked on separately approved H images. Strategy/gate definitions unchanged. |
+| 1.8 | September 30, 2026 | Status sync after Codex corrections: pinned v0.4 approval preserved; corrected v0.5 awaits G re-review, H paused for that revision, I/#470 blocked. |
+| 1.9 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
+| 1.10 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 1.11 | September 30, 2026 | H v0.1 reference ready for separate owner review, 23 image pairs; G evidence preserved and I remains blocked. |
+| 1.12 | September 30, 2026 | Records separate H image approval at 4a6220c; H PASS and I OPEN for handoff, with production binding still gated on I. |
+| 1.13 | October 1, 2026 | Adds current H v0.2 review-pending / I-on-hold note while preserving the dated v0.1 approval and its history row. No strategy or gate definition change. |
+| 1.14 | October 1, 2026 | Supersedes the author-imposed reopening/hold note; preserves H PASS / I OPEN for approved v0.1 while v0.2 adoption awaits separate owner approval. No strategy or gate definition change. |
+| 1.15 | October 1, 2026 | Records separate owner image approval of H v0.2 at a1044d5; I OPEN using v0.2, prior approvals unchanged. No strategy/gate definition change. |
+| 1.16 | October 1, 2026 | Status sync for S0 Gate-I handoff draft, IN PROGRESS with identity/scale-allocation blockers. H remains approved; #470 remains blocked on completed I. Strategy/scope and gate definitions unchanged. |
+| 1.17 | October 1, 2026 | PR #476 review status sync: identity, scale and dynamic UI formatting remain Gate-I allocation blockers. Strategy, scope and gate definitions unchanged. |
+| 1.18 | October 3, 2026 | Records actual B/C/A owner choices and remaining contract/reference work through journey §14.10. I remains IN PROGRESS; #470 blocked. Strategy, gate definitions and prior approvals unchanged. |
+| 1.19 | October 3, 2026 | Routes the October 3 contract-completion proposals to final Gate-I review; direction approval remains distinct from handoff acceptance and runtime proof. Previous approval/status history preserved; I IN PROGRESS, #470 blocked. |
+| 1.20 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89; main release follows #478 landing. Consumed implementation and Gate-J/client/host evidence remain due. Strategy, gate definitions and prior approvals preserved. |

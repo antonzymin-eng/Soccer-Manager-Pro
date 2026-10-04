@@ -20,8 +20,9 @@ demo is explicit opt-in only; a normal shell scene leaves that boot path disable
 It is deliberately thin: every render/camera/click *decision* is already made in
 the host-free sibling `src/match-client-core/` (`TacticalDirector.MatchClientCore`),
 which the `tools/dotnet-ci` shim gate compiles and tests on every push. This
-assembly only ever depends on that core plus the reused `match-viewer` streamer;
-it adds a skin, never new engine-facing logic (§12 rule 1 — see
+assembly references ClientApp, UiFramework, MatchClientCore, MatchViewer and MatchEngine;
+these are explicit Unity asmdef references, with shell decisions in gate-compiled ClientApp. It
+adds a skin, never new engine-facing logic (§12 rule 1 — see
 `docs/tracking/interactive-unity-client-design.md`).
 
 ## Excluded from the shim gate — compiled only by the Unity editor
@@ -246,3 +247,41 @@ The next lifecycle slice removes this flag and the internal
 `new MatchSession(MatchSetup.NeutralDemo(...))` ownership entirely, replacing
 it with an `Attach(MatchSession)`-style seam driven by the host-free lifecycle
 owner.
+
+## 7. PR #470 foundation refresh — October 4, 2026
+
+Gate I and the owner's explicit handoff acceptance landed through PR #478 at main
+`fafb63fc33dd97b3de77c37445357650e1565777`. PR #470 is refreshed onto that main.
+Its implementation is only the foundation: four mutually exclusive roots, pure wiring/
+visibility decisions and Main Menu → Tactics Setup / Cancel. Screen registrations still
+have null source/dispatcher handles. No StartMatch, lifecycle consumer, named-player
+frame projection, localized screens or report binding is claimed by this slice.
+The host-free lifecycle already exists; the next slice consumes its CreateSession /
+Current / ClearSession through the shell coordinator and adds Attach/detach to
+MatchClientBehaviour. That slice removes internal demo boot and the temporary opt-in.
+Follow journey §14 and binding contracts §5; #49 L2 must precede localized screens.
+
+The tracked `Assets/Scenes/Scene.unity` is still the isolated P4b demo and explicitly
+sets `_autoBootDemoMatch: 1`; no shell roots/buttons were added to it. Shell scenes leave
+that flag off. The retained default is false; all wiring validation still runs while inert.
+
+**Validation status: BLOCKED on the refreshed exact-head Unity compile.**
+September 28's reported zero compile errors and boot/off smoke are historical branch
+checks, not compile evidence for this refreshed head. The reported 254 passing / one
+failing EditMode tests are also historical: the repository-root discovery failure is
+tracked separately and remains unresolved. The two GetInstanceID CS0618 warnings are
+known, deferred warnings. No refreshed runtime/Console/player-build/performance result
+has been observed here. The regular Unity CI test job is skipped without the configured
+license; a green Linux shim gate never proves this Unity-only assembly compiles.
+
+Before merge, check out the exact published PR #470 head on Unity 6000.4.9f1, ensure
+Assets/Scripts points to src, preserve the Console baseline, force recursive source
+reimport, and follow the compile procedure in docs/agent-guides/coding-reference.md.
+Record the SHA, editor version, import/assembly-reload completion, compiler errors and
+warnings with the retained Editor.log or CI artifact. A changed head requires fresh
+head-bound evidence. Keep the PR draft until fresh CI and this compile are complete.
+This compile does not discharge remaining B8/B9b/B10 or Gate-J runtime/cert cases.
+
+| Documentation revision | Date | Notes |
+|---|---|---|
+| PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |

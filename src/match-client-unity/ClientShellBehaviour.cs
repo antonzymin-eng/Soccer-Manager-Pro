@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07 (PR #361 review follow-up)
+// Modified: 2026-10-04 (PR #470 refresh: lifecycle-consumer documentation; behavior unchanged)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
 //           UI / Client Framework #38 §3.2 (FR-UI-009/010/011), Code Standards #20 §12 rule 1
@@ -23,7 +23,8 @@ namespace TacticalDirector.MatchClientUnity
     /// applies booleans, and forwards UI events (§12 rule 1).
     /// <para>
     /// This first P5b slice intentionally exposes only Main Menu → Tactics Setup and its cancel edge.
-    /// The Tactics Setup → Match View edge stays withheld until match lifecycle is extracted host-free.
+    /// The Tactics Setup → Match View edge stays withheld until the shell consumes the existing
+    /// host-free MatchSessionLifecycle and the pitch renderer gains Attach(MatchSession).
     /// The shell deliberately knows nothing about the Match View implementation type or lifecycle host.
     /// P4b's temporary demo self-boot is owned by <see cref="MatchClientBehaviour"/> and is opt-in,
     /// default-off; the later <c>Attach(MatchSession)</c> refactor removes that scaffolding entirely.
@@ -70,7 +71,7 @@ namespace TacticalDirector.MatchClientUnity
 
             // P5b foundation STUB registrations: this slice binds only screen identity/visibility.
             // Null handles are legal per ScreenRegistration. They are intentionally temporary rather
-            // than a product contract: the lifecycle extraction that precedes StartMatch will replace
+            // than a product contract: the lifecycle consumer that precedes StartMatch will replace
             // MatchView's registration with its real MatchViewModelSource/MatchTacticsDispatcher, and
             // later screens receive their own real sources as their producers are bound.
             ScreenRegistration mainMenuRegistration =
@@ -197,4 +198,6 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | gated client-app; rejection deactivates all roots; visibility  |
 // |         |            |        | failures route through rejection; P4b lifecycle containment    |
 // |         |            |        | coupling removed in favour of P4b-owned default-off demo boot. |
+// | 1.2     | 2026-10-04 | —      | PR #470 refresh: existing lifecycle awaits its shell consumer; |
+// |         |            |        | renderer Attach remains TO BUILD. Documentation only.       |
 #endregion
