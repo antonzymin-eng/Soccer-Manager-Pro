@@ -2,7 +2,7 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 3, 2026\
-**Version:** 0.27\
+**Version:** 0.28\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT (§14)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.26 §5–§6\
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.30\
@@ -1363,7 +1363,7 @@ The owner adopted this route for dynamic UI sentences with display-only number f
 on October 3 (§14.10). This decision record implements no formatter or localization runtime. S0-I-003 must settle catalogue-pattern
 client build-time validation/coverage ownership, L2 fallback and ERR-049-005 dependencies,
 culture/formatter admission, fixed-context lifetime and argument-driven formatting, and name the consumed implementation
-landing; if the owners select a different route, revise this mapping before I completion.
+landing. If the owner later reverses the approved direction, revise this mapping before I completion.
 
 | Role ID | Copy covered / dynamic arguments | Owning integration requirement |
 |---|---|---|
@@ -1451,7 +1451,7 @@ an existing L2 loader, packaging or artifact-identity API.
 | ID / severity | Evidence and disposition | Accountable owner / concrete release condition |
 |---|---|---|
 | S0-I-001 / Major | `OWNER CHOICE RECORDED; HANDOFF CONTRACT OPEN`: on October 3 the owner chose B, distinct demo squads with stable player identities and authored names/shirts (§14.10). Audited source still uses slot numbers; frames lack player ids. | Client/roster owner: consume existing MatchSetup/Squad/PlayerRecord identity; allocate a frame-owned current-slot-to-player-id projection and immutable player-id-to-name/demo-shirt content. Complete Gate-A addendum/reference reconciliation and planned I-Q09 proof. No renderer-only identity, live engine getter polling or duplicated lineup selection. Choice is approved; I cannot pass until the binding/fixture contract is complete. S0-B-004 production-name evidence remains open. |
-| S0-I-002 / Minor | `OWNER CHOICE RECORDED; APPLICATION CONTRACT OPEN`: on October 3 the owner chose C, 100–200% support target (§14.10). This is not current Unity support. | P5b/#38 owns scaling/reflow, #49 owns its read-only a11y boundary. Name the consumed client presentation configuration and bind all S0 layouts to it before I completion; verify 150%/200% and real glyph/reflow behavior at J. No settings page/persistence is inferred; S0-E-004 remains an implementation verification obligation. |
+| S0-I-002 / Minor | `OWNER CHOICE RECORDED; APPLICATION CONTRACT OPEN`: on October 3 the owner chose C, 100–200% support target (§14.10). This is not current Unity support. | P5b/#38 owns scaling/reflow, #49 owns its read-only a11y boundary. Name the consumed client presentation configuration and define the binding contract for all S0 layouts before I completion; verify 150%/200% and real glyph/reflow behavior at J. No settings page/persistence is inferred; S0-E-004 remains an implementation verification obligation. |
 | S0-I-003 / Major | `OWNER CHOICE RECORDED; DEPENDENCY CONTRACT OPEN`: on October 3 the owner chose A, the §14.7 client formatter, client build-time pattern validation and fixed shell locale/catalogue policy (§14.10). No production ILocalizer or change notification exists. | #49 L2 owns in-memory catalogue/localizer/KD-5 and full ERR-049-005 discharge. The P5b client landing owns S0 key/schema content, formatter, admitted number-format provider, validation tooling and cache lifecycle; the generic core gains no client schema. Complete the consumed role/key/argument contract and dependency sequence before I passes; verify I-Q16 using actual shipped content at J. No runtime invalid-pattern base retry, producer namespace/draw, external locale release or live locale switch is admitted. |
 | S0-B-002 / Major carried | `ACCEPT FOR CURRENT GATE`: actual owner acceptance preserved in protocol §9.1; outcome adapter absent on audited main. | client/P5b: implement §14.5 in consumed gate-compiled code, then Gate J passes I-Q06–10; feedback cannot ship without it |
 | S0-B-009 / Major | prior design fix retained; production analytics/health adapter is TO BUILD | client/#37: implement §14.6; forced mid-tick fault and continued score/navigation proof I-Q12 at J |
@@ -1479,7 +1479,7 @@ above has been run against P5b and no shipping/host acceptance is inferred from 
 The immediately preceding recommendation was: real demo squads, 200% text scaling, and the
 proposed client formatter. This instruction approves choices **S0-I-001 B / S0-I-002 C /
 S0-I-003 A**. It does not approve a new image set, the complete Gate-I mapping, a Gate-I PASS,
-an implementation, Unity evidence or a merge of #470. The decision is recorded on `main`
+an implementation, Unity evidence or a merge of #470. The decision is recorded against `main` baseline
 `78232b09c02f03bd02c500820525cd9c3f2e1589` after #476; the source audit in §14.1 remains historical.
 
 | Choice | Adopted direction and rationale | Consumed landing / remaining contract |
@@ -1558,3 +1558,4 @@ P5b QA has been executed and Gate J remains the implementation acceptance step.
 | 0.25 | October 2, 2026 | PR #476 third review: fixes locale/catalogue for the S0 shell lifetime, clears caches on teardown and allocates no nonexistent revision signal. Client-owned build lint/tests fail publication on malformed patterns or missing base coverage, without client schemas in the localization core. Updates planned I-Q16 cases. I IN PROGRESS; #470 blocked; approvals/evidence unchanged. |
 | 0.26 | October 2, 2026 | PR #476 optional QA hardening: I-Q16 integration loads the validated published catalogue through the S0 packaging/loader path and records matching content identities. Negative fixtures remain separate; no L2 API or executed proof is claimed. I IN PROGRESS; #470 blocked; approvals/evidence unchanged. |
 | 0.27 | October 3, 2026 | Records actual owner choice B/C/A for distinct demo squads, 200% scale and the client formatter. Allocates existing setup/name seams versus pending frame/shirt projection, P5b scaling and #49 L2/client formatting ownership. Choices approved; handoff contracts/reference reconciliation and Gate J evidence remain open. I IN PROGRESS; #470 blocked; prior approvals/assets preserved. |
+| 0.28 | October 3, 2026 | PR #477 review corrections: records the decision against the main baseline, makes S0-I-002 a layout binding contract before I rather than an implementation requirement, and limits formatter-route change control to a later owner reversal. The approved scaling target is the 100–200% range. I IN PROGRESS; #470 blocked; v0.27 history, prior approvals/assets and planned QA preserved. |
