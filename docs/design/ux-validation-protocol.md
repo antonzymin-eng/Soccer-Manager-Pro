@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 4, 2026\
-**Version:** 0.34\
+**Version:** 0.35\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
@@ -886,6 +886,13 @@ own landing obligation; client S0 coverage alone cannot close it.
 
 ### 10.3 Gate-I review verdict — October 4
 
+**Owner acceptance:** Anton Zymin replied “I accept” on October 4, 2026 at
+15:07:45 America/Los_Angeles (22:07:45 UTC), directly answering the request to accept
+this Gate-I handoff PASS at PR #478 head
+`a1eae5675b3cadd22318b0640bbdd510ff888dab`. This explicitly accepts the technical
+handoff verdict below; it supplies no implementation, image, Gate-J, Unity or merge
+approval. The technical reviewer remains Codex; the owner acceptance is a separate decision.
+
 Technical handoff PASS at PR #478 head `e8ffd89661df182d33fa3646db3dc73a070d0610`;
 journey §14.11 records the eleven-deliverable checklist, source checks, reference
 reconciliation and main-landing boundary. S0-I-001/002/003 decisions close for handoff;
@@ -952,3 +959,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.32 | October 3, 2026 | PR #478 review sync: planned I-Q16 fixtures use the flat substitution argument schema and fixed invariant S0 provider; L2 missing-key fallback remains separate. Original approvals/fingerprints unchanged; I IN PROGRESS, #470 blocked. |
 | 0.33 | October 3, 2026 | Records the explicit 36-name approval at 96f16ba, synchronized with binding contracts v0.3 and journey v0.31. Stress coverage and final I review remain due; #470 blocked, QA planned; prior G/H approval records and evidence unchanged. |
 | 0.34 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89 and links the deliverable/reference review in journey §14.11. Main release follows #478 landing; QA, runtime/Unity and client dependencies remain due. Existing §9 approval records/fingerprints unchanged. |
+| 0.35 | October 4, 2026 | Mirrors explicit owner acceptance of the Gate-I handoff PASS at a1eae56 in journey §14.11. Technical review and owner decision remain distinct; prior approval/evidence records and planned QA unchanged. |

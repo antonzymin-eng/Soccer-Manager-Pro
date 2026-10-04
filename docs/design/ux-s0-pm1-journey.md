@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 4, 2026\
-**Version:** 0.32\
+**Version:** 0.33\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF (§14.11)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.34\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.35\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -1551,6 +1551,13 @@ an implementer can build the supported scope without inventing product behavior.
 This is a technical handoff review, not an additional owner image approval or Gate-J result.
 The owner directions and exact name-list approval remain recorded in §14.10.
 
+**Owner acceptance:** Anton Zymin replied “I accept” on October 4, 2026 at
+15:07:45 America/Los_Angeles (22:07:45 UTC), directly answering the request to accept
+this Gate-I handoff PASS at PR #478 head
+`a1eae5675b3cadd22318b0640bbdd510ff888dab`. This explicitly accepts the technical
+handoff verdict below; it supplies no implementation, image, Gate-J, Unity or merge
+approval. The technical reviewer remains Codex; the owner acceptance is a separate decision.
+
 | Gate-I deliverable | Reviewed mapping / conclusion |
 |---|---|
 | Journey and screen states | §§7/9/14.3: four screens, seven states, waiting/live/paused/full-time/fault behavior; no extra feature or navigation edge |
@@ -1628,3 +1635,4 @@ remaining B8/B9b/B10 evidence stay open. This record authorizes no PR merge.
 | 0.30 | October 3, 2026 | PR #478 review sync to binding contracts v0.2: I-Q16 uses flat typed substitution name/shirt/bench/minute patterns and one invariant S0 format provider. Final contract/reference review and explicit proposed-name acceptance remain due; I IN PROGRESS, #470 blocked, QA planned and earlier approvals preserved. |
 | 0.31 | October 3, 2026 | Records explicit owner acceptance of the unchanged 36 demo names at 96f16ba; binding contracts v0.3 and protocol v0.33 agree. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; prior approvals/history/evidence preserved. |
 | 0.32 | October 4, 2026 | Records Gate-I technical handoff PASS at reviewed e8ffd89 with all eleven deliverables, reference-delta dispositions, remaining implementation owners and landing boundary. Main release follows #478 landing; #470 still needs refresh/current-head CI/pinned compile. All QA PLANNED; G/H approvals and assets preserved. |
+| 0.33 | October 4, 2026 | Records Anton Zymin’s explicit “I accept” confirmation of the Gate-I handoff PASS at a1eae56, with timestamp and scope, separately from Codex’s technical review. Main release still follows #478 landing; runtime/Unity/QA and merge obligations unchanged. |
