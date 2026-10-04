@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 3, 2026\
-**Version:** 0.32\
+**Version:** 0.33\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.27 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
@@ -857,6 +857,14 @@ approval, final Gate-I verdict, runtime verification or merge instruction for #4
 
 ### 10.2 Contract-completion review and planned evidence
 
+**Name-list decision — October 3, 2026:** Anton Zymin replied “Approved” at 21:06:28
+America/Los_Angeles (October 4, 04:06:28 UTC) to the explicit request to approve the
+36 demo names in binding contracts §2.1 at PR #478 head
+`96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged. This records
+fixture-name acceptance; separate long-name/pseudo/200% stress fixtures and final
+contract/reference review remain required. I IN PROGRESS; #470 blocked; all I-Q cases
+PLANNED. Earlier G/H approvals and their evidence remain unchanged.
+
 Binding contracts §5.1 identifies the affected H inputs: named chooser/feedback identities,
 current-player shirts, the fixed scale/reflow contract and the production statistics row/copy.
 Review those deltas with journey §§14.2–8 before recording a Gate-I verdict; preserve the
@@ -932,3 +940,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.30 | October 3, 2026 | Adds §10.1 actual B/C/A owner choice record and distinguishes settled directions from remaining I contracts and J evidence. Current execution pointer advanced; original §9 approvals/hashes unchanged. |
 | 0.31 | October 3, 2026 | Adds the S0 binding-contract review and evidence checklist; I-Q01–19 stay planned, identity/scale/copy/package proofs remain Gate J obligations. Actual owner approval records and fingerprints unchanged; I IN PROGRESS, #470 blocked. |
 | 0.32 | October 3, 2026 | PR #478 review sync: planned I-Q16 fixtures use the flat substitution argument schema and fixed invariant S0 provider; L2 missing-key fallback remains separate. Original approvals/fingerprints unchanged; I IN PROGRESS, #470 blocked. |
+| 0.33 | October 3, 2026 | Records the explicit 36-name approval at 96f16ba, synchronized with binding contracts v0.3 and journey v0.31. Stress coverage and final I review remain due; #470 blocked, QA planned; prior G/H approval records and evidence unchanged. |

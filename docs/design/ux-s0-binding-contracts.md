@@ -2,7 +2,7 @@
 
 **Created:** October 3, 2026\
 **Last Updated:** October 3, 2026\
-**Version:** 0.2\
+**Version:** 0.3\
 **Status:** CONTRACT REVIEW DRAFT — TO BUILD; Gate I IN PROGRESS\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff-draft)\
@@ -37,7 +37,14 @@ P5b owns **TO BUILD `S0DemoFixture` revision 1**, in gate-compiled client conten
 consumed by the setup builder in the same landing. It provides two `Squad` values
 and a player-id lookup for authored demo shirt metadata. Home/Away remain the team
 display names; no real club affiliation is implied. The following synthetic players
-are the proposed fixture content, not professional-player data or approved image content.
+have owner-approved names; they are synthetic fixture content, not professional-player data.
+
+**Name-list approval:** Anton Zymin replied “Approved” on October 3, 2026 at
+21:06:28 America/Los_Angeles (October 4, 04:06:28 UTC), directly answering the
+request to approve these 36 demo names at PR #478 head
+`96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged from that head.
+All names are short; separate long-name, pseudo-text and 200% stress fixtures remain
+required. Final contract/reference review and the Gate-I verdict remain due.
 
 Each row is a squad-local record index, never a pitch/bench command index. Home
 `ClubId = 1`, away `ClubId = 2`; derive each id with #27's existing
@@ -363,8 +370,8 @@ approval records are preserved byte-for-byte. This draft changes no image approv
 
 **Final review due:** check these deltas with the complete journey §§14.2–8, verify
 that an implementer needs no additional product decision, and record the verdict and
-reviewed commit. Explicit owner acceptance of §2.1's proposed 36 synthetic names is
-also due; approval of the distinct-squad direction does not approve this particular list.
+reviewed commit. Explicit owner acceptance of §2.1's 36 synthetic names is now recorded
+there; that content decision leaves the final contract/reference review open.
 If a delta requires revised visual evidence, return only its affected
 references for review and retain the earlier approval pins. S0-I-001/002/003 are now
 defined proposals; none is closed by authoring this file. Gate I stays IN PROGRESS,
@@ -376,3 +383,4 @@ defined proposals; none is closed by authoring this file. Gate I stays IN PROGRE
 |---|---|---|
 | 0.1 | October 3, 2026 | Initial S0 binding-contract review draft against main 3429fafd: authored distinct-squad fixture, frame identity/bench/history publication, fixed 100–200% scale/reflow, static/dynamic typed copy register, fixed number-format context, L2/client consumption and packaging evidence, affected reference matrix. No source, approved assets, implementation proof or gate pass. |
 | 0.2 | October 3, 2026 | PR #478 review corrections: flat typed substitution name/shirt/bench/minute arguments and planned I-Q16 reordered/negative build fixtures; one invariant S0 number-format provider; Attach assigned to the pitch renderer while the shell consumes lifecycle methods. Explicit acceptance of the proposed name list remains due. I IN PROGRESS; #470 blocked; no source, approved evidence or gate-pass change. |
+| 0.3 | October 3, 2026 | Records Anton Zymin's explicit approval of the unchanged 36-name fixture list at 96f16ba. Separate long-name/pseudo/200% stress coverage remains required. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; no runtime, image or merge approval inferred. |

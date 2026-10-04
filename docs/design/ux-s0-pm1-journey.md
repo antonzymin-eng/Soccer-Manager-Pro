@@ -2,10 +2,10 @@
 
 **Created:** September 12, 2026  
 **Last Updated:** October 3, 2026\
-**Version:** 0.30\
+**Version:** 0.31\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT (§14)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.27 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.32\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.33\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -1481,6 +1481,14 @@ above has been run against P5b and no shipping/host acceptance is inferred from 
 
 ## 14.10 Owner choices — October 3, 2026
 
+**Name-list decision — October 3, 2026:** Anton Zymin replied “Approved” at 21:06:28
+America/Los_Angeles (October 4, 04:06:28 UTC) to the explicit request to approve the
+36 demo names in binding contracts §2.1 at PR #478 head
+`96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged. This records
+fixture-name acceptance; separate long-name/pseudo/200% stress fixtures and final
+contract/reference review remain required. I IN PROGRESS; #470 blocked; all I-Q cases
+PLANNED. Earlier G/H approvals and their evidence remain unchanged.
+
 **Decision owner:** Anton Zymin. **Actual instruction:** “Go with your recommended choices”.
 **Received:** October 3, 2026, 15:21:40 America/Los_Angeles (22:21:40 UTC).
 The immediately preceding recommendation was: real demo squads, 200% text scaling, and the
@@ -1569,3 +1577,4 @@ P5b QA has been executed and Gate J remains the implementation acceptance step.
 | 0.28 | October 3, 2026 | PR #477 review corrections: records the decision against the main baseline, makes S0-I-002 a layout binding contract before I rather than an implementation requirement, and limits formatter-route change control to a later owner reversal. The approved scaling target is the 100–200% range. I IN PROGRESS; #470 blocked; v0.27 history, prior approvals/assets and planned QA preserved. |
 | 0.29 | October 3, 2026 | Completes the proposed S0-I-001/002/003 inputs in ux-s0-binding-contracts.md v0.1 against main 3429fafd: authored fixture, synchronized identity/history, scale/reflow and typed copy/provider/dependency contracts. Reconciles affected reference semantics without changing approved images/sources. Contracts defined; final mapping/reference review and verdict due. I IN PROGRESS; #470 blocked; all P5b QA planned. |
 | 0.30 | October 3, 2026 | PR #478 review sync to binding contracts v0.2: I-Q16 uses flat typed substitution name/shirt/bench/minute patterns and one invariant S0 format provider. Final contract/reference review and explicit proposed-name acceptance remain due; I IN PROGRESS, #470 blocked, QA planned and earlier approvals preserved. |
+| 0.31 | October 3, 2026 | Records explicit owner acceptance of the unchanged 36 demo names at 96f16ba; binding contracts v0.3 and protocol v0.33 agree. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; prior approvals/history/evidence preserved. |
