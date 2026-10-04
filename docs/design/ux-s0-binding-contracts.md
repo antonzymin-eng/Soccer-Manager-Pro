@@ -1,20 +1,20 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 3, 2026\
-**Version:** 0.3\
-**Status:** CONTRACT REVIEW DRAFT — TO BUILD; Gate I IN PROGRESS\
+**Last Updated:** October 4, 2026\
+**Version:** 0.4\
+**Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
-**Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff-draft)\
+**Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
 **Execution authority:** [detailed plan](ux-detailed-plan.md) §5, Gates I/J
 
 ## 1. Authority and audited boundary
 
-This is a proposed client implementation contract against `main`
+This is a reviewed client implementation contract against audited `main`
 `3429fafdf998eaeee9b63bfb356c68c02679d761` (#477). It implements no API, fixture,
 catalogue or screen. The owner approved distinct demo squads, 100–200% text size and
 the client formatter on October 3 (journey §14.10). That approval supplies direction;
-the concrete allocations here still need final handoff review. APPROVED specs remain
+the concrete allocations passed final handoff review in journey §14.11. APPROVED specs remain
 authoritative. Exact class/file names below are proposed landing names, not existing symbols.
 
 Audited source: `MatchSetup` accepts both squads; `MatchSession.BootEngine` calls
@@ -44,7 +44,7 @@ have owner-approved names; they are synthetic fixture content, not professional-
 request to approve these 36 demo names at PR #478 head
 `96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged from that head.
 All names are short; separate long-name, pseudo-text and 200% stress fixtures remain
-required. Final contract/reference review and the Gate-I verdict remain due.
+required. Final handoff review passed in journey §14.11; runtime proof remains due.
 
 Each row is a squad-local record index, never a pitch/bench command index. Home
 `ClubId = 1`, away `ClubId = 2`; derive each id with #27's existing
@@ -347,7 +347,7 @@ proof cannot close #49 ERR-049-005 for unrelated admitted static keys.
 
 | Landing | Producer + real consumer | Required evidence / boundary |
 |---|---|---|
-| Gate I contract/reference PR (this draft) | This contract → journey component/QA mapping and implementer review | Review all three contracts and reference deltas below; record the final verdict in journey/protocol/plan/live tracking. No I PASS inferred here. |
+| Gate I contract/reference PR (#478) | This contract → journey component/QA mapping and implementer review | Technical review PASS at e8ffd89, journey §14.11. Main release follows landing of the recorded verdict; no runtime or merge approval. |
 | #49 L2 | Generic immutable in-memory catalogue + `ILocalizer` implementation → its seam behavior tests; P5b later consumes the named implementation | Owning plan §6 and approved #49 FR-LC-007–011; KD-5; full ERR-049-005 construction coverage or owner-approved terminal-result fix and executable proof. No client schema in core, external files, locale release, a11y store or live locale replacement. |
 | #470 shell foundation after I release | Existing shell foundation decisions → Unity roots | Refresh onto then-current main, close tracking, fresh CI and pinned Unity 6000.4.9f1 compile on PR head before merge. Foundation does not claim complete S0 screens/localization. |
 | P5b lifecycle/identity slice | Authored fixture + engine observation/frame cue + session roster descriptor → setup/session, pitch and chooser/feedback identity projections | The shell coordinator consumes `MatchSessionLifecycle.CreateSession` / `Current` / `ClearSession`; the pitch renderer `MatchClientBehaviour` gains the TO BUILD `Attach(MatchSession)` / detach binding (journey §14.2). Remove internal/opt-in demo ownership. Land new identity producers with consumers, boot/substitution/reset tests and pinned compile. Do not introduce another unconsumed lifecycle prerequisite before the authorized binding. |
@@ -356,26 +356,26 @@ proof cannot close #49 ERR-049-005 for unrelated admitted static keys.
 
 ### 5.1 Affected H/reference reconciliation
 
-The following is the proposed **implementation delta** from approved H v0.2 at
+The following is the reviewed **implementation delta** from approved H v0.2 at
 `a1044d5`. Approved sources, 23 image pairs, original walkthrough and actual G/H
 approval records are preserved byte-for-byte. This draft changes no image approval.
 
-| Approved reference | Contract reconciliation / final-review input |
+| Approved reference | Reviewed reconciliation / Gate-J obligation |
 |---|---|
-| H substitution dialog and live Applied example, shirt 4 → 14 | Layout, staging and outcome semantics retained. Replace illustrative shirt-only options with §2's actual first/last name, authored shirt and bench identity. Incoming shirts are player metadata; a particular bench index is not automatically shirt 14. Review the longer label treatment before final I verdict; I-Q09 proves actual mapping at J. |
+| H substitution dialog and live Applied example, shirt 4 → 14 | Layout, staging and outcome semantics retained. Replace illustrative shirt-only options with §2's actual first/last name, authored shirt and bench identity. Incoming shirts are player metadata; a particular bench index is not automatically shirt 14. §3 requires complete wrapped/scrolled labels; I-Q09/16 proves actual mapping/layout at J. |
 | H pitch markers / substitute legend | Keep compact H/A shirt labels and explicit substitute cue. Resolve shirt by current frame player id; complete name/shirt/cue text uses §4, without slot-number fallback. New occupant snaps as §2.2 specifies. |
-| H long-name/pseudo and 200% stress views | Remain geometry references. The admitted S0 range is now 100–200%; real player labels, provider and font metrics consume §§2–4. Review the label/reflow delta; I-Q16/17 supplies runtime proof. |
+| H long-name/pseudo and 200% stress views | Remain geometry references. The admitted S0 range is now 100–200%; real player labels, provider and font metrics consume §§2–4. Label/reflow contract reviewed at I; I-Q16/17 supplies runtime proof. |
 | H synthetic analytics and omitted Substitutions row | Production adds the already-allocated #37 Substitutions row and drops prototype/capture qualifiers; frame score and Goals recorded remain distinct, faults retain explicit cutoff wording (journey §14.6). |
 | G/H no-name and unallocated-maximum notes | Historical prototype limitations, superseded for the S0 target by the October 3 choices and this proposed contract. They are not a reason to defer S0 names to S1 or certify Unity scaling from browser exports. |
 
-**Final review due:** check these deltas with the complete journey §§14.2–8, verify
-that an implementer needs no additional product decision, and record the verdict and
-reviewed commit. Explicit owner acceptance of §2.1's 36 synthetic names is now recorded
-there; that content decision leaves the final contract/reference review open.
-If a delta requires revised visual evidence, return only its affected
-references for review and retain the earlier approval pins. S0-I-001/002/003 are now
-defined proposals; none is closed by authoring this file. Gate I stays IN PROGRESS,
-#470 stays blocked, and all P5b QA stays PLANNED until its appropriate lane runs.
+**Final review: PASS**, journey §14.11, reviewed PR #478 head e8ffd89 on October 4.
+All three contracts and the complete journey mapping provide the required product behavior.
+The owner-approved names and reference-delta dispositions need no revised H exports for
+handoff; approved sources/images and approval records remain unchanged. This does not
+approve an unseen named-player image or prove runtime layout/identity. S0-I-001/002/003
+handoff decisions are complete; production consumers and I-Q01–19 remain TO BUILD/PLANNED.
+Main's #470 Gate-I release follows #478 landing; fresh CI, exact-head pinned Unity compile
+and the remaining client/host acceptance obligations still apply. No merge is authorized.
 
 ## Version history
 
@@ -384,3 +384,4 @@ defined proposals; none is closed by authoring this file. Gate I stays IN PROGRE
 | 0.1 | October 3, 2026 | Initial S0 binding-contract review draft against main 3429fafd: authored distinct-squad fixture, frame identity/bench/history publication, fixed 100–200% scale/reflow, static/dynamic typed copy register, fixed number-format context, L2/client consumption and packaging evidence, affected reference matrix. No source, approved assets, implementation proof or gate pass. |
 | 0.2 | October 3, 2026 | PR #478 review corrections: flat typed substitution name/shirt/bench/minute arguments and planned I-Q16 reordered/negative build fixtures; one invariant S0 number-format provider; Attach assigned to the pitch renderer while the shell consumes lifecycle methods. Explicit acceptance of the proposed name list remains due. I IN PROGRESS; #470 blocked; no source, approved evidence or gate-pass change. |
 | 0.3 | October 3, 2026 | Records Anton Zymin's explicit approval of the unchanged 36-name fixture list at 96f16ba. Separate long-name/pseudo/200% stress coverage remains required. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; no runtime, image or merge approval inferred. |
+| 0.4 | October 4, 2026 | Final technical handoff review PASS recorded in journey §14.11 at e8ffd89; all three contracts/reference deltas reviewed. Main release follows #478 landing; implementation, Gate-J QA and exact-head Unity evidence remain due. No approved source/image or prior history change. |

@@ -1,8 +1,8 @@
 # S0 Gate H high-fidelity reference v0.2
 
 **Created:** September 30, 2026\
-**Last Updated:** October 1, 2026\
-**Status:** H v0.2 PASS — owner “images approved” October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC); reviewed `a1044d5`. I OPEN using v0.2; #470 blocked on completed I.\
+**Last Updated:** October 4, 2026\
+**Status:** H v0.2 PASS — owner “images approved” October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC); reviewed `a1044d5`. I PASS at reviewed e8ffd89 (journey §14.11); main release follows #478 landing.\
 **Prior approval preserved:** v0.1 at `4a6220c`, owner “images approved” September 30, 2026; recorded at `654c4f8` in [protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval). Its evidence and approval fingerprints remain unchanged.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
@@ -23,7 +23,7 @@ explicitly illustrative substitution overlay: the applied incoming shirt occupie
 player's captured position. It is design evidence, not a new runtime projection. Home/Away and
 shirt numbers identify every choice in this historical reference. The October 3 S0 target
 allocates names and synchronized production identity to P5b (binding contracts §2),
-with final reference/mapping review and Gate-J proof due; names are no longer deferred to S1.
+with reference/mapping review passed in journey §14.11 and Gate-J proof due; names are no longer deferred to S1.
 
 ## Post-approval validation delta
 
@@ -87,13 +87,14 @@ shipped locale catalog. Future captions remain a clearly labelled stress fixture
 
 ## Gate-I contract reconciliation — October 3, 2026
 
-[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 are the proposed P5b inputs:
+[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 are the reviewed P5b inputs:
 actual player-name/shirt/bench labels, discrete current-frame occupant identity, fixed
-100–200% scale/reflow and complete copy roles. Its §5.1 matrix identifies the affected
-dialog/Applied/long-name/stress/pitch/statistics references for final review. The approved
-23 v0.2 image pairs and actual G/H records remain unchanged; this annotation approves
-no named-player visual delta, I PASS, shipped localization or Unity support. If revised
-visuals are needed, review the affected references before the final handoff verdict.
+100–200% scale/reflow and complete copy roles. Journey §14.11 records the October 4
+technical handoff PASS at e8ffd89 and dispositions for dialog/Applied/long-name/stress/
+pitch/statistics references. No revised H exports are required for the contract handoff.
+The approved 23 v0.2 image pairs and G/H decisions stay unchanged. This is not approval
+of an unseen named-player image or proof of actual Unity labels/fonts/layout; Gate J must
+verify those. Main's #470 release follows #478 landing; fresh CI/pinned compile remain due.
 
 ## Reproduction and verification
 
@@ -177,3 +178,4 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | 0.2 approval record | October 1, 2026 | Owner “images approved” at a1044d5, all 23 views. Protocol §9.1.3 pins confirmation/time, 46 images, seven sources and walkthrough hash. H PASS / I OPEN using v0.2; all executable sources/images/evidence unchanged. |
 | 0.2 validation delta | October 1, 2026 | S0-H-014 localizes the complete long-name identity and extends coverage beyond fault. Focused run 03 and full 99-check scratch run pass; approved a1044d5 images/walkthrough/source pins unchanged. |
 | 0.2 contract annotation | October 3, 2026 | Markdown-only reconciliation to the proposed S0 binding contracts: names allocated to P5b, illustrative shirts separated from actual bench identity, fixed scaling/copy inputs and affected final-review references. H v0.2 evidence version, approved sources/images/walkthroughs and approval pins unchanged. |
+| 0.2 handoff review | October 4, 2026 | Technical Gate-I PASS at e8ffd89; reference-delta dispositions in journey §14.11. Existing images/sources/evidence and owner approvals unchanged; actual named-label/layout/Unity verification remains Gate J. |

@@ -107,11 +107,16 @@ Scripted evidence supplies no runtime or independent usability evidence.
 | 0.5 copy delta | September 30, 2026 | Suppresses the final-statistics report promise only when faulted; three focused checks and one regenerated PDF. Immutable run05 remains historical; separate delta record holds current hashes. Single-image owner approval pending; disabled Close statistics carried to H. |
 | 0.5 delta approval | September 30, 2026 | Records actual owner approval pinned to 0e8bd2b; G PASS, H OPEN, I/#470 blocked on separately approved H images. Markdown-only record; sources, PDFs and evidence unchanged. |
 | 0.5 contract annotation | October 3, 2026 | Markdown-only pointer to the proposed S0 identity/scale/copy contracts and final review; historical prototype sources/evidence and approval records unchanged. |
+| 0.5 handoff review | October 4, 2026 | Technical Gate-I PASS at e8ffd89, journey §14.11; approved prototype sources/images/evidence unchanged, actual P5b QA remains planned. |
 
 ## Gate-I contract reconciliation — October 3, 2026
 
 The original prototype limitations above remain evidence about v0.5. The owner-approved
 S0 target now uses distinct authored demo squads and 100–200% text size.
-[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 define the proposed identity,
-scale, copy and affected-reference inputs for final I review. No prototype source, capture,
-image or approval record changed; these annotations supply no runtime proof or gate pass.
+[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 define the reviewed identity,
+scale, copy and affected-reference inputs. Journey §14.11 records technical Gate-I PASS
+at e8ffd89 on October 4; main release follows #478 landing. No prototype source, capture,
+image or approval record changed; these annotations supply no runtime proof or additional prototype-gate pass.
+
+**October 4 handoff status:** Gate I PASS is a technical contract review; it supplies no
+additional prototype/image approval or executed P5b QA. Gate J remains due.

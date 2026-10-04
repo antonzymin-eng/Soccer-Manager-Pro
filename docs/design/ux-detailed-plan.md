@@ -1,9 +1,9 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 3, 2026\
-**Version:** 1.27\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
+**Last Updated:** October 4, 2026\
+**Version:** 1.28\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -967,14 +967,17 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-**Current next step: final review of the Gate-I mapping and binding contracts, then record the verdict.**
-I is IN PROGRESS on approved H v0.2 at `a1044d5`. On October 3 the owner selected distinct
-demo squads, 100–200% text scaling and the §14.7 client formatter (journey §14.10). Their product
-choices are settled; [binding contracts](ux-s0-binding-contracts.md) §§2–5 now define the
-fixture/frame/history, fixed scale/reflow, copy/provider/L2 dependency and affected-reference
-contracts against main `3429fafd`. The complete proposals remain open for final handoff review. #470 stays blocked; no I PASS is claimed. The v0.4 owner approval
-is preserved in validation protocol §9.1; the v0.5 single-image delta is approved at `0e8bd2b`
-in §9.1.1, carrying the other 18 forward apart from version text. H v0.1 approval at `4a6220c` remains preserved (protocol §9.1.2); the owner separately approved all 23 v0.2 views at `a1044d5` on October 1, 2026 (§9.1.3). I now uses the approved v0.2 sources/images; I is not passed and #470 remains blocked until I completes. The original first sequence remains for traceability.
+**Current next step: land the reviewed Gate-I record, then refresh #470 and begin the consumed implementation sequence.**
+Gate I PASS is recorded in journey §14.11 at reviewed PR #478 head e8ffd89. The owner
+approved distinct demo squads, 100–200% text size, the client formatter and the exact
+36 names. Binding contracts §§2–5 specify their producers/consumers and reference deltas.
+The eleven Gate-I deliverables require no additional product behavior decision. H v0.2
+remains approved at a1044d5; prior G/H decisions, hashes and evidence remain unchanged.
+Main's #470 Gate-I block clears only when #478 lands. Refresh #470 onto then-current main,
+reconcile tracking, run fresh CI and compile its exact head in Unity 6000.4.9f1 before merge.
+#49 L2 precedes localized screens; lifecycle/identity and copy/scale/screens follow contracts
+§5. All I-Q01–19 and B8/B9b/B10/Gate-J evidence remain due. No merge or runtime acceptance
+is inferred. The original first sequence remains for traceability.
 
 1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
 2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
@@ -990,7 +993,7 @@ in §9.1.1, carrying the other 18 forward apart from version text. H v0.1 approv
 12. **S0 Gate G for v0.5 — PASS September 30, 2026.** Anton Zymin approved the corrected full-time statistics-fault image at `0e8bd2b`, carrying the other 18 forward from approved v0.4 apart from version text. Protocol §9.1.1 pins the image/source hashes and actual confirmation. Baseline 85-check run and focused three-check delta remain unchanged.
 13. **S0 Gate H — PASS September 30, 2026.** Anton Zymin replied “images approved” to all 23 H v0.1 views at `4a6220c`. Protocol §9.1.2 records actual confirmation, all 46 image/seven executable-source hashes and preserved 90-check evidence. Packet §13 closes S0-H-001–004 and accepts the H shirt identity recheck; production names/feedback obligations remain.
 14. **S0 Gate H v0.2 — PASS October 1, 2026.** Anton Zymin replied “images approved” to all 23 v0.2 views at `a1044d5`. Protocol §9.1.3 pins actual confirmation/time, 46 images, seven sources and walkthrough hash. The unchanged run UX-H-S0-20261001-02 supplies 99 passing checks; prior v0.1 approval/evidence remain intact.
-15. **S0 Gate I — IN PROGRESS; owner choices recorded October 3, 2026.** Journey §14.10 records actual B/C/A approval: distinct demo squads, 200% scale and the client formatter. The concrete S0-I-001/002/003 proposals are defined in binding contracts §§2–5. Review the complete mapping and affected reference deltas, then record the verdict. #470 remains blocked until I completes; no implementation or host evidence is inferred.
+15. **S0 Gate I — PASS October 4, 2026 (technical handoff review).** Journey §14.11 reviews all eleven deliverables and the binding/reference contracts at e8ffd89. The owner decisions remain in §14.10; main release follows #478 landing. #470 needs refresh, fresh CI and exact-head pinned compile before merge. All production QA and host acceptance remain due.
 
 The existing Main Menu reference was revisited at H; its admitted demo-only entry and art fallback are included in the approved image set.
 
@@ -1093,3 +1096,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.25 | October 1, 2026 | PR #476 review sync: adds dynamic UI formatting allocation S0-I-003 to the handoff completion conditions alongside identity/scale. I remains IN PROGRESS; #470 remains blocked; gate definitions and prior approvals unchanged. |
 | 1.26 | October 3, 2026 | Records the actual B/C/A owner choices in journey §14.10. Current next step is remaining contract/reference completion and final Gate-I review, not repeated product decisions. I IN PROGRESS and #470 blocked; gate definitions/earlier approvals unchanged. |
 | 1.27 | October 3, 2026 | Defines the next action as final Gate-I mapping/reference review of the binding-contract proposals, with verdict recording still due. Product choices and prior approvals preserved; I IN PROGRESS, #470 blocked, Gate J requires real implementation evidence. |
+| 1.28 | October 4, 2026 | Records technical S0 Gate-I handoff PASS at e8ffd89 and advances next action to landing the verdict then consumed client/localization work. #470 main release follows #478 landing; refresh/CI/pinned compile and Gate J remain due. Gate definitions and prior owner approvals unchanged. |

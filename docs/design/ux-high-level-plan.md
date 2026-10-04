@@ -1,8 +1,8 @@
 # System XI — UX High-Level Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 3, 2026\
-**Version:** 1.19\
+**Last Updated:** October 4, 2026\
+**Version:** 1.20\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -356,6 +356,8 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 
 *Status update, October 3, 2026 — contract-completion draft: [S0 binding contracts](ux-s0-binding-contracts.md) §§2–5 define the proposed identity/fixture, scale/reflow, copy/provider/dependency and reference inputs against main `3429fafd`. Final review of the complete mapping and recorded verdict are next. I remains IN PROGRESS and #470 blocked; earlier approvals and status updates remain history.*
 
+*Status update, October 4, 2026: S0 Gate I passed the technical implementation-handoff review at e8ffd89 (journey §14.11). Identity/scale/copy decisions and reference reconciliation are complete; actual client/localization/host verification remains due. Main's #470 Gate-I block clears only after #478 lands; refresh, fresh CI and exact-head pinned Unity compile precede its merge. Earlier dated updates and owner approvals remain history.*
+
 ---
 
 ## Version History
@@ -382,3 +384,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.17 | October 1, 2026 | PR #476 review status sync: identity, scale and dynamic UI formatting remain Gate-I allocation blockers. Strategy, scope and gate definitions unchanged. |
 | 1.18 | October 3, 2026 | Records actual B/C/A owner choices and remaining contract/reference work through journey §14.10. I remains IN PROGRESS; #470 blocked. Strategy, gate definitions and prior approvals unchanged. |
 | 1.19 | October 3, 2026 | Routes the October 3 contract-completion proposals to final Gate-I review; direction approval remains distinct from handoff acceptance and runtime proof. Previous approval/status history preserved; I IN PROGRESS, #470 blocked. |
+| 1.20 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89; main release follows #478 landing. Consumed implementation and Gate-J/client/host evidence remain due. Strategy, gate definitions and prior approvals preserved. |
