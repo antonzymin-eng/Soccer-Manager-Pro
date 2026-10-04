@@ -2,9 +2,9 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 3, 2026\
-**Version:** 0.30\
+**Version:** 0.31\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.26 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.27 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -836,8 +836,9 @@ Its I-Q01–19 Given/When/Then cases are PLANNED, not executed P5b evidence. Pre
 S0-T1–T7, PM-1 substitution coverage and the carried finding IDs in each result; record
 PR/head, lane, dimensions, input mode, actual text-scale maximum/locale, observed result and
 artifact/log references. I is IN PROGRESS. The October 3 owner choices are recorded in journey
-§14.10; S0-I-001 identity/frame/reference, S0-I-002 scaling application and S0-I-003 formatter/L2
-dependency contracts must be completed before I passes. #470 remains blocked on completed I.
+§14.10; [binding contracts](ux-s0-binding-contracts.md) §§2–5 now define S0-I-001 identity/fixture/history,
+S0-I-002 configuration/reflow and S0-I-003 copy/provider/L2 dependencies against main `3429fafd`.
+The proposed mapping and affected reference deltas still need final review/verdict before I passes. #470 remains blocked on completed I.
 No G/H approval record or walkthrough is superseded by this draft.
 
 The implementation is not validated by matching a screenshot alone. It must preserve the tested task
@@ -853,6 +854,23 @@ scaling and the client formatter. Journey §14.10 records the B/C/A decision, ra
 ownership and outstanding contracts. This is product-direction approval, not a new G/H image
 approval, final Gate-I verdict, runtime verification or merge instruction for #470. The existing
 §9 approval records and source/image hashes remain unchanged; I-Q01–19 remain planned.
+
+### 10.2 Contract-completion review and planned evidence
+
+Binding contracts §5.1 identifies the affected H inputs: named chooser/feedback identities,
+current-player shirts, the fixed scale/reflow contract and the production statistics row/copy.
+Review those deltas with journey §§14.2–8 before recording a Gate-I verdict; preserve the
+original G/H approval pins. This draft supplies no additional image approval. If revised
+images are necessary for a delta, review those affected references before the verdict.
+
+At Gate J, I-Q09/I-Q14 record fixture revision/content hash, engine-selected XI/bench,
+current-frame player-id/name/shirt agreement, keeper replacement, skipped/repeated frames,
+immutable request labels, fresh-session reset and the former no-squad setup comparison.
+I-Q16/I-Q17 record actual 100/150/200% configuration, fonts/glyphs/pseudo text and display
+zoom separately, exact role schemas, provider identity, content build rejection/fallback
+results and validated/package/loaded-content identities. These are PLANNED requirements,
+not additional executed browser or P5b cases. #49 L2's full ERR-049-005 proof remains its
+own landing obligation; client S0 coverage alone cannot close it.
 
 ## 11. Current F4 status
 
@@ -871,7 +889,7 @@ approval, final Gate-I verdict, runtime verification or merge instruction for #4
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I is IN PROGRESS using approved v0.2; the journey §14 handoff draft linked from this protocol §10 has approved identity/scale/formatting choices with remaining contract/reference work and #470 remains blocked until I passes. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I is IN PROGRESS using approved v0.2; the journey §14 handoff draft linked from this protocol §10 has approved identity/scale/formatting choices and defined contract/reference proposals awaiting final review and #470 remains blocked until I passes. S1 requires its two independent completions.
 
 ---
 
@@ -909,3 +927,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.28 | October 1, 2026 | §10 links the S0 Gate-I draft and its 19 planned P5b QA cases, run/head/lane/context evidence fields and carried task/finding IDs. I IN PROGRESS with identity/scale blockers; no P5b test execution or I PASS inferred. Execution-authority pointer updated; all actual G/H approvals/evidence preserved. |
 | 0.29 | October 1, 2026 | PR #476 review correction: §10 is a link/evidence handoff, while the draft lives in journey §14. Names S0-I-003 dynamic-formatting allocation alongside identity/scale blockers; execution pointer updated. No approval/evidence or P5b execution claim changes. |
 | 0.30 | October 3, 2026 | Adds §10.1 actual B/C/A owner choice record and distinguishes settled directions from remaining I contracts and J evidence. Current execution pointer advanced; original §9 approvals/hashes unchanged. |
+| 0.31 | October 3, 2026 | Adds the S0 binding-contract review and evidence checklist; I-Q01–19 stay planned, identity/scale/copy/package proofs remain Gate J obligations. Actual owner approval records and fingerprints unchanged; I IN PROGRESS, #470 blocked. |

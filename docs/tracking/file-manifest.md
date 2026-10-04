@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 3, 2026 — **PR #477 review corrections.** Journey v0.28 corrects the decision-record baseline, requires the S0 layout binding contract before I, and applies formatter-route change control only to a later owner reversal. The approved text-scale target is 100–200%. Current journey pointers advance; v0.27 history and earlier tracking entries are preserved. Gate I remains IN PROGRESS; #470 remains blocked. Four Markdown files modified; no source/spec/assets, approval decision or executed P5b QA change. No snapshot-schema change, RNG stream/domain/draw-site or draw-order change; calibration and performance baselines unaffected. Prior head 9695b4a CI run 37158595654 passed all ten executed jobs, Unity skipped; the corrected head requires fresh CI.
+**Last Updated:** October 3, 2026 — **S0 Gate-I contract-completion draft.** NEW binding contracts v0.1; journey v0.29, detailed plan v1.27, validation protocol v0.31 and high-level plan v1.19. Defines identity/fixture/history, scale/reflow, copy/provider/L2 consumption and affected reference contracts for final review. Ten Markdown paths only; no source, approved spec, approved images/evidence or executed P5b QA change. Gate I IN PROGRESS; #470 blocked; 33 active / 60 archived. No snapshot-schema or RNG stream/domain/draw-site/order change; calibration/performance baselines unaffected. Local documentation checks are the validation lane; fresh PR CI required.
+
+**Last Updated (prior):** October 3, 2026 — **PR #477 review corrections.** Journey v0.28 corrects the decision-record baseline, requires the S0 layout binding contract before I, and applies formatter-route change control only to a later owner reversal. The approved text-scale target is 100–200%. Current journey pointers advance; v0.27 history and earlier tracking entries are preserved. Gate I remains IN PROGRESS; #470 remains blocked. Four Markdown files modified; no source/spec/assets, approval decision or executed P5b QA change. No snapshot-schema change, RNG stream/domain/draw-site or draw-order change; calibration and performance baselines unaffected. Prior head 9695b4a CI run 37158595654 passed all ten executed jobs, Unity skipped; the corrected head requires fresh CI.
 
 **Last Updated (prior):** October 3, 2026 — **S0 Gate-I owner choices recorded.** Actual B/C/A approval: distinct demo squads, 100–200% scale and the client formatter. Journey v0.27 §14.10/Gate-A addendum A-44 and protocol v0.30 §10.1 record the instruction, ownership and remaining frame/reference, scale-application and formatter/L2 dependency contracts. Detailed plan v1.26/high-level plan v1.18 agree: I IN PROGRESS, #470 blocked; choices settled, handoff/J evidence still due. Seven Markdown documents modified; no new source/spec/image or prior G/H approval-record change.
 
@@ -3563,13 +3565,14 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 
 | File | Purpose |
 |------|---------|
-| `docs/design/ux-high-level-plan.md` | UX strategy v1.18: H v0.2 approved; I IN PROGRESS through journey handoff draft |
-| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.26: H v0.2 PASS; I IN PROGRESS, review/reconcile handoff before release |
+| `docs/design/ux-high-level-plan.md` | UX strategy v1.19: H v0.2 approved; binding-contract proposals defined, final I review due |
+| `docs/design/ux-detailed-plan.md` | Single UX execution authority v1.27: H v0.2 PASS; final mapping/reference review next, I IN PROGRESS |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.30: §10 Gate-I QA evidence handoff; original G/H approvals and S0-H-014 delta preserved |
-| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.28: §14 Gate-I P5b handoff draft, identity/scale/dynamic-formatting blockers and 19 planned QA cases; I IN PROGRESS, #470 blocked |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.31: §10 contract-review and planned identity/scale/copy/package evidence; G/H approvals preserved |
+| `docs/design/ux-s0-pm1-journey.md` | S0 UX-D packet v0.29: §14 links the defined binding-contract proposals and 19 planned QA cases; final I review due, #470 blocked |
+| `docs/design/ux-s0-binding-contracts.md` | S0 binding contracts v0.1: authored fixture, frame identity/history, fixed scale/reflow, typed copy/provider/landing sequence and reference reconciliation; review draft, TO BUILD |
 | `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |
 | `docs/design/s0-high-fidelity/evidence/.gitattributes` | Direct storage for small documentation PNGs; global large-binary guard still applies |
 | `docs/design/s0-high-fidelity/evidence/v0.1/mentality-comparison.pdf` | H high-fidelity image owner-approved at 4a6220c; immutable hash in protocol §9.1.2 |

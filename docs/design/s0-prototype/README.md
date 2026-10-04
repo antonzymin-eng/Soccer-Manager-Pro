@@ -47,7 +47,7 @@ For example, open `index.html?review=1&state=MV-L&fixture=fault&pseudo=1&scale=2
 | `review=1` | freeze timer for wireframe inspection; navigation/controls still work |
 | `fixture` | `ordinary`, `waiting`, `fault`, `refusal`, `limit`, `pending-end`, `long-names`, `scoreline`, `events` |
 | `pseudo=1` | bracketed labels with approximately 40% expansion; equivalent stress content, not #49 runtime |
-| `scale=2` | 200% base-font stress (16px → 32px), browser zoom stays 100%; shipping maximum unallocated |
+| `scale=2` | 200% base-font stress (16px → 32px), browser zoom stays 100%; historical prototype proof only — the October 3 S0 target is 100–200%, with Unity proof due at J |
 | `captions=1` | future-caption region coexistence fixture only; #51 runtime remains future-blocked |
 
 The fault fixture exposes synthetic values through minute 18 beneath an incomplete notice; score/time
@@ -106,3 +106,12 @@ Scripted evidence supplies no runtime or independent usability evidence.
 | 0.5 | September 30, 2026 | Codex corrections: fault activates on cutoff crossing; full-time fault notice states final score; normal-text focus check omits pseudo and verifies actual labels/fonts. 85-check run 05 and 19 PDFs stored separately; approved v0.4 images/evidence preserved. Current revision awaits G re-review. |
 | 0.5 copy delta | September 30, 2026 | Suppresses the final-statistics report promise only when faulted; three focused checks and one regenerated PDF. Immutable run05 remains historical; separate delta record holds current hashes. Single-image owner approval pending; disabled Close statistics carried to H. |
 | 0.5 delta approval | September 30, 2026 | Records actual owner approval pinned to 0e8bd2b; G PASS, H OPEN, I/#470 blocked on separately approved H images. Markdown-only record; sources, PDFs and evidence unchanged. |
+| 0.5 contract annotation | October 3, 2026 | Markdown-only pointer to the proposed S0 identity/scale/copy contracts and final review; historical prototype sources/evidence and approval records unchanged. |
+
+## Gate-I contract reconciliation — October 3, 2026
+
+The original prototype limitations above remain evidence about v0.5. The owner-approved
+S0 target now uses distinct authored demo squads and 100–200% text size.
+[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 define the proposed identity,
+scale, copy and affected-reference inputs for final I review. No prototype source, capture,
+image or approval record changed; these annotations supply no runtime proof or gate pass.
