@@ -2,7 +2,7 @@
 
 **Created:** September 11, 2026  
 **Last Updated:** October 3, 2026\
-**Version:** 0.31\
+**Version:** 0.32\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.27 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
@@ -867,8 +867,11 @@ At Gate J, I-Q09/I-Q14 record fixture revision/content hash, engine-selected XI/
 current-frame player-id/name/shirt agreement, keeper replacement, skipped/repeated frames,
 immutable request labels, fresh-session reset and the former no-squad setup comparison.
 I-Q16/I-Q17 record actual 100/150/200% configuration, fonts/glyphs/pseudo text and display
-zoom separately, exact role schemas, provider identity, content build rejection/fallback
-results and validated/package/loaded-content identities. These are PLANNED requirements,
+zoom separately, exact role schemas, the fixed invariant S0 provider, content build rejection
+and L2 key-fallback results, and validated/package/loaded-content identities. I-Q16 uses
+all six flat substitution outcomes with separately reorderable outgoing/incoming first/last
+names, shirts, displayed bench and Applied minute; negative build fixtures reject missing
+or extra indices and numeric specifiers on name arguments (binding contracts §4.3). These are PLANNED requirements,
 not additional executed browser or P5b cases. #49 L2's full ERR-049-005 proof remains its
 own landing obligation; client S0 coverage alone cannot close it.
 
@@ -928,3 +931,4 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.29 | October 1, 2026 | PR #476 review correction: §10 is a link/evidence handoff, while the draft lives in journey §14. Names S0-I-003 dynamic-formatting allocation alongside identity/scale blockers; execution pointer updated. No approval/evidence or P5b execution claim changes. |
 | 0.30 | October 3, 2026 | Adds §10.1 actual B/C/A owner choice record and distinguishes settled directions from remaining I contracts and J evidence. Current execution pointer advanced; original §9 approvals/hashes unchanged. |
 | 0.31 | October 3, 2026 | Adds the S0 binding-contract review and evidence checklist; I-Q01–19 stay planned, identity/scale/copy/package proofs remain Gate J obligations. Actual owner approval records and fingerprints unchanged; I IN PROGRESS, #470 blocked. |
+| 0.32 | October 3, 2026 | PR #478 review sync: planned I-Q16 fixtures use the flat substitution argument schema and fixed invariant S0 provider; L2 missing-key fallback remains separate. Original approvals/fingerprints unchanged; I IN PROGRESS, #470 blocked. |

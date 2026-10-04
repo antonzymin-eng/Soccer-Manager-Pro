@@ -2,7 +2,7 @@
 
 **Created:** October 3, 2026\
 **Last Updated:** October 3, 2026\
-**Version:** 0.1\
+**Version:** 0.2\
 **Status:** CONTRACT REVIEW DRAFT — TO BUILD; Gate I IN PROGRESS\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff-draft)\
@@ -174,10 +174,10 @@ all states and both modals with actual fonts; H's browser evidence is not that r
 P5b owns **TO BUILD `S0CopyRole`, role schema and `S0CopyFormatter`** in gate-compiled
 client code, consumed by all four presenters. The composition injects one L2 `ILocalizer`,
 admitted immutable content and number-format provider for the entire shell. Initial shipped
-content uses `LocaleId.BaseLocale` (`en`) and an explicitly selected, read-only `en-US`
-`NumberFormatInfo`; never parse `LocaleId.Value` as a platform culture name. A platform
-without that provider uses a frozen invariant numeric provider selected at composition
-and recorded in evidence. Future selected locales need an explicit locale-to-provider
+content uses `LocaleId.BaseLocale` (`en`) and the single read-only provider
+`NumberFormatInfo.InvariantInfo`, fixed for the shell lifetime and recorded in evidence.
+No platform-culture lookup or provider fallback is required for S0; never parse
+`LocaleId.Value` as a platform culture name. Future selected locales need an explicit locale-to-provider
 admission mapping and valid base coverage before admission; no locale menu is added.
 
 Each role has exactly one `ui.s0.*` key and one argument schema below. Static roles have
@@ -277,9 +277,14 @@ expands to four arguments, never an opaque string assembled by Unity.
 
 Outcome keys have complete sentences, not concatenated status/detail fragments.
 Mentality keys take `0 Mentality S`, plus `1 minute I` only for Applied.
-Substitution keys take `0 outgoing identity S, 1 incoming identity S, 2 bench I`,
-plus `3 minute I` only for Applied. The two identity arguments are complete cached
-`identity.player` results captured at submission, preserving the original people.
+Home-only substitution keys take these **flat typed arguments** from the immutable
+identity components captured at submission: `0 outgoing first name S`, `1 outgoing
+last name S`, `2 outgoing shirt I`, `3 incoming first name S`, `4 incoming last name S`,
+`5 incoming shirt I`, `6 displayed bench I`, plus `7 minute I` only for Applied.
+No preformatted `identity.player` result is nested in an outcome pattern. Translators
+can independently order both players' name components and every numeric field; no
+repeated team prefix is needed in the home-team change context. Caches retain the
+typed components and final role output without rewriting old request identities.
 
 | Suffix | Complete base pattern |
 |---|---|
@@ -289,12 +294,21 @@ plus `3 minute I` only for Applied. The two identity arguments are complete cach
 | `feedback.mentality_refused` | Refused — Mentality: {0} — current Mentality unchanged. |
 | `feedback.mentality_not_applied` | Not applied — Mentality: {0} — match ended before it could apply. |
 | `feedback.mentality_send_failure` | Send failure — Mentality: {0} — request could not be sent; current Mentality unchanged. |
-| `feedback.substitution_pending` | Pending — {0} → {1} (bench slot {2}) — waiting to be applied. |
-| `feedback.substitution_pending_paused` | Pending — {0} → {1} (bench slot {2}) — waiting; resume to continue. |
-| `feedback.substitution_applied` | Applied — {0} → {1} (bench slot {2}) at minute {3}. |
-| `feedback.substitution_refused` | Refused — {0} → {1} (bench slot {2}) — substitution count unchanged. |
-| `feedback.substitution_not_applied` | Not applied — {0} → {1} (bench slot {2}) — match ended before it could apply. |
-| `feedback.substitution_send_failure` | Send failure — {0} → {1} (bench slot {2}) — request could not be sent; substitution count unchanged. |
+| `feedback.substitution_pending` | Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting to be applied. |
+| `feedback.substitution_pending_paused` | Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting; resume to continue. |
+| `feedback.substitution_applied` | Applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}) at minute {7}. |
+| `feedback.substitution_refused` | Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); substitution count unchanged. |
+| `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); match ended before it could apply. |
+| `feedback.substitution_send_failure` | Send failure — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); request could not be sent; substitution count unchanged. |
+
+Base-copy example: “Pending — Ben Calder (shirt 2) → Miles West (shirt 13, bench slot 2);
+waiting to be applied.” This is a planned formatting fixture, not an executed outcome.
+I-Q16 must cover all six substitution outcome roles, a translation pattern that reorders
+each player's first/last names and shirt independently, and the Applied minute. Build
+fixtures require indices 0–6 (0–7 for Applied), allow repetition, and reject a missing
+name/number index, an extra index or a numeric specifier on a name. Name strings
+containing braces remain literal argument data, never a second pattern to parse.
+Use the fixed invariant provider in every S0 fixture; locale-provider mapping remains later work.
 
 Accessible names match visible controls, using the same cached role output. Noninteractive
 pitch descriptions use the complete name/shirt/cue roles; glyph-only status is forbidden.
@@ -329,7 +343,7 @@ proof cannot close #49 ERR-049-005 for unrelated admitted static keys.
 | Gate I contract/reference PR (this draft) | This contract → journey component/QA mapping and implementer review | Review all three contracts and reference deltas below; record the final verdict in journey/protocol/plan/live tracking. No I PASS inferred here. |
 | #49 L2 | Generic immutable in-memory catalogue + `ILocalizer` implementation → its seam behavior tests; P5b later consumes the named implementation | Owning plan §6 and approved #49 FR-LC-007–011; KD-5; full ERR-049-005 construction coverage or owner-approved terminal-result fix and executable proof. No client schema in core, external files, locale release, a11y store or live locale replacement. |
 | #470 shell foundation after I release | Existing shell foundation decisions → Unity roots | Refresh onto then-current main, close tracking, fresh CI and pinned Unity 6000.4.9f1 compile on PR head before merge. Foundation does not claim complete S0 screens/localization. |
-| P5b lifecycle/identity slice | Authored fixture + engine observation/frame cue + session roster descriptor → setup/session, pitch and chooser/feedback identity projections | Consume `MatchSessionLifecycle` via `Attach(MatchSession)`; remove internal/opt-in demo ownership. Land new identity producers with consumers, boot/substitution/reset tests and pinned compile. Do not introduce another unconsumed lifecycle prerequisite before the authorized binding. |
+| P5b lifecycle/identity slice | Authored fixture + engine observation/frame cue + session roster descriptor → setup/session, pitch and chooser/feedback identity projections | The shell coordinator consumes `MatchSessionLifecycle.CreateSession` / `Current` / `ClearSession`; the pitch renderer `MatchClientBehaviour` gains the TO BUILD `Attach(MatchSession)` / detach binding (journey §14.2). Remove internal/opt-in demo ownership. Land new identity producers with consumers, boot/substitution/reset tests and pinned compile. Do not introduce another unconsumed lifecycle prerequisite before the authorized binding. |
 | P5b copy/scale/screens slice | L2 localizer + admitted S0 content/provider/configuration → formatter, all four presenters and Unity bindings | Full §4 schema/build admission/cache/package proof, §3 reflow; live command and analytics adapters from journey §§14.5–6. May combine with the preceding slice; localized screens wait for L2. |
 | Gate J / remaining B8/B9b/B10 acceptance | Real client → I-Q01–19, actual host/cert evidence | Compile on exact PR heads before merge; actual controls, keyboard, identity, observer fault, all scales and glyph fallback, repeat match, cert evidence. CI shim/browser images do not replace this lane. |
 
@@ -349,7 +363,9 @@ approval records are preserved byte-for-byte. This draft changes no image approv
 
 **Final review due:** check these deltas with the complete journey §§14.2–8, verify
 that an implementer needs no additional product decision, and record the verdict and
-reviewed commit. If a delta requires revised visual evidence, return only its affected
+reviewed commit. Explicit owner acceptance of §2.1's proposed 36 synthetic names is
+also due; approval of the distinct-squad direction does not approve this particular list.
+If a delta requires revised visual evidence, return only its affected
 references for review and retain the earlier approval pins. S0-I-001/002/003 are now
 defined proposals; none is closed by authoring this file. Gate I stays IN PROGRESS,
 #470 stays blocked, and all P5b QA stays PLANNED until its appropriate lane runs.
@@ -359,3 +375,4 @@ defined proposals; none is closed by authoring this file. Gate I stays IN PROGRE
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | October 3, 2026 | Initial S0 binding-contract review draft against main 3429fafd: authored distinct-squad fixture, frame identity/bench/history publication, fixed 100–200% scale/reflow, static/dynamic typed copy register, fixed number-format context, L2/client consumption and packaging evidence, affected reference matrix. No source, approved assets, implementation proof or gate pass. |
+| 0.2 | October 3, 2026 | PR #478 review corrections: flat typed substitution name/shirt/bench/minute arguments and planned I-Q16 reordered/negative build fixtures; one invariant S0 number-format provider; Attach assigned to the pitch renderer while the shell consumes lifecycle methods. Explicit acceptance of the proposed name list remains due. I IN PROGRESS; #470 blocked; no source, approved evidence or gate-pass change. |
