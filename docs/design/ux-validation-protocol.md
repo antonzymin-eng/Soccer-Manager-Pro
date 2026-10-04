@@ -1,10 +1,10 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** October 3, 2026\
-**Version:** 0.30\
-**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.26 §F4 and Gates E–G\
+**Last Updated:** October 4, 2026\
+**Version:** 0.35\
+**Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -831,14 +831,15 @@ Verification should cover at minimum:
 - supported resolutions/data extremes;
 - required Unity-host/cert behavior.
 
-The S0 implementation handoff draft is [journey packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff-draft).
+The reviewed S0 implementation handoff is [journey packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff).
 Its I-Q01–19 Given/When/Then cases are PLANNED, not executed P5b evidence. Preserve
 S0-T1–T7, PM-1 substitution coverage and the carried finding IDs in each result; record
 PR/head, lane, dimensions, input mode, actual text-scale maximum/locale, observed result and
-artifact/log references. I is IN PROGRESS. The October 3 owner choices are recorded in journey
-§14.10; S0-I-001 identity/frame/reference, S0-I-002 scaling application and S0-I-003 formatter/L2
-dependency contracts must be completed before I passes. #470 remains blocked on completed I.
-No G/H approval record or walkthrough is superseded by this draft.
+artifact/log references. I PASS is recorded in journey §14.11. The October 3 owner choices are recorded in journey
+§14.10; [binding contracts](ux-s0-binding-contracts.md) §§2–5 now define S0-I-001 identity/fixture/history,
+S0-I-002 configuration/reflow and S0-I-003 copy/provider/L2 dependencies against main `3429fafd`.
+The mapping and reference deltas passed technical handoff review at e8ffd89 (journey §14.11). Main release follows #478 landing; #470 still needs fresh CI and exact-head pinned compile before merge.
+No G/H approval record or walkthrough is superseded by this handoff.
 
 The implementation is not validated by matching a screenshot alone. It must preserve the tested task
 semantics and evidence-backed interaction states.
@@ -853,6 +854,51 @@ scaling and the client formatter. Journey §14.10 records the B/C/A decision, ra
 ownership and outstanding contracts. This is product-direction approval, not a new G/H image
 approval, final Gate-I verdict, runtime verification or merge instruction for #470. The existing
 §9 approval records and source/image hashes remain unchanged; I-Q01–19 remain planned.
+
+### 10.2 Contract-completion review and planned evidence
+
+**Name-list decision — October 3, 2026:** Anton Zymin replied “Approved” at 21:06:28
+America/Los_Angeles (October 4, 04:06:28 UTC) to the explicit request to approve the
+36 demo names in binding contracts §2.1 at PR #478 head
+`96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged. This records
+fixture-name acceptance; separate long-name/pseudo/200% stress fixtures and final
+contract/reference review were still required at that decision. I was IN PROGRESS; #470 blocked; all I-Q cases
+PLANNED. Earlier G/H approvals and their evidence remain unchanged.
+
+Binding contracts §5.1 identifies the affected H inputs: named chooser/feedback identities,
+current-player shirts, the fixed scale/reflow contract and the production statistics row/copy.
+Those deltas and journey §§14.2–8 passed the October 4 technical handoff review in
+journey §14.11 at e8ffd89. No revised H exports are required for this contract handoff;
+original G/H approval pins remain unchanged. Actual named labels/reflow/fonts and
+identity require Gate-J evidence; this is not additional image approval.
+
+At Gate J, I-Q09/I-Q14 record fixture revision/content hash, engine-selected XI/bench,
+current-frame player-id/name/shirt agreement, keeper replacement, skipped/repeated frames,
+immutable request labels, fresh-session reset and the former no-squad setup comparison.
+I-Q16/I-Q17 record actual 100/150/200% configuration, fonts/glyphs/pseudo text and display
+zoom separately, exact role schemas, the fixed invariant S0 provider, content build rejection
+and L2 key-fallback results, and validated/package/loaded-content identities. I-Q16 uses
+all six flat substitution outcomes with separately reorderable outgoing/incoming first/last
+names, shirts, displayed bench and Applied minute; negative build fixtures reject missing
+or extra indices and numeric specifiers on name arguments (binding contracts §4.3). These are PLANNED requirements,
+not additional executed browser or P5b cases. #49 L2's full ERR-049-005 proof remains its
+own landing obligation; client S0 coverage alone cannot close it.
+
+### 10.3 Gate-I review verdict — October 4
+
+**Owner acceptance:** Anton Zymin replied “I accept” on October 4, 2026 at
+15:07:45 America/Los_Angeles (22:07:45 UTC), directly answering the request to accept
+this Gate-I handoff PASS at PR #478 head
+`a1eae5675b3cadd22318b0640bbdd510ff888dab`. This explicitly accepts the technical
+handoff verdict below; it supplies no implementation, image, Gate-J, Unity or merge
+approval. The technical reviewer remains Codex; the owner acceptance is a separate decision.
+
+Technical handoff PASS at PR #478 head `e8ffd89661df182d33fa3646db3dc73a070d0610`;
+journey §14.11 records the eleven-deliverable checklist, source checks, reference
+reconciliation and main-landing boundary. S0-I-001/002/003 decisions close for handoff;
+all I-Q01–19 remain PLANNED. Run 37176192739 passed ten executed CI jobs, Unity skipped.
+This record is not an owner image approval, Unity compile, runtime acceptance or merge
+instruction. #49 L2/full ERR-049-005, client consumers and B8/B9b/B10 evidence remain due.
 
 ## 11. Current F4 status
 
@@ -871,7 +917,7 @@ approval, final Gate-I verdict, runtime verification or merge instruction for #4
 **F4 verdict: COMPLETE.** The protocol is operational for S0 and S1, Anton Zymin is accountable, and
 the privacy-safe participant mechanism is defined. **S0 Gate A has since completed; Gate B is next.** *(September 28, 2026: S0 Gate B has since completed (owner-confirmed September 28, 2026) — `ux-s0-pm1-journey.md` v0.5 §7; Gate C is next.)*
 Neither F4 nor Gate A passes Gate E, F or G. S0 Gate F is complete in the journey packet;
-S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I is IN PROGRESS using approved v0.2; the journey §14 handoff draft linked from this protocol §10 has approved identity/scale/formatting choices with remaining contract/reference work and #470 remains blocked until I passes. S1 requires its two independent completions.
+S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in §9.1.1. H v0.1 remains owner-approved at `4a6220c` (§9.1.2). H v0.2 is owner-approved at `a1044d5` (§9.1.3); I PASS uses approved v0.2 and the technical review in journey §14.11. The #470 Gate-I block clears on main only after #478 lands; its refresh, CI and pinned compile remain due. S1 requires its two independent completions.
 
 ---
 
@@ -909,3 +955,8 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.28 | October 1, 2026 | §10 links the S0 Gate-I draft and its 19 planned P5b QA cases, run/head/lane/context evidence fields and carried task/finding IDs. I IN PROGRESS with identity/scale blockers; no P5b test execution or I PASS inferred. Execution-authority pointer updated; all actual G/H approvals/evidence preserved. |
 | 0.29 | October 1, 2026 | PR #476 review correction: §10 is a link/evidence handoff, while the draft lives in journey §14. Names S0-I-003 dynamic-formatting allocation alongside identity/scale blockers; execution pointer updated. No approval/evidence or P5b execution claim changes. |
 | 0.30 | October 3, 2026 | Adds §10.1 actual B/C/A owner choice record and distinguishes settled directions from remaining I contracts and J evidence. Current execution pointer advanced; original §9 approvals/hashes unchanged. |
+| 0.31 | October 3, 2026 | Adds the S0 binding-contract review and evidence checklist; I-Q01–19 stay planned, identity/scale/copy/package proofs remain Gate J obligations. Actual owner approval records and fingerprints unchanged; I IN PROGRESS, #470 blocked. |
+| 0.32 | October 3, 2026 | PR #478 review sync: planned I-Q16 fixtures use the flat substitution argument schema and fixed invariant S0 provider; L2 missing-key fallback remains separate. Original approvals/fingerprints unchanged; I IN PROGRESS, #470 blocked. |
+| 0.33 | October 3, 2026 | Records the explicit 36-name approval at 96f16ba, synchronized with binding contracts v0.3 and journey v0.31. Stress coverage and final I review remain due; #470 blocked, QA planned; prior G/H approval records and evidence unchanged. |
+| 0.34 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89 and links the deliverable/reference review in journey §14.11. Main release follows #478 landing; QA, runtime/Unity and client dependencies remain due. Existing §9 approval records/fingerprints unchanged. |
+| 0.35 | October 4, 2026 | Mirrors explicit owner acceptance of the Gate-I handoff PASS at a1eae56 in journey §14.11. Technical review and owner decision remain distinct; prior approval/evidence records and planned QA unchanged. |

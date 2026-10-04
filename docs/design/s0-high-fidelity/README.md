@@ -1,8 +1,8 @@
 # S0 Gate H high-fidelity reference v0.2
 
 **Created:** September 30, 2026\
-**Last Updated:** October 1, 2026\
-**Status:** H v0.2 PASS — owner “images approved” October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC); reviewed `a1044d5`. I OPEN using v0.2; #470 blocked on completed I.\
+**Last Updated:** October 4, 2026\
+**Status:** H v0.2 PASS — owner “images approved” October 1, 2026 at 12:35:32 America/Los_Angeles (19:35:32 UTC); reviewed `a1044d5`. I PASS at reviewed e8ffd89 (journey §14.11); main release follows #478 landing.\
 **Prior approval preserved:** v0.1 at `4a6220c`, owner “images approved” September 30, 2026; recorded at `654c4f8` in [protocol §9.1.2](../ux-validation-protocol.md#912-s0-gate-h-owner-image-approval). Its evidence and approval fingerprints remain unchanged.\
 **Journey authority:** [S0 packet §13](../ux-s0-pm1-journey.md#13-gate-h--high-fidelity-reference)
 
@@ -21,7 +21,9 @@ All commands/results are simulated. The ordinary 2–1 score/statistics fixture 
 `fixture=scoreline` uses the unmodified 19–9 capture. Choices do not recompute either match. H adds an
 explicitly illustrative substitution overlay: the applied incoming shirt occupies the outgoing
 player's captured position. It is design evidence, not a new runtime projection. Home/Away and
-shirt numbers identify every choice; names and production roster identity still depend on S1/client work.
+shirt numbers identify every choice in this historical reference. The October 3 S0 target
+allocates names and synchronized production identity to P5b (binding contracts §2),
+with reference/mapping review passed in journey §14.11 and Gate-J proof due; names are no longer deferred to S1.
 
 ## Post-approval validation delta
 
@@ -63,8 +65,10 @@ report partial figures start behind disclosure. Full-time report remains primary
 
 Mentality staging shows the current value, the requested choice plus its effect, and an explicit comparison
 disclosure for all seven identical setup choices/effects tagged Current and Requested. Submit/Cancel remain separate; changing selection is not
-application. Bench labels are 1–7; option values remain 0–6. An Applied shirt 4 → shirt 14 change
-replaces H4 with a white-outlined H14 ↔ (enlarged glyph); Pending/Refused keep H4. Consumed outgoing/bench options are unavailable.
+application. Bench labels are 1–7; option values remain 0–6. The illustrative Applied shirt 4 → shirt 14 change
+replaces H4 with a white-outlined H14 ↔ (enlarged glyph); Pending/Refused keep H4.
+For the S0 target, actual engine-selected bench identity and authored shirt determine
+that number; bench index is not a shirt formula (binding contracts §§2/5). Consumed outgoing/bench options are unavailable.
 
 Outcomes carry an explicit label — Pending (dashed blue), Applied (green ✓), Refused (rose ✕), Not applied
 (dotted grey –) — with colour and glyph only reinforcing the word. Period and minute sit directly under
@@ -80,6 +84,17 @@ reasons; Pending/Applied/Refused/Not-applied outcomes; statistics health/cutoff;
 Text stays semantic DOM content, never rasterized in the interactive reference. Strings and dynamic
 arguments must be allocated to #49 localization roles in I; this English design reference claims no
 shipped locale catalog. Future captions remain a clearly labelled stress fixture, not a product feature.
+
+## Gate-I contract reconciliation — October 3, 2026
+
+[Binding contracts](../ux-s0-binding-contracts.md) §§2–5 are the reviewed P5b inputs:
+actual player-name/shirt/bench labels, discrete current-frame occupant identity, fixed
+100–200% scale/reflow and complete copy roles. Journey §14.11 records the October 4
+technical handoff PASS at e8ffd89 and dispositions for dialog/Applied/long-name/stress/
+pitch/statistics references. No revised H exports are required for the contract handoff.
+The approved 23 v0.2 image pairs and G/H decisions stay unchanged. This is not approval
+of an unseen named-player image or proof of actual Unity labels/fonts/layout; Gate J must
+verify those. Main's #470 release follows #478 landing; fresh CI/pinned compile remain due.
 
 ## Reproduction and verification
 
@@ -162,3 +177,5 @@ large-binary guard still applies. No Unity asset/LFS rule is changed.
 | 0.2 documentation correction | October 1, 2026 | Clarifies that hashes pin reviewed bytes rather than cross-machine output; restores H PASS / I OPEN for pinned v0.1 without inferring a new owner decision. v0.2 adoption still awaits separate approval; all executable sources/images/evidence unchanged. |
 | 0.2 approval record | October 1, 2026 | Owner “images approved” at a1044d5, all 23 views. Protocol §9.1.3 pins confirmation/time, 46 images, seven sources and walkthrough hash. H PASS / I OPEN using v0.2; all executable sources/images/evidence unchanged. |
 | 0.2 validation delta | October 1, 2026 | S0-H-014 localizes the complete long-name identity and extends coverage beyond fault. Focused run 03 and full 99-check scratch run pass; approved a1044d5 images/walkthrough/source pins unchanged. |
+| 0.2 contract annotation | October 3, 2026 | Markdown-only reconciliation to the proposed S0 binding contracts: names allocated to P5b, illustrative shirts separated from actual bench identity, fixed scaling/copy inputs and affected final-review references. H v0.2 evidence version, approved sources/images/walkthroughs and approval pins unchanged. |
+| 0.2 handoff review | October 4, 2026 | Technical Gate-I PASS at e8ffd89; reference-delta dispositions in journey §14.11. Existing images/sources/evidence and owner approvals unchanged; actual named-label/layout/Unity verification remains Gate J. |

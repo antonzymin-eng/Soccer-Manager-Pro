@@ -1,11 +1,11 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** October 3, 2026\
-**Version:** 0.28\
-**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I IN PROGRESS — HANDOFF DRAFT (§14)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.26 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.30\
+**Last Updated:** October 4, 2026\
+**Version:** 0.33\
+**Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF (§14.11)\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.35\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -870,7 +870,7 @@ a11y application, actual maximum scale and runtime audio/captions. No prototype 
 | Gate F complete task | UX workstream | PASS — §12.1 complete vehicle, v0.5 run 05; former tester prerequisite superseded |
 | Gate G image approval | Anton Zymin | v0.4 PASS at `13c2c09`; v0.5 PASS at `0e8bd2b`, single-image delta plus 18 carried images, protocol §9.1.1 |
 | Gate H high-fidelity image review | Anton Zymin | v0.2 PASS at `a1044d5`, actual “images approved” October 1, 2026; protocol §9.1.3. Prior v0.1 approval preserved in §9.1.2 |
-| Gate I implementation handoff | UX / Unity client | IN PROGRESS — §14 handoff draft from approved v0.2; S0-I-001 identity, S0-I-002 scale and S0-I-003 dynamic UI formatting remain open; I not passed, #470 blocked |
+| Gate I implementation handoff | UX / Unity client | PASS — §14.11 reviews the complete mapping/contracts at e8ffd89; implementation/QA remain due; main release follows landing of #478 |
 
 **Owner decision, September 30, 2026:** the owner instructed, "don't worry about testers. I will be
 conducting all reviews of images". This changes S0's review method under detailed-plan F4.2;
@@ -962,7 +962,7 @@ owner-approved for v0.1 at `4a6220c` (§13); the production identity and I oblig
 
 # 13. Gate H — high-fidelity reference
 
-**Status:** H PASS for owner-approved v0.2 at `a1044d5`; prior v0.1 approval preserved. I OPEN for pinned v0.2 handoff; #470 blocked on completed I.
+**Status:** H PASS for owner-approved v0.2 at `a1044d5`; prior v0.1 approval preserved. I PASS through §14.11 for pinned v0.2 handoff; main release follows #478 landing.
 **Base:** PR #473 head `b6c9c6a41be01fd3950f8e74755eda4672f124a2`, containing the owner-approved
 v0.5 delta record. The owner authorized starting H on that base before all #473 checks completed.
 That instruction authorizes H work, not H image approval or either PR's merge.
@@ -1057,12 +1057,20 @@ All S0-H-005–013 fixes are accepted in the owner-approved v0.2 images (protoco
 
 ---
 
-# 14. Gate I — P5b implementation handoff draft
+# 14. Gate I — P5b implementation handoff
 
-**Started:** October 1, 2026. **Status:** IN PROGRESS / REVIEW DRAFT; I has not passed.
+**Started:** October 1, 2026. **Status:** PASS — October 4 technical handoff review (§14.11); implementation verification remains due.
 **Purpose:** bind the supported S0 journey to the shipping four-screen Unity client without
 making the renderer decide simulation, navigation or command outcomes. Consumer: P5b / B9b.
-PR #470 remains blocked on completed I; this draft neither releases nor merges it.
+Main’s #470 Gate-I block clears when this reviewed record lands; refresh, fresh CI and
+exact-head pinned compile remain required before merge (§14.11).
+
+**Prior contract-completion draft, October 3 (superseded by §14.11):** [S0 binding contracts](ux-s0-binding-contracts.md)
+§§2–4 now define the three approved directions against main `3429fafd` after #477.
+They supply an authored fixture, synchronized occupant publication, complete typed copy
+register, read-only scale configuration and consumed landing sequence. §5 reconciles
+the affected H/reference semantics. This mapping is ready for final handoff review;
+no new image approval, implementation, I PASS or #470 release is inferred.
 
 ## 14.1 Baseline, scope and evidence
 
@@ -1097,8 +1105,9 @@ admit a save control. Desktop window close is the current exit; teardown stops t
 `TO BUILD` names required P5b presentation work, not an API already in `main`.
 The audited visual/contract conflict is S0-I-001 (§14.9): H's illustrative incoming shirt
 identity differs from the existing slot-number rule. The owner selected distinct demo squads on
-October 3 (§14.10); the frame/display contract and affected references still need reconciliation
-before I passes. This is an approved target, not a claim that the audited source changed.
+October 3 (§14.10). Binding contracts §§2/5 now define the proposed frame/display
+contract and affected-reference matrix. Final review passed in §14.11; the audited
+source has not changed.
 
 ## 14.2 Architecture and session ownership
 
@@ -1307,24 +1316,22 @@ The following are **TO BUILD content roles**, not registered keys or producer te
 `Resolve` accepts only a static key; `Render` requires a producer-scoped template and selection
 value. Neither API currently supplies a parameterized static-UI formatter. The handoff therefore
 allocates this **owner-approved TO BUILD client formatting direction** (October 3, §14.10).
-S0-I-003 still requires the complete role/key schema and consumed dependency/landing contract
-before Gate I can pass. It changes no existing localization API or approved spec:
+The complete proposed role/key schema and consumed dependency/landing contract are now
+in [binding contracts §4](ux-s0-binding-contracts.md#4-s0-i-003--copy-schema-and-fixed-formatting-context)
+and §5; S0-I-003 is reviewed for handoff in §14.11. They change no existing localization API or approved spec:
 
 - A gate-compiled client formatter takes a typed S0 copy role plus its fixed argument schema and
   the display locale/number-format provider from the client localization composition. Each role
   maps to one static `LocalizationKey`. `ILocalizer.Resolve(key)` supplies the complete localized
-  composite-format pattern; the formatter substitutes presentation arguments using the selected
-  locale's number format. No string concatenation supplies sentence structure, and no UI-created
+  composite-format pattern; the formatter substitutes presentation arguments using the fixed
+  S0 provider in binding contracts §4.1; later locales require an admitted provider mapping. No string concatenation supplies sentence structure, and no UI-created
   `LocalizedTextRequest`, producer namespace or selection draw is needed.
-- The adopted namespace direction is `ui.s0.*`; the complete key/argument-schema contract still
-  needs completion. The examples below are not registered catalogue entries. Examples: `ui.s0.scoreline` → two integer score
-  arguments, base pattern `{0} – {1}`; `ui.s0.minute` → one integer, `Minute {0}`;
-  `ui.s0.home_shirt` → one integer, `Home shirt {0}`; `ui.s0.bench_slot` → one integer,
-  `Bench slot {0}`; `ui.s0.mentality_applied` → resolved Mentality label and integer minute,
-  `Applied: {0} at minute {1}`; `ui.s0.statistics_incomplete` → integer cutoff minute,
-  `Statistics incomplete — stopped at minute {0}`. Allocate equivalent complete patterns for
-  the other I-L04/I-L06/I-L07 sentences, including all four outcome states and substitutions.
-  Status words remain explicit, and translators may reorder placeholders.
+- The adopted namespace is `ui.s0.*`; binding contracts §§4.2–3 are the single proposed
+  role/key/argument register for I-L01–07, including complete player identities, all request
+  outcomes and fault captions. Those keys are TO BUILD client content, not registered runtime
+  entries. `ui.s0.scoreline` takes two integer scores; `ui.s0.minute` one integer;
+  `ui.s0.feedback.mentality_applied` a resolved Mentality and integer minute. Status words
+  remain explicit; translators may reorder or repeat the required placeholders.
 - **TO BUILD client-owned build-time catalogue lint/tests** validate every authored selected/base
   S0 pattern against the role's exact argument indices/types and escaped braces before publication.
   They consume the S0 role-to-key schema and candidate catalogue data outside the generic
@@ -1344,7 +1351,7 @@ before Gate I can pass. It changes no existing localization API or approved spec
   must name the L2 implementation, admission/coverage proof and ERR discharge dependencies;
   no exception/key dump/blank label is an acceptable shipping result. Do not treat an arbitrary
   `LocaleId.Value` as a validated platform culture name; the composition must supply an admitted
-  number-format provider/fallback explicitly.
+  number-format provider explicitly (S0 uses the single invariant provider).
 - **Owner-approved S0 lifetime policy (§14.10):** the shell composition binds one fixed display locale, immutable
   admitted catalogue/localizer context and number-format provider at shell construction, covering
   MM, TS, MV and PR. S0 has no settings UI and admits no in-place locale/catalogue replacement.
@@ -1360,10 +1367,10 @@ before Gate I can pass. It changes no existing localization API or approved spec
   the unchanged per-frame path.
 
 The owner adopted this route for dynamic UI sentences with display-only number formatting
-on October 3 (§14.10). This decision record implements no formatter or localization runtime. S0-I-003 must settle catalogue-pattern
-client build-time validation/coverage ownership, L2 fallback and ERR-049-005 dependencies,
-culture/formatter admission, fixed-context lifetime and argument-driven formatting, and name the consumed implementation
-landing. If the owner later reverses the approved direction, revise this mapping before I completion.
+on October 3 (§14.10). This decision record implements no formatter or localization runtime.
+Binding contracts §§4–5 define the proposed catalogue-pattern validation/coverage ownership,
+L2 fallback and ERR-049-005 dependencies, provider admission, fixed lifetime and consumed landings.
+Final handoff review passed in §14.11. A later reversal returns this mapping to Gate A/I.
 
 | Role ID | Copy covered / dynamic arguments | Owning integration requirement |
 |---|---|---|
@@ -1396,8 +1403,9 @@ Never ship blank critical labels or use color/↔/✓/✕ alone to communicate a
 Text scaling is a presentation application responsibility (P5b/#38 with #49 boundary), not a new
 sim constant or settings screen. **Owner-approved S0 target range: 100–200% base text size** (October 3, §14.10).
 The maximum choice is settled. P5b/#38 owns application/reflow through a read-only client
-presentation configuration aligned with #49's a11y boundary; that consumed configuration contract
-is TO BUILD. Verify 150% and 200% with expanded pseudo text and separate display zoom. No settings
+presentation configuration aligned with #49's a11y boundary; binding contracts §3 defines the
+TO BUILD fixed-shell `S0PresentationConfiguration` and per-surface reflow. Verify 150% and 200%
+with expanded pseudo text and separate display zoom. No settings
 screen or persistence is added. S0-I-002 retains application/handoff work; S0-E-004 and actual
 shipping support close only on real-client evidence at Gate J.
 
@@ -1441,7 +1449,7 @@ an existing L2 loader, packaging or artifact-identity API.
 | I-Q13 / T6,G-008 | statistics open or closed before ended frame, healthy or faulted | full time then report acknowledgement | retain/close as before, static status/no reopen; report available only from end; frame home result wins over analytics; Return outside disclosure | host-free + Unity |
 | I-Q14 / T6,T1 | final report with fault/history | Return, start another match | old session stopped/detached/cleared; fresh caches/observer/feedback/draft/disclosures; old callbacks cannot mutate new context | host-free + Unity |
 | I-Q15 / all,H-005 | keyboard-only journey, dialogs, latest/earlier outcome disclosure | traverse forward/back, submit, close, let live ticks run | logical order, modal wrap, recoverable visible focus, no root loss/tick reset/disclosure collapse; pointer headings unboxed | Unity |
-| I-Q16 / all,H-014,E-004,I-003 | all three dimensions, expanded pseudo text, 150% and the owner-selected 200% maximum; reordered/invalid/missing pattern build fixtures; unchanged frames, changed arguments, match teardown and fresh shell contexts | load the validated published artifact through the S0 packaging/loader path; format dynamic roles and complete journey, both choosers, long-name/fault/history fixtures | matching validation/package/load artifact identities recorded; exact role arguments; client-owned lint fails content build on any malformed authored pattern or missing base role, publishes no rejected candidate, permits absent translations with valid base coverage, L2 KD-5 missing-selected-key fallback and ERR-049-005 terminal-path proof; locale number formatting; fixed-context unchanged arguments reuse labels; changed arguments refresh; match teardown clears match caches; fresh shell has no previous-context labels; no runtime replacement signal assumed; all product strings transformed incl Home/Away; whole labels/actions reachable, reflow/scroll, no horizontal clipping/distortion; record real max | host-free formatter + Unity |
+| I-Q16 / all,H-014,E-004,I-003 | all three dimensions, expanded pseudo text, 150% and the owner-selected 200% maximum; reordered flat substitution name/shirt/bench/minute patterns and invalid/missing pattern build fixtures; unchanged frames, changed arguments, match teardown and fresh shell contexts | load the validated published artifact through the S0 packaging/loader path; format dynamic roles and complete journey, both choosers, long-name/fault/history fixtures | matching validation/package/load artifact identities recorded; exact role arguments, including independently reordered outgoing/incoming first/last names, shirts, bench and Applied minute; fixed invariant S0 number-format provider; client-owned lint fails content build on any malformed authored pattern or missing base role, publishes no rejected candidate, permits absent translations with valid base coverage, L2 KD-5 missing-selected-key fallback and ERR-049-005 terminal-path proof; fixed-provider number formatting; fixed-context unchanged arguments reuse labels; changed arguments refresh; match teardown clears match caches; fresh shell has no previous-context labels; no runtime replacement signal assumed; all product strings transformed incl Home/Away; whole labels/actions reachable, reflow/scroll, no horizontal clipping/distortion; record real max | host-free formatter + Unity |
 | I-Q17 / all | no final art/network fonts, glyph failures, muted audio, color-independent inspection | read/play/choose/review | neutral text/geometry fallback, distinguish selection/focus/outcomes/locks without hue, no blank label or fabricated identity; measured contrast | Unity |
 | I-Q18 / T3,T6 | unusual real 19–9 capture equivalent, five-sub cap, dense chronological requests, mid-tick fault | render and traverse at small desktop/max scale | legible score/count/context, stable history, no synthetic 2–1/90-minute model/captured overlay in shipping source | host-free + Unity |
 | I-Q19 / release | exact P5b PR head on pinned host | compile, run scene/live inputs and cert capture | pinned Unity 6000.4.9f1 evidence before landing; satisfy B8/B9b/B10/P6 requirements with actual host run/head; no editor FPS used as certificate | Unity/cert |
@@ -1450,9 +1458,9 @@ an existing L2 loader, packaging or artifact-identity API.
 
 | ID / severity | Evidence and disposition | Accountable owner / concrete release condition |
 |---|---|---|
-| S0-I-001 / Major | `OWNER CHOICE RECORDED; HANDOFF CONTRACT OPEN`: on October 3 the owner chose B, distinct demo squads with stable player identities and authored names/shirts (§14.10). Audited source still uses slot numbers; frames lack player ids. | Client/roster owner: consume existing MatchSetup/Squad/PlayerRecord identity; allocate a frame-owned current-slot-to-player-id projection and immutable player-id-to-name/demo-shirt content. Complete Gate-A addendum/reference reconciliation and planned I-Q09 proof. No renderer-only identity, live engine getter polling or duplicated lineup selection. Choice is approved; I cannot pass until the binding/fixture contract is complete. S0-B-004 production-name evidence remains open. |
-| S0-I-002 / Minor | `OWNER CHOICE RECORDED; APPLICATION CONTRACT OPEN`: on October 3 the owner chose C, 100–200% support target (§14.10). This is not current Unity support. | P5b/#38 owns scaling/reflow, #49 owns its read-only a11y boundary. Name the consumed client presentation configuration and define the binding contract for all S0 layouts before I completion; verify 150%/200% and real glyph/reflow behavior at J. No settings page/persistence is inferred; S0-E-004 remains an implementation verification obligation. |
-| S0-I-003 / Major | `OWNER CHOICE RECORDED; DEPENDENCY CONTRACT OPEN`: on October 3 the owner chose A, the §14.7 client formatter, client build-time pattern validation and fixed shell locale/catalogue policy (§14.10). No production ILocalizer or change notification exists. | #49 L2 owns in-memory catalogue/localizer/KD-5 and full ERR-049-005 discharge. The P5b client landing owns S0 key/schema content, formatter, admitted number-format provider, validation tooling and cache lifecycle; the generic core gains no client schema. Complete the consumed role/key/argument contract and dependency sequence before I passes; verify I-Q16 using actual shipped content at J. No runtime invalid-pattern base retry, producer namespace/draw, external locale release or live locale switch is admitted. |
+| S0-I-001 / Major | `HANDOFF CONTRACT REVIEWED; IMPLEMENTATION DUE`: on October 3 the owner chose B, distinct demo squads with stable player identities and authored names/shirts (§14.10). Audited source still uses slot numbers; frames lack player ids. | Client/roster owner: consume existing MatchSetup/Squad/PlayerRecord identity; allocate a frame-owned current-slot-to-player-id projection and immutable player-id-to-name/demo-shirt content. Binding contracts §2 defines A-44's fixture/frame/bench/history contract and §5 the reference delta. §14.11 closes the handoff review; planned I-Q09/I-Q14 prove implementation at J. No renderer-only identity, live engine getter polling or duplicated lineup selection. Choice and binding/fixture mapping are reviewed for I; runtime acceptance remains J. S0-B-004 production-name evidence remains open. |
+| S0-I-002 / Minor | `HANDOFF CONTRACT REVIEWED; IMPLEMENTATION DUE`: on October 3 the owner chose C, 100–200% support target (§14.10). This is not current Unity support. | P5b/#38 owns scaling/reflow, #49 owns its read-only a11y boundary. Binding contracts §3 defines the consumed fixed-shell configuration and all S0 layout/reflow rules. §14.11 closes the handoff review; verify 150%/200% and real glyph/reflow behavior at J. No settings page/persistence is inferred; S0-E-004 remains an implementation verification obligation. |
+| S0-I-003 / Major | `HANDOFF CONTRACT REVIEWED; IMPLEMENTATION DUE`: on October 3 the owner chose A, the §14.7 client formatter, client build-time pattern validation and fixed shell locale/catalogue policy (§14.10). No production ILocalizer or change notification exists. | #49 L2 owns in-memory catalogue/localizer/KD-5 and full ERR-049-005 discharge. The P5b client landing owns S0 key/schema content, formatter, admitted number-format provider, validation tooling and cache lifecycle; the generic core gains no client schema. Binding contracts §§4–5 define the complete proposed role/key/argument register, admitted provider, fixed context and dependency sequence. §14.11 closes the handoff review; verify I-Q16 using actual shipped content at J. No runtime invalid-pattern base retry, producer namespace/draw, external locale release or live locale switch is admitted. |
 | S0-B-002 / Major carried | `ACCEPT FOR CURRENT GATE`: actual owner acceptance preserved in protocol §9.1; outcome adapter absent on audited main. | client/P5b: implement §14.5 in consumed gate-compiled code, then Gate J passes I-Q06–10; feedback cannot ship without it |
 | S0-B-009 / Major | prior design fix retained; production analytics/health adapter is TO BUILD | client/#37: implement §14.6; forced mid-tick fault and continued score/navigation proof I-Q12 at J |
 | S0-B-003 / change control | owner next-stoppage substitution rule recorded, not implemented; immediate current behavior retained | substitution owner: return to A/B when new execution/feedback semantics land; do not describe current request as waiting for stoppage |
@@ -1464,15 +1472,22 @@ an existing L2 loader, packaging or artifact-identity API.
 
 All eleven Gate-I deliverable classes in detailed-plan §5 are present in this draft: state/navigation
 §14.3; components/data/actions §§14.2/14.4–6; focus §14.3; localization/assets/a11y §14.7;
-Given/When/Then QA §14.8; blockers/deferred work §14.9. **I remains IN PROGRESS:** the three
-owner choices are recorded in §14.10; complete their remaining binding/dependency contracts,
-reconcile the affected references, review the complete mapping, and record the final handoff verdict in the
-packet, detailed plan and live tracking. Gate J requires real implementation evidence; no QA case
-above has been run against P5b and no shipping/host acceptance is inferred from this PR.
+Given/When/Then QA §14.8; blockers/deferred work §14.9. **I PASS:** §14.11 records the
+reviewed head, deliverable checklist, reference reconciliation and landing boundary.
+S0-I-001/002/003 handoff decisions are complete; their implementation obligations remain.
+All P5b QA remains PLANNED. Gate J requires real implementation and named host evidence.
 
 ---
 
 ## 14.10 Owner choices — October 3, 2026
+
+**Name-list decision — October 3, 2026:** Anton Zymin replied “Approved” at 21:06:28
+America/Los_Angeles (October 4, 04:06:28 UTC) to the explicit request to approve the
+36 demo names in binding contracts §2.1 at PR #478 head
+`96f16ba9d7f5b87210ab23796d8c8ea5dddcda38`. The table is unchanged. This records
+fixture-name acceptance; separate long-name/pseudo/200% stress fixtures and final
+contract/reference review were still required at that decision. I was IN PROGRESS; #470 blocked; all I-Q cases
+PLANNED. Earlier G/H approvals and their evidence remain unchanged.
 
 **Decision owner:** Anton Zymin. **Actual instruction:** “Go with your recommended choices”.
 **Received:** October 3, 2026, 15:21:40 America/Los_Angeles (22:21:40 UTC).
@@ -1484,11 +1499,11 @@ an implementation, Unity evidence or a merge of #470. The decision is recorded a
 
 | Choice | Adopted direction and rationale | Consumed landing / remaining contract |
 |---|---|---|
-| S0-I-001 B | Authored home/away demo squads with distinct stable players and truthful names/shirts. Real player identity supports substitution comprehension and later squad management. | P5b demo-identity landing: existing `MatchSetup.HomeSquad/AwaySquad` → `MatchSession.BootEngine` → `ConfigureSquads`; existing engine identity → TO BUILD frame projection → client labels. Complete Gate-A addendum A-44 and affected H/reference reconciliation before final I verdict; I-Q09/I-Q14 verify implementation at J. |
-| S0-I-002 C | Target 100–200% text size; enlarged text must preserve every critical action and context. | P5b/#38 scaling/configuration landing, aligned with #49 a11y boundary; consumed layout/reflow contract still due. I-Q16/17 test the selected maximum at J; actual support is not certified by this decision. |
-| S0-I-003 A | Complete static patterns via Resolve plus a client-owned typed formatter, strict client build validation and a fixed shell formatting context. Preserve the existing generic seam and clear ownership. | #49 L2 in-memory catalogue/localizer/KD-5 and ERR-049-005 first; P5b formatter/content/validation/cache landing then consumes it. Complete keys/argument schemas, admitted number-format provider and composition contract before final I verdict; I-Q16 verifies shipped content at J. |
+| S0-I-001 B | Authored home/away demo squads with distinct stable players and truthful names/shirts. Real player identity supports substitution comprehension and later squad management. | P5b demo-identity landing: existing `MatchSetup.HomeSquad/AwaySquad` → `MatchSession.BootEngine` → `ConfigureSquads`; existing engine identity → TO BUILD frame projection → client labels. Binding contracts §§2/5 define A-44 and the affected H/reference delta for final review; I-Q09/I-Q14 verify implementation at J. |
+| S0-I-002 C | Target 100–200% text size; enlarged text must preserve every critical action and context. | P5b/#38 scaling/configuration landing, aligned with #49 a11y boundary; consumed configuration/layout/reflow contract is defined in binding contracts §3 for review. I-Q16/17 test the selected maximum at J; actual support is not certified by this decision. |
+| S0-I-003 A | Complete static patterns via Resolve plus a client-owned typed formatter, strict client build validation and a fixed shell formatting context. Preserve the existing generic seam and clear ownership. | #49 L2 in-memory catalogue/localizer/KD-5 and ERR-049-005 first; P5b formatter/content/validation/cache landing then consumes it. Binding contracts §§4–5 define keys/argument schemas, admitted provider and composition/landing sequence for final review; I-Q16 verifies shipped content at J. |
 
-**Gate-A addendum A-44 — approved distinct-squad target (contract completion pending).**
+**Gate-A addendum A-44 — approved distinct-squad target (handoff contract reviewed in §14.11).**
 The setup path is EXISTING / UNWIRED: MatchSetup accepts both squads and MatchSession already
 calls ConfigureSquads. PlayerRecord supplies PlayerId/FirstName/LastName; it has no shirt-number
 field. Author the demo shirt metadata once as immutable client content keyed by the real player id,
@@ -1509,8 +1524,8 @@ the selected fixture/projection proves it; update/review only affected reference
 existing G/H approval records.
 
 **Scale allocation.** Capture a validated presentation scale in the client composition and apply
-it consistently to S0 text/layout through host-free decisions and thin Unity bindings. Its contract
-must state the admitted range and reflow behavior before I passes. Configuration for verification
+it consistently to S0 text/layout through host-free decisions and thin Unity bindings. Binding contracts §3
+defines its admitted range, lifetime and per-surface reflow, reviewed in §14.11. Configuration for verification
 does not itself add a player settings control; settings/persistence remain their separate scope.
 
 **Localization allocation.** The adopted contract includes §14.7's full-pattern validation,
@@ -1520,10 +1535,67 @@ The §14.8 artifact proof applies to that actual shipped content, including its 
 when applicable; it is not authorization to pull external Wave-8 loaders into L2. Full
 ERR-049-005 closure remains #49 L2's responsibility; S0 key coverage alone cannot close it.
 
-All choices are **approved directions with named workstream ownership**. S0-I-001/002/003 remain
-open for the concrete contracts above, not for repeating these owner choices. The next step is to
-complete the handoff/reference amendments and final I review. #470 remains blocked on I; no
-P5b QA has been executed and Gate J remains the implementation acceptance step.
+All choices are **approved directions with named workstream ownership**. The exact 36
+names are separately approved above. §14.11 completes the technical mapping/reference
+review; I PASS for handoff. Production implementation and all Gate-J cases remain due.
+Main's #470 release takes effect only after this review record lands.
+
+---
+
+## 14.11 Gate-I handoff review — October 4, 2026
+
+**Verdict: PASS for implementation handoff.** Codex reviewed PR #478 head
+`e8ffd89661df182d33fa3646db3dc73a070d0610`, comprising journey v0.31,
+binding contracts v0.3 and protocol v0.33, against detailed-plan §5's Gate-I criterion:
+an implementer can build the supported scope without inventing product behavior.
+This is a technical handoff review, not an additional owner image approval or Gate-J result.
+The owner directions and exact name-list approval remain recorded in §14.10.
+
+**Owner acceptance:** Anton Zymin replied “I accept” on October 4, 2026 at
+15:07:45 America/Los_Angeles (22:07:45 UTC), directly answering the request to accept
+this Gate-I handoff PASS at PR #478 head
+`a1eae5675b3cadd22318b0640bbdd510ff888dab`. This explicitly accepts the technical
+handoff verdict below; it supplies no implementation, image, Gate-J, Unity or merge
+approval. The technical reviewer remains Codex; the owner acceptance is a separate decision.
+
+| Gate-I deliverable | Reviewed mapping / conclusion |
+|---|---|
+| Journey and screen states | §§7/9/14.3: four screens, seven states, waiting/live/paused/full-time/fault behavior; no extra feature or navigation edge |
+| Components | §§14.2/14.4: I-C01–15, host-free decisions with thin Unity bindings; each new producer lands with its consumer |
+| Focus | §14.3: ordered traversal, modal wrap, Submit/Cancel targets, speed-endpoint recovery, full-time precedence, stable disclosures and fresh-session reset |
+| Data/read paths | §§14.2/14.4/14.6 and contracts §2: boot fixture/descriptor, same-frame current identity, immutable request names, synchronized analytics health |
+| Actions/commands | §§14.4–5: existing dispatcher/payloads, one unresolved request per kind, full-payload log suffix matching, paused Pending, ended-session barrier |
+| Navigation | §§14.2–3: five existing guarded ClientScreenFlow moves; attach before playback, full time before report acknowledgement, teardown before another match |
+| Localization | §14.7 and contracts §4: complete ui.s0 register, flat typed substitutions, fixed invariant provider/context, strict admission and shipped-content proof; #49 L2 prerequisite explicit |
+| Asset slots | §14.7: wordmark/text, neutral identity/geometry, packaged font/glyph fallback; absent art cannot remove an action |
+| Accessibility | §14.7 and contracts §3: explicit words alongside cues, keyboard focus, fixed 100–200% scale, measured wrap/scroll/reflow; no unsupported assistive bridge advertised |
+| QA Given/When/Then | §14.8: all I-Q01–19 retain tasks/findings, lanes and evidence requirements; all remain PLANNED |
+| Blockers/deferred work | §14.9 and contracts §5: I-001/002/003 contract decisions closed by this review; runtime identity, adapters, #49 L2, fonts and B8/B9b/B10 evidence remain implementation obligations |
+
+**Reference reconciliation:** reviewed contracts §5.1 with H's substitution-dialog,
+Applied-feedback and 1366 stress images, and the existing wrap/stack/scroll rules.
+The five deltas retain the approved hierarchy, staging, outcome meanings, compact pitch
+markers and disclosure/focus behavior. Names/shirts/bench values come from contracts §2;
+longer chooser/outcome labels wrap or scroll under §3; all outcomes use §4's flat schemas.
+The added Substitutions row uses the same existing table role and #37 source. H remains
+a geometry/state reference, not evidence of those production labels or real font metrics.
+No revised H image set is required to specify this handoff; no named-player image approval
+is inferred. I-Q09/14/16/17 must prove the actual mapping, long-name/pseudo/100/150/200%
+layout, fonts and fallback before acceptance. A demonstrated usability/accessibility or
+navigation defect reopens the affected gate under detailed-plan §13.
+
+Source spot-checks confirm lifecycle CreateSession/Current/ClearSession, the five navigation
+moves, squad boot/observer attachment, substitution's current-slot identity write and the
+streamer's tick-gate/frame-publication boundary. Proposed Attach and identity observations
+remain TO BUILD. CI run 37176192739 passed all ten executed jobs on the reviewed head;
+Unity tests were skipped. No local runtime, Unity compile or cert evidence is claimed.
+
+**Landing boundary:** this PASS record becomes the main-branch authorization when PR #478
+lands. Until then, main's Gate-I block on #470 remains. Afterwards, refresh #470 onto then-current
+main, reconcile tracking, run fresh CI and obtain Unity 6000.4.9f1 compile evidence on its
+exact PR head before merge. #470 is a foundation only. #49 L2 must land before localized
+screens; lifecycle/identity and copy/scale/screen consumers follow contracts §5. Gate J and
+remaining B8/B9b/B10 evidence stay open. This record authorizes no PR merge.
 
 ---
 
@@ -1559,3 +1631,8 @@ P5b QA has been executed and Gate J remains the implementation acceptance step.
 | 0.26 | October 2, 2026 | PR #476 optional QA hardening: I-Q16 integration loads the validated published catalogue through the S0 packaging/loader path and records matching content identities. Negative fixtures remain separate; no L2 API or executed proof is claimed. I IN PROGRESS; #470 blocked; approvals/evidence unchanged. |
 | 0.27 | October 3, 2026 | Records actual owner choice B/C/A for distinct demo squads, 200% scale and the client formatter. Allocates existing setup/name seams versus pending frame/shirt projection, P5b scaling and #49 L2/client formatting ownership. Choices approved; handoff contracts/reference reconciliation and Gate J evidence remain open. I IN PROGRESS; #470 blocked; prior approvals/assets preserved. |
 | 0.28 | October 3, 2026 | PR #477 review corrections: records the decision against the main baseline, makes S0-I-002 a layout binding contract before I rather than an implementation requirement, and limits formatter-route change control to a later owner reversal. The approved scaling target is the 100–200% range. I IN PROGRESS; #470 blocked; v0.27 history, prior approvals/assets and planned QA preserved. |
+| 0.29 | October 3, 2026 | Completes the proposed S0-I-001/002/003 inputs in ux-s0-binding-contracts.md v0.1 against main 3429fafd: authored fixture, synchronized identity/history, scale/reflow and typed copy/provider/dependency contracts. Reconciles affected reference semantics without changing approved images/sources. Contracts defined; final mapping/reference review and verdict due. I IN PROGRESS; #470 blocked; all P5b QA planned. |
+| 0.30 | October 3, 2026 | PR #478 review sync to binding contracts v0.2: I-Q16 uses flat typed substitution name/shirt/bench/minute patterns and one invariant S0 format provider. Final contract/reference review and explicit proposed-name acceptance remain due; I IN PROGRESS, #470 blocked, QA planned and earlier approvals preserved. |
+| 0.31 | October 3, 2026 | Records explicit owner acceptance of the unchanged 36 demo names at 96f16ba; binding contracts v0.3 and protocol v0.33 agree. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; prior approvals/history/evidence preserved. |
+| 0.32 | October 4, 2026 | Records Gate-I technical handoff PASS at reviewed e8ffd89 with all eleven deliverables, reference-delta dispositions, remaining implementation owners and landing boundary. Main release follows #478 landing; #470 still needs refresh/current-head CI/pinned compile. All QA PLANNED; G/H approvals and assets preserved. |
+| 0.33 | October 4, 2026 | Records Anton Zymin’s explicit “I accept” confirmation of the Gate-I handoff PASS at a1eae56, with timestamp and scope, separately from Codex’s technical review. Main release still follows #478 landing; runtime/Unity/QA and merge obligations unchanged. |
