@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-10-04 (PR #470 refresh: lifecycle-consumer documentation; behavior unchanged)
+// Modified: 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
 //           UI / Client Framework #38 §3.2 (FR-UI-009/010/011), Code Standards #20 §12 rule 1
@@ -109,7 +109,8 @@ namespace TacticalDirector.MatchClientUnity
         }
 
         /// <summary>
-        /// Collects only host facts: instance identity, <c>activeSelf</c>, and ancestor identities.
+        /// Collects only host facts: instance identity, <c>activeSelf</c>, whether every ancestor is
+        /// active, and ancestor identities.
         /// All interpretation of those facts lives in <see cref="ClientShellWiringValidator"/>.
         /// A null serialized reference becomes the validator's documented zero-id missing sentinel.
         /// </summary>
@@ -136,7 +137,14 @@ namespace TacticalDirector.MatchClientUnity
                 cursor = cursor.parent;
             }
 
-            return new ClientShellRootSnapshot(target.GetInstanceID(), target.activeSelf, ancestorIds);
+            Transform parent = target.transform.parent;
+            bool areAncestorsActive = parent == null || parent.gameObject.activeInHierarchy;
+
+            return new ClientShellRootSnapshot(
+                target.GetInstanceID(),
+                target.activeSelf,
+                areAncestorsActive,
+                ancestorIds);
         }
 
         private void ApplyCurrentScreen()
@@ -200,4 +208,6 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | coupling removed in favour of P4b-owned default-off demo boot. |
 // | 1.2     | 2026-10-04 | —      | PR #470 refresh: existing lifecycle awaits its shell consumer; |
 // |         |            |        | renderer Attach remains TO BUILD. Documentation only.       |
+// | 1.3     | 2026-10-05 | —      | PR #470 review: reports parent activeInHierarchy so roots under|
+// |         |            |        | an inactive ancestor are refused rather than shown blank.      |
 #endregion

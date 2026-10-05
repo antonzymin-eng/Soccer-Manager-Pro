@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientShellWiringFault.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-10-05 (PR #470 review: RootUnderInactiveAncestor)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
 //           Code Standards #20 §12 rule 1
@@ -27,7 +27,12 @@ namespace TacticalDirector.ClientApp
         ShellInsideScreenRoot = 4,
 
         /// <summary>A non-Main-Menu root is saved active, risking stacked UI before shell bootstrap.</summary>
-        NonMainRootInitiallyActive = 5
+        NonMainRootInitiallyActive = 5,
+
+        /// <summary>
+        /// A screen root sits beneath an inactive ancestor, so activating the root cannot show it.
+        /// </summary>
+        RootUnderInactiveAncestor = 6
     }
 }
 
@@ -36,4 +41,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-09-07 | —      | Final P5b foundation fault vocabulary: shell/root structure    |
 // |         |            |        | and initial-visibility hygiene only; no screen implementation  |
 // |         |            |        | lifecycle coupling.                                            |
+// | 1.1     | 2026-10-05 | —      | PR #470 review: RootUnderInactiveAncestor (value 6).           |
 #endregion

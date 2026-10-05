@@ -1,11 +1,12 @@
 // File:     src/client-app/ClientShellWiringValidator.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-10-05 (PR #470 review: refuse roots under inactive ancestors)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
 //           Code Standards #20 §12 rule 1
 // Purpose:  Pure P5b shell-structure validation. Unity collects ids/ancestor chains only; duplicate,
-//           nesting, shell containment, and initial-visibility decisions are made and test-locked here.
+//           nesting, shell containment, ancestor-activation and initial-visibility decisions are made and
+//           test-locked here.
 
 namespace TacticalDirector.ClientApp
 {
@@ -64,6 +65,14 @@ namespace TacticalDirector.ClientApp
                 return ClientShellWiringFault.ShellInsideScreenRoot;
             }
 
+            // The shell owns visibility only by toggling the roots themselves; a root under an
+            // inactive ancestor would stay hidden after SetActive(true) and present a blank screen.
+            if (!mainMenu.AreAncestorsActive || !tacticsSetup.AreAncestorsActive ||
+                !matchView.AreAncestorsActive || !postMatchReport.AreAncestorsActive)
+            {
+                return ClientShellWiringFault.RootUnderInactiveAncestor;
+            }
+
             if (tacticsSetup.IsActiveSelf || matchView.IsActiveSelf || postMatchReport.IsActiveSelf)
             {
                 return ClientShellWiringFault.NonMainRootInitiallyActive;
@@ -88,4 +97,6 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-09-07 | —      | Final P5b foundation validator: four opaque roots + shell only;|
 // |         |            |        | non-main activeSelf is UI hygiene, never a P4b lifecycle guard.|
+// | 1.1     | 2026-10-05 | —      | PR #470 review (Codex P2): refuse any root beneath an inactive |
+// |         |            |        | ancestor, checked after shell containment.                     |
 #endregion

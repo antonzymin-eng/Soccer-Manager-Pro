@@ -291,7 +291,14 @@ This compile does not discharge remaining B8/B9b/B10 or Gate-J runtime/cert case
 this PR. Editor.log retained on the host; summary on the PR. The commit recording this is
 Markdown-only. EditMode/PlayMode tests were not run in this pass.
 
+**October 5, 2026 — review fix.** Screen roots must also sit under active ancestors: the shell
+toggles only the roots, so a root beneath an inactive GameObject would stay hidden. The binding
+now reports `parent.gameObject.activeInHierarchy` and the shell refuses such a root with
+`RootUnderInactiveAncestor` (deactivating all roots and logging the reason). Unity 6000.4.9f1
+compile of the fix: 0 errors; ClientApp.Tests 26/26 in EditMode.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
 | PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
 | PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |

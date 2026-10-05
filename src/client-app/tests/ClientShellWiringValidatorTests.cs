@@ -1,11 +1,12 @@
 // File:     src/client-app/tests/ClientShellWiringValidatorTests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-07
+// Modified: 2026-10-05 (PR #470 review: inactive-ancestor refusal)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
 //           Code Standards #20 §12 rule 1
 // Purpose:  Locks every decision extracted from the gate-invisible P5b MonoBehaviour: missing and
-//           duplicate roots, nesting, shell containment, saved-active state, and snapshot immutability.
+//           duplicate roots, nesting, shell containment, inactive ancestors, saved-active state, and
+//           snapshot immutability.
 
 using NUnit.Framework;
 
@@ -18,7 +19,10 @@ namespace TacticalDirector.ClientApp.Tests
             int id,
             bool activeSelf = false,
             params int[] ancestors) =>
-            new ClientShellRootSnapshot(id, activeSelf, ancestors);
+            new ClientShellRootSnapshot(id, activeSelf, true, ancestors);
+
+        private static ClientShellRootSnapshot UnderInactiveAncestor(int id) =>
+            new ClientShellRootSnapshot(id, false, false, new[] { 50 });
 
         private static ClientShellWiringFault Validate(
             ClientShellRootSnapshot shell,
@@ -111,6 +115,23 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void AnyRootBeneathAnInactiveAncestor_IsRefused()
+        {
+            Assert.AreEqual(
+                ClientShellWiringFault.RootUnderInactiveAncestor,
+                ValidateDefault(UnderInactiveAncestor(1), Root(2), Root(3), Root(4)));
+            Assert.AreEqual(
+                ClientShellWiringFault.RootUnderInactiveAncestor,
+                ValidateDefault(Root(1), UnderInactiveAncestor(2), Root(3), Root(4)));
+            Assert.AreEqual(
+                ClientShellWiringFault.RootUnderInactiveAncestor,
+                ValidateDefault(Root(1), Root(2), UnderInactiveAncestor(3), Root(4)));
+            Assert.AreEqual(
+                ClientShellWiringFault.RootUnderInactiveAncestor,
+                ValidateDefault(Root(1), Root(2), Root(3), UnderInactiveAncestor(4)));
+        }
+
+        [Test]
         public void SnapshotCopiesAncestorIds()
         {
             int[] ancestors = { 10 };
@@ -128,4 +149,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-09-07 | —      | Final locks for P5b shell/root structure and initial UI hygiene;|
 // |         |            |        | no P4b implementation-placement contract.                      |
+// | 1.1     | 2026-10-05 | —      | PR #470 review: inactive-ancestor refusal for all four roots.  |
 #endregion
