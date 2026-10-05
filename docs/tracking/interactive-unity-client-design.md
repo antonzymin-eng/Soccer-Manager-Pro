@@ -602,6 +602,17 @@ now have their answer by precedent: they register into this same assembly when P
 
 #### P5b — Unity UGUI binding (host, cert-verified)
 
+**Current status, October 5, 2026 — FOUNDATION LANDED; full P5b acceptance open.**
+#470 merged at f276f700 from 509a9f5d. CI run 37264147436 passed including the
+Linux functional gate; Unity CI tests were skipped. The merged tree has no file
+differences from the source compiled/tested on the pinned host (0 compile errors,
+ClientApp.Tests 26/26). The dated candidate/compile entries below remain history.
+Next is the consumed [lifecycle/identity implementation](p5b-lifecycle-identity-plan.md)
+v0.1: shell lifecycle, external renderer Attach/detach, approved fixture/frame identity,
+analytics and repeat-session teardown. Full time enters frozen Match View; the
+player opens the report explicitly. #49 L2 precedes localized copy/scale/screens.
+B8/B9b/B10 and Gate J remain open; this update claims no new runtime/cert proof.
+
 **October 4, 2026 — foundation candidate refreshed after Gate I.** S0 Gate I and
 explicit owner acceptance landed via #478 at main fafb63fc. PR #470 now carries the
 foundation on that baseline: ClientShellBehaviour forwards the existing Main Menu /
@@ -928,6 +939,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.27 | 2026-10-05 | Records #470 foundation merged at f276f700 with green PR CI; routes consumed lifecycle/identity/analytics and renderer attachment to the new plan. Full P5b/Gate-J acceptance remains open. |
 | 0.26 | 2026-10-05 | Records the #470 Codex P2 fix: `AreAncestorsActive` fact plus `RootUnderInactiveAncestor` refusal; Unity compile 0 errors; ClientApp.Tests 26/26 EditMode. |
 | 0.25 | 2026-10-04 | Records the #470 exact-head Unity 6000.4.9f1 compile at db38e211 (0 errors; two deferred CS0618; pre-existing CS0219). Compile requirement discharged; no runtime/test/Gate-J claim. |
 | 0.24 | 2026-10-04 | PR #470 foundation candidate refreshed onto main fafb63fc after landed Gate I/owner acceptance. Records pure root/wiring/visibility decisions, temporary demo opt-in and remaining consumed lifecycle/localization scope. Fresh CI and exact-head pinned Unity compile remain pre-merge requirements; no P5b/Gate-J completion claim. |

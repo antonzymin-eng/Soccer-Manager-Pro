@@ -1,8 +1,8 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 4, 2026\
-**Version:** 1.28\
+**Last Updated:** October 5, 2026\
+**Version:** 1.29\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
@@ -967,6 +967,20 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
+**Current next step: implement the consumed P5b lifecycle/identity slice.**
+#478 landed Gate-I technical handoff PASS and owner acceptance at fafb63fc.
+#470 foundation then merged October 5 at f276f700 from 509a9f5d after CI run
+37264147436 passed and recorded Unity 6000.4.9f1 compile/ClientApp 26/26 evidence.
+The merged tree matches the tested head. The source-audited
+[P5b lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md) v0.1
+allocates the shell lifecycle consumer, renderer Attach/detach, authored identity,
+analytics publication and teardown; no internal/opt-in demo ownership remains in
+the target. Full time freezes Match View; report navigation requires acknowledgement.
+#49 L2 precedes localized copy/scale/screens. All I-Q01–19 and complete
+B8/B9b/B10/Gate-J evidence remain due. Approved 36-name fixture, 100–200% text
+size, client formatter and H v0.2 pins remain unchanged.
+
+**Prior next-step statement, October 4, 2026 (completed by #478/#470):**
 **Current next step: land the reviewed Gate-I record, then refresh #470 and begin the consumed implementation sequence.**
 Gate I PASS is recorded in journey §14.11 at reviewed PR #478 head e8ffd89. The owner
 approved distinct demo squads, 100–200% text size, the client formatter and the exact
@@ -978,6 +992,7 @@ reconcile tracking, run fresh CI and compile its exact head in Unity 6000.4.9f1 
 #49 L2 precedes localized screens; lifecycle/identity and copy/scale/screens follow contracts
 §5. All I-Q01–19 and B8/B9b/B10/Gate-J evidence remain due. No merge or runtime acceptance
 is inferred. The original first sequence remains for traceability.
+
 
 1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
 2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
@@ -1097,3 +1112,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.26 | October 3, 2026 | Records the actual B/C/A owner choices in journey §14.10. Current next step is remaining contract/reference completion and final Gate-I review, not repeated product decisions. I IN PROGRESS and #470 blocked; gate definitions/earlier approvals unchanged. |
 | 1.27 | October 3, 2026 | Defines the next action as final Gate-I mapping/reference review of the binding-contract proposals, with verdict recording still due. Product choices and prior approvals preserved; I IN PROGRESS, #470 blocked, Gate J requires real implementation evidence. |
 | 1.28 | October 4, 2026 | Records technical S0 Gate-I handoff PASS at e8ffd89 and advances next action to landing the verdict then consumed client/localization work. #470 main release follows #478 landing; refresh/CI/pinned compile and Gate J remain due. Gate definitions and prior owner approvals unchanged. |
+| 1.29 | October 5, 2026 | Records #470 foundation merged at f276f700 and routes consumed lifecycle/identity implementation to the source-audited plan. Preserves previous sequence and all gate/approval/QA contracts. |

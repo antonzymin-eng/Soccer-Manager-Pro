@@ -1,11 +1,11 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** October 4, 2026\
-**Version:** 0.33\
+**Last Updated:** October 5, 2026\
+**Version:** 0.34\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF (§14.11)\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §5–§6\
-**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.35\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.29 §5–§6\
+**Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.36\
 **Evidence snapshot:** Gate A — `main` at `ad7e0d751f978c8785e7bab2024b99ff5a8da26d` (PR #406 reconciliation base); Gate B — `main` at `ee37aa60` (September 28, 2026)
 
 ---
@@ -1072,6 +1072,14 @@ register, read-only scale configuration and consumed landing sequence. §5 recon
 the affected H/reference semantics. This mapping is ready for final handoff review;
 no new image approval, implementation, I PASS or #470 release is inferred.
 
+**Implementation status, October 5, 2026:** #470 foundation merged at f276f700
+from 509a9f5d after green PR CI and recorded pinned Unity compile/ClientApp 26/26
+evidence. The [consumed lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md)
+v0.1 sequences the next implementation. The source audit and approved visual pins
+below remain historical authority, not a claim that the planned APIs exist.
+Full time freezes Match View until explicit report acknowledgement; #49 L2
+precedes localized screens. All I-Q01–19 remain PLANNED and Gate J is open.
+
 ## 14.1 Baseline, scope and evidence
 
 The source audit is pinned to `main` merge `53dceaa089da3f14bde5a94aff12204834ce4dd2`
@@ -1636,3 +1644,4 @@ remaining B8/B9b/B10 evidence stay open. This record authorizes no PR merge.
 | 0.31 | October 3, 2026 | Records explicit owner acceptance of the unchanged 36 demo names at 96f16ba; binding contracts v0.3 and protocol v0.33 agree. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; prior approvals/history/evidence preserved. |
 | 0.32 | October 4, 2026 | Records Gate-I technical handoff PASS at reviewed e8ffd89 with all eleven deliverables, reference-delta dispositions, remaining implementation owners and landing boundary. Main release follows #478 landing; #470 still needs refresh/current-head CI/pinned compile. All QA PLANNED; G/H approvals and assets preserved. |
 | 0.33 | October 4, 2026 | Records Anton Zymin’s explicit “I accept” confirmation of the Gate-I handoff PASS at a1eae56, with timestamp and scope, separately from Codex’s technical review. Main release still follows #478 landing; runtime/Unity/QA and merge obligations unchanged. |
+| 0.34 | October 5, 2026 | Pointer/status sync after #470 foundation merged; detailed plan v1.29, protocol v0.36 and lifecycle/identity implementation plan v0.1. H/I approvals, reviewed behavior, source-audit pins and planned QA unchanged. |

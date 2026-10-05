@@ -1,8 +1,8 @@
 # System XI — UX High-Level Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 4, 2026\
-**Version:** 1.20\
+**Last Updated:** October 5, 2026\
+**Version:** 1.21\
 **Status:** PLAN — CONVERGED AFTER EXTERNAL DEPENDENCY REVIEW\
 **Scope:** Player-facing UX planning from the current PM-1 presentation surface through the PM-2 Early Access loop\
 **Execution plan:** [`ux-detailed-plan.md`](ux-detailed-plan.md)
@@ -360,6 +360,8 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 
 ---
 
+*Status update, October 5, 2026: #470 foundation landed at f276f700 after green exact-head CI and recorded pinned Unity compile/ClientApp evidence. The next consumed lifecycle/identity slice is planned in [P5b implementation plan](../tracking/p5b-lifecycle-identity-plan.md). #49 L2 precedes localized screens. Strategy, S0 scope, Gate-I approval and Gate-J/B8/B9b/B10 acceptance requirements are unchanged.*
+
 ## Version History
 
 | Version | Date | Change |
@@ -385,3 +387,4 @@ After those conditions are landed, F1 is the next UX action. No additional high-
 | 1.18 | October 3, 2026 | Records actual B/C/A owner choices and remaining contract/reference work through journey §14.10. I remains IN PROGRESS; #470 blocked. Strategy, gate definitions and prior approvals unchanged. |
 | 1.19 | October 3, 2026 | Routes the October 3 contract-completion proposals to final Gate-I review; direction approval remains distinct from handoff acceptance and runtime proof. Previous approval/status history preserved; I IN PROGRESS, #470 blocked. |
 | 1.20 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89; main release follows #478 landing. Consumed implementation and Gate-J/client/host evidence remain due. Strategy, gate definitions and prior approvals preserved. |
+| 1.21 | October 5, 2026 | Records #470 foundation landing and routes the next consumed lifecycle/identity implementation; strategy, approved scope and gates unchanged. |

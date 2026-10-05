@@ -1,10 +1,10 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** October 4, 2026\
-**Version:** 0.35\
+**Last Updated:** October 5, 2026\
+**Version:** 0.36\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.28 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.29 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -960,3 +960,10 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.33 | October 3, 2026 | Records the explicit 36-name approval at 96f16ba, synchronized with binding contracts v0.3 and journey v0.31. Stress coverage and final I review remain due; #470 blocked, QA planned; prior G/H approval records and evidence unchanged. |
 | 0.34 | October 4, 2026 | Records technical Gate-I handoff PASS at e8ffd89 and links the deliverable/reference review in journey §14.11. Main release follows #478 landing; QA, runtime/Unity and client dependencies remain due. Existing §9 approval records/fingerprints unchanged. |
 | 0.35 | October 4, 2026 | Mirrors explicit owner acceptance of the Gate-I handoff PASS at a1eae56 in journey §14.11. Technical review and owner decision remain distinct; prior approval/evidence records and planned QA unchanged. |
+| 0.36 | October 5, 2026 | Execution pointer v1.29 and #470 foundation merge/next consumed implementation recorded; validation rules, approval pins and all planned I-Q evidence unchanged. |
+
+**October 5, 2026 — implementation sequencing pointer:** #470 foundation merged
+at f276f700 after green PR CI and recorded pinned-host compile/ClientApp evidence.
+The [P5b lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md) v0.1
+allocates the next consumed implementation. This is no additional UX gate pass;
+all I-Q01–19 remain PLANNED, and actual complete client/host evidence remains due.
