@@ -2,7 +2,7 @@
 
 **Created:** October 5, 2026\
 **Last Updated:** October 5, 2026\
-**Version:** 0.1\
+**Version:** 0.2\
 **Status:** IMPLEMENTATION PLAN — source audited; implementation and validation pending\
 **Purpose:** consume the existing match lifecycle in the Unity shell and renderer, with the approved S0 demo identity and real match/report data.\
 **Baseline:** `main` at `f276f700acf534f470a3a2abc9649f88b55fdbda` (#470 merge).
@@ -78,8 +78,13 @@ Production boundaries remain engine → captured observations → host-free clie
 coordinator will need explicit downward references to its consumed lifecycle and
 fixture types. `match-client-core` owns generic session/roster/analytics adapters;
 `client-app` owns the concrete S0 fixture, screen decisions and request presentation.
-Add only actually consumed asmdef references, update structural dependency locks, and
-keep simulation assemblies free of client/UI dependencies. Do not reference
+The consumed analytics adapter adds the new production reference
+`TacticalDirector.MatchClientCore` → `TacticalDirector.MatchAnalytics` in
+`match-client-core.asmdef`; it is absent at the baseline. Update the #20 assembly
+tier/dependency contracts and #37 `NoOtherAssemblyReferencesMatchAnalytics`
+sanctioned-consumer lock in the same implementation, including directly consumed
+test-assembly references. Add only actually consumed references and keep simulation
+assemblies free of client/UI dependencies. Do not reference
 `match-client-web`; its observer locking is precedent, not a production dependency.
 Follow `src/CLAUDE.md`: constructor injection, one primary public type per file,
 XML contracts, file headers and append-only version histories. No mutable global context.
@@ -178,8 +183,13 @@ The consumed analytics adapter attaches before any tick and uses #37's read-only
 observation and aggregator. Serialize ObserveTick and result/cutoff publication under
 one adapter lock. On failure, mark publication incomplete before releasing that lock,
 then rethrow so the streamer disarms/latches its observer fault. Publish immutable
-snapshots; track attempted tick, completed observation and observed-tick count. Never
-hold the analytics lock while Stop/ServiceOnce or a streamer gate is acquired.
+snapshots; track attempted tick, completed observation and observed-tick count.
+Lock order is streamer tick lock → analytics adapter lock, never the reverse.
+The observer already holds the tick lock when it acquires the analytics lock;
+release the analytics lock before Stop, ServiceOnce or any streamer-gate acquisition.
+`SetPostTickObserver` has one set-once slot, consumed by this adapter. Any later
+per-tick consumer must be composed through the same adapter, rather than attaching
+a second observer; ordinary frame-backed presentation needs no extra observer.
 Consume the publication in the host-free report context in this landing and the final
 screen binding later. Score/end state always comes from the frame; partial analytics
 cannot freeze playback, redefine the result or add a retry. Presentation row/copy
@@ -252,3 +262,4 @@ actual build/scene results belong to that implementation review.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 0.1 | October 5, 2026 | Source-audited plan after #470 merged: consumed lifecycle/identity/analytics boundaries, stable registrations, external renderer attachment, explicit report acknowledgement, teardown and pre-merge evidence. Implementation pending. |
+| 0.2 | October 5, 2026 | PR #479 review corrections: explicit tick→analytics lock order, the single observer slot and its composition rule, and the new MatchClientCore→MatchAnalytics reference with dependency/consumer-lock updates. Implementation scope and acceptance remain unchanged. |

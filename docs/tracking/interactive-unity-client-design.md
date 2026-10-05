@@ -608,7 +608,7 @@ Linux functional gate; Unity CI tests were skipped. The merged tree has no file
 differences from the source compiled/tested on the pinned host (0 compile errors,
 ClientApp.Tests 26/26). The dated candidate/compile entries below remain history.
 Next is the consumed [lifecycle/identity implementation](p5b-lifecycle-identity-plan.md)
-v0.1: shell lifecycle, external renderer Attach/detach, approved fixture/frame identity,
+v0.2: shell lifecycle, external renderer Attach/detach, approved fixture/frame identity,
 analytics and repeat-session teardown. Full time enters frozen Match View; the
 player opens the report explicitly. #49 L2 precedes localized copy/scale/screens.
 B8/B9b/B10 and Gate J remain open; this update claims no new runtime/cert proof.
@@ -939,6 +939,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.28 | 2026-10-05 | PR #479 review corrections: implementation pointer v0.2 with explicit analytics locking, observer composition and dependency-lock work; screen/navigation scope retained in B9b. Approved scope and host acceptance unchanged. |
 | 0.27 | 2026-10-05 | Records #470 foundation merged at f276f700 with green PR CI; routes consumed lifecycle/identity/analytics and renderer attachment to the new plan. Full P5b/Gate-J acceptance remains open. |
 | 0.26 | 2026-10-05 | Records the #470 Codex P2 fix: `AreAncestorsActive` fact plus `RootUnderInactiveAncestor` refusal; Unity compile 0 errors; ClientApp.Tests 26/26 EditMode. |
 | 0.25 | 2026-10-04 | Records the #470 exact-head Unity 6000.4.9f1 compile at db38e211 (0 errors; two deferred CS0618; pre-existing CS0219). Compile requirement discharged; no runtime/test/Gate-J claim. |

@@ -2,7 +2,7 @@
 
 **Created:** September 4, 2026  
 **Last Updated:** October 5, 2026\
-**Version:** 1.29\
+**Version:** 1.30\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
@@ -972,7 +972,7 @@ After Gate H/I:
 #470 foundation then merged October 5 at f276f700 from 509a9f5d after CI run
 37264147436 passed and recorded Unity 6000.4.9f1 compile/ClientApp 26/26 evidence.
 The merged tree matches the tested head. The source-audited
-[P5b lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md) v0.1
+[P5b lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md) v0.2
 allocates the shell lifecycle consumer, renderer Attach/detach, authored identity,
 analytics publication and teardown; no internal/opt-in demo ownership remains in
 the target. Full time freezes Match View; report navigation requires acknowledgement.
@@ -1113,3 +1113,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.27 | October 3, 2026 | Defines the next action as final Gate-I mapping/reference review of the binding-contract proposals, with verdict recording still due. Product choices and prior approvals preserved; I IN PROGRESS, #470 blocked, Gate J requires real implementation evidence. |
 | 1.28 | October 4, 2026 | Records technical S0 Gate-I handoff PASS at e8ffd89 and advances next action to landing the verdict then consumed client/localization work. #470 main release follows #478 landing; refresh/CI/pinned compile and Gate J remain due. Gate definitions and prior owner approvals unchanged. |
 | 1.29 | October 5, 2026 | Records #470 foundation merged at f276f700 and routes consumed lifecycle/identity implementation to the source-audited plan. Preserves previous sequence and all gate/approval/QA contracts. |
+| 1.30 | October 5, 2026 | PR #479 review corrections advance the consumed implementation pointer to v0.2; B9b screen/navigation scope and analytics locking, observer-slot and dependency obligations are explicit. Gate definitions, owner approvals and planned QA unchanged. |
