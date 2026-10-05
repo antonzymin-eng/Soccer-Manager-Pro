@@ -3207,10 +3207,10 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 
 ---
 
-### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b LANDED August 15, 2026; P5b foundation candidate on #470; full P5b/P6 open)
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b LANDED August 15, 2026; P5b foundation LANDED October 5, 2026 via #470; full P5b/P6 open)
 
 Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4b … §5-P6).
-**P4b landed:** the `MonoBehaviour` render/camera/click binding. #470 adds a candidate shell foundation; complete UGUI screens (P5b) are still to
+**P4b landed:** the `MonoBehaviour` render/camera/click binding. #470 landed the shell foundation at `f276f700`; complete UGUI screens (P5b) are still to
 come — types that need a Unity host (`Camera`, `SpriteRenderer`/mesh prefabs, `GameObject`, UGUI).
 It adds a skin over `match-client-core`, never engine-facing logic — every render/camera/click
 *decision* was made in P4a/P5a; this file only assigns transforms and forwards input (§12 rule 1).
@@ -3224,7 +3224,7 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 
 | File | Purpose |
 |------|---------|
-| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine on the #470 candidate |
+| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine in the landed #470 foundation |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
 | `ClientShellBehaviour.cs` | LANDED #470 at f276f700; foundation v1.3, host-fact/visibility/event binding with inactive-ancestor refusal; Main Menu ↔ Tactics Setup only; pinned compile 0 errors and ClientApp.Tests 26/26 recorded; full lifecycle/screens remain due |
 | `ClientShellBehaviour.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
