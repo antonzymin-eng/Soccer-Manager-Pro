@@ -14,13 +14,16 @@ per-round code detail.
 > document's to assert.
 
 This is the **Unity-host** half of the interactive Unity client — the
-`MonoBehaviour` that owns a `MatchSession`, reads frames each `Update`, and binds
-them onto scene objects. It is deliberately thin: every render/camera/click
-*decision* is already made in the host-free sibling `src/match-client-core/`
-(`TacticalDirector.MatchClientCore`), which the `tools/dotnet-ci` shim gate
-compiles and tests on every push. This assembly only ever depends on that core
-plus the reused `match-viewer` streamer; it adds a skin, never new engine-facing
-logic (§12 rule 1 — see `docs/tracking/interactive-unity-client-design.md`).
+`MonoBehaviour` that binds a `MatchSession`, reads frames each `Update`, and binds
+them onto scene objects. During the P5b transition its old self-created neutral
+demo is explicit opt-in only; a normal shell scene leaves that boot path disabled.
+It is deliberately thin: every render/camera/click *decision* is already made in
+the host-free sibling `src/match-client-core/` (`TacticalDirector.MatchClientCore`),
+which the `tools/dotnet-ci` shim gate compiles and tests on every push. This
+assembly references ClientApp, UiFramework, MatchClientCore, MatchViewer and MatchEngine;
+these are explicit Unity asmdef references, with shell decisions in gate-compiled ClientApp. It
+adds a skin, never new engine-facing logic (§12 rule 1 — see
+`docs/tracking/interactive-unity-client-design.md`).
 
 ## Excluded from the shim gate — compiled only by the Unity editor
 
@@ -45,11 +48,13 @@ editor is now the governing compiler (owner decision, September 12, 2026 —
 see §1) and every project-setting requirement here, since a `MonoBehaviour` can
 neither enforce a Project Settings value nor fail a Unity install that lacks it,
 and a contract stated in two places drifts. This section is that document —
-the single one. `ValidateWiring()` enforces everything it can detect at runtime
-(null references, array lengths, transform scale/rotation) and fails loud,
-naming the offending field, when it can — but the five items below are either
-checked only once a prefab is instantiated, or cannot be checked from code at
-all.
+the single one. `ValidateWiring()` runs on every `Awake`, including when temporary
+demo boot is off, and enforces everything session-independent it can detect at
+runtime (null references, array lengths, transform scale/rotation, colour-property
+name), failing loud and naming the offending field. The demo seed is the one
+exception: `ValidateDemoSeed()` runs only when the temporary demo path is explicitly
+enabled, because the seed has no meaning otherwise. The items below are either
+checked only once a prefab is instantiated, or cannot be checked from code at all.
 
 ### 1. The prefab contract — 8 slots
 
@@ -151,9 +156,8 @@ project-setup requirement the binding cannot enforce or detect from code.
 ### 3. The host GameObject's own transform must be at identity scale AND rotation
 
 `ValidateWiring()` checks both and rejects the client, naming the actual value,
-if either fails — but only for the `MatchClient` GameObject and its own
-`transform`; it cannot see the scene hierarchy ahead of time, so set this up
-correctly rather than relying on the runtime check alone:
+if either fails — and it does so even when temporary demo boot is disabled. Set
+this up correctly rather than relying on the runtime check alone:
 
 - **Identity scale** (`transform.lossyScale == Vector3.one`) — `PlaceLine` /
   `PlaceRadial` mix a world POSITION with a LOCAL scale, so a scaled ancestor
@@ -179,8 +183,8 @@ rotation applied anywhere in its ancestry, at the scene root if in doubt.
 `_teamColors` must have exactly `MatchEngineConstants.TEAM_COUNT` (2) entries:
 **index 0 = home, index 1 = away.** `RenderAgents` indexes it by
 `AgentRenderModel.TeamId` unguarded past `ValidateWiring`'s length check, so a
-mis-sized array is rejected at boot rather than index-out-of-ranging the first
-time an away-team agent is drawn.
+mis-sized array is rejected at `Awake` even when demo boot is disabled, rather
+than index-out-of-ranging later when a session is attached or a demo is enabled.
 
 ### 5. The pitch/ground surface (L13) — not a prefab slot, but still this contract's
 
@@ -217,3 +221,84 @@ ground surface narrower than that clips at the touchline/goal line before the
 camera's `CameraOverscanM` margin does; a generous overshoot (the standard
 run-off area a broadcast pitch model already has) costs nothing and avoids the
 edge being visible at the tilted camera's default overscan.
+
+### 6. Temporary demo boot during P5b
+
+`_autoBootDemoMatch` is temporary migration scaffolding. It defaults to
+**false**. P5b shell scenes must leave it false: merely having a
+`MatchClientBehaviour` in the scene must not construct or start a hidden demo
+match before the shell has a real lifecycle owner.
+
+The default has one deliberate compatibility consequence: Unity scenes saved
+before this field existed deserialize it as false. Therefore the August P4b
+demo scene no longer self-starts after this change. To keep using that isolated
+legacy demo before `Attach(MatchSession)` lands, explicitly tick **Demo boot
+(temporary; leave off in P5b shell scenes)** in the Inspector. This is an
+intentional transition, not a silent regression.
+
+Demo-off does **not** mean validation-off. `Awake()` always runs
+`ValidateWiring()` first, so prefab references, camera, palette size, host
+transform and `_colorPropertyName` still fail loud in an inert shell scene.
+Only `_demoSeedText` is deferred to `ValidateDemoSeed()`, because that value is
+consumed exclusively by `MatchSetup.NeutralDemo` and is meaningless when demo
+boot is disabled.
+
+The next lifecycle slice removes this flag and the internal
+`new MatchSession(MatchSetup.NeutralDemo(...))` ownership entirely, replacing
+it with an `Attach(MatchSession)`-style seam driven by the host-free lifecycle
+owner.
+
+## 7. PR #470 foundation refresh — October 4, 2026
+
+Gate I and the owner's explicit handoff acceptance landed through PR #478 at main
+`fafb63fc33dd97b3de77c37445357650e1565777`. PR #470 is refreshed onto that main.
+Its implementation is only the foundation: four mutually exclusive roots, pure wiring/
+visibility decisions and Main Menu → Tactics Setup / Cancel. Screen registrations still
+have null source/dispatcher handles. No StartMatch, lifecycle consumer, named-player
+frame projection, localized screens or report binding is claimed by this slice.
+The host-free lifecycle already exists; the next slice consumes its CreateSession /
+Current / ClearSession through the shell coordinator and adds Attach/detach to
+MatchClientBehaviour. That slice removes internal demo boot and the temporary opt-in.
+Follow journey §14 and binding contracts §5; #49 L2 must precede localized screens.
+
+The tracked `Assets/Scenes/Scene.unity` is still the isolated P4b demo and explicitly
+sets `_autoBootDemoMatch: 1`; no shell roots/buttons were added to it. Shell scenes leave
+that flag off. The retained default is false; all wiring validation still runs while inert.
+
+**Validation status: BLOCKED on the refreshed exact-head Unity compile.**
+September 28's reported zero compile errors and boot/off smoke are historical branch
+checks, not compile evidence for this refreshed head. The reported 254 passing / one
+failing EditMode tests are also historical: the repository-root discovery failure is
+tracked separately and remains unresolved. The two GetInstanceID CS0618 warnings are
+known, deferred warnings. No refreshed runtime/Console/player-build/performance result
+has been observed here. The regular Unity CI test job is skipped without the configured
+license; a green Linux shim gate never proves this Unity-only assembly compiles.
+
+Before merge, check out the exact published PR #470 head on Unity 6000.4.9f1, ensure
+Assets/Scripts points to src, preserve the Console baseline, force recursive source
+reimport, and follow the compile procedure in docs/agent-guides/coding-reference.md.
+Record the SHA, editor version, import/assembly-reload completion, compiler errors and
+warnings with the retained Editor.log or CI artifact. A changed head requires fresh
+head-bound evidence. Keep the PR draft until fresh CI and this compile are complete.
+This compile does not discharge remaining B8/B9b/B10 or Gate-J runtime/cert cases.
+
+**October 4, 2026 — exact-head compile PASSED; the block above is discharged.** Head
+`db38e2118922b2a7b8eac384f7cdf0d6f81d6338`, Unity 6000.4.9f1 (f7258d6eebbe), clean checkout,
+`Assets/Scripts` → `src` junction confirmed, forced recursive reimport: Tundra build success
+(55.02 s, 75 items updated), domain reload complete, **0 compile errors**. Warnings: CS0618 at
+`ClientShellBehaviour.cs` (135,34) and (139,48), known and deferred; CS0219 at
+`ball-physics/tests/BallIntegrationTests.cs` (330,19), pre-existing since `ff8ae56ab` and outside
+this PR. Editor.log retained on the host; summary on the PR. The commit recording this is
+Markdown-only. EditMode/PlayMode tests were not run in this pass.
+
+**October 5, 2026 — review fix.** Screen roots must also sit under active ancestors: the shell
+toggles only the roots, so a root beneath an inactive GameObject would stay hidden. The binding
+now reports `parent.gameObject.activeInHierarchy` and the shell refuses such a root with
+`RootUnderInactiveAncestor` (deactivating all roots and logging the reason). Unity 6000.4.9f1
+compile of the fix: 0 errors; ClientApp.Tests 26/26 in EditMode.
+
+| Documentation revision | Date | Notes |
+|---|---|---|
+| PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
+| PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
+| PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |

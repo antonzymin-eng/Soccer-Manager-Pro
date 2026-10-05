@@ -1,6 +1,6 @@
 // File:     src/ui-framework/Tests/MatchViewObserverNeutralityTests.cs
 // Created:  2026-07-25
-// Modified: 2026-08-07
+// Modified: 2026-09-28
 // Author:   —
 // Spec:     UI / Client Framework #38 §5.1 (T-UI-NEU-001, T-UI-LAYER-001, FR-UI-001/017),
 //           Code Standards #20
@@ -129,6 +129,7 @@ namespace TacticalDirector.UiFramework.Tests
                 "ui-framework", "ui-framework-tests",           // itself
                 "match-client-web", "match-client-web-tests",   // roadmap B6 — the PM-1 browser client
                 "client-app", "client-app-tests",               // roadmap B9c — the screen catalogue / navigation graph (FR-UI-010 puts a concrete screen set above the framework)
+                "match-client-unity",                           // roadmap B9b/P5b — the Unity shell binds ClientScreenFlow's ScreenId surface
             };
 
             var mustNeverReference = new HashSet<string>
@@ -193,4 +194,8 @@ namespace TacticalDirector.UiFramework.Tests
 // | 1.1     | 2026-08-07 | —      | client-app (+ its tests) added to the sanctioned renderers —   |
 // |         |            |        | roadmap B9c, the screen catalogue above the framework. The     |
 // |         |            |        | scan fired exactly as designed at the B9c landing's gate run.  |
+// | 1.2     | 2026-09-28 | —      | match-client-unity added to the sanctioned renderers — roadmap |
+// |         |            |        | B9b/P5b, whose shell binding references UiFramework for        |
+// |         |            |        | ScreenId. PR #361's gate run was cancelled, so the scan never  |
+// |         |            |        | ran against that asmdef; a Unity EditMode run surfaced it.     |
 #endregion
