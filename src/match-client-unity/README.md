@@ -282,6 +282,16 @@ warnings with the retained Editor.log or CI artifact. A changed head requires fr
 head-bound evidence. Keep the PR draft until fresh CI and this compile are complete.
 This compile does not discharge remaining B8/B9b/B10 or Gate-J runtime/cert cases.
 
+**October 4, 2026 — exact-head compile PASSED; the block above is discharged.** Head
+`db38e2118922b2a7b8eac384f7cdf0d6f81d6338`, Unity 6000.4.9f1 (f7258d6eebbe), clean checkout,
+`Assets/Scripts` → `src` junction confirmed, forced recursive reimport: Tundra build success
+(55.02 s, 75 items updated), domain reload complete, **0 compile errors**. Warnings: CS0618 at
+`ClientShellBehaviour.cs` (135,34) and (139,48), known and deferred; CS0219 at
+`ball-physics/tests/BallIntegrationTests.cs` (330,19), pre-existing since `ff8ae56ab` and outside
+this PR. Editor.log retained on the host; summary on the PR. The commit recording this is
+Markdown-only. EditMode/PlayMode tests were not run in this pass.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
 | PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |
