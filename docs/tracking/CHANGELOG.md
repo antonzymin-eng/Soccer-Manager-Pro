@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan drafted.** New `docs/tracking/localization-l2-plan.md` v0.1 (draft) plans the immutable in-memory catalogue, template expander and production `ILocalizer` under `localization-implementation-plan.md` v2.7 §6, and records the owner's ERR-049-005 choice: construction coverage of caller-admitted static keys plus a `string.Empty` terminal result for a key never admitted. Five design choices await review. Documentation only; ERR-049-005 stays OPEN until the implementing commit.
+> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan review corrections.** `docs/tracking/localization-l2-plan.md` v0.2: translated variant indices may be sparse within the base range; single-pass expansion becomes proposed ERR-049-006 (the approved spec requires identity with chained `.Replace`, which a producer-agnostic core cannot reproduce), pending owner approval, with spec back-prop and test planned for the implementing commit; P5b is assigned to admit its exact client consumers in the L1 tripwire while keeping the sim ban. Documentation only; no ERR filed yet.
+>
+> **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan drafted.** New `docs/tracking/localization-l2-plan.md` v0.1 (draft) plans the immutable in-memory catalogue, template expander and production `ILocalizer` under `localization-implementation-plan.md` v2.7 §6, and records the owner's ERR-049-005 choice: construction coverage of caller-admitted static keys plus a `string.Empty` terminal result for a key never admitted. Five design choices await review. Documentation only; ERR-049-005 stays OPEN until the implementing commit.
 >
 > **Last Updated (prior):** October 6, 2026 — **P5b Unity compile fix (Codex review).** `MatchClientBehaviour.cs` v1.10 restores `using System.Globalization;`, which the v1.9 edit dropped while the `Inv` helpers still use `CultureInfo` (Unity CS0103). The Linux shim gate does not compile the Unity rendering assembly, so the pinned Unity compile check remains required.
 >
