@@ -74,9 +74,10 @@ namespace TacticalDirector.ClientApp.Tests
             try
             {
                 LiveMatchFrame frame = default;
-                // Full time is evaluated against the entering tick; its captured frame is the
-                // next completed tick. This guard detects a missing real end transition.
-                ulong lastTick = (ulong)MatchEngineConstants.MATCH_TICKS_TOTAL + 1UL;
+                // The clock advances before the Input phase checks full time, so the ended frame
+                // is MATCH_TICKS_TOTAL itself. The bound stops the loop there, so a missing real
+                // end transition fails the MatchEnded assertion below instead of running on.
+                ulong lastTick = (ulong)MatchEngineConstants.MATCH_TICKS_TOTAL;
                 while (session.CurrentTick < lastTick && !frame.MatchEnded)
                 {
                     frame = session.TickOnce();
@@ -144,4 +145,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Real full matches for fixture repeatability, observer neutrality and prior setup outcomes. |
+// | 1.1     | 2026-10-06 | —      | Full time is tick MATCH_TICKS_TOTAL (324,000), not +1; bound, assertion and comment corrected. |
 #endregion

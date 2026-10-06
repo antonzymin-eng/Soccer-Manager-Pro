@@ -245,6 +245,68 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(identity.Roster.ShirtNumber(slot), models[slot].ShirtNumber, "explicit neutral policy remains slot-owned");
         }
 
+        private sealed class FixtureSquads : ISquadProvider
+        {
+            private readonly MatchSetup _setup;
+            internal FixtureSquads(MatchSetup setup) => _setup = setup;
+            public Squad ResolveByClubId(int clubId) =>
+                clubId == _setup.HomeSquad.ClubId ? _setup.HomeSquad :
+                clubId == _setup.AwaySquad.ClubId ? _setup.AwaySquad : null;
+        }
+
+        [Test]
+        public void RestoreBeforeAnySubstitutionKeepsTheBootRoster()
+        {
+            MatchSetup setup = S0DemoFixture.CreateApproved().BuildSetup(Mentality.Balanced);
+            var session = new MatchSession(setup);
+            for (int i = 0; i < 3; i++) session.TickOnce();
+            MatchSession restored = MatchSession.RestoreFrom(session.CaptureSave(), new FixtureSquads(setup));
+            Assert.AreEqual(session.CurrentTick, restored.CurrentTick);
+            for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
+                Assert.AreEqual(session.BootRoster.StarterPlayerId(a), restored.BootRoster.StarterPlayerId(a), "starter " + a);
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+                for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                    Assert.AreEqual(session.BootRoster.BenchPlayerId(t, b), restored.BootRoster.BenchPlayerId(t, b), "bench " + t + "/" + b);
+            Assert.IsNotNull(S0DemoFixture.CreateApproved().Bind(restored));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void RestoreAfterSubstitutionResumesPlaybackButRefusesBootRoster(int teamId)
+        {
+            S0DemoFixture fixture = S0DemoFixture.CreateApproved();
+            MatchSetup setup = fixture.BuildSetup(Mentality.Balanced);
+            var session = new MatchSession(setup);
+            MatchIdentityContext identity = fixture.Bind(session);
+            LiveMatchFrame before = session.TickOnce();
+            int slot = -1;
+            int bench = -1;
+            for (int i = 0; i < identity.Roster.AgentCount; i++)
+                if (identity.Roster.TeamId(i) == teamId && before.AgentCues[i].IsGoalkeeper) slot = i;
+            for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                if (identity.Bench(teamId, b).ShirtNumber == 12) bench = b;
+            Assert.GreaterOrEqual(slot, 0);
+            Assert.GreaterOrEqual(bench, 0);
+            int starter = identity.Resolve(in before, slot).PlayerId;
+            int incoming = identity.Bench(teamId, bench).PlayerId;
+            session.Commands.Enqueue(ManagerCommand.Substitute(teamId, slot, bench, SubstitutionReason.Tactical));
+            session.ServiceOnce();
+            Assert.AreEqual(1, session.Driver.Log.Count, "substitution applied");
+            LiveMatchFrame after = session.TickOnce();
+            Assert.AreEqual(incoming, after.AgentCues[slot].PlayerId);
+            Assert.AreEqual(starter, session.BootRoster.StarterPlayerId(slot), "a fresh session keeps its boot starter after a substitution");
+            Assert.AreEqual(incoming, session.BootRoster.BenchPlayerId(teamId, bench));
+
+            MatchSession restored = MatchSession.RestoreFrom(session.CaptureSave(), new FixtureSquads(setup));
+            Assert.AreEqual(session.CurrentTick, restored.CurrentTick);
+            InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => _ = restored.BootRoster);
+            StringAssert.Contains("restored after a substitution", refused.Message);
+            Assert.Throws<InvalidOperationException>(() => fixture.Bind(restored));
+            LiveMatchFrame resumed = restored.TickOnce();
+            Assert.AreEqual(after.Tick + 1UL, resumed.Tick, "restored playback continues");
+            Assert.AreEqual(incoming, resumed.AgentCues[slot].PlayerId, "restored occupancy keeps the substitute");
+        }
+
         [Test]
         public void ApprovedFixtureBootIsCompleteRepeatableAndObserverNeutral()
         {
@@ -336,4 +398,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
+// | 1.1     | 2026-10-06 | —      | Restore keeps BootRoster before any substitution; after one (either team) restore and playback continue while BootRoster refuses. |
 #endregion

@@ -43,6 +43,8 @@ namespace TacticalDirector.MatchClientCore
         private readonly LiveMatchStreamer _streamer;
         private readonly MatchClientDriver _driver;
         private readonly MatchEngineMutations _mutations;
+        // Null only for a session restored after a substitution; see BootRoster.
+        private readonly MatchBootRoster _bootRoster;
 
         // Save-request handshake between an arbitrary caller thread (CaptureSave) and the sim thread
         // (the pre-tick hook, whether fired by a tick or by ServiceOnce). Deliberately Interlocked /
@@ -79,7 +81,14 @@ namespace TacticalDirector.MatchClientCore
         private MatchSession(MatchEngine.MatchEngine engine)
         {
             _engine    = engine;
-            BootRoster = new MatchBootRoster(engine.PlayerIdsByAgentId());
+            // With no substitution made, current occupants ARE the boot starters: always on a fresh
+            // engine, and on a restored one, which re-derives its lineup. After any substitution
+            // PlayerIdsByAgentId reports current occupants; the engine re-derives the replaced
+            // starters internally at restore but exposes no query for them. Leave the descriptor
+            // absent rather than record occupants as starters.
+            _bootRoster = HasAnySubstitution(engine)
+                ? null
+                : new MatchBootRoster(engine.PlayerIdsByAgentId());
             _streamer  = new LiveMatchStreamer(_engine);
             _mutations = new MatchEngineMutations(_engine);
             _driver    = new MatchClientDriver(new ManagerCommandQueue());
@@ -88,6 +97,15 @@ namespace TacticalDirector.MatchClientCore
             // Installed as the pre-tick hook (fires each tick) and reachable off-tick via ServiceOnce()
             // (§6.3). A method group rather than a closure, so it allocates once here, not per tick.
             _streamer.SetPreTickHook(ServiceOnSimThread);
+        }
+
+        private static bool HasAnySubstitution(MatchEngine.MatchEngine engine)
+        {
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (engine.SubstitutionsUsed(t) != 0) { return true; }
+            }
+            return false;
         }
 
         // Constructs and boot-configures an engine from a setup. Static so it can run before the
@@ -159,8 +177,19 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>The reused ViewModel — the View reads frames from it; playback pause/speed live here (§6.4).</summary>
         public LiveMatchStreamer Streamer => _streamer;
 
-        /// <summary>Engine-assigned identity captured once before any tick or observer runs.</summary>
-        public MatchBootRoster BootRoster { get; }
+        /// <summary>
+        /// Engine-assigned starter and bench-origin identity, captured once at construction before
+        /// any tick or observer runs. A fresh session always has it, and keeps it after later
+        /// substitutions. For a session restored from a save made after any substitution, the
+        /// engine's identity query reports only current occupants, so this refuses rather than
+        /// report them as starters; restore and playback of that session are otherwise unaffected.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// The session was restored from a save made after a substitution.
+        /// </exception>
+        public MatchBootRoster BootRoster => _bootRoster ?? throw new InvalidOperationException(
+            "This session was restored after a substitution; the engine exposes only current " +
+            "occupants, so no boot roster is available. Restore and playback are unaffected.");
 
         // Narrow test-only access to the existing real engine transition seam; never a production handle.
         internal MatchEngine.MatchEngine TestOnly_Engine => _engine;
@@ -387,5 +416,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | tactics as the baseline. AI teams therefore select + seed their |
 // |         |            |        | kickoff preset before tick 1; human teams retain the setup      |
 // |         |            |        | baseline. Replaces the two unconditional SetTeamTactic calls.   |
-// | 1.4     | 2026-10-06 | —      | Copy canonical engine boot identity for the shell/renderer consumer. |
+// | 1.4     | 2026-10-06 | —      | Copy canonical engine boot identity for the shell/renderer consumer. A session restored after any substitution refuses BootRoster (only current occupants are queryable) while restore/playback continue. |
 #endregion

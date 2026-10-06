@@ -2,8 +2,8 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.2\
-**Status:** DRAFT IMPLEMENTATION — pinned-host and complete outcome evidence pending\
+**Version:** 0.3\
+**Status:** DRAFT IMPLEMENTATION — full PR gate and pinned-host evidence pending\
 **Authority:** [approved implementation plan](p5b-lifecycle-identity-plan.md) v0.2;
 [S0 binding contracts](../design/ux-s0-binding-contracts.md) §§2–5.\
 **Implementation baseline:** main `7c870dd850acb462a335cdd8f6fbe13c49549215`.
@@ -132,6 +132,50 @@ any test or hook edit. These tooling results do not compile the new C# test.
 The candidate is locally committed; branch publication and draft-PR creation
 remain pending. Fresh normal CI and the complete-match result remain unexecuted.
 
+## Published-head review and corrections — October 6, 2026
+
+The sections above are the historical record at `816dfede`/`6617ae33` and are not
+rewritten. The candidate was later published as `ui/p5b-lifecycle-identity` at
+`50e6e5a` (one commit; tree `70b9e2f4`, identical to `6617ae33`). No PR or Actions
+run existed for that head at review time.
+
+**Independent run at `50e6e5a`.** .NET SDK 8.0.131 (Ubuntu package),
+`tools/dotnet-ci/run-gate.sh --owner-held-red report-only`. 36 of 37 test assemblies
+completed; all passed except `ClientApp.Tests` (43/44):
+`sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral` failed with
+`Expected: 324001 But was: 324000`. `MatchEngine.Tests` did not finish before the
+worker's 60-minute limit and is **not** evidence. The run is non-certifying.
+
+**Corrections in this revision.**
+
+- *Full-match end tick.* The clock advances before Input checks full time, so the
+  ended frame is `MATCH_TICKS_TOTAL` (324,000), not +1. The test bound/assertion and
+  its comment are corrected. With only that change, `ClientApp.Tests` passed 44/44,
+  including all four full matches.
+- *Restored `BootRoster`.* The boot and restore paths share the session constructor,
+  so a session restored after a substitution recorded current occupants as starters,
+  and `MatchIdentityContext` then rejected the duplicate bench origin. A session now
+  captures the descriptor only when neither team has used a substitution. Otherwise
+  `BootRoster` throws `InvalidOperationException`, while `RestoreFrom` and resumed
+  playback are unchanged (existing replay scenarios restore after substitutions).
+  The engine re-derives the replaced starters internally at restore but exposes no
+  query for them. Exposing one is a possible follow-up; no save-format change is made.
+  New tests cover restore before any substitution (identical starter/bench mapping),
+  restore after a substitution on either team (restore and playback continue, the
+  substitute stays on the pitch, `BootRoster` and `Bind` refuse), and a fresh session
+  keeping its boot starter after a substitution. With the guard removed, both
+  after-substitution cases fail.
+- *Cue mapping test.* `LiveAgentCue`'s positional test now passes a distinct
+  `playerId` and asserts it.
+- *Visible identity effect.* Shirt labels remain deferred, but frame identity already
+  changes rendering: interpolation snaps a replaced occupant instead of blending.
+
+**Corrected tree, affected suites** (same SDK, `run-gate.sh --fast` with a test
+filter; `sim_` excluded): ClientApp 46/46, MatchClientCore 180/180, MatchViewer 73/73,
+MatchClientWeb 58/58. Full `ClientApp.Tests` including the full-match test: 47/47
+passed (about 15 minutes on this shared worker). The full normal PR gate, including `MatchEngine.Tests`, is left
+to PR CI.
+
 ## Before merge — exact review head
 
 - [ ] Normal PR CI functional and policy gates pass at the final review head.
@@ -168,3 +212,4 @@ not this changed source tree. No merge or host acceptance is claimed here.
 | --- | --- | --- |
 | 0.1 | October 6, 2026 | Records consumed A–C candidate, actual bounded Linux evidence and explicit exact-head host/full-outcome prerequisites. |
 | 0.2 | October 6, 2026 | Recovery record, normal-suite real full-match comparison and explicit pending execution; Unity profiler scopes and host checks. |
+| 0.3 | October 6, 2026 | Published-head review: independent run at `50e6e5a`, full-match end-tick fix, restored-session `BootRoster` refusal with mirrored tests, cue `PlayerId` assertion; historical sections preserved. |
