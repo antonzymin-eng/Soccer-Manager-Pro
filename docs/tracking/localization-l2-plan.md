@@ -2,8 +2,8 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.3\
-**Status:** DRAFT PLAN — source audited; owner decision on ERR-049-005 recorded; proposed ERR-049-006 (§4.2) needs owner approval\
+**Version:** 0.4\
+**Status:** PLAN FOR REVIEW — source audited; owner decisions on ERR-049-005 and ERR-049-006 recorded (October 6, 2026); implementation not started\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
 
@@ -68,7 +68,7 @@ Each slice admits only its own named consumer. Neither replaces the tripwire wit
 | `LocaleId` | Trimmed and lower-cased; `BaseLocale` = `en`. | Catalogue identity. No further validation (§6.5). |
 | L1 structural tests | Public type shape may use only `System*` or Localization types. No mutable static fields. No field or type name containing `Random`, `Rng`, `Save` or `Snapshot`. No `[Serializable]`. | New types must comply. Use instance `readonly` fields and no static caches. |
 | Consumers | No production assembly or test outside `src/localization/` references `ILocalizer`. | No call-site migration is needed. |
-| Living-world expansion | `InteractionTextGenerator.Expand` chains `.Replace("{subject}")`, `.Replace("{opponent}")`, `.Replace("{score}")`. | Base-locale identity reference for §5.4 and §4.2 (proposed ERR-049-006). |
+| Living-world expansion | `InteractionTextGenerator.Expand` chains `.Replace("{subject}")`, `.Replace("{opponent}")`, `.Replace("{score}")`. | Base-locale identity reference for §5.4 and §4.2 (ERR-049-006). |
 
 ## 4. Spec defects discharged with L2
 
@@ -110,7 +110,7 @@ If §8 Q1 is accepted, the same terminal rule also covers `Render` of a non-admi
 clause missing from both catalogues. Those are recorded in the same back-prop, under F1/F2, as
 defensive behaviour.
 
-### 4.2 Proposed ERR-049-006 — `Render` expansion cannot be identical to chained `.Replace`
+### 4.2 ERR-049-006 (owner-approved, to be filed) — `Render` expansion cannot be identical to chained `.Replace`
 
 **Defect.** KD-3, FR-LC-009 and §3.5 require base-locale expansion to be identical to
 `InteractionTextGenerator`'s chained `.Replace` (subject, then opponent, then score), and FR-LC-016
@@ -144,7 +144,7 @@ about values. The verified L3A oracle slot values are brace-free (subject `Kade 
 templates contain braces only in `{subject}`, `{opponent}` and `{score}` tokens. A real player or club
 name containing a brace is exactly the case where behaviour deliberately differs.
 
-**Proposed resolution (requires owner approval, since it changes approved spec text):** generic
+**Resolution (owner-approved October 6, 2026; it changes approved spec text):** generic
 `Expand` performs single-pass, non-recursive substitution. Each `{name}` token in the template is
 replaced once, and substituted values are never re-scanned. Base-locale identity with today's output
 is required only under the two conditions of the sufficient identity guarantee above.
@@ -256,7 +256,7 @@ formatting (FR-LC-005).
 2. Add `PluralCategory`, `TemplateForm`, `TemplateVariant`, `CatalogueCoverage`, then
    `TemplateCatalogue` with its construction validation, plus tests T5, T6, T14 and T15.
 3. Add `TemplateExpander` and `Localizer`, plus tests T1–T4, T7–T13 and T16.
-4. Make both spec back-props and error-log updates in the same commit as the code: ERR-049-005 resolved, and ERR-049-006 filed and resolved if the owner approves §4.2.
+4. Make both spec back-props and error-log updates in the same commit as the code: ERR-049-005 resolved, and ERR-049-006 filed and resolved (owner-approved, §4.2).
 5. Close out with `landing-close-out`: `CHANGELOG.md`/`CHANGELOG-src.md` headers; `file-manifest.md`
    (new `.cs`/`.meta` paths); `open-issues.md` #49 entry; `localization-implementation-plan.md` version
    row (L2 executed); roadmap and audio-plan D49 wording (L2 delivered; the caption boundary is still
@@ -289,9 +289,9 @@ RNG change, so the full Linux gate is runnable on a worker.
 - **Q4. Selected-locale orphans.** These are selected rows whose key, id or clause is absent from base.
   **Recommend:** reject at construction. An orphan can never render, because the base catalogue is the
   admission authority, so it most likely indicates a typo.
-- **Q5. Single-pass expansion versus chained `.Replace`.** Now proposed ERR-049-006 (§4.2):
-  single pass, with the approved spec text corrected in the implementing commit and tested by T13.
-  This deliberately changes approved spec behaviour, so it needs owner approval. (v0.1 cited the S0
+- **Q5. Single-pass expansion versus chained `.Replace`.** Decided as ERR-049-006 (§4.2), approved by
+  the owner on October 6, 2026: single pass, with the approved spec text corrected in the implementing
+  commit and tested by T13. (v0.1 cited the S0
   non-recursive rule as its authority. That rule governs the client formatter over `Resolve` patterns,
   not `Render`, so it does not authorize this change.)
 
@@ -302,7 +302,7 @@ RNG change, so the full Linux gate is runnable on a worker.
 - [ ] FR-LC-009 conformance (T10) is shown through the real renderer.
 - [ ] ERR-049-005 is RESOLVED with executable evidence (T5 static-key mutant + T7), and the spec,
   section-7 and error log are updated in the same commit.
-- [ ] If approved, ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
+- [ ] ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
 - [ ] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
 - [ ] `bash tools/run-tests-local.sh --pr` passes with no new failures.
 - [ ] Tracking surfaces are current, and the doc-consistency check passes.
@@ -318,3 +318,4 @@ It does unblock the P5b copy/scale/screens slice, which can then inject a real `
 | 0.1 | October 6, 2026 | Initial draft against `ce2e2a36`. Records the owner's ERR-049-005 choice (construction coverage plus a `string.Empty` terminal for never-admitted keys), the L2 type and test plan, and five open choices with recommendations. |
 | 0.2 | October 6, 2026 | Review corrections: translated variant indices may be sparse within the base range (T3 uses base `0,1,2`, selected `0,2`); Q5 becomes proposed ERR-049-006 with spec back-prop and test T13, pending owner approval; handoff obligations assign P5b to admit its exact client consumers in the L1 tripwire and #20 record while keeping the sim ban; thread-safety qualified on the plural-rule purity contract; S0's separate content proof stated as still mandatory. |
 | 0.3 | October 6, 2026 | Second review: the identity guarantee becomes brace-free slot values plus well-formed template tokens (enforced at construction), with counterexamples for token formation across substitutions and from template braces; T13/T14 cover them; evidence is stated as verified oracle slot values rather than corpus rows; `section-5.md` joins the ERR-049-006 back-prop list. Owner approval of ERR-049-006 still pending. |
+| 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |

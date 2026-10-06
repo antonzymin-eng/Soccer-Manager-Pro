@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan second review.** `docs/tracking/localization-l2-plan.md` v0.3: the proposed ERR-049-006 identity guarantee becomes brace-free slot values plus well-formed template tokens enforced at construction, with counterexamples (tokens formed across adjacent substitutions, and from template braces) added to T13/T14; evidence cites the verified L3A oracle slot values; #49 `section-5.md` joins the back-prop list. Owner approval of ERR-049-006 still pending. Documentation only.
+> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan: ERR-049-006 approved.** `docs/tracking/localization-l2-plan.md` v0.4 records the owner's approval of ERR-049-006 (single-pass `Render` expansion; identity with chained `.Replace` guaranteed for brace-free slot values and well-formed template tokens). The error-log entry and spec back-prop land with the implementing commit. Documentation only.
+>
+> **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan second review.** `docs/tracking/localization-l2-plan.md` v0.3: the proposed ERR-049-006 identity guarantee becomes brace-free slot values plus well-formed template tokens enforced at construction, with counterexamples (tokens formed across adjacent substitutions, and from template braces) added to T13/T14; evidence cites the verified L3A oracle slot values; #49 `section-5.md` joins the back-prop list. Owner approval of ERR-049-006 still pending. Documentation only.
 >
 > **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan review corrections.** `docs/tracking/localization-l2-plan.md` v0.2: translated variant indices may be sparse within the base range; single-pass expansion becomes proposed ERR-049-006 (the approved spec requires identity with chained `.Replace`, which a producer-agnostic core cannot reproduce), pending owner approval, with spec back-prop and test planned for the implementing commit; P5b is assigned to admit its exact client consumers in the L1 tripwire while keeping the sim ban. Documentation only; no ERR filed yet.
 >
