@@ -7,7 +7,8 @@
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.PlayerDatabase",
-        "TacticalDirector.ProjectConstants"
+        "TacticalDirector.ProjectConstants",
+        "TacticalDirector.MatchAnalytics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -222,31 +222,25 @@ camera's `CameraOverscanM` margin does; a generous overshoot (the standard
 run-off area a broadcast pitch model already has) costs nothing and avoids the
 edge being visible at the tilted camera's default overscan.
 
-### 6. Temporary demo boot during P5b
+### 6. External lifecycle ownership (P5b candidate)
 
-`_autoBootDemoMatch` is temporary migration scaffolding. It defaults to
-**false**. P5b shell scenes must leave it false: merely having a
-`MatchClientBehaviour` in the scene must not construct or start a hidden demo
-match before the shell has a real lifecycle owner.
+`MatchClientBehaviour.Attach(session, identity, acceptedFrames, onFailure)` initializes
+and validates synchronously even before Awake on an inactive Match View root. It never
+constructs, starts or stops a session. `ClientMatchCoordinator` owns the existing
+`MatchSessionLifecycle`, approved fixture, observer and playback. The renderer owns
+only its generated container. Detach hides that container immediately, clears all match
+references and then schedules its destruction, preserving authored objects and prefabs.
+Disabling the root changes visibility only. Render rejection/destruction reports the
+captured attachment back to the coordinator so playback is quiesced.
 
-The default has one deliberate compatibility consequence: Unity scenes saved
-before this field existed deserialize it as false. Therefore the August P4b
-demo scene no longer self-starts after this change. To keep using that isolated
-legacy demo before `Attach(MatchSession)` lands, explicitly tick **Demo boot
-(temporary; leave off in P5b shell scenes)** in the Inspector. This is an
-intentional transition, not a silent regression.
+The temporary `_autoBootDemoMatch` and seed fields have been removed. The isolated
+`Assets/Scenes/Scene.unity` now has an explicit `DevelopmentMatchHost`, which consumes
+the same coordinator and approved fixture. The shell still exposes only Open/Cancel;
+player-facing Start/report controls await the localized screen slice after #49 L2.
 
-Demo-off does **not** mean validation-off. `Awake()` always runs
-`ValidateWiring()` first, so prefab references, camera, palette size, host
-transform and `_colorPropertyName` still fail loud in an inert shell scene.
-Only `_demoSeedText` is deferred to `ValidateDemoSeed()`, because that value is
-consumed exclusively by `MatchSetup.NeutralDemo` and is meaningless when demo
-boot is disabled.
-
-The next lifecycle slice removes this flag and the internal
-`new MatchSession(MatchSetup.NeutralDemo(...))` ownership entirely, replacing
-it with an `Attach(MatchSession)`-style seam driven by the host-free lifecycle
-owner.
+Exact-head Unity 6000.4.9f1 compile, inactive-root attachment, deferred destruction,
+repeat attachment and failure smoke checks are pending. Follow
+`docs/tracking/p5b-lifecycle-validation.md`; earlier host evidence below remains historical.
 
 ## 7. PR #470 foundation refresh — October 4, 2026
 
@@ -299,6 +293,7 @@ compile of the fix: 0 errors; ClientApp.Tests 26/26 in EditMode.
 
 | Documentation revision | Date | Notes |
 |---|---|---|
+| P5b lifecycle candidate | October 6, 2026 | External attachment and explicit development host replace internal demo ownership; pinned-host validation pending. |
 | PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
 | PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
 | PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |

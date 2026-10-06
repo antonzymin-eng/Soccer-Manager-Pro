@@ -1,6 +1,7 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-03
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
 //           Testing Strategy #19 (unit layer), Code Standards #20
@@ -50,17 +51,19 @@ namespace TacticalDirector.MatchViewer.Tests
         [Test]
         public void TheCueConstructorMapsItsArgumentsPositionally()
         {
-            // Two ints and two bools: the shape AR-1 M-6 called out on LiveMatchFrame's ctor, here at
-            // four parameters where collapsing them into carriers would cost more than it buys. The
+            // Three ints and two bools: the shape AR-1 M-6 called out on LiveMatchFrame's ctor, here at
+            // five parameters where collapsing them into carriers would cost more than it buys. The
             // cheap defence is to assert the mapping once, so a transposed pair fails here rather
-            // than as a sent-off keeper somewhere on screen.
-            var cue = new LiveAgentCue(yellowCards: 1, isSentOff: false, benchSlot: 5, isGoalkeeper: true);
+            // than as a sent-off keeper somewhere on screen. The int values are pairwise distinct
+            // so swapping any two of them is caught.
+            var cue = new LiveAgentCue(yellowCards: 1, isSentOff: false, benchSlot: 5, isGoalkeeper: true, playerId: 7);
 
             Assert.AreEqual(1, cue.YellowCards);
             Assert.IsFalse(cue.IsSentOff);
             Assert.AreEqual(5, cue.BenchSlot);
             Assert.IsTrue(cue.IsSubstitute);
             Assert.IsTrue(cue.IsGoalkeeper);
+            Assert.AreEqual(7, cue.PlayerId);
         }
 
         [Test]
@@ -198,4 +201,6 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | guard (two ints and two bools) and the substitution test that   |
 // |         |            |        | shows the cue following the engine while the streamer's         |
 // |         |            |        | boot-time accessor goes stale — run for both teams.             |
+// | 1.3     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
+// | 1.4     | 2026-10-06 | —      | Positional cue test asserts a distinct PlayerId. |
 #endregion

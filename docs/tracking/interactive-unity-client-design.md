@@ -83,6 +83,15 @@
 
 ---
 
+**UPDATE October 6, 2026 — P5b A–C implementation candidate.** The approved
+[plan](p5b-lifecycle-identity-plan.md) is now consumed by a shell coordinator,
+frame-owned identity, a synchronized analytics observer/report source and external
+renderer attachment. The isolated scene uses an explicit development host. Full time
+freezes Match View until the named report action. Existing Open/Cancel remains the
+shell's only player-facing surface until #49 L2 and the complete screen slice.
+[Validation and remaining host checks](p5b-lifecycle-validation.md) govern the draft;
+this is neither a full P5b journey nor a Gate-J/B8/B9b/B10 acceptance claim.
+
 ## 1. Problem & current floor
 
 The presentation layer today is **two browser-based surfaces**, both deliberately capped as
@@ -939,6 +948,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.29 | 2026-10-06 | Records consumed lifecycle/identity candidate and explicit development host; host-free evidence and pending Unity/full fixture comparison tracked separately. Complete localized screens and acceptance remain open. |
 | 0.28 | 2026-10-05 | PR #479 review corrections: implementation pointer v0.2 with explicit analytics locking, observer composition and dependency-lock work; screen/navigation scope retained in B9b. Approved scope and host acceptance unchanged. |
 | 0.27 | 2026-10-05 | Records #470 foundation merged at f276f700 with green PR CI; routes consumed lifecycle/identity/analytics and renderer attachment to the new plan. Full P5b/Gate-J acceptance remains open. |
 | 0.26 | 2026-10-05 | Records the #470 Codex P2 fix: `AreAncestorsActive` fact plus `RootUnderInactiveAncestor` refusal; Unity compile 0 errors; ClientApp.Tests 26/26 EditMode. |

@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
 // Modified: 2026-09-27 (W8 B snapshot-proof correction: PassExecutor state codec private→internal for direct canonical write/read tests; no runtime behavior change)
 // Modified: 2026-09-27 (W8 B dormant #5 executor snapshot/query seams merged after ERR-011-018; gameplay path remains unwired)
 // Modified: 2026-09-27 (ERR-011-018 / #11 §3.3.0 / KD-13 baseline-slot wiring: UpdateBaselineSlot receives the keeper's #12 slot in world space, not the keeper's own position, so Recovering → Set honours RecoveryCooldownTicks. Behaviour change; no schema/RNG change)
@@ -2300,6 +2301,14 @@ namespace TacticalDirector.MatchEngine
                 }
             }
             return ids;
+        }
+
+        /// <summary>Current player identity for a valid pitch slot. Read under the streamer tick gate;
+        /// neutral matches return NO_PLAYER_ID and zero is a valid player id. No allocation or mutation.</summary>
+        public int AgentPlayerId(int agentId)
+        {
+            GuardRosterIndex(agentId);
+            return _slotPlayerIds[agentId];
         }
 
         /// <summary>Home team's (team 0) current goal count.</summary>
@@ -10638,4 +10647,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.93    | 2026-09-27 | —      | W8 B dormant #5 integration substrate merged after ERR-011-018: v24 PassExecutor serialization/restore, CONTACT receiver/fallback queries, and test-only executor state seams. #21/#11 production wiring remains absent. No new RNG stream/domain/draw-site/order; schema v24 digest change is intentional. |
 // | 1.94    | 2026-09-27 | —      | W8 B snapshot-proof correction after CI 36328692042: PassExecutor state's canonical writer/reader are internal static instead of private so tests can exercise the real v24 codec directly. Test visibility only; serialized order, gameplay, schema v24 and RNG are unchanged. |
 // | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
+// | 1.96    | 2026-10-06 | —      | Read-only scalar occupant identity consumed by live frame capture; no schema/RNG change. |
 #endregion

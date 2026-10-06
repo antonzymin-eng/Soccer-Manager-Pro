@@ -1,21 +1,25 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-09-07 (P5b review — demo boot default-off; host wiring still validates; see VersionHistory 1.8)
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-09-07 (P5b review — demo boot default-off; host wiring still validates; see VersionHistory 1.8)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
 // Purpose:  The Unity host for a live match (P4b). Binds a MatchSession, reads frames each Update,
-//           and binds them onto scene objects. Temporary demo self-boot is explicit opt-in only;
+//           and binds them onto scene objects. Playback is externally owned;
 //           every render/camera/click decision is already made in match-client-core (P4a).
 
 using System;
 using System.Globalization;
 
+using Unity.Profiling;
 using UnityEngine;
 
+using TacticalDirector.ClientApp;
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.MatchViewer;
+using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.MatchClientUnity
 {
@@ -46,14 +50,8 @@ namespace TacticalDirector.MatchClientUnity
     /// was authored as a solid disc — is invisible from code and has no diagnostic short of eyeballing
     /// the rendered pitch.</para>
     ///
-    /// <para><b>P5b temporary lifecycle boundary.</b> <see cref="_autoBootDemoMatch"/> is explicit
-    /// opt-in and defaults false. <see cref="ValidateWiring"/> still runs unconditionally in
-    /// <see cref="Awake"/>, so an inert P5b host remains fail-loud for prefab/camera/palette/transform/
-    /// colour-property wiring. With demo boot off, only the demo-specific seed validation and scene/
-    /// session construction are skipped; <see cref="Start"/> and <see cref="Update"/> remain inert
-    /// because <see cref="_session"/> is null. This keeps the shell independent of P4b scene geography
-    /// while P5b withholds StartMatch. The next lifecycle slice replaces this temporary switch and the
-    /// internal demo construction with an <c>Attach(MatchSession)</c>-style seam.</para>
+    /// <para>External attachment is safe before Awake on an inactive Match View root.
+    /// The coordinator owns playback; this binding owns only its generated container.</para>
     ///
     /// <para><b>M8 — Active Input Handling.</b> <see cref="HandleClick"/> uses the legacy
     /// <c>UnityEngine.Input</c> API. Project Settings → Player → Active Input Handling MUST be
@@ -64,8 +62,9 @@ namespace TacticalDirector.MatchClientUnity
     /// <c>src/match-client-unity/README.md</c> — which also carries this GameObject's own transform
     /// requirement (M15), the team-colour palette shape, and the pitch-surface placement rule (L13).</para>
     /// </summary>
-    public sealed class MatchClientBehaviour : MonoBehaviour
+    public sealed class MatchClientBehaviour : MonoBehaviour, IMatchRendererBinding
     {
+        private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("MatchClientBehaviour.Update");
         [Header("Prefabs — neutral root, unit-sized mesh (README.md §1 is the full contract)")]
         [SerializeField] private GameObject _agentMarkerPrefab;
         [SerializeField] private GameObject _possessionRingPrefab;
@@ -83,24 +82,6 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private Camera _matchCamera;
 
         /// <summary>
-        /// Temporary P4b demo self-boot. Default false so a P5b shell scene cannot start a hidden
-        /// match merely because this component exists. Enable only for an intentionally isolated
-        /// demo-host scene until the real lifecycle owner supplies a session through Attach.
-        /// </summary>
-        [Header("Demo boot (temporary; leave off in P5b shell scenes)")]
-        [SerializeField] private bool _autoBootDemoMatch = false;
-
-        /// <summary>
-        /// The demo match's seed, as text. A <c>ulong</c> <c>[SerializeField]</c>'s round-trip
-        /// through Unity's <c>SerializedProperty</c> for values above <c>long.MaxValue</c> is
-        /// unverified in this environment (L5) — a string inspector field sidesteps the question
-        /// entirely, at the cost of parsing it here instead of the type system doing it for free.
-        /// When demo boot is enabled, that parse lives in <see cref="ValidateDemoSeed"/> (H5), not at
-        /// the point of use.
-        /// </summary>
-        [SerializeField] private string _demoSeedText = "1";
-
-        /// <summary>
         /// Name of the shader property the marker's colour is written to — README §1 clause 3.
         /// An inspector field rather than a baked literal because the answer is a render-pipeline
         /// fact this code cannot see: the Built-in pipeline's standard shader calls it
@@ -112,6 +93,12 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private string _colorPropertyName = "_Color";
 
         private MatchSession _session;
+        private MatchIdentityContext _identity;
+        private ILiveFrameSource _frames;
+        private Action _onFailure;
+        private GameObject _generatedRoot;
+        private bool _initialized;
+        private bool _attaching;
         private MatchRoster _roster;
 
         private GameObject[] _agentMarkers;
@@ -124,86 +111,90 @@ namespace TacticalDirector.MatchClientUnity
         private Vector2[] _scratchAgentPositions;
         private AgentRenderModel[] _agentRenderModels;
 
-        // Resolved ONCE before use. _colorPropertyId is session-independent and therefore resolves
-        // during unconditional ValidateWiring even while demo boot is off; _demoSeed is demo-only and
-        // resolves in ValidateDemoSeed immediately before the temporary demo session is constructed.
-        // The property id is an instance field rather than the static readonly one it replaces because
-        // a static initialiser runs before deserialization and cannot see a serialized value.
-        private ulong _demoSeed;
+        // Shader id is session-independent and resolved by unconditional initialization.
         private int _colorPropertyId;
 
         private bool _wiringRejected;
 
         // The previous/current frame decision (§12 rule 1: a state machine, so it lives in
         // match-client-core where the gate compiles and tests it — AR pass M-6).
-        private readonly LiveFrameLatch _frameLatch = new LiveFrameLatch();
+        private LiveFrameLatch _frameLatch = new LiveFrameLatch();
         private Vector2 _cameraTarget;
 
-        private void Awake()
+        private void Awake() => Initialize();
+
+        private void Initialize()
         {
-            // Host wiring is independent of whether this particular scene is allowed to self-boot a
-            // demo. Keep it fail-loud in P5b shell scenes so an inert MatchClientBehaviour cannot sit
-            // silently miswired until Attach(MatchSession) arrives in the next lifecycle slice.
+            if (_initialized) return;
+            _initialized = true;
             ValidateWiring();
-            if (_wiringRejected)
-            {
-                return;
-            }
+        }
 
-            // P5b boundary: merely existing in a shell scene must not construct a MatchSession or
-            // scene objects. The temporary demo path is explicit opt-in until Attach(MatchSession)
-            // replaces internal lifecycle ownership.
-            if (!_autoBootDemoMatch)
-            {
-                return;
-            }
-
-            // The seed has meaning only for the temporary NeutralDemo path. Keeping this validation
-            // behind the opt-in means a P5b scene does not reject an unused demo field while all real
-            // host wiring above remains validated.
-            ValidateDemoSeed();
-            if (_wiringRejected)
-            {
-                return;
-            }
-
-            // H5: Unity CATCHES an exception thrown out of Awake, logs it — and then delivers Start
-            // and every Update anyway, WITHOUT disabling the component. So anything that throws
-            // inside BuildScene (a MatchSession/MatchSetup constructor, PitchMarkings.BuildDrawables'
-            // own invariant check, BuildMarkings' unreachable-by-design default: arm) would leave
-            // _session null with this component still live, NullReferenceException-ing every frame
-            // forever and naming none of it. Catching converts any such failure into the single
-            // terminal, self-describing state this file already has for bad wiring.
-            //
-            // FR-CS-069 bans try/catch in per-frame INNER LOOPS; this is one-time initialization —
-            // the same carve-out LiveMatchStreamer's post-tick observer and MatchSession's save path
-            // cite for their own non-hot-path catches.
+        /// <summary>Attaches an externally owned session and accepted-frame source without starting playback.</summary>
+        public void Attach(MatchSession session, MatchIdentityContext identity, ILiveFrameSource frames, Action onFailure)
+        {
+            Initialize();
+            if (_wiringRejected) throw new InvalidOperationException("Pitch renderer wiring was rejected.");
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (identity == null) throw new ArgumentNullException(nameof(identity));
+            if (frames == null) throw new ArgumentNullException(nameof(frames));
+            if (onFailure == null) throw new ArgumentNullException(nameof(onFailure));
+            if (!ReferenceEquals(identity.Boot, session.BootRoster))
+                throw new ArgumentException("Renderer identity belongs to another session.");
+            Detach();
+            _attaching = true;
             try
             {
+                _session = session;
+                _identity = identity;
+                _frames = frames;
+                _onFailure = onFailure;
+                _roster = identity.Roster;
+                _generatedRoot = new GameObject("Match visuals");
+                _generatedRoot.transform.SetParent(transform, false);
+                _generatedRoot.SetActive(false);
                 BuildScene();
+                if (_wiringRejected) throw new InvalidOperationException("Pitch renderer rejected generated prefab wiring.");
+                _generatedRoot.SetActive(true);
             }
-            catch (Exception ex)
+            catch
             {
-                RejectWiring("scene construction threw " + ex.GetType().Name + ": " + ex.Message + ".");
+                Detach();
+                throw;
+            }
+            finally { _attaching = false; }
+        }
 
-                // Logged separately because the line above names the cause but drops the stack trace,
-                // which is the half that says WHERE in the construction it went wrong.
-                Debug.LogException(ex, this);
+        /// <summary>Hides and destroys only generated visuals; drops references before deferred Destroy.</summary>
+        public void Detach()
+        {
+            GameObject generated = _generatedRoot;
+            _generatedRoot = null;
+            _session = null;
+            _identity = null;
+            _frames = null;
+            _onFailure = null;
+            _roster = null;
+            _frameLatch = new LiveFrameLatch();
+            _agentMarkers = null;
+            _agentMarkerRenderers = null;
+            _possessionRings = null;
+            _ball = null;
+            _ballShadow = null;
+            _scratchPropertyBlock = null;
+            _scratchAgentPositions = null;
+            _agentRenderModels = null;
+            _cameraTarget = default;
+            if (generated != null)
+            {
+                generated.SetActive(false);
+                Destroy(generated);
             }
         }
 
-        /// <summary>
-        /// Builds everything this binding owns, in the only order that works — the session first,
-        /// since the roster it reports is what sizes the per-agent arrays. Called once from
-        /// <see cref="Awake"/> only when temporary demo boot is explicitly enabled, and only after
-        /// <see cref="ValidateWiring"/> and <see cref="ValidateDemoSeed"/> have passed; nothing here
-        /// may throw past <see cref="Awake"/>.
-        /// </summary>
+        // The roster and session are installed by Attach before any generated object exists.
         private void BuildScene()
         {
-            _session = new MatchSession(MatchSetup.NeutralDemo(_demoSeed));
-            _roster = MatchRoster.FromStreamer(_session.Streamer);
-
             _scratchAgentPositions = new Vector2[_roster.AgentCount];
             _agentRenderModels = new AgentRenderModel[_roster.AgentCount];
             _scratchPropertyBlock = new MaterialPropertyBlock();
@@ -232,64 +223,53 @@ namespace TacticalDirector.MatchClientUnity
             BuildBallObjects();
         }
 
-        private void Start()
-        {
-            // A null session is the normal default-off P5b state. A rejected or unconstructed client
-            // must never start a match; only explicit demo opt-in currently creates a session here.
-            if (_wiringRejected || _session == null)
-            {
-                return;
-            }
-
-            _session.Start();
-        }
-
         private void Update()
         {
-            // Default-off demo boot leaves _session null and therefore makes this binding inert.
+            using var updateScope = UpdateMarker.Auto();
+            // An unattached renderer is inert; disabling visibility never changes ownership.
             if (_wiringRejected || _session == null)
             {
                 return;
             }
 
-            AdvanceFrame();
-
-            if (!_frameLatch.HasFrame)
-            {
-                return;
-            }
-
-            float alpha = FrameInterpolator.ComputeAlpha(
-                _frameLatch.Previous.Tick,
-                _frameLatch.Current.Tick,
-                _frameLatch.SecondsSinceCurrent(Time.time),
-                _session.Streamer.EffectiveTicksPerSecond);
-
-            // Computed once and reused by both RenderBall and UpdateCamera (L2) — the two used to
-            // call FrameInterpolator.BallAt at DIFFERENT alphas (this one, and a hardcoded 1f under a
-            // comment that wrongly called the result "the interpolated frame"), which was both a
-            // redundant call and a silently stale camera target on every render frame that was not
-            // fully caught up to the newest tick.
-            Vector3 pitchBallPosition = FrameInterpolator.BallAt(_frameLatch.Previous, _frameLatch.Current, alpha);
-
-            // L12: MatchRenderProjection.ProjectAgents/ProjectBall (called inside RenderAgents/
-            // RenderBall below) are fail-loud on a non-finite coordinate, and nothing upstream refuses
-            // one — FrameInterpolator deliberately PROPAGATES a non-finite position rather than gating
-            // it (it reads one as a discontinuity and snaps to it). Without this, one bad frame from
-            // the sim throws the SAME exception every subsequent Update forever, with the rest of this
-            // method (the camera, the click handler) never reached again on any later frame either —
-            // an unresponsive-but-not-disabled client, H5's Awake failure mode one call site over.
-            //
-            // Mirrors H5's own Awake try/catch exactly, and the same FR-CS-069 reasoning applies: this
-            // is Unity's top-level MonoBehaviour callback, invoked once per rendered frame — not a
-            // per-frame INNER loop in the rule's sense (a physics substep loop iterated many times
-            // inside one frame, say). FR-CS-069 bans a catch inside that kind of hot inner loop; it
-            // does not ban one wrapping the once-per-frame entry point itself, which is exactly the
-            // carve-out H5's own comment in Awake already claims for one-time initialization — Update
-            // is the same shape, called once per frame rather than once per process, but never nested
-            // inside a tighter loop of its own.
             try
             {
+                AdvanceFrame();
+
+                if (!_frameLatch.HasFrame)
+                {
+                    return;
+                }
+
+                float alpha = FrameInterpolator.ComputeAlpha(
+                    _frameLatch.Previous.Tick,
+                    _frameLatch.Current.Tick,
+                    _frameLatch.SecondsSinceCurrent(Time.time),
+                    _session.Streamer.EffectiveTicksPerSecond);
+
+                // Computed once and reused by both RenderBall and UpdateCamera (L2) — the two used to
+                // call FrameInterpolator.BallAt at DIFFERENT alphas (this one, and a hardcoded 1f under a
+                // comment that wrongly called the result "the interpolated frame"), which was both a
+                // redundant call and a silently stale camera target on every render frame that was not
+                // fully caught up to the newest tick.
+                Vector3 pitchBallPosition = FrameInterpolator.BallAt(_frameLatch.Previous, _frameLatch.Current, alpha);
+
+                // L12: MatchRenderProjection.ProjectAgents/ProjectBall (called inside RenderAgents/
+                // RenderBall below) are fail-loud on a non-finite coordinate, and nothing upstream refuses
+                // one — FrameInterpolator deliberately PROPAGATES a non-finite position rather than gating
+                // it (it reads one as a discontinuity and snaps to it). Without this, one bad frame from
+                // the sim throws the SAME exception every subsequent Update forever, with the rest of this
+                // method (the camera, the click handler) never reached again on any later frame either —
+                // an unresponsive-but-not-disabled client, H5's Awake failure mode one call site over.
+                //
+                // Mirrors H5's own Awake try/catch exactly, and the same FR-CS-069 reasoning applies: this
+                // is Unity's top-level MonoBehaviour callback, invoked once per rendered frame — not a
+                // per-frame INNER loop in the rule's sense (a physics substep loop iterated many times
+                // inside one frame, say). FR-CS-069 bans a catch inside that kind of hot inner loop; it
+                // does not ban one wrapping the once-per-frame entry point itself, which is exactly the
+                // carve-out H5's own comment in Awake already claims for one-time initialization — Update
+                // is the same shape, called once per frame rather than once per process, but never nested
+                // inside a tighter loop of its own.
                 RenderAgents(alpha);
                 RenderBall(pitchBallPosition);
                 UpdateCamera(pitchBallPosition);
@@ -308,14 +288,16 @@ namespace TacticalDirector.MatchClientUnity
 
         private void OnDestroy()
         {
-            _session?.Stop();
+            Action onFailure = _onFailure;
+            Detach();
+            onFailure?.Invoke();
         }
 
         // ---- wiring validation (Awake, before anything is instantiated) -----------------------
 
         /// <summary>
         /// M1: the session-independent wiring checks that must hold before ANY prefab is instantiated.
-        /// This runs on every <see cref="Awake"/>, including the default-off P5b path. A null inspector
+        /// This runs on Awake or early Attach, before any generated object exists. A null inspector
         /// reference would throw inside <c>Instantiate</c> itself; a team palette shorter than
         /// <see cref="MatchEngineConstants.TEAM_COUNT"/> would index-out-of-range the first time an
         /// away-team agent is drawn; and a non-identity scale on this GameObject's own transform would
@@ -335,9 +317,7 @@ namespace TacticalDirector.MatchClientUnity
         /// is the complementary check that runs once a prefab HAS been instantiated (root neutrality,
         /// no world-space <c>LineRenderer</c>).
         ///
-        /// <para>The shader colour-property id also resolves here because it is host wiring, not a
-        /// demo-session concern. The demo seed is deliberately excluded and validated only by
-        /// <see cref="ValidateDemoSeed"/> when temporary demo boot is actually enabled.</para>
+        /// <para>The shader colour-property id resolves once here and survives repeated attachment.</para>
         /// </summary>
         private void ValidateWiring()
         {
@@ -406,35 +386,11 @@ namespace TacticalDirector.MatchClientUnity
             _colorPropertyId = Shader.PropertyToID(_colorPropertyName);
         }
 
-        /// <summary>
-        /// H5 demo-only validation. The seed has no meaning while <see cref="_autoBootDemoMatch"/> is
-        /// false, so parsing it is intentionally gated behind that opt-in while all host wiring stays
-        /// validated by <see cref="ValidateWiring"/>.
-        /// </summary>
-        private void ValidateDemoSeed()
-        {
-            // Parsed immediately ahead of demo construction rather than at MatchSetup.NeutralDemo's
-            // call site — a parse failure there threw out of Awake, which Unity answers by logging and
-            // carrying on. Invariant culture with no permitted number styles means exactly "digits":
-            // a plain TryParse honours the host locale, under which a group separator could silently
-            // select a different seed.
-            if (!ulong.TryParse(_demoSeedText, NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
-            {
-                RejectWiring(
-                    nameof(_demoSeedText) + " must be an unsigned 64-bit integer written as digits only " +
-                    "(no sign, spaces, separators or exponent) — it is \"" + _demoSeedText +
-                    "\", which MatchSetup.NeutralDemo cannot be given.");
-                return;
-            }
-
-            _demoSeed = seed;
-        }
-
         // ---- frame plumbing -------------------------------------------------------------------
 
         private void AdvanceFrame()
         {
-            if (!_session.TryGetLatestFrame(out LiveMatchFrame frame))
+            if (!_frames.TryGetLatestFrame(out LiveMatchFrame frame))
             {
                 return;
             }
@@ -447,7 +403,7 @@ namespace TacticalDirector.MatchClientUnity
         private void BuildMarkings()
         {
             Transform parent = new GameObject("Markings").transform;
-            parent.SetParent(transform, false);
+            parent.SetParent(_generatedRoot.transform, false);
 
             // BuildDrawables, not Build: match-client-core has already decomposed each rectangle into
             // the four lines that close it, so every entry here is one primitive and this file
@@ -559,7 +515,7 @@ namespace TacticalDirector.MatchClientUnity
                 // instantiating (and keep re-logging the same rejection) for every remaining agent.
                 if (_wiringRejected) { return; }
 
-                _agentMarkers[i] = InstantiatePrefab(_agentMarkerPrefab, transform, nameof(_agentMarkerPrefab));
+                _agentMarkers[i] = InstantiatePrefab(_agentMarkerPrefab, _generatedRoot.transform, nameof(_agentMarkerPrefab));
 
                 // M4: resolved ONCE here rather than every frame in RenderAgents — the walk was
                 // re-run 22 times a frame for a value (which mesh draws the marker) that never
@@ -607,20 +563,20 @@ namespace TacticalDirector.MatchClientUnity
                 // same agent in the same iteration on top of the marker's own rejection.
                 if (_wiringRejected) { return; }
 
-                _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, transform, nameof(_possessionRingPrefab));
+                _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, _generatedRoot.transform, nameof(_possessionRingPrefab));
                 _possessionRings[i].SetActive(false);
             }
         }
 
         private void BuildBallObjects()
         {
-            _ball = InstantiatePrefab(_ballPrefab, transform, nameof(_ballPrefab));
+            _ball = InstantiatePrefab(_ballPrefab, _generatedRoot.transform, nameof(_ballPrefab));
 
             // L6: the ball itself may have just been rejected (a non-neutral root, say) — without
             // this, the shadow prefab still gets instantiated on top of that rejection.
             if (_wiringRejected) { return; }
 
-            _ballShadow = InstantiatePrefab(_ballShadowPrefab, transform, nameof(_ballShadowPrefab));
+            _ballShadow = InstantiatePrefab(_ballShadowPrefab, _generatedRoot.transform, nameof(_ballShadowPrefab));
         }
 
         /// <summary>
@@ -710,34 +666,17 @@ namespace TacticalDirector.MatchClientUnity
             return groundPosition;
         }
 
-        /// <summary>
-        /// The client's single TERMINAL state, and (M24) its TEARDOWN point. Logs
-        /// <paramref name="reason"/>, stops the match if one is running, and disables this component;
-        /// every guard in this file re-checks <c>_wiringRejected</c> so nothing runs past it.
-        ///
-        /// <para><b>M24: it must stop the session, not merely disable the component.</b> Disabling a
-        /// <c>MonoBehaviour</c> stops Unity delivering <c>Update</c> — it does not touch
-        /// <see cref="MatchSession"/>, whose <see cref="MatchSession.Start"/> hands paced playback to a
-        /// BACKGROUND thread inside <c>LiveMatchStreamer</c>. Since L12 (round 4) added a catch around
-        /// <see cref="Update"/>'s render calls, a rejection can fire AFTER
-        /// <see cref="MatchSession.Start"/> — and without this, that thread went on ticking a full 90-minute match
-        /// nobody would ever read a frame from, until the Play session itself ended. The stop is safe
-        /// on every path this method is reachable from: <see cref="ValidateWiring"/> and
-        /// <see cref="ValidateDemoSeed"/> both run before <see cref="_session"/> exists (hence the
-        /// null-conditional), and <c>LiveMatchStreamer.Stop</c> returns immediately unless the streamer
-        /// is Running, so a session constructed but never started, or already stopped, is a no-op
-        /// rather than a throw.</para>
-        /// </summary>
+        /// <summary>Terminal render failure; the owning coordinator receives the captured attachment callback.</summary>
         private void RejectWiring(string reason)
         {
-            Debug.LogError("MatchClientBehaviour: " + reason + " Disabling the client.", this);
+            if (_wiringRejected) return;
             _wiringRejected = true;
-
-            // M24: BEFORE enabled = false, so the terminal state is reached with nothing still running
-            // behind it. Null-conditional because validation may reject before _session is constructed.
-            _session?.Stop();
-
             enabled = false;
+            Debug.LogError("MatchClientBehaviour rejected wiring: " + reason, this);
+            if (_attaching) return; // Attach observes rejection synchronously and cleans its partial build.
+            Action onFailure = _onFailure;
+            Detach();
+            onFailure?.Invoke(); // The coordinator stops owned playback; the renderer never owns it.
         }
 
         // ---- per-frame binding ------------------------------------------------------------------
@@ -750,7 +689,7 @@ namespace TacticalDirector.MatchClientUnity
             // longer (it is sized once, in Awake, off the roster the streamer reports at boot) — so
             // the loop below walks the returned count, not the destination array's own length.
             int count = MatchRenderProjection.ProjectAgents(
-                _scratchAgentPositions, _frameLatch.Current, _roster, _agentRenderModels);
+                _scratchAgentPositions, _frameLatch.Current, _roster, _agentRenderModels, _identity);
 
             for (int i = 0; i < count; i++)
             {
@@ -1163,4 +1102,6 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | inert state. Existing pre-1.8 serialized scenes therefore become   |
 // |         |            |        | inert unless the new flag is explicitly enabled; this is temporary |
 // |         |            |        | until Attach(MatchSession) lands.                                  |
+// | 1.9     | 2026-10-06 | —      | External inactive-root Attach/detach; isolated generated container and callback-based rejection. |
+// | 1.10    | 2026-10-06 | —      | Restore the System.Globalization import the 1.9 edit dropped; the Inv helpers still use CultureInfo (Unity compile error CS0103). |
 #endregion
