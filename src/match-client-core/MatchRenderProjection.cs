@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchRenderProjection.cs
 // Created:  2026-08-03
-// Modified: 2026-08-16 (P4b AR round 5, M23: ProjectBall's M17 floor is raised from the drawn radius
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-08-16 (P4b AR round 5, M23: ProjectBall's M17 floor is raised from the drawn radius
 //           to the drawn radius plus the topmost M12/M16 ground layer, which round 4's M19 rescale
 //           had left passing through the ball)
 // Author:   —
@@ -63,11 +64,13 @@ namespace TacticalDirector.MatchClientCore
         /// is smaller than the frame's roster, or a position to draw is not finite. Nothing is
         /// written to <paramref name="destination"/> when any of these is refused.
         /// </exception>
+        /// <param name="identity">Authored S0 identity; null explicitly selects neutral slot shirts.</param>
         public static int ProjectAgents(
             Vector2[] pitchPositions,
             in LiveMatchFrame frame,
             MatchRoster roster,
-            AgentRenderModel[] destination)
+            AgentRenderModel[] destination,
+            MatchIdentityContext identity = null)
         {
             if (pitchPositions == null) { throw new ArgumentNullException(nameof(pitchPositions)); }
             if (roster == null)         { throw new ArgumentNullException(nameof(roster)); }
@@ -105,6 +108,7 @@ namespace TacticalDirector.MatchClientCore
             for (int i = 0; i < count; i++)
             {
                 RequireFiniteAgent(pitchPositions[i], i);
+                if (identity != null) identity.Resolve(in frame, i);
             }
 
             int possessing = frame.PossessingAgentId;
@@ -117,7 +121,7 @@ namespace TacticalDirector.MatchClientCore
                 destination[i] = new AgentRenderModel(
                     i,
                     roster.TeamId(i),
-                    roster.ShirtNumber(i),
+                    identity == null ? roster.ShirtNumber(i) : identity.Resolve(in frame, i).ShirtNumber,
                     PitchViewProjection.ToWorld(pitchPositions[i], 0f),
                     markerRadius,
                     i == possessing,
@@ -290,4 +294,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | layers, so clearing it clears all of them). Floor only — a ball  |
 // |         |            |        | genuinely above that height still rides on its raw physics       |
 // |         |            |        | height, and HeightM/ShadowPosition are again untouched.          |
+// | 1.5     | 2026-10-06 | —      | Consume authored frame identity with explicit neutral slot-shirt fallback. |
 #endregion

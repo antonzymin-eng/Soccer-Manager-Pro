@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchSession.cs
 // Created:  2026-07-24
-// Modified: 2026-09-11 (wiring backlog W7: live boot now runs ManagerAdaptation.ApplyKickoff after manager configuration, preserving setup baselines for human teams while selecting + seeding AI-manager kickoff presets before the first tick)
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-09-11 (wiring backlog W7: live boot now runs ManagerAdaptation.ApplyKickoff after manager configuration, preserving setup baselines for human teams while selecting + seeding AI-manager kickoff presets before the first tick)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§5-P6/§6),
 //           Code Standards #20
@@ -78,6 +79,7 @@ namespace TacticalDirector.MatchClientCore
         private MatchSession(MatchEngine.MatchEngine engine)
         {
             _engine    = engine;
+            BootRoster = new MatchBootRoster(engine.PlayerIdsByAgentId());
             _streamer  = new LiveMatchStreamer(_engine);
             _mutations = new MatchEngineMutations(_engine);
             _driver    = new MatchClientDriver(new ManagerCommandQueue());
@@ -156,6 +158,12 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>The reused ViewModel — the View reads frames from it; playback pause/speed live here (§6.4).</summary>
         public LiveMatchStreamer Streamer => _streamer;
+
+        /// <summary>Engine-assigned identity captured once before any tick or observer runs.</summary>
+        public MatchBootRoster BootRoster { get; }
+
+        // Narrow test-only access to the existing real engine transition seam; never a production handle.
+        internal MatchEngine.MatchEngine TestOnly_Engine => _engine;
 
         /// <summary>The command drain + tick-stamped log (read the log for the match record; §6.1).</summary>
         public MatchClientDriver Driver => _driver;
@@ -379,4 +387,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | tactics as the baseline. AI teams therefore select + seed their |
 // |         |            |        | kickoff preset before tick 1; human teams retain the setup      |
 // |         |            |        | baseline. Replaces the two unconditional SetTeamTactic calls.   |
+// | 1.4     | 2026-10-06 | —      | Copy canonical engine boot identity for the shell/renderer consumer. |
 #endregion

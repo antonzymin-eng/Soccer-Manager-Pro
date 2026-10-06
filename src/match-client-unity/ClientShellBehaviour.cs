@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-10-05 (PR #470 review: report ancestor activation to the validator)
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
 //           UI / Client Framework #38 §3.2 (FR-UI-009/010/011), Code Standards #20 §12 rule 1
@@ -9,6 +10,7 @@
 
 using System;
 
+using Unity.Profiling;
 using UnityEngine;
 
 using TacticalDirector.ClientApp;
@@ -21,14 +23,8 @@ namespace TacticalDirector.MatchClientUnity
     /// graph, structural wiring rules, initial-active hygiene, and exhaustive visibility mapping all
     /// live in gate-compiled <c>client-app</c>; this type only collects Unity instance/ancestor facts,
     /// applies booleans, and forwards UI events (§12 rule 1).
-    /// <para>
-    /// This first P5b slice intentionally exposes only Main Menu → Tactics Setup and its cancel edge.
-    /// The Tactics Setup → Match View edge stays withheld until the shell consumes the existing
-    /// host-free MatchSessionLifecycle and the pitch renderer gains Attach(MatchSession).
-    /// The shell deliberately knows nothing about the Match View implementation type or lifecycle host.
-    /// P4b's temporary demo self-boot is owned by <see cref="MatchClientBehaviour"/> and is opt-in,
-    /// default-off; the later <c>Attach(MatchSession)</c> refactor removes that scaffolding entirely.
-    /// </para>
+    /// <para>The lifecycle composition is consumed, while player-facing Start/report controls remain
+    /// withheld until the localized screen slice. A development host exercises the same coordinator.</para>
     /// <para>
     /// Place this component on an always-active GameObject outside all four screen roots. The pure
     /// validator refuses a shell on or beneath a root, roots nested inside each other, and any
@@ -40,13 +36,16 @@ namespace TacticalDirector.MatchClientUnity
     /// </summary>
     public sealed class ClientShellBehaviour : MonoBehaviour
     {
+        private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("ClientShellBehaviour.Update");
         [Header("P5b screen roots — mutually exclusive children of an always-active shell")]
         [SerializeField] private GameObject _mainMenuRoot;
         [SerializeField] private GameObject _tacticsSetupRoot;
         [SerializeField] private GameObject _matchViewRoot;
         [SerializeField] private GameObject _postMatchReportRoot;
 
-        private ClientScreenFlow _flow;
+        [SerializeField] private MatchClientBehaviour _matchRenderer;
+
+        private ClientMatchCoordinator _coordinator;
         private bool _wiringRejected;
 
         private void Awake()
@@ -69,25 +68,13 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            // P5b foundation STUB registrations: this slice binds only screen identity/visibility.
-            // Null handles are legal per ScreenRegistration. They are intentionally temporary rather
-            // than a product contract: the lifecycle consumer that precedes StartMatch will replace
-            // MatchView's registration with its real MatchViewModelSource/MatchTacticsDispatcher, and
-            // later screens receive their own real sources as their producers are bound.
-            ScreenRegistration mainMenuRegistration =
-                new ScreenRegistration(ClientScreens.MainMenu, null, null);
-            ScreenRegistration tacticsSetupRegistration =
-                new ScreenRegistration(ClientScreens.TacticsSetup, null, null);
-            ScreenRegistration matchViewRegistration =
-                new ScreenRegistration(ClientScreens.MatchView, null, null);
-            ScreenRegistration postMatchReportRegistration =
-                new ScreenRegistration(ClientScreens.PostMatchReport, null, null);
-
-            _flow = new ClientScreenFlow(
-                in mainMenuRegistration,
-                in tacticsSetupRegistration,
-                in matchViewRegistration,
-                in postMatchReportRegistration);
+            if (_matchRenderer == null || !(_matchRenderer.transform == _matchViewRoot.transform ||
+                _matchRenderer.transform.IsChildOf(_matchViewRoot.transform)))
+            {
+                RejectWiring("pitch renderer must be assigned on or beneath Match View.");
+                return;
+            }
+            _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved());
 
             ApplyCurrentScreen();
         }
@@ -96,7 +83,7 @@ namespace TacticalDirector.MatchClientUnity
         public void OpenTacticsSetup()
         {
             RequireReady(nameof(OpenTacticsSetup));
-            _flow.OpenTacticsSetup();
+            _coordinator.OpenTacticsSetup();
             ApplyCurrentScreen();
         }
 
@@ -104,9 +91,29 @@ namespace TacticalDirector.MatchClientUnity
         public void CancelTacticsSetup()
         {
             RequireReady(nameof(CancelTacticsSetup));
-            _flow.CancelTacticsSetup();
+            _coordinator.CancelTacticsSetup();
             ApplyCurrentScreen();
         }
+
+        // No UnityEvent Start/report entry point is exposed until complete localized screens land.
+        private void Update()
+        {
+            using var updateScope = UpdateMarker.Auto();
+            if (_wiringRejected || _coordinator == null) return;
+            try
+            {
+                _coordinator.Refresh(Time.time);
+                if (_coordinator.IsRejected) RejectWiring("required pitch renderer was lost.");
+            }
+            catch (Exception exception)
+            {
+                RejectWiring("match refresh failed: " + exception.Message);
+                Debug.LogException(exception, this);
+            }
+        }
+
+        private void OnDestroy() => _coordinator?.Dispose();
+        private void OnApplicationQuit() => _coordinator?.Dispose();
 
         /// <summary>
         /// Collects only host facts: instance identity, <c>activeSelf</c>, whether every ancestor is
@@ -152,7 +159,7 @@ namespace TacticalDirector.MatchClientUnity
             ClientScreenVisibility visibility;
             try
             {
-                visibility = ClientScreenVisibility.From(_flow.Current);
+                visibility = ClientScreenVisibility.From(_coordinator.Flow.Current);
             }
             catch (ArgumentOutOfRangeException exception)
             {
@@ -160,15 +167,19 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            _mainMenuRoot.SetActive(visibility.MainMenu);
-            _tacticsSetupRoot.SetActive(visibility.TacticsSetup);
-            _matchViewRoot.SetActive(visibility.MatchView);
-            _postMatchReportRoot.SetActive(visibility.PostMatchReport);
+            if (!visibility.MainMenu) _mainMenuRoot.SetActive(false);
+            if (!visibility.TacticsSetup) _tacticsSetupRoot.SetActive(false);
+            if (!visibility.MatchView) _matchViewRoot.SetActive(false);
+            if (!visibility.PostMatchReport) _postMatchReportRoot.SetActive(false);
+            if (visibility.MainMenu) _mainMenuRoot.SetActive(true);
+            if (visibility.TacticsSetup) _tacticsSetupRoot.SetActive(true);
+            if (visibility.MatchView) _matchViewRoot.SetActive(true);
+            if (visibility.PostMatchReport) _postMatchReportRoot.SetActive(true);
         }
 
         private void RequireReady(string action)
         {
-            if (_wiringRejected || _flow == null)
+            if (_wiringRejected || _coordinator == null)
             {
                 throw new InvalidOperationException(
                     action + " cannot run because ClientShellBehaviour did not complete valid Awake wiring.");
@@ -178,15 +189,16 @@ namespace TacticalDirector.MatchClientUnity
         private void RejectWiring(string reason)
         {
             _wiringRejected = true;
-            enabled = false;
-
-            // Rejection is a terminal presentation state, not "whatever the scene happened to contain".
-            DeactivateIfAssigned(_mainMenuRoot);
-            DeactivateIfAssigned(_tacticsSetupRoot);
-            DeactivateIfAssigned(_matchViewRoot);
-            DeactivateIfAssigned(_postMatchReportRoot);
-
-            Debug.LogError("ClientShellBehaviour rejected wiring: " + reason, this);
+            try { _coordinator?.Dispose(); }
+            finally
+            {
+                enabled = false;
+                DeactivateIfAssigned(_mainMenuRoot);
+                DeactivateIfAssigned(_tacticsSetupRoot);
+                DeactivateIfAssigned(_matchViewRoot);
+                DeactivateIfAssigned(_postMatchReportRoot);
+                Debug.LogError("ClientShellBehaviour rejected wiring: " + reason, this);
+            }
         }
 
         private static void DeactivateIfAssigned(GameObject root)
@@ -210,4 +222,5 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | renderer Attach remains TO BUILD. Documentation only.       |
 // | 1.3     | 2026-10-05 | —      | PR #470 review: reports parent activeInHierarchy so roots under|
 // |         |            |        | an inactive ancestor are refused rather than shown blank.      |
+// | 1.4     | 2026-10-06 | —      | Consume stable lifecycle coordinator; renderer containment and outgoing-first visibility. |
 #endregion

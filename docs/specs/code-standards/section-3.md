@@ -8,8 +8,8 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** September 28, 2026
-**Version:** 1.16
+**Modified:** October 6, 2026
+**Version:** 1.17
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -620,10 +620,10 @@ order:
 |---|---|---|
 | 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
 | 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
-| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web`, `ui-framework` and `client-app` (P5b setup composition) — no Data or Management or Presentation assembly, and no `match-client-unity`, references it. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
-| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, seven of the eight Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save`, `club-finances`, `transfers` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, seven of the eight Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save`, `club-finances`, `transfers` — not `living-world`) and Client's `match-client-core` and `client-app` (P5b admitted fixture) — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
 | 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30), `club-finances` (#40), `transfers` (#31) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
@@ -645,6 +645,15 @@ order, never above. The two notations are the same rule; `──►` above point
 provider to the consumer, the root `CLAUDE.md` arrow points from the consumer to the
 provider. Both files label their arrow so the reader never has to reconstruct which
 convention is in force.
+
+**P5b consumed dependency update (October 6, 2026).** `match-client-core` now
+references Presentation's `match-analytics` for its synchronized session observer
+and immutable publication. `client-app` consumes that lifecycle/publication plus
+`match-viewer`, `match-engine`, `player-database` and `tactical-instructions` for
+its concrete S0 setup and report. Direct test references follow their consumed
+contracts. #37's sanctioned-consumer lock names these clients; simulation has no
+reference to analytics or client/UI assemblies. This records downward/intra-tier
+references without approving the pending #20 governance amendment.
 
 **A tier is a ceiling, not a licence.** An individual spec may forbid a reference the
 tier order permits — #44 Discipline sits in Management but its FR-DC set forbids it to
@@ -1330,6 +1339,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.14 | September 12, 2026 | Codex | **D5/#31 T0 seating.** Adds `transfers` (#31) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note moves five-of-seven → six-of-eight because `transfers` has a live #27 read edge; current non-consumers remain `living-world` and `club-finances`. The new assembly's #40 reference is intra-tier and its ProjectConstants reference is downward to Foundation; no dependency-direction rule or A3.1a governance semantics change. | — |
 | 1.15 | September 21, 2026 | OpenAI | **PR #407 current-main reconciliation.** Corrects the maintained Data-tier consumer note after #40 T2a had already activated `club-finances` → `player-database` on September 11: seven of eight Management assemblies now consume #27, with only `living-world` not doing so. Tier-7 seating is unchanged; no dependency-direction or A3.1a governance semantics change. | — |
 | 1.16 | September 28, 2026 | OpenAI | **Localization #49 L1 seating.** Adds `localization` (#49) to Tier 9 Client in the same commit that adds `src/localization/localization.asmdef`. The production assembly is dependency-free, so this adds no upward edge; the L1 reverse-reference lock rejects unauthorized production consumers until L3B deliberately narrows it for the approved sibling boundary adapter. No other tier membership changes. | — |
+| 1.17 | 2026-10-06 | — | Record consumed P5b client fixture/tactic and session analytics dependencies; ordered taxonomy and simulation boundary unchanged. | — |
 
 ---
 

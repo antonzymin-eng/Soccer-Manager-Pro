@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveAgentCue.cs
 // Created:  2026-07-27
-// Modified: 2026-08-03
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1 KD-P1-6,
 //           Code Standards #20
@@ -49,13 +50,17 @@ namespace TacticalDirector.MatchViewer
         /// </summary>
         public readonly bool IsGoalkeeper;
 
+        /// <summary>Current occupant identity; NO_PLAYER_ID for neutral matches, zero is valid.</summary>
+        public readonly int PlayerId;
+
         /// <summary>Constructs one agent's cue set.</summary>
-        public LiveAgentCue(int yellowCards, bool isSentOff, int benchSlot, bool isGoalkeeper)
+        public LiveAgentCue(int yellowCards, bool isSentOff, int benchSlot, bool isGoalkeeper, int playerId)
         {
             YellowCards  = yellowCards;
             IsSentOff    = isSentOff;
             BenchSlot    = benchSlot;
             IsGoalkeeper = isGoalkeeper;
+            PlayerId     = playerId;
         }
     }
 }
@@ -72,4 +77,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | The ctor gains a fourth parameter (no default: a producer that |
 // |         |            |        | forgets it must fail to compile, not silently report no        |
 // |         |            |        | keeper on the pitch).                                          |
+// | 1.2     | 2026-10-06 | —      | Carry explicit current player identity in each captured frame. |
 #endregion

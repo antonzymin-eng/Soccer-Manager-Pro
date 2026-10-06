@@ -1,6 +1,7 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsValueTypeTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-07-27
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §2.2 / §2.3 (FR-AN-015/018, F1/F2/F4) + §4.1 KD-4,
 //           Code Standards #20
@@ -175,6 +176,8 @@ namespace TacticalDirector.MatchAnalytics.Tests
             var sanctionedConsumers = new HashSet<string>
             {
                 "match-analytics", "match-analytics-tests",   // itself
+                "match-client-core", "match-client-core-tests", // P5b session analytics publication
+                "client-app", "client-app-tests", // P5b immutable report consumer
                 "match-client-web", "match-client-web-tests", // roadmap B6 — the PM-1 browser client
             };
 
@@ -240,4 +243,5 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | the heatmap and map arrays, every FR-AN-018 construction gate  |
 // |         |            |        | incl. the F4 xG-without-a-producer refusal, and the mechanical |
 // |         |            |        | KD-4 reverse-reference scan.                                   |
+// | 1.1     | 2026-10-06 | —      | Sanction actually consumed P5b client/report references; sim ban remains explicit. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/match-engine/AssemblyInfo.cs
 // Created:  2026-06-16
-// Modified: 2026-06-16
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-06-16
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md), Code Standards #20 FR-CS-015
 // Purpose:  Assembly-level attributes for TacticalDirector.MatchEngine.
@@ -10,10 +11,12 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("TacticalDirector.MatchEngine.Tests")]
+[assembly: InternalsVisibleTo("TacticalDirector.ClientApp.Tests")]
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-06-16 | —      | Initial creation (Phase A): InternalsVisibleTo for the test   |
 // |         |            |        | assembly, parallel to deterministic-sim / first-touch /       |
 // |         |            |        | pass-mechanics / agent-movement.                              |
+// | 1.1     | 2026-10-06 | —      | Client lifecycle tests exercise the existing real end transition; no production friend. |
 #endregion

@@ -2,7 +2,13 @@
     "name": "TacticalDirector.ClientApp",
     "rootNamespace": "TacticalDirector.ClientApp",
     "references": [
-        "TacticalDirector.UiFramework"
+        "TacticalDirector.UiFramework",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchAnalytics",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

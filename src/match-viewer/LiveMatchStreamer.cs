@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
 //           held in a single RestartBanner after AR-1 M-6)
 // Modified: 2026-08-03 (P4a: CaptureFrame samples the live goalkeeper flag into LiveAgentCue)
@@ -356,7 +357,8 @@ namespace TacticalDirector.MatchViewer
                     _engine.AgentYellowCards(i),
                     _engine.AgentIsSentOff(i),
                     _engine.AgentBenchSlot(i),
-                    _engine.AgentIsGoalkeeper(i));
+                    _engine.AgentIsGoalkeeper(i),
+                    _engine.AgentPlayerId(i));
             }
 
             var subsUsed = new int[MatchEngineConstants.TEAM_COUNT];
@@ -642,4 +644,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | recomputes this product against the DEFAULT tick rate, which   |
 // |         |            |        | would have silently diverged from a streamer constructed with  |
 // |         |            |        | a non-default ticksPerSecond.                                  |
+// | 1.9     | 2026-10-06 | —      | Capture identity with position/cues under the existing tick gate. |
 #endregion

@@ -3,7 +3,15 @@
     "rootNamespace": "TacticalDirector.ClientApp.Tests",
     "references": [
         "TacticalDirector.ClientApp",
-        "TacticalDirector.UiFramework"
+        "TacticalDirector.UiFramework",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchAnalytics",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [
         "Editor"
