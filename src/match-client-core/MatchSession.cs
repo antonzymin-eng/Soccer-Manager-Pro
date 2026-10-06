@@ -416,5 +416,6 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | tactics as the baseline. AI teams therefore select + seed their |
 // |         |            |        | kickoff preset before tick 1; human teams retain the setup      |
 // |         |            |        | baseline. Replaces the two unconditional SetTeamTactic calls.   |
-// | 1.4     | 2026-10-06 | —      | Copy canonical engine boot identity for the shell/renderer consumer. A session restored after any substitution refuses BootRoster (only current occupants are queryable) while restore/playback continue. |
+// | 1.4     | 2026-10-06 | —      | Copy canonical engine boot identity for the shell/renderer consumer. |
+// | 1.5     | 2026-10-06 | —      | A session restored after any substitution refuses BootRoster (only current occupants are queryable) while restore/playback continue. |
 #endregion
