@@ -2,8 +2,8 @@
 
 **Created:** October 6, 2026  
 **Purpose:** Record deletion candidates, preserve cited provenance, and track retained work branches.  
-**Version:** 0.2  
-**Status:** PROPOSED — owner authorization pending; no archive tags created and no candidate branches deleted.
+**Version:** 0.3  
+**Status:** EXECUTED October 6, 2026 — owner-authorized; both annotated archive tags published and verified; all eight candidate branches deleted; the fourteen retained snapshot refs remain. Deferred-work reviewer assignments remain open.
 
 ## Audited snapshot
 
@@ -162,11 +162,12 @@ depend on the archive tags but still requires authorization and its own fresh ch
 
 | Event | State / evidence |
 |---|---|
-| Owner authorization | Pending |
-| Disposition record landed | Pending |
-| Archive tag publication and remote verification | Not performed |
-| Candidate branch deletions | Not performed |
-| Post-delete remote verification | Not performed |
+| Owner authorization | Granted October 6, 2026 by the project owner in Claude Code session <https://claude.ai/code/session_01KpfRDP45frQeE3nmRAtrqi>, covering the two annotated tags and the eight candidate deletions. Recorded after the landing below, not before it as gate 1 asked. |
+| Disposition record landed | PR #480 merged October 6, 2026 at main `5cd8ad5869b4954e5aaa4afdece5febf0d1872d8` from head `339aa90c5cd2c5491eb5ad5d9513dcad9eaa08fc` (CI run 37397655542: ten executed jobs green, Unity tests skipped). |
+| Pre-execution checks (gates 2–3) | Before the PR #480 merge, on a full-history (non-shallow) fetch: all 22 audited heads unchanged; `tools/dotnet-ci/check_branch_ancestry.py` reported ANCESTOR for all five merged candidates against `refs/remotes/origin/main` at the audited `4103e620`; `add310c9` is an ancestor of the W12 tip (4 commits); `refs/pull/397/head` = `1b70f0dec10933509c381e3eda77352bd67d01a7`; remote tag inventory empty. After the merge and immediately before tag publication, a fresh `ls-remote` showed `main` moved only to the merge commit `5cd8ad58`, a descendant of `4103e620`, so each ancestry result holds for the refreshed main; the 21 non-main audited heads were unchanged, `refs/pull/397/head` was unchanged, and the tag inventory was still empty. The checker itself was not re-run against `5cd8ad58` before deletion; when this record was written it was re-run against `5cd8ad58` with the five audited OIDs and reported ANCESTOR for all five. |
+| Archive tag publication and remote verification | Published from the owner's host (the automation session's Git credential is limited to its own branch and received HTTP 403). `archive/fervent-ride-gmknin`: tag object `47e915f2ecbccb6119ed37bfb1c772ca36b0857f`, peeled `f7f44b513f5b496ef0d9b2853c2920e49aeb6660`. `archive/w12-evidence-repair`: tag object `0bbc576e88346cb08316db193c02909cd2343191`, peeled `7dd81a9c842298927ac929d35e8caac12860a365`. Both published tag objects were fetched and inspected: type `tag` (annotated), message bodies byte-identical to the annotations above. |
+| Candidate branch deletions | All eight deleted from the owner's host with the per-candidate `--force-with-lease` form above; each reported `[deleted]` and none was rejected. The two provenance branches were deleted only after both tags verified. The PR #480 review branch `docs/branch-cleanup-disposition` (outside the snapshot, merged) was also deleted with an expected-head lease at `339aa90c`. |
+| Post-delete remote verification | `git ls-remote origin` after deletion: all eight candidates absent; the thirteen retained non-main refs match their audited heads exactly; `main` = `5cd8ad58` (moved only by the PR #480 merge); 14 branches total; both archive tags peel to the required commits; `refs/pull/397/head` = `1b70f0dec10933509c381e3eda77352bd67d01a7`. No concurrently moved retained head. |
 | Deferred-work reviewer assignments | Pending project-owner decision |
 
 ## Version history
@@ -175,3 +176,4 @@ depend on the archive tags but still requires authorization and its own fresh ch
 |---|---|---|
 | 0.1 | October 6, 2026 | Initial audited dispositions, annotated archive messages, remote verification and authorization gates; execution pending. |
 | 0.2 | October 6, 2026 | PR #480 review correction: W12 annotation adds the W6 pre-registration closeout provenance citation and the CHANGELOG/file-manifest references; execution remains pending. |
+| 0.3 | October 6, 2026 | Execution recorded: owner authorization, PR #480 landing, pre-execution checks (ordering against audited and refreshed main stated), published tag-object and peeled OIDs, eight lease-protected deletions and post-delete remote verification. Audited table and gates unchanged. |
