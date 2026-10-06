@@ -92,14 +92,16 @@ on current `main` supersede them.
 
 The corrected post-#398 comparison is derived from the committed post-run archive above. The workflow run and job log corroborate that archive and its GitHub digest. The temporary workflow branch is not itself treated as the durable evidence source.
 
-## Proposed branch-to-tag transition (October 6, 2026)
+## Branch-to-tag transition (proposed and executed October 6, 2026)
 
-The [branch disposition record](../../branch-cleanup-disposition.md) proposes preserving
+**Current state:** branch `wiring/w12-evidence-repair` no longer exists; annotated tag
+`archive/w12-evidence-repair` is the retained history reference (details below).
+
+The [branch disposition record](../../branch-cleanup-disposition.md) proposed preserving
 `wiring/w12-evidence-repair` at annotated tag `archive/w12-evidence-repair`, peeled
 commit `7dd81a9c842298927ac929d35e8caac12860a365` (also retaining ancestor
-`add310c94adbe0b4f452dfa5ec7108df1a63eab8`). Owner authorization and remote tag
-verification are pending; the branch has not been deleted. After execution, that
-record will name the verified published tag as the retained history reference.
+`add310c94adbe0b4f452dfa5ec7108df1a63eab8`). At proposal time owner authorization and
+remote tag verification were pending and the branch still existed.
 The census `salvaged_from` text and checker `EXPECTED_SALVAGED_FROM` remain unchanged
 historical identifiers; their exact-match validation contract is preserved.
 
