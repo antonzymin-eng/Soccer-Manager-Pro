@@ -10,6 +10,7 @@
 //           every render/camera/click decision is already made in match-client-core (P4a).
 
 using System;
+using System.Globalization;
 
 using Unity.Profiling;
 using UnityEngine;
@@ -1102,4 +1103,5 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | inert unless the new flag is explicitly enabled; this is temporary |
 // |         |            |        | until Attach(MatchSession) lands.                                  |
 // | 1.9     | 2026-10-06 | —      | External inactive-root Attach/detach; isolated generated container and callback-based rejection. |
+// | 1.10    | 2026-10-06 | —      | Restore the System.Globalization import the 1.9 edit dropped; the Inv helpers still use CultureInfo (Unity compile error CS0103). |
 #endregion
