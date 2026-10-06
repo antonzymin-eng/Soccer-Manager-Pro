@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 3: The Seam, the Determinism Boundary, the Template Model
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.3
+**Last Updated:** October 6, 2026 (v0.4 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing)
+**Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -33,18 +34,20 @@ producer type (§4.1).
 ```
 Resolve(key):
     template = catalogue[currentLocale].static[key] ?? catalogue[BaseLocale].static[key]   # KD-5 fallback
-    return template                                                                        # no slots
+    return template ?? ""          # "" only for a never-admitted key (F7, ERR-049-005); returned verbatim, never parsed
 
 Render(req):
     n        = catalogue[BaseLocale].variantCount(req.Id)          # locale-INDEPENDENT count (KD-2); n >= 1 (§3.4)
+    if n == 0: return ""                                          # never-admitted template (F7, ERR-049-005)
     variant  = (int)(req.SelectionDraw % (ulong)n)                # the selection, reproduced display-side
     template = catalogue[currentLocale].template(req.Id, variant) # KD-5 fallback to BaseLocale per (Id, variant)
-    text     = Expand(template, req.Slots)                        # pure string placeholder substitution over the NamedSlotSet (§3.5)
+    text     = Expand(template, req.Slots)                        # single-pass placeholder substitution over the NamedSlotSet (§3.5, ERR-049-006)
     if req.HasCitedEpisode:                                       # citation clause — selected by EventKind, NOT the draw
         # producer-scoped by req.Id.ProducerTag so two producers' clause keys never collide:
         clause = catalogue[currentLocale].clause(req.Id.ProducerTag, req.CitationKind)
               ?? catalogue[BaseLocale].clause(req.Id.ProducerTag, req.CitationKind)
-        text   = text + " " + clause                             # matches InteractionTextGenerator's `text + " " + clause`
+        if clause != null:                                        # absent from both: append nothing (F7, ERR-049-005)
+            text = text + " " + clause                            # matches InteractionTextGenerator's `text + " " + clause`
     return text
 ```
 
@@ -112,8 +115,16 @@ localize the surrounding template text, **not** the numeric score glyph. Beyond 
 applies an optional bounded grammatical selector: a template
 MAY declare a plural/gender category keyed on a slot (CLDR-style `one`/`few`/`many`/`other` + a small gender
 set) so a locale chooses among sub-forms of the same variant. It MUST NOT require arbitrary runtime
-morphology. Base-locale English declares no categories, so `Expand` reduces to today's `.Replace` behaviour
-(identity). Deeper grammar (case declension synthesis, agreement engines) is a Stage-3+ deferral (§7),
+morphology. Base-locale English declares no categories (a base selector is a construction error), so
+`Expand` reduces to plain substitution. Substitution is **single-pass** (ERR-049-006): the template is parsed
+once at construction into literal runs and `{name}` tokens, each token is replaced once, a token with no slot
+is kept verbatim, and substituted values are never re-scanned. Any template brace outside a well-formed token
+is a construction error, and there is no escape. Chained `.Replace` re-scans substituted values and depends
+on replacement order, which a producer-agnostic core cannot reproduce (`NamedSlotSet` orders slot names
+ordinally). The two agree whenever every slot value is brace-free: with only well-formed tokens in the
+template and no braces in values, no new token can form during chained replacement. For example, template
+`{subject}{opponent}` with subject `{`, opponent `score}` and score `2-1` gives `2-1` chained but `{score}`
+single-pass. Deeper grammar (case declension synthesis, agreement engines) is a Stage-3+ deferral (§7),
 recorded so a locale author cannot silently expand the model.
 
 ## 3.6 Worked render (base locale, matching today's output)
@@ -126,7 +137,8 @@ recorded so a locale author cannot silently expand the model.
 - no cited episode → no clause appended.
 
 This is byte-identical to `InteractionTextGenerator.Generate` for the same `(intent, draw, slots)` because
-the migrated corpus preserves the template row and count and the draw is unchanged (Appendix C).
+the migrated corpus preserves the template row and count, the draw is unchanged and the slot values are
+brace-free (Appendix C, ERR-049-006).
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -134,4 +146,5 @@ the migrated corpus preserves the template row and count and the draw is unchang
 | 0.1 | 2026-07-23 | — | Initial contracts: the seam (Resolve/Render), localize-after-generate boundary, pre-draw validation split + citation clause, template model, worked render. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
+| 0.4 | 2026-10-06 | — | **L2 back-prop (ERR-049-005, ERR-049-006).** §3.2 pseudocode gains the never-admitted terminal steps (empty `Resolve`/`Render`, no clause) and single-pass expansion; §3.5 specifies construction-time parsing, single-pass substitution and the brace-free identity condition with a counterexample; §3.6 states the condition its identity relies on. |
 #endregion

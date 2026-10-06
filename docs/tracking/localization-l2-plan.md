@@ -2,8 +2,8 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.5\
-**Status:** PLAN FOR REVIEW — source audited; owner decisions on ERR-049-005 and ERR-049-006 recorded (October 6, 2026); implementation not started\
+**Version:** 0.6\
+**Status:** IMPLEMENTED (October 6, 2026) — code, tests and spec back-prop in the implementing PR; pinned Unity compile pending\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
 
@@ -13,7 +13,7 @@
   FR-LC-005–011 and FR-LC-008a, KD-3 (template model), KD-5 (fallback), §2.3 F1–F6, §3.2 (renderer),
   §3.5 (expansion), §4.2 (file layout).
 - **Execution authority:** [`localization-implementation-plan.md`](localization-implementation-plan.md)
-  v2.7 §6 (L2), §3.4 (ERR-049-005 discharge stage), §6.5 (no Wave-8 leakage), §6.6 (L2 exit).
+  v2.8 §6 (L2), §3.4 (ERR-049-005 discharge stage), §6.5 (no Wave-8 leakage), §6.6 (L2 exit).
   This plan chooses implementation boundaries inside §6. It does not widen §6's scope.
 - **Consumer contract:** [S0 binding contracts](../design/ux-s0-binding-contracts.md) §4 and the
   [S0 journey](../design/ux-s0-pm1-journey.md) §14.7. The P5b copy/scale/screens slice will inject
@@ -314,6 +314,25 @@ RNG change, so the full Linux gate is runnable on a worker.
 L2 does not unblock captions on its own: audio D49 still needs the approved #49/#51 caption boundary.
 It does unblock the P5b copy/scale/screens slice, which can then inject a real `ILocalizer`.
 
+## 10. Implementation record (October 6, 2026)
+
+Implemented on `main` baseline `fc66c43` (PR #483 merge). Differences from §5.1, all within scope:
+
+- **Twelve source files instead of seven.** `SelectorKind`, `StaticTextEntry`, `CitationClauseKey` and
+  `CitationClause` are separate public types, following `src/CLAUDE.md`'s one-primary-type-per-file rule
+  rather than folding row types into `TemplateCatalogue.cs`.
+- **Default forms.** The default form of a selector is the form keyed by that kind's zero value:
+  `PluralCategory.Other` for plural and `GrammaticalGender.Unspecified` for gender.
+- **Variant storage.** Each catalogue stores a template's variants sorted by index and finds them by
+  binary search, so an authored index never sizes an allocation. Contiguity of the base indices is
+  checked by `Localizer`.
+- **No profiler marker.** `localization.asmdef` has `noEngineReferences: true`, and `Render` is a
+  display call, not a system tick.
+
+Tests: 52 new cases in `LocalizerTests.cs` (69 in `TacticalDirector.Localization.Tests` including the
+L1 locks). Three mutants were run and each was caught by the intended tests: removing the static-key
+coverage check (T5), narrowing the draw before the modulo (T2), and allowing base selectors (T14).
+
 ## Version History
 
 | Version | Date | Notes |
@@ -323,3 +342,4 @@ It does unblock the P5b copy/scale/screens slice, which can then inject a real `
 | 0.3 | October 6, 2026 | Second review: the identity guarantee becomes brace-free slot values plus well-formed template tokens (enforced at construction), with counterexamples for token formation across substitutions and from template braces; T13/T14 cover them; evidence is stated as verified oracle slot values rather than corpus rows; `section-5.md` joins the ERR-049-006 back-prop list. Owner approval of ERR-049-006 still pending. |
 | 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |
 | 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |
+| 0.6 | October 6, 2026 | Implemented: status updated and §10 records the implementation (twelve files, default-form convention, sorted variant storage, no profiler marker), the test count and the three mutant runs; authority citation advances to the execution plan's v2.8. |

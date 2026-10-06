@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** October 6, 2026 (v0.3 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -18,8 +19,8 @@
   discipline is enforced at each producer's spec, FR-LC-002).
 
 ### T-LC-IDENTITY — Base-locale identity (FR-LC-016, the correctness anchor)
-- **T-LC-IDENTITY-001** — For a fixed `(intent, draw, slots)`, `ILocalizer.Render` with only the base locale
-  loaded returns **byte-identical** output to `InteractionTextGenerator`'s pre-retrofit result — the
+- **T-LC-IDENTITY-001** — For a fixed `(intent, draw, slots)` with brace-free slot values (ERR-049-006),
+  `ILocalizer.Render` with only the base locale loaded returns **byte-identical** output to `InteractionTextGenerator`'s pre-retrofit result — the
   migrated corpus + `draw % variantCount` reproduce the exact template selection, slot expansion, and
   appended clause (the §3.6 / Appendix C worked case, plus a cited-episode case exercising the clause).
 - **T-LC-IDENTITY-002** — `variantCount(BaseLocale, Id) == TemplatesFor(intent).Length` for every defined
@@ -34,14 +35,20 @@
 
 ### T-LC-FALLBACK — Fail-safe fallback (FR-LC-011, KD-5)
 - **T-LC-FALLBACK-001** — A missing key / missing locale / missing `(Id, variant)` / missing clause renders
-  the base-locale identity; **no throw**, **no** state mutation (F2/F4).
+  the base-locale identity; **no throw**, **no** state mutation (F2/F4). A never-admitted key or template
+  absent from both catalogues yields `""` and a never-admitted clause appends nothing (F7, ERR-049-005); a
+  caller-admitted static key, template or clause missing from the base catalogue fails construction (F5).
 - **T-LC-FALLBACK-002** — In a dev build a missing entry MAY surface a `‹key›` marker; in a production build
   it MUST fall through to base (a build-flag-gated assert).
 
 ### T-LC-TEMPLATE — Template model (FR-LC-009/010, KD-3)
 - **T-LC-TEMPLATE-001** — Named-placeholder substitution fills `{subject}`/`{opponent}`/`{score}`; a
   template declaring a plural/gender category selects the correct sub-form on the keyed slot.
-- **T-LC-TEMPLATE-002** — Base-locale English (no categories declared) is identity with `.Replace`.
+- **T-LC-TEMPLATE-002** — Base-locale English (no categories declared; a base selector fails construction)
+  equals chained `.Replace` in any replacement order when every slot value is brace-free and every template
+  brace belongs to a well-formed token. Substitution is single-pass: a slot value containing `{name}` is not
+  re-expanded, and a token formed across adjacent substitutions (template `{subject}{opponent}`, subject `{`,
+  opponent `score}`) stays literal (ERR-049-006).
 - **T-LC-TEMPLATE-003** — The citation clause is selected by `EventKind` (not the draw): varying the draw
   with a fixed `citationKind` yields the same clause; varying `citationKind` changes it (FR-LC-010).
 
@@ -92,4 +99,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial test plan (SEAM/IDENTITY/DET/FALLBACK/TEMPLATE/PREDRAW/LAYER) + FR traceability. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-10-06 | — | **L2 back-prop (ERR-049-005, ERR-049-006).** T-LC-FALLBACK-001 adds the never-admitted terminal cases and the admitted-coverage construction failure; T-LC-TEMPLATE-002 and T-LC-IDENTITY-001 condition `.Replace` identity on brace-free slot values and add the single-pass counterexamples. |
 #endregion

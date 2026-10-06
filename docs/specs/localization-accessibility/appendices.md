@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.3
+**Last Updated:** October 6, 2026 (v0.4 — Appendix C slot-expansion identity conditioned on brace-free slot values, ERR-049-006)
+**Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -51,7 +52,7 @@ For a fixed `(intent, draw, slots)`, base locale only:
 | Variant index | `draw % (ulong)length` | `draw % (ulong)variantCount` | yes |
 | Template | the English template row | the **migrated** English template row (base-locale catalogue) | yes |
 | `{score}` derivation | in `Expand`: `HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals…` | in the **boundary adapter**: same InvariantCulture formatting → `score` string slot | yes (same bytes; just relocated to the producer-owning adapter, §3.5) |
-| Slot expansion | `.Replace({subject}/{opponent}/{score})` | generic `Expand` — pure string substitution over the `NamedSlotSet` (no categories at base) | yes |
+| Slot expansion | `.Replace({subject}/{opponent}/{score})` | generic `Expand` — single-pass substitution over the `NamedSlotSet` (no categories at base; ERR-049-006) | yes, when every slot value is brace-free (true for the verified L3A oracle slot values); a value containing a brace is not re-expanded |
 | Clause | `EpisodeClause(CitedEpisode.Kind)`, appended `text + " " + clause` | `clause(Id.ProducerTag, CitationKind)` (migrated table, producer-scoped), appended `text + " " + clause` | yes |
 | Serialized state | `world.text` cursor + memory | **unchanged** | yes |
 
@@ -80,4 +81,5 @@ pre-draw gates** (T-LC-IDENTITY-001). The retrofit is behaviour-neutral at the b
 | 0.1 | 2026-07-23 | — | Initial appendices: constant catalogue, producer-emission→renderer-input mapping, the #22-retrofit byte-identity table, a worked render transition. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
+| 0.4 | 2026-10-06 | — | **L2 back-prop (ERR-049-006).** Appendix C's slot-expansion row now states its condition: identity with chained `.Replace` holds when every slot value is brace-free; single-pass expansion never re-expands a value. |
 #endregion

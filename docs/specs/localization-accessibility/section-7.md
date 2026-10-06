@@ -1,12 +1,13 @@
 # Localization & Accessibility #49 — Section 7: Forward Extensions
 
 **Created:** July 23, 2026
-**Last Updated:** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
+**Last Updated:** October 6, 2026 (v0.7 — #49 L2 disposition: ERR-049-005 and ERR-049-006 resolved)
+**Last Updated (prior):** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
 **Last Updated (prior):** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)
 **Last Updated (prior):** September 9, 2026 (v0.4 — L0R records ERR-049-002/003/004/005 with named T0/T1 discharge stages under C6; no contract hardening)
 **Last Updated (prior):** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -96,6 +97,20 @@ ERR-049-003 remains open for L3B/T1 and ERR-049-005 remains open for L2.
   every admitted static key or by one explicit production-safe terminal result. L2 must prove no throw and no
   mutation for that terminal path (or kill the corresponding missing-key construction mutant).
 
+**L2 disposition (October 6, 2026).** The #49 L2 landing (`Localizer`, `TemplateCatalogue`,
+`TemplateExpander` and their tests) discharges both remaining L2 findings:
+
+- **ERR-049-005 — RESOLVED in L2 (owner decision October 6, 2026).** Both halves were taken: caller-admitted
+  static keys, template ids and clauses are proven present in the base catalogue at construction
+  (FR-LC-008a, F5), and a never-admitted identity absent from both catalogues has one production terminal
+  result, the empty string (FR-LC-011, F7). Evidence: the static-key coverage mutant is killed, and the
+  terminal path is shown not to throw or change later results.
+- **ERR-049-006 — RESOLVED in L2 (owner-approved October 6, 2026).** Base-locale expansion could not be
+  identical to living-world's chained `.Replace` in general, because chained replacement re-scans
+  substituted values and depends on replacement order. Expansion is now single-pass over construction-parsed
+  `{name}` tokens, base selectors and malformed braces are construction errors, and identity is required only
+  for brace-free slot values (KD-3, FR-LC-009/016, §3.5–§3.6, §5, Appendix C).
+
 The owning `spec-error-log.md` rows are the durable status authority and are synchronized by this L1 close-out.
 
 #region VersionHistory
@@ -107,4 +122,5 @@ The owning `spec-error-log.md` rows are the durable status authority and are syn
 | 0.4 | 2026-09-09 | — | L0R record-only scope extended to ERR-049-004 (missing typed plural/gender selector operand; deferred wholly to L1/T0) and ERR-049-005 (undefined static-key terminal fallback; resolution family decided at L1, discharge in L1 if signature-changing otherwise L2). Existing ERR-049-002/003 dispositions unchanged. C6 still forbids pre-T0 normative hardening. |
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |
 | 0.6 | 2026-09-12 | GPT-5.6 Sol | L1 landing close-out: restores the frozen v0.2 history row verbatim; synchronizes ERR-049-002 and ERR-049-004 to RESOLVED; retains ERR-049-003 OPEN for L3B/T1 and ERR-049-005 OPEN for L2. |
+| 0.7 | 2026-10-06 | — | **L2 disposition.** Appends the L2 record below the frozen L1 entries: ERR-049-005 RESOLVED (admitted-coverage plus empty terminal result) and ERR-049-006 filed and RESOLVED (single-pass expansion with the brace-free identity condition). ERR-049-003 remains OPEN for L3B/T1. |
 #endregion

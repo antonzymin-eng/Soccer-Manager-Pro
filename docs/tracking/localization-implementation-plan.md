@@ -1,7 +1,7 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.7
+**Version:** 2.8
 **Status:** READY FOR IMPLEMENTATION
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
@@ -804,4 +804,5 @@ Review of v2.4 found that the two new records had been added without following t
 | 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof. §5.2 no longer hard-codes the pre-fix `ILocalizer`/`NamedSlotSet`/`LocalizedTextRequest` shapes that §3.3/§3.4 require L1 to change — the three bullets are marked subject to those decisions. ERR-049-004's exit evidence split at the slice boundary: L1 proves the operand exists with the required type/locale-neutrality/immutability/no-persisted-state properties (§5.3, §5.5) and closes the ERR there; L2 proves it drives plural selection (§6.6) as FR-LC-009 conformance, since the renderer and catalogue are L2. §2 H1 and the §3 preamble updated from two known defects to four. No new defect recorded, no normative fix chosen, no FR/KD wording altered. |
 | 2.7 | 2026-09-28 | OpenAI | L1 restart close-out on current main: records the L1-only reverse-reference tripwire lifecycle, requires pinned Unity 6000.4.9f1 compilation of both new asmdefs before merge, and preserves v2.6's owner-held gate-policy update. |
 | 2.6 | 2026-09-20 | — | Synchronized gate acceptance wording with the owner retirement of the final held-red row. The canonical `tools/run-tests-local.sh --pr` contract is unchanged; owner-held verification is now conditional on configured rows, and the comments-only current ledger means no exclusion/dedicated stage while `sim_match_engine_close_chance` runs in the ordinary sweep. Historical v2.1 and L3A gate evidence remain historical and are not rewritten. |
+| 2.8 | 2026-10-06 | — | **L2 executed** per `localization-l2-plan.md` v0.5: `TemplateCatalogue`, `TemplateExpander`, `Localizer` and their row/coverage types land in `src/localization/` with tests T1–T16. ERR-049-005 RESOLVED (admitted-coverage plus empty terminal result, owner decision October 6); ERR-049-006 filed and RESOLVED (single-pass expansion, identity conditioned on brace-free slot values, owner-approved October 6). §6 scope unchanged; ERR-049-003 stays with L3B. Pinned Unity compile pending on the PR head. |
 #endregion

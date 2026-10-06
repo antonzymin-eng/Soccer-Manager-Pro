@@ -1,12 +1,13 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.7 — restore omitted v0.3 header-chain record; review hardening only)
+**Last Updated:** October 6, 2026 (v0.8 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing)
+**Last Updated (prior):** September 14, 2026 (v0.7 — restore omitted v0.3 header-chain record; review hardening only)
 **Last Updated (prior):** September 12, 2026 (v0.6 — frozen-history restoration and LocaleId external-tag clarification)
 **Last Updated (prior):** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -42,7 +43,11 @@
   category selector (CLDR-style categories + a small gender set). The request-side selector input MUST be
   typed and locale-neutral (for example, a cardinal number and/or authored grammatical-gender value), not
   a preformatted localized category string. A template MUST NOT require arbitrary runtime morphology.
-  Base-locale English declares no categories (identity with `.Replace`).
+  Base-locale English declares no categories; a base variant declaring a plural or gender selector MUST be
+  rejected at catalogue construction. Named-placeholder substitution MUST be single-pass: each `{name}`
+  token is replaced once and substituted values are never re-scanned. A template brace outside a
+  well-formed token (`{`, one or more characters other than braces, `}`) MUST be rejected at construction
+  (ERR-049-006).
 - **FR-LC-010** — The episode citation clause MUST be a per-`EventKind` localizable string, selected by
   `EventKind` (a sim fact), **not** by the draw, and appended when `hasCitedEpisode` — matching
   `InteractionTextGenerator`'s `text + " " + clause`. The clause table migrates to the base-locale catalogue
@@ -52,7 +57,10 @@
 **Fallback (KD-5)**
 - **FR-LC-011** — A missing key, locale, `(Id, variant)`, or clause MUST render the base-locale identity;
   it MUST NOT crash and MUST NOT mutate any state. A visible `‹key›` marker is permitted **only** in dev
-  builds; production MUST fall through to the base locale.
+  builds; production MUST fall through to the base locale. For an identity the caller never admitted that is
+  absent from both the selected and base catalogues, the production terminal result is the empty string:
+  `Resolve` returns `""`, `Render` returns `""` for such a template, and such a clause appends nothing
+  (ERR-049-005). Admitted identities never reach this path (FR-LC-008a).
 
 **Seam placement / reference direction (KD-6)**
 - **FR-LC-012** — No sim/loop assembly may reference `TacticalDirector.Localization` (the no-reverse-
@@ -75,10 +83,15 @@
   cover the producer's **entire defined roster**: every defined `InteractionIntent` (excl. `None`) has ≥1
   base-locale template, and every defined citable `EventKind` has a base-locale clause. This is asserted
   **fail-loud at catalogue construction** (F5), so a defined id **missing** a row is caught at the authoring
-  boundary — not merely an explicit 0-count row, and never a consumed-cursor-then-fail at render.
+  boundary — not merely an explicit 0-count row, and never a consumed-cursor-then-fail at render. The same
+  construction-time coverage applies to every **static `LocalizationKey`** the caller admits: the caller or
+  boundary supplies the required static keys, template ids and clause keys, and construction fails if the base
+  catalogue lacks any of them (ERR-049-005). The core never enumerates a producer roster itself.
 - **FR-LC-016** — The #22 retrofit MUST be base-locale-identity-neutral: `InteractionTextGenerator.Generate`
   returns native values, the corpus (template rows **and** the per-`EventKind` clause table) migrates to
-  #49, and the rendered base-locale output is byte-identical to today's (§3 / Appendix C).
+  #49, and the rendered base-locale output is byte-identical to today's (§3 / Appendix C) whenever every slot
+  value is brace-free; the verified L3A oracle slot values satisfy this. A slot value containing a brace is not
+  re-expanded (ERR-049-006).
 
 **Determinism / persistence (KD-7 / KD-4)**
 - **FR-LC-017** — #49 MUST register no RNG stream, no `DOMAIN_TAG_*`, no `SubsystemOrdinal`, hold no
@@ -217,8 +230,9 @@ public static class LivingWorldTextBoundary
 | **F2** | Missing locale / `(Id, variant)` **translation** / **non-base** clause | Render the base-locale identity (FR-LC-011); no throw, no mutation. (A missing **base-locale** row/clause for a defined id is F5, caught at construction — not this graceful path.) |
 | **F3** | A producer emits a baked, human-readable localized string | **Coverage-lock failure** — a routing check at the producer's spec (FR-LC-002); not a runtime path in #49. |
 | **F4** | `currentLocale` set to an unknown locale | Falls back entirely to the base locale (KD-5); no throw. |
-| **F5** | Catalogue fails **roster coverage** at construction (FR-LC-008a: a defined `InteractionIntent` with no base-locale template row, or a defined citable `EventKind` with no base-locale clause; a defined id with an explicit 0-count row) | **Fail loud** at catalogue construction (the authoring boundary), never a silent render-time default or a consumed-cursor-then-fail. |
+| **F5** | Catalogue fails **roster coverage** at construction (FR-LC-008a: a defined `InteractionIntent` with no base-locale template row, or a defined citable `EventKind` with no base-locale clause; a defined id with an explicit 0-count row; a caller-admitted static key with no base-locale row — ERR-049-005) | **Fail loud** at catalogue construction (the authoring boundary), never a silent render-time default or a consumed-cursor-then-fail. |
 | **F6** | A sim/loop assembly references `TacticalDirector.Localization` | **Build error** (asmdef direction, FR-LC-012). |
+| **F7** | A key, template or clause the caller never admitted is absent from both the selected and base catalogues | Production terminal result: `""` from `Resolve`/`Render`, no clause appended; no throw, no mutation, no key text (FR-LC-011, ERR-049-005). Reachable only through a caller defect. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -230,4 +244,5 @@ public static class LivingWorldTextBoundary
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |
 | 0.6 | 2026-09-12 | GPT-5.6 Sol | Restores the frozen v0.4 history row verbatim and clarifies that `LocaleId.Value` is an internal lower-case identity, not BCP-47 canonical form; Wave-8 external file/CLDR lookups map from it to the external canonical tag/form they require. |
 | 0.7 | 2026-09-14 | GPT-5.6 Sol | Restores the omitted v0.3 header-chain record. No normative contract change. |
+| 0.8 | 2026-10-06 | — | **L2 back-prop (ERR-049-005, ERR-049-006).** FR-LC-008a/F5 extend construction coverage to caller-admitted static keys; FR-LC-011 and new F7 define the empty-string production terminal result for never-admitted identities; FR-LC-009 makes base selectors a construction error and pins single-pass substitution with well-formed tokens; FR-LC-016 identity is conditioned on brace-free slot values. |
 #endregion
