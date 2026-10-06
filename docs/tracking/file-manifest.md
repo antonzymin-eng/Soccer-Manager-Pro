@@ -1,6 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 6, 2026 — **P5b published-head review fixes.** No files added or removed. `MatchSession.cs`, `ClientMatchCoordinatorTests.cs`, `S0DemoFixtureComparisonTests.cs` and `LiveMatchFrameCueTests.cs` change in place; validation record `docs/tracking/p5b-lifecycle-validation.md` v0.3 adds the published-head review and corrections.
+**Last Updated:** October 6, 2026 — **Localization #49 L2 plan: PR #483 review fix.** `docs/tracking/localization-l2-plan.md` advances to v0.5; no files added or removed.
+
+**Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan: ERR-049-006 approved.** `docs/tracking/localization-l2-plan.md` advances to v0.4; no files added or removed.
+
+**Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan second review.** `docs/tracking/localization-l2-plan.md` advances to v0.3; no files added or removed.
+
+**Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan review corrections.** `docs/tracking/localization-l2-plan.md` advances to v0.2; no files added or removed.
+
+**Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan drafted.** New: `docs/tracking/localization-l2-plan.md` v0.1 (draft implementation plan; documentation only).
+
+**Last Updated (prior):** October 6, 2026 — **P5b published-head review fixes.** No files added or removed. `MatchSession.cs`, `ClientMatchCoordinatorTests.cs`, `S0DemoFixtureComparisonTests.cs` and `LiveMatchFrameCueTests.cs` change in place; validation record `docs/tracking/p5b-lifecycle-validation.md` v0.3 adds the published-head review and corrections.
 
 **Last Updated (prior):** October 6, 2026 — **P5b lifecycle continuation.** Adds the real complete-match fixture comparison to the normal PR suite and profiler scopes to the three Unity Update bindings. Validation record `docs/tracking/p5b-lifecycle-validation.md` v0.2 distinguishes recovered affected-suite results from the pending new comparison/CI and exact-head Unity checks. No new gameplay, calibration, schema, RNG or product scope.
 
@@ -3648,6 +3658,7 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/ux-high-level-plan.md` | UX high-level plan v1.21: #470 foundation landing/next implementation status; strategy, approved scope and gates unchanged |
 | `docs/tracking/p5b-lifecycle-validation.md` | v0.3 candidate implementation/evidence, published-head review corrections; full PR gate and exact-head Unity checks pending |
 | `docs/tracking/p5b-lifecycle-identity-plan.md` | v0.2 source-audited consumed implementation plan at f276f700: lifecycle, authored/frame identity, analytics, renderer Attach/detach, explicit report acknowledgement, teardown and pre-merge evidence; implementation pending |
+| `docs/tracking/localization-l2-plan.md` | v0.5 #49 L2 implementation plan at ce2e2a36: catalogue, expander, `Localizer`, ERR-049-005 and ERR-049-006 owner decisions, consumer handoff obligations, tests and open choices |
 | `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.30: #470 foundation landed; next consumed lifecycle/identity implementation planned, L2-dependent screens and Gate J remain due |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
