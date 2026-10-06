@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.2\
+**Version:** 0.3\
 **Status:** DRAFT PLAN — source audited; owner decision on ERR-049-005 recorded; proposed ERR-049-006 (§4.2) needs owner approval\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
@@ -121,18 +121,38 @@ and §3.6 rely on that identity. A generic expander cannot meet it in general, f
 - **Order.** The result depends on the replacement order. `NamedSlotSet` sorts slot names ordinally
   (opponent, score, subject), and the producer-agnostic core has no producer order to follow. Copying
   living-world's order into the core would break FR-LC-012/KD-6.
+- **Tokens formed across boundaries.** Chained replacement can create a token that exists in neither
+  the template nor any single value. Template `{subject}{opponent}` with subject `{`, opponent `score}`
+  and score `2-1` gives `2-1` when chained but `{score}` in a single pass. Template braces can do the
+  same: `{{subject}}` with subject `score` gives `2-1` chained and `{score}` single-pass, even though
+  every value is brace-free.
 
-The two agree whenever no slot value contains another slot's `{name}` token, which holds for every
-row in the current corpus and oracle.
+**Sufficient identity guarantee.** Single-pass and chained `.Replace` (in any order) produce the same
+string when both of these hold:
+
+1. every slot value is brace-free (contains no `{` or `}`); and
+2. every brace in the template belongs to a well-formed token: `{`, then one or more characters that
+   are not `{` or `}`, then `}`. L2 enforces this at catalogue construction (§5.2).
+
+Under these two conditions the only braces left during chained replacement are those of not-yet-replaced
+original tokens, so no new token can form. Neither condition alone is sufficient, as the two examples
+above show.
+
+**Current evidence.** Template rows do not constrain runtime names, so the corpus alone proves nothing
+about values. The verified L3A oracle slot values are brace-free (subject `Kade Moreno`, opponent
+`Halden Rovers`, and scores formatted from integers with `InvariantCulture`), and the current corpus
+templates contain braces only in `{subject}`, `{opponent}` and `{score}` tokens. A real player or club
+name containing a brace is exactly the case where behaviour deliberately differs.
 
 **Proposed resolution (requires owner approval, since it changes approved spec text):** generic
 `Expand` performs single-pass, non-recursive substitution. Each `{name}` token in the template is
 replaced once, and substituted values are never re-scanned. Base-locale identity with today's output
-is required only when no slot value contains a `{name}` token. In that case single-pass and chained
-`.Replace` give the same result in any order.
+is required only under the two conditions of the sufficient identity guarantee above.
 
 **Back-prop in the implementing commit:** KD-3 (`section-1.md`), FR-LC-009 and FR-LC-016
-(`section-2.md`), and §3.5/§3.6 (`section-3.md`) gain the single-pass rule and the identity condition.
+(`section-2.md`), §3.5/§3.6 (`section-3.md`) and the tests in `section-5.md` (T-LC-IDENTITY-001 and
+T-LC-TEMPLATE-002, which currently require unconditional `.Replace` identity) gain the single-pass rule
+and the two identity conditions.
 Appendix C's slot-expansion row, which currently says "yes" unconditionally, gains the same condition. A new `spec-error-log.md` entry is filed
 (re-check that the id is still free at filing time). Test T13 proves it now (§6). L3B's oracle
 comparison then confirms identity on the real corpus. This changes no S0 behaviour: S0 uses only
@@ -166,8 +186,11 @@ fold into `TemplateCatalogue.cs` during implementation if the type-shape test al
 - **Selected catalogue (FR-LC-008):** translated indices may be sparse, but each one must lie in
   `[0, n)`. A missing translated index falls back to the base variant at that index. An index at or
   above `n` is rejected, because it could never render. See §8 Q4 on orphans.
-- **Templates:** placeholders are parsed once at construction. Unbalanced braces in a template are
-  rejected. Static rows are opaque and are never parsed (§5.3).
+- **Templates:** placeholders are parsed once at construction. A token is `{`, one or more characters
+  that are not `{` or `}`, then `}`. Any other brace (unmatched, nested such as `{{x}}`, or empty `{}`)
+  is rejected; L2 has no brace escape. This is condition 2 of the §4.2 identity guarantee. A slot whose
+  name contains a brace (L1 allows it) simply cannot be referenced. Static rows are opaque and are
+  never parsed (§5.3).
 - **Selectors:** a variant that declares a plural selector requires its catalogue to supply a plural
   rule. The base English catalogue declares none (KD-3 identity).
 
@@ -221,8 +244,8 @@ formatting (FR-LC-005).
 | T10 | Synthetic non-English catalogue with a test plural rule chooses `Few` for 3 through the real `Render`; English base takes the identity path | FR-LC-009 conformance (plan §6.6) |
 | T11 | Gender form chosen by operand; unknown or missing operand → default form; plural selector with a gender-only operand → default form | Bounded selector, FR-LC-011 |
 | T12 | Clause appended with one space; selected → base fallback; same `CitationKind` under two producer tags does not collide; `HasCitedEpisode == false` appends nothing | FR-LC-010, producer scoping |
-| T13 | Single-pass expansion: a subject named `{opponent}` stays literal (chained `.Replace` would expand it); output for brace-free values equals the chained `.Replace` result; an unknown placeholder stays verbatim | §5.4 step 5, ERR-049-006 |
-| T14 | Construction rejects: wrong base locale, duplicate rows, a gap in base indices, a selected index at or above the base count, unbalanced braces, plural selector without a rule | §5.2 |
+| T13 | Single-pass expansion: (a) a subject named `{opponent}` stays literal; (b) template `{subject}{opponent}` with subject `{`, opponent `score}`, score `2-1` gives `{score}`, not `2-1`; (c) with brace-free values and well-formed templates, output equals chained `.Replace` in both living-world order and sorted order; (d) an unknown placeholder stays verbatim | §5.4 step 5, ERR-049-006 |
+| T14 | Construction rejects: wrong base locale, duplicate rows, a gap in base indices, a selected index at or above the base count, malformed template braces (unmatched, nested `{{subject}}`, empty `{}`), plural selector without a rule | §5.2 |
 | T15 | Caller arrays mutated after construction do not change output | Immutability |
 | T16 | Non-admitted template id → `""`; required clause absent from both is impossible by construction; an unrequired missing clause appends nothing | §8 Q1 defensive paths |
 | — | Existing L1 locks keep passing: no references, public type shape, no mutable static, no forbidden state, L1-only tripwire | Layer and state constraints |
@@ -294,3 +317,4 @@ It does unblock the P5b copy/scale/screens slice, which can then inject a real `
 | --- | --- | --- |
 | 0.1 | October 6, 2026 | Initial draft against `ce2e2a36`. Records the owner's ERR-049-005 choice (construction coverage plus a `string.Empty` terminal for never-admitted keys), the L2 type and test plan, and five open choices with recommendations. |
 | 0.2 | October 6, 2026 | Review corrections: translated variant indices may be sparse within the base range (T3 uses base `0,1,2`, selected `0,2`); Q5 becomes proposed ERR-049-006 with spec back-prop and test T13, pending owner approval; handoff obligations assign P5b to admit its exact client consumers in the L1 tripwire and #20 record while keeping the sim ban; thread-safety qualified on the plural-rule purity contract; S0's separate content proof stated as still mandatory. |
+| 0.3 | October 6, 2026 | Second review: the identity guarantee becomes brace-free slot values plus well-formed template tokens (enforced at construction), with counterexamples for token formation across substitutions and from template braces; T13/T14 cover them; evidence is stated as verified oracle slot values rather than corpus rows; `section-5.md` joins the ERR-049-006 back-prop list. Owner approval of ERR-049-006 still pending. |
