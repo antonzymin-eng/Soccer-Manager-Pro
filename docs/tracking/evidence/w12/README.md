@@ -102,3 +102,10 @@ verification are pending; the branch has not been deleted. After execution, that
 record will name the verified published tag as the retained history reference.
 The census `salvaged_from` text and checker `EXPECTED_SALVAGED_FROM` remain unchanged
 historical identifiers; their exact-match validation contract is preserved.
+
+**Executed October 6, 2026.** Annotated tag `archive/w12-evidence-repair` is published
+(tag object `0bbc576e88346cb08316db193c02909cd2343191`, peeled commit
+`7dd81a9c842298927ac929d35e8caac12860a365`, which retains ancestor
+`add310c94adbe0b4f452dfa5ec7108df1a63eab8`) and was verified remotely before the branch
+`wiring/w12-evidence-repair` was deleted. That tag is now the retained history reference
+for the historical branch identifier above; see the disposition record's execution record.
