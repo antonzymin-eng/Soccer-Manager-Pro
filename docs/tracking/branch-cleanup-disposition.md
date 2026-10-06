@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026  
 **Purpose:** Record deletion candidates, preserve cited provenance, and track retained work branches.  
-**Version:** 0.1  
+**Version:** 0.2  
 **Status:** PROPOSED — owner authorization pending; no archive tags created and no candidate branches deleted.
 
 ## Audited snapshot
@@ -112,6 +112,9 @@ docs/tracking/evidence/w12/w12-gate-firing-census.json
 tools/dotnet-ci/check_w12_evidence.py
 docs/tracking/w12-preregistration-reconciliation.md
 docs/tracking/evidence/w12/README.md
+docs/tracking/w6-controlled-ball-closeout.md
+docs/tracking/CHANGELOG.md
+docs/tracking/file-manifest.md
 
 Disposition record: docs/tracking/branch-cleanup-disposition.md
 ```
@@ -171,3 +174,4 @@ depend on the archive tags but still requires authorization and its own fresh ch
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | October 6, 2026 | Initial audited dispositions, annotated archive messages, remote verification and authorization gates; execution pending. |
+| 0.2 | October 6, 2026 | PR #480 review correction: W12 annotation adds the W6 pre-registration closeout provenance citation and the CHANGELOG/file-manifest references; execution remains pending. |
