@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.4\
+**Version:** 0.5\
 **Status:** PLAN FOR REVIEW — source audited; owner decisions on ERR-049-005 and ERR-049-006 recorded (October 6, 2026); implementation not started\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
@@ -191,8 +191,11 @@ fold into `TemplateCatalogue.cs` during implementation if the type-shape test al
   is rejected; L2 has no brace escape. This is condition 2 of the §4.2 identity guarantee. A slot whose
   name contains a brace (L1 allows it) simply cannot be referenced. Static rows are opaque and are
   never parsed (§5.3).
-- **Selectors:** a variant that declares a plural selector requires its catalogue to supply a plural
-  rule. The base English catalogue declares none (KD-3 identity).
+- **Selectors:** the base English catalogue must declare no selector of any kind. `Localizer`
+  construction rejects a base variant with a plural **or** a gender selector (KD-3 and FR-LC-009:
+  base English declares no categories, which is what keeps base rendering identical to `.Replace`
+  under FR-LC-016). Only selected-locale variants may declare a selector, and a selected catalogue
+  that declares a plural selector must supply a plural rule.
 
 `Localizer` and catalogues are immutable after construction and hold only `readonly` instance fields.
 Concurrent reads are safe without locks **provided the supplied plural rule is pure and total**
@@ -245,7 +248,7 @@ formatting (FR-LC-005).
 | T11 | Gender form chosen by operand; unknown or missing operand → default form; plural selector with a gender-only operand → default form | Bounded selector, FR-LC-011 |
 | T12 | Clause appended with one space; selected → base fallback; same `CitationKind` under two producer tags does not collide; `HasCitedEpisode == false` appends nothing | FR-LC-010, producer scoping |
 | T13 | Single-pass expansion: (a) a subject named `{opponent}` stays literal; (b) template `{subject}{opponent}` with subject `{`, opponent `score}`, score `2-1` gives `{score}`, not `2-1`; (c) with brace-free values and well-formed templates, output equals chained `.Replace` in both living-world order and sorted order; (d) an unknown placeholder stays verbatim | §5.4 step 5, ERR-049-006 |
-| T14 | Construction rejects: wrong base locale, duplicate rows, a gap in base indices, a selected index at or above the base count, malformed template braces (unmatched, nested `{{subject}}`, empty `{}`), plural selector without a rule | §5.2 |
+| T14 | Construction rejects: wrong base locale, duplicate rows, a gap in base indices, a selected index at or above the base count, malformed template braces (unmatched, nested `{{subject}}`, empty `{}`), a base variant declaring a plural selector, a base variant declaring a gender selector, a selected plural selector without a rule | §5.2 |
 | T15 | Caller arrays mutated after construction do not change output | Immutability |
 | T16 | Non-admitted template id → `""`; required clause absent from both is impossible by construction; an unrequired missing clause appends nothing | §8 Q1 defensive paths |
 | — | Existing L1 locks keep passing: no references, public type shape, no mutable static, no forbidden state, L1-only tripwire | Layer and state constraints |
@@ -319,3 +322,4 @@ It does unblock the P5b copy/scale/screens slice, which can then inject a real `
 | 0.2 | October 6, 2026 | Review corrections: translated variant indices may be sparse within the base range (T3 uses base `0,1,2`, selected `0,2`); Q5 becomes proposed ERR-049-006 with spec back-prop and test T13, pending owner approval; handoff obligations assign P5b to admit its exact client consumers in the L1 tripwire and #20 record while keeping the sim ban; thread-safety qualified on the plural-rule purity contract; S0's separate content proof stated as still mandatory. |
 | 0.3 | October 6, 2026 | Second review: the identity guarantee becomes brace-free slot values plus well-formed template tokens (enforced at construction), with counterexamples for token formation across substitutions and from template braces; T13/T14 cover them; evidence is stated as verified oracle slot values rather than corpus rows; `section-5.md` joins the ERR-049-006 back-prop list. Owner approval of ERR-049-006 still pending. |
 | 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |
+| 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |

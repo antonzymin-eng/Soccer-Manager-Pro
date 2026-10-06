@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan: ERR-049-006 approved.** `docs/tracking/localization-l2-plan.md` v0.4 records the owner's approval of ERR-049-006 (single-pass `Render` expansion; identity with chained `.Replace` guaranteed for brace-free slot values and well-formed template tokens). The error-log entry and spec back-prop land with the implementing commit. Documentation only.
+> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan: PR #483 review fix.** `docs/tracking/localization-l2-plan.md` v0.5: the base English catalogue rejects every selector kind (plural and gender) at construction, per KD-3/FR-LC-009; T14 covers both. Documentation only.
+>
+> **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan: ERR-049-006 approved.** `docs/tracking/localization-l2-plan.md` v0.4 records the owner's approval of ERR-049-006 (single-pass `Render` expansion; identity with chained `.Replace` guaranteed for brace-free slot values and well-formed template tokens). The error-log entry and spec back-prop land with the implementing commit. Documentation only.
 >
 > **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan second review.** `docs/tracking/localization-l2-plan.md` v0.3: the proposed ERR-049-006 identity guarantee becomes brace-free slot values plus well-formed template tokens enforced at construction, with counterexamples (tokens formed across adjacent substitutions, and from template braces) added to T13/T14; evidence cites the verified L3A oracle slot values; #49 `section-5.md` joins the back-prop list. Owner approval of ERR-049-006 still pending. Documentation only.
 >
