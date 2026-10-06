@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 6, 2026 — **P5b Unity compile fix (Codex review).** `MatchClientBehaviour.cs` v1.10 restores `using System.Globalization;`, which the v1.9 edit dropped while the `Inv` helpers still use `CultureInfo` (Unity CS0103). The Linux shim gate does not compile the Unity rendering assembly, so the pinned Unity compile check remains required.
+> **Last Updated:** October 6, 2026 — **Localization #49 L2 plan drafted.** New `docs/tracking/localization-l2-plan.md` v0.1 (draft) plans the immutable in-memory catalogue, template expander and production `ILocalizer` under `localization-implementation-plan.md` v2.7 §6, and records the owner's ERR-049-005 choice: construction coverage of caller-admitted static keys plus a `string.Empty` terminal result for a key never admitted. Five design choices await review. Documentation only; ERR-049-005 stays OPEN until the implementing commit.
+>
+> **Last Updated (prior):** October 6, 2026 — **P5b Unity compile fix (Codex review).** `MatchClientBehaviour.cs` v1.10 restores `using System.Globalization;`, which the v1.9 edit dropped while the `Inv` helpers still use `CultureInfo` (Unity CS0103). The Linux shim gate does not compile the Unity rendering assembly, so the pinned Unity compile check remains required.
 >
 > **Last Updated (prior):** October 6, 2026 — **P5b published-head review fixes.** The full-match comparison test expected tick 324,001; full time is tick 324,000 (`MATCH_TICKS_TOTAL`), so the bound, assertion and comment are corrected. `MatchSession.BootRoster` now refuses with `InvalidOperationException` for a session restored after any substitution (the engine's identity query then reports current occupants, not the replaced starters); `RestoreFrom` and resumed playback are unchanged. Mirrored restore tests and a `LiveAgentCue` `PlayerId` assertion are added. Validation v0.3 records the independent run at `50e6e5a` and keeps the earlier evidence as history. Full PR gate and pinned Unity checks remain pending. No schema, RNG, tuning or calibration change.
 >
