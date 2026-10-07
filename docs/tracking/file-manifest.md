@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 6, 2026 — **Localization #49 L2 plan: PR #483 review fix.** `docs/tracking/localization-l2-plan.md` advances to v0.5; no files added or removed.
+**Last Updated:** October 7, 2026 — **Loopback servers: lingering close (Windows RST fix).** Modified, with no files added or removed: `src/match-client-web/MatchClientServer.cs` v1.2, `src/match-client-web/MatchClientWebConstants.cs` v1.2, `src/match-client-web/tests/MatchClientServerTests.cs` v1.2, `src/match-viewer/LiveMatchServer.cs` v1.6, `src/match-viewer/MatchViewerConstants.cs` v1.5, `src/match-viewer/tests/LiveMatchServerTests.cs` v1.2, `docs/tracking/browser-match-client-design.md` v1.4, `docs/tracking/interactive-match-view-design.md` v0.5.
+
+**Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan: PR #483 review fix.** `docs/tracking/localization-l2-plan.md` advances to v0.5; no files added or removed.
 
 **Last Updated (prior):** October 6, 2026 — **Localization #49 L2 plan: ERR-049-006 approved.** `docs/tracking/localization-l2-plan.md` advances to v0.4; no files added or removed.
 
@@ -3279,12 +3281,12 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | File | Purpose |
 |------|---------|
 | `match-client-web.asmdef` | `TacticalDirector.MatchClientWeb`; references MatchClientCore + UiFramework + MatchAnalytics + MatchViewer + MatchEngine + TacticalInstructions + ProjectConstants + DeterministicSim |
-| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound |
+| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound and lingering-close drain bounds |
 | `MatchClientHost.cs` | KD-W1/W4 composition: `MatchSession` + the #38 projection + the intent dispatcher + the live #37 aggregator, pumped by a sim-thread post-tick observer under an analytics lock |
 | `MatchClientResponse.cs` | KD-W6 — the router/transport seam value |
 | `MatchClientRouter.cs` | KD-W2/W3/W7 — the four routes and their privilege split; #38 frame + #37 report serialization; fail-loud parsing incl. the `Enum.IsDefined` guard |
 | `MatchClientPage.cs` | KD-W9 — the self-contained page (pitch, HUD, playback, tactics, statistics); renders the view model, reads pitch geometry from the streamer |
-| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route |
+| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route; half-closes and drains unread input before closing (no Windows RST) |
 | `tests/match-client-web-tests.asmdef` | `TacticalDirector.MatchClientWeb.Tests` (Editor-only) |
 | `tests/MatchClientRouterTests.cs` | Routing table + the privilege split asserted against the command queue + fail-loud parsing |
 | `tests/MatchClientHostTests.cs` | The every-tick pump over a really-running match (F6 self-checks it), `ServiceOnce` not advancing it, the disarm-and-latch fault path, intent delivery |

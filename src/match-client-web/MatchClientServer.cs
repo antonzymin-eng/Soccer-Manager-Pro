@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientServer.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-07
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6, option (b)), Code Standards #20
 // Purpose:  Loopback-only HTTP transport for the browser match client. Owns sockets and threads and
@@ -147,28 +147,60 @@ namespace TacticalDirector.MatchClientWeb
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
-                    string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
-                    {
-                        Write(stream, MatchClientResponse.Text(400, "Bad Request"));
-                        return;
-                    }
-
-                    if (_shuttingDown)
-                    {
-                        Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
-                        return;
-                    }
-
-                    Write(stream, _router.Route(method, pathAndQuery));
+                    Respond(stream);
+                    CloseLingering(client.Client, stream);
                 }
             }
             catch (Exception)
             {
                 // One malformed or aborted request must not take down the accept loop or another
                 // connection. Networking code, not the simulation inner loop FR-CS-069 targets.
+            }
+        }
+
+        private void Respond(Stream stream)
+        {
+            string requestLine = ReadRequestLine(stream);
+            if (requestLine == null) { return; }
+
+            if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+            {
+                Write(stream, MatchClientResponse.Text(400, "Bad Request"));
+                return;
+            }
+
+            if (_shuttingDown)
+            {
+                Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
+                return;
+            }
+
+            Write(stream, _router.Route(method, pathAndQuery));
+        }
+
+        /// <summary>
+        /// Half-closes, then drains whatever the client sent past the request line until its FIN,
+        /// bounded by <see cref="MatchClientWebConstants.MAX_LINGERING_CLOSE_DRAIN_BYTES"/> and
+        /// <see cref="MatchClientWebConstants.LINGERING_CLOSE_TIMEOUT_MS"/>.
+        ///
+        /// <para>Only the request line is ever read, so a browser's headers — or the tail of a line
+        /// refused as oversized or non-ASCII — are still unread when the response is done. Closing
+        /// with unread input makes Windows send RST instead of FIN, and the client then discards the
+        /// response it has not read yet. The half-close comes first so the client sees the response
+        /// end without waiting on this drain.</para>
+        /// </summary>
+        private static void CloseLingering(Socket socket, Stream stream)
+        {
+            socket.Shutdown(SocketShutdown.Send);
+            socket.ReceiveTimeout = MatchClientWebConstants.LINGERING_CLOSE_TIMEOUT_MS;
+
+            var buffer = new byte[1_024];
+            int drained = 0;
+            while (drained < MatchClientWebConstants.MAX_LINGERING_CLOSE_DRAIN_BYTES)
+            {
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read <= 0) { return; }
+                drained += read;
             }
         }
 
@@ -296,4 +328,7 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | lifecycle, request-line bound and post-Stop 503 refusal.       |
 // | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, raw    |
 // |         |            |        | non-ASCII octets, and non-origin-form targets before routing.  |
+// | 1.2     | 2026-10-07 | —      | Lingering close: half-close after the response, then drain the |
+// |         |            |        | unread request bytes (bounded) before closing. Windows sent RST|
+// |         |            |        | on close with unread headers, discarding the client's response.|
 #endregion

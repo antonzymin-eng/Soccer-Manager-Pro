@@ -5,6 +5,7 @@
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
 // Modified: 2026-09-09 (strict request-line grammar and origin-form validation)
+// Modified: 2026-10-07 (lingering close: half-close and drain unread request bytes so Windows does not RST)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -159,16 +160,8 @@ namespace TacticalDirector.MatchViewer
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
-                    string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
-                    {
-                        WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
-                        return;
-                    }
-
-                    Route(stream, method, pathAndQuery);
+                    Respond(stream);
+                    CloseLingering(client.Client, stream);
                 }
             }
             catch (Exception)
@@ -176,6 +169,46 @@ namespace TacticalDirector.MatchViewer
                 // A single malformed/aborted request must not affect the accept loop or any other
                 // connection — this is networking/presentation code, not the 60 Hz simulation inner
                 // loop the project's try/catch ban targets (FR-CS-069 scope).
+            }
+        }
+
+        private void Respond(Stream stream)
+        {
+            string requestLine = ReadRequestLine(stream);
+            if (requestLine == null) { return; }
+
+            if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+            {
+                WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
+                return;
+            }
+
+            Route(stream, method, pathAndQuery);
+        }
+
+        /// <summary>
+        /// Half-closes, then drains whatever the client sent past the request line until its FIN,
+        /// bounded by <see cref="MatchViewerConstants.MaxLingeringCloseDrainBytes"/> and
+        /// <see cref="MatchViewerConstants.LingeringCloseTimeoutMs"/>.
+        ///
+        /// <para>Only the request line is ever read, so a browser's headers — or the tail of a line
+        /// refused as oversized or non-ASCII — are still unread when the response is done. Closing
+        /// with unread input makes Windows send RST instead of FIN, and the client then discards the
+        /// response it has not read yet. The half-close comes first so the client sees the response
+        /// end without waiting on this drain.</para>
+        /// </summary>
+        private static void CloseLingering(Socket socket, Stream stream)
+        {
+            socket.Shutdown(SocketShutdown.Send);
+            socket.ReceiveTimeout = MatchViewerConstants.LingeringCloseTimeoutMs;
+
+            var buffer = new byte[1024];
+            int drained = 0;
+            while (drained < MatchViewerConstants.MaxLingeringCloseDrainBytes)
+            {
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read <= 0) { return; }
+                drained += read;
             }
         }
 
@@ -702,4 +735,7 @@ poll();
 // | 1.5     | 2026-09-09 | —      | Request parsing now requires exact HTTP/1.1 grammar, a valid   |
 // |         |            |        | method token, raw ASCII octets, and an origin-form target      |
 // |         |            |        | before routing.                                                |
+// | 1.6     | 2026-10-07 | —      | Lingering close: half-close after the response, then drain the |
+// |         |            |        | unread request bytes (bounded) before closing. Windows sent RST|
+// |         |            |        | on close with unread headers, discarding the client's response.|
 #endregion

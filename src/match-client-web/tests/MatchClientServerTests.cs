@@ -1,6 +1,6 @@
 // File:     src/match-client-web/tests/MatchClientServerTests.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-07
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6), Code Standards #20
 // Purpose:  Drives the transport over real loopback sockets — the part the router tests cannot
@@ -82,6 +82,20 @@ namespace TacticalDirector.MatchClientWeb.Tests
             StringAssert.Contains("Content-Type: text/html; charset=utf-8", response);
             StringAssert.Contains("Content-Length: ", response);
             StringAssert.Contains("<canvas", response);
+        }
+
+        [Test]
+        public void ABrowserShapedRequestWithHeaders_IsAnsweredInFull()
+        {
+            // A browser always sends headers after the request line, and the server reads only the
+            // line. On Windows, closing with those headers unread sent RST, and the client discarded
+            // the response it had not yet read. The page's closing tag proves the whole body arrived.
+            string response = Request(Encoding.ASCII.GetBytes(
+                "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: MatchClientServerTests\r\n" +
+                "Accept: text/html\r\nConnection: close\r\n\r\n"));
+
+            StringAssert.StartsWith("HTTP/1.1 200 OK", response);
+            StringAssert.EndsWith("</html>", response);
         }
 
         [Test]
@@ -208,4 +222,7 @@ namespace TacticalDirector.MatchClientWeb.Tests
 // |         |            |        | request-line bound, post-Stop refusal and lifecycle idempotence|
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw   |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                   |
+// | 1.2     | 2026-10-07 | —      | Locks a complete answer to a browser-shaped request (request  |
+// |         |            |        | line plus headers), the shape Windows reset before the server |
+// |         |            |        | drained unread input ahead of closing.                        |
 #endregion

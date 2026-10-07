@@ -1,6 +1,6 @@
 // File:     src/match-viewer/tests/LiveMatchServerTests.cs
 // Created:  2026-07-15
-// Modified: 2026-09-09
+// Modified: 2026-10-07
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchServer, driven over real loopback TCP sockets (bound to an
@@ -75,6 +75,25 @@ namespace TacticalDirector.MatchViewer.Tests
                 StringAssert.StartsWith("<!DOCTYPE html>", body);
                 StringAssert.Contains("canvas", body);
                 StringAssert.Contains("fetch('/frame')", body);
+            }
+            finally { server.Stop(); }
+        }
+
+        [Test]
+        public void BrowserShapedRequest_WithHeaders_IsAnsweredInFull()
+        {
+            // A browser always sends headers after the request line, and the server reads only the
+            // line. On Windows, closing with those headers unread sent RST, and the client discarded
+            // the response it had not yet read. The page's closing tag proves the whole body arrived.
+            LiveMatchServer server = StartServer(out _);
+            try
+            {
+                byte[] request = Encoding.ASCII.GetBytes(
+                    "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: LiveMatchServerTests\r\n" +
+                    "Accept: text/html\r\nConnection: close\r\n\r\n");
+                (int status, string body) = SendRequest(server.Port, request);
+                Assert.AreEqual(200, status);
+                StringAssert.EndsWith("</html>\n", body);
             }
             finally { server.Stop(); }
         }
@@ -303,4 +322,7 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | idempotent shutdown.                                            |
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw    |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                    |
+// | 1.2     | 2026-10-07 | —      | Locks a complete answer to a browser-shaped request (request   |
+// |         |            |        | line plus headers), the shape Windows reset before the server  |
+// |         |            |        | drained unread input ahead of closing.                         |
 #endregion

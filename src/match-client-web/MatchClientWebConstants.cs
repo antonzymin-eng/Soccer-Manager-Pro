@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientWebConstants.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-10-07
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6 renderer decision — option (b)), interactive Unity
 //           client design note §5-P3/§5-P5, Code Standards #20
@@ -27,6 +27,18 @@ namespace TacticalDirector.MatchClientWeb
         /// the hang guard against a client that never sends a terminator. Mirrors the spectator
         /// viewer's guard; a request line longer than this is refused, not buffered.</summary>
         public const int MAX_HTTP_REQUEST_LINE_BYTES = 8_192;
+
+        /// <summary>[FIXED] Maximum unread request bytes (headers, or the tail of a refused line) the
+        /// server drains after sending its response and half-closing, before it closes the socket.
+        /// Draining is what lets Windows close with a FIN instead of an RST that would discard the
+        /// unread response at the client; past this many bytes the connection is closed regardless.
+        /// Eight request lines' worth: well above any browser's header block.</summary>
+        public const int MAX_LINGERING_CLOSE_DRAIN_BYTES = 65_536;
+
+        /// <summary>[FIXED] Milliseconds one drain read waits for the client's remaining bytes or its
+        /// FIN after the server half-closes. A client that neither sends nor closes is cut off after
+        /// this, so a connection thread cannot be pinned by a peer that never hangs up.</summary>
+        public const int LINGERING_CLOSE_TIMEOUT_MS = 1_000;
 
         #endregion
 
@@ -77,4 +89,7 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | first (Fixed before GT), and FramePollIntervalMs' doc fixed —  |
 // |         |            |        | it claimed 100 ms was "well below the ~16 ms tick" and sized   |
 // |         |            |        | for an interpolation the page does not do.                     |
+// | 1.2     | 2026-10-07 | —      | Lingering-close drain bounds (bytes, per-read timeout): the    |
+// |         |            |        | server now half-closes and drains unread request bytes so      |
+// |         |            |        | Windows closes with FIN, not an RST that discards the response.|
 #endregion
