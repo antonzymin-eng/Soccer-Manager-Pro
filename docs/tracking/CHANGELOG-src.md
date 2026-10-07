@@ -14,7 +14,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 7, 2026 (v2.166 — **P5b full-match test: Unity timeout.** `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.3 adds `[Timeout(7200000)]` to `sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral`. Unity's default 180 s per-test timeout failed it at 4,284 s although its assertions passed. With the attribute it passes in Unity in 4,547 s, and on the Linux shim it is 47/47. `tools/dotnet-ci/check_evidence_manifests.py` registers `p5b-host-20261007` with a full-manifest contract. No production code changes.)
+> **Last Updated:** October 7, 2026 (v2.166 — **P5b full-match test: Unity timeout.** `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.3 adds `[Timeout(7200000)]` to `sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral`. Unity's default 180 s per-test timeout failed it at 4,284 s although its assertions passed. With the attribute it passes in Unity in 4,547 s, and on the Linux shim it is 47/47. `tools/dotnet-ci/check_evidence_manifests.py` registers `p5b-host-20261007` with a full-manifest contract, and `tools/tests/test_evidence_manifests.py` expects 10 registered directories instead of 9 (Codex P1). No production code changes.)
 >
 > **Last Updated (prior):** October 6, 2026 (v2.165 — **P5b Unity compile fix: NUnit 3.7 attribute removed.** `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.2 drops `[NonParallelizable]` (NUnit 3.7+; Unity's NUnit 3.5 reported CS0246 and skipped `TacticalDirector.ClientApp.Tests.dll`). Neither runner enables parallel fixtures, so no replacement is needed; no other post-3.5 NUnit API is used under `src/`. Pinned Unity 6000.4.9f1 compile: 0 errors.)
 >
@@ -2694,7 +2694,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.166 | 2026-10-07 | — | `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.3: `[Timeout(7200000)]` on the full-match comparison; Unity's 180 s default failed it at 4,284 s. Evidence registry gains `p5b-host-20261007`. |
+| 2.166 | 2026-10-07 | — | `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.3: `[Timeout(7200000)]` on the full-match comparison; Unity's 180 s default failed it at 4,284 s. Evidence registry gains `p5b-host-20261007`; its contract test now expects 10 directories. |
 | 2.165 | 2026-10-06 | — | `client-app/tests/S0DemoFixtureComparisonTests.cs` v1.2: removed NUnit 3.7 `[NonParallelizable]`, which Unity 6000.4.9f1's NUnit 3.5 rejected (CS0246). No runner enables parallel fixtures; pinned Unity compile 0 errors. |
 | 2.164 | 2026-10-06 | — | P5b consumed lifecycle/identity candidate: approved fixture, frame occupant identities, synchronized analytics, transactional shell/report cleanup, external renderer attachment and explicit development host. Host-free evidence recorded; Unity/full outcome checks pending. |
 | 2.163 | 2026-10-05 | — | PR #470 Codex P2 fix: `ClientShellRootSnapshot` v1.1 `AreAncestorsActive`; `ClientShellWiringFault` v1.1 `RootUnderInactiveAncestor`; `ClientShellWiringValidator` v1.1; `ClientShellBehaviour` v1.3; validator tests v1.1 (8 → 9 cases). Unity compile 0 errors; ClientApp.Tests 26/26 EditMode. No sim/schema/RNG/tuning change. |
