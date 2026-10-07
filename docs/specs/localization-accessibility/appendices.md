@@ -1,9 +1,10 @@
 # Localization & Accessibility #49 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 6, 2026 (v0.4 — Appendix C slot-expansion identity conditioned on brace-free slot values, ERR-049-006)
+**Last Updated:** October 7, 2026 (v0.5 — PR #484 review: Appendix C closing paragraph carries the ERR-049-006 condition)
+**Last Updated (prior):** October 6, 2026 (v0.4 — Appendix C slot-expansion identity conditioned on brace-free slot values, ERR-049-006)
 **Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -57,8 +58,9 @@ For a fixed `(intent, draw, slots)`, base locale only:
 | Serialized state | `world.text` cursor + memory | **unchanged** | yes |
 
 **Base-locale identity is a mechanical property of preserving the corpus + the clause table + the draw + the
-pre-draw gates** (T-LC-IDENTITY-001). The retrofit is behaviour-neutral at the base locale despite changing
-#22's public return type.
+pre-draw gates, for brace-free slot values** (T-LC-IDENTITY-001, ERR-049-006). Under that condition the
+retrofit is behaviour-neutral at the base locale despite changing #22's public return type; a slot value
+containing a brace is the one deliberate difference, because single-pass expansion never re-expands it.
 
 ## Appendix D — Worked render transition (§3.6)
 
@@ -82,4 +84,5 @@ pre-draw gates** (T-LC-IDENTITY-001). The retrofit is behaviour-neutral at the b
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-10-06 | — | **L2 back-prop (ERR-049-006).** Appendix C's slot-expansion row now states its condition: identity with chained `.Replace` holds when every slot value is brace-free; single-pass expansion never re-expands a value. |
+| 0.5 | 2026-10-07 | — | PR #484 review: Appendix C's closing paragraph conditions base-locale identity and behaviour-neutrality on brace-free slot values (ERR-049-006); the per-row table already did. |
 #endregion

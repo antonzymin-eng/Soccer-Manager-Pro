@@ -1,13 +1,14 @@
 # Localization & Accessibility #49 — Section 7: Forward Extensions
 
 **Created:** July 23, 2026
-**Last Updated:** October 6, 2026 (v0.7 — #49 L2 disposition: ERR-049-005 and ERR-049-006 resolved)
+**Last Updated:** October 7, 2026 (v0.8 — PR #484 review: §7.5 retrofit identity carries the ERR-049-006 condition)
+**Last Updated (prior):** October 6, 2026 (v0.7 — #49 L2 disposition: ERR-049-005 and ERR-049-006 resolved)
 **Last Updated (prior):** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
 **Last Updated (prior):** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)
 **Last Updated (prior):** September 9, 2026 (v0.4 — L0R records ERR-049-002/003/004/005 with named T0/T1 discharge stages under C6; no contract hardening)
 **Last Updated (prior):** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -58,7 +59,8 @@ than synthesizing morphology at runtime.
 
 The retrofit (§4, FR-LC-016) is sequenced as a T-phase: `InteractionTextGenerator.Generate` returns native
 values, `InteractionTextCorpus` migrates to the base-locale catalogue, and the base-locale output is proven
-byte-identical (Appendix C / T-LC-IDENTITY-001). It is behaviour-neutral at the base locale despite changing
+byte-identical for brace-free slot values (Appendix C / T-LC-IDENTITY-001, ERR-049-006). Under that
+condition it is behaviour-neutral at the base locale despite changing
 #22's public return type — the one real API change this spec introduces, forward-designed here and applied
 post-APPROVED like #21–#38 code.
 
@@ -123,4 +125,5 @@ The owning `spec-error-log.md` rows are the durable status authority and are syn
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |
 | 0.6 | 2026-09-12 | GPT-5.6 Sol | L1 landing close-out: restores the frozen v0.2 history row verbatim; synchronizes ERR-049-002 and ERR-049-004 to RESOLVED; retains ERR-049-003 OPEN for L3B/T1 and ERR-049-005 OPEN for L2. |
 | 0.7 | 2026-10-06 | — | **L2 disposition.** Appends the L2 record below the frozen L1 entries: ERR-049-005 RESOLVED (admitted-coverage plus empty terminal result) and ERR-049-006 filed and RESOLVED (single-pass expansion with the brace-free identity condition). ERR-049-003 remains OPEN for L3B/T1. |
+| 0.8 | 2026-10-07 | — | PR #484 review: §7.5's T1-retrofit description conditions base-locale identity and behaviour-neutrality on brace-free slot values (ERR-049-006). |
 #endregion

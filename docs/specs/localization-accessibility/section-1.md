@@ -1,9 +1,10 @@
 # Localization & Accessibility #49 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** October 6, 2026 (v0.4 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing: KD-3 single-pass expansion and conditional identity; KD-5 admitted-coverage plus empty terminal result)
+**Last Updated:** October 7, 2026 (v0.5 — PR #484 review: KD-5's identity anchor carries the ERR-049-006 brace-free condition)
+**Last Updated (prior):** October 6, 2026 (v0.4 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing: KD-3 single-pass expansion and conditional identity; KD-5 admitted-coverage plus empty terminal result)
 **Last Updated (prior):** September 11, 2026 (v0.3 — L1 dependency-direction correction implemented; ERR-049-002 tracker closure pending landing close-out)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
 
@@ -134,7 +135,8 @@ construction (FR-LC-008a), so the base step always succeeds for admitted identit
 caller never admitted and that is absent from both catalogues, the production terminal result is the empty
 string (no clause, for a clause): no throw, no mutation, no key text (ERR-049-005). Because a missing translation resolves to base-locale English — today's exact
 strings — **base-locale identity is the correctness anchor**: with only the base locale loaded, every
-rendered string is byte-identical to today's output (§3 / Appendix C).
+rendered string is byte-identical to today's output whenever its slot values are brace-free (§3 /
+Appendix C); a slot value containing a brace is not re-expanded (KD-3, ERR-049-006).
 
 **KD-6 — Seam placement / one-way reference direction (load-bearing for layering).** The generic core seam
 (`ILocalizer`, request/value contracts, catalogue/renderer behavior and locale data) lives high in
@@ -169,4 +171,5 @@ no `SubsystemOrdinal`, holds no persistent sim state, and bumps no save format. 
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-002 fix implementation.** Corrects stale §1 dependency/KD-6 wording to the already-approved generic-core + sibling-boundary architecture: the #49 core references no sim/producer assembly; a later producer adapter references both sides and constructs generic request identities. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. No runtime behavior or producer integration is added. |
 | 0.4 | 2026-10-06 | — | **L2 back-prop (ERR-049-005, ERR-049-006).** KD-3: base variants may not declare selectors (construction-enforced); expansion is single-pass; identity with chained `.Replace` holds for brace-free slot values and well-formed template tokens. KD-5: admitted identities are proven present in the base catalogue at construction; a never-admitted identity absent from both catalogues yields the empty string without throwing or mutating. |
+| 0.5 | 2026-10-07 | — | PR #484 review: KD-5's base-locale identity anchor now states the ERR-049-006 condition (brace-free slot values) instead of promising unconditional identity. |
 #endregion

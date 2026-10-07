@@ -1,9 +1,10 @@
 # Localization & Accessibility #49 — Section 3: The Seam, the Determinism Boundary, the Template Model
 
 **Created:** July 23, 2026
-**Last Updated:** October 6, 2026 (v0.4 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing)
+**Last Updated:** October 7, 2026 (v0.5 — PR #484 review: §3.5 `{score}` identity sentence carries the brace-free condition)
+**Last Updated (prior):** October 6, 2026 (v0.4 — ERR-049-005 and ERR-049-006 back-prop with the #49 L2 landing)
 **Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -108,8 +109,8 @@ placeholder, derived in the boundary adapter, not the renderer** — `LivingWorl
 holds the typed `InteractionSlots` and owns the #22 score-format knowledge, computes `score =
 HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals.ToString(InvariantCulture)` and puts a plain `score`
 string slot into the `NamedSlotSet`. So the generic `Expand` substitutes `{score}` like any other string
-slot, base-locale expansion is byte-identical to today's `Expand` (FR-LC-016 — the boundary formats exactly
-as `InteractionTextGenerator.Expand` did), and the numeric-score formatting stays with the producer that
+slot, base-locale expansion is byte-identical to today's `Expand` for brace-free slot values (FR-LC-016,
+ERR-049-006 — the boundary formats exactly as `InteractionTextGenerator.Expand` did), and the numeric-score formatting stays with the producer that
 owns the concept (not leaked into the generic core — the KD-6 / #38 boundary this spec pins). Locales
 localize the surrounding template text, **not** the numeric score glyph. Beyond substitution, `Expand`
 applies an optional bounded grammatical selector: a template
@@ -147,4 +148,5 @@ brace-free (Appendix C, ERR-049-006).
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-10-06 | — | **L2 back-prop (ERR-049-005, ERR-049-006).** §3.2 pseudocode gains the never-admitted terminal steps (empty `Resolve`/`Render`, no clause) and single-pass expansion; §3.5 specifies construction-time parsing, single-pass substitution and the brace-free identity condition with a counterexample; §3.6 states the condition its identity relies on. |
+| 0.5 | 2026-10-07 | — | PR #484 review: §3.5's `{score}` paragraph conditions base-locale identity on brace-free slot values (ERR-049-006). |
 #endregion

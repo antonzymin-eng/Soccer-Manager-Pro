@@ -2,8 +2,8 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.6\
-**Status:** IMPLEMENTED (October 6, 2026) — code, tests and spec back-prop in the implementing PR; pinned Unity compile pending\
+**Version:** 0.7\
+**Status:** IMPLEMENTED (October 6, 2026) in PR #484 — full Linux PR gate passed; PR CI and the pinned Unity compile are pending before merge\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
 
@@ -18,9 +18,10 @@
 - **Consumer contract:** [S0 binding contracts](../design/ux-s0-binding-contracts.md) §4 and the
   [S0 journey](../design/ux-s0-pm1-journey.md) §14.7. The P5b copy/scale/screens slice will inject
   one L2 `ILocalizer` and call only `Resolve`. It never calls `Render`.
-- **Defect record:** `spec-error-log.md` ERR-049-005 (OPEN, assigned to L2).
+- **Defect record:** `spec-error-log.md` ERR-049-005 (RESOLVED in L2) and ERR-049-006 (filed and RESOLVED in L2).
 
-The spec wins over this plan wherever they differ. Proposed types and members are TO BUILD.
+The spec wins over this plan wherever they differ. The types and members below are implemented; §10 records
+where the implementation differs from this plan.
 
 ## 2. Scope
 
@@ -110,7 +111,7 @@ If §8 Q1 is accepted, the same terminal rule also covers `Render` of a non-admi
 clause missing from both catalogues. Those are recorded in the same back-prop, under F1/F2, as
 defensive behaviour.
 
-### 4.2 ERR-049-006 (owner-approved, to be filed) — `Render` expansion cannot be identical to chained `.Replace`
+### 4.2 ERR-049-006 (owner-approved; filed and resolved in L2) — `Render` expansion cannot be identical to chained `.Replace`
 
 **Defect.** KD-3, FR-LC-009 and §3.5 require base-locale expansion to be identical to
 `InteractionTextGenerator`'s chained `.Replace` (subject, then opponent, then score), and FR-LC-016
@@ -300,15 +301,16 @@ RNG change, so the full Linux gate is runnable on a worker.
 
 ## 9. Exit criteria (plan §6.6, plus this plan)
 
-- [ ] Tests T1–T16 are green, and every L1 structural lock still passes.
-- [ ] Each coverage mutant (T5/T6) fails construction.
-- [ ] FR-LC-009 conformance (T10) is shown through the real renderer.
-- [ ] ERR-049-005 is RESOLVED with executable evidence (T5 static-key mutant + T7), and the spec,
+- [x] Tests T1–T16 are green, and every L1 structural lock still passes.
+- [x] Each coverage mutant (T5/T6) fails construction.
+- [x] FR-LC-009 conformance (T10) is shown through the real renderer.
+- [x] ERR-049-005 is RESOLVED with executable evidence (T5 static-key mutant + T7), and the spec,
   section-7 and error log are updated in the same commit.
-- [ ] ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
-- [ ] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
-- [ ] `bash tools/run-tests-local.sh --pr` passes with no new failures.
-- [ ] Tracking surfaces are current, and the doc-consistency check passes.
+- [x] ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
+- [x] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
+- [x] `bash tools/run-tests-local.sh --pr` passes with no new failures.
+- [x] Tracking surfaces are current, and the doc-consistency check passes.
+- [ ] PR CI is green on the final head.
 - [ ] Pinned Unity compile passes on the PR head before merge.
 
 L2 does not unblock captions on its own: audio D49 still needs the approved #49/#51 caption boundary.
@@ -343,3 +345,4 @@ coverage check (T5), narrowing the draw before the modulo (T2), and allowing bas
 | 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |
 | 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |
 | 0.6 | October 6, 2026 | Implemented: status updated and §10 records the implementation (twelve files, default-form convention, sorted variant storage, no profiler marker), the test count and the three mutant runs; authority citation advances to the execution plan's v2.8. |
+| 0.7 | October 7, 2026 | PR #484 review: removes the remaining pre-implementation wording (§1 defect record and TO BUILD note, §4.2 heading), checks the eight exit criteria met by the landing, and adds PR CI beside the still-pending Unity compile. |
