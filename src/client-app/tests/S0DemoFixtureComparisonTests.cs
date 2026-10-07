@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/S0DemoFixtureComparisonTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-06 (Unity compile — removed NUnit 3.7 [NonParallelizable])
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §7, S0 binding contracts §2.1, Code Standards #20
 // Purpose:  Complete-match fixture repeatability, observer neutrality and former no-squad comparison.
@@ -18,8 +18,9 @@ using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.ClientApp.Tests
 {
+    // No [NonParallelizable]: Unity's bundled NUnit 3.5 lacks it (added in 3.7), and neither runner
+    // opts into parallel execution, so fixtures already run serially.
     [TestFixture]
-    [NonParallelizable]
     public sealed class S0DemoFixtureComparisonTests
     {
         private readonly struct Outcome
@@ -146,4 +147,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Real full matches for fixture repeatability, observer neutrality and prior setup outcomes. |
 // | 1.1     | 2026-10-06 | —      | Full time is tick MATCH_TICKS_TOTAL (324,000), not +1; bound, assertion and comment corrected. |
+// | 1.2     | 2026-10-06 | —      | Removed [NonParallelizable] (NUnit 3.7+); Unity's NUnit 3.5 rejected it with CS0246. |
 #endregion

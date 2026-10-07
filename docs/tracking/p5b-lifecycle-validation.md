@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 6, 2026\
-**Version:** 0.3\
+**Version:** 0.4\
 **Status:** DRAFT IMPLEMENTATION — full PR gate and pinned-host evidence pending\
 **Authority:** [approved implementation plan](p5b-lifecycle-identity-plan.md) v0.2;
 [S0 binding contracts](../design/ux-s0-binding-contracts.md) §§2–5.\
@@ -206,6 +206,14 @@ to PR CI.
 B8/B9b/B10 and Gate J remain open. Prior #470 host evidence applies to its foundation,
 not this changed source tree. No merge or host acceptance is claimed here.
 
+## Post-merge Unity compile fix — October 6, 2026
+
+Unity 6000.4.9f1 (bundled NUnit 3.5) rejected `src/client-app/tests/S0DemoFixtureComparisonTests.cs(22,6)` with CS0246: `[NonParallelizable]` arrived in NUnit 3.7, and PR #482 (`50e6e5a6`) added it. The Linux shim gate (NUnit 3.14) accepted it, so main stopped rebuilding `TacticalDirector.ClientApp.Tests.dll` in the governing editor while CI stayed green.
+
+`S0DemoFixtureComparisonTests.cs` v1.2 drops the attribute and does not replace it. Neither runner opts into parallel execution: no `[Parallelizable]`, `LevelOfParallelism` or worker-count setting exists in `src/` or `tools/dotnet-ci/`, and NUnit runs fixtures serially by default, so the attribute was inert. A sweep of `src/` for other post-3.5 APIs (`Parallelizable`, `Assert.Multiple`, `Assert.Warn`, `DefaultFloatingPointTolerance`, `FixtureLifeCycle`, `Does.Not.Contain(non-string)`) found none.
+
+Pinned host, Unity 6000.4.9f1, clean detached checkout of `0a236ed4` (main `fc66c43f` + this fix; the landing commit amends it with Markdown only, so the compiled input is identical) with `Assets/Scripts` as the `src/` junction, forced `AssetDatabase.ImportAsset("Assets/Scripts", ImportRecursive | ForceUpdate)`: `Tundra build success (5.79 seconds), 19 items updated, 1151 evaluated`, `TacticalDirector.ClientApp.Tests.dll` rebuilt and copied, **0 `error CS`**; warnings only the two known, deferred CS0618 `GetInstanceID()` at `ClientShellBehaviour.cs` (143,34)/(151,17). Unity EditMode tests were **not** run in this pass. This is compile evidence only; every unchecked item above stays open.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -213,3 +221,4 @@ not this changed source tree. No merge or host acceptance is claimed here.
 | 0.1 | October 6, 2026 | Records consumed A–C candidate, actual bounded Linux evidence and explicit exact-head host/full-outcome prerequisites. |
 | 0.2 | October 6, 2026 | Recovery record, normal-suite real full-match comparison and explicit pending execution; Unity profiler scopes and host checks. |
 | 0.3 | October 6, 2026 | Published-head review: independent run at `50e6e5a`, full-match end-tick fix, restored-session `BootRoster` refusal with mirrored tests, cue `PlayerId` assertion; historical sections preserved. |
+| 0.4 | October 6, 2026 | Post-merge Unity compile fix: NUnit 3.7 `[NonParallelizable]` removed from the full-match comparison test; pinned Unity 6000.4.9f1 compile 0 errors; EditMode/Play checks still due. |
