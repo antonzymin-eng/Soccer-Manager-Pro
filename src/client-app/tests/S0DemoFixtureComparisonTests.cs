@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/S0DemoFixtureComparisonTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06 (Unity compile — removed NUnit 3.7 [NonParallelizable])
+// Modified: 2026-10-07 (Unity run — [Timeout] above Unity's 180 s default)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §7, S0 binding contracts §2.1, Code Standards #20
 // Purpose:  Complete-match fixture repeatability, observer neutrality and former no-squad comparison.
@@ -37,7 +37,11 @@ namespace TacticalDirector.ClientApp.Tests
             }
         }
 
+        // Four complete matches take about 71 min in the Unity 6000.4.9f1 editor on the pinned host
+        // (7.6 min on the Linux CI runner); Unity's default per-test timeout is 180 s, which failed
+        // the run despite passing assertions. Two hours keeps headroom on the governing build.
         [Test]
+        [Timeout(7200000)]
         public void sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral()
         {
             S0DemoFixture fixture = S0DemoFixture.CreateApproved();
@@ -148,4 +152,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-06 | —      | Real full matches for fixture repeatability, observer neutrality and prior setup outcomes. |
 // | 1.1     | 2026-10-06 | —      | Full time is tick MATCH_TICKS_TOTAL (324,000), not +1; bound, assertion and comment corrected. |
 // | 1.2     | 2026-10-06 | —      | Removed [NonParallelizable] (NUnit 3.7+); Unity's NUnit 3.5 rejected it with CS0246. |
+// | 1.3     | 2026-10-07 | —      | [Timeout(7200000)]: the test took 4,284 s in Unity, over its 180 s default timeout. |
 #endregion
