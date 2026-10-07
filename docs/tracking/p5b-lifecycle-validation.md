@@ -1,9 +1,9 @@
 # P5b lifecycle/identity — candidate validation
 
 **Created:** October 6, 2026\
-**Last Updated:** October 6, 2026\
-**Version:** 0.4\
-**Status:** DRAFT IMPLEMENTATION — full PR gate and pinned-host evidence pending\
+**Last Updated:** October 7, 2026\
+**Version:** 0.5\
+**Status:** MERGED; consumed lifecycle/identity slice validated on the pinned host (see the October 7 section); #49 L2, the complete screens and Gate J remain open\
 **Authority:** [approved implementation plan](p5b-lifecycle-identity-plan.md) v0.2;
 [S0 binding contracts](../design/ux-s0-binding-contracts.md) §§2–5.\
 **Implementation baseline:** main `7c870dd850acb462a335cdd8f6fbe13c49549215`.
@@ -214,6 +214,131 @@ Unity 6000.4.9f1 (bundled NUnit 3.5) rejected `src/client-app/tests/S0DemoFixtur
 
 Pinned host, Unity 6000.4.9f1, clean detached checkout of `0a236ed4` (main `fc66c43f` + this fix; the landing commit amends it with Markdown only, so the compiled input is identical) with `Assets/Scripts` as the `src/` junction, forced `AssetDatabase.ImportAsset("Assets/Scripts", ImportRecursive | ForceUpdate)`: `Tundra build success (5.79 seconds), 19 items updated, 1151 evaluated`, `TacticalDirector.ClientApp.Tests.dll` rebuilt and copied, **0 `error CS`**; warnings only the two known, deferred CS0618 `GetInstanceID()` at `ClientShellBehaviour.cs` (143,34)/(151,17). Unity EditMode tests were **not** run in this pass. This is compile evidence only; every unchecked item above stays open.
 
+## Pinned-host validation — October 7, 2026
+
+The P5b source tree merged to `main` through #482 and #485, so the exact head checked
+here is main `5d112babb5d05597f392484a2bdcab5545910f82`, plus the `[Timeout]`
+correction below. The host is the owner's Windows 11 machine with Unity 6000.4.9f1,
+in a clean checkout with `Assets/Scripts` as a junction to `src`. Raw evidence is
+committed in [`evidence/p5b-host-20261007/`](evidence/p5b-host-20261007/README.md).
+
+**Compile.** A forced recursive reimport plus a compilation request gave
+`Tundra build success (440.86 seconds), 75 items updated, 1151 evaluated` and **0
+`error CS`** lines. Three warnings remain, all known: CS0618 `GetInstanceID()` at
+`ClientShellBehaviour.cs` (143,34) and (151,17), which are deferred, and the
+pre-existing CS0219 at `BallIntegrationTests.cs` (330,19).
+
+**EditMode (Unity Test Runner).** The run covered ClientApp, MatchClientCore,
+MatchAnalytics and UiFramework: **335 passed, 3 failed**, as follows.
+
+| Assembly | Passed / total | Failure |
+| --- | --- | --- |
+| ClientApp.Tests | 46 / 47 | `sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral`: Unity's default 180,000 ms timeout |
+| MatchClientCore.Tests | 182 / 182 | — |
+| MatchAnalytics.Tests | 58 / 59 | `NoOtherAssemblyReferencesMatchAnalytics`: repository root not found |
+| UiFramework.Tests | 49 / 50 | `NoOtherAssemblyReferencesTheUiFramework`: repository root not found |
+
+The two repository-root failures belong to the separately tracked root-discovery
+open issue. The MatchAnalytics one had previously been inferred from the code; this
+run observes it. The full-match test ran for 4,284 s, against 458 s on the CI Linux
+runner. Every assertion in it held, and it printed `P5B_FULL_MATCH PASS`. Unity marked
+it failed only because it exceeded the default timeout. `S0DemoFixtureComparisonTests.cs`
+v1.3 adds `[Timeout(7200000)]`, which `TimeoutAttribute` supports in both Unity's
+NUnit build (`com.unity.ext.nunit` 2.0.5) and NUnit 3.14. The test was then rerun alone in Unity at `6e949a26`, which is main `5d112bab` plus v1.3; the landing commit adds only Markdown, the evidence directory and the evidence registry. It **passed** in 4,547 s and produced the same four outcomes and digests.
+
+**Complete-match outcome on the certified host.** The fixture is S0-approved-demo-v1,
+sha256 `769dc27f…5f5da79`, with seed 1, Balanced, home Human, away AI profile 0,
+heading off and no commands.
+
+| Run | Ticks | Score | Chained digest |
+| --- | --- | --- | --- |
+| Approved, unobserved | 324,000 | 14–13 | `95A006D5F5BB4503AFC80BD25F66AC93CC9BD56FD450FE4203C5ADC3C4477048` |
+| Approved, independent repeat | 324,000 | 14–13 | same |
+| Approved, analytics observed | 324,000 | 14–13 | same |
+| Former no-squad, observed | 324,000 | 14–13 | `DB6513DA1B4FA4CC44F9E7EA3ED59FCA6EB48FB19B9ACABF2C84143CF1E36891` |
+
+Repeatability and observer neutrality hold. The no-squad comparison shows identical
+scores and identical basic and advanced statistics, with a different digest. That is
+expected: the approved fixture keeps the existing numeric defaults and adds only
+identity and shirts.
+
+The Linux CI runner on #485's head produced 11–14 with digest `68191AE6…` for the
+same inputs. Cross-runtime parity (Mono versus .NET 8 CoreCLR) is deferred to
+Stage 5+ by Testing Strategy #19 §7.3. The certified determinism host is this Unity
+Mono editor, so the Unity row is the authoritative outcome, and the Linux figures are
+non-certifying.
+
+About 25 goals per match is consistent with the engine's known high goal rate
+(about 8.5 or more per match in the match-realism open issue). Under KD-W1 nothing
+here is tuned, rebased or used as a target.
+
+**Play mode.** Session 2 ran with only one `MatchEngine` alive at any time. Its
+results are in `play-session2.txt`.
+
+- [x] **Dev-host smoke.** `Scene.unity`'s `DevelopmentMatchHost` booted the approved
+  fixture into one generated root of 47 objects, and the ball moved. Destroying the
+  host disposed its coordinator and left no generated roots.
+- [x] **Attach before Awake.** A coordinator attached a renderer on an inactive object
+  before its Awake. A second `StartMatch` returned false. Activating the object later
+  created no duplicate root, and playback advanced 86 ticks in 180 frames (1.44 s).
+- [x] **Partial prefab-construction failure.** The ball-shadow prefab had a
+  non-neutral root, so markings, agents and ball built before the last step rejected.
+  `StartMatch` threw, and the coordinator ended rejected with no match. The renderer
+  disabled itself, the partial root was hidden and then destroyed, and reuse threw.
+- [x] **Active renderer destroyed.** The coordinator ended rejected with no match and
+  an empty view.
+- [x] **Active rendering rejection.** The renderer's camera was destroyed mid-match.
+  `Update` threw a `MissingReferenceException`, after which the renderer rejected and
+  disabled itself and dropped its visuals, and the coordinator stopped its playback.
+- [x] **Unattached renderer.** It stays inert, with no generated root, and stays
+  enabled.
+- [x] **Double detach, then a same-frame re-attach.** The old root was hidden
+  immediately and still existed during that frame beside one active new root. It was
+  destroyed in the next frame, leaving one root.
+- [x] **Disable and enable.** Toggling the object only changed visibility: the same
+  root and the same match remained, it was not rejected, and the tick advanced from
+  55 to 72.
+- [x] **Authored objects survive.** All nine authored references remain on the scene
+  renderer and on the probe copy, along with Pitch, Main Camera and the `AgentMarker`
+  material.
+- [x] **Full time, report, return and second Start.** This ran on the authored scene
+  renderer after the dev host's own detach, and the match was paced at 1× from
+  12:04:25 to 13:34:25.
+  - Full time came at tick 324,000 with `ended=True`, a score of 14–13, and
+    analytics complete through tick 324,000. No commands were applied or refused.
+  - Match View stayed frozen, with the same tick after 120 frames.
+  - The explicit report action moved to the report screen.
+  - Return went to the main menu with no match, no active root, an empty view and no
+    report.
+  - A second Start then succeeded (attachment 2, one active root), and the new match
+    was playing at tick 293 after 300 frames.
+
+The paced 1× outcome matches the stepped EditMode outcome on this host. The session
+log has no `ERR_EVT` or wrong-phase errors. Its only two errors are the intentional
+rejections from the partial-failure and rendering-rejection probes.
+
+**Session 1 is void and kept only for honesty** (`play-session1-void.txt`). It ran
+up to five paced matches at once in one process. `EventBus` is process-static
+(Event System #17 §3.2.1), so each new engine's boot reset the bus under the others.
+Four engine threads died with
+`ERR_EVT_QUEUE_OVERFLOW (0x1701): Publish<T> called with invalid CurrentPhase 0xFF`,
+and one coordinator's full-time run stalled at tick 369. That fault came from the
+probe design, not from P5b: the coordinator stops and joins one match before starting
+the next. Session 2 repeated every check serially.
+
+Neither session's ownership results depend on engine ticking. Unity's Play mode,
+however, stops advancing frames while the editor is unfocused unless
+`Application.runInBackground` is set. The session enabled it at runtime and restored
+`PlayerSettings.runInBackground = false` afterwards. `ProjectSettings.asset` is
+unchanged.
+
+**Gate.** Linux shim on this host, .NET SDK 8.0.425 under Git Bash: `run-gate.sh --fast --test-filter FullyQualifiedName~TacticalDirector.ClientApp.Tests` gave **Gate PASSED**, ClientApp.Tests 47/47. That run includes the full-match test with `[Timeout]` under NUnit 3.14 on .NET 8. It took 51 m 53 s because it shared the CPU with the concurrent Unity run. PR CI runs the full Linux gate. On Windows hosts the loopback-server tests in the unchanged MatchClientWeb and MatchViewer assemblies are known to fail, and a separate task covers them.
+
+#49 L2, the complete four-screen bindings, copy and reflow, command outcomes,
+choosers and focus, B8/B9b/B10 and Gate J remain open. Those are the next P5b
+deliverables. The pinned-host checklist for the consumed lifecycle/identity slice is
+now complete.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -222,3 +347,4 @@ Pinned host, Unity 6000.4.9f1, clean detached checkout of `0a236ed4` (main `fc66
 | 0.2 | October 6, 2026 | Recovery record, normal-suite real full-match comparison and explicit pending execution; Unity profiler scopes and host checks. |
 | 0.3 | October 6, 2026 | Published-head review: independent run at `50e6e5a`, full-match end-tick fix, restored-session `BootRoster` refusal with mirrored tests, cue `PlayerId` assertion; historical sections preserved. |
 | 0.4 | October 6, 2026 | Post-merge Unity compile fix: NUnit 3.7 `[NonParallelizable]` removed from the full-match comparison test; pinned Unity 6000.4.9f1 compile 0 errors; EditMode/Play checks still due. |
+| 0.5 | October 7, 2026 | Pinned-host validation at main `5d112bab`: exact-head compile, EditMode 335/3 and the certified complete-match outcome (14–13, `95A006D5…`). Every Play-mode lifecycle check passed in a serial session; the concurrent session 1 is void because `EventBus` is process-static. The full-match test gains `[Timeout(7200000)]` because Unity's 180 s default failed it at 4,284 s. |
