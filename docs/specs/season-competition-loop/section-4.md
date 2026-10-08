@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** September 11, 2026 (v1.2 — T2b review correction: legacy empty finance initialization is Restore-only; generic composition remains validation-only/fail-loud)
+**Last Updated:** October 8, 2026 (v1.3 — live finance state participates in daily identity accounting without additional persistence)
+**Last Updated (prior):** September 11, 2026 (v1.2 — T2b review correction: legacy empty finance initialization is Restore-only; generic composition remains validation-only/fail-loud)
 **Last Updated (prior):** September 11, 2026 (v1.1 — ERR-030-051 / #40 T2b: live bootstrap/settlement and finance observer/query/command surfaces on the #30 composition root)
 **Last Updated (prior):** September 10, 2026 (v1.0 — ERR-030-050: the T1b resume/composition surface includes `SeasonLoop.Restore(..., financesOrNull)` and loop-held finance state. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.9 — ERR-030-049, #40 T1b: §4.2's frame-version delta line
@@ -20,7 +21,7 @@ this section's own recorded omission class after the v0.4 and v0.6 rows below. N
 **Last Updated (prior):** August 8, 2026, later same day (v0.5 — AR pass 14 L4: §4.2's leftover 1 → 2 delta line corrected to 1 → 4; the tests list marked illustrative)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
 **Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 1.2
+**Version:** 1.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -136,7 +137,10 @@ src/season-save/
   upgrades an empty T1b pre-producer finance block to one initial entry per restored `SeasonState.ClubId`;
   ordinary constructor composition never manufactures finance state. The low-level generic constructor may
   still carry the explicit legacy/unwired empty representation for compatibility, but finance reads/commands
-  and season settlement fail loud on it. Non-empty entries exactly cover `_state.ClubIds`.
+  and season settlement fail loud on it. Non-empty entries exactly cover `_state.ClubIds`. T3b1's daily identity pass runs at
+  day-completion slot 11a outside pre-round career replay, using the sole #40-owned disabled gate
+  (ERR-030-052). Explicit generic empty state skips that daily pass and remains unwired; no cursor or
+  save-format change is introduced.
   `FinanceView(clubId)` returns a detached observer value;
   `AvailableTransferBudget(clubId)` and `ApplyTransaction(clubId, ...)` route through #40's canonical
   ledger; `FinanceEntriesForSave()` remains an internal defensive-copy persistence bridge. At the season
@@ -234,4 +238,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 1.0 | 2026-09-10 | — | **ERR-030-050 review correction.** §4.3 now represents the actual T1b composition surface: loop-held canonical finance state (private `_finances`, no public property), `Restore(..., financesOrNull)`, the internal defensive-copy `FinanceEntriesForSave()`, and forwarding by `Save(SeasonLoop, ...)`; T2 retains only bootstrap/settlement production. This expressly supersedes v0.9's deliberate omission while preserving that row historically. |
 | 1.1 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** §4.3 promotes `_finances` from persistence-only carrier to live composed state, records `League.CreateLoop` bootstrap ownership, the observer/query/command surfaces, and staged-(b')/post-commit installation semantics. |
 | 1.2 | 2026-09-11 | — | **T2b review correction.** Separates ordinary finance-set validation from compatibility migration: only `SeasonLoop.Restore` may initialize an empty persisted T1b block; generic composition may retain the explicit legacy/unwired empty representation, on which finance use and settlement fail loud. |
+| 1.3 | 2026-10-08 | — | **T3b1 / ERR-030-052.** live finance state participates in daily identity accounting without additional persistence. |
 #endregion

@@ -1,10 +1,11 @@
 # Club Finances & Economy #40 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.3 — ERR-040-003: §1.2's mutation-path scope line reconciled with FR-FN-003's externally-commanded/autonomous split)
+**Last Updated:** October 8, 2026 (v0.4 — day-completion identity wiring leaves minimal economics unchanged)
+**Last Updated (prior):** September 11, 2026 (v0.3 — ERR-040-003: §1.2's mutation-path scope line reconciled with FR-FN-003's externally-commanded/autonomous split)
 **Last Updated (prior):** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -70,10 +71,10 @@ Reference DAG: `#30 → {#28, #40}`, `#31 → #40`, `#34 → #40` (future), `#45
 
 - **KD-1 (accounting cadence — season-boundary minimal, per-day deep).** The minimal tier settles **once per
   season at the boundary roll** (`SettleFinances`, the #28 `RunSeasonBoundary` precedent) — a single budget
-  figure read as a constant during the season. There is **no per-day step** and no per-day accrual state at
-  minimal, keeping serialized state tiny. The deep-tier per-day revenue accrual adds a **daily** slot (a
-  future #30 tick-order back-prop analogous to #41's, deferred here — the minimal tier does not need it),
-  and its accumulators default to zero (KD-8). This split keeps the minimal surface a pure boundary
+  figure read as a constant during the season. There is **no non-zero per-day accrual** and no per-day cursor at minimal. T3b1 wires the
+  zero-input accounting primitive at #30's day-completion slot 11a (ERR-030-052); this structural
+  invocation preserves every finance field. T3b2 defines the later non-zero revenue model; deep
+  accumulators default to zero (KD-8). This split keeps the minimal surface a pure boundary
   transform.
 
 - **KD-2 (minimal is pure, no draw — reserve, don't promote).** The minimal budget is a pure deterministic
@@ -179,4 +180,5 @@ data-structure sketch and no-contradiction with any KD:
 | 0.1 | 2026-07-23 | — | Initial. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | **ERR-040-002** (at #53's approval): a new out-of-scope row records that **#53 owns facility state** and #40's role is **funding** via the existing `ApplyTransaction` path. Filed because **four approved specs pointed at #40 for a facility model its own scope excludes** — the gap that caused #53 to be opened. Names #53's `Stadium` capacity as the input for §7.2's deferred matchday accrual. **No #40 code, constraint, ledger or requirement change.** |
 | 0.3 | 2026-09-11 | Claude | **ERR-040-003 back-prop.** §1.2 still called `ApplyTransaction` *the* single ledger-mutation entry point after FR-FN-003 (§2 v0.5) split externally-commanded mutation from #40-owned autonomous accrual, so the two APPROVED section files gave downstream implementers contradictory ownership guidance. The scope line now carries the `externally-commanded` qualifier and names the T3a `AccrueDailyRevenue` surface with its `Balance` + `SeasonRevenueAccrued` bound. **No requirement, constraint or code change** — §1 is brought into line with §2/§3, which already stated the split. |
+| 0.4 | 2026-10-08 | — | **T3b1 / ERR-030-052.** day-completion identity wiring leaves minimal economics unchanged. |
 #endregion

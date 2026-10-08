@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
+**Last Updated:** October 8, 2026 (v2.21 — finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged)
+**Last Updated (prior):** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
 **Last Updated:** August 18, 2026, even later still (v2.19 — **adversarial-review round-7 finding M7**,
 spec-text only — no code change; the code was already correct): `PlayThroughEngine`'s pseudocode body
 derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null —
@@ -229,7 +230,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.20
+**Version:** 2.21
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -374,7 +375,11 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     # 11. tenure       (#54)  — NULL SEAM today (ERR-030-021 — EvaluateTenure. Positioned after board
     #                           (step 8) because it READS the day's board confidence; the terminating
     #                           decision itself is #54's, not #30's)
-    # 12. world day:    WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 11a. finance (#40 T3b1) — LIVE only at day completion, outside pre-round replay:
+    if initialized finance entries exist:
+        for each finance entry:
+            AccrueDailyRevenue(entry, 0L, 0L, ClubFinancesConstants.DEEP_REVENUE_ENABLED)
+    # 12. world day — advances only after daily accounting succeeds
     WorldStore.AdvanceDay()
 ```
 
@@ -1083,6 +1088,18 @@ and `SEASON_SAVE_FORMAT_VERSION` bumps 1 → 2 (§4). The codec never parses the
 and 11 both finish P=3 W=2 D=0 L=1 with GF/GA giving equal GD and equal GF, club 10 orders above 11
 by ascending `ClubId` (FR-SN-007 final key) — a total order.
 
+## 3.7 T3b1 finance day completion (ERR-030-052)
+
+The daily finance pass runs only in `RunWorldTickInFixedOrder`, after its career pass and before clock
+advance. Slots 0–11 still run pre-round under §3.3.2; slot **11a** does not. A fixture's finance day is
+completed by the following advance, after the round; zero-day/refused commands do not enter this slot.
+The world's existing clock distinguishes completed days after save/restore, so T3b1 adds no finance
+cursor or persisted gate. The season break uses the same path. Generic legacy/unwired empty loops skip
+11a without creating cash; canonical new games and restored saves have one finance entry per club.
+#40 owns the disabled gate and accounting; #30 forwards zero inputs and owns invocation only.
+T-FN-DAY-001–006 in #40 §5.9 cover the runtime and compiled ordering contracts. Revenue magnitudes,
+formula inputs and tuning remain T3b2; this back-prop grants no amount-production ownership to #30.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -1128,4 +1145,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.18 | 2026-08-18 | — | **ERR-030-048** (adversarial-review round 7, H4 — spec-text only; the code was already correct). §3.4's `AdvanceAndPlayNextRound` pseudocode ran the `OnClubFixturePlayed` pair and `fold?.Commit` at the same indent as `f.Played := true`, i.e. UNGATED inside the fixture loop — while the comment block directly above justified their null-safety by appealing to "the same condition this whole block already runs under". No such condition existed in the block. The live code wraps both calls in `if (_disciplineDriver != null)` (`SeasonLoop.cs:982`) and `RosterIds` returns **null** when discipline is unwired (`SeasonLoop.cs:1751-1756`), so an implementer following the pseudocode literally passes null and takes the `clubPlayerIds` `ArgumentNullException` (`DisciplineRules.cs:329`) on the FIRST fixture of any career without discipline wired — the loud twin of the silently-permanent-ban defect `ERR-030-047` fixed one round earlier, in the same block, from the same omission. The `fold?.Commit` on the next line being `?.`-guarded made the gap read as deliberate. Pair and commit now sit under an explicit `if discipline is wired:`, and the null-safety comment cites that gate instead of a gate that was not there. Recorded in passing, because it is the reason the two defects are twins: what the block IS NOT gated on is a CAREER being wired — a ban is served by the club playing without him, on both resolution paths. | — |
 | 2.19 | 2026-08-18 | — | **Adversarial-review round-7 finding M7** (spec-text only; the code was already correct). `PlayThroughEngine`'s pseudocode body derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null — while the serve-step comment (§3.4, below the pseudocode) justified skipping a null check on those same variables by citing `FieldedXi`'s null-gating, a DISTINCT producer (`SeasonLoop.cs:1721-1724`: `_career == null && _disciplineDriver == null ? null : SquadRating.StartingElevenPlayerIds(squad)`). The pseudocode's own body therefore did not support the null-safety argument built on it two names later. Fixed: `PlayThroughEngine` now derives `homeXi := FieldedXi(home)` / `awayXi := FieldedXi(away)`, with `StartingElevenPlayerIds` named as `FieldedXi`'s inner walk once the gate has passed; §3.4.1's prose description of `ResolveRound` corrected the same way, so both resolution paths are stated to derive their XIs through the same producer. Verified against `src/season-save/SeasonLoop.cs:1721-1724` before writing. | — |
 | 2.20 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** Step (b') becomes live. The complete finance result is computed there from the final table before regeneration, then installed only after `BeginNextSeason` succeeds; refused rolls leave finance state untouched. The prior mid-roll-save wording is retired because `RollToNextSeason()` is synchronous and exposes no such save seam. |
+| 2.21 | 2026-10-08 | — | **T3b1 / ERR-030-052.** finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged. |
 #endregion

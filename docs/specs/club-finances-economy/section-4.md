@@ -1,14 +1,15 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.9 — T3a review close-out: restore-time coherence includes accumulated revenue; canonical newline restored)
+**Last Updated:** October 8, 2026 (v0.10 — daily composition uses the existing edge and adds no persisted state)
+**Last Updated (prior):** September 11, 2026 (v0.9 — T3a review close-out: restore-time coherence includes accumulated revenue; canonical newline restored)
 **Last Updated (prior):** September 11, 2026 (v0.8 — T3a: record draw-free daily revenue accounting surface; dependency graph unchanged)
 **Last Updated (prior):** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
 **Last Updated (prior):** September 11, 2026 (v0.6 — PR #392 T2a: the consumed #40 → #27 Squad.ClubId edge is now live; #30 invocation remains T2b)
 **Last Updated (prior):** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
 **Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -30,7 +31,7 @@ requires. At every phase #40 does **not** reference `MatchEngine`, `LivingWorld`
 **T3a changes no assembly edge.** `FinanceStep.AccrueDailyRevenue` is a pure #40-owned accounting transform
 over caller-supplied integer revenue amounts. It neither discovers the day/fixture nor calls #30, and it
 performs no deterministic draw, so the existing `DeterministicSim` reference remains save-framing-only and
-the reserved `0x29`/91 namespace remains unpromoted. The later #30 daily invocation is a caller-side T3
+the reserved `0x29`/91 namespace remains unpromoted. T3b1's #30 daily invocation is a caller-side
 composition change on the already-existing `#30 → #40` edge, not a reverse dependency.
 
 ```
@@ -39,7 +40,7 @@ T3a current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical
                                  └──▶ PlayerDatabase (#27)       [Squad.ClubId bootstrap transform]
 T1b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [compose finance sub-blob]
 T2b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [League.CreateLoop bootstrap + staged settle at step (b')]
-T3 future:    #30 SeasonSave ──────▶ ClubFinances (#40)         [daily revenue invocation once amount producers are specified]
+T3b1 current: #30 SeasonSave ─────▶ ClubFinances (#40)         [day-completion identity invocation; non-zero model remains T3b2]
 T3/future:    #31/#34/#45 ─────────▶ ClubFinances (#40)         [downstream query/commands/modifier producers]
 ```
 
@@ -80,12 +81,13 @@ src/club-finances/
   produces one initial entry per distinct club and canonicalizes by ClubId. #40 declares no write path into
   `Squad`, `PlayerAttributes`, or `PlayerRecord`; the caller supplies the club universe and retains lifecycle
   ownership.
-- **To #30 (T1b/T2b live; T3 daily invocation deferred):** T1b composes #40's opaque codec into
+- **To #30 (T1b/T2b/T3b1 live):** T1b composes #40's opaque codec into
   `SeasonSaveCodec`. T2b's `League.CreateLoop` is the new-game lifecycle seam: it invokes T2a's bootstrap
   transform exactly once. `SeasonLoop.RollToNextSeason()` computes `SettleFinances` per club at reserved
   step (b') and stages those values until the fallible #30 season commit succeeds; only then are they
-  installed (ERR-030-051). T3a now exposes the pure `AccrueDailyRevenue` accounting transform, but #30 does
-  not invoke it yet: the daily tick-order insertion and amount producers remain later T3 work. #40 never
+  installed (ERR-030-051). T3b1 invokes the pure `AccrueDailyRevenue` accounting transform at day-completion slot 11a,
+  outside the replayed pre-round career helper. Amounts are zero and the disabled gate is owned by
+  #40's constants catalogue; amount producers remain T3b2 work. #40 never
   references #30 and never invokes its own bootstrap factory independently.
 - **T3a autonomous accounting:** `AccrueDailyRevenue` is #40-owned rather than a second caller-command
   ledger. With its gate disabled it returns the prior state exactly; enabled, it can change only `Balance`
@@ -109,7 +111,7 @@ codec**; composition into #30's `SeasonSaveCodec` and the coordinating outer `SE
 bump were **T1b**, and landed September 10, 2026 (ERR-030-049: frame `6 → 7`, the mandatory `FNCE` block
 between #44's discipline block and the optional match block). The split kept each implementation phase
 matched to the code: the codec was built and validated without pretending the season-save envelope had
-already changed. The byte layout below is unchanged by T1b, T2a, T2b, or T3a — T3a mutates fields that were
+already changed. The byte layout below is unchanged by T1b, T2a, T2b, T3a, or T3b1 — T3a mutates fields that were
 already persisted in the six-field record and introduces no new cursor/state field, so
 `FINANCE_SAVE_FORMAT_VERSION` stays 1.
 
@@ -173,4 +175,5 @@ its deterministic accounting transform leaves every existing stream cursor uncha
 | 0.7 | 2026-09-11 | — | **T2b / ERR-030-051 architecture back-prop.** Promotes #30's bootstrap/settlement edge to current, records `League.CreateLoop` as the lifecycle owner, and pins settlement-at-(b') with post-commit installation to preserve #30 atomicity. |
 | 0.8 | 2026-09-11 | OpenAI | **T3a architecture back-prop.** Records `AccrueDailyRevenue` as a draw-free #40-owned autonomous accounting transform, keeps the assembly graph unchanged, leaves #30 daily invocation deferred, and keeps `0x29`/91 reserved until the first stochastic sponsorship-variance consumer. |
 | 0.9 | 2026-09-11 | OpenAI | **T3a review close-out.** Restore-time coherence pseudocode now includes negative `SeasonRevenueAccrued` rejection and the file regains a canonical trailing newline. |
+| 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** daily composition uses the existing edge and adds no persisted state. |
 #endregion

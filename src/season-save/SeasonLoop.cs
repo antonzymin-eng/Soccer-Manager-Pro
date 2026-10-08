@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
+// Modified: 2026-10-08 (#40 T3b1: daily identity invocation at day completion)
+//           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
 //           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
 //           League.CreateLoop; this loop exposes the keyed ledger/read surfaces, stages every club's
@@ -61,8 +62,8 @@
 //           FR-SN-010/011/012/013/013a/013b/016/017/018/025/026/029/030/031/032/033/034;
 //           Training System #29 §3.3/§3.5, FR-TR-004/016/025; Injuries & Medical #41 §3.5,
 //           FR-MD-003/022/023/025; Club Finances & Economy #40
-//           FR-FN-001/002/003/004/012/013/020/021/023/025/027, §7.1 T2b;
-//           ERR-030-002 / ERR-030-009 / ERR-030-050 / ERR-030-051;
+//           FR-FN-001/002/003/004/012/013/020/021/023/025/027, §7.1 T2b/T3b1;
+//           ERR-030-002 / ERR-030-009 / ERR-030-050 / ERR-030-051 / ERR-030-052;
 //           path-to-playable A4 + A5 + D2/D3 (T2); Code Standards #20
 // Purpose:  The season composition root — the only writer of SeasonState (KD-7 / FR-SN-032). Advances the
 //           world one calendar day at a time in the KD-2 fixed order, resolves a whole round of fixtures,
@@ -1360,15 +1361,14 @@ namespace TacticalDirector.SeasonSave
         /// without throwing anything.
         /// </para>
         /// <para>
-        /// With no career wired, only step 12 runs and a no-fixture day's advance is byte-identical to a
-        /// bare <see cref="WorldStore.AdvanceDay"/> (FR-SN-026 / KD-8) — which is exactly what the
-        /// behaviour-neutral floor test asserts. With one wired it stays byte-identical <i>to the
-        /// world</i>: neither day step touches <see cref="WorldStore"/>, they mutate only the career
-        /// state, which is serialized in its own sub-blobs.
+        /// With no career or finance state wired, only step 12 runs. A no-fixture day's advance is
+        /// byte-identical to a bare <see cref="WorldStore.AdvanceDay"/> (FR-SN-026 / KD-8), as the
+        /// behaviour-neutral floor test asserts. With those systems wired, the world remains identical:
+        /// the day steps touch only management state carried in separate save sub-blobs.
         /// </para>
         /// <para>
-        /// Both steps take the world day BEFORE step 12's increment — the day being lived, not the day
-        /// being entered. That is what makes the first advance of a fresh world day 0 and keeps
+        /// The career steps take the world day BEFORE step 12's increment — the day being lived,
+        /// not the day being entered. That makes the first advance of a fresh world day 0 and keeps
         /// <c>LastAdvancedWorldDay</c> exactly one behind the clock between ticks, so a save taken here
         /// restores without a phantom gap.
         /// </para>
@@ -1386,12 +1386,30 @@ namespace TacticalDirector.SeasonSave
         /// FR-MD-010 appearance window (which never contains today) instead of through a draw-after-
         /// the-round convention. Locked by <c>DayAdvance_StopsBeforeTheFixtureDaysOwnSteps</c>.
         /// </para>
+        /// <para>
+        /// T3b1 finance runs at day completion (slot 11a), after the career pass and before the clock
+        /// increment. It is deliberately outside the pre-round pass: playing a fixture does not complete
+        /// its world day, and the following advance must account for that day exactly once. The world
+        /// clock already survives restore, so identity wiring adds no finance cursor (ERR-030-052).
+        /// </para>
         /// </summary>
         private void RunWorldTickInFixedOrder()
         {
             RunCareerDaySteps(_world.CurrentWorldTick);
 
-            // 12. world day    — LIVE (the only step outside RunCareerDaySteps).
+            // 11a. finance (#40 T3b1) — day completion only, outside the pre-round career pass.
+            // The world clock owns invocation: each successful advance completes exactly one day,
+            // including a played fixture day and the season break. No second serialized cursor.
+            // Generic legacy/unwired loops retain their explicit empty state; canonical new games
+            // and restored saves always have entries. Do not bypass the primitive when its gate is off.
+            if (_finances.Length > 0)
+            {
+                SeasonFinanceRuntime.AccrueDailyRevenue(
+                    _finances,
+                    ClubFinancesConstants.DEEP_REVENUE_ENABLED);
+            }
+
+            // 12. world day — LIVE, after the day's finance accounting succeeds.
             _world.AdvanceDay();
         }
 
@@ -2208,4 +2226,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | commit succeeds, preserving all-or-nothing boundary semantics.    |
 // | 1.33    | 2026-09-11 | —      | T2b review: legacy empty initialization moved behind Restore;     |
 // |         |            |        | ordinary generic composition is validation-only and fail-loud.    |
+// | 1.34    | 2026-10-08 | —      | ERR-030-052 / #40 T3b1: slot 11a daily identity accounting before clock advance; no fixture-day replay or save cursor. |
 #endregion

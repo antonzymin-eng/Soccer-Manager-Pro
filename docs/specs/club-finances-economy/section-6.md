@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 6: Performance & Cadence
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** October 8, 2026 (v0.2 — identity daily pass is linear in initialized clubs and allocation-free)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -35,12 +36,13 @@ even the world-tick cadence, let alone the match loops.
 
 Off-pitch, at most once per simulated season for `SettleFinances` and on-demand for `ApplyTransaction` —
 orders of magnitude below any per-tick or even per-world-day budget. No perf gate is required at Stage 0/1;
-the FR-PO-052 per-tick gate is a match-loop concern and does not apply. The (deferred) deep-tier per-day
-revenue accrual, if it lands, would add an O(`clubCount`) daily step — still off-pitch and cheap, comparable
+the FR-PO-052 per-tick gate is a match-loop concern and does not apply. T3b1 adds the zero-input O(`clubCount`) daily accounting pass at #30 day completion
+(slot 11a), without allocation or RNG. The non-zero T3b2 model will use the same slot — still off-pitch and cheap, comparable
 to #41's per-day cost analysis.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial performance analysis: cadence, per-season cost, `ApplyTransaction` cost, budget. Status IN REVIEW. |
+| 0.2 | 2026-10-08 | — | **T3b1 / ERR-030-052.** identity daily pass is linear in initialized clubs and allocation-free. |
 #endregion

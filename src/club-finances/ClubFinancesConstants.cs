@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinancesConstants.cs
 // Created:  2026-09-04
-// Modified: 2026-09-08
+// Modified: 2026-10-08
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #40 Appendix A, §3.1, §4.4 (Club Finances constants/save framing)
@@ -17,6 +17,9 @@ namespace TacticalDirector.ClubFinances
     public static class ClubFinancesConstants
     {
         #region Fixed
+
+        /// <summary>[FIXED] T3b1 identity gate; #40 alone owns enabling revenue when T3b2 specifies its model. Spec #40 §7.1.</summary>
+        public const bool DEEP_REVENUE_ENABLED = false;
 
         /// <summary>[FIXED] Shared per-mille denominator for board and budget-share arithmetic. Spec #40 Appendix A.</summary>
         public const int PERMILLE_DENOM = 1000;
@@ -75,4 +78,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.1     | 2026-09-04 | —      | T1a: add save magic/version and framing widths. |
 // | 1.2     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
 // | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.4     | 2026-10-08 | —      | T3b1: sole #40-owned disabled daily-revenue gate, without tuning. |
 #endregion

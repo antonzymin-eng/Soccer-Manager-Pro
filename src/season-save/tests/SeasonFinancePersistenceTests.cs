@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonFinancePersistenceTests.cs
 // Created:  2026-09-10
-// Modified: 2026-09-11 (#40 T2a — prove bootstrap Squad.ClubId universe composes with SeasonState.ClubIds)
+// Modified: 2026-10-08 (#40 T2a — prove bootstrap Squad.ClubId universe composes with SeasonState.ClubIds)
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-020/021/025; Season & Competition Loop #30 Appendix B.1;
 //           ERR-030-050; Code Standards #20
@@ -163,6 +163,50 @@ namespace TacticalDirector.SeasonSave
             AssertSameFinances(expected, copied.Finances);
         }
 
+        /// <summary>T-FN-DAY-005: daily identity resumes across pre/post-fixture saves without a finance cursor.</summary>
+        [Test]
+        public void DailyAccounting_SaveRestoreBeforeAndAfterFixture_EqualsUninterruptedContinuation()
+        {
+            const ulong seed = 0x40F1AACEUL;
+            League league = LeagueBootstrap.Generate(seed, 4);
+            var world = new WorldStore(0, seed);
+            SeasonLoop straight = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            var fee = new FinanceTransaction(FinanceTransactionKind.Debit, FinanceLineItem.General, 123L);
+            var wage = new FinanceTransaction(FinanceTransactionKind.Debit, FinanceLineItem.PlayerWage, 456L);
+            straight.ApplyTransaction(1, in fee);
+            straight.ApplyTransaction(2, in wage);
+            ClubFinanceEntry[] expected = straight.FinanceEntriesForSave();
+
+            straight.AdvanceDays(2);
+            SeasonLoop resumed = SaveAndRestore(straight, "off-day.season");
+            AssertSameFinances(expected, resumed.FinanceEntriesForSave());
+            straight.AdvanceToNextFixtureDay();
+            resumed.AdvanceToNextFixtureDay();
+            resumed = SaveAndRestore(resumed, "pre-fixture.season");
+            straight.AdvanceAndPlayNextRound(league);
+            resumed.AdvanceAndPlayNextRound(league);
+            resumed = SaveAndRestore(resumed, "post-fixture.season");
+            straight.AdvanceDays(1);
+            resumed.AdvanceDays(1);
+
+            AssertSameFinances(expected, resumed.FinanceEntriesForSave());
+            Assert.That(resumed.Snapshot(), Is.EqualTo(straight.Snapshot()));
+            SeasonSaveManager.Save(straight, null, TempPath("straight.season"));
+            SeasonSaveManager.Save(resumed, null, TempPath("resumed.season"));
+            Assert.That(File.ReadAllBytes(TempPath("resumed.season")),
+                Is.EqualTo(File.ReadAllBytes(TempPath("straight.season"))),
+                "The complete save, including the world and RNG state, must continue identically.");
+        }
+
+        private SeasonLoop SaveAndRestore(SeasonLoop loop, string name)
+        {
+            string path = TempPath(name);
+            SeasonSaveManager.Save(loop, null, path);
+            SeasonSaveContents contents = SeasonSaveManager.Load(path);
+            return SeasonLoop.Restore(contents.World, SeasonStateCodec.Encode(contents.Season),
+                RoundResolutionMode.QuickSimAll, financesOrNull: contents.Finances);
+        }
+
         [Test]
         public void Save_NonEmptyFinancesMissingCurrentSeasonClub_FailsLoud()
         {
@@ -216,4 +260,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-09-10 | —      | ERR-030-050 regression locks: populated load→loop→Save As;   |
 // |         |            |        | missing/foreign ClubId refusal at save and composition.      |
 // | 1.1     | 2026-09-11 | —      | T2a: #27 Squad.ClubId bootstrap universe proven compatible with #30 SeasonState.ClubIds. |
+// | 1.2     | 2026-10-08 | —      | T3b1: daily continuation through off-day and pre/post-fixture saves. |
 #endregion

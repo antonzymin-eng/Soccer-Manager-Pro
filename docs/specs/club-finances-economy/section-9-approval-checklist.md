@@ -1,13 +1,14 @@
 # Club Finances & Economy #40 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.7 — PR #395 named as the T2b landing under gate; T2a/T2b boxes remain open pending corrected-head CI)
+**Last Updated:** October 8, 2026 (v0.8 — T3b1 source status recorded; pinned Unity compile remains open)
+**Last Updated (prior):** September 11, 2026 (v0.7 — PR #395 named as the T2b landing under gate; T2a/T2b boxes remain open pending corrected-head CI)
 **Last Updated (prior):** September 11, 2026 (v0.6 — T2b source status recorded; T2a/T2b checkboxes remain open pending executed current-head gate evidence)
 **Last Updated (prior):** September 11, 2026 (v0.5 — PR #392 T2a source status recorded; checkbox held open pending executed gate evidence)
 **Last Updated (prior):** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 
@@ -129,6 +130,16 @@ implementation status is refreshed as each T-phase lands; review gates track the
 T3 deep tier) is the post-`APPROVED` implementation sequence and is not gated on anything in this checklist
 beyond `APPROVED` itself.
 
+## 9.7 T3b1 implementation evidence
+
+- Source anchors: `SeasonLoop.RunWorldTickInFixedOrder` → `SeasonFinanceRuntime.AccrueDailyRevenue`
+  → `FinanceStep.AccrueDailyRevenue`; the gate comes only from `ClubFinancesConstants`.
+- Executable acceptance: `SeasonLoopFinanceTests` / `SeasonFinancePersistenceTests`, T-FN-DAY-001–006.
+- No changes to `.asmdef` references, world/match/season/finance save layouts, or RNG namespace/streams.
+- [ ] Exact-final-head Unity 6000.4.9f1 editor compile (not available in this Linux authoring session).
+- Canonical Linux PR composition is supplied by CI; direct Roslyn/NUnitLite fallback results are reported
+  separately in the PR and are not represented as the policy runner or Unity evidence.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -139,4 +150,5 @@ beyond `APPROVED` itself.
 | 0.5 | 2026-09-11 | — | **PR #392 T2a status refresh, review-corrected.** Records the pure `Squad.ClubId` bootstrap transform and live `PlayerDatabase` dependency against source, but deliberately leaves the T2a implementation box open until the named suites have actually executed successfully; T2b remains #30 invocation/settlement and the across-roll half of T-FN-LIFE-001. |
 | 0.6 | 2026-09-11 | — | **T2b source-status refresh / ERR-030-051.** Records the live #30 bootstrap, staged boundary settlement, command/read surfaces and `SeasonLoopFinanceTests`; both T2a/T2b evidence boxes remain deliberately unchecked until the current-head functional gate executes successfully. |
 | 0.7 | 2026-09-11 | — | **PR #395 gate binding.** Names PR #395 as the T2b landing under evaluation and as the current execution surface for the already-landed T2a regression evidence; both boxes remain deliberately open until corrected-head CI supplies executed proof. |
+| 0.8 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T3b1 source status recorded; pinned Unity compile remains open. |
 #endregion

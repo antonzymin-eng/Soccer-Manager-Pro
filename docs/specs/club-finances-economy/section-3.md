@@ -1,13 +1,14 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
+**Last Updated:** October 8, 2026 (v0.10 — zero inputs, sole gate ownership and fixture/save timing pinned)
+**Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
 **Last Updated (prior):** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
 **Last Updated (prior):** September 11, 2026 (v0.7 — wording correction: ApplyTransaction remains the single externally-commanded ledger path, not the only T3 mutation)
 **Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -190,7 +191,7 @@ T2/T4 decision gates use ahead of their own upstream engine-substrate deliverabl
 
 T3a defines the **accounting mutation only**. It deliberately does not decide how much sponsorship or
 matchday revenue a club earns, does not own the calendar invocation, and does not draw sponsorship variance.
-Those are later T3 slices (§7.1/§7.2). Keeping this primitive pure preserves #40's ownership of the accounting
+Calendar invocation lands at T3b1 (§3.6); amount production and variance are later slices (§7). Keeping this primitive pure preserves #40's ownership of the accounting
 rule while allowing #30 to remain the lifecycle/composition owner when the daily slot is wired.
 
 ```
@@ -229,7 +230,7 @@ admit corrupt budget/liability/revenue state. T-FN-NEU-004 locks both halves of 
 This T3a primitive **does not promote** `_RESERVED_0x29_` / `SubsystemOrdinals.ClubFinances = 91`: it performs
 no draw and stores no draw cursor/action ordinal. Promotion remains atomic with the first genuine stochastic
 sponsorship-variance consumer. It also does not update `FfpBalanceWindow`, debit `WageBillAggregate`, choose
-`[GT]` revenue magnitudes, or add a #30 world-tick call. Passing already-derived amounts into this pure
+`[GT]` revenue magnitudes; T3b1 supplies the separate #30 day-completion call (§3.6). Passing already-derived amounts into this pure
 primitive is an internal layering boundary, not permission for #30/#31/#34/#45 to invent competing finance
 models; the amount-production rules remain #40-owned when those later T3 slices are specified.
 
@@ -279,6 +280,29 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 **not** fail loud — debt is representable (`Balance` carries no F1 floor); only `TransferBudget`/
 `WageBudget`/`WageBillAggregate` do.
 
+## 3.6 T3b1 day-completion composition (ERR-030-052)
+
+#30 invokes `SeasonFinanceRuntime.AccrueDailyRevenue` once per completed world day at **slot 11a**,
+after career/management slots 0–11 and before slot 12's `WorldStore.AdvanceDay()`. For every initialized
+club, #30 passes `sponsorshipRevenue = 0L`, `matchdayRevenue = 0L`, and the sole #40-owned
+`ClubFinancesConstants.DEEP_REVENUE_ENABLED = false` [FIXED] into the T3a primitive. The primitive is
+still invoked with the gate off, so canonical finance coherence is checked. Generic low-level loops with
+an explicitly empty/unwired finance set skip this pass without manufacturing entries; canonical new games
+and Restore-normalized saves have a complete set. Finance commands and settlement still refuse emptiness.
+
+**Fixture timing:** slots 0–11 may run pre-round and again on the following advance using their career
+cursors. Finance is outside that replayed helper. Resolving a fixture does not complete its day; the next
+advance accounts for that day, after its fixtures, exactly once. A save before or after the fixture keeps
+the same world day; a save after advancement keeps the next day. No finance cursor, gate bit, save-layout
+change, or RNG draw is added. Zero-day and refused advances invoke no accounting. Season-break advances
+use the same slot. T3b2 must feed its model through this completion seam, rather than adding a second caller.
+
+**Worked identity example (integer currency units):** day 5, club 2, coherent prior
+`{ Balance: -102, TransferBudget: 202, WageBudget: 302, WageBillAggregate: 402,
+SeasonRevenueAccrued: 502, FfpBalanceWindow: -602 }`. Revenue inputs are `0 + 0 = 0`; the disabled gate
+returns all six fields identically, and only #30 advances the world clock to day 6. Negative balance and
+FFP-window values remain representable; budgets, liability and accrued revenue must stay non-negative.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -291,4 +315,5 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.7 | 2026-09-11 | OpenAI | **T3a wording correction.** Restates `ApplyTransaction` as the single externally-commanded ledger mutation path so §3.2 no longer conflicts with the autonomous T3a accrual path defined in §3.4.1 and FR-FN-003. |
 | 0.8 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Names the completed-season revenue handoff before reset, pins future FFP consumption to that handoff, and clarifies that the disabled revenue gate is identity only after canonical prior-state coherence validation. |
 | 0.9 | 2026-09-11 | Claude | **ERR-040-003 close-out.** v0.8's `completedSeasonRevenue` local and `CloseCompletedSeasonRevenue(...)` call were removed from `FinanceStep.cs` (v1.8) as a misleading indirection, but §3.1's pseudocode and §3.1's prose still described both — an APPROVED spec instructing the next implementer to rebuild a construct the code had just deleted. §3.1 now shows the shipped `result.SeasonRevenueAccrued = 0` with the FFP insertion point pinned **above** the reset and reading `prior.SeasonRevenueAccrued`, and records why no intermediate carrier is reintroduced. No requirement, arithmetic or worked-example value changes. |
+| 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** zero inputs, sole gate ownership and fixture/save timing pinned. |
 #endregion
