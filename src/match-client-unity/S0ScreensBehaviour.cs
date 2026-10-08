@@ -740,6 +740,7 @@ namespace TacticalDirector.MatchClientUnity
                 if (_measuredText[i] == text && _measuredWidth == width)
                     continue;
                 S0UiFactory.Set(label, text);
+                // Constrain the wrapping rectangle, never the string; then measure full text at that width.
                 float textWidth = Mathf.Min(width - S0UiConstants.GAP, label.preferredWidth);
                 label.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, textWidth);
                 _labelSizes[i] = new Vector2(textWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP);
@@ -933,4 +934,5 @@ namespace TacticalDirector.MatchClientUnity
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Persistent four-screen UGUI binding and keyboard/dialog/resource lifecycle. |
 // | 1.1     | 2026-10-08 | —      | Complete first-frame layout, grow full-label scroll surface, cache metrics/controls and stabilize chronological history. |
+// | 1.2     | 2026-10-08 | —      | Clarify full-string wrapping and subsequent measured height for narrow label rectangles. |
 #endregion

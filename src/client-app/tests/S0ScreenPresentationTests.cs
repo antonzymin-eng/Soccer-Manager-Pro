@@ -98,6 +98,12 @@ namespace TacticalDirector.ClientApp.Tests
             _view.SubmitMentality();
             Tick();
             _view.Refresh();
+            // A stubbed/unsupported runtime counter must never certify the zero-allocation assertion.
+            long controlBefore = GC.GetAllocatedBytesForCurrentThread();
+            byte[] control = new byte[1024];
+            long controlBytes = GC.GetAllocatedBytesForCurrentThread() - controlBefore;
+            GC.KeepAlive(control);
+            Assert.Greater(controlBytes, 0L, "Allocation counter must detect a known live allocation on this runtime.");
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 1000; i++)
                 _view.Refresh();
@@ -376,4 +382,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Real composed screen and driver scenarios; no Unity visual claim. |
 // | 1.1     | 2026-10-08 | —      | Reproduce structural invalidation and unchanged-frame allocations after command settlement. |
+// | 1.2     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 #endregion

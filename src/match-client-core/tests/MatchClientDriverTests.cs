@@ -108,6 +108,12 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(8UL, refused[0].AppliedTick);
             var retained = applied;
             driver.TryGetCommandOutcomes(1, 1, out _, out _); // warm up the polling path
+            // A stubbed/unsupported runtime counter must never certify the zero-allocation assertion.
+            long controlBefore = GC.GetAllocatedBytesForCurrentThread();
+            byte[] control = new byte[1024];
+            long controlBytes = GC.GetAllocatedBytesForCurrentThread() - controlBefore;
+            GC.KeepAlive(control);
+            Assert.Greater(controlBytes, 0L, "Allocation counter must detect a known live allocation on this runtime.");
             long before = GC.GetAllocatedBytesForCurrentThread();
             bool changed = false;
             for (int i = 0; i < 1000; i++)
@@ -202,4 +208,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-07-24 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.2     | 2026-10-08 | —      | Conditional atomic outcome snapshots, immutable retained evidence and zero-byte unchanged polling. |
+// | 1.3     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 #endregion

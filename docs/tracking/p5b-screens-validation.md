@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.2\
+**Version:** 0.3\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -94,6 +94,46 @@ Only the pinned Editor can resolve/regenerate them and confirm the exact depende
 No Unity provider or Editor is available here. The new child-image layout, first-frame
 activation, density/reflow, Tab chronology and repeat-match caches remain explicit host
 checks. Keep PR #489 draft; B8/B9b/B10 and Gate J remain OPEN.
+
+## Follow-up review — counter validity and host profiling
+
+CI for `ac9a0ac6a92a7daa7893c35042771cd5cbd73efe` is now complete:
+[run 37760302461](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37760302461)
+passed the Linux functional gate and all lint/link/format/metadata/spec checks. Unity tests
+were skipped. This evidence belongs to that head; the following test correction needs
+fresh corrected-head CI and pinned Editor execution.
+
+Both allocation tests now first retain a known 1,024-byte array and require the runtime
+counter to detect that allocation. An always-zero counter fails explicitly before any
+zero-allocation assertion; it cannot silently certify the presenter/driver. The probe is
+outside the unchanged-path measurement. No test is skipped or disabled. Unity's official
+[UUM-100690](https://issuetracker.unity.com/issues/5660/crash-on-runtimefieldinforesolvetype-with-il2cpp-and-returns-0-with-mono-when-calling-gcgetallocatedbytesforcurrentthread-method)
+records this problem in older releases and marks the 6.1/6.2 tracks fixed; that status is
+not a direct observation of the pinned 6000.4.9f1 Mono host. If the control fails there,
+record the counter failure and obtain Unity Profiler allocation evidence; do not describe
+that run as a passing allocation measurement or remove the assertion.
+
+Supplementary counter check, October 8 at 17:58 UTC: ClientApp fast filter
+`test !~ S0DemoFixtureComparisonTests` passed **99/99**, and the driver fixture passed
+**8/8**. In temporary test-source copies only, replacing every counter read with `0L`
+made both original tests falsely pass and both corrected tests fail at the exact positive
+control assertion. Production and committed test sources were not mutated. These results
+remain CLR 8.0.28 / NUnitLite 3.14 evidence, not a Unity counter/skin/performance result.
+
+The narrow-label statement needs qualification: the binding limits the text rectangle,
+retains the entire string, uses `HorizontalWrapMode.Wrap`, and reads `preferredHeight`
+**after** setting its width. There is no substring/ellipsis or font-size reduction. Unity's
+[UGUI Text implementation](https://github.com/Unity-Technologies/uGUI/blob/main/com.unity.ugui/Runtime/UGUI/UI/Core/Text.cs)
+measures preferred height against that current width. This supports the wrapping intent;
+it does not prove the selected font fits an arbitrarily narrow rectangle. The pinned-host
+font test below must verify complete glyphs and adequate height with a deliberately narrow
+pitch and expanded marker text. No native font/render result is claimed here.
+
+The remaining forced-layout cadence is intentionally unmeasured. Every structural rebind
+marks pitch layout dirty, and statistics publish once per simulated second, so 10× playback
+can drive approximately ten such refreshes per real second. No speculative cadence/observer
+change is made before profiling. B8 must record actual forced-layout/bind/publication counts
+and CPU/GC/frame results at 1× and 10×, rather than infer performance from this rate.
 
 ## Content and dependency boundary
 
@@ -193,8 +233,16 @@ Supplementary results below cover portions of the contracts, not their complete 
    200% layouts. Record `PitchLayoutFailureCount` (must remain zero) and Console warnings.
    Expand earlier feedback before/after Report and in a second match; visual and Tab order
    must agree and retained label caches must never produce blank repeat-match markers.
+   Also deliberately narrow the pitch rectangle and expand marker text: verify the entire
+   string/glyph set wraps, its measured height grows, and no glyph disappears or autoshrinks.
+   A font/layout failure is a failed I-Q16 case even if the simulation continues.
 5. Retain target build/runtime and cert-host profiling artifacts under the existing B8/B10
    procedures. An editor FPS reading, shim outcome or browser screenshot is not a certificate.
+   Compare 1× and 10× playback with statistics closed and open, including the 200% stacked
+   layout. Capture actual `Canvas.ForceUpdateCanvases`/structural-bind/analytics-publication
+   cadence per real second, UI/layout and presenter CPU time, GC allocations and frame-time
+   distribution under the existing cert-host procedure/budgets. Separate resize/activation
+   spikes from sustained playback; retain raw captures and `PitchLayoutFailureCount` (zero).
    Record product/runtime acceptance explicitly; do not close Gate J from these unit results.
 
 ## Version History
@@ -203,3 +251,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | --- | --- | --- |
 | 0.1 | October 8, 2026 | Four consumed screen candidate, supplementary validation and exact-head host acceptance procedure; all host gates remain open. |
 | 0.2 | October 8, 2026 | PR #489 review fixes: nonfatal/growable label layout, changed-outcome snapshots, structural refresh and stable chronological feedback; before/after allocation evidence and baseline CI retry recorded, all host acceptance remains open. |
+| 0.3 | October 8, 2026 | Follow-up review: known-allocation controls reject always-zero runtime counters; ac9a0ac CI completion, wrapping qualification and explicit 1×/10× host layout profiling cases recorded. Unity/runtime/cert acceptance remains open. |
