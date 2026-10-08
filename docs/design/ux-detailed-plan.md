@@ -1,8 +1,8 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 5, 2026\
-**Version:** 1.30\
+**Last Updated:** October 8, 2026\
+**Version:** 1.32\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
@@ -967,7 +967,13 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-**Current next step: validate the complete P5b screens on the pinned host.**
+**Current next step: validate the merged P5b screens on main on the pinned host.**
+The four screens merged to main October 8 through #489 at `1c8366d`, before any Unity compile.
+Run the [screens record](../tracking/p5b-screens-validation.md) v0.11 procedure against main:
+Unity compile and EditMode, Editor-regenerated package lock, real-client I-Q01–19, then B8
+profiling. A Unity failure is fixed forward on main. B8/B9b/B10/Gate J remain open.
+
+**Prior next step, October 8, 2026 (superseded by the #489 merge): validate the complete P5b screens on the pinned host.**
 The coordinator has the October 7 pinned-host acceptance in [its validation record](../tracking/p5b-lifecycle-validation.md) v0.5.
 L2 merged October 8 through #487 at 574b0344. The four screens now have an
 [implemented candidate and host procedure](../tracking/p5b-screens-validation.md) v0.1.
@@ -1122,3 +1128,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.29 | October 5, 2026 | Records #470 foundation merged at f276f700 and routes consumed lifecycle/identity implementation to the source-audited plan. Preserves previous sequence and all gate/approval/QA contracts. |
 | 1.30 | October 5, 2026 | PR #479 review corrections advance the consumed implementation pointer to v0.2; B9b screen/navigation scope and analytics locking, observer-slot and dependency obligations are explicit. Gate definitions, owner approvals and planned QA unchanged. |
 | 1.31 | October 8, 2026 | Sequences exact-head host validation after L2 merged and the complete P5b screen candidate; runtime/cert gates remain open. |
+| 1.32 | October 8, 2026 | Records the #489 merge of the P5b screens to main at `1c8366d` ahead of host acceptance; the current next step is the pinned-host run against main (screens record v0.11). Corrects the header, which still read v1.30 after the v1.31 row. Gates, approvals and QA unchanged. |
