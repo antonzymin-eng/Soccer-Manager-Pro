@@ -86,6 +86,7 @@ functional gate or Unity compile is claimed.
 | Focused P5b tests | 48 passed / 0 failed / 0 skipped | Presenter/request/content/layout, no UGUI execution |
 | Broader ClientApp candidate run | 93 passed / 0 failed / 0 skipped, 484.466 s, 04:27:16–04:35:20 UTC | Includes complete-match comparison, before the two added font/bounds cases |
 | Final changed-source fast regression | 94 passed / 0 failed / 0 skipped, 04:47:21 UTC | `test !~ S0DemoFixtureComparisonTests`; long comparison passed in the earlier full run; fresh unfiltered PR CI remains due |
+| Complete final ClientApp assembly | 95 passed / 0 failed / 0 skipped, 497.949 s, 04:46:44–04:55:02 UTC | Includes the long full-match comparison and both added font/bounds cases; supplementary Linux only |
 | Localization | 67 passed / 0 failed / 0 skipped | Includes consumed-client reverse-reference lock |
 | NUnit 3.5 compatibility | ClientApp and Localization test sources compile | Supplementary signatures, not Unity compilation |
 | Assembly package-policy tooling | 11 tests passed | Valid pin plus missing/mismatched/foreign/unknown negative cases |
@@ -94,11 +95,13 @@ functional gate or Unity compile is claimed.
 | Scene references and metadata | PASS: 31 unique scene objects, four root activation/parent mappings, shell/skin script and camera references; metadata integrity PASS | Does not prove Unity import/runtime |
 
 Focused command: NUnitLite ClientApp filter `class =~ S0Screen or class =~ S0Text or
-class =~ ClientChangeRequestsTests`, `--workers=0`. The earlier full ClientApp run has no filter; the final fast regression filter is recorded above. An attempted final unfiltered rerun ended without a test summary/result artifact, so it supplies no additional pass claim. Localization runs its full assembly. The canonical entry point remains
+class =~ ClientChangeRequestsTests`, `--workers=0`. The earlier full ClientApp run has no filter; the final fast regression filter is recorded above. An attempted final unfiltered rerun ended without a test summary/result artifact. The completed final run used `class != S0DemoFixtureComparisonTests`: this unqualified exclusion matched no fully qualified class, so all 95 cases executed, including `S0DemoFixtureComparisonTests.sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral`. Its XML reports 95 passed / 0 failed / 0 skipped. Localization runs its full assembly. The canonical entry point remains
 `bash tools/run-tests-local.sh --pr`; GitHub Actions must execute it against the published
 head. No tests are marked Explicit, disabled or removed in this slice. A failed new font
 assertion initially checked the legend rather than the substitute-marker role; correcting
 that oracle gives 48/48 without changing production behavior.
+
+The published source commit is `0643b71bd63d3b65fd79029d2b76ef9415dc17a8`; this final evidence update changes Markdown only. The connected GitHub publication tree matched the local tree exactly (`878bf7302fb544c06e2a8a6ba1386afc94152e3d`). A final PR CI pass remains due; the published PR head, rather than this authoring snapshot, is the required pinned-host compile target.
 
 ## Acceptance matrix and pinned-host procedure
 
