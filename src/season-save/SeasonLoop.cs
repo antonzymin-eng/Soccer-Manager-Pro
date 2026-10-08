@@ -133,7 +133,7 @@ namespace TacticalDirector.SeasonSave
         // squad for a new game. Restore validates populated persisted entries and upgrades ONLY an empty
         // persisted T1b block. The generic constructor may still carry the explicit legacy/unwired empty
         // state, but finance reads/commands and the season-boundary settlement fail loud on that state.
-        private readonly ClubFinanceEntry[] _finances;
+        private ClubFinanceEntry[] _finances;
 
         // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
         // has no day step, no cursor and no provider of its own, so nothing here can fall out of step
@@ -1404,7 +1404,7 @@ namespace TacticalDirector.SeasonSave
             // and restored saves always have entries. Do not bypass the primitive when its gate is off.
             if (_finances.Length > 0)
             {
-                SeasonFinanceRuntime.AccrueDailyRevenue(
+                _finances = SeasonFinanceRuntime.PrepareDailyRevenue(
                     _finances,
                     ClubFinancesConstants.DEEP_REVENUE_ENABLED);
             }
@@ -2227,4 +2227,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.33    | 2026-09-11 | —      | T2b review: legacy empty initialization moved behind Restore;     |
 // |         |            |        | ordinary generic composition is validation-only and fail-loud.    |
 // | 1.34    | 2026-10-08 | —      | ERR-030-052 / #40 T3b1: slot 11a daily identity accounting before clock advance; no fixture-day replay or save cursor. |
+// | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
 #endregion

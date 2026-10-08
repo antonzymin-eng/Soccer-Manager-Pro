@@ -1,11 +1,12 @@
 // File:     src/season-save/tests/SeasonFinancePersistenceTests.cs
 // Created:  2026-09-10
-// Modified: 2026-10-08 (#40 T2a — prove bootstrap Squad.ClubId universe composes with SeasonState.ClubIds)
+// Modified: 2026-10-08 (#40 T3b1 — whole-save daily continuation with zero revenue)
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-020/021/025; Season & Competition Loop #30 Appendix B.1;
 //           ERR-030-050; Code Standards #20
 // Purpose:  Locks the T1b finance resume seam, the current-season ClubId coherence rule, and T2a's
 //           canonical #27 bootstrap universe so save/composition cannot drift between club identities.
+//           T3b1 checks whole-save continuation around daily advances and fixtures with zero revenue.
 
 using System;
 using System.IO;
@@ -163,9 +164,9 @@ namespace TacticalDirector.SeasonSave
             AssertSameFinances(expected, copied.Finances);
         }
 
-        /// <summary>T-FN-DAY-005: daily identity resumes across pre/post-fixture saves without a finance cursor.</summary>
+        /// <summary>T-FN-DAY-005: complete saves continue identically around advances and fixtures with zero revenue.</summary>
         [Test]
-        public void DailyAccounting_SaveRestoreBeforeAndAfterFixture_EqualsUninterruptedContinuation()
+        public void ZeroRevenue_SaveRestoreAroundDayAdvanceAndFixture_EqualsWholeSaveContinuation()
         {
             const ulong seed = 0x40F1AACEUL;
             League league = LeagueBootstrap.Generate(seed, 4);
@@ -261,4 +262,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | missing/foreign ClubId refusal at save and composition.      |
 // | 1.1     | 2026-09-11 | —      | T2a: #27 Squad.ClubId bootstrap universe proven compatible with #30 SeasonState.ClubIds. |
 // | 1.2     | 2026-10-08 | —      | T3b1: daily continuation through off-day and pre/post-fixture saves. |
+// | 1.3     | 2026-10-08 | —      | PR #491 review: label whole-save zero-revenue continuation precisely. |
 #endregion

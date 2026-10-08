@@ -7,7 +7,7 @@
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
 //           Code Standards #20 §3.9.4
 // Purpose:  Locks #40's production bootstrap, Restore-only legacy migration, runtime ledger surface,
-//           boundary settlement ordering, across-roll identity, refused-roll atomicity, and preservation
+//           daily publication/refusal, boundary settlement ordering, across-roll identity, and preservation
 //           of already-composed runtime subsystems at the #30 composition root.
 //           General unit tests (Code Standards #20 §3.9.4): reflection/allocation rules relaxed.
 // ============================================================================
@@ -251,12 +251,47 @@ namespace TacticalDirector.SeasonSave.Tests
         public void DailyAccounting_ZeroInputsPreserveAllClubFields(bool enabled)
         {
             ClubFinanceEntry[] entries = PopulatedFinances();
+            ClubFinanceEntry[] published = entries;
             ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
 
-            SeasonFinanceRuntime.AccrueDailyRevenue(entries, enabled);
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
 
+            Assert.That(entries, Is.Not.SameAs(published), "Success must publish a detached result.");
+            AssertEntriesEqual(before, published);
             AssertEntriesEqual(before, entries);
             Assert.That(ClubFinancesConstants.DEEP_REVENUE_ENABLED, Is.False);
+        }
+
+        /// <summary>T-FN-DAY-007: a late-club refusal publishes nothing; repairing it permits retry.</summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void DailyAccounting_LateClubFailurePreservesPublishedArrayAndAllowsRetry(bool enabled)
+        {
+            ClubFinanceEntry[] expected = PopulatedFinances();
+            ClubFinanceEntry[] entries = (ClubFinanceEntry[])expected.Clone();
+            int last = entries.Length - 1;
+            var corrupt = entries[last].Finances;
+            corrupt.SeasonRevenueAccrued = -1L;
+            entries[last] = new ClubFinanceEntry(entries[last].ClubId, in corrupt);
+            ClubFinanceEntry[] published = entries;
+            ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
+
+            var error = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled));
+
+            Assert.That(error.ParamName, Is.EqualTo("finances"));
+            Assert.That(error.Message, Does.Contain("SeasonRevenueAccrued must be non-negative current-season revenue (F1)."));
+            Assert.That(entries, Is.SameAs(published), "Refusal must retain the published array.");
+            AssertEntriesEqual(before, published);
+
+            // Repair the injected corruption and retry from the same published state.
+            entries[last] = expected[last];
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
+
+            Assert.That(entries, Is.Not.SameAs(published));
+            AssertEntriesEqual(expected, published);
+            AssertEntriesEqual(expected, entries);
+            // Zero inputs cannot expose partial monetary writes; T3b2 must add non-zero retry tests.
         }
 
         /// <summary>T-FN-DAY-002: day advance reaches the primitive for every club, even gate-off.</summary>
@@ -280,6 +315,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(error.ParamName, Is.EqualTo("finances"));
             Assert.That(error.Message, Does.Contain("SeasonRevenueAccrued must be non-negative current-season revenue (F1)."));
             Assert.That(loop.CurrentWorldDay, Is.Zero, "Finance failure must precede the clock increment.");
+            Assert.That(LiveEntries(loop), Is.SameAs(entries), "A refused day must not publish a finance array.");
             AssertEntriesEqual(before, entries);
         }
 
@@ -315,6 +351,7 @@ namespace TacticalDirector.SeasonSave.Tests
             ClubFinanceEntry[] expected = PopulatedFinances();
             var loop = new SeasonLoop(world, league.CreateSeason(0),
                 RoundResolutionMode.QuickSimAll, financesOrNull: expected);
+            ClubFinanceEntry[] published = LiveEntries(loop);
 
             loop.AdvanceDays(3);
             for (int i = 0; i < 3; i++)
@@ -322,18 +359,22 @@ namespace TacticalDirector.SeasonSave.Tests
                 bareWorld.AdvanceDay();
             }
 
+            Assert.That(LiveEntries(loop), Is.Not.SameAs(published), "Day advancement must install the staged result.");
+            AssertEntriesEqual(expected, published);
             AssertEntriesEqual(expected, loop.FinanceEntriesForSave());
             Assert.That(world.Snapshot(), Is.EqualTo(bareWorld.Snapshot()));
         }
 
         /// <summary>T-FN-DAY-004: cardinality/order of an identity invocation is a compiled-call-graph lock.</summary>
         [Test]
-        public void DailyAccounting_HasOneClockAdvanceCallerOutsideFixturePreparation()
+        public void DailyAccounting_SeasonLoopHasOneClockAdvanceCallerOutsideFixturePreparation()
         {
             // §3.9.4 general-unit-test — reflection/allocation rules relaxed in test body.
             // Identity output alone cannot distinguish zero, one or two calls. Inspect decoded IL,
             // not source substrings, so this lock runs under both the Linux and Unity test runners.
-            MethodInfo daily = typeof(SeasonFinanceRuntime).GetMethod("AccrueDailyRevenue",
+            // Scope: methods/constructors declared directly on SeasonLoop, excluding generated types.
+            // T3b2 must supplement this lock with behavioural counts using non-zero daily amounts.
+            MethodInfo daily = typeof(SeasonFinanceRuntime).GetMethod("PrepareDailyRevenue",
                 BindingFlags.Static | BindingFlags.NonPublic);
             MethodInfo tick = typeof(SeasonLoop).GetMethod("RunWorldTickInFixedOrder",
                 BindingFlags.Instance | BindingFlags.NonPublic);
@@ -354,7 +395,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 }
             }
 
-            Assert.That(callers, Is.EqualTo(new[] { tick }), "Exactly one direct finance call site is allowed.");
+            Assert.That(callers, Is.EqualTo(new[] { tick }),
+                "SeasonLoop's declared methods/constructors must contain exactly one direct finance call site.");
             List<MethodBase> calls = CalledMethods(tick);
             int careerIndex = calls.FindIndex(m => m.Name == "RunCareerDaySteps");
             int financeIndex = calls.IndexOf(daily);
@@ -526,4 +568,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.3     | 2026-09-11 | —      | Claude review: Restore-only migration, career/progression    |
 // |         |            |        | preservation coverage, and independent position economics.  |
 // | 1.4     | 2026-10-08 | —      | T3b1: identity, per-club live invocation, fixture timing and IL ownership/order locks. |
+// | 1.5     | 2026-10-08 | —      | PR #491 review: detached publication, late-club refusal/retry, and explicit IL scan scope. |
 #endregion

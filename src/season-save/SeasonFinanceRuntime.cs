@@ -7,7 +7,7 @@
 //           §3.4/§3.6, §4.1-§4.3, §7.1 T2b/T3b1; Season Loop #30 §3.3/§3.5/§4.3;
 //           Code Standards #20
 // Purpose:  #30-owned composition mechanics for the live #40 state: keyed access, ledger routing,
-//           the per-club daily identity pass, and staged season-boundary settlement for SeasonLoop.
+//           staged daily accounting and season-boundary settlement for SeasonLoop.
 // ============================================================================
 
 using System;
@@ -28,9 +28,10 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// Invokes #40's accounting primitive once per initialized club for the day being completed.
         /// T3b1 supplies zero amounts and forwards the sole #40-owned gate; T3b2 owns amount production.
-        /// The identity pass allocates no state and needs no day cursor beyond the world's clock.
+        /// Returns all clubs in a detached array only after every calculation succeeds. SeasonLoop
+        /// publishes that complete result; a refusal preserves live state for retry without a day cursor.
         /// </summary>
-        internal static void AccrueDailyRevenue(ClubFinanceEntry[] entries, bool deepRevenueEnabled)
+        internal static ClubFinanceEntry[] PrepareDailyRevenue(ClubFinanceEntry[] entries, bool deepRevenueEnabled)
         {
             if (entries == null)
             {
@@ -42,6 +43,7 @@ namespace TacticalDirector.SeasonSave
                 throw new InvalidOperationException("Daily finance accounting requires initialized club finances.");
             }
 
+            var accrued = new ClubFinanceEntry[entries.Length];
             for (int i = 0; i < entries.Length; i++)
             {
                 ClubFinanceEntry entry = entries[i];
@@ -51,8 +53,10 @@ namespace TacticalDirector.SeasonSave
                     sponsorshipRevenue: 0L,
                     matchdayRevenue: 0L,
                     deepRevenueEnabled);
-                entries[i] = new ClubFinanceEntry(entry.ClubId, in next);
+                accrued[i] = new ClubFinanceEntry(entry.ClubId, in next);
             }
+
+            return accrued;
         }
 
         /// <summary>
@@ -194,4 +198,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.3     | 2026-09-11 | —      | Claude review: comments align with Restore-only legacy        |
 // |         |            |        | migration; BoardModifier.Identity explicitly pinned to T2b.   |
 // | 1.4     | 2026-10-08 | —      | T3b1: allocation-free, per-club zero daily accounting invocation. |
+// | 1.5     | 2026-10-08 | —      | PR #491 review: publish daily state only after every club succeeds. |
 #endregion

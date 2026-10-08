@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** October 8, 2026 (v2.21 — finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged)
+**Last Updated:** October 8, 2026 (v2.22 — finance slot 11a publishes only after every club succeeds)
+**Last Updated (prior):** October 8, 2026 (v2.21 — finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged)
 **Last Updated (prior):** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
 **Last Updated:** August 18, 2026, even later still (v2.19 — **adversarial-review round-7 finding M7**,
 spec-text only — no code change; the code was already correct): `PlayThroughEngine`'s pseudocode body
@@ -230,7 +231,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.21
+**Version:** 2.22
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -377,8 +378,10 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     #                           decision itself is #54's, not #30's)
     # 11a. finance (#40 T3b1) — LIVE only at day completion, outside pre-round replay:
     if initialized finance entries exist:
-        for each finance entry:
-            AccrueDailyRevenue(entry, 0L, 0L, ClubFinancesConstants.DEEP_REVENUE_ENABLED)
+        staged := PrepareDailyRevenue(finance entries, ClubFinancesConstants.DEEP_REVENUE_ENABLED)
+        # PrepareDailyRevenue calls AccrueDailyRevenue(entry, 0L, 0L, gate) for each club;
+        # no live entry changes if any club fails.
+        finance entries := staged
     # 12. world day — advances only after daily accounting succeeds
     WorldStore.AdvanceDay()
 ```
@@ -406,6 +409,11 @@ managed club only). A no-fixture day's advance is **byte-identical to the world*
 a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8) — since #29/#41 T2 the career day-steps also run
 (slots 2/4), but their state lives in the career sub-blobs, not the world blob, so the world-digest
 identity FR-SN-026 pins is unchanged.
+
+**Finance publication (slot 11a):** #30 installs the detached result returned by
+`SeasonFinanceRuntime.PrepareDailyRevenue` only after every club succeeds, before advancing the
+world clock. A finance refusal preserves the live finance array and day for retry; all-club staging
+remains mandatory when T3b2 supplies non-zero amounts (#40 §3.6).
 
 ### 3.3.1 Tick-order reconciliation (ERR-030-022, July 27, 2026)
 
@@ -1146,4 +1154,5 @@ formula inputs and tuning remain T3b2; this back-prop grants no amount-productio
 | 2.19 | 2026-08-18 | — | **Adversarial-review round-7 finding M7** (spec-text only; the code was already correct). `PlayThroughEngine`'s pseudocode body derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null — while the serve-step comment (§3.4, below the pseudocode) justified skipping a null check on those same variables by citing `FieldedXi`'s null-gating, a DISTINCT producer (`SeasonLoop.cs:1721-1724`: `_career == null && _disciplineDriver == null ? null : SquadRating.StartingElevenPlayerIds(squad)`). The pseudocode's own body therefore did not support the null-safety argument built on it two names later. Fixed: `PlayThroughEngine` now derives `homeXi := FieldedXi(home)` / `awayXi := FieldedXi(away)`, with `StartingElevenPlayerIds` named as `FieldedXi`'s inner walk once the gate has passed; §3.4.1's prose description of `ResolveRound` corrected the same way, so both resolution paths are stated to derive their XIs through the same producer. Verified against `src/season-save/SeasonLoop.cs:1721-1724` before writing. | — |
 | 2.20 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** Step (b') becomes live. The complete finance result is computed there from the final table before regeneration, then installed only after `BeginNextSeason` succeeds; refused rolls leave finance state untouched. The prior mid-roll-save wording is retired because `RollToNextSeason()` is synchronous and exposes no such save seam. |
 | 2.21 | 2026-10-08 | — | **T3b1 / ERR-030-052.** finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged. |
+| 2.22 | 2026-10-08 | — | **PR #491 review.** finance slot 11a publishes only after every club succeeds. |
 #endregion

@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 8, 2026 — (v2.179 — **#40 T3b1 identity daily invocation / ERR-030-052.** `ClubFinancesConstants` v1.4 supplies the sole fixed disabled gate. `SeasonFinanceRuntime` v1.4 invokes the T3a accounting primitive per club with zero inputs, and `SeasonLoop` v1.34 calls it at day-completion slot 11a, outside pre-round replay and before clock advancement. `SeasonLoopFinanceTests` v1.4 and `SeasonFinancePersistenceTests` v1.2 add 11 executable cases for identity, every-club invocation, fixture timing, decoded IL ownership/order, complete-save continuation and the break/roll. No formula, tuning, draw, persisted field, version or assembly change; Unity final-head compile remains pending.)
+> **Last Updated:** October 8, 2026 — (v2.180 — **PR #491 atomic daily publication.** `SeasonFinanceRuntime` v1.5 returns a detached complete result; `SeasonLoop` v1.35 publishes after success. `SeasonLoopFinanceTests` v1.5 adds two late-club failure/retry cases and locks detached success results, preserving zero-revenue scope. `SeasonFinancePersistenceTests` v1.3 corrects header/name; IL scan scope is explicit. No revenue formula, save, RNG or assembly change; pinned Unity compile remains pending.)
+
+> **Last Updated (prior):** October 8, 2026 — (v2.179 — **#40 T3b1 identity daily invocation / ERR-030-052.** `ClubFinancesConstants` v1.4 supplies the sole fixed disabled gate. `SeasonFinanceRuntime` v1.4 invokes the T3a accounting primitive per club with zero inputs, and `SeasonLoop` v1.34 calls it at day-completion slot 11a, outside pre-round replay and before clock advancement. `SeasonLoopFinanceTests` v1.4 and `SeasonFinancePersistenceTests` v1.2 add 11 executable cases for identity, every-club invocation, fixture timing, decoded IL ownership/order, complete-save continuation and the break/roll. No formula, tuning, draw, persisted field, version or assembly change; Unity final-head compile remains pending.)
 
 > **Last Updated (prior):** October 8, 2026 — (v2.178 — **PR #489 Match View Tab order and contract parity.** Match View Tab now follows journey §9.3 explicitly (Slower → Pause/Resume → Faster → Change Mentality → Make substitution → statistics → earlier feedback), then the report action and the single pitch inspection entry; headings/feedback anchors enter at their next listed successor. New permanent S0ContentContractTests parses binding-contract v0.4 §§4.2–4.3 and asserts all 141 compiled base patterns verbatim, catching the three semicolon truncations fixed in dbe8e32. No content, hash, engine, save, schema or RNG change. Linux CI is the only test run (no local SDK); Unity compile and host acceptance remain open.)
 >
@@ -2725,6 +2727,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.180 | October 8, 2026 | — | PR #491 review: stage all-club daily accounting, publish after success, test late refusal/retry with both gates, and bound structural/whole-save evidence. |
 | 2.179 | October 8, 2026 | — | #40 T3b1 / ERR-030-052: sole disabled gate; zero-input accounting at day completion; 11 daily identity, invocation, ordering, save and season-break cases. Linux fallback evidence reported separately; exact-final-head Unity compile remains open. |
 | 2.178 | 2026-10-08 | — | Explicit journey §9.3 Match View Tab order (statistics before earlier feedback) and permanent 141-role binding-contract parity test; host acceptance open. |
 | 2.177 | 2026-10-08 | — | Focus overlay layout exclusion, persistent current/requested comparison tags and complete approved context; 141-role audit/hash and native QA boundaries, host acceptance open. |
