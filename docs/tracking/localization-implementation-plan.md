@@ -1,8 +1,8 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.7
-**Status:** READY FOR IMPLEMENTATION
+**Version:** 2.9
+**Status:** L1/L3A LANDED; L2 IMPLEMENTED IN THIS CHANGESET, PRE-MERGE VALIDATION PENDING; L3B NEXT AFTER L2
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
 
@@ -355,6 +355,14 @@ This executable layer proof is the evidence used to discharge ERR-049-002 in ful
 
 # 6. Approved renderer and in-memory catalogue — L2
 
+**October 7 implementation:** see `localization-l2-plan.md` v0.7. Seven source files and two test
+files implement the reviewed plan, with 67 localization tests passing through NUnitLite. Codex
+review adds a canonical-base selection guard: five cases fail before the fix and pass after it.
+Prior-head standard CI run 37713997728 passed Localization 60/60 and the full PR gate; that
+production head is superseded by the guard, so fresh corrected-head CI remains due.
+ERR-049-005/006 and their approved spec back-props land with the code. Canonical Linux PR composition and exact-head Unity 6000.4.9f1 compile remain
+pre-merge gates; this status does not authorize downstream wiring before L2 lands.
+
 **Purpose:** implement only FR-LC-007/008/008a/009/010/011 and the renderer behavior required for T1.
 
 ## 6.1 In-memory model only
@@ -375,18 +383,18 @@ No external serialized locale format is defined here.
 
 1. selected-locale row if present;
 2. base-locale row otherwise;
-3. if both are absent, follow the construction/fallback invariant; **omit the optional dev-only `‹key›` marker in T0**. FR-LC-011 permits that marker but does not require it, while production must fall through to base.
+3. if both are absent for a never-admitted key, return `string.Empty` (ERR-049-005); construction covers every caller-admitted static key. Omit the optional dev marker in L2.
 
 `Render`:
 
 1. obtain `variantCount(BaseLocale, Id)`;
-2. require count >= 1 by construction;
+2. admitted ids have count >= 1 by construction; an unknown unrequired id returns `string.Empty` before modulo;
 3. compute `SelectionDraw % (ulong)count` before narrowing;
 4. lookup the selected locale at the **same** variant index;
 5. fall back to the base row for that exact index;
-6. pure named-slot expansion;
+6. single-pass non-recursive named-slot expansion (ERR-049-006), with bounded data-model selectors;
 7. optional clause lookup by `(Id.ProducerTag, CitationKind)` with selected -> base fallback;
-8. append one space + clause exactly as the oracle expects.
+8. append one space + clause if found; an unrequired missing clause appends nothing.
 
 Renderer performs no RNG draw, tick advance, persistence write or producer-specific formatting.
 
@@ -404,7 +412,7 @@ Use synthetic test catalogues for selector behavior. Real translated content is 
 
 ## 6.4 Construction coverage
 
-Because the core cannot enumerate producer enums, catalogue construction accepts generic required identities/clauses from its caller/boundary and fails if the base catalogue omits any required row or has zero variants.
+Because the core cannot enumerate producer enums, catalogue construction accepts generic required static keys/template ids/clauses from its caller/boundary and fails if the base catalogue omits any required row or has zero variants.
 
 Tests must prove a **missing row**, not only an explicit zero row, fails construction.
 
@@ -804,4 +812,6 @@ Review of v2.4 found that the two new records had been added without following t
 | 2.5 | 2026-09-09 | — | Followed the v2.4 four-defect scope through the places it had not reached, and fixed one mis-sliced proof. §5.2 no longer hard-codes the pre-fix `ILocalizer`/`NamedSlotSet`/`LocalizedTextRequest` shapes that §3.3/§3.4 require L1 to change — the three bullets are marked subject to those decisions. ERR-049-004's exit evidence split at the slice boundary: L1 proves the operand exists with the required type/locale-neutrality/immutability/no-persisted-state properties (§5.3, §5.5) and closes the ERR there; L2 proves it drives plural selection (§6.6) as FR-LC-009 conformance, since the renderer and catalogue are L2. §2 H1 and the §3 preamble updated from two known defects to four. No new defect recorded, no normative fix chosen, no FR/KD wording altered. |
 | 2.7 | 2026-09-28 | OpenAI | L1 restart close-out on current main: records the L1-only reverse-reference tripwire lifecycle, requires pinned Unity 6000.4.9f1 compilation of both new asmdefs before merge, and preserves v2.6's owner-held gate-policy update. |
 | 2.6 | 2026-09-20 | — | Synchronized gate acceptance wording with the owner retirement of the final held-red row. The canonical `tools/run-tests-local.sh --pr` contract is unchanged; owner-held verification is now conditional on configured rows, and the comments-only current ledger means no exclusion/dedicated stage while `sim_match_engine_close_chance` runs in the ordinary sweep. Historical v2.1 and L3A gate evidence remain historical and are not rewritten. |
+| 2.8 | 2026-10-07 | — | L2 implemented with Q1–Q4 recommendations, 60 targeted localization passes, four negative controls, and ERR-049-005/006 back-props. Canonical PR/pinned Unity gates remain open; producer migration and Wave-8 content remain later. |
+| 2.9 | 2026-10-07 | — | Codex L2 review: preserve canonical English identity on selection; L2 record v0.7, 67 supplementary passes and prior-head standard CI pass. Final-head Linux/pinned Unity gates remain required. |
 #endregion

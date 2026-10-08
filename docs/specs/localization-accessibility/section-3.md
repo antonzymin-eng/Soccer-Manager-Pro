@@ -1,8 +1,10 @@
 # Localization & Accessibility #49 — Section 3: The Seam, the Determinism Boundary, the Template Model
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.3
+**Last Updated:** October 7, 2026 (v0.5 — preserve canonical base-locale identity on catalogue selection)
+**Last Updated (prior):** October 7, 2026 (v0.4 — L2 construction/render algorithm and single-pass identity guarantee, ERR-049-005/006)
+**Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -31,22 +33,38 @@ producer type (§4.1).
 ## 3.2 The renderer (`ILocalizer`) — the single seam
 
 ```
+Construct(base, selected, coverage):
+    require base.locale == BaseLocale
+    require selected is null, the same instance as base, or has a non-base locale
+    require every base template has indices 0..n-1 and no selector
+    require all caller-admitted static keys, template ids and clauses exist in base
+    require selected rows have base identities and selected indices are in [0, n)
+    require each catalogue declaring a plural selector supplies a pure, total plural rule
+    # Fail with every offending identity in ordinal order before any render.
+
 Resolve(key):
-    template = catalogue[currentLocale].static[key] ?? catalogue[BaseLocale].static[key]   # KD-5 fallback
-    return template                                                                        # no slots
+    return selected.static[key] ?? base.static[key] ?? string.Empty
+    # Static rows are opaque; client composite patterns are never parsed here.
 
 Render(req):
-    n        = catalogue[BaseLocale].variantCount(req.Id)          # locale-INDEPENDENT count (KD-2); n >= 1 (§3.4)
-    variant  = (int)(req.SelectionDraw % (ulong)n)                # the selection, reproduced display-side
-    template = catalogue[currentLocale].template(req.Id, variant) # KD-5 fallback to BaseLocale per (Id, variant)
-    text     = Expand(template, req.Slots)                        # pure string placeholder substitution over the NamedSlotSet (§3.5)
-    if req.HasCitedEpisode:                                       # citation clause — selected by EventKind, NOT the draw
-        # producer-scoped by req.Id.ProducerTag so two producers' clause keys never collide:
-        clause = catalogue[currentLocale].clause(req.Id.ProducerTag, req.CitationKind)
-              ?? catalogue[BaseLocale].clause(req.Id.ProducerTag, req.CitationKind)
-        text   = text + " " + clause                             # matches InteractionTextGenerator's `text + " " + clause`
+    n = base.variantCount(req.Id)
+    if n == 0: return string.Empty                              # never-admitted id
+    variant = (int)(req.SelectionDraw % (ulong)n)
+    content = selected if selected has (req.Id, variant) else base
+    template = content.template(req.Id, variant)
+    form = Select(template, req.Selectors, content.pluralRule)  # missing/wrong/unmatched -> default
+    text = Expand(form, req.Slots)                              # single-pass, non-recursive
+    if req.HasCitedEpisode:
+        clause = selected.clause(req.Id.ProducerTag, req.CitationKind)
+              ?? base.clause(req.Id.ProducerTag, req.CitationKind)
+        if clause exists: text = text + " " + clause
     return text
 ```
+
+A distinct selected catalogue tagged `BaseLocale` is rejected, even if its rows equal the base
+rows. Null selection and selection of the canonical base instance both render only canonical base
+content; this keeps English identity and the no-selector invariant from being bypassed by a
+separately loaded catalogue. Non-base translations retain sparse per-index fallback.
 
 The renderer is the **one place a locale is consulted and a surface string is produced** (FR-LC-001). The
 draw is emitted raw and the modulo happens here because the *selection* must be reproducible from serialized
@@ -100,20 +118,25 @@ Two properties of the one built producer bind the contract:
 `Expand(template, slots)` performs **pure string** named-placeholder substitution over the
 producer-agnostic `NamedSlotSet` (an immutable `name → string` map) — the `{subject}`/`{opponent}`/`{score}`
 set today, extensible with new placeholders. The generic expander does **no** producer-specific formatting:
-each placeholder is replaced by its already-formatted string slot value. **`{score}` is a *derived*
+each original placeholder is replaced once by its already-formatted string slot value; inserted values
+are never scanned again, and a missing slot leaves the token verbatim (ERR-049-006). Templates are
+parsed once at construction: a token is `{`, one or more non-brace characters, then `}`. Unmatched,
+nested or empty braces are rejected; L2 defines no brace escape. **`{score}` is a *derived*
 placeholder, derived in the boundary adapter, not the renderer** — `LivingWorldTextBoundary` (§2.2.1), which
 holds the typed `InteractionSlots` and owns the #22 score-format knowledge, computes `score =
 HomeGoals.ToString(InvariantCulture) + "-" + AwayGoals.ToString(InvariantCulture)` and puts a plain `score`
 string slot into the `NamedSlotSet`. So the generic `Expand` substitutes `{score}` like any other string
-slot, base-locale expansion is byte-identical to today's `Expand` (FR-LC-016 — the boundary formats exactly
-as `InteractionTextGenerator.Expand` did), and the numeric-score formatting stays with the producer that
+slot, base-locale expansion is byte-identical to today's `Expand` when every slot value is brace-free and every template brace belongs to a well-formed `{name}` token (FR-LC-016), and the numeric-score formatting stays with the producer that
 owns the concept (not leaked into the generic core — the KD-6 / #38 boundary this spec pins). Locales
 localize the surrounding template text, **not** the numeric score glyph. Beyond substitution, `Expand`
 applies an optional bounded grammatical selector: a template
 MAY declare a plural/gender category keyed on a slot (CLDR-style `one`/`few`/`many`/`other` + a small gender
 set) so a locale chooses among sub-forms of the same variant. It MUST NOT require arbitrary runtime
-morphology. Base-locale English declares no categories, so `Expand` reduces to today's `.Replace` behaviour
-(identity). Deeper grammar (case declension synthesis, agreement engines) is a Stage-3+ deferral (§7),
+morphology. Forms live in the data model: one declared selector per variant, keyed forms and a required
+default form. The selected catalogue supplies an optional pure, total `Func<long, PluralCategory>`; it
+is required for plural selectors. Missing operands, the wrong operand dimension, undefined rule results
+and unmatched categories use the default form. Real CLDR tables wait for Wave 8. Base English rejects
+both selector kinds, so the two-condition `.Replace` identity guarantee applies. Deeper grammar (case declension synthesis, agreement engines) is a Stage-3+ deferral (§7),
 recorded so a locale author cannot silently expand the model.
 
 ## 3.6 Worked render (base locale, matching today's output)
@@ -126,7 +149,10 @@ recorded so a locale author cannot silently expand the model.
 - no cited episode → no clause appended.
 
 This is byte-identical to `InteractionTextGenerator.Generate` for the same `(intent, draw, slots)` because
-the migrated corpus preserves the template row and count and the draw is unchanged (Appendix C).
+the migrated corpus preserves the template row and count, the draw is unchanged, and these example
+values are brace-free with well-formed template tokens (Appendix C). A subject named `{opponent}`
+remains literal in L2. With template `{subject}{opponent}`, subject `{` and opponent `score}`, L2
+returns `{score}` even if the score slot is `2-1`; chained replacement would re-expand it to `2-1`.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -134,4 +160,6 @@ the migrated corpus preserves the template row and count and the draw is unchang
 | 0.1 | 2026-07-23 | — | Initial contracts: the seam (Resolve/Render), localize-after-generate boundary, pre-draw validation split + citation clause, template model, worked render. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
+| 0.4 | 2026-10-07 | — | L2 construction/render algorithm and single-pass identity guarantee, ERR-049-005/006. |
+| 0.5 | 2026-10-07 | — | Codex review: clarify selected base-locale instance admission to enforce canonical English identity; null and same-base selection remain valid. |
 #endregion

@@ -1,8 +1,9 @@
 # Localization & Accessibility Specification #49 (seam + template contract slice) — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** September 12, 2026 (v0.3 — L1 dependency direction and typed-selector architecture synchronized)
-**Version:** 0.3
+**Last Updated:** October 7, 2026 (v0.4 — L2 implementation status and F7 synchronized; approved status unchanged)
+**Last Updated (prior):** September 12, 2026 (v0.3 — L1 dependency direction and typed-selector architecture synchronized)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2 (July 23, 2026), AR-1 (2H+1M+1L) → AR-2 converged
 
@@ -17,9 +18,9 @@ into at the localization boundary. The load-bearing invariant: a single routing 
 memory) locale-independent, so a save round-trips byte-identically regardless of display locale. It is
 presentation/content layer: **no sim assembly may reference it**.
 
-The L1 core contract is now implemented in `TacticalDirector.Localization`; catalogue lookup, template
-expansion/rendering, producer adapters, translated **locales**, and the **accessibility content surface**
-remain later slices. Wave 8 still owns locale/a11y content. The #22 retrofit remains a later integration
+The L1 core and L2 immutable in-memory catalogue/renderer are implemented in `TacticalDirector.Localization`.
+L2 remains pre-merge gated on the canonical PR composition and exact-head pinned Unity compile.
+Producer adapters, translated **locales**, and the **accessibility content surface** remain later slices. Wave 8 still owns locale/a11y content. The #22 retrofit remains a later integration
 through a sibling boundary adapter rather than a dependency from the core localization assembly.
 
 ## Section map
@@ -27,7 +28,7 @@ through a sibling boundary adapter rather than a dependency from the core locali
 | Section | Content |
 |---|---|
 | 1 | Introduction, scope (the seam+contract slice; the locale/a11y-content + producer deferrals), dependencies, key decisions (KD-1..KD-7), boundary matrix |
-| 2 | Functional requirements (FR-LC-001..020 + FR-LC-008a), data structures (generic core `ILocalizer`/`LocalizationKey`/`TextTemplateId`/`LocalizedTextRequest`/`NamedSlotSet`/typed selector contracts + the per-producer boundary adapter), failure modes F1–F6 |
+| 2 | Functional requirements (FR-LC-001..020 + FR-LC-008a), data structures (generic core `ILocalizer`/`LocalizationKey`/`TextTemplateId`/`LocalizedTextRequest`/`NamedSlotSet`/typed selector contracts + the per-producer boundary adapter), failure modes F1–F7 |
 | 3 | The seam (static `Resolve` + procedural `Render`); the localize-after-generate boundary; the template model; the pre-draw validation split + citation clause; worked render |
 | 4 | Architecture: the `TacticalDirector.Localization` generic core, its no-sim-reference rule, sibling per-producer boundary adapters that reference both sides, the #22 retrofit, no RNG/tag/ordinal |
 | 5 | Test plan (coverage lock / base-locale identity / localize-after-generate save round-trip / fallback fail-safe / template model / no-reverse-reference) + FR traceability |
@@ -61,4 +62,5 @@ through a sibling boundary adapter rather than a dependency from the core locali
 | 0.1 | 2026-07-23 | — | Initial outline authored from the converged design supplement (v0.2). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-09-12 | GPT-5.6 Sol | Synchronizes the outline with the approved generic-core/sibling-boundary dependency direction and the L1 typed-selector request contract; records that the L1 core exists while renderer/catalogue/content and producer integration remain later slices. |
+| 0.4 | 2026-10-07 | — | L2 implementation status and F7 synchronized; approved status unchanged. |
 #endregion

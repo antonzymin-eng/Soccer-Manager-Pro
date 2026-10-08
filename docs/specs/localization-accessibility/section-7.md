@@ -1,12 +1,13 @@
 # Localization & Accessibility #49 — Section 7: Forward Extensions
 
 **Created:** July 23, 2026
-**Last Updated:** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
+**Last Updated:** October 7, 2026 (v0.7 — L2 resolves ERR-049-005/006 with named executable proofs; L3B remains open)
+**Last Updated (prior):** September 12, 2026 (v0.6 — L1 tracker close-out plus frozen v0.2 restoration)
 **Last Updated (prior):** September 11, 2026 (v0.5 — L1 implements fixes for ERR-049-002/004; authoritative tracker closure remains landing-closeout work; ERR-049-005 fixed to L2)
 **Last Updated (prior):** September 9, 2026 (v0.4 — L0R records ERR-049-002/003/004/005 with named T0/T1 discharge stages under C6; no contract hardening)
 **Last Updated (prior):** September 7, 2026 (v0.3 — L0R records ERR-049-002/003 for T0/T1 discharge under C6; no contract hardening)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -57,16 +58,17 @@ than synthesizing morphology at runtime.
 
 The retrofit (§4, FR-LC-016) is sequenced as a T-phase: `InteractionTextGenerator.Generate` returns native
 values, `InteractionTextCorpus` migrates to the base-locale catalogue, and the base-locale output is proven
-byte-identical (Appendix C / T-LC-IDENTITY-001). It is behaviour-neutral at the base locale despite changing
+byte-identical (Appendix C / T-LC-IDENTITY-001). It is behaviour-neutral under the two identity conditions in §3.5 at the base locale despite changing
 #22's public return type — the one real API change this spec introduces, forward-designed here and applied
 post-APPROVED like #21–#38 code.
 
-## 7.6 Recorded implementation-time defects and L1 dispositions
+## 7.6 Recorded implementation-time defects and L1/L2 dispositions
 
 The L0R pass filed four implementation-time defects before a production localization assembly existed. L1
 now supplies the executable core seam and discharges the two defects whose proof is purely structural. The
 authoritative `spec-error-log.md` is synchronized in this close-out: ERR-049-002 and ERR-049-004 are RESOLVED;
-ERR-049-003 remains open for L3B/T1 and ERR-049-005 remains open for L2.
+ERR-049-003 remains open for L3B/T1. L2 resolves ERR-049-005 and files/resolves ERR-049-006
+in the same commit as the catalogue, renderer and executable proofs.
 
 - **ERR-049-002 — RESOLVED in L1.** §1 KD-6 and the dependency
   table now state the already-approved architecture consistently: `TacticalDirector.Localization` references
@@ -89,14 +91,19 @@ ERR-049-003 remains open for L3B/T1 and ERR-049-005 remains open for L2.
   mutate the sets, and verify the core exposes no mutable static/RNG/persistence state. L2 remains responsible
   for mapping those operands to locale-authored `one/few/many/other`/gender sub-forms; that renderer behavior
   is outside this ERR's structural discharge.
-- **ERR-049-005 — OPEN; discharge fixed at L2.** L1 keeps the approved public seam final:
-  `string Resolve(LocalizationKey key)` and `string Render(in LocalizedTextRequest req)`. No Try/found-not-found
-  signature is introduced. L2 must therefore resolve the still-undefined production terminal case for a
-  static `LocalizationKey` absent from both selected and base catalogues, either by construction coverage for
-  every admitted static key or by one explicit production-safe terminal result. L2 must prove no throw and no
-  mutation for that terminal path (or kill the corresponding missing-key construction mutant).
+- **ERR-049-005 — RESOLVED in L2.** Construction covers caller-admitted static keys, template ids
+  and clauses. A never-admitted key/id returns `string.Empty`; an unrequired missing clause appends
+  nothing. `T5_EachMissingRequiredIdentity_RejectsConstructionEvenWithATranslation`,
+  `T6_RequiredTemplateWithNoRowsAtAll_FailsBeforeAnyRender` and
+  `T7_NonAdmittedStaticKey_ReturnsEmptyWithoutChangingOtherResults` provide executable evidence.
+- **ERR-049-006 — RESOLVED in L2 (owner decision October 6, 2026).** Generic expansion is single-pass
+  and non-recursive. Chained `.Replace` identity holds only with brace-free values and well-formed
+  template tokens. Construction rejects every other template brace.
+  `T13_Substitution_IsSinglePassForTokenValuesAndCrossBoundaryTokens`,
+  `T13_BraceFreeValuesAndWellFormedTokens_MatchBothChainedReplacementOrders` and
+  `T14_MalformedBraces_AreRejectedInPlainAndSelectorForms` lock the changed contract.
 
-The owning `spec-error-log.md` rows are the durable status authority and are synchronized by this L1 close-out.
+The owning `spec-error-log.md` rows are the durable status authority and are synchronized by the L1 and L2 implementing commits.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -107,4 +114,5 @@ The owning `spec-error-log.md` rows are the durable status authority and are syn
 | 0.4 | 2026-09-09 | — | L0R record-only scope extended to ERR-049-004 (missing typed plural/gender selector operand; deferred wholly to L1/T0) and ERR-049-005 (undefined static-key terminal fallback; resolution family decided at L1, discharge in L1 if signature-changing otherwise L2). Existing ERR-049-002/003 dispositions unchanged. C6 still forbids pre-T0 normative hardening. |
 | 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 implementation disposition.** ERR-049-002 and ERR-049-004 fixes are implemented with structural tests, but their authoritative tracker rows remain OPEN until landing-closeout synchronization. The approved `Resolve`/`Render` signatures remain final, so ERR-049-005 is explicitly assigned to L2. ERR-049-003 remains open for L3B/T1. |
 | 0.6 | 2026-09-12 | GPT-5.6 Sol | L1 landing close-out: restores the frozen v0.2 history row verbatim; synchronizes ERR-049-002 and ERR-049-004 to RESOLVED; retains ERR-049-003 OPEN for L3B/T1 and ERR-049-005 OPEN for L2. |
+| 0.7 | 2026-10-07 | — | L2 resolves ERR-049-005/006 with named executable proofs; L3B remains open. |
 #endregion

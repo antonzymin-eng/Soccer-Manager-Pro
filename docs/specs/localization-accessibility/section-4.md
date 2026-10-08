@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 12, 2026 (v0.4 — L1 typed-selector architecture synchronized)
-**Version:** 0.4
+**Last Updated:** October 7, 2026 (v0.5 — L2 source inventory; dependency direction and later boundary integration unchanged)
+**Last Updated (prior):** September 12, 2026 (v0.4 — L1 typed-selector architecture synchronized)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -33,7 +34,7 @@ nothing sim-side; only a concrete per-producer boundary adapter references a bui
 
 ## 4.2 File layout
 
-L1 has landed the dependency-free core value/interface surface. L2+ adds the catalogue/renderer behavior;
+L1 has landed the dependency-free core value/interface surface. L2 implements the catalogue/renderer;
 producer integration adds the sibling boundary assembly later.
 
 ```
@@ -52,9 +53,13 @@ src/localization/                  // CORE assembly — references NO sim assemb
 ├── LocalizedTextRequest.cs        // template id + ulong draw + slots + typed selectors + citation facts
 ├── LocaleId.cs                    // normalized locale identity; BaseLocale = "en"
 ├── LocalizationConstants.cs       // [FIXED] BaseLocale etc.; no sim constants
-├── TemplateCatalogue.cs           // L2+: per-locale strings/templates/variant counts/producer-scoped clauses
-├── TemplateExpander.cs            // L2+: named substitution + bounded selector interpretation (KD-3)
-├── Localizer.cs                   // L2+: ILocalizer impl, KD-5 fallback precedence + §3.2 Render algorithm
+├── PluralCategory.cs              // L2: bounded plural vocabulary; real rules deferred
+├── TemplateForm.cs                // L2: default or typed selector sub-form
+├── TemplateVariant.cs             // L2: one selector plus parsed forms
+├── CatalogueCoverage.cs           // L2: caller-admitted static/template/clause coverage
+├── TemplateCatalogue.cs           // L2: per-locale strings/templates/variant counts/producer-scoped clauses
+├── TemplateExpander.cs            // L2: named substitution + bounded selector interpretation (KD-3)
+├── Localizer.cs                   // L2: ILocalizer impl, KD-5 fallback precedence + §3.2 Render algorithm
 ├── A11yBoundary.cs                // later Wave-8 boundary marker/content integration
 └── Tests/ …                       // L1 contract/dependency locks; L2+ rendering/fallback/identity suites
 
@@ -98,4 +103,5 @@ same-named type into a shared scope, fully-qualify from line one (the KD-P6 disc
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-09-12 | GPT-5.6 Sol | Synchronizes the architecture inventory with the L1 public request: immutable typed selector contracts are explicit, the implemented L1 file set is recorded, and selector interpretation remains L2 renderer behavior. Dependency direction is unchanged: generic core references no producer; sibling boundary adapters reference both sides. |
+| 0.5 | 2026-10-07 | — | L2 source inventory; dependency direction and later boundary integration unchanged. |
 #endregion
