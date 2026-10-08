@@ -298,7 +298,7 @@ an additional instance of the existing stroked ring prefab. That prefab must als
 expose the configured marker colour property. These are source mechanisms; runtime
 layout, glyphs, input and annulus appearance require host validation.
 
-Follow `docs/tracking/p5b-screens-validation.md` v0.4 for exact-head compile, candidate
+Follow `docs/tracking/p5b-screens-validation.md` v0.5 for exact-head compile, candidate
 lock regeneration, EditMode, real-client I-Q01–19 and cert-host checks. The new UGUI
 binding has not compiled/run in Unity here. Keep B8/B9b/B10 and Gate J open.
 
@@ -314,6 +314,7 @@ actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match check
 
 | Documentation revision | Date | Notes |
 |---|---|---|
+| PR #489 Codex focus corrections | October 8, 2026 | Action-only Tab traversal; first dialog selector and active current feedback focus after repeat matches. Source/control-flow checks recorded; native input/scroll/compile proof still due. |
 | PR #489 Unity allocation correction | October 8, 2026 | Native allocation constraints with positive controls and explicit test-runner references; Linux counter retained. Pinned Editor/runtime proof still due. |
 | PR #489 counter/profiling follow-up | October 8, 2026 | Known-allocation test controls; narrow full-string wrapping qualification and 1×/10× host profiling procedure. ac9a0ac CI green; Unity/runtime proof still due. |
 | PR #489 review corrections | October 8, 2026 | Nonfatal measured layout, cached refresh and stable history; host proof still due. |

@@ -35,6 +35,7 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<GameObject> _owned = new List<GameObject>();
         private readonly Dictionary<Selectable, GameObject> _focusRings = new Dictionary<Selectable, GameObject>();
         private readonly Dictionary<Selectable, ScrollRect> _scrolls = new Dictionary<Selectable, ScrollRect>();
+        private readonly HashSet<Selectable> _tabStops = new HashSet<Selectable>();
         private readonly Button[] _setupChoices = new Button[7];
         private readonly Button[] _mentalityChoices = new Button[7];
         private readonly List<Button> _outgoing = new List<Button>();
@@ -161,13 +162,16 @@ namespace TacticalDirector.MatchClientUnity
                     _renderer.RejectPresentation(exception);
                 }
             });
-            Register(button, scroll);
+            Register(button, scroll, isTabStop: true);
             return button;
         }
 
-        private void Register(Selectable control, ScrollRect scroll)
+        private void Register(Selectable control, ScrollRect scroll, bool isTabStop = false)
         {
             _scrolls.Add(control, scroll);
+            // Headings, feedback and pitch labels remain explicit focus targets, outside action traversal.
+            if (isTabStop)
+                _tabStops.Add(control);
             RectTransform ring = _ui.Node("Keyboard focus", control.transform);
             S0UiFactory.Stretch(ring);
             // Four geometry strips: focus surrounds the control, never outlines individual text glyphs.
@@ -386,7 +390,16 @@ namespace TacticalDirector.MatchClientUnity
             _dialog.SetActive(true);
             _compare.SetActive(false);
             Refresh();
-            Focus(_dialogHeading);
+            Focus(DialogInitialFocus());
+        }
+
+        private Selectable DialogInitialFocus()
+        {
+            IReadOnlyList<Button> choices = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality ? _mentalityChoices : _outgoing;
+            for (int i = 0; i < choices.Count; i++)
+                if (IsAllowed(choices[i]))
+                    return choices[i];
+            return _cancel;
         }
 
         private void CancelDialog()
@@ -401,8 +414,8 @@ namespace TacticalDirector.MatchClientUnity
         {
             ClientChangeRecord record = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality ? _view.SubmitMentality() : _view.SubmitSubstitution();
             Refresh();
-            if (record != null && _feedbackRows.Count != 0)
-                Focus(_feedbackRows[_feedbackRows.Count - 1]);
+            if (record != null && _view.Feedback.Count != 0)
+                Focus(_feedbackRows[_view.Feedback.Count - 1]);
         }
 
         /// <summary>Called after the coordinator's accepted-frame refresh; retains authored/generated view roots.</summary>
@@ -560,7 +573,7 @@ namespace TacticalDirector.MatchClientUnity
                 _earlierToggle.transform.SetParent(target, false);
             if (_earlierRoot.parent != target)
                 _earlierRoot.SetParent(target, false);
-            // Chronological visual and Tab order is explicit after every reparent/repeat match.
+            // Chronological visual and explicit-anchor order survives every reparent/repeat match.
             _earlierToggle.transform.SetSiblingIndex(1);
             _earlierRoot.SetSiblingIndex(2);
             _feedbackRoot.SetSiblingIndex(3);
@@ -806,7 +819,7 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             Selectable current = EventSystem.current.currentSelectedGameObject.GetComponent<Selectable>();
             if (!IsAllowed(current))
-                Focus(_dialog.activeSelf ? _dialogHeading : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _pause.IsInteractable() ? _pause : _matchHeading);
+                Focus(_dialog.activeSelf ? DialogInitialFocus() : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _pause.IsInteractable() ? _pause : _matchHeading);
         }
 
         private void Keyboard()
@@ -829,7 +842,7 @@ namespace TacticalDirector.MatchClientUnity
                 for (int n = 0; n < order.Length; n++)
                 {
                     current = (current + step + order.Length) % order.Length;
-                    if (IsAllowed(order[current]))
+                    if (_tabStops.Contains(order[current]) && IsAllowed(order[current]))
                     {
                         Focus(order[current]);
                         break;
@@ -935,4 +948,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.0     | 2026-10-08 | —      | Persistent four-screen UGUI binding and keyboard/dialog/resource lifecycle. |
 // | 1.1     | 2026-10-08 | —      | Complete first-frame layout, grow full-label scroll surface, cache metrics/controls and stabilize chronological history. |
 // | 1.2     | 2026-10-08 | —      | Clarify full-string wrapping and subsequent measured height for narrow label rectangles. |
+// | 1.3     | 2026-10-08 | —      | Separate action Tab stops from explicit anchors, focus first dialog selector and current feedback row across repeat matches. |
 #endregion

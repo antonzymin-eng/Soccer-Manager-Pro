@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.4\
+**Version:** 0.5\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -170,6 +170,52 @@ NUnit output retained. The uncompiled skin, Editor-regenerated lock and measured
 layout cadence remain required; `PitchLayoutFailureCount` must be zero. PR #489 remains
 draft and B8/B9b/B10/Gate J remain open.
 
+## Codex review — keyboard focus correction (v0.5)
+
+Review baseline: `3113d8211a36ad9253e77b399ca579d5a99f4856`. Its
+[CI run 37825109785](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37825109785)
+passed, including the Linux functional gate; Unity tests were skipped. The three inline
+focus findings are confirmed by source tracing against journey §14.3:
+
+- The custom Tab loop ignored navigation modes and included every visible `Selectable`.
+  Only controls made by `Control` now register as Tab stops. Heading, feedback and pitch
+  anchors remain registered for explicit focus and scrolling, but Tab skips them. UGUI
+  navigation stays `None` for buttons too, because this binding owns traversal and arrows.
+- Both choosers previously opened on the heading. Entry and invalid-focus recovery now
+  target the first active/interactable choice in the appropriate Mentality/outgoing group.
+  If no selector survives, Cancel remains a meaningful escape; focusing does not select or
+  submit a draft.
+- Submit previously indexed the retained row pool's tail. It now indexes the last current
+  feedback record after binding, so a second match with less history focuses its active row.
+
+A temporary control-flow harness compiles the actual affected method bodies extracted
+from the before/after source. Its lightweight hierarchy, input and EventSystem model is
+**not Unity**. Nine cases cover forward/reverse traversal past anchors, modal wrap and
+background exclusion, both dialog entries, hidden/disabled selector removal, dialog recovery,
+repeat-match Submit with a larger retained pool, and explicit heading/feedback focus.
+Before: **1 passed / 8 failed**; after: **9 passed / 0 failed**. The registration call sites
+are separately inspected: only `Control` opts into Tab traversal. This is supplementary
+logic evidence, not full-skin compilation, native input/scroll/ring validation, or a host QA
+pass. The complete modified skin parses as C# 9 with zero syntax errors. Tier policy and
+its 11 regression tests pass. No automated Unity test or native run is claimed.
+
+Pinned-host I-Q15 must additionally record:
+
+1. From each page heading, Tab reaches an available action, never a section heading,
+   feedback anchor or pitch label; Shift-Tab and modal wrapping preserve action order.
+   Explicit page/feedback/pitch focus and scroll reveal still work.
+2. Open both dialogs with keyboard and pointer: focus starts on the first available
+   selector, arrows stage only, Tab stays inside, and Cancel restores the invoker.
+   Remove/disable the focused selector and verify a surviving selector receives focus.
+3. Submit several requests in one match, Return, start a second match, then submit its first
+   request. Focus must land on that request's visible Pending feedback row rather than an
+   inactive retained row; subsequent Tab must reach a surviving action.
+
+This correction requires fresh exact-head CI and pinned-host compile/QA. The skin and
+Editor-regenerated lock, native allocation tests, `PitchLayoutFailureCount == 0`, 1×/10×
+profiling and B8/B9b/B10/Gate-J acceptance remain open. No engine/save/schema/RNG, package
+pin, scene or gameplay behavior changes.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -290,3 +336,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.2 | October 8, 2026 | PR #489 review fixes: nonfatal/growable label layout, changed-outcome snapshots, structural refresh and stable chronological feedback; before/after allocation evidence and baseline CI retry recorded, all host acceptance remains open. |
 | 0.3 | October 8, 2026 | Follow-up review: known-allocation controls reject always-zero runtime counters; ac9a0ac CI completion, wrapping qualification and explicit 1×/10× host layout profiling cases recorded. Unity/runtime/cert acceptance remains open. |
 | 0.4 | October 8, 2026 | Unity-native allocation constraints and positive controls replace the managed counter in Editor tests; explicit TestRunner references, Linux passes and compile-only evidence limits recorded. Pinned-host acceptance remains open. |
+| 0.5 | October 8, 2026 | Codex focus corrections: action-only Tab traversal, first available dialog selector and active current feedback after repeat matches. Baseline CI, bounded before/after control-flow checks and exact I-Q15 host cases recorded; host gates stay open. |
