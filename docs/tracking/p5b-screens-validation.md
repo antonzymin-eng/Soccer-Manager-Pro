@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.8\
+**Version:** 0.9\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -203,6 +203,8 @@ Pinned-host I-Q15 must additionally record:
 
 1. From each page heading, Tab reaches an available action, never a section heading,
    feedback anchor or pitch label; Shift-Tab and modal wrapping preserve action order.
+   In Match View with four or more records, Tab goes statistics → earlier feedback →
+   report (when available) → pitch entry, per §9.3 plus the v0.9 tail.
    Explicit page/feedback/pitch focus and scroll reveal still work.
 2. Open both dialogs with keyboard and pointer: focus starts on the first available
    selector, arrows stage only, Tab stays inside, and Cancel restores the invoker.
@@ -342,6 +344,40 @@ Capture actual loaded-content hash (including any font fallback) at I-Q16. Fresh
 all native compile/lock/input/runtime/profiling gates remain due; PR stays draft and
 B8/B9b/B10/Gate J remain open.
 
+## Match View Tab order and contract parity (v0.9)
+
+Review baseline: `dbe8e32e183098cdc1b33bb22ae091a314705eed`.
+
+- **Codex: statistics before history.** `Keyboard()` derived Tab order from
+  `GetComponentsInChildren<Selectable>`. The earlier-history disclosure lives in the
+  feedback region, which precedes the statistics toggle in the rail, so Tab reached history
+  first once a fourth record existed. Journey §9.3 MV-L/P orders "Open/Close statistics →
+  any earlier-feedback disclosure". Match View now uses an explicit logical order through
+  `S0FocusNavigation.MoveInLogicalOrder`: Slower → Pause/Resume → Faster → Change Mentality
+  → Make substitution → statistics → earlier feedback, then View match report and the
+  single pitch inspection entry. Unavailable targets are skipped. A focused heading or
+  feedback anchor enters the order before its next listed hierarchy successor, so Tab after
+  Submit's feedback focus reaches statistics. Other screens and both dialogs keep hierarchy
+  order. Visual layout is unchanged.
+- **Pitch entry is outside §9.3.** The approved MV-L/P sequence lists no pitch stop, and
+  contract §4.3 calls pitch descriptions noninteractive. The pitch entry (added in v0.6) is
+  therefore placed after the approved sequence, so that sequence is preserved as a prefix.
+  Whether keyboard pitch inspection ships at all needs an owner decision; it is not
+  claimed as approved.
+- **Permanent contract parity.** New `S0ContentContractTests` reads
+  `docs/design/ux-s0-binding-contracts.md` §4.2 (arrow register and Mentality table) and
+  §4.3 (dynamic tables), and asserts every compiled role's base pattern verbatim, plus no
+  missing or extra roles (141). A second case pins the four semicolon-bearing sentences.
+  A Python mirror of the parser yields 141/141 at this head and reports exactly
+  `context.substitution`, `pitch.description` and `statistics.loose_ball` at 7270bd6.
+- Added focus regressions cover the Codex scenario, anchor entry from the feedback row and
+  heading, skipped unavailable report, end wrap and the pitch entry at the end. Expected
+  values were checked against a Python mirror of `Move`/`MoveInLogicalOrder`.
+
+**Evidence limits.** No .NET SDK was reachable in this environment, so these C# changes
+were not compiled or run locally; GitHub's Linux functional gate is the first execution.
+Content and the compiled-content hash are unchanged. Native Unity input remains I-Q15.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -466,3 +502,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.6 | October 8, 2026 | Restore keyboard pitch inspection through one composite Tab stop and arrows; consume host-free focus policy with 18 permanent regressions plus a composed read-only description test. Content hash/legend and native I-Q15 cases updated; host gates stay open. |
 | 0.7 | October 8, 2026 | Restore the owner-approved pitch legend verbatim and original content hash; retain composite keyboard inspection and permanent focus coverage. Pinned-host/CI acceptance remains open. |
 | 0.8 | October 8, 2026 | Five Codex corrections: exclude focus overlays from layout, rebind independent comparison tags, restore three complete approved sentences. All 141 role patterns now match the contract; new loaded-content hash and exact native QA obligations recorded, host gates remain open. |
+| 0.9 | October 8, 2026 | Explicit journey §9.3 Match View Tab order (Codex: statistics before history), pitch entry placed after the approved sequence pending owner decision, and permanent 141-role binding-contract parity test. Not compiled locally; host gates remain open. |

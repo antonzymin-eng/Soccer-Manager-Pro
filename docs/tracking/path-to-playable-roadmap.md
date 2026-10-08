@@ -550,6 +550,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.43 | October 8, 2026 | Screens validation v0.9: explicit journey §9.3 Match View Tab order and permanent 141-role contract parity test. Host acceptance remains open. |
 | v0.42 | October 8, 2026 | Screens validation v0.8: focus-overlay layout exclusion, live comparison tags and complete approved copy; 141-role audit and native QA boundaries recorded. Host acceptance remains open. |
 | v0.41 | October 8, 2026 | Screens validation v0.7 restores approved legend/hash while retaining keyboard inspection; native acceptance gates remain open. |
 | v0.40 | October 8, 2026 | Screens validation v0.6: composite keyboard pitch inspection and permanent focus-policy/projection regressions; native input/compile/host gates remain open. |

@@ -38,6 +38,8 @@ namespace TacticalDirector.MatchClientUnity
         private readonly Dictionary<Selectable, S0FocusNavigation.Role> _focusRoles = new Dictionary<Selectable, S0FocusNavigation.Role>();
         private readonly Selectable[] _pitchControls = new Selectable[MatchEngineConstants.SQUAD_SIZE];
         private Predicate<Selectable> _isAllowed, _isTabStop;
+        // Journey §9.3 MV-L/P order, then the report action and the single pitch inspection entry.
+        private Selectable[] _matchTabOrder;
         private int _pitchEntryIndex = -1;
         private readonly Button[] _setupChoices = new Button[7];
         private readonly Button[] _mentalityChoices = new Button[7];
@@ -124,6 +126,16 @@ namespace TacticalDirector.MatchClientUnity
             Control(s, L("action.back"), _view.CancelSetup, _setupScroll);
             BuildMatch(Page(match, out _matchScroll));
             BuildReport(Page(report, out _reportScroll));
+            _matchTabOrder = new Selectable[8 + _pitchControls.Length];
+            _matchTabOrder[0] = _slower;
+            _matchTabOrder[1] = _pause;
+            _matchTabOrder[2] = _faster;
+            _matchTabOrder[3] = _mentality;
+            _matchTabOrder[4] = _substitution;
+            _matchTabOrder[5] = _statisticsToggle;
+            _matchTabOrder[6] = _earlierToggle;
+            _matchTabOrder[7] = _report;
+            Array.Copy(_pitchControls, 0, _matchTabOrder, 8, _pitchControls.Length);
             BuildDialog();
             var eventSystem = new GameObject("S0 EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
             eventSystem.transform.SetParent(transform, false);
@@ -898,9 +910,19 @@ namespace TacticalDirector.MatchClientUnity
                     if (order[i].gameObject == selected)
                         current = i;
                 int step = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? -1 : 1;
-                int next = S0FocusNavigation.Move(order, current, step, _isTabStop);
-                if (next >= 0)
-                    Focus(order[next]);
+                if (!_dialog.activeSelf && _view.Screen == ClientScreens.MatchView)
+                {
+                    // Hierarchy places the history disclosure before statistics; §9.3 orders statistics first.
+                    int next = S0FocusNavigation.MoveInLogicalOrder(_matchTabOrder, order, current, step, _isTabStop);
+                    if (next >= 0)
+                        Focus(_matchTabOrder[next]);
+                }
+                else
+                {
+                    int next = S0FocusNavigation.Move(order, current, step, _isTabStop);
+                    if (next >= 0)
+                        Focus(order[next]);
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.Escape) && _dialog.activeSelf)
@@ -1012,4 +1034,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.3     | 2026-10-08 | —      | Separate action Tab stops from explicit anchors, focus first dialog selector and current feedback row across repeat matches. |
 // | 1.4     | 2026-10-08 | —      | Consume tested focus policy; retain one roving pitch Tab entry with read-only arrow inspection and visibility recovery. |
 // | 1.5     | 2026-10-08 | —      | Exclude focus overlays from layout and retain/rebind both comparison tags to current and requested Mentality. |
+// | 1.6     | 2026-10-08 | —      | Match View Tab follows journey §9.3 explicitly: statistics before earlier feedback, then report and pitch entry. |
 #endregion

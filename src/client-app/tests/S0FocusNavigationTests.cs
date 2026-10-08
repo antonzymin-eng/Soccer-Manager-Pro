@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/S0FocusNavigationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-08 (explicit Match View order)
 // Author:   —
 // Spec:     S0 journey §14.3, I-Q15, Code Standards #20
 // Purpose:  Permanent regressions for composite pitch traversal, modal/selector eligibility and retained feedback.
@@ -120,9 +120,85 @@ namespace TacticalDirector.ClientApp.Tests
         [Test]
         public void EmptyTraversalReturnsNoTarget()
             => Assert.AreEqual(-1, S0FocusNavigation.Move(Array.Empty<bool>(), -1, 1, v => v));
+
+        private sealed class Node
+        {
+            internal readonly string Name;
+            internal bool Available = true;
+            internal bool IsTabStop = true;
+            internal Node(string name) => Name = name;
+            public override string ToString() => Name;
+        }
+
+        // Hierarchy mirrors the Match View binding: the earlier-history disclosure lives in the
+        // feedback region, which precedes the statistics toggle in the rail.
+        private static Node[] MatchHierarchy(out Node[] logical)
+        {
+            Node heading = new Node("heading") { IsTabStop = false };
+            Node slower = new Node("slower"), pause = new Node("pause"), faster = new Node("faster");
+            Node pitch = new Node("pitch");
+            Node mentality = new Node("mentality"), substitution = new Node("substitution");
+            Node feedbackHeading = new Node("feedback heading") { IsTabStop = false };
+            Node earlier = new Node("earlier"), row = new Node("feedback row") { IsTabStop = false };
+            Node statistics = new Node("statistics"), report = new Node("report") { Available = false };
+            logical = new[] { slower, pause, faster, mentality, substitution, statistics, earlier, report, pitch };
+            return new[] { heading, slower, pause, faster, pitch, mentality, substitution, feedbackHeading, earlier, row, statistics, report };
+        }
+
+        private static string Next(Node[] logical, Node[] hierarchy, string from, int step)
+        {
+            int index = Array.FindIndex(hierarchy, n => n.Name == from);
+            int next = S0FocusNavigation.MoveInLogicalOrder(logical, hierarchy, index, step, n => n.Available && n.IsTabStop);
+            return next < 0 ? null : logical[next].Name;
+        }
+
+        [Test]
+        public void MatchViewTabVisitsStatisticsBeforeEarlierFeedback()
+        {
+            Node[] hierarchy = MatchHierarchy(out Node[] logical);
+            Assert.AreEqual("statistics", Next(logical, hierarchy, "substitution", 1));
+            Assert.AreEqual("earlier", Next(logical, hierarchy, "statistics", 1));
+            Assert.AreEqual("statistics", Next(logical, hierarchy, "earlier", -1));
+            Assert.AreEqual("substitution", Next(logical, hierarchy, "statistics", -1));
+        }
+
+        [Test]
+        public void MatchViewOrderSkipsUnavailableReportAndEndsAtThePitchEntry()
+        {
+            Node[] hierarchy = MatchHierarchy(out Node[] logical);
+            Assert.AreEqual("pitch", Next(logical, hierarchy, "earlier", 1));
+            Assert.AreEqual("slower", Next(logical, hierarchy, "pitch", 1));
+            Assert.AreEqual("pitch", Next(logical, hierarchy, "slower", -1));
+            Assert.AreEqual("mentality", Next(logical, hierarchy, "faster", 1));
+        }
+
+        [Test]
+        public void AnchorsEnterTheLogicalOrderAtTheirNextListedSuccessor()
+        {
+            Node[] hierarchy = MatchHierarchy(out Node[] logical);
+            Assert.AreEqual("slower", Next(logical, hierarchy, "heading", 1));
+            Assert.AreEqual("pitch", Next(logical, hierarchy, "heading", -1));
+            // Submit focuses the feedback row; Tab continues to statistics, Shift-Tab to the prior action.
+            Assert.AreEqual("statistics", Next(logical, hierarchy, "feedback row", 1));
+            Assert.AreEqual("substitution", Next(logical, hierarchy, "feedback row", -1));
+            // Nothing focused: Tab starts at the first available listed target.
+            Assert.AreEqual(0, S0FocusNavigation.MoveInLogicalOrder(logical, hierarchy, -1, 1, n => n.Available && n.IsTabStop));
+        }
+
+        [Test]
+        public void AnchorAfterEveryListedTargetWrapsToTheEnds()
+        {
+            var logical = new[] { new Node("a"), new Node("b") };
+            var trailing = new Node("trailing anchor") { IsTabStop = false };
+            var hierarchy = new[] { logical[0], logical[1], trailing };
+            Assert.AreEqual(0, S0FocusNavigation.MoveInLogicalOrder(logical, hierarchy, 2, 1, n => n.IsTabStop));
+            Assert.AreEqual(1, S0FocusNavigation.MoveInLogicalOrder(logical, hierarchy, 2, -1, n => n.IsTabStop));
+            Assert.AreEqual(-1, S0FocusNavigation.MoveInLogicalOrder(Array.Empty<Node>(), hierarchy, 2, 1, n => n.IsTabStop));
+        }
     }
 }
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Composite Tab/arrow, visibility/modal, first-selector and repeated-history regressions for the shipping focus policy. |
+// | 1.1     | 2026-10-08 | —      | Journey §9.3 Match View order: statistics before earlier feedback, anchor entry and end wrap. |
 #endregion
