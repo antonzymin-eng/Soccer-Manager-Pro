@@ -550,6 +550,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.44 | October 8, 2026 | Owner approves keyboard pitch inspection: journey v0.36 / binding contracts v0.5 and screens validation v0.10. Host acceptance remains open. |
 | v0.43 | October 8, 2026 | Screens validation v0.9: explicit journey §9.3 Match View Tab order and permanent 141-role contract parity test. Host acceptance remains open. |
 | v0.42 | October 8, 2026 | Screens validation v0.8: focus-overlay layout exclusion, live comparison tags and complete approved copy; 141-role audit and native QA boundaries recorded. Host acceptance remains open. |
 | v0.41 | October 8, 2026 | Screens validation v0.7 restores approved legend/hash while retaining keyboard inspection; native acceptance gates remain open. |

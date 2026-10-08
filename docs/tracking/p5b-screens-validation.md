@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.9\
+**Version:** 0.10\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -362,8 +362,7 @@ Review baseline: `dbe8e32e183098cdc1b33bb22ae091a314705eed`.
 - **Pitch entry is outside §9.3.** The approved MV-L/P sequence lists no pitch stop, and
   contract §4.3 calls pitch descriptions noninteractive. The pitch entry (added in v0.6) is
   therefore placed after the approved sequence, so that sequence is preserved as a prefix.
-  Whether keyboard pitch inspection ships at all needs an owner decision; it is not
-  claimed as approved.
+  Whether keyboard pitch inspection ships at all needed an owner decision; v0.10 records it.
 - **Permanent contract parity.** New `S0ContentContractTests` reads
   `docs/design/ux-s0-binding-contracts.md` §4.2 (arrow register and Mentality table) and
   §4.3 (dynamic tables), and asserts every compiled role's base pattern verbatim, plus no
@@ -377,6 +376,16 @@ Review baseline: `dbe8e32e183098cdc1b33bb22ae091a314705eed`.
 **Evidence limits.** No .NET SDK was reachable in this environment, so these C# changes
 were not compiled or run locally; GitHub's Linux functional gate is the first execution.
 Content and the compiled-content hash are unchanged. Native Unity input remains I-Q15.
+
+## Owner decision — keyboard pitch inspection (v0.10)
+
+On October 8, 2026, Anton Zymin decided to ship keyboard pitch player inspection (option 1:
+keep it). The approved design now includes it: [journey](../design/ux-s0-pm1-journey.md)
+v0.36 adds the single pitch Tab stop after the earlier-feedback disclosure in §9.3 MV-L/P
+and §14 MV-L, and I-Q15 covers it; [binding contracts](../design/ux-s0-binding-contracts.md)
+v0.5 describe pitch descriptions as read-only, displayed on pointer or the keyboard entry,
+never staging or dispatching. The 8464b71 implementation already matches this order. No
+code, copy or content-hash change.
 
 ## Content and dependency boundary
 
@@ -503,3 +512,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.7 | October 8, 2026 | Restore the owner-approved pitch legend verbatim and original content hash; retain composite keyboard inspection and permanent focus coverage. Pinned-host/CI acceptance remains open. |
 | 0.8 | October 8, 2026 | Five Codex corrections: exclude focus overlays from layout, rebind independent comparison tags, restore three complete approved sentences. All 141 role patterns now match the contract; new loaded-content hash and exact native QA obligations recorded, host gates remain open. |
 | 0.9 | October 8, 2026 | Explicit journey §9.3 Match View Tab order (Codex: statistics before history), pitch entry placed after the approved sequence pending owner decision, and permanent 141-role binding-contract parity test. Not compiled locally; host gates remain open. |
+| 0.10 | October 8, 2026 | Records the owner decision to ship keyboard pitch inspection; journey v0.36 and binding contracts v0.5 now include it. Docs only; host gates remain open. |

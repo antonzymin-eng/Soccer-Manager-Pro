@@ -1,8 +1,8 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 4, 2026\
-**Version:** 0.4\
+**Last Updated:** October 8, 2026\
+**Version:** 0.5\
 **Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
@@ -317,8 +317,10 @@ name/number index, an extra index or a numeric specifier on a name. Name strings
 containing braces remain literal argument data, never a second pattern to parse.
 Use the fixed invariant provider in every S0 fixture; locale-provider mapping remains later work.
 
-Accessible names match visible controls, using the same cached role output. Noninteractive
+Accessible names match visible controls, using the same cached role output. Read-only
 pitch descriptions use the complete name/shirt/cue roles; glyph-only status is forbidden.
+Pointer hover/selection and the single keyboard pitch entry (journey §9.3, owner decision
+October 8, 2026) only display a description; inspection never stages or dispatches a request.
 This defines semantic text inputs, not an unimplemented Unity screen-reader bridge.
 Presentation notifications, if consumed by the real binding, use these same outcome/state
 roles; do not ship the prototype's separate unregistered announcement sentences.
@@ -385,3 +387,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.2 | October 3, 2026 | PR #478 review corrections: flat typed substitution name/shirt/bench/minute arguments and planned I-Q16 reordered/negative build fixtures; one invariant S0 number-format provider; Attach assigned to the pitch renderer while the shell consumes lifecycle methods. Explicit acceptance of the proposed name list remains due. I IN PROGRESS; #470 blocked; no source, approved evidence or gate-pass change. |
 | 0.3 | October 3, 2026 | Records Anton Zymin's explicit approval of the unchanged 36-name fixture list at 96f16ba. Separate long-name/pseudo/200% stress coverage remains required. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; no runtime, image or merge approval inferred. |
 | 0.4 | October 4, 2026 | Final technical handoff review PASS recorded in journey §14.11 at e8ffd89; all three contracts/reference deltas reviewed. Main release follows #478 landing; implementation, Gate-J QA and exact-head Unity evidence remain due. No approved source/image or prior history change. |
+| 0.5 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): pitch descriptions are read-only rather than noninteractive, shown on pointer or the single keyboard pitch entry of journey §9.3. Role register, copy and content hash unchanged. |

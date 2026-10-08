@@ -1,8 +1,8 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** October 5, 2026\
-**Version:** 0.35\
+**Last Updated:** October 8, 2026\
+**Version:** 0.36\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF (§14.11)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.30 §5–§6\
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.37\
@@ -629,7 +629,7 @@ remain in labelled disclosure, preserving the active task's space under many ind
 |---|---|
 | MM | Play a demo match; root has no Back action |
 | TS | checked Mentality radio group (arrows traverse seven values) → Start match → Back; cancellation discards draft |
-| MV-L/P | available Slower → Pause/Resume → available Faster → Change Mentality → Make substitution → Open/Close statistics → any earlier-feedback disclosure; disabled controls skipped, reasons stay visible |
+| MV-L/P | available Slower → Pause/Resume → available Faster → Change Mentality → Make substitution → Open/Close statistics → any earlier-feedback disclosure → pitch player inspection (one Tab stop; arrow keys move between visible player markers and show that player's full name/shirt/cue description; Tab/Shift-Tab leave the pitch); disabled controls skipped, reasons stay visible |
 | Mentality dialog | requested Mentality selector → Submit change → Cancel; full selected label and consequence remain inline |
 | Substitution dialog | outgoing shirt selector → incoming bench selector → Submit change → Cancel |
 | MV-FT | report acknowledgement receives focus on full-time transition; disabled playback/team actions do not trap focus |
@@ -1171,7 +1171,7 @@ feedback region are programmatic anchors outside the normal control traversal.
 | MM | launch or `ReturnToMainMenu()` (Pop) | product/home/AI context; Play a demo match | heading; Play → `OpenTacticsSetup()` (Push) |
 | TS | `OpenTacticsSetup()` | all seven Mentalities/effects; Start; Back | heading; checked radio group → Start → Back; arrows change draft only |
 | MV-0 | attached session + `StartMatch()` (Replace), no first frame | waiting heading, withheld score/clock, selected speed, unavailable match actions with waiting reason | heading; no match action is selectable; no fake timer, zeros or retry |
-| MV-L | first/live frame, not paused/ended | score/period/minute, speed/current Mentality, pitch, playback/team actions, outcomes, statistics | preserve anchor; available Slower → Pause → available Faster → Change Mentality → Make substitution → statistics toggle → earlier-feedback disclosure |
+| MV-L | first/live frame, not paused/ended | score/period/minute, speed/current Mentality, pitch, playback/team actions, outcomes, statistics | preserve anchor; available Slower → Pause → available Faster → Change Mentality → Make substitution → statistics toggle → earlier-feedback disclosure → pitch inspection entry (§9.3) |
 | MV-P | streamer paused, not ended | same as MV-L, explicit Paused plus unchanged selected rung | preserve Pause/Resume target; same order with Resume; queued request remains Pending until resume |
 | MV-FT | frame `MatchEnded`, availability `FullTime` | frozen score/pitch; locked match actions; stable outcomes; retained/closed statistics status; View match report | cancel unsubmitted chooser; focus View match report → `ShowPostMatchReport()` (Replace); no Back/abandon |
 | PR | report acknowledgement from MV-FT only | frame score/home win/draw/loss; healthy totals or incomplete warning and partial disclosure; Return | heading; partial disclosure when present → Return to main menu |
@@ -1456,7 +1456,7 @@ an existing L2 loader, packaging or artifact-identity API.
 | I-Q12 / T5,T6,B-009 | forced observer exception before/mid/after tick accumulation | continue match, inspect live and PR | atomically incomplete publication, no healthy partial interval; cutoff/partial warning persists; frame score/time advance; no retry; PR partials initially hidden | host-free + Unity |
 | I-Q13 / T6,G-008 | statistics open or closed before ended frame, healthy or faulted | full time then report acknowledgement | retain/close as before, static status/no reopen; report available only from end; frame home result wins over analytics; Return outside disclosure | host-free + Unity |
 | I-Q14 / T6,T1 | final report with fault/history | Return, start another match | old session stopped/detached/cleared; fresh caches/observer/feedback/draft/disclosures; old callbacks cannot mutate new context | host-free + Unity |
-| I-Q15 / all,H-005 | keyboard-only journey, dialogs, latest/earlier outcome disclosure | traverse forward/back, submit, close, let live ticks run | logical order, modal wrap, recoverable visible focus, no root loss/tick reset/disclosure collapse; pointer headings unboxed | Unity |
+| I-Q15 / all,H-005 | keyboard-only journey, dialogs, latest/earlier outcome disclosure, pitch player inspection | traverse forward/back, submit, close, let live ticks run | logical order, modal wrap, recoverable visible focus, no root loss/tick reset/disclosure collapse; pointer headings unboxed | Unity |
 | I-Q16 / all,H-014,E-004,I-003 | all three dimensions, expanded pseudo text, 150% and the owner-selected 200% maximum; reordered flat substitution name/shirt/bench/minute patterns and invalid/missing pattern build fixtures; unchanged frames, changed arguments, match teardown and fresh shell contexts | load the validated published artifact through the S0 packaging/loader path; format dynamic roles and complete journey, both choosers, long-name/fault/history fixtures | matching validation/package/load artifact identities recorded; exact role arguments, including independently reordered outgoing/incoming first/last names, shirts, bench and Applied minute; fixed invariant S0 number-format provider; client-owned lint fails content build on any malformed authored pattern or missing base role, publishes no rejected candidate, permits absent translations with valid base coverage, L2 KD-5 missing-selected-key fallback and ERR-049-005 terminal-path proof; fixed-provider number formatting; fixed-context unchanged arguments reuse labels; changed arguments refresh; match teardown clears match caches; fresh shell has no previous-context labels; no runtime replacement signal assumed; all product strings transformed incl Home/Away; whole labels/actions reachable, reflow/scroll, no horizontal clipping/distortion; record real max | host-free formatter + Unity |
 | I-Q17 / all | no final art/network fonts, glyph failures, muted audio, color-independent inspection | read/play/choose/review | neutral text/geometry fallback, distinguish selection/focus/outcomes/locks without hue, no blank label or fabricated identity; measured contrast | Unity |
 | I-Q18 / T3,T6 | unusual real 19–9 capture equivalent, five-sub cap, dense chronological requests, mid-tick fault | render and traverse at small desktop/max scale | legible score/count/context, stable history, no synthetic 2–1/90-minute model/captured overlay in shipping source | host-free + Unity |
@@ -1646,3 +1646,4 @@ remaining B8/B9b/B10 evidence stay open. This record authorizes no PR merge.
 | 0.33 | October 4, 2026 | Records Anton Zymin’s explicit “I accept” confirmation of the Gate-I handoff PASS at a1eae56, with timestamp and scope, separately from Codex’s technical review. Main release still follows #478 landing; runtime/Unity/QA and merge obligations unchanged. |
 | 0.34 | October 5, 2026 | Pointer/status sync after #470 foundation merged; detailed plan v1.29, protocol v0.36 and lifecycle/identity implementation plan v0.1. H/I approvals, reviewed behavior, source-audit pins and planned QA unchanged. |
 | 0.35 | October 5, 2026 | PR #479 review corrections: implementation plan v0.2, execution pointer v1.30 and protocol v0.37. Approved H/I contracts, references, decisions and planned QA unchanged. |
+| 0.36 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): §9.3 MV-L/P and §14 MV-L focus order gain one pitch Tab stop after the earlier-feedback disclosure, with arrow keys over visible markers; I-Q15 covers it. Read-only: inspection never stages or dispatches. Copy, other focus order, gates and QA unchanged. |
