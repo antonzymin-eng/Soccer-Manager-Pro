@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.7\
+**Version:** 0.8\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -287,7 +287,9 @@ projection and committed focus tests are unchanged. The accepted contract and it
 remain intact; this is a source correction, not a wording proposal or new owner acceptance.
 
 All production content declarations match 9aa1aca exactly (excluding append-only source
-history). The compiled formatter again reports the original base hash shown below.
+history). At 7270bd6, the compiled formatter again reported the original base hash
+`6a6e38939b35ec7ed1f2dced11c3fd0d6822eecf1a98db78545bf31164d41c8c`;
+v0.8 below supersedes it after restoring three more approved sentences.
 Supplementary CLR 8.0.28 / NUnitLite 3.14 at 20:18 UTC: **118/118 ClientApp fast cases**
 pass after recompiling ClientApp, including all focus and read-only inspection cases;
 the same long full-match exclusion applies. This does not validate Unity wiring or input.
@@ -295,6 +297,50 @@ Fresh exact-head CI is required. PR stays draft and the pinned-host gates remain
 B8 profiling must also distinguish Editor-only missing-component allocation noise from
 player-build GC and include the per-frame focus recovery/visibility work. No performance
 acceptance is inferred from source review.
+
+## Codex layout, comparison and complete-copy corrections (v0.8)
+
+Five additional Codex findings at 7270bd6 are corrected:
+
+- Every keyboard-focus ring has `LayoutElement.ignoreLayout = true` before it is
+  stretched, so the parent button's VerticalLayoutGroup does not treat the overlay
+  as a content child. Strip geometry, pointer behavior and Tab roles are unchanged.
+- All seven read-only comparison rows retain separate localized Current and Requested
+  tags. BindDialog updates both independently on each structural revision, including
+  hidden disclosure content. Equal values show both on the same row; changing the draft
+  moves Requested only. Tags are plain noninteractive Text, not new Tab stops.
+- Restore the complete approved `context.substitution`, `pitch.description` and
+  `statistics.loose_ball` sentences verbatim: immediate application does not wait for
+  a stoppage, the baseline pitch describes both attack directions and pitch cues, and
+  team possession shares need not total 100%. No approved contract/owner record changes.
+
+An audit of all **141/141** role base patterns against binding-contract v0.4 §§4.2–4.3
+reports zero mismatches after these three restorations (103 static and 38 dynamic).
+The compiled formatter reports the new canonical hash below; 7270bd6's restored-legend
+hash remains historical evidence, not the current shipped-content identity.
+Recompiled ClientApp on CLR 8.0.28 / NUnitLite 3.14 at 20:37 UTC passes **118/118** fast
+cases with the existing long full-match exclusion. Both changed source files parse
+with zero C# 9 errors. No permanent test or assembly is added in this small binding/copy
+correction.
+
+A temporary bounded harness compiles the comparison-binding block extracted from the
+modified BindDialog against tag-visibility stand-ins and the real presenter/coordinator.
+It checks all seven Requested drafts against the current Balanced state, Cancel/reopen
+with both tags together, and an Applied Attacking request with no stale Balanced tags.
+The prior no-binding variant fails, while the extracted new block passes at 20:38 UTC.
+This harness is outside the repo and proves neither UGUI layout nor full-skin compilation;
+the committed focus-policy suite still covers its previously stated policy boundaries.
+
+Pinned-host I-Q05 must expand comparison, inspect both tags when equal, change each draft
+and verify only Requested moves, then Cancel/reopen and repeat after Applied and a new
+match. Tags must remain understandable with selectors scrolled out of view at 100/150/200%.
+I-Q15 must toggle keyboard focus on/off for action buttons and capture unchanged button
+rect/preferred height, stretched ring bounds and complete text with no reflow/clipping at
+all three scales. I-Q09/16 must record the complete substitution and loose-ball copy;
+I-Q01/16 must record the complete baseline pitch description before marker inspection.
+Capture actual loaded-content hash (including any font fallback) at I-Q16. Fresh CI and
+all native compile/lock/input/runtime/profiling gates remain due; PR stays draft and
+B8/B9b/B10/Gate J remain open.
 
 ## Content and dependency boundary
 
@@ -307,7 +353,7 @@ shirts, bench slot and Applied minute can be independently reordered; brace-cont
 names remain literal data. One-value typed cache paths avoid boxing/argument arrays on
 unchanged values. Match teardown drops match caches/identities; shell context is fixed.
 
-Canonical base content SHA-256: `6a6e38939b35ec7ed1f2dced11c3fd0d6822eecf1a98db78545bf31164d41c8c`.
+Canonical base content SHA-256: `51e1a201cc81a81bd2c5e0e945cbffa8a326cc4a8c8fadf368d33d66941b876d`.
 The hash format is the ordered UTF-8 sequence `key|schema|pattern-length:pattern\n`.
 The real binding exposes `LoadedContentSha256`. Packaged-font admission applies equivalent
 punctuation fallbacks before Resolve/validation/hash; host evidence must record the actual
@@ -419,3 +465,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.5 | October 8, 2026 | Codex focus corrections: action-only Tab traversal, first available dialog selector and active current feedback after repeat matches. Baseline CI, bounded before/after control-flow checks and exact I-Q15 host cases recorded; host gates stay open. |
 | 0.6 | October 8, 2026 | Restore keyboard pitch inspection through one composite Tab stop and arrows; consume host-free focus policy with 18 permanent regressions plus a composed read-only description test. Content hash/legend and native I-Q15 cases updated; host gates stay open. |
 | 0.7 | October 8, 2026 | Restore the owner-approved pitch legend verbatim and original content hash; retain composite keyboard inspection and permanent focus coverage. Pinned-host/CI acceptance remains open. |
+| 0.8 | October 8, 2026 | Five Codex corrections: exclude focus overlays from layout, rebind independent comparison tags, restore three complete approved sentences. All 141 role patterns now match the contract; new loaded-content hash and exact native QA obligations recorded, host gates remain open. |

@@ -39,7 +39,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("context.setup", "You manage Home. Away is AI-managed.", ""),
             new S0TextRole("context.speed_steps", "Speed steps: 1×, 3×, 5×, 10×.", ""),
             new S0TextRole("context.submit", "Choose a change, then submit it. Your team changes only when you see Applied.", ""),
-            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution takes effect when the request is applied", ""),
+            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution takes effect when the request is applied; it does not wait for a stoppage.", ""),
             new S0TextRole("dialog.mentality", "Change Home Mentality", ""),
             new S0TextRole("dialog.substitution", "Make Home substitution", ""),
             new S0TextRole("effect.attacking", "More risk in on-ball choices; higher defensive line.", ""),
@@ -67,7 +67,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("mentality.positive", "Positive", ""),
             new S0TextRole("mentality.very_attacking", "Very Attacking", ""),
             new S0TextRole("mentality.very_defensive", "Very Defensive", ""),
-            new S0TextRole("pitch.description", "Match pitch. Home H attacks right", ""),
+            new S0TextRole("pitch.description", "Match pitch. Home H attacks right; Away A attacks left. Goals, penalty areas and ball shown.", ""),
             new S0TextRole("pitch.direction", "Home attacks right → • Away attacks left ←", ""),
             new S0TextRole("pitch.legend", "H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution.", ""),
             new S0TextRole("pitch.waiting", "Pitch appears after the first frame.", ""),
@@ -98,7 +98,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("statistics.fouls", "Fouls", ""),
             new S0TextRole("statistics.goal_kicks", "Goal kicks", ""),
             new S0TextRole("statistics.goals", "Goals recorded", ""),
-            new S0TextRole("statistics.loose_ball", "Possession shares include loose-ball time", ""),
+            new S0TextRole("statistics.loose_ball", "Possession shares include loose-ball time; the two teams need not total 100%.", ""),
             new S0TextRole("statistics.offsides", "Offsides", ""),
             new S0TextRole("statistics.possession", "Possession %", ""),
             new S0TextRole("statistics.red", "Red cards", ""),
@@ -186,4 +186,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-08 | —      | Complete reviewed S0 role register and coverage. |
 // | 1.1     | 2026-10-08 | —      | Localized pitch legend explains single Tab entry and read-only arrow inspection. |
 // | 1.2     | 2026-10-08 | —      | Restore owner-approved pitch legend verbatim; keyboard inspection remains in the focus binding. |
+// | 1.3     | 2026-10-08 | —      | Restore complete approved substitution, baseline pitch and loose-ball context sentences. |
 #endregion

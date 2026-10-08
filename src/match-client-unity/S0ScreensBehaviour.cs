@@ -41,6 +41,8 @@ namespace TacticalDirector.MatchClientUnity
         private int _pitchEntryIndex = -1;
         private readonly Button[] _setupChoices = new Button[7];
         private readonly Button[] _mentalityChoices = new Button[7];
+        private readonly Text[] _comparisonCurrent = new Text[7];
+        private readonly Text[] _comparisonRequested = new Text[7];
         private readonly List<Button> _outgoing = new List<Button>();
         private readonly List<Button> _incoming = new List<Button>();
         private readonly List<Selectable> _feedbackRows = new List<Selectable>();
@@ -176,6 +178,8 @@ namespace TacticalDirector.MatchClientUnity
             _scrolls.Add(control, scroll);
             _focusRoles.Add(control, role);
             RectTransform ring = _ui.Node("Keyboard focus", control.transform);
+            // An overlay must not become content in the button's VerticalLayoutGroup.
+            ring.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             S0UiFactory.Stretch(ring);
             // Four geometry strips: focus surrounds the control, never outlines individual text glyphs.
             for (int i = 0; i < 4; i++)
@@ -362,8 +366,13 @@ namespace TacticalDirector.MatchClientUnity
 
             Control(_mentalityDraft.transform, L("action.compare"), () => _compare.SetActive(!_compare.activeSelf), _dialogScroll);
             _compare = _ui.Column("Comparison", _mentalityDraft.transform).gameObject;
-            foreach (Mentality m in S0ScreenPresenter.Mentalities)
-                _ui.Label(_compare.transform, _view.MentalityChoice(m));
+            for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
+            {
+                RectTransform row = _ui.Column("Comparison row", _compare.transform);
+                _ui.Label(row, _view.MentalityChoice(S0ScreenPresenter.Mentalities[i]));
+                _comparisonCurrent[i] = _ui.Label(row, L("tag.current"));
+                _comparisonRequested[i] = _ui.Label(row, L("tag.requested"));
+            }
             _compare.SetActive(false);
             _substitutionDraft = _ui.Column("Substitution draft", content).gameObject;
             _ui.Label(_substitutionDraft.transform, L("context.substitution"));
@@ -544,6 +553,15 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.Set(_dialogHeading.GetComponent<Text>(), L(mentality ? "dialog.mentality" : "dialog.substitution"));
             S0UiFactory.Set(_dialogCurrent, _view.Text.Format("dialog.current", "mentality.current", _view.MentalityLabel(_view.CurrentMentality)));
             _dialogCurrent.gameObject.SetActive(mentality);
+            if (mentality)
+            {
+                for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
+                {
+                    Mentality value = S0ScreenPresenter.Mentalities[i];
+                    _comparisonCurrent[i].gameObject.SetActive(value == _view.CurrentMentality);
+                    _comparisonRequested[i].gameObject.SetActive(value == _view.RequestedMentality);
+                }
+            }
             S0UiFactory.Set(_choiceNotice, _view.ChoiceNotice);
             _submit.interactable = mentality ? _view.CanChangeMentality : _view.CanSubmitSubstitution;
             for (int i = 0; i < _outgoing.Count; i++)
@@ -993,4 +1011,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.2     | 2026-10-08 | —      | Clarify full-string wrapping and subsequent measured height for narrow label rectangles. |
 // | 1.3     | 2026-10-08 | —      | Separate action Tab stops from explicit anchors, focus first dialog selector and current feedback row across repeat matches. |
 // | 1.4     | 2026-10-08 | —      | Consume tested focus policy; retain one roving pitch Tab entry with read-only arrow inspection and visibility recovery. |
+// | 1.5     | 2026-10-08 | —      | Exclude focus overlays from layout and retain/rebind both comparison tags to current and requested Mentality. |
 #endregion
