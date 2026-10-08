@@ -23,8 +23,11 @@ namespace TacticalDirector.ClientApp
             return available >= pitchMinimum + railMinimum + gap;
         }
 
-        /// <summary>Places full measured labels inside the viewport, moving collisions to the nearest free grid cell.</summary>
-        public static void PlacePitchLabels(Vector2 viewport, Vector2[] markers, Vector2[] sizes, bool[] visible, Vector2[] centres, float gap)
+        /// <summary>
+        /// Places full labels near their markers, falling back to a complete grid if greedy placement
+        /// exhausts free cells. Returns false for an unready/undersized surface; invalid inputs still fail.
+        /// </summary>
+        public static bool TryPlacePitchLabels(Vector2 viewport, Vector2[] markers, Vector2[] sizes, bool[] visible, Vector2[] centres, float gap)
         {
             RequireFinite(viewport.x);
             RequireFinite(viewport.y);
@@ -41,7 +44,7 @@ namespace TacticalDirector.ClientApp
             }
 
             if (cellWidth <= 0 || cellHeight <= 0)
-                return;
+                return true;
             for (int i = 0; i < markers.Length; i++)
             {
                 if (!visible[i])
@@ -49,7 +52,7 @@ namespace TacticalDirector.ClientApp
                 RequireFinite(markers[i].x);
                 RequireFinite(markers[i].y);
                 if (sizes[i].x > viewport.x || sizes[i].y > viewport.y)
-                    throw new InvalidOperationException("Pitch viewport cannot hold the measured labels.");
+                    return false;
                 float hx = sizes[i].x * 0.5f, hy = sizes[i].y * 0.5f;
                 Vector2 desired = new Vector2(Math.Max(hx, Math.Min(viewport.x - hx, markers[i].x)), Math.Max(hy, Math.Min(viewport.y - hy, markers[i].y)));
                 centres[i] = desired;
@@ -69,11 +72,61 @@ namespace TacticalDirector.ClientApp
                         }
                     }
 
-                // If the measured viewport cannot hold every label, the binding must grow/scroll it;
-                // a hidden/truncated name or autoshrink is never a successful layout result.
                 if (float.IsPositiveInfinity(nearest))
-                    throw new InvalidOperationException("Pitch viewport cannot hold the measured labels.");
+                    return PlaceGrid(viewport, sizes, visible, centres, cellWidth, cellHeight, gap);
             }
+            return true;
+        }
+
+        /// <summary>
+        /// Height needed for a complete grid at this width. The binding may grow its scrollable label
+        /// surface while retaining the pitch image's aspect. Positive infinity means width is unready.
+        /// </summary>
+        public static float RequiredPitchLabelHeight(float width, Vector2[] sizes, bool[] visible, float gap)
+        {
+            RequireFinite(width);
+            RequireFinite(gap);
+            if (sizes == null || visible == null || sizes.Length != visible.Length)
+                throw new ArgumentException("Pitch label buffers differ.");
+            float cellWidth = gap, cellHeight = gap;
+            int count = 0;
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                RequireFinite(sizes[i].x);
+                RequireFinite(sizes[i].y);
+                if (!visible[i])
+                    continue;
+                count++;
+                cellWidth = Math.Max(cellWidth, sizes[i].x + gap);
+                cellHeight = Math.Max(cellHeight, sizes[i].y + gap);
+            }
+            if (count == 0)
+                return 0;
+            int columns = cellWidth > 0 ? (int)Math.Floor((width + gap) / cellWidth) : 0;
+            return columns == 0 ? float.PositiveInfinity : ((count + columns - 1) / columns) * cellHeight - gap;
+        }
+
+        private static bool PlaceGrid(Vector2 viewport, Vector2[] sizes, bool[] visible,
+            Vector2[] centres, float cellWidth, float cellHeight, float gap)
+        {
+            int columns = (int)Math.Floor((viewport.x + gap) / cellWidth);
+            int rows = (int)Math.Floor((viewport.y + gap) / cellHeight);
+            int count = 0;
+            for (int i = 0; i < visible.Length; i++)
+                if (visible[i])
+                    count++;
+            if (columns == 0 || rows == 0 || (long)columns * rows < count)
+                return false;
+            int cell = 0;
+            for (int i = 0; i < visible.Length; i++)
+            {
+                if (!visible[i])
+                    continue;
+                centres[i] = new Vector2((cell % columns) * cellWidth + (cellWidth - gap) * 0.5f,
+                    (cell / columns) * cellHeight + (cellHeight - gap) * 0.5f);
+                cell++;
+            }
+            return true;
         }
 
         private static bool IsFree(int index, Vector2 candidate, Vector2[] sizes, bool[] visible, Vector2[] centres, float gap)
@@ -94,4 +147,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Measured reflow and marker-preserving label deconfliction. |
+// | 1.1     | 2026-10-08 | —      | Nonfatal capacity result, complete-grid fallback and measured scroll-surface height. |
 #endregion

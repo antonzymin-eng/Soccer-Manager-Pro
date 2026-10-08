@@ -6,6 +6,8 @@
 // Purpose:  Build persistent wrapped/scrolled UGUI views; layout owns measured sizes rather than truncation.
 
 using System;
+using System.Collections.Generic;
+
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -15,6 +17,7 @@ namespace TacticalDirector.MatchClientUnity
     /// <summary>Local UGUI construction helper; contains visual binding, never gameplay/navigation decisions.</summary>
     internal sealed class S0UiFactory
     {
+        private readonly Dictionary<Button, Text> _buttonText = new Dictionary<Button, Text>();
         private readonly Font _font;
         private readonly float _scale;
         internal S0UiFactory(Font font, float scale)
@@ -103,7 +106,7 @@ namespace TacticalDirector.MatchClientUnity
             layout.childControlHeight = layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
-            Label(node, label);
+            _buttonText.Add(button, Label(node, label));
             button.onClick.AddListener(action);
             ColorBlock colors = button.colors;
             colors.normalColor = colors.highlightedColor = colors.selectedColor = colors.pressedColor = Color.white;
@@ -125,10 +128,11 @@ namespace TacticalDirector.MatchClientUnity
                 label.text = text;
         }
 
-        internal static void Set(Button button, string text) => Set(button.GetComponentInChildren<Text>(true), text);
+        internal void SetButton(Button button, string text) => Set(_buttonText[button], text);
     }
 }
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Persistent wrapped/scrolled neutral UGUI construction. |
+// | 1.1     | 2026-10-08 | —      | Retain button text references at construction instead of repeated component searches. |
 #endregion

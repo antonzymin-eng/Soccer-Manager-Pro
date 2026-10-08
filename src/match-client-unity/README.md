@@ -298,12 +298,23 @@ an additional instance of the existing stroked ring prefab. That prefab must als
 expose the configured marker colour property. These are source mechanisms; runtime
 layout, glyphs, input and annulus appearance require host validation.
 
-Follow `docs/tracking/p5b-screens-validation.md` v0.1 for exact-head compile, candidate
+Follow `docs/tracking/p5b-screens-validation.md` v0.2 for exact-head compile, candidate
 lock regeneration, EditMode, real-client I-Q01–19 and cert-host checks. The new UGUI
 binding has not compiled/run in Unity here. Keep B8/B9b/B10 and Gate J open.
 
+**PR #489 review correction:** activation and geometry changes force UGUI layout before
+pitch placement. The scrollable full-label surface may grow vertically around a child
+105:68 image; tethers still anchor to identity-matched rendered markers. Unplaceable
+labels increment `PitchLayoutFailureCount` and warn without terminating the match;
+any nonzero count fails layout QA. Text metrics are cached per string/available width
+with font and scale fixed per shell. Ordinary frames retain structural controls; outcome
+logs copy only on count changes. Explicit feedback sibling order keeps earlier records
+before latest records on both screens and on repeat entry. These changes still require
+actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match checks.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| PR #489 review corrections | October 8, 2026 | Nonfatal measured layout, cached refresh and stable history; host proof still due. |
 | P5b screens candidate | October 8, 2026 | Complete localized screens and tracked shell scene; prior lifecycle host proof preserved, new exact-head Unity/runtime/cert evidence due. |
 | P5b lifecycle candidate | October 6, 2026 | External attachment and explicit development host replace internal demo ownership; pinned-host validation pending. |
 | PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |

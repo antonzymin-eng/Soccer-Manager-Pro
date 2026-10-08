@@ -89,6 +89,43 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void RefreshWithSettledCommandHistoryDoesNotAllocateOnUnchangedFrames()
+        {
+            Start();
+            Tick();
+            _view.OpenMentality();
+            _view.SelectRequestedMentality(Mentality.Positive);
+            _view.SubmitMentality();
+            Tick();
+            _view.Refresh();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+                _view.Refresh();
+            long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.AreEqual(0, bytes);
+        }
+
+        [Test]
+        public void OrdinaryAcceptedFramesDoNotInvalidateStructuralBindings()
+        {
+            Start();
+            Tick();
+            int revision = _view.Revision;
+            ulong tick = _view.Frame.Tick;
+            Tick();
+            Assert.Greater(_view.Frame.Tick, tick);
+            Assert.AreEqual(revision, _view.Revision);
+            _view.OpenMentality();
+            Assert.Greater(_view.Revision, revision);
+            revision = _view.Revision;
+            Tick();
+            Assert.AreEqual(revision, _view.Revision, "an open draft retains bindings on ordinary frames");
+            End();
+            Assert.Greater(_view.Revision, revision);
+            Assert.IsTrue(_view.CanReport);
+        }
+
+        [Test]
         public void DraftCancelDoesNotDispatchAndSetupReentryIsBalanced()
         {
             _view.OpenSetup();
@@ -338,4 +375,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Real composed screen and driver scenarios; no Unity visual claim. |
+// | 1.1     | 2026-10-08 | —      | Reproduce structural invalidation and unchanged-frame allocations after command settlement. |
 #endregion

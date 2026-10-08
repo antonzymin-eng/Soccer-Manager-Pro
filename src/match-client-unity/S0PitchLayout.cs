@@ -12,9 +12,25 @@ using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.MatchClientUnity
 {
-    /// <summary>The parent layout controls both axes; no competing AspectRatioFitter drives the rectangle.</summary>
-    internal sealed class S0PitchLayout : UIBehaviour, ILayoutElement
+    /// <summary>Scrollable labels own the surface height; its child image always keeps the true pitch aspect.</summary>
+    internal sealed class S0PitchLayout : UIBehaviour, ILayoutElement, ILayoutSelfController
     {
+        internal RectTransform Image;
+        internal float LabelHeight;
+
+        /// <inheritdoc/>
+        public void SetLayoutHorizontal()
+        {
+            Image.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ((RectTransform)transform).rect.width);
+        }
+
+        /// <inheritdoc/>
+        public void SetLayoutVertical()
+        {
+            Image.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
+                ((RectTransform)transform).rect.width * MatchEngineConstants.PITCH_WIDTH_M / MatchEngineConstants.PITCH_LENGTH_M);
+        }
+
         /// <inheritdoc/>
         public void CalculateLayoutInputHorizontal()
         {
@@ -34,7 +50,7 @@ namespace TacticalDirector.MatchClientUnity
         /// <inheritdoc/>
         public float minHeight => preferredHeight;
         /// <inheritdoc/>
-        public float preferredHeight => ((RectTransform)transform).rect.width * MatchEngineConstants.PITCH_WIDTH_M / MatchEngineConstants.PITCH_LENGTH_M;
+        public float preferredHeight => Mathf.Max(LabelHeight, ((RectTransform)transform).rect.width * MatchEngineConstants.PITCH_WIDTH_M / MatchEngineConstants.PITCH_LENGTH_M);
         /// <inheritdoc/>
         public float flexibleHeight => 0;
         /// <inheritdoc/>
@@ -44,4 +60,5 @@ namespace TacticalDirector.MatchClientUnity
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Width-derived pitch geometry in the parent layout pass. |
+// | 1.1     | 2026-10-08 | —      | Keep the image aspect within a vertically growable full-label surface. |
 #endregion

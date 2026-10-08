@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.1\
+**Version:** 0.2\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -44,6 +44,57 @@ necessary; scrollable pages/dialogs preserve focus and disclosure. Keyboard Tab 
 follows the actual visible hierarchy after history moves between match and report.
 These are implemented mechanisms, not an executed font/layout/input acceptance claim.
 
+## PR #489 review corrections — October 8, 2026
+
+Review baseline: `d2788f15ee6aa7cbd62a3858e14374ac105b3333`. Static tracing confirms
+that an undersized label rectangle could throw through LateUpdate into terminal renderer
+rejection. The reported first-frame timing trigger has **not** been reproduced in Unity here.
+The binding now forces pending UGUI layout after activation/structural or viewport changes
+before reading geometry. It measures label text only when that string or available width
+changes (font and scale are fixed at composition). A separate label surface can grow into
+vertical page scroll; its child image always retains 105:68 pitch aspect and world positions.
+Capacity failure returns false, never throws. If near-marker greedy placement exhausts
+cells, the pure layout retries all labels on a complete grid; tethers preserve marker identity.
+A remaining placement failure emits one warning per failure episode and increments the
+binding's `PitchLayoutFailureCount`, leaving match lifetime intact. A nonzero counter fails
+host layout acceptance; ordinary unready geometry is deferred until layout is available.
+Invalid arguments/content/integration exceptions still fail loudly through their existing paths.
+
+`MatchClientDriver.TryGetCommandOutcomes` compares append-only counts and copies both logs
+under one lock only when they change. The presenter consumes those snapshots, retains its
+outcome cursors, and uses the existing frozen report logs at the end barrier. Ordinary
+accepted frames update the frame without invalidating structural bindings; score, minute,
+period, occupants/choices, command outcomes, playback, disclosure and analytics refreshes
+still invalidate the UI when needed. Pitch projection remains per render frame. Control,
+selection, feedback and statistics text references are retained instead of repeated searches.
+Feedback hierarchy is explicitly heading → earlier toggle → earlier chronological rows →
+latest chronological rows on both Match View and Report, including a second match. Hidden
+earlier rows remain hidden until disclosed; disclosure and focus ownership are unchanged.
+
+Two presenter regressions fail against the original production assemblies: an ordinary
+accepted tick changes structural revision (expected 4, observed 5); 1,000 unchanged
+refreshes after one settled command allocate **104,000 bytes**. Both pass with the fixes;
+the latter measures **0 bytes** on the same supplementary CLR. This is a targeted
+allocation result, not UGUI profiling or B8's 60 FPS proof. #20 §3.3.4's client allocation
+carve-out still governs; no claim of whole-client zero allocation is made.
+
+| Review check | Result | Limit |
+| --- | --- | --- |
+| ClientApp affected fast regression | 99 passed / 0 failed / 0 skipped; 09:51:50 UTC, 0.512 s | Filter `test !~ S0DemoFixtureComparisonTests`; full-match scenario remains in canonical CI |
+| Driver regression fixture | 8 passed / 0 failed / 0 skipped; 09:50:05 UTC | FIFO/refusal/end-drop plus conditional atomic/immutable snapshot and unchanged-poll allocation tests |
+| Layout regressions | Included in ClientApp run | Unready 0/100 geometry, nonfatal insufficient capacity, all 22 enlarged labels on grown grid, nonoverlap and unchanged markers; no actual font/render evidence |
+| NUnit 3.5 compatibility | Changed ClientApp tests and driver fixture compile | Uses repository shim, not Editor compilation |
+| Canonical local PR gate | Surveys, metadata and 74-project generation pass; restore aborts exit 134 in `Process.GetStat` / `StartTime` | Re-attempted on corrected source; no local canonical test execution |
+| Changed C# syntax | 9 files parsed with C# 9, 0 errors | Unity member resolution excluded |
+| Assembly tiers / metadata / package-policy tests | PASS / PASS / 11 passed | Existing package pin/lock policy unchanged |
+| GitHub CI at review baseline | Linux functional and other checks passed; RFC link-check retry passed, run 37729959539 | Unity job skipped; corrected-head CI must run again |
+
+The manifest and hand-authored lock are deliberately unchanged in this correction.
+Only the pinned Editor can resolve/regenerate them and confirm the exact dependency graph.
+No Unity provider or Editor is available here. The new child-image layout, first-frame
+activation, density/reflow, Tab chronology and repeat-match caches remain explicit host
+checks. Keep PR #489 draft; B8/B9b/B10 and Gate J remain OPEN.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -73,12 +124,12 @@ required before merge. The tier checker resolves that assembly only from the exa
 asmdef with the matching package pin and both module dependencies. Package metadata is
 bound into graph evidence; unknown references, project tier rules and cycles still fail.
 
-## Executed supplementary evidence
+## Initial candidate evidence (v0.1 authoring snapshot)
 
 Ubuntu 24.04.3, SDK 8.0.422 / CLR 8.0.28; direct Roslyn C# 9 against netstandard2.1
 and the repository Unity shim, NUnitLite 3.14. This is supplementary, non-certifying
-execution. The normal dotnet CLI is broken in this worker; with the SDK on PATH the canonical local gate reaches `dotnet restore`, then aborts (exit 134) in `Process.GetStat` / `Process.StartTime` before compilation/test execution. Checklist/schema surveys, metadata and project generation pass. No canonical PR
-functional gate or Unity compile is claimed.
+execution. The normal dotnet CLI is broken in this worker; with the SDK on PATH the canonical local gate reaches `dotnet restore`, then aborts (exit 134) in `Process.GetStat` / `Process.StartTime` before compilation/test execution. Checklist/schema surveys, metadata and project generation pass. At that authoring snapshot no canonical PR
+functional gate or Unity compile was claimed; the subsequent baseline CI result is recorded above.
 
 | Check | Result | Limit |
 | --- | --- | --- |
@@ -101,7 +152,7 @@ head. No tests are marked Explicit, disabled or removed in this slice. A failed 
 assertion initially checked the legend rather than the substitute-marker role; correcting
 that oracle gives 48/48 without changing production behavior.
 
-The published source commit is `0643b71bd63d3b65fd79029d2b76ef9415dc17a8`; this final evidence update changes Markdown only. The connected GitHub publication tree matched the local tree exactly (`878bf7302fb544c06e2a8a6ba1386afc94152e3d`). A final PR CI pass remains due; the published PR head, rather than this authoring snapshot, is the required pinned-host compile target.
+The published source commit is `0643b71bd63d3b65fd79029d2b76ef9415dc17a8`; this final evidence update changes Markdown only. The connected GitHub publication tree matched the local tree exactly (`878bf7302fb544c06e2a8a6ba1386afc94152e3d`). At that snapshot a final PR CI pass remained due. The baseline subsequently passed with the external link-check retry above; the corrected published PR head is the required fresh CI and pinned-host target.
 
 ## Acceptance matrix and pinned-host procedure
 
@@ -129,7 +180,8 @@ Supplementary results below cover portions of the contracts, not their complete 
 3. Open the enabled `Assets/Scenes/Scene.unity`: verify Main Menu only, four exclusive roots,
    one EventSystem and no development-host duplicate. Run I-Q01–14 serially (process-static
    EventBus requires one engine at a time). Confirm viewport pitch coordinates, authored
-   markers/white substitute outline, first-frame waiting, report acknowledgement and a
+   markers/white substitute outline, first-frame waiting and activation after forced layout,
+   report acknowledgement and a
    second match with no old names/outcomes/callbacks.
 4. Run I-Q15–18 at **1366×768, 1920×1080, 2560×1440**, display zoom recorded, each at
    **100/150/200%**, with packaged font, expanded pseudo content, long names, reordered
@@ -137,6 +189,10 @@ Supplementary results below cover portions of the contracts, not their complete 
    the two larger dimensions must show the whole pitch without scrolling; 1366×768 may
    scroll. No clipping, autoshrink, distorted pitch, missing context or unreachable action.
    Freeze text scale per shell construction; record real supported maximum and loaded hash.
+   Verify child pitch image aspect, tether visibility and full label-surface growth at dense
+   200% layouts. Record `PitchLayoutFailureCount` (must remain zero) and Console warnings.
+   Expand earlier feedback before/after Report and in a second match; visual and Tab order
+   must agree and retained label caches must never produce blank repeat-match markers.
 5. Retain target build/runtime and cert-host profiling artifacts under the existing B8/B10
    procedures. An editor FPS reading, shim outcome or browser screenshot is not a certificate.
    Record product/runtime acceptance explicitly; do not close Gate J from these unit results.
@@ -146,3 +202,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | Version | Date | Notes |
 | --- | --- | --- |
 | 0.1 | October 8, 2026 | Four consumed screen candidate, supplementary validation and exact-head host acceptance procedure; all host gates remain open. |
+| 0.2 | October 8, 2026 | PR #489 review fixes: nonfatal/growable label layout, changed-outcome snapshots, structural refresh and stable chronological feedback; before/after allocation evidence and baseline CI retry recorded, all host acceptance remains open. |

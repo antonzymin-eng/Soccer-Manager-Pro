@@ -30,6 +30,7 @@ namespace TacticalDirector.ClientApp
         private bool _hasStatistics;
         private bool _lastPaused;
         private int _lastRequestRevision = -1;
+        private int _appliedCount, _refusedCount;
         private readonly List<PlayerChoice> _outgoing = new List<PlayerChoice>();
         private readonly List<PlayerChoice> _incoming = new List<PlayerChoice>();
         private readonly List<string> _feedback = new List<string>();
@@ -459,27 +460,33 @@ namespace TacticalDirector.ClientApp
 
                 if (_context == null)
                     return;
-                // The end barrier already settled these frozen logs. Otherwise reads are separate snapshots.
+                // The end barrier settled its frozen logs; live polling copies only changed outcomes.
                 if (_context.IsFullTime)
                 {
                     ClientMatchReport report = _coordinator.Report.Project();
                     _context.Changes.Reconcile(report.Applied, report.Refused, true);
                 }
-                else
-                    _context.Changes.Reconcile(_context.Session.Driver.Log, _context.Session.Driver.FailedCommands, false);
+                else if (_context.Session.Driver.TryGetCommandOutcomes(_appliedCount, _refusedCount, out var applied, out var refused))
+                {
+                    _context.Changes.Reconcile(applied, refused, false);
+                    _appliedCount = applied.Count;
+                    _refusedCount = refused.Count;
+                }
                 if (_context.TryGetLatestFrame(out LiveMatchFrame frame) && (_frame.IsEmpty || frame.Tick != _lastFrameTick))
                 {
                     _frame = _coordinator.MatchView.Project();
                     _lastFrameTick = frame.Tick;
-                    UpdateFrame(in frame);
+                    bool changed = UpdateFrame(in frame);
                     if (_context.IsFullTime || !_hasStatistics || frame.Tick - _statisticsTick >= DeterministicSimConstants.PHYSICS_TICK_HZ || (!_analytics.IsIncomplete && _context.Session.Streamer.PostTickObserverFault != null))
                     {
                         UpdateStatistics(_context.IsFullTime ? _coordinator.Report.Project().Analytics : _context.Analytics.Publish());
                         _statisticsTick = frame.Tick;
                         _hasStatistics = true;
+                        changed = true;
                     }
 
-                    Revision++;
+                    if (changed)
+                        Revision++;
                 }
 
                 if (_lastPaused != IsPaused)
@@ -500,10 +507,12 @@ namespace TacticalDirector.ClientApp
             }
         }
 
-        private void UpdateFrame(in LiveMatchFrame frame)
+        private bool UpdateFrame(in LiveMatchFrame frame)
         {
+            bool changed = false;
             if (_scoreHome != frame.Score.Home || _scoreAway != frame.Score.Away)
             {
+                changed = true;
                 _scoreHome = frame.Score.Home;
                 _scoreAway = frame.Score.Away;
                 Score = Text.Format("score", "scoreline", _scoreHome, _scoreAway);
@@ -512,32 +521,38 @@ namespace TacticalDirector.ClientApp
             int minute = Minute(frame.Tick);
             if (_minute != minute)
             {
+                changed = true;
                 _minute = minute;
                 Clock = Text.Format("clock", "minute", minute);
             }
 
-            Period = Text.Label(frame.MatchEnded ? "state.full_time" : frame.Period == MatchPeriod.FirstHalf ? "state.first_half" : "state.second_half");
+            string period = Text.Label(frame.MatchEnded ? "state.full_time" : frame.Period == MatchPeriod.FirstHalf ? "state.first_half" : "state.second_half");
+            changed |= Period != period;
+            Period = period;
             if (_usedSubs != frame.SubstitutionsUsed[0])
             {
+                changed = true;
                 _usedSubs = frame.SubstitutionsUsed[0];
                 SubstitutionsUsed = Text.Format("subs.used", "substitutions.used", _usedSubs, MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM);
             }
 
-            UpdateChoices(in frame);
-            UpdateAvailability();
+            changed |= UpdateChoices(in frame);
+            if (changed)
+                UpdateAvailability();
             if (frame.MatchEnded)
             {
                 CancelDialog();
                 string outcome = frame.Score.Home > frame.Score.Away ? "win" : frame.Score.Home < frame.Score.Away ? "loss" : "draw";
                 Result = Text.Format("result", "result.home", Text.Label("result." + outcome));
             }
+            return changed;
         }
 
         /// <summary>Compact marker already cached from the currently accepted player identity and cues.</summary>
         public string PitchMarker(int agentId) => _markerText[agentId] ?? "";
         /// <summary>Complete semantic name/shirt/cue text from that same accepted frame.</summary>
         public string PitchPlayerDescription(int agentId) => _playerDescriptions[agentId] ?? "";
-        private void UpdateChoices(in LiveMatchFrame frame)
+        private bool UpdateChoices(in LiveMatchFrame frame)
         {
             bool changed = !_hasChoices;
             for (int i = 0; i < frame.AgentCues.Length; i++)
@@ -548,7 +563,7 @@ namespace TacticalDirector.ClientApp
             }
 
             if (!changed)
-                return;
+                return false;
             _hasChoices = true;
             for (int i = 0; i < frame.AgentCues.Length; i++)
             {
@@ -589,6 +604,7 @@ namespace TacticalDirector.ClientApp
 
             if (Dialog == DialogKind.Substitution && !PairIsCurrent())
                 CanSubmitSubstitution = false;
+            return true;
         }
 
         private void UpdateAvailability()
@@ -724,6 +740,7 @@ namespace TacticalDirector.ClientApp
             _lastFrameTick = _statisticsTick = 0;
             _hasStatistics = _lastPaused = _isReport = false;
             _lastRequestRevision = -1;
+            _appliedCount = _refusedCount = 0;
             _outgoing.Clear();
             _incoming.Clear();
             _feedback.Clear();
@@ -744,4 +761,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed localized screen state, owner availability, requests and analytics. |
+// | 1.1     | 2026-10-08 | —      | Poll changed command outcomes atomically; structural revision excludes ordinary frames. |
 #endregion

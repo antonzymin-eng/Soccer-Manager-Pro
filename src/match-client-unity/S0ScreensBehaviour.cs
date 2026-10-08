@@ -41,6 +41,9 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<Button> _incoming = new List<Button>();
         private readonly List<Selectable> _feedbackRows = new List<Selectable>();
         private readonly List<RectTransform> _statRows = new List<RectTransform>();
+        private readonly Dictionary<RectTransform, Text[]> _statText = new Dictionary<RectTransform, Text[]>();
+        private readonly Dictionary<Selectable, Text> _feedbackText = new Dictionary<Selectable, Text>();
+        private readonly Dictionary<Button, Text> _selectionText = new Dictionary<Button, Text>();
         private readonly List<Text> _pitchLabels = new List<Text>();
         private ScrollRect _menuScroll, _setupScroll, _matchScroll, _reportScroll, _dialogScroll;
         private Selectable _menuHeading, _setupHeading, _matchHeading, _reportHeading, _dialogHeading;
@@ -53,6 +56,14 @@ namespace TacticalDirector.MatchClientUnity
         private Button _submit, _cancel;
         private Selectable _invoker;
         private RawImage _pitch;
+        private RectTransform _pitchBounds;
+        private S0PitchLayout _pitchLayout;
+        private bool _pitchLayoutDirty = true;
+        private int _screenWidth, _screenHeight;
+        private float _measuredWidth;
+        private readonly string[] _measuredText = new string[MatchEngineConstants.SQUAD_SIZE];
+        private readonly bool[] _labelReserved = new bool[MatchEngineConstants.SQUAD_SIZE];
+        private bool _layoutFailureReported;
         private RenderTexture _pitchTexture;
         private ScreenId _lastScreen;
         private bool _wasFullTime;
@@ -68,6 +79,8 @@ namespace TacticalDirector.MatchClientUnity
         private bool _disposed;
         /// <summary>Actual admitted compiled role identity for host evidence; not a separately constructed fixture.</summary>
         public string LoadedContentSha256 => _view?.Text.ContentSha256;
+        /// <summary>Host QA must treat a nonzero count as failed label-layout acceptance, without stopping play.</summary>
+        public int PitchLayoutFailureCount { get; private set; }
 
         /// <summary>Called explicitly after the shell admits roots and creates its coordinator, before playback.</summary>
         public void Initialize(ClientMatchCoordinator coordinator, GameObject menu, GameObject setup, GameObject match, GameObject report, MatchClientBehaviour renderer, Action applyVisibility)
@@ -222,10 +235,16 @@ namespace TacticalDirector.MatchClientUnity
             Text direction = _ui.Label(pitchColumn, L("pitch.direction"));
             bodyLayout.PitchMeasure = direction;
             RectTransform pitch = _ui.Node("Pitch", pitchColumn);
-            _pitch = pitch.gameObject.AddComponent<RawImage>();
+            _pitchBounds = pitch;
+            _pitchLayout = pitch.gameObject.AddComponent<S0PitchLayout>();
+            RectTransform imageRect = _ui.Node("Pitch image", pitch);
+            imageRect.anchorMin = imageRect.anchorMax = new Vector2(0.5f, 1);
+            imageRect.pivot = new Vector2(0.5f, 1);
+            imageRect.anchoredPosition = Vector2.zero;
+            _pitchLayout.Image = imageRect;
+            _pitch = imageRect.gameObject.AddComponent<RawImage>();
             _pitch.color = Color.white;
             _pitch.raycastTarget = false;
-            pitch.gameObject.AddComponent<S0PitchLayout>();
             _pitchWaiting = _ui.Label(pitchColumn, L("pitch.waiting"));
             _ui.Label(pitchColumn, L("pitch.legend"));
             _pitchDescription = _ui.Label(pitchColumn, L("pitch.description"));
@@ -236,6 +255,7 @@ namespace TacticalDirector.MatchClientUnity
                 RectTransform rect = label.rectTransform;
                 rect.sizeDelta = new Vector2(S0UiConstants.TEXT_SIZE * _textScale * 4, S0UiConstants.TEXT_SIZE * _textScale * 2);
                 _pitchLabels.Add(label);
+                _labelReserved[i] = true;
                 RectTransform line = _ui.Node("Marker tether", pitch);
                 var image = line.gameObject.AddComponent<Image>();
                 image.color = S0UiConstants.TEXT_COLOR;
@@ -272,6 +292,9 @@ namespace TacticalDirector.MatchClientUnity
                 clicked.callback.AddListener(_ => Focus(markerControl));
                 hover.triggers.Add(clicked);
             }
+
+            for (int i = 0; i < _leaderLines.Length; i++)
+                _leaderLines[i].SetSiblingIndex(i + 1); // image, tethers, labels: tethers remain visible over the pitch.
 
             Heading(rail, L("heading.changes"), _matchScroll);
             _current = _ui.Label(rail, "");
@@ -415,6 +438,7 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Bind()
         {
+            _pitchLayoutDirty = true;
             for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
             {
                 Mentality value = S0ScreenPresenter.Mentalities[i];
@@ -437,13 +461,13 @@ namespace TacticalDirector.MatchClientUnity
             _slower.interactable = _view.CanSlower;
             _faster.interactable = _view.CanFaster;
             _pause.interactable = _view.CanPause;
-            S0UiFactory.Set(_pause, L(_view.IsPaused ? "action.resume" : "action.pause"));
+            _ui.SetButton(_pause, L(_view.IsPaused ? "action.resume" : "action.pause"));
             _mentality.interactable = _view.CanChangeMentality;
             _substitution.interactable = _view.CanSubstitute;
             _report.gameObject.SetActive(_view.CanReport);
             _statisticsToggle.gameObject.SetActive(!_view.IsFullTime);
             _statisticsToggle.interactable = !_view.Frame.IsEmpty;
-            S0UiFactory.Set(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
+            _ui.SetButton(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
             _matchStatistics.gameObject.SetActive(_view.IsStatisticsOpen && _view.HasStatistics);
             S0UiFactory.Set(_notice, _view.StatisticsNotice);
             S0UiFactory.Set(_caption, _view.StatisticsCaption);
@@ -452,22 +476,25 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.Set(_reportNotice, _view.StatisticsNotice);
             S0UiFactory.Set(_reportCaption, _view.StatisticsCaption);
             _partialToggle.gameObject.SetActive(_view.IsStatisticsIncomplete && _view.HasStatistics);
-            S0UiFactory.Set(_partialToggle, L(_view.IsPartialReportOpen ? "action.statistics_close" : "action.partial"));
+            _ui.SetButton(_partialToggle, L(_view.IsPartialReportOpen ? "action.statistics_close" : "action.partial"));
             _reportStatistics.gameObject.SetActive(_view.HasStatistics && (!_view.IsStatisticsIncomplete || _view.IsPartialReportOpen));
             BindStatistics();
             BindFeedback();
             BindDialog();
             _matchCamera.enabled = _view.Screen == ClientScreens.MatchView && !_view.Frame.IsEmpty;
             _pitchWaiting.gameObject.SetActive(_view.Frame.IsEmpty);
-            _pitch.gameObject.SetActive(!_view.Frame.IsEmpty);
+            _pitchBounds.gameObject.SetActive(!_view.Frame.IsEmpty);
             if (_view.Screen == ClientScreens.MainMenu)
             {
                 foreach (Text label in _pitchLabels)
                     S0UiFactory.Set(label, "");
+                Array.Clear(_measuredText, 0, _measuredText.Length);
+                _measuredWidth = 0;
+                _pitchLayout.LabelHeight = 0;
                 foreach (Button button in _outgoing)
-                    S0UiFactory.Set(button, "");
+                    _ui.SetButton(button, "");
                 foreach (Button button in _incoming)
-                    S0UiFactory.Set(button, "");
+                    _ui.SetButton(button, "");
                 S0UiFactory.Set(_pitchDescription, L("pitch.description"));
             }
 
@@ -476,15 +503,13 @@ namespace TacticalDirector.MatchClientUnity
 
         private void MarkChoice(Button button, bool selected, string tag)
         {
-            Transform existing = button.transform.Find("Selection");
-            if (existing == null)
+            if (!_selectionText.TryGetValue(button, out Text label))
             {
-                Text label = _ui.Label(button.transform, tag);
+                label = _ui.Label(button.transform, tag);
                 label.gameObject.name = "Selection";
-                existing = label.transform;
+                _selectionText.Add(button, label);
             }
-
-            existing.gameObject.SetActive(selected);
+            label.gameObject.SetActive(selected);
         }
 
         private void BindDialog()
@@ -507,7 +532,7 @@ namespace TacticalDirector.MatchClientUnity
                 _outgoing[i].gameObject.SetActive(exists);
                 if (exists)
                 {
-                    S0UiFactory.Set(_outgoing[i], _view.Outgoing[i].Label);
+                    _ui.SetButton(_outgoing[i], _view.Outgoing[i].Label);
                     MarkChoice(_outgoing[i], _view.Outgoing[i].Index == _view.SelectedOutgoing, L("tag.requested"));
                 }
             }
@@ -518,7 +543,7 @@ namespace TacticalDirector.MatchClientUnity
                 _incoming[i].gameObject.SetActive(exists);
                 if (exists)
                 {
-                    S0UiFactory.Set(_incoming[i], _view.Incoming[i].Label);
+                    _ui.SetButton(_incoming[i], _view.Incoming[i].Label);
                     MarkChoice(_incoming[i], _view.Incoming[i].Index == _view.SelectedIncoming, L("tag.requested"));
                 }
             }
@@ -535,9 +560,17 @@ namespace TacticalDirector.MatchClientUnity
                 _earlierToggle.transform.SetParent(target, false);
             if (_earlierRoot.parent != target)
                 _earlierRoot.SetParent(target, false);
+            // Chronological visual and Tab order is explicit after every reparent/repeat match.
+            _earlierToggle.transform.SetSiblingIndex(1);
+            _earlierRoot.SetSiblingIndex(2);
+            _feedbackRoot.SetSiblingIndex(3);
             _scrolls[_earlierToggle] = scroll;
             while (_feedbackRows.Count < _view.Feedback.Count)
-                _feedbackRows.Add(Heading(_feedbackRoot, "", _matchScroll, false));
+            {
+                Selectable row = Heading(_feedbackRoot, "", _matchScroll, false);
+                _feedbackRows.Add(row);
+                _feedbackText.Add(row, row.GetComponent<Text>());
+            }
             int earlier = Mathf.Max(0, _view.Feedback.Count - S0UiConstants.EXPANDED_FEEDBACK);
             for (int i = 0; i < _feedbackRows.Count; i++)
             {
@@ -547,19 +580,20 @@ namespace TacticalDirector.MatchClientUnity
                 row.gameObject.SetActive(exists && (i >= earlier || _view.IsEarlierFeedbackOpen));
                 if (!exists)
                 {
-                    S0UiFactory.Set(row.GetComponent<Text>(), "");
+                    S0UiFactory.Set(_feedbackText[row], "");
                     continue;
                 }
 
                 Transform parent = i < earlier ? _earlierRoot : _feedbackRoot;
                 if (row.transform.parent != parent)
                     row.transform.SetParent(parent, false);
-                S0UiFactory.Set(row.GetComponent<Text>(), _view.Feedback[i]);
+                row.transform.SetSiblingIndex(i < earlier ? i : i - earlier);
+                S0UiFactory.Set(_feedbackText[row], _view.Feedback[i]);
             }
 
             _earlierToggle.gameObject.SetActive(earlier > 0);
             _earlierRoot.gameObject.SetActive(_view.IsEarlierFeedbackOpen);
-            S0UiFactory.Set(_earlierToggle, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+            _ui.SetButton(_earlierToggle, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
         }
 
         private void BindStatistics()
@@ -573,15 +607,18 @@ namespace TacticalDirector.MatchClientUnity
                 layout.childControlWidth = layout.childControlHeight = true;
                 layout.childForceExpandWidth = true;
                 layout.childForceExpandHeight = false;
-                for (int i = 0; i < 3; i++)
+                var labels = new Text[3];
+                for (int i = 0; i < labels.Length; i++)
                 {
                     Text label = _ui.Label(row, "");
+                    labels[i] = label;
                     label.alignment = i == 0 ? TextAnchor.UpperLeft : TextAnchor.UpperRight;
                     var size = label.gameObject.AddComponent<LayoutElement>();
                     size.flexibleWidth = 1;
                 }
 
                 _statRows.Add(row);
+                _statText.Add(row, labels);
             }
 
             for (int i = 0; i < _statRows.Count; i++)
@@ -607,15 +644,17 @@ namespace TacticalDirector.MatchClientUnity
                     away = stat.Away;
                 }
 
-                S0UiFactory.Set(row.GetChild(0).GetComponent<Text>(), label);
-                S0UiFactory.Set(row.GetChild(1).GetComponent<Text>(), home);
-                S0UiFactory.Set(row.GetChild(2).GetComponent<Text>(), away);
+                S0UiFactory.Set(_statText[row][0], label);
+                S0UiFactory.Set(_statText[row][1], home);
+                S0UiFactory.Set(_statText[row][2], away);
             }
         }
 
         private void BindPitch()
         {
             if (_view.Screen != ClientScreens.MatchView || _view.Frame.IsEmpty)
+                return;
+            if (!PreparePitchLayout())
                 return;
             MatchFrameView frame = _view.Frame;
             int width = Mathf.Clamp(Mathf.RoundToInt(_pitch.rectTransform.rect.width), 1, S0UiConstants.MAX_TEXTURE_SIDE);
@@ -635,25 +674,29 @@ namespace TacticalDirector.MatchClientUnity
                 _matchCamera.targetTexture = _pitchTexture;
             }
 
-            Vector2 viewportSize = _pitch.rectTransform.rect.size;
+            Vector2 viewportSize = _pitchBounds.rect.size;
+            float imageBottom = viewportSize.y - _pitch.rectTransform.rect.height;
             for (int i = 0; i < _pitchLabels.Count; i++)
             {
-                Text label = _pitchLabels[i];
                 var cue = frame.AgentCues[i];
                 Vector3 world = default;
                 _labelVisible[i] = !cue.IsSentOff && _renderer.TryGetRenderedAgentPosition(i, cue.PlayerId, out world);
                 if (!_labelVisible[i])
                     continue;
-                S0UiFactory.Set(label, _view.PitchMarker(i));
                 Vector3 projected = _matchCamera.WorldToViewportPoint(world);
                 _labelVisible[i] = projected.z > 0 && projected.x >= 0 && projected.x <= 1 && projected.y >= 0 && projected.y <= 1;
-                _markerPoints[i] = new Vector2(projected.x * viewportSize.x, projected.y * viewportSize.y);
-                _labelSizes[i] = new Vector2(label.preferredWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP);
+                _markerPoints[i] = new Vector2(projected.x * viewportSize.x,
+                    imageBottom + projected.y * _pitch.rectTransform.rect.height);
             }
 
             if (viewportSize.x <= 0 || viewportSize.y <= 0)
                 return;
-            S0ScreenLayout.PlacePitchLabels(viewportSize, _markerPoints, _labelSizes, _labelVisible, _labelCentres, S0UiConstants.GAP);
+            if (!S0ScreenLayout.TryPlacePitchLabels(viewportSize, _markerPoints, _labelSizes, _labelVisible, _labelCentres, S0UiConstants.GAP))
+            {
+                RecordLayoutFailure();
+                return;
+            }
+            _layoutFailureReported = false;
             for (int i = 0; i < _pitchLabels.Count; i++)
             {
                 Text label = _pitchLabels[i];
@@ -671,8 +714,62 @@ namespace TacticalDirector.MatchClientUnity
                 Vector2 delta = _labelCentres[i] - _markerPoints[i];
                 line.sizeDelta = new Vector2(delta.magnitude, 1);
                 line.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
-                line.SetAsFirstSibling();
             }
+        }
+
+        private bool PreparePitchLayout()
+        {
+            if (_screenWidth != Screen.width || _screenHeight != Screen.height)
+            {
+                _screenWidth = Screen.width;
+                _screenHeight = Screen.height;
+                _pitchLayoutDirty = true;
+            }
+            // UGUI normally lays out at render, after LateUpdate. Activation/geometry changes must
+            // complete that pass before we read the rect, never the default first-frame 100x100.
+            if (_pitchLayoutDirty)
+                Canvas.ForceUpdateCanvases();
+            float width = _pitchBounds.rect.width;
+            if (width <= S0UiConstants.GAP)
+                return false;
+            bool changed = _measuredWidth != width;
+            for (int i = 0; i < _pitchLabels.Count; i++)
+            {
+                Text label = _pitchLabels[i];
+                string text = _view.PitchMarker(i);
+                if (_measuredText[i] == text && _measuredWidth == width)
+                    continue;
+                S0UiFactory.Set(label, text);
+                float textWidth = Mathf.Min(width - S0UiConstants.GAP, label.preferredWidth);
+                label.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, textWidth);
+                _labelSizes[i] = new Vector2(textWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP);
+                _measuredText[i] = text;
+                changed = true;
+            }
+            _measuredWidth = width;
+            if (changed)
+            {
+                float height = S0ScreenLayout.RequiredPitchLabelHeight(width, _labelSizes, _labelReserved, S0UiConstants.GAP);
+                if (float.IsPositiveInfinity(height))
+                {
+                    RecordLayoutFailure();
+                    return false;
+                }
+                _pitchLayout.LabelHeight = height;
+                LayoutRebuilder.MarkLayoutForRebuild(_pitchBounds);
+                Canvas.ForceUpdateCanvases();
+            }
+            _pitchLayoutDirty = false;
+            return _pitchBounds.rect.height > 0;
+        }
+
+        private void RecordLayoutFailure()
+        {
+            if (_layoutFailureReported)
+                return;
+            _layoutFailureReported = true;
+            PitchLayoutFailureCount++;
+            Debug.LogWarning("S0 pitch label layout is incomplete; record I-Q01/I-Q16 as failed. Playback remains available.");
         }
 
         private void LateUpdate()
@@ -835,4 +932,5 @@ namespace TacticalDirector.MatchClientUnity
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Persistent four-screen UGUI binding and keyboard/dialog/resource lifecycle. |
+// | 1.1     | 2026-10-08 | —      | Complete first-frame layout, grow full-label scroll surface, cache metrics/controls and stabilize chronological history. |
 #endregion
