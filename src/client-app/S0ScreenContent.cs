@@ -69,7 +69,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("mentality.very_defensive", "Very Defensive", ""),
             new S0TextRole("pitch.description", "Match pitch. Home H attacks right", ""),
             new S0TextRole("pitch.direction", "Home attacks right → • Away attacks left ←", ""),
-            new S0TextRole("pitch.legend", "H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution. Tab enters the pitch; arrow keys inspect players; Tab moves on.", ""),
+            new S0TextRole("pitch.legend", "H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution.", ""),
             new S0TextRole("pitch.waiting", "Pitch appears after the first frame.", ""),
             new S0TextRole("reason.choice_changed", "This choice is no longer available. Choose an available player.", ""),
             new S0TextRole("reason.ended", "Match ended — playback and team changes are unavailable.", ""),
@@ -185,4 +185,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Complete reviewed S0 role register and coverage. |
 // | 1.1     | 2026-10-08 | —      | Localized pitch legend explains single Tab entry and read-only arrow inspection. |
+// | 1.2     | 2026-10-08 | —      | Restore owner-approved pitch legend verbatim; keyboard inspection remains in the focus binding. |
 #endregion

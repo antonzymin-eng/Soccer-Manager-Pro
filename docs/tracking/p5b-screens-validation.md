@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.6\
+**Version:** 0.7\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -230,7 +230,8 @@ set the same entry, so keyboard re-entry resumes at that inspected player. Hidde
 markers are skipped; losing the inspected marker recovers to a surviving marker, or an
 available page control when none survive. Modal eligibility blocks background inspection.
 Return resets pitch entry. Headings and feedback rows remain explicit anchors outside Tab.
-The existing localized `pitch.legend` now explains Tab entry, arrows and Tab exit.
+At 9e56abe, `pitch.legend` was expanded with key instructions; v0.7 below restores
+the approved wording. Keyboard traversal itself is unchanged.
 
 `S0FocusNavigation` is a consumed host-free ClientApp policy for role-based Tab eligibility,
 wrapped movement, first surviving selector and latest current feedback index. The Unity
@@ -272,6 +273,29 @@ This revision needs fresh exact-head CI. Keep PR #489 draft. Pinned Unity compil
 Editor-regenerated lock, native allocation tests, runtime QA, zero layout-failure count and
 1×/10× B8 profiling remain due; B8/B9b/B10/Gate J stay open.
 
+## Approved legend correction (v0.7)
+
+Review confirmed that 9e56abe appended keyboard instructions to `pitch.legend` while
+[the owner-accepted binding contract](../design/ux-s0-binding-contracts.md) v0.4 §4
+still specified the original text. Restore that exact text:
+
+> H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution.
+
+No new player-facing keyboard hint is added elsewhere. Keyboard instructions remain in
+the implementation README and I-Q15 procedure. The composite pitch navigation, description
+projection and committed focus tests are unchanged. The accepted contract and its approval
+remain intact; this is a source correction, not a wording proposal or new owner acceptance.
+
+All production content declarations match 9aa1aca exactly (excluding append-only source
+history). The compiled formatter again reports the original base hash shown below.
+Supplementary CLR 8.0.28 / NUnitLite 3.14 at 20:18 UTC: **118/118 ClientApp fast cases**
+pass after recompiling ClientApp, including all focus and read-only inspection cases;
+the same long full-match exclusion applies. This does not validate Unity wiring or input.
+Fresh exact-head CI is required. PR stays draft and the pinned-host gates remain open.
+B8 profiling must also distinguish Editor-only missing-component allocation noise from
+player-build GC and include the per-frame focus recovery/visibility work. No performance
+acceptance is inferred from source review.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -283,7 +307,7 @@ shirts, bench slot and Applied minute can be independently reordered; brace-cont
 names remain literal data. One-value typed cache paths avoid boxing/argument arrays on
 unchanged values. Match teardown drops match caches/identities; shell context is fixed.
 
-Canonical base content SHA-256: `ed78c939f94608368300bf891c20216fd3e474ffa4054b300ffe04a59965d8e1`.
+Canonical base content SHA-256: `6a6e38939b35ec7ed1f2dced11c3fd0d6822eecf1a98db78545bf31164d41c8c`.
 The hash format is the ordered UTF-8 sequence `key|schema|pattern-length:pattern\n`.
 The real binding exposes `LoadedContentSha256`. Packaged-font admission applies equivalent
 punctuation fallbacks before Resolve/validation/hash; host evidence must record the actual
@@ -394,3 +418,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.4 | October 8, 2026 | Unity-native allocation constraints and positive controls replace the managed counter in Editor tests; explicit TestRunner references, Linux passes and compile-only evidence limits recorded. Pinned-host acceptance remains open. |
 | 0.5 | October 8, 2026 | Codex focus corrections: action-only Tab traversal, first available dialog selector and active current feedback after repeat matches. Baseline CI, bounded before/after control-flow checks and exact I-Q15 host cases recorded; host gates stay open. |
 | 0.6 | October 8, 2026 | Restore keyboard pitch inspection through one composite Tab stop and arrows; consume host-free focus policy with 18 permanent regressions plus a composed read-only description test. Content hash/legend and native I-Q15 cases updated; host gates stay open. |
+| 0.7 | October 8, 2026 | Restore the owner-approved pitch legend verbatim and original content hash; retain composite keyboard inspection and permanent focus coverage. Pinned-host/CI acceptance remains open. |
