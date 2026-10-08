@@ -2,8 +2,8 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.10\
-**Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
+**Version:** 0.11\
+**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); Unity/host acceptance OPEN\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
 **Base:** main `574b0344db3cfe24ee6bef5db459e1b34e6365f4`, after L2 PR #487 merged. The coordinator's pinned-host acceptance is recorded separately in [lifecycle validation](p5b-lifecycle-validation.md) v0.5; that evidence is not carried forward as a screen compile.
@@ -387,6 +387,33 @@ v0.5 describe pitch descriptions as read-only, displayed on pointer or the keybo
 never staging or dispatching. The 8464b71 implementation already matches this order. No
 code, copy or content-hash change.
 
+## Merged to main (v0.11)
+
+PR #489 merged on October 8, 2026 at 22:42 UTC as merge commit
+`1c8366df232bce082c6a70e1e6f936f6a14aa778`, from PR head
+`307b145e293ac3d30bb09bbb7f8ff285a4a1cd55`. CI run 37848750594 on that head passed every
+check, including the Linux functional gate (the first execution of `S0ContentContractTests`
+and the `MoveInLogicalOrder` regressions). The Unity tests job was skipped, as on every
+earlier head.
+
+The PR was marked ready and merged before the pinned-host procedure below ran. Main therefore
+carries the UGUI skin and the hand-authored `Packages/packages-lock.json` without a Unity
+compile. Consequences for the host run:
+
+- Run the procedure against main at `1c8366d` (or the main head current at run time, recorded
+  in full), not the PR head. Sections above that say "keep PR #489 draft" or name a PR head
+  as the target are superseded.
+- If the Unity compile or EditMode run fails, main is red on the governing build until a
+  follow-up PR lands; fix forward on main rather than reverting the coordinator work.
+- `S0ContentContractTests` and the existing `LocalizationCoreContractTests` locate the repo
+  root from `TestContext.CurrentContext.TestDirectory`, not `AppContext.BaseDirectory`.
+  Their Unity behaviour is unobserved. A "Could not locate repository root" failure there
+  belongs to the open repo-root-resolver issue, not to content drift; record it as such.
+
+Still open: Unity 6000.4.9f1 compile and EditMode runs, Editor-regenerated package lock,
+real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling, B9b/B10 and
+Gate J. No code, copy or content-hash change in this revision.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -513,3 +540,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.8 | October 8, 2026 | Five Codex corrections: exclude focus overlays from layout, rebind independent comparison tags, restore three complete approved sentences. All 141 role patterns now match the contract; new loaded-content hash and exact native QA obligations recorded, host gates remain open. |
 | 0.9 | October 8, 2026 | Explicit journey §9.3 Match View Tab order (Codex: statistics before history), pitch entry placed after the approved sequence pending owner decision, and permanent 141-role binding-contract parity test. Not compiled locally; host gates remain open. |
 | 0.10 | October 8, 2026 | Records the owner decision to ship keyboard pitch inspection; journey v0.36 and binding contracts v0.5 now include it. Docs only; host gates remain open. |
+| 0.11 | October 8, 2026 | Records the #489 merge to main (`1c8366d` from `307b145`, CI 37848750594 green, Unity job skipped) ahead of host acceptance; the host procedure now targets main, and the repo-root lookup risk for the two contract tests is noted. All host gates remain open. |
