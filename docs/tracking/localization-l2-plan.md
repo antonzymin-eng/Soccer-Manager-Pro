@@ -1,11 +1,12 @@
 # System XI — Localization #49 L2 Implementation Plan
 
 **Created:** October 6, 2026\
-**Last Updated:** October 6, 2026\
-**Version:** 0.5\
-**Status:** PLAN FOR REVIEW — source audited; owner decisions on ERR-049-005 and ERR-049-006 recorded (October 6, 2026); implementation not started\
+**Last Updated:** October 7, 2026\
+**Version:** 0.6\
+**Status:** IMPLEMENTED — Q1–Q4 recommendations selected under the owner’s October 7 work instruction; Linux PR gate and exact-head pinned Unity compile pending before merge\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
+**Implementation base:** current `main` `0381b2bbc909ac8d51b4069a0cf3e80e7eb0433d` (PR #486 merge).
 
 ## 1. Authority
 
@@ -18,9 +19,15 @@
 - **Consumer contract:** [S0 binding contracts](../design/ux-s0-binding-contracts.md) §4 and the
   [S0 journey](../design/ux-s0-pm1-journey.md) §14.7. The P5b copy/scale/screens slice will inject
   one L2 `ILocalizer` and call only `Resolve`. It never calls `Render`.
-- **Defect record:** `spec-error-log.md` ERR-049-005 (OPEN, assigned to L2).
+- **Defect record:** `spec-error-log.md` ERR-049-005 and ERR-049-006 (RESOLVED in this L2 changeset).
 
-The spec wins over this plan wherever they differ. Proposed types and members are TO BUILD.
+The spec wins over this plan wherever they differ. L2 types and members below are implemented in this changeset.
+Compilation/test evidence: Roslyn C# 9 against netstandard2.1; NUnitLite 3.14 executes the compiled
+Localization test assembly: 60 passed / 0 failed / 0 skipped (18 L1 + 42 L2 cases). Removing each
+static/template/clause coverage check and adding recursive expansion all fail negative controls.
+The environment’s .NET CLI/VSTest fail before execution, so this is targeted evidence, not a canonical
+PR-gate pass. All localization test sources also compile against NUnit 3.5; that API compatibility
+check does not substitute for the Unity Editor. Pinned Unity 6000.4.9f1 remains unavailable here and required on the exact PR head.
 
 ## 2. Scope
 
@@ -106,7 +113,7 @@ defined terminal result for a key that was never admitted.
 - `spec-error-log.md`: ERR-049-005 entry and index row marked RESOLVED, with the test names as evidence.
 - `SPEC_INDEX.md`: #49 status stays APPROVED. This is a back-prop, not a re-approval.
 
-If §8 Q1 is accepted, the same terminal rule also covers `Render` of a non-admitted template id and a
+With §8 Q1 selected, the same terminal rule also covers `Render` of a non-admitted template id and a
 clause missing from both catalogues. Those are recorded in the same back-prop, under F1/F2, as
 defensive behaviour.
 
@@ -211,7 +218,7 @@ that the client formatter consumes (binding contracts §4.1).
 ### 5.4 `Render(request)` (§3.2, FR-LC-007–010)
 
 1. `n` = base variant count for `request.Id`. If `n == 0` (not admitted), return `string.Empty`
-   (§8 Q1).
+   (§8 Q1 selected).
 2. `variant = (int)(request.SelectionDraw % (ulong)n)`. The modulo is computed in `ulong` before
    narrowing (FR-LC-007/020).
 3. Take the selected locale's variant at that index if present, otherwise the base variant at the
@@ -226,7 +233,7 @@ that the client formatter consumes (binding contracts §4.1).
    substituted values are never re-scanned. A placeholder with no slot is left verbatim, as `.Replace`
    does today.
 6. If `HasCitedEpisode`, look up the clause by `(Id.ProducerTag, CitationKind)`: selected, then base.
-   If found, append `" " + clause`. If absent from both, append nothing (§8 Q1).
+   If found, append `" " + clause`. If absent from both, append nothing (§8 Q1 selected).
 
 The renderer draws no random numbers, advances no tick, writes no state and does no producer-specific
 formatting (FR-LC-005).
@@ -272,26 +279,20 @@ formatting (FR-LC-005).
 Expected size: about seven source files and two test files in one PR. No match-engine, save, schema or
 RNG change, so the full Linux gate is runnable on a worker.
 
-## 8. Open choices for review (each has a recommendation)
+## 8. Implementation choices (Q1–Q4 selected October 7, 2026)
 
-- **Q1. Apply the terminal rule to `Render` as well?** A non-admitted template id would otherwise divide
-  by zero, and FR-LC-011 forbids a crash. **Recommend:** yes. Return `""` for a non-admitted template id,
-  and append nothing for a clause absent from both catalogues. Both cases are unreachable for admitted
-  identities.
-- **Q2. Selector representation.** Option (a): forms in the data model (a variant declares one selector
-  and keyed forms). Option (b): an inline syntax such as `{n, plural, one{…} other{…}}`.
-  **Recommend (a):** it needs no new grammar, escaping or parser, malformed forms fail at construction,
-  and KD-3's "bounded" rule is enforced by type. Combined plural+gender selection in one variant is
-  deferred.
-- **Q3. Plural rules.** **Recommend:** each catalogue receives an optional `Func<long, PluralCategory>`.
-  It is required only if that catalogue declares a plural selector. L2 ships no built-in locale rule;
-  tests use a synthetic rule. Real CLDR tables arrive with real locales (Wave 8). The alternative,
-  shipping CLDR rules in L2, is Wave-8 scope under §6.5. Risk: a delegate can be impure. The
-  contract requires a pure, total function; `Render` treats an undefined returned category as the
-  default form; and the thread-safety claim in §5.2 depends on that contract.
-- **Q4. Selected-locale orphans.** These are selected rows whose key, id or clause is absent from base.
-  **Recommend:** reject at construction. An orphan can never render, because the base catalogue is the
-  admission authority, so it most likely indicates a typo.
+- **Q1 — selected: terminal rule applies to `Render`.** A never-admitted template id returns
+  `string.Empty` before modulo. A clause absent from both catalogues appends nothing. Construction
+  coverage prevents either terminal path for required identities.
+- **Q2 — selected: forms in the data model.** Each variant declares at most one plural or gender
+  selector, keyed forms and one default form. No inline grammar or brace escape is added; combined
+  plural/gender selection remains deferred.
+- **Q3 — selected: optional caller-supplied rule per catalogue.** `Func<long, PluralCategory>` is
+  required only for catalogues declaring plural selectors. It must be pure and total; concurrent-read
+  safety depends on that caller contract. Undefined returned categories use the default form. Real
+  CLDR tables remain Wave-8 work.
+- **Q4 — selected: reject selected-locale orphans.** Static keys, template ids and clause keys absent
+  from base fail `Localizer` construction; translated variant indices outside the base range also fail.
 - **Q5. Single-pass expansion versus chained `.Replace`.** Decided as ERR-049-006 (§4.2), approved by
   the owner on October 6, 2026: single pass, with the approved spec text corrected in the implementing
   commit and tested by T13. (v0.1 cited the S0
@@ -300,19 +301,40 @@ RNG change, so the full Linux gate is runnable on a worker.
 
 ## 9. Exit criteria (plan §6.6, plus this plan)
 
-- [ ] Tests T1–T16 are green, and every L1 structural lock still passes.
-- [ ] Each coverage mutant (T5/T6) fails construction.
-- [ ] FR-LC-009 conformance (T10) is shown through the real renderer.
-- [ ] ERR-049-005 is RESOLVED with executable evidence (T5 static-key mutant + T7), and the spec,
+- [x] Tests T1–T16 are green, and every L1 structural lock still passes.
+- [x] Each coverage mutant (T5/T6) fails construction.
+- [x] FR-LC-009 conformance (T10) is shown through the real renderer.
+- [x] ERR-049-005 is RESOLVED with executable evidence (T5 static-key mutant + T7), and the spec,
   section-7 and error log are updated in the same commit.
-- [ ] ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
-- [ ] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
+- [x] ERR-049-006 is filed and RESOLVED in the same commit, with T13 as evidence.
+- [x] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
 - [ ] `bash tools/run-tests-local.sh --pr` passes with no new failures.
-- [ ] Tracking surfaces are current, and the doc-consistency check passes.
+- [x] Tracking surfaces are current, and the doc-consistency check passes.
 - [ ] Pinned Unity compile passes on the PR head before merge.
 
 L2 does not unblock captions on its own: audio D49 still needs the approved #49/#51 caption boundary.
-It does unblock the P5b copy/scale/screens slice, which can then inject a real `ILocalizer`.
+After the remaining merge gates pass and L2 lands, P5b copy/scale/screens can inject the production `ILocalizer`.
+
+## Validation evidence
+
+The canonical `bash tools/run-tests-local.sh --pr` was attempted on the implementing source:
+coverage names `TacticalDirector.Localization`; checklist/schema surveys and approval-transition
+selection pass; metadata and generated-project checks pass; `dotnet restore` then aborts in
+`Process.GetStat` / `Process.StartTime` before compilation/test execution. Canonical gate status is
+**BLOCKED by the authoring environment**, not passed. Fresh GitHub Actions evidence remains due.
+
+Broader tooling: 343 tests, 340 passed / 1 failed / 2 skipped. The failure is
+`test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required` (Git exit 128,
+"the remote end hung up unexpectedly"). It reproduces in a detached baseline checkout at
+`0381b2bbc909ac8d51b4069a0cf3e80e7eb0433d`; tooling/hook code is unchanged by L2. No test was
+excluded or altered. Documentation consistency, assembly tiers, whitespace and metadata checks pass.
+
+The 42 L2 cases live in `LocalizationRenderingTests.cs` and `LocalizationCatalogueTests.cs`;
+parameterized cases expand T1–T16 without adding another production dependency. The unchanged
+`LocalizationCoreContractTests` supplies the 18 L1 locks. The pre-merge host procedure is:
+check out the final PR head, record its full SHA and a clean source tree, compile both Localization
+asmdefs in Unity 6000.4.9f1 on the pinned host, and run Localization EditMode tests. Record the host,
+Editor version, result counts and log/evidence paths against that exact SHA before merge.
 
 ## Version History
 
@@ -323,3 +345,4 @@ It does unblock the P5b copy/scale/screens slice, which can then inject a real `
 | 0.3 | October 6, 2026 | Second review: the identity guarantee becomes brace-free slot values plus well-formed template tokens (enforced at construction), with counterexamples for token formation across substitutions and from template braces; T13/T14 cover them; evidence is stated as verified oracle slot values rather than corpus rows; `section-5.md` joins the ERR-049-006 back-prop list. Owner approval of ERR-049-006 still pending. |
 | 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |
 | 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |
+| 0.6 | October 7, 2026 | Q1–Q4 recommendations selected and L2 implemented; T1–T16/structural evidence and negative controls recorded; both ERRs back-propagated together. Canonical PR and pinned Unity gates remain open. |

@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.3 — L1 dependency-direction correction implemented; ERR-049-002 tracker closure pending landing close-out)
-**Version:** 0.3
+**Last Updated:** October 7, 2026 (v0.4 — L2 back-propagates ERR-049-005/006 and Q1-Q3; admission, terminal fallback and single-pass expansion)
+**Last Updated (prior):** September 11, 2026 (v0.3 — L1 dependency-direction correction implemented; ERR-049-002 tracker closure pending landing close-out)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/localization-seam-template-design.md` v0.2
 
@@ -110,8 +111,11 @@ what is serialized (a display transform), so **no** `SNAPSHOT_SCHEMA_VERSION` / 
 substitution (`{subject}`, `{opponent}`, `{score}`, …) **plus a bounded grammatical selector**: a template
 MAY declare a plural/gender category keyed on a slot (CLDR-style `one`/`few`/`many`/`other` + a small
 gender set) to choose among sub-forms of the same variant; it MUST NOT require arbitrary runtime morphology
-(case-declension synthesis, agreement engines). Base-locale English declares no categories → identity with
-today's `.Replace` behaviour. Deeper grammar is a Stage-3+ deferral (§7).
+(case-declension synthesis, agreement engines). One variant declares at most one plural or gender selector,
+with keyed forms in the data model and a required default form; there is no inline selector grammar.
+Base-locale English declares no selector of either kind. Expansion is single-pass and non-recursive
+(ERR-049-006): substituted values are never scanned again. Identity with chained `.Replace` holds when
+every slot value is brace-free and every template brace belongs to a well-formed `{name}` token. Construction enforces the template condition; runtime values may contain braces. Deeper grammar is a Stage-3+ deferral (§7).
 
 **KD-4 — Accessibility: record the boundary only (content is Wave 8).** A11y is a presentation-side,
 client-local concern (text scale, high-contrast + colourblind-safe palette reusing the `dataviz` colour
@@ -122,10 +126,12 @@ touches serialized state.
 
 **KD-5 — Fallback: stable default, never crash, never mutate.** A missing key, locale, `(Id, variant)`, or
 clause renders the **base-locale identity**, never a crash and never a state mutation. Precedence:
-`currentLocale` → `BaseLocale` → (dev builds only) a visible `‹key›` marker; **production always falls
-through to the base locale**. Because a missing translation resolves to base-locale English — today's exact
+`currentLocale` → `BaseLocale` → `string.Empty` for a never-admitted static key or template id;
+a missing unrequired clause appends nothing. Caller-admitted static keys, template ids and clause keys
+must all be present in base content at `Localizer` construction (ERR-049-005). A dev-only `‹key›` marker
+remains optional and is omitted in L2; production never exposes key text. Because a missing translation resolves to base-locale English — today's exact
 strings — **base-locale identity is the correctness anchor**: with only the base locale loaded, every
-rendered string is byte-identical to today's output (§3 / Appendix C).
+rendered string is byte-identical to today's output under KD-3's two identity conditions (§3 / Appendix C).
 
 **KD-6 — Seam placement / one-way reference direction (load-bearing for layering).** The generic core seam
 (`ILocalizer`, request/value contracts, catalogue/renderer behavior and locale data) lives high in
@@ -159,4 +165,5 @@ no `SubsystemOrdinal`, holds no persistent sim state, and bumps no save format. 
 | 0.1 | 2026-07-23 | — | Initial section from the converged supplement. Scope/deps/KD-1..7/boundary matrix, grounded in `InteractionTextGenerator`/`InteractionSlots`/`InteractionTextCorpus` + #38 FR-UI-004/KD-5. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-002 fix implementation.** Corrects stale §1 dependency/KD-6 wording to the already-approved generic-core + sibling-boundary architecture: the #49 core references no sim/producer assembly; a later producer adapter references both sides and constructs generic request identities. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. No runtime behavior or producer integration is added. |
+| 0.4 | 2026-10-07 | — | L2 back-propagates ERR-049-005/006 and Q1-Q3; admission, terminal fallback and single-pass expansion. |
 #endregion
