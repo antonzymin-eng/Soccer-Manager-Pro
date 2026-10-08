@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.5\
+**Version:** 0.6\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -170,7 +170,7 @@ NUnit output retained. The uncompiled skin, Editor-regenerated lock and measured
 layout cadence remain required; `PitchLayoutFailureCount` must be zero. PR #489 remains
 draft and B8/B9b/B10/Gate J remain open.
 
-## Codex review — keyboard focus correction (v0.5)
+## Codex review at 9aa1aca — keyboard focus correction (v0.5 snapshot)
 
 Review baseline: `3113d8211a36ad9253e77b399ca579d5a99f4856`. Its
 [CI run 37825109785](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37825109785)
@@ -216,6 +216,62 @@ Editor-regenerated lock, native allocation tests, `PitchLayoutFailureCount == 0`
 profiling and B8/B9b/B10/Gate-J acceptance remain open. No engine/save/schema/RNG, package
 pin, scene or gameplay behavior changes.
 
+## Keyboard pitch inspection and committed focus coverage (v0.6)
+
+The v0.5 action-only traversal removed the previously claimed keyboard access to pitch
+player descriptions. This revision restores it as **one composite pitch Tab stop**, rather
+than making all 22 markers separate Tab stops. This is read-only inspection of the existing
+pitch/detail projection; no new global shortcut, command, pause or navigation edge is added.
+
+The pitch's current visible marker is its sole Tab entry. Right/Down moves to the next
+visible marker; Left/Up moves to the previous one, with wrap in stable engine-slot order
+across Home and Away. Tab/Shift-Tab leaves the group for a surviving action. Pointer clicks
+set the same entry, so keyboard re-entry resumes at that inspected player. Hidden/sent-off
+markers are skipped; losing the inspected marker recovers to a surviving marker, or an
+available page control when none survive. Modal eligibility blocks background inspection.
+Return resets pitch entry. Headings and feedback rows remain explicit anchors outside Tab.
+The existing localized `pitch.legend` now explains Tab entry, arrows and Tab exit.
+
+`S0FocusNavigation` is a consumed host-free ClientApp policy for role-based Tab eligibility,
+wrapped movement, first surviving selector and latest current feedback index. The Unity
+binding supplies visibility/interactability/modal eligibility and applies EventSystem/scroll
+selection. Predicates are cached at composition. Pitch arrow handling returns before any
+choice-button click, and selected-player descriptions refresh after rendered visibility is
+applied. Native focus-ring/scroll/input behavior still needs the pinned host.
+
+Permanent `S0FocusNavigationTests` contributes **18 cases** to the existing ClientApp test
+assembly and Linux gate, covering one pitch entry at first/middle/last players, forward and
+reverse Tab exit, all 22 markers in both arrow directions, wrapping/removed markers,
+modal background exclusion, no visible targets, initial selector eligibility and retained
+feedback indexing. A composed presenter test reads 22 distinct current Home/Away shirt
+and goalkeeper descriptions through that traversal, with unchanged tick/command count and
+no dialog. Tests cover the production policy/projection; they do not execute UGUI input or
+prove that the native binding supplies correct eligibility.
+
+Supplementary CLR 8.0.28 / NUnitLite 3.14 at 19:58 UTC: **118/118 ClientApp fast cases**
+pass (same full-match exclusion), including the goalkeeper-description assertion.
+Focus tests compile against NUnit 3.5. Generic binding calls
+with Button-list/Selectable predicates pass a compile-only type-variance check; five changed
+C# files parse with zero C# 9 errors. These are not full Unity skin compilation.
+Temporary production-policy mutants prove the new tests detect the relevant mistakes:
+removing the pitch Tab entry fails **3/18** focus cases; reverting to retained-pool feedback
+indexing fails **3/18**. Committed source is restored/unmutated. The earlier transient focus
+harness remains historical supplementary evidence; regression protection now lives in repo.
+
+Pinned-host I-Q15 must Tab into the pitch once, inspect each visible player's full name,
+shirt and goalkeeper/substitute cue with all four arrows, then Tab and Shift-Tab out.
+Verify wrap, sent-off/hidden-marker recovery, no pitch target when none are visible,
+pointer-to-keyboard re-entry, fresh-match reset, modal background exclusion and full-time
+report-focus precedence. At 100/150/200% text scale, record focus ring/scroll reveal and
+complete description glyphs. Capture unchanged command history/playback state while doing
+inspection. No keyboard-support waiver is taken and no native QA pass is claimed.
+
+At 20:01 UTC, 9aa1aca's [run 37832229389](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37832229389)
+completed successfully, including its Linux functional gate; Unity was skipped.
+This revision needs fresh exact-head CI. Keep PR #489 draft. Pinned Unity compilation,
+Editor-regenerated lock, native allocation tests, runtime QA, zero layout-failure count and
+1×/10× B8 profiling remain due; B8/B9b/B10/Gate J stay open.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -227,7 +283,7 @@ shirts, bench slot and Applied minute can be independently reordered; brace-cont
 names remain literal data. One-value typed cache paths avoid boxing/argument arrays on
 unchanged values. Match teardown drops match caches/identities; shell context is fixed.
 
-Canonical base content SHA-256: `6a6e38939b35ec7ed1f2dced11c3fd0d6822eecf1a98db78545bf31164d41c8c`.
+Canonical base content SHA-256: `ed78c939f94608368300bf891c20216fd3e474ffa4054b300ffe04a59965d8e1`.
 The hash format is the ordered UTF-8 sequence `key|schema|pattern-length:pattern\n`.
 The real binding exposes `LoadedContentSha256`. Packaged-font admission applies equivalent
 punctuation fallbacks before Resolve/validation/hash; host evidence must record the actual
@@ -337,3 +393,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.3 | October 8, 2026 | Follow-up review: known-allocation controls reject always-zero runtime counters; ac9a0ac CI completion, wrapping qualification and explicit 1×/10× host layout profiling cases recorded. Unity/runtime/cert acceptance remains open. |
 | 0.4 | October 8, 2026 | Unity-native allocation constraints and positive controls replace the managed counter in Editor tests; explicit TestRunner references, Linux passes and compile-only evidence limits recorded. Pinned-host acceptance remains open. |
 | 0.5 | October 8, 2026 | Codex focus corrections: action-only Tab traversal, first available dialog selector and active current feedback after repeat matches. Baseline CI, bounded before/after control-flow checks and exact I-Q15 host cases recorded; host gates stay open. |
+| 0.6 | October 8, 2026 | Restore keyboard pitch inspection through one composite Tab stop and arrows; consume host-free focus policy with 18 permanent regressions plus a composed read-only description test. Content hash/legend and native I-Q15 cases updated; host gates stay open. |

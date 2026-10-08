@@ -93,6 +93,33 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void PitchInspectionReachesEveryDescriptionWithoutAdvancingOrQueuingCommands()
+        {
+            Start();
+            Tick();
+            ulong tick = _shell.Session.CurrentTick;
+            var descriptions = new HashSet<string>();
+            var markers = new int[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < markers.Length; i++)
+                markers[i] = i;
+            int current = S0FocusNavigation.FirstAvailable(markers, _ => true);
+            for (int i = 0; i < markers.Length; i++)
+            {
+                string description = _view.PitchPlayerDescription(current);
+                StringAssert.Contains(current < MatchEngineConstants.PLAYERS_PER_TEAM ? "Home" : "Away", description);
+                StringAssert.Contains("shirt", description);
+                if (_view.Frame.AgentCues[current].IsGoalkeeper)
+                    StringAssert.Contains("Goalkeeper", description);
+                Assert.IsTrue(descriptions.Add(description), "every marker exposes its own identity");
+                current = S0FocusNavigation.Move(markers, current, 1, _ => true);
+            }
+            Assert.AreEqual(0, current);
+            Assert.AreEqual(tick, _shell.Session.CurrentTick);
+            Assert.AreEqual(0, _shell.Session.Commands.Count);
+            Assert.AreEqual(S0ScreenPresenter.DialogKind.None, _view.Dialog);
+        }
+
+        [Test]
         public void RefreshWithSettledCommandHistoryDoesNotAllocateOnUnchangedFrames()
         {
             Start();
@@ -402,4 +429,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1     | 2026-10-08 | —      | Reproduce structural invalidation and unchanged-frame allocations after command settlement. |
 // | 1.2     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 // | 1.3     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
+// | 1.4     | 2026-10-08 | —      | Composed read-only pitch inspection reaches all 22 current player descriptions without ticking or dispatching. |
 #endregion

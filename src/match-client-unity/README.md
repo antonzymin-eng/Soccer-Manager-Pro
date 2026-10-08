@@ -293,12 +293,12 @@ are admitted for required characters, with equivalent punctuation fallbacks and 
 actual loaded content hash. `_textScale` is fixed per shell at 1.0–2.0. Only the
 coordinator controls match lifetime; UI forwards Start, staged home requests, explicit
 report acknowledgement and Return. The renderer's texture viewport supplies pointer/
-keyboard player inspection, localized labels and the white substitute annulus using
+keyboard player inspection (one pitch Tab entry, arrows among visible markers, Tab exit), localized labels and the white substitute annulus using
 an additional instance of the existing stroked ring prefab. That prefab must also
 expose the configured marker colour property. These are source mechanisms; runtime
 layout, glyphs, input and annulus appearance require host validation.
 
-Follow `docs/tracking/p5b-screens-validation.md` v0.5 for exact-head compile, candidate
+Follow `docs/tracking/p5b-screens-validation.md` v0.6 for exact-head compile, candidate
 lock regeneration, EditMode, real-client I-Q01–19 and cert-host checks. The new UGUI
 binding has not compiled/run in Unity here. Keep B8/B9b/B10 and Gate J open.
 
@@ -314,6 +314,7 @@ actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match check
 
 | Documentation revision | Date | Notes |
 |---|---|---|
+| PR #489 keyboard pitch inspection | October 8, 2026 | One roving pitch Tab entry and read-only arrows; consume tested ClientApp focus policy, with permanent regressions and explicit native I-Q15 cases. |
 | PR #489 Codex focus corrections | October 8, 2026 | Action-only Tab traversal; first dialog selector and active current feedback focus after repeat matches. Source/control-flow checks recorded; native input/scroll/compile proof still due. |
 | PR #489 Unity allocation correction | October 8, 2026 | Native allocation constraints with positive controls and explicit test-runner references; Linux counter retained. Pinned Editor/runtime proof still due. |
 | PR #489 counter/profiling follow-up | October 8, 2026 | Known-allocation test controls; narrow full-string wrapping qualification and 1×/10× host profiling procedure. ac9a0ac CI green; Unity/runtime proof still due. |

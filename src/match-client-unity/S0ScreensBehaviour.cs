@@ -35,7 +35,10 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<GameObject> _owned = new List<GameObject>();
         private readonly Dictionary<Selectable, GameObject> _focusRings = new Dictionary<Selectable, GameObject>();
         private readonly Dictionary<Selectable, ScrollRect> _scrolls = new Dictionary<Selectable, ScrollRect>();
-        private readonly HashSet<Selectable> _tabStops = new HashSet<Selectable>();
+        private readonly Dictionary<Selectable, S0FocusNavigation.Role> _focusRoles = new Dictionary<Selectable, S0FocusNavigation.Role>();
+        private readonly Selectable[] _pitchControls = new Selectable[MatchEngineConstants.SQUAD_SIZE];
+        private Predicate<Selectable> _isAllowed, _isTabStop;
+        private int _pitchEntryIndex = -1;
         private readonly Button[] _setupChoices = new Button[7];
         private readonly Button[] _mentalityChoices = new Button[7];
         private readonly List<Button> _outgoing = new List<Button>();
@@ -97,6 +100,8 @@ namespace TacticalDirector.MatchClientUnity
             _view = new S0ScreenPresenter(coordinator, S0TextFormatter.WithGlyphCoverage(_font.HasCharacter), new S0PresentationConfiguration(_textScale));
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _applyVisibility = applyVisibility ?? throw new ArgumentNullException(nameof(applyVisibility));
+            _isAllowed = IsAllowed;
+            _isTabStop = IsTabStop;
             _ui = new S0UiFactory(_font, _view.Configuration.TextScale);
             RectTransform m = Page(menu, out _menuScroll);
             _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
@@ -162,16 +167,14 @@ namespace TacticalDirector.MatchClientUnity
                     _renderer.RejectPresentation(exception);
                 }
             });
-            Register(button, scroll, isTabStop: true);
+            Register(button, scroll, S0FocusNavigation.Role.Action);
             return button;
         }
 
-        private void Register(Selectable control, ScrollRect scroll, bool isTabStop = false)
+        private void Register(Selectable control, ScrollRect scroll, S0FocusNavigation.Role role = S0FocusNavigation.Role.Anchor)
         {
             _scrolls.Add(control, scroll);
-            // Headings, feedback and pitch labels remain explicit focus targets, outside action traversal.
-            if (isTabStop)
-                _tabStops.Add(control);
+            _focusRoles.Add(control, role);
             RectTransform ring = _ui.Node("Keyboard focus", control.transform);
             S0UiFactory.Stretch(ring);
             // Four geometry strips: focus surrounds the control, never outlines individual text glyphs.
@@ -282,7 +285,8 @@ namespace TacticalDirector.MatchClientUnity
                 {
                     mode = Navigation.Mode.None
                 };
-                Register(markerControl, _matchScroll);
+                _pitchControls[i] = markerControl;
+                Register(markerControl, _matchScroll, S0FocusNavigation.Role.PitchMarker);
                 var selected = new EventTrigger.Entry
                 {
                     eventID = EventTriggerType.Select
@@ -293,7 +297,7 @@ namespace TacticalDirector.MatchClientUnity
                 {
                     eventID = EventTriggerType.PointerClick
                 };
-                clicked.callback.AddListener(_ => Focus(markerControl));
+                clicked.callback.AddListener(_ => FocusPitch(index));
                 hover.triggers.Add(clicked);
             }
 
@@ -396,10 +400,8 @@ namespace TacticalDirector.MatchClientUnity
         private Selectable DialogInitialFocus()
         {
             IReadOnlyList<Button> choices = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality ? _mentalityChoices : _outgoing;
-            for (int i = 0; i < choices.Count; i++)
-                if (IsAllowed(choices[i]))
-                    return choices[i];
-            return _cancel;
+            int first = S0FocusNavigation.FirstAvailable(choices, _isAllowed);
+            return first >= 0 ? choices[first] : _cancel;
         }
 
         private void CancelDialog()
@@ -414,8 +416,12 @@ namespace TacticalDirector.MatchClientUnity
         {
             ClientChangeRecord record = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality ? _view.SubmitMentality() : _view.SubmitSubstitution();
             Refresh();
-            if (record != null && _view.Feedback.Count != 0)
-                Focus(_feedbackRows[_view.Feedback.Count - 1]);
+            if (record != null)
+            {
+                int latest = S0FocusNavigation.LatestFeedbackIndex(_view.Feedback.Count, _feedbackRows.Count);
+                if (latest >= 0)
+                    Focus(_feedbackRows[latest]);
+            }
         }
 
         /// <summary>Called after the coordinator's accepted-frame refresh; retains authored/generated view roots.</summary>
@@ -499,6 +505,7 @@ namespace TacticalDirector.MatchClientUnity
             _pitchBounds.gameObject.SetActive(!_view.Frame.IsEmpty);
             if (_view.Screen == ClientScreens.MainMenu)
             {
+                _pitchEntryIndex = -1;
                 foreach (Text label in _pitchLabels)
                     S0UiFactory.Set(label, "");
                 Array.Clear(_measuredText, 0, _measuredText.Length);
@@ -795,6 +802,12 @@ namespace TacticalDirector.MatchClientUnity
                 try
                 {
                     BindPitch();
+                    // Marker visibility is applied in LateUpdate, after structural binding/focus recovery.
+                    RecoverFocus();
+                    Selectable focused = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
+                    int marker = Array.IndexOf(_pitchControls, focused);
+                    if (marker >= 0 && IsAllowed(focused))
+                        S0UiFactory.Set(_pitchDescription, _view.PitchPlayerDescription(marker));
                 }
                 catch (Exception exception)
                 {
@@ -804,6 +817,21 @@ namespace TacticalDirector.MatchClientUnity
         }
 
         private bool IsAllowed(Selectable item) => item != null && item.gameObject.activeInHierarchy && item.IsInteractable() && (!_dialog.activeSelf || item.transform.IsChildOf(_dialog.transform));
+        private bool IsTabStop(Selectable item)
+        {
+            if (!IsAllowed(item) || !_focusRoles.TryGetValue(item, out S0FocusNavigation.Role role))
+                return false;
+            int marker = role == S0FocusNavigation.Role.PitchMarker ? Array.IndexOf(_pitchControls, item) : -1;
+            return S0FocusNavigation.IsTabStop(role, marker, _pitchEntryIndex);
+        }
+
+        private void FocusPitch(int index)
+        {
+            if (index < 0 || !IsAllowed(_pitchControls[index]))
+                return;
+            _pitchEntryIndex = index;
+            Focus(_pitchControls[index]);
+        }
         private void Focus(Selectable item)
         {
             if (!IsAllowed(item) || EventSystem.current == null)
@@ -819,11 +847,26 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             Selectable current = EventSystem.current.currentSelectedGameObject.GetComponent<Selectable>();
             if (!IsAllowed(current))
-                Focus(_dialog.activeSelf ? DialogInitialFocus() : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _pause.IsInteractable() ? _pause : _matchHeading);
+            {
+                int marker = Array.IndexOf(_pitchControls, current);
+                if (!_dialog.activeSelf && marker >= 0 && !_view.IsFullTime)
+                {
+                    int next = S0FocusNavigation.Move(_pitchControls, marker, 1, _isAllowed);
+                    if (next >= 0)
+                    {
+                        FocusPitch(next);
+                        return;
+                    }
+                }
+                Focus(_dialog.activeSelf ? DialogInitialFocus() : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _view.IsFullTime ? _report : _pause.IsInteractable() ? _pause : _matchHeading);
+            }
         }
 
         private void Keyboard()
         {
+            if (!_dialog.activeSelf && _view.Screen == ClientScreens.MatchView &&
+                (_pitchEntryIndex < 0 || !IsAllowed(_pitchControls[_pitchEntryIndex])))
+                _pitchEntryIndex = S0FocusNavigation.FirstAvailable(_pitchControls, _isAllowed);
             if (Input.GetMouseButtonDown(0))
                 _keyboardFocus = false;
             if (Input.GetKeyDown(KeyCode.Tab))
@@ -837,17 +880,9 @@ namespace TacticalDirector.MatchClientUnity
                     if (order[i].gameObject == selected)
                         current = i;
                 int step = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? -1 : 1;
-                if (current < 0 && step < 0)
-                    current = 0;
-                for (int n = 0; n < order.Length; n++)
-                {
-                    current = (current + step + order.Length) % order.Length;
-                    if (_tabStops.Contains(order[current]) && IsAllowed(order[current]))
-                    {
-                        Focus(order[current]);
-                        break;
-                    }
-                }
+                int next = S0FocusNavigation.Move(order, current, step, _isTabStop);
+                if (next >= 0)
+                    Focus(order[next]);
             }
 
             if (Input.GetKeyDown(KeyCode.Escape) && _dialog.activeSelf)
@@ -870,6 +905,17 @@ namespace TacticalDirector.MatchClientUnity
             GameObject selected = EventSystem.current?.currentSelectedGameObject;
             if (selected == null)
                 return;
+            int marker = Array.IndexOf(_pitchControls, selected.GetComponent<Selectable>());
+            if (marker >= 0)
+            {
+                int next = S0FocusNavigation.Move(_pitchControls, marker, step, _isAllowed);
+                if (next >= 0)
+                {
+                    _keyboardFocus = true;
+                    FocusPitch(next);
+                }
+                return;
+            }
             IReadOnlyList<Button> group = null;
             foreach (Button b in _setupChoices)
                 if (b.gameObject == selected)
@@ -889,15 +935,12 @@ namespace TacticalDirector.MatchClientUnity
             for (int i = 0; i < group.Count; i++)
                 if (group[i].gameObject == selected)
                     index = i;
-            for (int i = 0; i < group.Count; i++)
+            int choice = S0FocusNavigation.Move(group, index, step, _isAllowed);
+            if (choice >= 0)
             {
-                index = (index + step + group.Count) % group.Count;
-                if (!IsAllowed(group[index]))
-                    continue;
                 _keyboardFocus = true;
-                group[index].onClick.Invoke();
-                Focus(group[index]);
-                return;
+                group[choice].onClick.Invoke();
+                Focus(group[choice]);
             }
         }
 
@@ -949,4 +992,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.1     | 2026-10-08 | —      | Complete first-frame layout, grow full-label scroll surface, cache metrics/controls and stabilize chronological history. |
 // | 1.2     | 2026-10-08 | —      | Clarify full-string wrapping and subsequent measured height for narrow label rectangles. |
 // | 1.3     | 2026-10-08 | —      | Separate action Tab stops from explicit anchors, focus first dialog selector and current feedback row across repeat matches. |
+// | 1.4     | 2026-10-08 | —      | Consume tested focus policy; retain one roving pitch Tab entry with read-only arrow inspection and visibility recovery. |
 #endregion
