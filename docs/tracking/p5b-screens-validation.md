@@ -2,7 +2,7 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 8, 2026\
-**Version:** 0.3\
+**Version:** 0.4\
 **Status:** IMPLEMENTED CANDIDATE; Unity/host acceptance BLOCKED in this environment\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
@@ -95,7 +95,7 @@ No Unity provider or Editor is available here. The new child-image layout, first
 activation, density/reflow, Tab chronology and repeat-match caches remain explicit host
 checks. Keep PR #489 draft; B8/B9b/B10 and Gate J remain OPEN.
 
-## Follow-up review — counter validity and host profiling
+## Follow-up review at 5214ab1 — counter validity and host profiling (v0.3 snapshot)
 
 CI for `ac9a0ac6a92a7daa7893c35042771cd5cbd73efe` is now complete:
 [run 37760302461](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37760302461)
@@ -134,6 +134,41 @@ marks pitch layout dirty, and statistics publish once per simulated second, so 1
 can drive approximately ten such refreshes per real second. No speculative cadence/observer
 change is made before profiling. B8 must record actual forced-layout/bind/publication counts
 and CPU/GC/frame results at 1× and 10×, rather than infer performance from this rate.
+
+## Unity allocation measurement correction (v0.4)
+
+The v0.3 counter-failure procedure above is superseded for Editor execution. Both
+allocation tests now select their measurement at compile time:
+
+- `UNITY_5_3_OR_NEWER`: use Test Framework's native
+  `UnityEngine.TestTools.Constraints.Is.AllocatingGCMemory()` for a retained 1,024-byte
+  positive control, then `Is.Not.AllocatingGCMemory()` for 1,000 unchanged calls.
+  The delegate and its captures are created outside recording; the unchanged delegate
+  is warmed before recording. Driver outcome assertions remain outside the measured loop.
+- Linux shim gate: retain `GC.GetAllocatedBytesForCurrentThread()` with the existing
+  positive control and zero-byte assertion. An always-zero counter still fails the control.
+
+Neither lane skips, ignores or marks the test Inconclusive. The Unity lane never reads
+Mono's managed byte counter. Both test asmdefs explicitly reference `UnityEngine.TestRunner`,
+the assembly owning the constraint. The pinned Test Framework 1.6.0
+[API documentation](https://docs.unity3d.com/Packages/com.unity.test-framework@1.6/api/UnityEngine.TestTools.Constraints.AllocatingGCMemoryConstraint.html)
+provides this constraint and negation/namespace pattern. No production or package pin changes.
+
+Supplementary checks on October 8 at 18:27 UTC: **99/99 ClientApp fast cases** (same
+full-match exclusion) and **8/8 driver cases** pass on CLR 8.0.28 / NUnitLite 3.14.
+A separate compile-only check defines `UNITY_5_3_OR_NEWER` and compiles both test inputs
+against the downloaded Unity NUnit 2.0.5 binary and official registry Test Framework
+1.4.6 constraint sources. Those sources use the same documented 1.6.0 calls. The temporary
+native `Recorder` type surface throws from every member and is never executed. This
+checks imports, delegate/constraint overloads and NUnit compatibility; it is **not** a
+compile against the pinned 1.6.0 package, an Editor compile, or a native GC measurement.
+
+At 18:22 UTC, `5214ab1`'s [CI run 37821405416](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37821405416)
+was still running. This revision needs fresh CI. Pinned-host ClientApp and MatchClientCore
+EditMode must pass both native positive controls and unchanged-path constraints, with raw
+NUnit output retained. The uncompiled skin, Editor-regenerated lock and measured B8
+layout cadence remain required; `PitchLayoutFailureCount` must be zero. PR #489 remains
+draft and B8/B9b/B10/Gate J remain open.
 
 ## Content and dependency boundary
 
@@ -216,7 +251,9 @@ Supplementary results below cover portions of the contracts, not their complete 
 2. Force recursive import/compile and retain Editor.log with import/reload completion,
    errors and warnings. Run ClientApp and Localization EditMode plus affected coordinator/
    analytics/core/framework regressions. Respect the existing full-match timeout; retain raw
-   NUnit results. A source/package change requires a new SHA and fresh checks.
+   NUnit results. Require passing native allocation positive controls and unchanged-path
+   constraints in ClientApp and MatchClientCore; do not substitute the Linux counter or
+   an Inconclusive result. A source/package change requires a new SHA and fresh checks.
 3. Open the enabled `Assets/Scenes/Scene.unity`: verify Main Menu only, four exclusive roots,
    one EventSystem and no development-host duplicate. Run I-Q01–14 serially (process-static
    EventBus requires one engine at a time). Confirm viewport pitch coordinates, authored
@@ -252,3 +289,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.1 | October 8, 2026 | Four consumed screen candidate, supplementary validation and exact-head host acceptance procedure; all host gates remain open. |
 | 0.2 | October 8, 2026 | PR #489 review fixes: nonfatal/growable label layout, changed-outcome snapshots, structural refresh and stable chronological feedback; before/after allocation evidence and baseline CI retry recorded, all host acceptance remains open. |
 | 0.3 | October 8, 2026 | Follow-up review: known-allocation controls reject always-zero runtime counters; ac9a0ac CI completion, wrapping qualification and explicit 1×/10× host layout profiling cases recorded. Unity/runtime/cert acceptance remains open. |
+| 0.4 | October 8, 2026 | Unity-native allocation constraints and positive controls replace the managed counter in Editor tests; explicit TestRunner references, Linux passes and compile-only evidence limits recorded. Pinned-host acceptance remains open. |

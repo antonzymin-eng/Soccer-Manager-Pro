@@ -11,6 +11,10 @@ using System;
 using System.Collections.Generic;
 
 using NUnit.Framework;
+#if UNITY_5_3_OR_NEWER
+using UnityEngine.TestTools.Constraints;
+using UnityIs = UnityEngine.TestTools.Constraints.Is;
+#endif
 
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.MatchEngine;
@@ -108,6 +112,20 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(8UL, refused[0].AppliedTick);
             var retained = applied;
             driver.TryGetCommandOutcomes(1, 1, out _, out _); // warm up the polling path
+            bool changed = false;
+#if UNITY_5_3_OR_NEWER
+            // Use the native GC recorder; Mono's managed byte counter is not the Editor oracle.
+            TestDelegate control = () => GC.KeepAlive(new byte[1024]);
+            Assert.That(control, UnityIs.AllocatingGCMemory(),
+                "Unity allocation recorder must detect a known live allocation.");
+            TestDelegate poll = () =>
+            {
+                for (int i = 0; i < 1000; i++)
+                    changed |= driver.TryGetCommandOutcomes(1, 1, out _, out _);
+            };
+            poll(); // warm delegate invocation before native recording
+            Assert.That(poll, UnityIs.Not.AllocatingGCMemory());
+#else
             // A stubbed/unsupported runtime counter must never certify the zero-allocation assertion.
             long controlBefore = GC.GetAllocatedBytesForCurrentThread();
             byte[] control = new byte[1024];
@@ -115,12 +133,12 @@ namespace TacticalDirector.MatchClientCore.Tests
             GC.KeepAlive(control);
             Assert.Greater(controlBytes, 0L, "Allocation counter must detect a known live allocation on this runtime.");
             long before = GC.GetAllocatedBytesForCurrentThread();
-            bool changed = false;
             for (int i = 0; i < 1000; i++)
                 changed |= driver.TryGetCommandOutcomes(1, 1, out _, out _);
             long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.IsFalse(changed);
             Assert.AreEqual(0, bytes);
+#endif
+            Assert.IsFalse(changed);
             driver.Commands.Enqueue(ManagerCommand.SetTeamTactic(1, TeamTactic.Balanced));
             driver.Service(m);
             Assert.IsTrue(driver.TryGetCommandOutcomes(1, 1, out applied, out refused));
@@ -209,4 +227,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.2     | 2026-10-08 | —      | Conditional atomic outcome snapshots, immutable retained evidence and zero-byte unchanged polling. |
 // | 1.3     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
+// | 1.4     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
 #endregion

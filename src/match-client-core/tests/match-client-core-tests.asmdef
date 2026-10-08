@@ -9,7 +9,8 @@
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.TestingStrategy",
-        "TacticalDirector.MatchAnalytics"
+        "TacticalDirector.MatchAnalytics",
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

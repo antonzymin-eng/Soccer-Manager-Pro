@@ -12,7 +12,8 @@
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.EventSystem",
         "TacticalDirector.DeterministicSim",
-        "TacticalDirector.Localization"
+        "TacticalDirector.Localization",
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

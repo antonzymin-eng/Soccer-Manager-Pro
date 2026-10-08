@@ -10,6 +10,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+#if UNITY_5_3_OR_NEWER
+using UnityEngine.TestTools.Constraints;
+using UnityIs = UnityEngine.TestTools.Constraints.Is;
+#endif
 using TacticalDirector.MatchAnalytics;
 using TacticalDirector.EventSystem;
 using TacticalDirector.DeterministicSim;
@@ -98,6 +102,19 @@ namespace TacticalDirector.ClientApp.Tests
             _view.SubmitMentality();
             Tick();
             _view.Refresh();
+#if UNITY_5_3_OR_NEWER
+            // Use the native GC recorder; Mono's managed byte counter is not the Editor oracle.
+            TestDelegate control = () => GC.KeepAlive(new byte[1024]);
+            Assert.That(control, UnityIs.AllocatingGCMemory(),
+                "Unity allocation recorder must detect a known live allocation.");
+            TestDelegate refresh = () =>
+            {
+                for (int i = 0; i < 1000; i++)
+                    _view.Refresh();
+            };
+            refresh(); // warm delegate invocation before native recording
+            Assert.That(refresh, UnityIs.Not.AllocatingGCMemory());
+#else
             // A stubbed/unsupported runtime counter must never certify the zero-allocation assertion.
             long controlBefore = GC.GetAllocatedBytesForCurrentThread();
             byte[] control = new byte[1024];
@@ -109,6 +126,7 @@ namespace TacticalDirector.ClientApp.Tests
                 _view.Refresh();
             long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.AreEqual(0, bytes);
+#endif
         }
 
         [Test]
@@ -383,4 +401,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-08 | —      | Real composed screen and driver scenarios; no Unity visual claim. |
 // | 1.1     | 2026-10-08 | —      | Reproduce structural invalidation and unchanged-frame allocations after command settlement. |
 // | 1.2     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
+// | 1.3     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
 #endregion
