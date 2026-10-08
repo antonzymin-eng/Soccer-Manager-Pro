@@ -6,7 +6,10 @@
         "TacticalDirector.MatchClientCore",
         "TacticalDirector.MatchViewer",
         "TacticalDirector.MatchEngine",
-        "TacticalDirector.UiFramework"
+        "TacticalDirector.UiFramework",
+        "UnityEngine.UI",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.Localization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

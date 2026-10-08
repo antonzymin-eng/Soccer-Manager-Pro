@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientMatchContext.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-08 (P5b screens)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Per-match accepted frames and dispatch; invalidation drops every owned session reference.
@@ -9,6 +9,7 @@ using System;
 
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.MatchViewer;
+using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.ClientApp
@@ -22,17 +23,19 @@ namespace TacticalDirector.ClientApp
         internal MatchViewModelSource Source { get; private set; }
         internal MatchTacticsDispatcher Dispatcher { get; private set; }
         internal ClientMatchReport Report { get; private set; }
+        internal ClientChangeRequests Changes { get; private set; }
         internal bool IsValid => Session != null;
         internal bool IsFullTime { get; private set; }
         private LiveFrameLatch _latch = new LiveFrameLatch();
 
-        internal ClientMatchContext(MatchSession session, MatchIdentityContext identity, SessionMatchAnalytics analytics)
+        internal ClientMatchContext(MatchSession session, MatchIdentityContext identity, SessionMatchAnalytics analytics, TeamTactic homeTactic)
         {
             Session = session;
             Identity = identity;
             Analytics = analytics;
             Source = new MatchViewModelSource(this);
             Dispatcher = new MatchTacticsDispatcher(session);
+            Changes = new ClientChangeRequests(homeTactic);
         }
 
         /// <summary>Returns only the coordinator's accepted frame; never polls or services simulation.</summary>
@@ -75,6 +78,7 @@ namespace TacticalDirector.ClientApp
             Analytics = null;
             Source = null;
             Dispatcher = null;
+            Changes = null;
             Report = default;
             _latch = new LiveFrameLatch();
         }
@@ -84,4 +88,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
+// | 1.1     | 2026-10-08 | —      | Session-owned request evidence state; cleared on invalidation. |
 #endregion

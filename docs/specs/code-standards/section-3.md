@@ -620,7 +620,7 @@ order:
 |---|---|---|
 | 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
 | 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
-| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web`, `ui-framework` and `client-app` (P5b setup composition) — no Data or Management or Presentation assembly, and no `match-client-unity`, references it. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web`, `ui-framework`, `client-app` and `match-client-unity` (P5b setup/choice binding) — no Data or Management or Presentation assembly references it. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
 | 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, seven of the eight Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save`, `club-finances`, `transfers` — not `living-world`) and Client's `match-client-core` and `client-app` (P5b admitted fixture) — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
@@ -654,6 +654,18 @@ its concrete S0 setup and report. Direct test references follow their consumed
 contracts. #37's sanctioned-consumer lock names these clients; simulation has no
 reference to analytics or client/UI assemblies. This records downward/intra-tier
 references without approving the pending #20 governance amendment.
+
+**P5b localized screens dependency update (October 8, 2026).** `client-app` and
+`match-client-unity` consume `localization` through `S0TextFormatter` and composition.
+The #49 reverse-reference lock admits only those two exact production paths; no
+simulation consumer is admitted. `client-app` references `deterministic-sim` directly
+for the physics-clock conversion. The Unity skin names `tactical-instructions`
+directly for Mentality choices and built-in UGUI's `UnityEngine.UI` assembly. The
+tier checker resolves that external assembly only for the exact Unity skin asmdef,
+against manifest/lock pin `com.unity.ugui` 2.0.0 and both built-in module dependencies;
+resolved package metadata participates in graph evidence. Unknown references and
+all existing project direction/cycle rules still fail. Package resolution and
+Editor regeneration of the candidate lock remain pinned-host checks.
 
 **A tier is a ceiling, not a licence.** An individual spec may forbid a reference the
 tier order permits — #44 Discipline sits in Management but its FR-DC set forbids it to
@@ -1340,6 +1352,8 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.15 | September 21, 2026 | OpenAI | **PR #407 current-main reconciliation.** Corrects the maintained Data-tier consumer note after #40 T2a had already activated `club-finances` → `player-database` on September 11: seven of eight Management assemblies now consume #27, with only `living-world` not doing so. Tier-7 seating is unchanged; no dependency-direction or A3.1a governance semantics change. | — |
 | 1.16 | September 28, 2026 | OpenAI | **Localization #49 L1 seating.** Adds `localization` (#49) to Tier 9 Client in the same commit that adds `src/localization/localization.asmdef`. The production assembly is dependency-free, so this adds no upward edge; the L1 reverse-reference lock rejects unauthorized production consumers until L3B deliberately narrows it for the approved sibling boundary adapter. No other tier membership changes. | — |
 | 1.17 | 2026-10-06 | — | Record consumed P5b client fixture/tactic and session analytics dependencies; ordered taxonomy and simulation boundary unchanged. | — |
+
+| 1.18 | October 8, 2026 | — | Record consumed P5b localization/clock/choice edges and exact built-in UGUI package evidence; simulation bans and tier rules unchanged. | — |
 
 ---
 

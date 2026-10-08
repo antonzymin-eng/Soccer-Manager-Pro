@@ -11,7 +11,8 @@
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.EventSystem",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.Localization"
     ],
     "includePlatforms": [
         "Editor"

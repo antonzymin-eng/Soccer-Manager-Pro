@@ -1,6 +1,6 @@
 // File:     src/client-app/S0DemoFixture.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-08 (P5b screens)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Admits the exact approved names/defaults; the engine alone selects XI and bench.
@@ -120,6 +120,21 @@ namespace TacticalDirector.ClientApp
             return new MatchIdentityContext(MatchRoster.FromStreamer(session.Streamer), session.BootRoster, _identities);
         }
 
+        /// <summary>Immutable authored position for bench copy; live pitch keeper status remains frame-owned.</summary>
+        public bool IsAuthoredGoalkeeper(int playerId)
+        {
+            for (int team = 0; team < MatchEngineConstants.TEAM_COUNT; team++)
+            {
+                Squad squad = team == 0 ? _home : _away;
+                for (int i = 0; i < squad.Count; i++)
+                {
+                    PlayerRecord player = squad.GetPlayer(i);
+                    if (player.PlayerId == playerId) return player.Position == PlayerPosition.Goalkeeper;
+                }
+            }
+            throw new ArgumentOutOfRangeException(nameof(playerId));
+        }
+
         private MatchPlayerIdentity FindIdentity(int playerId)
         {
             bool found = false;
@@ -155,4 +170,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
+// | 1.1     | 2026-10-08 | —      | Authored bench position lookup for complete keeper chooser labels. |
 #endregion

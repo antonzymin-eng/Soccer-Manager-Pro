@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-08 (P5b screens)
 // Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
@@ -23,8 +23,8 @@ namespace TacticalDirector.MatchClientUnity
     /// graph, structural wiring rules, initial-active hygiene, and exhaustive visibility mapping all
     /// live in gate-compiled <c>client-app</c>; this type only collects Unity instance/ancestor facts,
     /// applies booleans, and forwards UI events (§12 rule 1).
-    /// <para>The lifecycle composition is consumed, while player-facing Start/report controls remain
-    /// withheld until the localized screen slice. A development host exercises the same coordinator.</para>
+    /// <para>The localized screens consume the coordinator for Start, explicit report acknowledgement
+    /// and Return; the renderer owns only its attached generated visuals.</para>
     /// <para>
     /// Place this component on an always-active GameObject outside all four screen roots. The pure
     /// validator refuses a shell on or beneath a root, roots nested inside each other, and any
@@ -44,6 +44,7 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private GameObject _postMatchReportRoot;
 
         [SerializeField] private MatchClientBehaviour _matchRenderer;
+        [SerializeField] private S0ScreensBehaviour _screens;
 
         private ClientMatchCoordinator _coordinator;
         private bool _wiringRejected;
@@ -75,8 +76,10 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
             _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved());
-
             ApplyCurrentScreen();
+            if (_screens == null) { RejectWiring("localized screen binding is required."); return; }
+            try { _screens.Initialize(_coordinator, _mainMenuRoot, _tacticsSetupRoot, _matchViewRoot, _postMatchReportRoot, _matchRenderer, ApplyCurrentScreen); }
+            catch (Exception exception) { RejectWiring("screen construction failed: " + exception.Message); Debug.LogException(exception, this); }
         }
 
         /// <summary>Forwards Main Menu's New Demo Match action to the host-free navigation graph.</summary>
@@ -95,7 +98,6 @@ namespace TacticalDirector.MatchClientUnity
             ApplyCurrentScreen();
         }
 
-        // No UnityEvent Start/report entry point is exposed until complete localized screens land.
         private void Update()
         {
             using var updateScope = UpdateMarker.Auto();
@@ -104,6 +106,7 @@ namespace TacticalDirector.MatchClientUnity
             {
                 _coordinator.Refresh(Time.time);
                 if (_coordinator.IsRejected) RejectWiring("required pitch renderer was lost.");
+                else { ApplyCurrentScreen(); _screens.Refresh(); }
             }
             catch (Exception exception)
             {
@@ -112,7 +115,7 @@ namespace TacticalDirector.MatchClientUnity
             }
         }
 
-        private void OnDestroy() => _coordinator?.Dispose();
+        private void OnDestroy() { _coordinator?.Dispose(); _screens?.DisposeViews(); }
         private void OnApplicationQuit() => _coordinator?.Dispose();
 
         /// <summary>
@@ -189,6 +192,7 @@ namespace TacticalDirector.MatchClientUnity
         private void RejectWiring(string reason)
         {
             _wiringRejected = true;
+            _screens?.DisposeViews();
             try { _coordinator?.Dispose(); }
             finally
             {
@@ -223,4 +227,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.3     | 2026-10-05 | —      | PR #470 review: reports parent activeInHierarchy so roots under|
 // |         |            |        | an inactive ancestor are refused rather than shown blank.      |
 // | 1.4     | 2026-10-06 | —      | Consume stable lifecycle coordinator; renderer containment and outgoing-first visibility. |
+// | 1.5     | 2026-10-08 | —      | Compose the localized UGUI screens and apply visibility before view/focus refresh. |
 #endregion

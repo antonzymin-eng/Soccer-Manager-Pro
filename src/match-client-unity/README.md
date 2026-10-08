@@ -2,8 +2,7 @@
 
 **Status:** P4b (the render/camera/click binding) **LANDED** —
 `MatchClientBehaviour.cs`, landed across **5 adversarial-review rounds** (findings
-H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) and the on-host half of P6
-remain open. See `docs/tracking/interactive-unity-client-design.md` for the full
+H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) now has a complete screen candidate; pinned-host screen acceptance and the on-host half of P6 remain open. See `docs/tracking/interactive-unity-client-design.md` for the full
 landing history, and `MatchClientBehaviour.cs`'s own `VersionHistory` block for the
 per-round code detail.
 
@@ -15,12 +14,11 @@ per-round code detail.
 
 This is the **Unity-host** half of the interactive Unity client — the
 `MonoBehaviour` that binds a `MatchSession`, reads frames each `Update`, and binds
-them onto scene objects. During the P5b transition its old self-created neutral
-demo is explicit opt-in only; a normal shell scene leaves that boot path disabled.
+them onto scene objects. The validated P5b coordinator owns the session; internal demo ownership is removed.
 It is deliberately thin: every render/camera/click *decision* is already made in
 the host-free sibling `src/match-client-core/` (`TacticalDirector.MatchClientCore`),
 which the `tools/dotnet-ci` shim gate compiles and tests on every push. This
-assembly references ClientApp, UiFramework, MatchClientCore, MatchViewer and MatchEngine;
+assembly references ClientApp, UiFramework, MatchClientCore, MatchViewer, MatchEngine, TacticalInstructions, Localization and built-in UnityEngine.UI;
 these are explicit Unity asmdef references, with shell decisions in gate-compiled ClientApp. It
 adds a skin, never new engine-facing logic (§12 rule 1 — see
 `docs/tracking/interactive-unity-client-design.md`).
@@ -233,14 +231,9 @@ references and then schedules its destruction, preserving authored objects and p
 Disabling the root changes visibility only. Render rejection/destruction reports the
 captured attachment back to the coordinator so playback is quiesced.
 
-The temporary `_autoBootDemoMatch` and seed fields have been removed. The isolated
-`Assets/Scenes/Scene.unity` now has an explicit `DevelopmentMatchHost`, which consumes
-the same coordinator and approved fixture. The shell still exposes only Open/Cancel;
-player-facing Start/report controls await the localized screen slice after #49 L2.
+The temporary `_autoBootDemoMatch` and seed fields have been removed. The tracked `Assets/Scenes/Scene.unity` now boots the four-screen shell. Its development-host component is removed; that helper source remains for isolated investigations.
 
-Exact-head Unity 6000.4.9f1 compile, inactive-root attachment, deferred destruction,
-repeat attachment and failure smoke checks are pending. Follow
-`docs/tracking/p5b-lifecycle-validation.md`; earlier host evidence below remains historical.
+The coordinator lifecycle was validated October 7 on the pinned host; see `docs/tracking/p5b-lifecycle-validation.md` v0.5. That prior compile does not validate the new screen skin.
 
 ## 7. PR #470 foundation refresh — October 4, 2026
 
@@ -291,8 +284,27 @@ now reports `parent.gameObject.activeInHierarchy` and the shell refuses such a r
 `RootUnderInactiveAncestor` (deactivating all roots and logging the reason). Unity 6000.4.9f1
 compile of the fix: 0 errors; ClientApp.Tests 26/26 in EditMode.
 
+## 8. Complete P5b screens candidate — October 8, 2026
+
+The tracked shell assigns `S0ScreensBehaviour` and all four roots, with Main Menu
+alone authored active. It creates persistent UGUI pages/dialogs plus one EventSystem,
+using built-in UGUI 2.0.0. The packaged fallback is `LegacyRuntime.ttf`; assigned fonts
+are admitted for required characters, with equivalent punctuation fallbacks and the
+actual loaded content hash. `_textScale` is fixed per shell at 1.0–2.0. Only the
+coordinator controls match lifetime; UI forwards Start, staged home requests, explicit
+report acknowledgement and Return. The renderer's texture viewport supplies pointer/
+keyboard player inspection, localized labels and the white substitute annulus using
+an additional instance of the existing stroked ring prefab. That prefab must also
+expose the configured marker colour property. These are source mechanisms; runtime
+layout, glyphs, input and annulus appearance require host validation.
+
+Follow `docs/tracking/p5b-screens-validation.md` v0.1 for exact-head compile, candidate
+lock regeneration, EditMode, real-client I-Q01–19 and cert-host checks. The new UGUI
+binding has not compiled/run in Unity here. Keep B8/B9b/B10 and Gate J open.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| P5b screens candidate | October 8, 2026 | Complete localized screens and tracked shell scene; prior lifecycle host proof preserved, new exact-head Unity/runtime/cert evidence due. |
 | P5b lifecycle candidate | October 6, 2026 | External attachment and explicit development host replace internal demo ownership; pinned-host validation pending. |
 | PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
 | PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |

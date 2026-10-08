@@ -1,0 +1,838 @@
+// File:     src/match-client-unity/S0ScreensBehaviour.cs
+// Created:  2026-10-08
+// Modified: 2026-10-08
+// Author:   —
+// Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
+// Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
+
+using System;
+using System.Collections.Generic;
+using Unity.Profiling;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchClientCore;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.TacticalInstructions;
+using TacticalDirector.UiFramework;
+
+namespace TacticalDirector.MatchClientUnity
+{
+    /// <summary>Builds views once under the four authored roots. The shell owns lifecycle and this view's refresh.</summary>
+    public sealed class S0ScreensBehaviour : MonoBehaviour
+    {
+        private static readonly ProfilerMarker RefreshMarker = new ProfilerMarker("S0ScreensBehaviour.Refresh");
+        [SerializeField]
+        private Font _font;
+        [SerializeField]
+        private Camera _matchCamera;
+        [SerializeField]
+        private float _textScale = 1f;
+        private S0ScreenPresenter _view;
+        private Action _applyVisibility;
+        private S0UiFactory _ui;
+        private readonly List<GameObject> _owned = new List<GameObject>();
+        private readonly Dictionary<Selectable, GameObject> _focusRings = new Dictionary<Selectable, GameObject>();
+        private readonly Dictionary<Selectable, ScrollRect> _scrolls = new Dictionary<Selectable, ScrollRect>();
+        private readonly Button[] _setupChoices = new Button[7];
+        private readonly Button[] _mentalityChoices = new Button[7];
+        private readonly List<Button> _outgoing = new List<Button>();
+        private readonly List<Button> _incoming = new List<Button>();
+        private readonly List<Selectable> _feedbackRows = new List<Selectable>();
+        private readonly List<RectTransform> _statRows = new List<RectTransform>();
+        private readonly List<Text> _pitchLabels = new List<Text>();
+        private ScrollRect _menuScroll, _setupScroll, _matchScroll, _reportScroll, _dialogScroll;
+        private Selectable _menuHeading, _setupHeading, _matchHeading, _reportHeading, _dialogHeading;
+        private Button _pause, _slower, _faster, _mentality, _substitution, _statisticsToggle, _report, _partialToggle, _earlierToggle;
+        private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _controlReason, _slowerReason, _fasterReason, _mentalityReason, _substitutionReason;
+        private Text _notice, _caption, _reportScore, _reportResult, _reportNotice, _reportCaption, _dialogCurrent, _choiceNotice;
+        private RectTransform _reportFeedback, _matchFeedback;
+        private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot;
+        private GameObject _dialog, _mentalityDraft, _substitutionDraft, _compare;
+        private Button _submit, _cancel;
+        private Selectable _invoker;
+        private RawImage _pitch;
+        private RenderTexture _pitchTexture;
+        private ScreenId _lastScreen;
+        private bool _wasFullTime;
+        private bool _keyboardFocus;
+        private readonly Vector2[] _markerPoints = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+        private readonly Vector2[] _labelSizes = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+        private readonly Vector2[] _labelCentres = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+        private readonly bool[] _labelVisible = new bool[MatchEngineConstants.SQUAD_SIZE];
+        private readonly RectTransform[] _leaderLines = new RectTransform[MatchEngineConstants.SQUAD_SIZE];
+        private Text _pitchDescription, _pitchWaiting;
+        private MatchClientBehaviour _renderer;
+        private int _revision = -1;
+        private bool _disposed;
+        /// <summary>Actual admitted compiled role identity for host evidence; not a separately constructed fixture.</summary>
+        public string LoadedContentSha256 => _view?.Text.ContentSha256;
+
+        /// <summary>Called explicitly after the shell admits roots and creates its coordinator, before playback.</summary>
+        public void Initialize(ClientMatchCoordinator coordinator, GameObject menu, GameObject setup, GameObject match, GameObject report, MatchClientBehaviour renderer, Action applyVisibility)
+        {
+            if (_view != null)
+                throw new InvalidOperationException("S0 screen binding already initialized.");
+            if (_matchCamera == null)
+                throw new InvalidOperationException("S0 pitch camera is required.");
+            if (_font == null)
+                _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (_font == null)
+                throw new InvalidOperationException("S0 fallback font is unavailable.");
+            _view = new S0ScreenPresenter(coordinator, S0TextFormatter.WithGlyphCoverage(_font.HasCharacter), new S0PresentationConfiguration(_textScale));
+            _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
+            _applyVisibility = applyVisibility ?? throw new ArgumentNullException(nameof(applyVisibility));
+            _ui = new S0UiFactory(_font, _view.Configuration.TextScale);
+            RectTransform m = Page(menu, out _menuScroll);
+            _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
+            _ui.Label(m, L("context.menu"));
+            Control(m, L("action.demo"), _view.OpenSetup, _menuScroll);
+            RectTransform s = Page(setup, out _setupScroll);
+            _setupHeading = Heading(s, L("heading.setup"), _setupScroll);
+            _ui.Label(s, L("context.setup"));
+            _ui.Label(s, L("context.mentality_choice"));
+            for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
+            {
+                Mentality value = S0ScreenPresenter.Mentalities[i];
+                _setupChoices[i] = Control(s, _view.MentalityChoice(value), () => _view.SelectSetupMentality(value), _setupScroll);
+            }
+
+            _setupReady = _ui.Label(s, "");
+            Control(s, L("action.start"), _view.StartMatch, _setupScroll);
+            Control(s, L("action.back"), _view.CancelSetup, _setupScroll);
+            BuildMatch(Page(match, out _matchScroll));
+            BuildReport(Page(report, out _reportScroll));
+            BuildDialog();
+            var eventSystem = new GameObject("S0 EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            eventSystem.transform.SetParent(transform, false);
+            _owned.Add(eventSystem);
+            if (EventSystem.current != null && EventSystem.current != eventSystem.GetComponent<EventSystem>())
+                throw new InvalidOperationException("S0 requires one scene EventSystem.");
+            Refresh();
+        }
+
+        private string L(string role) => _view.Text.Label(role);
+        private RectTransform Page(GameObject root, out ScrollRect scroll)
+        {
+            RectTransform content = _ui.Page(root.transform, out scroll);
+            _owned.Add(scroll.gameObject);
+            return content;
+        }
+
+        private Selectable Heading(Transform parent, string text, ScrollRect scroll, bool heading = true)
+        {
+            Text label = _ui.Label(parent, text, heading);
+            Selectable anchor = label.gameObject.AddComponent<Selectable>();
+            anchor.navigation = new Navigation
+            {
+                mode = Navigation.Mode.None
+            };
+            anchor.transition = Selectable.Transition.None;
+            Register(anchor, scroll);
+            return anchor;
+        }
+
+        private Button Control(Transform parent, string text, Action action, ScrollRect scroll)
+        {
+            Button button = _ui.Button(parent, text, () =>
+            {
+                try
+                {
+                    action();
+                    _applyVisibility();
+                    Refresh();
+                }
+                catch (Exception exception)
+                {
+                    _renderer.RejectPresentation(exception);
+                }
+            });
+            Register(button, scroll);
+            return button;
+        }
+
+        private void Register(Selectable control, ScrollRect scroll)
+        {
+            _scrolls.Add(control, scroll);
+            RectTransform ring = _ui.Node("Keyboard focus", control.transform);
+            S0UiFactory.Stretch(ring);
+            // Four geometry strips: focus surrounds the control, never outlines individual text glyphs.
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform edge = _ui.Node("Edge", ring);
+                var image = edge.gameObject.AddComponent<Image>();
+                image.color = S0UiConstants.TEXT_COLOR;
+                image.raycastTarget = false;
+                if (i < 2)
+                {
+                    edge.anchorMin = new Vector2(0, i);
+                    edge.anchorMax = new Vector2(1, i);
+                    edge.sizeDelta = new Vector2(0, S0UiConstants.FOCUS_WIDTH);
+                }
+                else
+                {
+                    edge.anchorMin = new Vector2(i - 2, 0);
+                    edge.anchorMax = new Vector2(i - 2, 1);
+                    edge.sizeDelta = new Vector2(S0UiConstants.FOCUS_WIDTH, 0);
+                }
+
+                edge.anchoredPosition = Vector2.zero;
+            }
+
+            ring.gameObject.SetActive(false);
+            _focusRings.Add(control, ring.gameObject);
+        }
+
+        private void BuildMatch(RectTransform parent)
+        {
+            _matchHeading = Heading(parent, L("heading.match"), _matchScroll);
+            _matchScore = _ui.Label(parent, "", true);
+            _matchPeriod = _ui.Label(parent, "");
+            _matchClock = _ui.Label(parent, "");
+            _speed = _ui.Label(parent, "");
+            RectTransform playback = _ui.Node("Playback", parent);
+            var playbackLayout = playback.gameObject.AddComponent<HorizontalLayoutGroup>();
+            playbackLayout.spacing = S0UiConstants.GAP;
+            playbackLayout.childControlWidth = playbackLayout.childControlHeight = true;
+            playbackLayout.childForceExpandWidth = true;
+            playbackLayout.childForceExpandHeight = false;
+            _slower = Control(playback, L("action.slower"), () =>
+            {
+                _view.Slower();
+                if (!_view.CanSlower)
+                    Focus(_pause);
+            }, _matchScroll);
+            _slowerReason = _ui.Label(parent, "");
+            _pause = Control(playback, L("action.pause"), _view.TogglePause, _matchScroll);
+            _faster = Control(playback, L("action.faster"), () =>
+            {
+                _view.Faster();
+                if (!_view.CanFaster)
+                    Focus(_pause);
+            }, _matchScroll);
+            _fasterReason = _ui.Label(parent, "");
+            _controlReason = _ui.Label(parent, "");
+            _ui.Label(parent, L("context.speed_steps"));
+            RectTransform body = _ui.Node("Match body", parent);
+            var bodyLayout = body.gameObject.AddComponent<S0BodyLayout>();
+            bodyLayout.PageScroll = _matchScroll;
+            RectTransform pitchColumn = _ui.Column("Pitch column", body);
+            RectTransform rail = _ui.Column("Changes rail", body);
+            Text direction = _ui.Label(pitchColumn, L("pitch.direction"));
+            bodyLayout.PitchMeasure = direction;
+            RectTransform pitch = _ui.Node("Pitch", pitchColumn);
+            _pitch = pitch.gameObject.AddComponent<RawImage>();
+            _pitch.color = Color.white;
+            _pitch.raycastTarget = false;
+            pitch.gameObject.AddComponent<S0PitchLayout>();
+            _pitchWaiting = _ui.Label(pitchColumn, L("pitch.waiting"));
+            _ui.Label(pitchColumn, L("pitch.legend"));
+            _pitchDescription = _ui.Label(pitchColumn, L("pitch.description"));
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Text label = _ui.Label(pitch, "");
+                label.alignment = TextAnchor.MiddleCenter;
+                RectTransform rect = label.rectTransform;
+                rect.sizeDelta = new Vector2(S0UiConstants.TEXT_SIZE * _textScale * 4, S0UiConstants.TEXT_SIZE * _textScale * 2);
+                _pitchLabels.Add(label);
+                RectTransform line = _ui.Node("Marker tether", pitch);
+                var image = line.gameObject.AddComponent<Image>();
+                image.color = S0UiConstants.TEXT_COLOR;
+                image.raycastTarget = false;
+                line.pivot = new Vector2(0, 0.5f);
+                _leaderLines[i] = line;
+                label.raycastTarget = true;
+                int index = i;
+                var hover = label.gameObject.AddComponent<EventTrigger>();
+                var entry = new EventTrigger.Entry
+                {
+                    eventID = EventTriggerType.PointerEnter
+                };
+                entry.callback.AddListener(_ => S0UiFactory.Set(_pitchDescription, _view.PitchPlayerDescription(index)));
+                hover.triggers.Add(entry);
+                Selectable markerControl = label.gameObject.AddComponent<Selectable>();
+                markerControl.targetGraphic = label;
+                markerControl.transition = Selectable.Transition.None;
+                markerControl.navigation = new Navigation
+                {
+                    mode = Navigation.Mode.None
+                };
+                Register(markerControl, _matchScroll);
+                var selected = new EventTrigger.Entry
+                {
+                    eventID = EventTriggerType.Select
+                };
+                selected.callback.AddListener(_ => S0UiFactory.Set(_pitchDescription, _view.PitchPlayerDescription(index)));
+                hover.triggers.Add(selected);
+                var clicked = new EventTrigger.Entry
+                {
+                    eventID = EventTriggerType.PointerClick
+                };
+                clicked.callback.AddListener(_ => Focus(markerControl));
+                hover.triggers.Add(clicked);
+            }
+
+            Heading(rail, L("heading.changes"), _matchScroll);
+            _current = _ui.Label(rail, "");
+            bodyLayout.RailMeasure = _current;
+            _mentality = Control(rail, L("action.mentality"), () => OpenDialog(_mentality, _view.OpenMentality), _matchScroll);
+            _mentalityReason = _ui.Label(rail, "");
+            _substitution = Control(rail, L("action.substitution"), () => OpenDialog(_substitution, _view.OpenSubstitution), _matchScroll);
+            _used = _ui.Label(rail, "");
+            _substitutionReason = _ui.Label(rail, "");
+            _matchFeedback = _ui.Column("Feedback region", rail);
+            Heading(_matchFeedback, L("heading.feedback"), _matchScroll);
+            _feedbackRoot = _ui.Column("Latest feedback", parent);
+            _earlierToggle = Control(_matchFeedback, "", _view.ToggleEarlierFeedback, _matchScroll);
+            _earlierRoot = _ui.Column("Earlier feedback", parent);
+            _notice = _ui.Label(rail, "");
+            _statisticsToggle = Control(rail, L("action.statistics_open"), _view.ToggleStatistics, _matchScroll);
+            _matchStatistics = _ui.Column("Statistics", parent);
+            _caption = _ui.Label(_matchStatistics, "");
+            _ui.Label(_matchStatistics, L("statistics.loose_ball"));
+            _report = Control(rail, L("action.report"), _view.ShowReport, _matchScroll);
+        }
+
+        private void BuildReport(RectTransform parent)
+        {
+            _reportHeading = Heading(parent, L("heading.report"), _reportScroll);
+            _reportResult = _ui.Label(parent, "", true);
+            _reportScore = _ui.Label(parent, "", true);
+            _reportNotice = _ui.Label(parent, "");
+            _partialToggle = Control(parent, L("action.partial"), _view.TogglePartialReport, _reportScroll);
+            _reportStatistics = _ui.Column("Report statistics", parent);
+            _reportCaption = _ui.Label(_reportStatistics, "");
+            _ui.Label(_reportStatistics, L("statistics.loose_ball"));
+            _reportFeedback = _ui.Column("Report feedback region", parent);
+            Heading(_reportFeedback, L("heading.feedback"), _reportScroll);
+            // Navigation is outside the partial disclosure and remains available through observer failure.
+            Control(parent, L("action.return"), _view.ReturnToMenu, _reportScroll);
+        }
+
+        private void BuildDialog()
+        {
+            var root = new GameObject("S0 dialog", typeof(RectTransform));
+            root.transform.SetParent(transform, false);
+            _owned.Add(root);
+            RectTransform content = _ui.Page(root.transform, out _dialogScroll);
+            _dialogScroll.GetComponent<Canvas>().sortingOrder = 1;
+            _dialog = root;
+            _dialogHeading = Heading(content, "", _dialogScroll);
+            _dialogCurrent = _ui.Label(content, "");
+            _ui.Label(content, L("context.submit"));
+            _mentalityDraft = _ui.Column("Mentality draft", content).gameObject;
+            _ui.Label(_mentalityDraft.transform, L("field.requested_mentality"));
+            for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
+            {
+                Mentality value = S0ScreenPresenter.Mentalities[i];
+                _mentalityChoices[i] = Control(_mentalityDraft.transform, _view.MentalityChoice(value), () => _view.SelectRequestedMentality(value), _dialogScroll);
+            }
+
+            Control(_mentalityDraft.transform, L("action.compare"), () => _compare.SetActive(!_compare.activeSelf), _dialogScroll);
+            _compare = _ui.Column("Comparison", _mentalityDraft.transform).gameObject;
+            foreach (Mentality m in S0ScreenPresenter.Mentalities)
+                _ui.Label(_compare.transform, _view.MentalityChoice(m));
+            _compare.SetActive(false);
+            _substitutionDraft = _ui.Column("Substitution draft", content).gameObject;
+            _ui.Label(_substitutionDraft.transform, L("context.substitution"));
+            _ui.Label(_substitutionDraft.transform, L("field.outgoing"));
+            for (int i = 0; i < MatchEngineConstants.PLAYERS_PER_TEAM; i++)
+            {
+                int index = i;
+                _outgoing.Add(Control(_substitutionDraft.transform, "", () => _view.SelectOutgoing(_view.Outgoing[index].Index), _dialogScroll));
+            }
+
+            _ui.Label(_substitutionDraft.transform, L("field.incoming"));
+            for (int i = 0; i < MatchEngineConstants.SUBSTITUTES_PER_TEAM; i++)
+            {
+                int index = i;
+                _incoming.Add(Control(_substitutionDraft.transform, "", () => _view.SelectIncoming(_view.Incoming[index].Index), _dialogScroll));
+            }
+
+            _choiceNotice = _ui.Label(content, "");
+            _submit = Control(content, L("action.submit"), SubmitDialog, _dialogScroll);
+            _cancel = Control(content, L("action.cancel"), CancelDialog, _dialogScroll);
+            _dialog.SetActive(false);
+        }
+
+        private void OpenDialog(Selectable invoker, Action open)
+        {
+            open();
+            _invoker = invoker;
+            _dialog.SetActive(true);
+            _compare.SetActive(false);
+            Refresh();
+            Focus(_dialogHeading);
+        }
+
+        private void CancelDialog()
+        {
+            _view.CancelDialog();
+            _dialog.SetActive(false);
+            Refresh();
+            Focus(_invoker);
+        }
+
+        private void SubmitDialog()
+        {
+            ClientChangeRecord record = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality ? _view.SubmitMentality() : _view.SubmitSubstitution();
+            Refresh();
+            if (record != null && _feedbackRows.Count != 0)
+                Focus(_feedbackRows[_feedbackRows.Count - 1]);
+        }
+
+        /// <summary>Called after the coordinator's accepted-frame refresh; retains authored/generated view roots.</summary>
+        public void Refresh()
+        {
+            using (RefreshMarker.Auto())
+            {
+                if (_view == null || _disposed)
+                    return;
+                _view.Refresh();
+                if (_revision != _view.Revision)
+                {
+                    _revision = _view.Revision;
+                    Bind();
+                    if (_lastScreen != _view.Screen)
+                    {
+                        _lastScreen = _view.Screen;
+                        Focus(_view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.MatchView ? _matchHeading : _reportHeading);
+                    }
+
+                    if (!_wasFullTime && _view.IsFullTime)
+                    {
+                        _dialog.SetActive(false);
+                        Focus(_report);
+                    }
+
+                    _wasFullTime = _view.IsFullTime;
+                }
+
+                Keyboard();
+            }
+        }
+
+        private void Bind()
+        {
+            for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
+            {
+                Mentality value = S0ScreenPresenter.Mentalities[i];
+                MarkChoice(_setupChoices[i], value == _view.CurrentMentality && _view.Screen == ClientScreens.TacticsSetup, L("tag.current"));
+                MarkChoice(_mentalityChoices[i], value == _view.RequestedMentality, L("tag.requested"));
+            }
+
+            S0UiFactory.Set(_setupReady, _view.Text.Format("setup.ready", "setup.ready", _view.MentalityLabel(_view.CurrentMentality)));
+            S0UiFactory.Set(_matchScore, _view.Score);
+            S0UiFactory.Set(_matchClock, _view.Clock);
+            S0UiFactory.Set(_matchPeriod, _view.Period);
+            S0UiFactory.Set(_speed, _view.Speed);
+            S0UiFactory.Set(_current, _view.Text.Format("current", "mentality.current", _view.MentalityLabel(_view.CurrentMentality)));
+            S0UiFactory.Set(_used, _view.SubstitutionsUsed);
+            S0UiFactory.Set(_controlReason, _view.ControlReason);
+            S0UiFactory.Set(_slowerReason, _view.SlowerReason);
+            S0UiFactory.Set(_fasterReason, _view.FasterReason);
+            S0UiFactory.Set(_mentalityReason, _view.MentalityReason);
+            S0UiFactory.Set(_substitutionReason, _view.SubstitutionReasonText);
+            _slower.interactable = _view.CanSlower;
+            _faster.interactable = _view.CanFaster;
+            _pause.interactable = _view.CanPause;
+            S0UiFactory.Set(_pause, L(_view.IsPaused ? "action.resume" : "action.pause"));
+            _mentality.interactable = _view.CanChangeMentality;
+            _substitution.interactable = _view.CanSubstitute;
+            _report.gameObject.SetActive(_view.CanReport);
+            _statisticsToggle.gameObject.SetActive(!_view.IsFullTime);
+            _statisticsToggle.interactable = !_view.Frame.IsEmpty;
+            S0UiFactory.Set(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
+            _matchStatistics.gameObject.SetActive(_view.IsStatisticsOpen && _view.HasStatistics);
+            S0UiFactory.Set(_notice, _view.StatisticsNotice);
+            S0UiFactory.Set(_caption, _view.StatisticsCaption);
+            S0UiFactory.Set(_reportScore, _view.Score);
+            S0UiFactory.Set(_reportResult, _view.Result);
+            S0UiFactory.Set(_reportNotice, _view.StatisticsNotice);
+            S0UiFactory.Set(_reportCaption, _view.StatisticsCaption);
+            _partialToggle.gameObject.SetActive(_view.IsStatisticsIncomplete && _view.HasStatistics);
+            S0UiFactory.Set(_partialToggle, L(_view.IsPartialReportOpen ? "action.statistics_close" : "action.partial"));
+            _reportStatistics.gameObject.SetActive(_view.HasStatistics && (!_view.IsStatisticsIncomplete || _view.IsPartialReportOpen));
+            BindStatistics();
+            BindFeedback();
+            BindDialog();
+            _matchCamera.enabled = _view.Screen == ClientScreens.MatchView && !_view.Frame.IsEmpty;
+            _pitchWaiting.gameObject.SetActive(_view.Frame.IsEmpty);
+            _pitch.gameObject.SetActive(!_view.Frame.IsEmpty);
+            if (_view.Screen == ClientScreens.MainMenu)
+            {
+                foreach (Text label in _pitchLabels)
+                    S0UiFactory.Set(label, "");
+                foreach (Button button in _outgoing)
+                    S0UiFactory.Set(button, "");
+                foreach (Button button in _incoming)
+                    S0UiFactory.Set(button, "");
+                S0UiFactory.Set(_pitchDescription, L("pitch.description"));
+            }
+
+            RecoverFocus();
+        }
+
+        private void MarkChoice(Button button, bool selected, string tag)
+        {
+            Transform existing = button.transform.Find("Selection");
+            if (existing == null)
+            {
+                Text label = _ui.Label(button.transform, tag);
+                label.gameObject.name = "Selection";
+                existing = label.transform;
+            }
+
+            existing.gameObject.SetActive(selected);
+        }
+
+        private void BindDialog()
+        {
+            bool open = _view.Dialog != S0ScreenPresenter.DialogKind.None;
+            _dialog.SetActive(open);
+            if (!open)
+                return;
+            bool mentality = _view.Dialog == S0ScreenPresenter.DialogKind.Mentality;
+            _mentalityDraft.SetActive(mentality);
+            _substitutionDraft.SetActive(!mentality);
+            S0UiFactory.Set(_dialogHeading.GetComponent<Text>(), L(mentality ? "dialog.mentality" : "dialog.substitution"));
+            S0UiFactory.Set(_dialogCurrent, _view.Text.Format("dialog.current", "mentality.current", _view.MentalityLabel(_view.CurrentMentality)));
+            _dialogCurrent.gameObject.SetActive(mentality);
+            S0UiFactory.Set(_choiceNotice, _view.ChoiceNotice);
+            _submit.interactable = mentality ? _view.CanChangeMentality : _view.CanSubmitSubstitution;
+            for (int i = 0; i < _outgoing.Count; i++)
+            {
+                bool exists = i < _view.Outgoing.Count;
+                _outgoing[i].gameObject.SetActive(exists);
+                if (exists)
+                {
+                    S0UiFactory.Set(_outgoing[i], _view.Outgoing[i].Label);
+                    MarkChoice(_outgoing[i], _view.Outgoing[i].Index == _view.SelectedOutgoing, L("tag.requested"));
+                }
+            }
+
+            for (int i = 0; i < _incoming.Count; i++)
+            {
+                bool exists = i < _view.Incoming.Count;
+                _incoming[i].gameObject.SetActive(exists);
+                if (exists)
+                {
+                    S0UiFactory.Set(_incoming[i], _view.Incoming[i].Label);
+                    MarkChoice(_incoming[i], _view.Incoming[i].Index == _view.SelectedIncoming, L("tag.requested"));
+                }
+            }
+        }
+
+        private void BindFeedback()
+        {
+            bool report = _view.Screen == ClientScreens.PostMatchReport;
+            RectTransform target = report ? _reportFeedback : _matchFeedback;
+            ScrollRect scroll = report ? _reportScroll : _matchScroll;
+            if (_feedbackRoot.parent != target)
+                _feedbackRoot.SetParent(target, false);
+            if (_earlierToggle.transform.parent != target)
+                _earlierToggle.transform.SetParent(target, false);
+            if (_earlierRoot.parent != target)
+                _earlierRoot.SetParent(target, false);
+            _scrolls[_earlierToggle] = scroll;
+            while (_feedbackRows.Count < _view.Feedback.Count)
+                _feedbackRows.Add(Heading(_feedbackRoot, "", _matchScroll, false));
+            int earlier = Mathf.Max(0, _view.Feedback.Count - S0UiConstants.EXPANDED_FEEDBACK);
+            for (int i = 0; i < _feedbackRows.Count; i++)
+            {
+                Selectable row = _feedbackRows[i];
+                _scrolls[row] = scroll;
+                bool exists = i < _view.Feedback.Count;
+                row.gameObject.SetActive(exists && (i >= earlier || _view.IsEarlierFeedbackOpen));
+                if (!exists)
+                {
+                    S0UiFactory.Set(row.GetComponent<Text>(), "");
+                    continue;
+                }
+
+                Transform parent = i < earlier ? _earlierRoot : _feedbackRoot;
+                if (row.transform.parent != parent)
+                    row.transform.SetParent(parent, false);
+                S0UiFactory.Set(row.GetComponent<Text>(), _view.Feedback[i]);
+            }
+
+            _earlierToggle.gameObject.SetActive(earlier > 0);
+            _earlierRoot.gameObject.SetActive(_view.IsEarlierFeedbackOpen);
+            S0UiFactory.Set(_earlierToggle, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+        }
+
+        private void BindStatistics()
+        {
+            RectTransform parent = _view.Screen == ClientScreens.PostMatchReport ? _reportStatistics : _matchStatistics;
+            while (_statRows.Count < _view.Statistics.Count + 1)
+            {
+                RectTransform row = _ui.Node("Statistic row", parent);
+                var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+                layout.spacing = S0UiConstants.GAP;
+                layout.childControlWidth = layout.childControlHeight = true;
+                layout.childForceExpandWidth = true;
+                layout.childForceExpandHeight = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    Text label = _ui.Label(row, "");
+                    label.alignment = i == 0 ? TextAnchor.UpperLeft : TextAnchor.UpperRight;
+                    var size = label.gameObject.AddComponent<LayoutElement>();
+                    size.flexibleWidth = 1;
+                }
+
+                _statRows.Add(row);
+            }
+
+            for (int i = 0; i < _statRows.Count; i++)
+            {
+                RectTransform row = _statRows[i];
+                if (row.parent != parent)
+                    row.SetParent(parent, false);
+                row.gameObject.SetActive(i <= _view.Statistics.Count);
+                if (i > _view.Statistics.Count)
+                    continue;
+                string label, home, away;
+                if (i == 0)
+                {
+                    label = L("statistics.column");
+                    home = L("team.home");
+                    away = L("team.away");
+                }
+                else
+                {
+                    var stat = _view.Statistics[i - 1];
+                    label = stat.Label;
+                    home = stat.Home;
+                    away = stat.Away;
+                }
+
+                S0UiFactory.Set(row.GetChild(0).GetComponent<Text>(), label);
+                S0UiFactory.Set(row.GetChild(1).GetComponent<Text>(), home);
+                S0UiFactory.Set(row.GetChild(2).GetComponent<Text>(), away);
+            }
+        }
+
+        private void BindPitch()
+        {
+            if (_view.Screen != ClientScreens.MatchView || _view.Frame.IsEmpty)
+                return;
+            MatchFrameView frame = _view.Frame;
+            int width = Mathf.Clamp(Mathf.RoundToInt(_pitch.rectTransform.rect.width), 1, S0UiConstants.MAX_TEXTURE_SIDE);
+            int height = Mathf.Max(1, Mathf.RoundToInt(width * MatchEngineConstants.PITCH_WIDTH_M / MatchEngineConstants.PITCH_LENGTH_M));
+            if (_pitchTexture == null || _pitchTexture.width != width)
+            {
+                _matchCamera.targetTexture = null;
+                if (_pitchTexture != null)
+                {
+                    _pitchTexture.Release();
+                    Destroy(_pitchTexture);
+                }
+
+                _pitchTexture = new RenderTexture(width, height, S0UiConstants.TEXTURE_DEPTH_BITS);
+                _pitchTexture.Create();
+                _pitch.texture = _pitchTexture;
+                _matchCamera.targetTexture = _pitchTexture;
+            }
+
+            Vector2 viewportSize = _pitch.rectTransform.rect.size;
+            for (int i = 0; i < _pitchLabels.Count; i++)
+            {
+                Text label = _pitchLabels[i];
+                var cue = frame.AgentCues[i];
+                Vector3 world = default;
+                _labelVisible[i] = !cue.IsSentOff && _renderer.TryGetRenderedAgentPosition(i, cue.PlayerId, out world);
+                if (!_labelVisible[i])
+                    continue;
+                S0UiFactory.Set(label, _view.PitchMarker(i));
+                Vector3 projected = _matchCamera.WorldToViewportPoint(world);
+                _labelVisible[i] = projected.z > 0 && projected.x >= 0 && projected.x <= 1 && projected.y >= 0 && projected.y <= 1;
+                _markerPoints[i] = new Vector2(projected.x * viewportSize.x, projected.y * viewportSize.y);
+                _labelSizes[i] = new Vector2(label.preferredWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP);
+            }
+
+            if (viewportSize.x <= 0 || viewportSize.y <= 0)
+                return;
+            S0ScreenLayout.PlacePitchLabels(viewportSize, _markerPoints, _labelSizes, _labelVisible, _labelCentres, S0UiConstants.GAP);
+            for (int i = 0; i < _pitchLabels.Count; i++)
+            {
+                Text label = _pitchLabels[i];
+                label.gameObject.SetActive(_labelVisible[i]);
+                _leaderLines[i].gameObject.SetActive(_labelVisible[i]);
+                if (!_labelVisible[i])
+                    continue;
+                RectTransform rect = label.rectTransform;
+                rect.anchorMin = rect.anchorMax = Vector2.zero;
+                rect.sizeDelta = _labelSizes[i];
+                rect.anchoredPosition = _labelCentres[i];
+                RectTransform line = _leaderLines[i];
+                line.anchorMin = line.anchorMax = Vector2.zero;
+                line.anchoredPosition = _markerPoints[i];
+                Vector2 delta = _labelCentres[i] - _markerPoints[i];
+                line.sizeDelta = new Vector2(delta.magnitude, 1);
+                line.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+                line.SetAsFirstSibling();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            using (RefreshMarker.Auto())
+            {
+                if (_view == null || _disposed)
+                    return;
+                try
+                {
+                    BindPitch();
+                }
+                catch (Exception exception)
+                {
+                    _renderer.RejectPresentation(exception);
+                }
+            }
+        }
+
+        private bool IsAllowed(Selectable item) => item != null && item.gameObject.activeInHierarchy && item.IsInteractable() && (!_dialog.activeSelf || item.transform.IsChildOf(_dialog.transform));
+        private void Focus(Selectable item)
+        {
+            if (!IsAllowed(item) || EventSystem.current == null)
+                return;
+            EventSystem.current.SetSelectedGameObject(item.gameObject);
+            if (_scrolls.TryGetValue(item, out ScrollRect scroll))
+                Reveal(scroll, item.transform as RectTransform);
+        }
+
+        private void RecoverFocus()
+        {
+            if (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null)
+                return;
+            Selectable current = EventSystem.current.currentSelectedGameObject.GetComponent<Selectable>();
+            if (!IsAllowed(current))
+                Focus(_dialog.activeSelf ? _dialogHeading : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _pause.IsInteractable() ? _pause : _matchHeading);
+        }
+
+        private void Keyboard()
+        {
+            if (Input.GetMouseButtonDown(0))
+                _keyboardFocus = false;
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                _keyboardFocus = true;
+                int current = -1;
+                // Hierarchy order follows the visible layout, including retained/reparented history.
+                Selectable[] order = GetComponentsInChildren<Selectable>(false);
+                GameObject selected = EventSystem.current?.currentSelectedGameObject;
+                for (int i = 0; i < order.Length; i++)
+                    if (order[i].gameObject == selected)
+                        current = i;
+                int step = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? -1 : 1;
+                if (current < 0 && step < 0)
+                    current = 0;
+                for (int n = 0; n < order.Length; n++)
+                {
+                    current = (current + step + order.Length) % order.Length;
+                    if (IsAllowed(order[current]))
+                    {
+                        Focus(order[current]);
+                        break;
+                    }
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape) && _dialog.activeSelf)
+            {
+                _keyboardFocus = true;
+                CancelDialog();
+            }
+
+            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.RightArrow))
+                ChoiceArrow(1);
+            else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.LeftArrow))
+                ChoiceArrow(-1);
+            GameObject focused = EventSystem.current?.currentSelectedGameObject;
+            foreach (var pair in _focusRings)
+                pair.Value.SetActive(_keyboardFocus && pair.Key.gameObject == focused && IsAllowed(pair.Key));
+        }
+
+        private void ChoiceArrow(int step)
+        {
+            GameObject selected = EventSystem.current?.currentSelectedGameObject;
+            if (selected == null)
+                return;
+            IReadOnlyList<Button> group = null;
+            foreach (Button b in _setupChoices)
+                if (b.gameObject == selected)
+                    group = _setupChoices;
+            foreach (Button b in _mentalityChoices)
+                if (b.gameObject == selected)
+                    group = _mentalityChoices;
+            foreach (Button b in _outgoing)
+                if (b.gameObject == selected)
+                    group = _outgoing;
+            foreach (Button b in _incoming)
+                if (b.gameObject == selected)
+                    group = _incoming;
+            if (group == null)
+                return;
+            int index = 0;
+            for (int i = 0; i < group.Count; i++)
+                if (group[i].gameObject == selected)
+                    index = i;
+            for (int i = 0; i < group.Count; i++)
+            {
+                index = (index + step + group.Count) % group.Count;
+                if (!IsAllowed(group[index]))
+                    continue;
+                _keyboardFocus = true;
+                group[index].onClick.Invoke();
+                Focus(group[index]);
+                return;
+            }
+        }
+
+        private static void Reveal(ScrollRect scroll, RectTransform item)
+        {
+            if (scroll == null || item == null)
+                return;
+            Canvas.ForceUpdateCanvases();
+            Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, item);
+            Rect visible = scroll.viewport.rect;
+            Vector2 offset = scroll.content.anchoredPosition;
+            if (bounds.max.y > visible.yMax)
+                offset.y -= bounds.max.y - visible.yMax;
+            else if (bounds.min.y < visible.yMin)
+                offset.y += visible.yMin - bounds.min.y;
+            scroll.content.anchoredPosition = offset;
+        }
+
+        /// <summary>Destroy only owned UI/render resources; authored scene roots and renderer survive.</summary>
+        public void DisposeViews()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            if (_matchCamera != null)
+                _matchCamera.targetTexture = null;
+            if (_pitchTexture != null)
+            {
+                _pitchTexture.Release();
+                Destroy(_pitchTexture);
+            }
+
+            foreach (GameObject item in _owned)
+                if (item != null)
+                {
+                    item.SetActive(false);
+                    Destroy(item);
+                }
+
+            _owned.Clear();
+        }
+
+        private void OnDestroy() => DisposeViews();
+    }
+}
+#region VersionHistory
+// | Version | Date       | Author | Notes |
+// | 1.0     | 2026-10-08 | —      | Persistent four-screen UGUI binding and keyboard/dialog/resource lifecycle. |
+#endregion

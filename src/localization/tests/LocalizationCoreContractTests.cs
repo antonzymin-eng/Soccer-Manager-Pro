@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/localization/tests/LocalizationCoreContractTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-14
+// Modified: 2026-10-08
 // Author:   —
 // Specs:    Localization & Accessibility #49 §5, FR-LC-001-005/009/010/012/014/020
 // Purpose:  L1 contract, value-safety, selector-shape and dependency-boundary tests.
@@ -187,7 +187,7 @@ namespace TacticalDirector.Localization.Tests
         }
 
         [Test]
-        public void NoOtherProductionAsmdef_ReferencesLocalizationAtL1()
+        public void OnlyConsumedP5bClientAssembliesReferenceLocalization()
         {
             string srcRoot = Path.Combine(FindRepositoryRoot(), "src");
             string testSegment = Path.DirectorySeparatorChar + "tests" + Path.DirectorySeparatorChar;
@@ -195,6 +195,8 @@ namespace TacticalDirector.Localization.Tests
                 .Where(path => path.IndexOf(testSegment, StringComparison.OrdinalIgnoreCase) < 0)
                 .Where(path => !string.Equals(Path.GetFileName(path), "localization.asmdef", StringComparison.Ordinal))
                 .Where(path => File.ReadAllText(path).Contains("TacticalDirector.Localization"))
+                .Where(path => !string.Equals(path, Path.Combine(srcRoot, "client-app", "client-app.asmdef"), StringComparison.Ordinal))
+                .Where(path => !string.Equals(path, Path.Combine(srcRoot, "match-client-unity", "match-client-unity.asmdef"), StringComparison.Ordinal))
                 .ToArray();
 
             Assert.That(offenders, Is.Empty);
@@ -381,4 +383,5 @@ namespace TacticalDirector.Localization.Tests
 // | 1.3     | 2026-09-11 | GPT-5.6 Sol | Scope authored-state reflection to localization-owned namespaces so coverage instrumentation is ignored. |
 // | 1.4     | 2026-09-12 | GPT-5.6 Sol | Apply the authored-type scope consistently to public type-shape and serializable-attribute locks; compiler/coverage tracker types are implementation artifacts, not localization-contract types. |
 // | 1.5     | 2026-09-14 | GPT-5.6 Sol | Replace namespace allow-listing with explicit compiler/Coverlet exclusions; inspect every other assembly-owned runtime type, RNG/persistence field identifiers, and `[Serializable]` regardless of visibility. |
+// | 1.6     | 2026-10-08 | —      | Admit only the two consumed P5b client paths; all simulation and other production references remain forbidden. |
 #endregion
