@@ -1,6 +1,6 @@
 // File:     src/match-client-core/MatchClientDriver.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P2/§6),
 //           Code Standards #20
@@ -65,6 +65,24 @@ namespace TacticalDirector.MatchClientCore
         public IReadOnlyList<TickStampedCommand> FailedCommands
         {
             get { lock (_logLock) { return _failedLog.ToArray(); } }
+        }
+
+        /// <summary>
+        /// Copies both outcome logs atomically only when their append-only counts differ from the
+        /// caller's last snapshot. Unchanged polling returns false and null outputs without allocation.
+        /// </summary>
+        public bool TryGetCommandOutcomes(int appliedCount, int refusedCount,
+            out IReadOnlyList<TickStampedCommand> applied, out IReadOnlyList<TickStampedCommand> refused)
+        {
+            lock (_logLock)
+            {
+                applied = refused = null;
+                if (appliedCount == _log.Count && refusedCount == _failedLog.Count)
+                    return false;
+                applied = _log.ToArray();
+                refused = _failedLog.ToArray();
+                return true;
+            }
         }
 
         /// <summary>
@@ -145,4 +163,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | engine (bad index / sub cap / used slot) is now isolated —      |
 // |         |            |        | dropped + recorded in FailedCommands — instead of escaping the  |
 // |         |            |        | pre-tick hook and killing the background pacing thread.         |
+// | 1.3     | 2026-10-08 | —      | Atomic conditional outcome snapshots for allocation-free unchanged UI polling. |
 #endregion

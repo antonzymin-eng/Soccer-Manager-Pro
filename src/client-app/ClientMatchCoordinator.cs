@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientMatchCoordinator.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-08 (P5b screens)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Consumes one lifecycle with transaction, accepted-frame end barrier and repeat-match teardown.
@@ -43,6 +43,8 @@ namespace TacticalDirector.ClientApp
         /// <summary>Client-local monotonic callback identity, never a simulation/save input.</summary>
         public long AttachmentId => _attachmentId;
         internal MatchSession Session => _lifecycle.Current;
+        internal ClientMatchContext Context => _context;
+        internal S0DemoFixture Fixture => _fixture;
 
         /// <summary>Constructs one shell with explicit renderer and admitted approved fixture.</summary>
         public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture)
@@ -96,10 +98,11 @@ namespace TacticalDirector.ClientApp
             long attachment = checked(++_attachmentId);
             try
             {
-                MatchSession session = _lifecycle.CreateSession(_fixture.BuildSetup(DraftMentality));
+                MatchSetup setup = _fixture.BuildSetup(DraftMentality);
+                MatchSession session = _lifecycle.CreateSession(setup);
                 MatchIdentityContext identity = _fixture.Bind(session);
                 SessionMatchAnalytics analytics = SessionMatchAnalytics.Attach(session);
-                var context = new ClientMatchContext(session, identity, analytics);
+                var context = new ClientMatchContext(session, identity, analytics, setup.HomeTactic);
                 _context = context;
                 MatchView.Install(context);
                 Report.Install(context);
@@ -194,4 +197,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
+// | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
 #endregion

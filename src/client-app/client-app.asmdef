@@ -8,7 +8,9 @@
         "TacticalDirector.MatchViewer",
         "TacticalDirector.MatchAnalytics",
         "TacticalDirector.PlayerDatabase",
-        "TacticalDirector.TacticalInstructions"
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.Localization",
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

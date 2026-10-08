@@ -967,7 +967,14 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-**Current next step: implement the consumed P5b lifecycle/identity slice.**
+**Current next step: validate the complete P5b screens on the pinned host.**
+The coordinator has the October 7 pinned-host acceptance in [its validation record](../tracking/p5b-lifecycle-validation.md) v0.5.
+L2 merged October 8 through #487 at 574b0344. The four screens now have an
+[implemented candidate and host procedure](../tracking/p5b-screens-validation.md) v0.1.
+All real-client I-Q01–19 and B8/B9b/B10/Gate J remain open; no new product decision or
+reopening of approved H/I is inferred from source implementation.
+
+**Prior next step, October 6, 2026 (coordinator work completed): implement the consumed P5b lifecycle/identity slice.**
 #478 landed Gate-I technical handoff PASS and owner acceptance at fafb63fc.
 #470 foundation then merged October 5 at f276f700 from 509a9f5d after CI run
 37264147436 passed and recorded Unity 6000.4.9f1 compile/ClientApp 26/26 evidence.
@@ -1114,3 +1121,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.28 | October 4, 2026 | Records technical S0 Gate-I handoff PASS at e8ffd89 and advances next action to landing the verdict then consumed client/localization work. #470 main release follows #478 landing; refresh/CI/pinned compile and Gate J remain due. Gate definitions and prior owner approvals unchanged. |
 | 1.29 | October 5, 2026 | Records #470 foundation merged at f276f700 and routes consumed lifecycle/identity implementation to the source-audited plan. Preserves previous sequence and all gate/approval/QA contracts. |
 | 1.30 | October 5, 2026 | PR #479 review corrections advance the consumed implementation pointer to v0.2; B9b screen/navigation scope and analytics locking, observer-slot and dependency obligations are explicit. Gate definitions, owner approvals and planned QA unchanged. |
+| 1.31 | October 8, 2026 | Sequences exact-head host validation after L2 merged and the complete P5b screen candidate; runtime/cert gates remain open. |

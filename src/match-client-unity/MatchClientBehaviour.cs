@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-08 (P5b screens)
 // Modified (prior): 2026-09-07 (P5b review — demo boot default-off; host wiring still validates; see VersionHistory 1.8)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
@@ -104,6 +104,7 @@ namespace TacticalDirector.MatchClientUnity
         private GameObject[] _agentMarkers;
         private MeshRenderer[] _agentMarkerRenderers;
         private GameObject[] _possessionRings;
+        private GameObject[] _substituteRings;
         private GameObject _ball;
         private GameObject _ballShadow;
 
@@ -165,6 +166,19 @@ namespace TacticalDirector.MatchClientUnity
             finally { _attaching = false; }
         }
 
+        /// <summary>Rendered host position only when its latched identity matches the accepted UI identity.</summary>
+        public bool TryGetRenderedAgentPosition(int agentId, int playerId, out Vector3 position)
+        {
+            position = default;
+            if (_wiringRejected || _agentMarkers == null || !_frameLatch.HasFrame || agentId < 0 || agentId >= _agentMarkers.Length ||
+                _frameLatch.Current.AgentCues[agentId].PlayerId != playerId || _agentMarkers[agentId] == null) return false;
+            position = _agentMarkers[agentId].transform.position;
+            return true;
+        }
+        /// <summary>View integration failures use the existing renderer/coordinator terminal rejection path.</summary>
+        public void RejectPresentation(Exception exception)
+        { RejectWiring("S0 presentation failed: " + exception.Message); Debug.LogException(exception, this); }
+
         /// <summary>Hides and destroys only generated visuals; drops references before deferred Destroy.</summary>
         public void Detach()
         {
@@ -179,6 +193,7 @@ namespace TacticalDirector.MatchClientUnity
             _agentMarkers = null;
             _agentMarkerRenderers = null;
             _possessionRings = null;
+            _substituteRings = null;
             _ball = null;
             _ballShadow = null;
             _scratchPropertyBlock = null;
@@ -508,6 +523,7 @@ namespace TacticalDirector.MatchClientUnity
             _agentMarkers = new GameObject[_roster.AgentCount];
             _agentMarkerRenderers = new MeshRenderer[_roster.AgentCount];
             _possessionRings = new GameObject[_roster.AgentCount];
+            _substituteRings = new GameObject[_roster.AgentCount];
 
             for (int i = 0; i < _roster.AgentCount; i++)
             {
@@ -565,6 +581,13 @@ namespace TacticalDirector.MatchClientUnity
 
                 _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, _generatedRoot.transform, nameof(_possessionRingPrefab));
                 _possessionRings[i].SetActive(false);
+                _substituteRings[i] = InstantiatePrefab(_possessionRingPrefab, _generatedRoot.transform, nameof(_possessionRingPrefab));
+                if (_wiringRejected) return;
+                MeshRenderer outline = _substituteRings[i].GetComponentInChildren<MeshRenderer>();
+                if (outline == null || outline.sharedMaterial == null || !outline.sharedMaterial.HasProperty(_colorPropertyId))
+                { RejectWiring("substitute annulus requires a MeshRenderer with the marker colour property."); return; }
+                _scratchPropertyBlock.SetColor(_colorPropertyId, Color.white); outline.SetPropertyBlock(_scratchPropertyBlock);
+                _substituteRings[i].SetActive(false);
             }
         }
 
@@ -695,17 +718,21 @@ namespace TacticalDirector.MatchClientUnity
             {
                 AgentRenderModel model = _agentRenderModels[i];
 
-                // M2: ShirtNumber, YellowCards and IsSubstitute are DELIBERATELY DEFERRED here, not
-                // silently dropped. This landing wires no label prefab — Packages/manifest.json
-                // carries no com.unity.textmeshpro dependency — so there is nowhere on the existing
-                // marker to draw a number or a card count. IsGoalkeeper and IsSentOff below ARE
-                // bound: both fit the existing marker material as a tint, with no new prefab slot.
+                // S0 supplies localized shirt/substitute labels. Cards remain statistics text;
+                // goalkeeper/sent-off tint and the separate white substitute annulus bind actual cues.
                 Transform marker = _agentMarkers[i].transform;
                 marker.position = WithGroundLayerHeight(model.WorldPosition, MatchClientConstants.AgentMarkerLayerHeightM);
                 marker.localScale = FlatGroundScale(model.MarkerRadius);
 
                 _scratchPropertyBlock.SetColor(_colorPropertyId, ResolveMarkerColor(in model));
                 _agentMarkerRenderers[i].SetPropertyBlock(_scratchPropertyBlock);
+                _substituteRings[i].SetActive(model.IsSubstitute && !model.IsSentOff);
+                if (model.IsSubstitute && !model.IsSentOff)
+                {
+                    Transform substitute = _substituteRings[i].transform;
+                    substitute.position = WithGroundLayerHeight(model.WorldPosition, MatchClientConstants.PossessionRingLayerHeightM);
+                    substitute.localScale = FlatGroundScale(S0UiConstants.SubstituteOutlineRadiusM);
+                }
 
                 Transform ring = _possessionRings[i].transform;
                 _possessionRings[i].SetActive(model.HasBall);
@@ -785,7 +812,9 @@ namespace TacticalDirector.MatchClientUnity
             // M8: requires Player Settings → Active Input Handling = "Input Manager (Old)" or
             // "Both" — see the type doc. Under "Input System Package (New)" only, both calls below
             // throw every frame.
-            if (!Input.GetMouseButtonDown(0))
+            // The S0 RawImage owns pointer selection in its own viewport. A screen-space ray
+            // would use the wrong coordinates while this camera renders into its texture.
+            if (_matchCamera.targetTexture != null || !Input.GetMouseButtonDown(0))
             {
                 return;
             }
@@ -1104,4 +1133,5 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | until Attach(MatchSession) lands.                                  |
 // | 1.9     | 2026-10-06 | —      | External inactive-root Attach/detach; isolated generated container and callback-based rejection. |
 // | 1.10    | 2026-10-06 | —      | Restore the System.Globalization import the 1.9 edit dropped; the Inv helpers still use CultureInfo (Unity compile error CS0103). |
+// | 1.11    | 2026-10-08 | —      | Bind identity-matched rendered label positions and terminal presentation failures; texture viewport owns pointer selection. |
 #endregion
