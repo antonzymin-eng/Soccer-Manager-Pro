@@ -1,9 +1,10 @@
 # Localization & Accessibility #49 — Section 3: The Seam, the Determinism Boundary, the Template Model
 
 **Created:** July 23, 2026
-**Last Updated:** October 7, 2026 (v0.4 — L2 construction/render algorithm and single-pass identity guarantee, ERR-049-005/006)
+**Last Updated:** October 7, 2026 (v0.5 — preserve canonical base-locale identity on catalogue selection)
+**Last Updated (prior):** October 7, 2026 (v0.4 — L2 construction/render algorithm and single-pass identity guarantee, ERR-049-005/006)
 **Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -34,6 +35,7 @@ producer type (§4.1).
 ```
 Construct(base, selected, coverage):
     require base.locale == BaseLocale
+    require selected is null, the same instance as base, or has a non-base locale
     require every base template has indices 0..n-1 and no selector
     require all caller-admitted static keys, template ids and clauses exist in base
     require selected rows have base identities and selected indices are in [0, n)
@@ -58,6 +60,11 @@ Render(req):
         if clause exists: text = text + " " + clause
     return text
 ```
+
+A distinct selected catalogue tagged `BaseLocale` is rejected, even if its rows equal the base
+rows. Null selection and selection of the canonical base instance both render only canonical base
+content; this keeps English identity and the no-selector invariant from being bypassed by a
+separately loaded catalogue. Non-base translations retain sparse per-index fallback.
 
 The renderer is the **one place a locale is consulted and a surface string is produced** (FR-LC-001). The
 draw is emitted raw and the modulo happens here because the *selection* must be reproducible from serialized
@@ -154,4 +161,5 @@ returns `{score}` even if the score slot is `2-1`; chained replacement would re-
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-10-07 | — | L2 construction/render algorithm and single-pass identity guarantee, ERR-049-005/006. |
+| 0.5 | 2026-10-07 | — | Codex review: clarify selected base-locale instance admission to enforce canonical English identity; null and same-base selection remain valid. |
 #endregion

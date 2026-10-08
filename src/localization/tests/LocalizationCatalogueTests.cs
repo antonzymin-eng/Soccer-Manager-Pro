@@ -68,6 +68,40 @@ namespace TacticalDirector.Localization.Tests
             Assert.That(error.Message, Does.Contain("template:1/2: missing base index 1"));
         }
 
+        [TestCase("empty")]
+        [TestCase("copy")]
+        [TestCase("override")]
+        [TestCase("plural")]
+        [TestCase("gender")]
+        public void T14_DistinctBaseLocaleSelectedCatalogue_IsRejected(string content)
+        {
+            var baseCatalogue = new TemplateCatalogue(LocaleId.BaseLocale, new[] { new StaticRow(_key, "base") }, new[] { Row(0), Row(1) }, new[] { new ClauseRow(_clause, "clause") });
+            TemplateVariant variant = content == "plural" ? TemplateVariant.ForPlural("count", new TemplateForm("override"))
+                : content == "gender" ? TemplateVariant.ForGender("subject", new TemplateForm("override"))
+                : new TemplateVariant("override");
+            var selected = content == "empty" ? new TemplateCatalogue(new LocaleId(" EN "))
+                : new TemplateCatalogue(new LocaleId(" EN "), new[] { new StaticRow(_key, content == "copy" ? "base" : "override") },
+                    content == "copy" ? new[] { Row(0), Row(1) } : new[] { new VariantRow(_id, 1, variant) },
+                    new[] { new ClauseRow(_clause, content == "copy" ? "clause" : "override") }, count => PluralCategory.Other);
+
+            ArgumentException error = Assert.Throws<ArgumentException>(() => new Localizer(baseCatalogue, selected, new CatalogueCoverage()));
+            Assert.That(error.Message, Is.EqualTo("locale: selected base catalogue must be the base instance"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void T14_NullOrSameBaseInstance_PreservesCanonicalBaseContent(bool sameInstance)
+        {
+            var baseCatalogue = new TemplateCatalogue(LocaleId.BaseLocale, new[] { new StaticRow(_key, "base") },
+                new[] { new VariantRow(_id, 0, new TemplateVariant("zero")), new VariantRow(_id, 1, new TemplateVariant("one")) },
+                new[] { new ClauseRow(_clause, "clause") });
+            var localizer = new Localizer(baseCatalogue, sameInstance ? baseCatalogue : null, new CatalogueCoverage());
+            var request = new LocalizedTextRequest(_id, 1UL, default(NamedSlotSet), default(NamedSelectorSet), true, 9);
+
+            Assert.That(localizer.Resolve(_key), Is.EqualTo("base"));
+            Assert.That(localizer.Render(request), Is.EqualTo("one clause"));
+        }
+
         [TestCase("static")]
         [TestCase("template")]
         [TestCase("clause")]
@@ -231,4 +265,5 @@ namespace TacticalDirector.Localization.Tests
 // | Version | Date       | Author | Change |
 // | 1.0     | 2026-10-07 | —      | Initial L2 construction acceptance tests. |
 // | 1.1     | 2026-10-07 | —      | PR #487 review: pin missing-row, wrong-locale and base-selector failure reasons. |
+// | 1.2     | 2026-10-07 | —      | Codex review: reject distinct selected English catalogues; preserve null/same-base identity rendering. |
 #endregion

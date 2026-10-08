@@ -1,7 +1,7 @@
 # Localization #49 — End-to-End Implementation Plan
 
 **Created:** September 6, 2026
-**Version:** 2.8
+**Version:** 2.9
 **Status:** L1/L3A LANDED; L2 IMPLEMENTED IN THIS CHANGESET, PRE-MERGE VALIDATION PENDING; L3B NEXT AFTER L2
 **Baseline:** `main` at `67f2343c34e767ba02a4dc13816c91090b3bf3d9` — the L3A merge commit (PR #370, September 9, 2026). v2.0–v2.2 were authored against `9fbd7533`; the historical review records below keep that value and are not rewritten.
 **Scope:** the APPROVED #49 seam/T0+T1 implementation first; Wave-8 locale/a11y content remains a later, separately approved tier.
@@ -355,10 +355,12 @@ This executable layer proof is the evidence used to discharge ERR-049-002 in ful
 
 # 6. Approved renderer and in-memory catalogue — L2
 
-**October 7 implementation:** see `localization-l2-plan.md` v0.6. Seven source files and two test
-files implement the reviewed plan, with 60 localization tests passing through NUnitLite and four
-negative controls failing as expected. ERR-049-005/006 and their approved spec back-props land
-with the code. Canonical Linux PR composition and exact-head Unity 6000.4.9f1 compile remain
+**October 7 implementation:** see `localization-l2-plan.md` v0.7. Seven source files and two test
+files implement the reviewed plan, with 67 localization tests passing through NUnitLite. Codex
+review adds a canonical-base selection guard: five cases fail before the fix and pass after it.
+Prior-head standard CI run 37713997728 passed Localization 60/60 and the full PR gate; that
+production head is superseded by the guard, so fresh corrected-head CI remains due.
+ERR-049-005/006 and their approved spec back-props land with the code. Canonical Linux PR composition and exact-head Unity 6000.4.9f1 compile remain
 pre-merge gates; this status does not authorize downstream wiring before L2 lands.
 
 **Purpose:** implement only FR-LC-007/008/008a/009/010/011 and the renderer behavior required for T1.
@@ -811,4 +813,5 @@ Review of v2.4 found that the two new records had been added without following t
 | 2.7 | 2026-09-28 | OpenAI | L1 restart close-out on current main: records the L1-only reverse-reference tripwire lifecycle, requires pinned Unity 6000.4.9f1 compilation of both new asmdefs before merge, and preserves v2.6's owner-held gate-policy update. |
 | 2.6 | 2026-09-20 | — | Synchronized gate acceptance wording with the owner retirement of the final held-red row. The canonical `tools/run-tests-local.sh --pr` contract is unchanged; owner-held verification is now conditional on configured rows, and the comments-only current ledger means no exclusion/dedicated stage while `sim_match_engine_close_chance` runs in the ordinary sweep. Historical v2.1 and L3A gate evidence remain historical and are not rewritten. |
 | 2.8 | 2026-10-07 | — | L2 implemented with Q1–Q4 recommendations, 60 targeted localization passes, four negative controls, and ERR-049-005/006 back-props. Canonical PR/pinned Unity gates remain open; producer migration and Wave-8 content remain later. |
+| 2.9 | 2026-10-07 | — | Codex L2 review: preserve canonical English identity on selection; L2 record v0.7, 67 supplementary passes and prior-head standard CI pass. Final-head Linux/pinned Unity gates remain required. |
 #endregion

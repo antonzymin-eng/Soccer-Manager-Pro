@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026\
 **Last Updated:** October 7, 2026\
-**Version:** 0.6\
+**Version:** 0.7\
 **Status:** IMPLEMENTED — Q1–Q4 recommendations selected under the owner’s October 7 work instruction; Linux PR gate and exact-head pinned Unity compile pending before merge\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
@@ -23,7 +23,8 @@
 
 The spec wins over this plan wherever they differ. L2 types and members below are implemented in this changeset.
 Compilation/test evidence: Roslyn C# 9 against netstandard2.1; NUnitLite 3.14 executes the compiled
-Localization test assembly: 60 passed / 0 failed / 0 skipped (18 L1 + 42 L2 cases). Removing each
+Localization test assembly: 67 passed / 0 failed / 0 skipped (18 L1 + 49 L2 cases). Five distinct-English
+selection regressions failed before the canonical-base guard; null/same-base selection passes. Removing each
 static/template/clause coverage check and adding recursive expansion all fail negative controls.
 The environment’s .NET CLI/VSTest fail before execution, so this is targeted evidence, not a canonical
 PR-gate pass. All localization test sources also compile against NUnit 3.5; that API compatibility
@@ -185,6 +186,9 @@ fold into `TemplateCatalogue.cs` during implementation if the type-shape test al
 ### 5.2 Construction (all failures throw `ArgumentException` naming every offending identity, in ordinal order)
 
 - The base catalogue's locale must be `LocaleId.BaseLocale`.
+- A selected catalogue tagged `BaseLocale` must be the actual base instance. A distinct instance
+  fails construction, including an identical copy or an empty catalogue. Null selection still means
+  canonical base-only rendering; non-base translations retain sparse fallback.
 - **Coverage (F5 + ERR-049-005):** every required static key, template id (at least one variant;
   a missing row is tested, not only an explicit empty one) and clause key must exist in the base
   catalogue.
@@ -255,7 +259,7 @@ formatting (FR-LC-005).
 | T11 | Gender form chosen by operand; unknown or missing operand → default form; plural selector with a gender-only operand → default form | Bounded selector, FR-LC-011 |
 | T12 | Clause appended with one space; selected → base fallback; same `CitationKind` under two producer tags does not collide; `HasCitedEpisode == false` appends nothing | FR-LC-010, producer scoping |
 | T13 | Single-pass expansion: (a) a subject named `{opponent}` stays literal; (b) template `{subject}{opponent}` with subject `{`, opponent `score}`, score `2-1` gives `{score}`, not `2-1`; (c) with brace-free values and well-formed templates, output equals chained `.Replace` in both living-world order and sorted order; (d) an unknown placeholder stays verbatim | §5.4 step 5, ERR-049-006 |
-| T14 | Construction rejects: wrong base locale, duplicate rows, a gap in base indices, a selected index at or above the base count, malformed template braces (unmatched, nested `{{subject}}`, empty `{}`), a base variant declaring a plural selector, a base variant declaring a gender selector, a selected plural selector without a rule | §5.2 |
+| T14 | Construction rejects: wrong base locale, distinct selected base-locale catalogue (empty, identical copy, sparse plain override, plural override or gender override; null/same-instance selections remain valid), duplicate rows, a gap in base indices, a selected index at or above the base count, malformed template braces (unmatched, nested `{{subject}}`, empty `{}`), a base variant declaring a plural selector, a base variant declaring a gender selector, a selected plural selector without a rule | §5.2 |
 | T15 | Caller arrays mutated after construction do not change output | Immutability |
 | T16 | Non-admitted template id → `""`; required clause absent from both is impossible by construction; an unrequired missing clause appends nothing | §8 Q1 defensive paths |
 | — | Existing L1 locks keep passing: no references, public type shape, no mutable static, no forbidden state, L1-only tripwire | Layer and state constraints |
@@ -317,11 +321,16 @@ After the remaining merge gates pass and L2 lands, P5b copy/scale/screens can in
 
 ## Validation evidence
 
-The canonical `bash tools/run-tests-local.sh --pr` was attempted on the implementing source:
+The canonical GitHub PR gate passed on prior head `4b74ec7982d41b01c19fab42d0521e0c987f089d`
+([run 37713997728](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/37713997728)): the standard
+runner executed Localization 60/60 and the full gate ended `Gate PASSED`, quarantine empty. The
+Codex base-locale fix changes production after that head; fresh final-head CI remains required.
+
+At initial implementation, canonical `bash tools/run-tests-local.sh --pr` was attempted locally:
 coverage names `TacticalDirector.Localization`; checklist/schema surveys and approval-transition
 selection pass; metadata and generated-project checks pass; `dotnet restore` then aborts in
 `Process.GetStat` / `Process.StartTime` before compilation/test execution. Canonical gate status is
-**BLOCKED by the authoring environment**, not passed. Fresh GitHub Actions evidence remains due.
+**BLOCKED by the authoring environment**, not passed. Fresh GitHub Actions evidence for the corrected final head remains due.
 
 Broader tooling: 343 tests, 340 passed / 1 failed / 2 skipped. The failure is
 `test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required` (Git exit 128,
@@ -329,12 +338,19 @@ Broader tooling: 343 tests, 340 passed / 1 failed / 2 skipped. The failure is
 `0381b2bbc909ac8d51b4069a0cf3e80e7eb0433d`; tooling/hook code is unchanged by L2. No test was
 excluded or altered. Documentation consistency, assembly tiers, whitespace and metadata checks pass.
 
-The 42 L2 cases live in `LocalizationRenderingTests.cs` and `LocalizationCatalogueTests.cs`;
+The 49 L2 cases live in `LocalizationRenderingTests.cs` and `LocalizationCatalogueTests.cs`;
 parameterized cases expand T1–T16 without adding another production dependency. The unchanged
 `LocalizationCoreContractTests` supplies the 18 L1 locks. The pre-merge host procedure is:
 check out the final PR head, record its full SHA and a clean source tree, compile both Localization
 asmdefs in Unity 6000.4.9f1 on the pinned host, and run Localization EditMode tests. Record the host,
 Editor version, result counts and log/evidence paths against that exact SHA before merge.
+
+Codex review reproduction: five distinct selected-English catalogue cases were accepted before the
+fix (62 passed / 5 failed); after the guard, all 67 cases pass. Removing that guard again fails
+the five rejection cases; the earlier static/template/clause/recursive controls still fail 2/3/3/1
+cases respectively, and restored production passes 67/67. The supplementary host still cannot
+start the normal dotnet CLI (`Process.GetStat`); direct Roslyn/NUnitLite supplies the narrow proof.
+The standard prior-head CI pass is separate evidence and is not carried forward as a new-head pass.
 
 ## Version History
 
@@ -346,3 +362,4 @@ Editor version, result counts and log/evidence paths against that exact SHA befo
 | 0.4 | October 6, 2026 | Records the owner's approval of ERR-049-006 (single-pass expansion with the two-condition identity guarantee). The ERR is still filed, and the spec back-prop made, only in the implementing commit. Status moves to plan for review. |
 | 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |
 | 0.6 | October 7, 2026 | Q1–Q4 recommendations selected and L2 implemented; T1–T16/structural evidence and negative controls recorded; both ERRs back-propagated together. Canonical PR and pinned Unity gates remain open. |
+| 0.7 | October 7, 2026 | Codex review: selected English content must be the canonical base instance; five rejection and two identity cases bring localization to 67 local passes. Records prior-head standard CI 60/60 and full gate pass, with corrected-head CI and pinned Unity still due. |

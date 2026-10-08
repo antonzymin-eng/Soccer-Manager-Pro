@@ -3,7 +3,7 @@
 **Status:** G0 ACCEPTED — P1/P2 AUTHORIZED AFTER THIS PLANNING PR LANDS
 **Started:** September 4, 2026  
 **Last Updated:** October 7, 2026
-**Version:** 1.8
+**Version:** 1.9
 **Implementation gate:** G0 CLOSED by owner acceptance on September 7, 2026; P1/P2 may begin after this planning PR lands. No bulk audio production is authorized before G3.
 **Governs:** Audio & Sound Design #51 implementation plus the production pipeline for shippable audio assets.
 
@@ -512,7 +512,7 @@ End-to-end audio architecture is proven. Bulk production may now begin.
 
 ## D49 — caption renderer prerequisite
 
-L2 implementation and targeted tests are recorded in `../tracking/localization-l2-plan.md` v0.6;
+L2 implementation and targeted tests are recorded in `../tracking/localization-l2-plan.md` v0.7;
 its canonical PR gate, pinned Unity compile and landing remain due. The approved caption boundary
 is still open, so this change does not satisfy D49. Before P5B begins, verify landed #49 L2 rendering/catalogue behavior exists and that the approved integration topology provides a legitimate caption boundary between #49 and #51. #49 L1 core existence alone does not satisfy D49, and this plan does not force the generic localization core to acquire a #51 dependency.
 
@@ -765,3 +765,4 @@ G0 was accepted by the owner on September 7, 2026 and the canonical G0 tracking 
 | 1.6 | 2026-09-08 | **Codex review of PR #368, two P2 findings, both accepted and both real.** (1) §9.1 asserted that the P4A output-neutrality lock *"should fail if the adapter acquires a sim read or deterministic draw"* — false for the read half: a prohibited read (consulting the score to choose a cue) leaves the digest chain, every RNG cursor and the serialized bytes byte-identical, so the lock passes while FR-AU-015 is violated. Output equality detects **writes and draws only**. §9.1 now lands the lock the APPROVED spec already prescribed — **T-AU-BOUND-006**'s behavioural no-call assertion (which §5 explicitly justifies on the ground that the reference graph does not cover the host callback path) plus **T-AU-BOUND-007** and the `src/**/*.asmdef` direction scan — with the digest assertions kept as the write/draw half. (2) `ERR-051-001` had a detailed `spec-error-log.md` entry but no `## Error Index` row, so the index that enumerates the authoritative remediation backlog would not have surfaced the new open T0 blocker; index 229 → 230 rows. Neither defect was caught by `doc-consistency-check.py`, `recurring-defect-lint.py` or `check_drift.sh`, all of which passed over both. |
 | 1.7 | 2026-09-29 | Synchronizes D49 with the #49 L1 landing (PR #468, restarting #397): the dependency-free localization L1 core assembly now exists, while P5B remains blocked on L2 renderer/catalogue behavior plus an approved #49/#51 caption boundary; the generic localization core acquires no audio dependency. |
 | 1.8 | 2026-10-07 | Records L2 implementation candidate with pre-merge gates pending; D49 still needs landed L2 and the approved caption boundary. No audio dependency is added to the generic core. |
+| 1.9 | 2026-10-07 | Follow L2 v0.7 after Codex canonical-base selection fix; corrected-head PR/Unity gates and landing still precede D49, and caption boundary remains open. |

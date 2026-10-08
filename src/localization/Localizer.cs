@@ -19,6 +19,7 @@ namespace TacticalDirector.Localization
         /// <summary>
         /// Validates base indices, selector restrictions, caller coverage and selected-locale identities.
         /// Null selected content means base-only rendering; null coverage is a configuration error.
+        /// Selected base-locale content must be the same instance as the canonical base catalogue.
         /// Concurrent reads require the catalogue's supplied plural rule to be pure and total.
         /// </summary>
         public Localizer(TemplateCatalogue baseCatalogue, TemplateCatalogue selected, CatalogueCoverage coverage)
@@ -38,6 +39,11 @@ namespace TacticalDirector.Localization
             coverage.Validate(baseCatalogue, errors);
             if (selected != null && !ReferenceEquals(selected, baseCatalogue))
             {
+                if (selected.Locale == LocaleId.BaseLocale)
+                {
+                    errors.Add("locale: selected base catalogue must be the base instance");
+                }
+
                 selected.ValidateTranslation(baseCatalogue, errors);
             }
 
@@ -93,4 +99,5 @@ namespace TacticalDirector.Localization
 #region VersionHistory
 // | Version | Date       | Author | Change |
 // | 1.0     | 2026-10-07 | —      | Initial L2 localizer and production terminal paths. |
+// | 1.1     | 2026-10-07 | —      | Reject distinct selected base-locale catalogues to preserve canonical English identity. |
 #endregion
