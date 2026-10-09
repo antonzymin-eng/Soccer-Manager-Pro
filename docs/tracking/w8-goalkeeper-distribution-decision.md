@@ -2,7 +2,7 @@
 
 > **Created:** September 25, 2026  
 > **Status:** **B contract approved; #466 dormant substrate merged as `8fab5e1d` and its pinned Unity compile condition met at `5d112bab` on October 7, re-confirmed at `93de60f6` on October 9. Live B wiring remains outstanding, including exactly-once Resolve feedback consumption, F-05 original-request/effective-target telemetry and engine-level identity tests.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. Compile evidence does not establish a passing overall EditMode gate; PR #492 records six failures.
-> **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
+> **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
 ## Owner decisions at a glance
@@ -52,6 +52,9 @@ evidence is not certification of future wiring.
   60 Hz claim frame, legal release at elapsed 480 and sanction at 481 before CONTACT processing,
   with a `[FIXED]` constant and worked example. This note schedules that amendment, not its approval.
 - **Single host:** use the roadmap host queue, with separate final-head evidence for B and C.
+  D-01a's interim operational default applies now; licensed-CI D-01b has no blocking deadline,
+  and the queue's scheduling details stay in the roadmap rather than #19/#20. October 9's compile
+  evidence is supplied by PR #492: this packet/roadmap update must not merge before that PR.
   Preserve A→B and B→C isolation. Dormant query scaffolding may be split only within the approved
   B contract; activating receiver validation or action suppression is measured behavior.
 
@@ -424,6 +427,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.29 | 2026-10-09 | PR #493 review corrections | Labels c50726e as historical pre-A production audit, not current comparison anchor; distinguishes active interim host queue from optional CI and retains the explicit #492 merge dependency for October 9 compile evidence. |
 | 0.28 | 2026-10-09 | landing coordination; decisions pending | Records met #466 compile condition and remaining live-wiring obligations; links roadmap owner/host queue; removes unconditional substitution/schema reservations; names W10-only reaction gates and separate C law/history coordination; outside-area handling disposition before C closeout. No contract approval or gameplay change. |
 | 0.27 | 2026-09-28 | PR #466 PX-001 fix; owner approval recorded; fresh CI required | CI `36461159668` on `cc51730` failed only `PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult`, whose regex still expected the retired "in progress" diagnostic; the test now expects the v1.18 unavailable-executor text. The owner explicitly approved the #5 §3.8.13 v1.6 / §4.3 v1.2 goalkeeper/team identity amendment on September 28, 2026 (a hand-held distribution may be started only by the team's own live goalkeeper; goal kicks are restarts and are not routed through this mode). `open-issues.md` adds an engine-level `IsGoalkeeperOfTeam` test obligation. Test/tracking only. |
 | 0.26 | 2026-09-28 | PR #466 review correction; fresh CI required | Owner-approved #5 §3.8.13 v1.6 + §4.3 v1.2 amendment + dormant code reject dedicated requests unless AgentId is a live goalkeeper on TeamId, covering wrong-team and outfield-player entry for both ends. Records exactly-once Resolve feedback consumption and F-05 original-request-vs-effective-target telemetry as live-wiring obligations. Fixes guard diagnostic/docs only otherwise; no schema/RNG/A→B result change. Local gate unavailable in this authoring environment; CI required. |

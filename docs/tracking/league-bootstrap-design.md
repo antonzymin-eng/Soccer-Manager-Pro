@@ -3,7 +3,7 @@
 > **Created:** July 25, 2026
 > **Status:** DESIGN SUPPLEMENT — **A3 LANDED July 25, 2026** (design converged AR-1..AR-3;
 > implemented, then code-reviewed AR-4 → AR-5 (whole-file, 1H+4M+3L) → AR-6 (1M) — full gate green
-> at each step, then AR-7 over the spec/tests/governance — 1H+4M). **A4a RAN August 12, 2026** — the ~9 h
+> at each step, then AR-7 over the spec/tests/governance — 1H+4M). **A4a RAN August 12, 2026** — the
 > corpus run is executed, not outstanding: 198 real 90-minute `MatchEngine` matches captured and
 > committed under `docs/tracking/corpus-data/`, all three round-resolution `[GT]`s re-fitted, and
 > KD-8's two bars recorded **mean agreement PASS, distribution shape FAIL** (`ERR-030-033`
@@ -447,8 +447,9 @@ Two things follow, and both were wrong in the first draft of this section:
 **Generation.** A committed harness (lands with A4a) that boots the engine through
 `ConfigureSquads` and ticks to `MatchEnded`, recording `(dSquad, homeGoals, awayGoals, matchSeed)`
 — every column observable at capture time, which `dRating`/`edge` would not be.
-It is parallelisable across buckets and **run once**; roadmap C1a budgets ~9 h. It must be
-*scheduled*, not discovered.
+It is parallelisable across buckets and scheduled for the selected engine anchor, with KD-8
+recapture when invalidated. Roadmap C1a now starts from the measured ~90 s/match (~5 worker-hours
+for 198 matches); re-measure current throughput and schedule pilot/depth/extra costs explicitly.
 
 > **Harness placement (corrected during A3's code review).** It belongs in
 > `src/season-save/tests/`, **not** beside `MatchEngineCapstonePerfHarness` in
@@ -473,10 +474,12 @@ Freeze the selected scope, complete any included calibration, then recapture/ref
 rather than after every development landing. Any subsequent engine invalidator requires fresh
 affected corpus/fit evidence before shipping the newer engine. This does not weaken KD-8's trigger.
 
-Budget 198 × ~2.6 min = **~8.6 worker-hours** for the core capture, plus Step 0, W/D/L depth and
-extra samples required by the acceptance contract. Wall time depends on declared workers/platform
-and measured current throughput; the August capture's ~90 s/match, four-worker ~1.4 h elapsed run
-is historical evidence, not a promised runtime. Re-fitting existing rows is cheap. Record engine
+Start from the measured August **198 × ~90 s = ~5 worker-hours** for the core capture, plus
+Step 0, W/D/L depth, extra samples and any added cost from engine wiring since August. The earlier
+~8.6 worker-hour budget used the roadmap's 154 s/match lower-bound claim, disproved by that capture;
+roadmap C1 now records the correction. Re-measure current throughput before booking. Wall time
+depends on declared workers/platform; August's four-worker ~1.4 h elapsed run is not a current
+guarantee. Re-fitting existing rows is cheap. Record engine
 SHA, snapshot schema, harness/fit invocation and retained raw rows. Owner decisions on the PM-2
 anchor and shape treatment block PM-2 closeout. KD-7a remains HELD until its owning gates and
 explicit adoption decision are met; a mean-parameter fit does not cure ERR-030-034 or explain the
@@ -859,3 +862,4 @@ Windows certification host.
 | 1.6 | 2026-08-17 | — | **Adversarial-review fixes over the v1.5 landing (M16, M19), documentation only.** **M19:** v1.5 claimed S7 condition 4 was "corrected in place"; it was not — the correction sat ~30 lines below, past S8 and the football-check paragraph, so a reader working the four-condition tripwire in order never reached it. The amendment now sits **at condition 4 itself**, with S9 retained as the decision record. **M16:** the file's status header still read "A4a is designed here but NOT executed" five days after A4a ran — corrected to record the run, the committed corpus, the re-fitted `[GT]`s and KD-8's split PASS/FAIL verdict. No decision changed: KD-7a remains HELD, and no successor distribution is adopted or rejected. |
 | 1.7 | 2026-08-18 | — | **Adversarial-review round-6 corrections (H1, H2), documentation only — no decision changed.** **H1:** the KD-8 callout was still headlined "BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN" — the retracted flat verdict, contradicted by the callout's own first bullet (mean bar RESOLVED → PASS), by the verdict paragraph directly above it, and by `round-resolution-corpus.md`; re-titled to the two-part verdict (mean agreement PASS, distribution shape FAIL). **H2:** the same callout quoted the pooled home/away correlation as "+0.004 ± 0.052, n=378", contradicting S6's "+0.044 ± 0.073 (n = 198), ~3σ" in this same file — the n=378 figure is reproducible only by pooling the 180 W/D/L depth rows into the fit corpus, an unsanctioned invocation that also flips the α verdict to DETERMINED and so contradicts the α figures S7 condition 2 and S9 rely on; corrected to the sanctioned invocation's printed value, **+0.044 ± 0.073 (n=198), ~3σ**. Verified by re-running `tools/round-resolution-fit.py` on the four sanctioned slices with `--wdl-csv`: `-> MEAN: PASS`, `-> SHAPE (W/D/L): FAIL`, `pooled within-bucket home/away corr = +0.044 +/- 0.073 (n=198)`. |
 | 1.8 | 2026-10-09 | — | Coordinates selected PM-2 engine anchor and milestone corpus recapture/refit with roadmap §5.1; distinguishes worker-hours from elapsed time and capture from cheap fitting; retains KD-7a HOLD and separate mean/shape verdicts. No model, acceptance or parameter change. |
+| 1.9 | 2026-10-09 | — | PR #493 review corrections: capture budget starts from measured ~90 s/match (~5 worker-hours for 198), with current throughput/added wiring cost remeasured. Marks the old 154 s universal lower-bound estimate as disproved; retains selected-anchor, shape and adoption gates. |

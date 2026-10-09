@@ -121,7 +121,8 @@ available is blocking the season loop — which has no blocker — behind a Unit
 
 Development and host-free checks remain parallel; Unity-affecting **landings** share the owner's
 single Windows 11 / Unity 6000.4.9f1 host. Host-free development is not an exemption from the
-final-PR-head Unity compile requirement. The proposed queue and its owner decision are in §5.1.
+final-PR-head Unity compile requirement. The operational queue is in §5.1; its use does not wait
+for the separate, non-blocking licensed-CI decision.
 
 ---
 
@@ -130,29 +131,35 @@ final-PR-head Unity compile requirement. The proposed queue and its owner decisi
 These are quantified findings, not cautions. Each one changes the plan.
 
 ### C1 — Full-fidelity season simulation is infeasible. The round-resolution model is critical path.
-From the certified baseline (`kickoff-multi-second.cert.md`: **p50 = 0.4768 ms/tick**) and
+Historical sizing from the certified baseline (`kickoff-multi-second.cert.md`:
+**p50 = 0.4768 ms/tick**) and
 `MATCH_TICKS_TOTAL = 324,000`:
 
-- One full match ≳ **154 s** (~2.6 min) of compute.
-- A 20-club league season = 38 rounds × 10 fixtures = **380 matches ≳ 16.3 hours**.
+- One full match was estimated at **154 s** (~2.6 min) of compute.
+- A 20-club league season = 38 rounds × 10 fixtures = **380 matches**, originally estimated at
+  **16.3 worker-hours**.
 
-> These are **lower bounds**, not point estimates: they multiply the *median* per-tick cost by the tick
-> count, but total wall-clock tracks the *mean*, and with p99 = 2.5669 ms the distribution is
-> right-tailed. The true figures are higher, which only strengthens the conclusion below.
+> **Correction October 9, 2026:** the original claim that these are universal **lower bounds**
+> is disproved by the August A4a capture's measured **~90 s/match**, below 154 s. Extrapolating
+> a short certified tick benchmark did not establish a full-match runtime floor across workloads
+> and platforms. The measured capture gives ~5 worker-hours for 198 matches; re-measure the
+> selected current engine before scheduling (§5.1). Parallel elapsed time is a separate quantity.
 
 So "simulate every fixture with the real engine" is not a slow option — it is not an option. #30's
 KD-9 `AdvanceAndPlayNextRound` already specifies the answer (managed fixture through a real
 `MatchEngine`, the rest through a **round-resolution model**), but the sizing makes the requirement
 sharp: for a round to resolve in under a second, the quick-sim budget is **≲ 10 ms/match** — a
-~15,000× gap. That is a *statistical resolution model*, not a fast-forwarded engine, and it is on
+a ~9,000× gap even at August's measured ~90 s/match. That is a *statistical resolution model*,
+not a fast-forwarded engine, and it is on
 the critical path to PM-2, not an optimisation after it.
 
 ### C1a — The quick-sim needs a calibration corpus, and the corpus costs compute.
 If the round-resolution model's score distribution does not agree with the engine's, the league table
 will feel wrong in a way no unit test catches. Calibrating it requires a corpus of **engine-simulated**
-matches across varied squad strengths — at ~2.6 min each, ~200 matches ≈ **9 hours** of compute.
-This is parallelisable and run-once. **Budget it explicitly (A4a) rather than discovering it during
-A4.**
+matches across varied squad strengths. The August core capture measured ~90 s/match, so 198
+matches cost **~5 worker-hours**, before pilot, acceptance depth and later engine costs. This is
+parallelisable; budget each selected anchor's capture explicitly (A4a), using current throughput
+and KD-8's recapture triggers. The original ~9 h sizing used C1's disproved lower-bound premise.
 
 ### C2 — Unity host access is an external blocker on P4–P6, and it is back on the critical path.
 The `match-client-unity` README and `interactive-unity-client-design.md` both record it: no Unity host
@@ -260,7 +267,7 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | Step / lane | Work and owning document | Blocking dependencies | Exit criterion |
 |---|---|---|---|
 | 1 / governance | Review #492, then synchronize this roadmap and owning records | #492 review and required checks | Compile-pass/EditMode-fail evidence and current sequencing agree |
-| 2 / verification | Repair four structural test root lookups using `TestContext.CurrentContext.TestDirectory`; investigate two SeasonSave timeouts; retain sentinels, non-vacuity and assertions | Final-head host slot; independent of spec-only PRs | Six previously failing cases and the applicable full EditMode suite pass with pinned commit/NUnit evidence |
+| 2 / verification | Repair four structural test root lookups using `TestContext.CurrentContext.TestDirectory`; investigate two SeasonSave timeouts; retain sentinels, non-vacuity and assertions | Final-head host slot under D-01a; independent of spec-only PRs, D-02 and licensed-CI D-01b | Six previously failing cases and the applicable full EditMode suite pass with pinned commit/NUnit evidence |
 | 3 / specifications | Split #20 historical drift from proposed #19/#20 normative rules; land bounded #7/#8/#11/#3 corrections | Consumer-specific gates below; normative amendments require D-02 sign-off | Each correction names wording, source evidence, replacement and acceptance; no new rule is represented as approved |
 | 4 / substitutions | Amend [match-flow §6](match-flow-completion-design.md), then implement serialized requests and stoppage execution/client outcomes | Approved execution contract and final-head host slot; **not** a pre-B prerequisite when census proves no affected requests | No mid-play roster replacement; exactly-once execution/cancellation and restore tests; host compile passes |
 | 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; continue finance T3b2, progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
@@ -286,19 +293,27 @@ Land it any time. Do not reopen already-completed #13 work.
 related §§3/5/7 text and ERR-020-008; the certified-platform record needs cross-references only.
 A separate owner-reviewed normative amendment covers direct `.asmdef` verification, NUnit
 ownership in #19, a `TD_*` exception limited to test assemblies, observation-only instrumentation,
-and the standing Unity verification policy. Keep that policy in one owning spec with references
-elsewhere. This roadmap does not approve those rules or imply unbuilt analyzers/profiling exist.
+and the final-head Unity compile requirement per PR. Keep that verification requirement in one
+owning spec with references elsewhere. Host scheduling stays in this roadmap; the optional
+licensed-CI decision does not gate repairs or belong to the normative amendment's approval path.
+This roadmap does not approve those rules or imply unbuilt analyzers/profiling exist.
 
-**Single-host scheduling proposal (D-01).** Prepare reviews and Linux checks before booking the
-host. First repair the known red EditMode cases; next prioritize ready landings that open or close
+**Single-host operational queue (D-01a; interim default applies now).** Prepare reviews and Linux
+checks before booking the host. First repair the known red EditMode cases; next prioritize ready landings that open or close
 an isolated engine-evidence window; then take ready client/career landings in request order.
 Reserve a client/career slot in each agreed host cycle so engine work cannot starve that lane.
-Anton owns bookings and any priority override. Batch distinct PR checkouts in one host session,
-but compile/test and retain evidence at **each PR's actual final head**; a combined checkout or
+Anton owns bookings and any priority override. This is a roadmap operating default for the
+already-authorized work, not a claim of explicit owner ratification or a new spec rule. Test repairs
+may be prepared and booked now without waiting for D-02 or D-01b. Batch distinct PR checkouts in
+one host session, but compile/test and retain evidence at **each PR's actual final head**; a combined checkout or
 later `main` build does not certify untested heads. A new source/package/assembly-affecting head
 requires fresh applicable evidence. Substitutions, test repairs, P5b changes, C3/C4, W8 B/C, W9
-and W10 all enter this queue. Licensed Unity CI is an early owner licensing/cost/governance
-decision, not assumed capacity and not an automatic waiver of host acceptance/profiling.
+and W10 all enter this queue.
+
+**Licensed Unity CI (D-01b; non-blocking).** Anton may decide licensing/cost/governance whenever
+useful; no booking, repair, landing or milestone waits on that choice. Continue using the existing
+host and required per-PR evidence meanwhile. CI is not assumed capacity and does not automatically
+replace real-client acceptance/profiling. Scheduling priorities remain here, not in #19/#20.
 
 **Isolation and schema allocation.** Census the frozen W8 and foul/card drivers for substitution
 requests before deciding ordering. Zero relevant requests removes the substitution → pre-B edge;
@@ -315,22 +330,26 @@ even if dormant query scaffolding was landed earlier.
 ships; it need not include every later W8/W9/W10 or realism improvement. Freeze that chosen anchor
 before its expensive corpus capture, then refit once for the milestone. A later engine invalidator
 reopens the affected capture/fit before shipping that newer engine; it does not force a capture
-after every development PR. At 198 matches × ~2.6 min, budget **~8.6 worker-hours**, plus pilot,
-W/D/L depth and any required extra samples. This is compute work, not necessarily host elapsed
-time: the recorded August capture used ~90 s/match and four workers (~1.4 h elapsed). Re-measure
-current throughput and declare workers/platform under the applicable acceptance contract; do not
-promise either historic timing. Fitting an existing corpus is cheap. Mean fitting cannot close
-ERR-030-034's dispersion/shape failure or establish the separate draw-deficit mechanism.
+after every development PR. Start from the measured August **198 × ~90 s = ~5 worker-hours**,
+plus pilot, W/D/L depth, required extra samples and any added cost from engine wiring since August.
+The earlier **~8.6 worker-hour** estimate came from C1's disproved 154 s lower-bound claim and
+is superseded. Compute work is not host elapsed time: August used four workers (~1.4 h elapsed).
+Re-measure current throughput and declare workers/platform under the applicable acceptance
+contract; historical timing is not a current guarantee. Fitting an existing corpus is cheap.
+Mean fitting cannot close ERR-030-034's dispersion/shape failure or establish the separate draw-deficit mechanism.
 
-**Decision register.** All entries below are **pending decisions**, not approvals. Anton Zymin
-(project owner) is the decision owner; the implementing agent prepares the source-backed options,
-cost and evidence. Deadlines are explicit blocking events because host dates are not booked yet;
+**Decision register.** Entries are **pending owner decisions**, not approvals; D-01a separately
+records the interim operational default already in use and invites owner adjustment without
+blocking repairs. Anton Zymin (project owner) is the decision owner; the implementing agent
+prepares the source-backed options, cost and evidence. Where a decision blocks work, deadlines
+name that event because host dates are not booked yet;
 record an actual host date when booking, rather than inventing one here. Record each decision in
 the owning document and link it here before the blocked landing/capture/closeout proceeds.
 
 | ID | Decision / decision owner | Blocking deadline | Record owner |
 |---|---|---|---|
-| D-01 | Anton: single-host queue and licensed Unity CI posture | Before the next Unity-affecting landing is booked/merged (steps 2 onward) | #19/#20 policy amendment; host evidence linked here |
+| D-01a | Anton: ratify/adjust the interim operational host queue, active now | **Non-blocking:** step 2 uses this queue now; confirm/adjust at the next host planning review | This roadmap and host bookings/evidence; scheduling does not amend #19/#20 |
+| D-01b | Anton: optional licensed Unity CI posture | **No blocking deadline:** repairs and subsequent landings continue on the pinned host | CI licensing/cost/governance record linked here; final-head compile requirement alone belongs in the owning spec |
 | D-02 | Anton: explicit sign-off on proposed #19/#20 normative amendments | Before step 3 normative amendments land | Owning spec approval/version records |
 | D-03 | Anton: `Recovering` claim/save eligibility; no cooldown tuning by this decision | Before step 6 pre-B freeze | #11 and open Recovering issue |
 | D-04 | Anton: retain or correct W2 foul-cooldown policy | Before step 6 pre-B freeze; any correction measured separately | #435 characterization/preregistration and owning contract |
@@ -353,6 +372,10 @@ tests, adversarial review to convergence, and a green full gate — the project'
 (#28 T0 was one landing).
 
 ### Phase A — Season spine (Track S, host-free, **no external blockers**)
+
+**Historical phase rows:** Phases A–D retain their dated landings, original scopes and evidence.
+For current dependencies, exit criteria and pending decisions use §5.1. These rows do not override
+the selected PM-2 engine anchor, quick-sim recapture/refit or single-host landing queue.
 
 | # | Work item | Governance | Gate | Depends on |
 |---|---|---|---|---|
@@ -580,6 +603,12 @@ math are host-free and test-locked in `match-client-core` today.
 
 ## 8. Dependency graph
 
+**Historical dependency sketch:** the graph and critical-path text below preserve the original
+phase sequencing. Current dependencies are owned by [§5.1](#51-current-implementation-lanes-and-decision-register--october-9-2026).
+In particular, current PM-2 requires D-08's selected engine anchor, D-09's shape disposition and
+that anchor's A4a recapture/refit to converge with C3/C4 and client acceptance. The old C3 → C4
+path alone does not describe today's PM-2 closeout; its original landing-count estimates are history.
+
 ```
                        [existing: match-engine · season-save · player-database · match-client-core]
                                                     │
@@ -663,6 +692,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.49 | October 9, 2026 | PR #493 review corrections: operational host queue applies now; licensed CI has no blocking deadline and scheduling stays outside normative specs. Capture budget uses measured ~90 s/match; C1 lower-bound claim is disproved. Historical phase/graph labels point to current PM-2 anchor/refit gates. |
 | v0.48 | October 9, 2026 | Consolidated parallel implementation lanes; single-host queue proposal; named spec consumers; census-dependent substitution/schema ordering; selected PM-2 engine anchor/capture budget; owner decision deadlines. Sequencing only, with no gameplay or normative approval. |
 | v0.47 | October 9, 2026 | Pinned-host compile and EditMode run of main `93de60f6` (covers #487 L2, #489 screens, #491 T3b1): 0 compile errors after the Editor resolved `com.unity.ugui`; 1,025 passed / 6 failed across two runs (four tracked repo-root locks, two SeasonSave Unity-timeout tests that predate all three PRs; overall status Failed). B9b's compile check is discharged; a passing EditMode run, real-client I-Q01–19, B8/B9b/B10 and Gate J remain due. Evidence `docs/tracking/evidence/host-93de60f6-20261009/`. |
 | v0.46 | October 8, 2026 | #40 T3b1 implemented: day-completion slot 11a, zero inputs, sole disabled gate, no finance save cursor. Final-head Unity compile pending; T3b2 amount model remains next. |
