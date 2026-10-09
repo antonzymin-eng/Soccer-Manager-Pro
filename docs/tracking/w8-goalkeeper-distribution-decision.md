@@ -1,11 +1,16 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **B contract approved; PR #466 review correction adds the #5 goalkeeper/team identity guard (owner-approved September 28, 2026) and requires fresh CI before merge. CI `36461159668` on `cc51730` failed only the stale PX-001 log expectation, fixed in v0.27; prior head `6119fe7` was fully green; Unity 6000.4.9f1 compilation is still pending, so live #21/#11 wiring must not depend on this substrate yet.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved.
+> **Status:** **B contract approved; #466 dormant substrate merged as `8fab5e1d` and its pinned Unity compile condition met at `5d112bab` on October 7, re-confirmed at `93de60f6` on October 9. Live B wiring remains outstanding, including exactly-once Resolve feedback consumption, F-05 original-request/effective-target telemetry and engine-level identity tests.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. Compile evidence does not establish a passing overall EditMode gate; PR #492 records six failures.
 > **Production anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (`main`, PR #455 merge).  
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
 ## Owner decisions at a glance
+
+Current ordering and pending decision owners/deadlines live in
+[roadmap §5.1](path-to-playable-roadmap.md#51-current-implementation-lanes-and-decision-register--october-9-2026).
+The recorded architecture below remains unchanged; that roadmap does not grant new gameplay or
+spec approval.
 
 | ID | Recorded architecture; details to specify in owning specs | Landing |
 |---|---|---|
@@ -16,7 +21,39 @@
 
 **Owner direction (September 25, 2026):** proceed in this order: land a behavior-neutral, nonserialized instrument and preregistration **before reading A results**; run the frozen six-seed A baseline; land the separate, behavior-neutral possession-change helper with exact frozen-seed digest equality (it may be developed alongside A); amend #11, #5, #21 and Match Engine with the actual policy delays, delivery ranges, tie-break and punt-zone geometry and file the #11 ERRs **before any B wiring code**; then wire B and compare the same corpus with A. The architecture choices above govern that work. §7 now lists only unresolved numerical and policy details. Approved specs govern implementation once amended; this packet does not itself amend or approve them. #5/#11 remain overall DRAFT in #461. The W8 amendments to #5/#11/#21 were explicitly approved by the owner on September 26, 2026; that approval is narrower than whole-spec promotion. Merge is still not treated as implicit approval. C's Law-12 correction remains a later, separately measured landing.
 
-**Unity compile gate for the dormant B substrate (PR #466):** CI `36346168645` passed on `6119fe7`, but Unity was skipped by the normal workflow. Until the merged PR #466 code compiles successfully on the pinned Unity 6000.4.9f1 host, #21/#11 live wiring must not depend on the new goalkeeper-distribution executor substrate. `open-issues.md` owns this blocker so it survives the PR body; Unity evidence must land before dependent live-wiring code. The same live-wiring entry must also prove an exactly-once Resolve terminal-feedback consumer and F-05 telemetry by comparing the serialized original request target with the terminal effective target; `EffectiveTargetAgentId == -1` alone cannot distinguish an intentional receiverless request.
+**Unity compile gate for the dormant B substrate (PR #466): MET.** The October 7 compile of
+`5d112bab` includes merged #466; evidence is in `evidence/p5b-host-20261007/compile-5d112bab.txt`.
+PR #492 also records the October 9 compile of `93de60f6`. The live-wiring entry in `open-issues.md`
+still requires exactly-once Resolve terminal feedback, F-05 telemetry comparing the serialized
+original target with the terminal effective target, and the real engine identity test.
+`EffectiveTargetAgentId == -1` alone cannot distinguish an intentional receiverless request.
+Every later Unity-affecting B/C landing needs its own final-head compile; the old substrate
+evidence is not certification of future wiring.
+
+### Landing coordination — October 9, 2026
+
+- **Baseline:** owner decisions on Recovering eligibility, W2 cooldown and #434/#440 placement
+  precede the new pre-B freeze. Deferred substitutions are not an unconditional predecessor:
+  census the frozen drivers first; zero relevant requests removes that behavioral dependency.
+  Otherwise include the change before freeze or approve an attribution plan. Later relevant
+  engine merges reopen a measured comparison even when digests are treated as fingerprints.
+- **Schema:** the first durable-layout landing takes the next free version after current v24;
+  substitution, live B and C PRs rebase on predecessors and rerun schema/codec/restore/replay locks.
+  No v25/v26 reservation is made for a named feature.
+- **Spec consumers:** #7/#8 and #11 reaction-stamp corrections gate W10, not live B. Land the
+  bounded #11 reaction documentation correction before the C law-amendment PR, or reconcile C's
+  shared version/history citations on rebase; it is not a C behavioral prerequisite. #3's existing
+  AgentPosition field correction has no blocking consumer.
+- **Outside-area handling:** OD-W8-1 already records this separate offence. An implementation or
+  explicit owner-approved deferral is required before C closeout; retain its own work item and
+  never classify outside-area handling as an eight-second corner. Do not silently enlarge C's
+  code scope or erase the requirement.
+- **Exact C boundary:** the owning #11 law amendment must define elapsed frame 0 as the recorded
+  60 Hz claim frame, legal release at elapsed 480 and sanction at 481 before CONTACT processing,
+  with a `[FIXED]` constant and worked example. This note schedules that amendment, not its approval.
+- **Single host:** use the roadmap host queue, with separate final-head evidence for B and C.
+  Preserve A→B and B→C isolation. Dormant query scaffolding may be split only within the approved
+  B contract; activating receiver validation or action suppression is measured behavior.
 
 ---
 
@@ -387,6 +424,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.28 | 2026-10-09 | landing coordination; decisions pending | Records met #466 compile condition and remaining live-wiring obligations; links roadmap owner/host queue; removes unconditional substitution/schema reservations; names W10-only reaction gates and separate C law/history coordination; outside-area handling disposition before C closeout. No contract approval or gameplay change. |
 | 0.27 | 2026-09-28 | PR #466 PX-001 fix; owner approval recorded; fresh CI required | CI `36461159668` on `cc51730` failed only `PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult`, whose regex still expected the retired "in progress" diagnostic; the test now expects the v1.18 unavailable-executor text. The owner explicitly approved the #5 §3.8.13 v1.6 / §4.3 v1.2 goalkeeper/team identity amendment on September 28, 2026 (a hand-held distribution may be started only by the team's own live goalkeeper; goal kicks are restarts and are not routed through this mode). `open-issues.md` adds an engine-level `IsGoalkeeperOfTeam` test obligation. Test/tracking only. |
 | 0.26 | 2026-09-28 | PR #466 review correction; fresh CI required | Owner-approved #5 §3.8.13 v1.6 + §4.3 v1.2 amendment + dormant code reject dedicated requests unless AgentId is a live goalkeeper on TeamId, covering wrong-team and outfield-player entry for both ends. Records exactly-once Resolve feedback consumption and F-05 original-request-vs-effective-target telemetry as live-wiring obligations. Fixes guard diagnostic/docs only otherwise; no schema/RNG/A→B result change. Local gate unavailable in this authoring environment; CI required. |
 | 0.25 | 2026-09-27 | PR #466 CI green; Unity compile gate recorded durably | Records green run `36341081930` on `30372cd`, including the functional gate, while making the skipped Unity editor compile an explicit repository blocker: live #21/#11 wiring must not depend on the dormant B substrate until the merged code compiles on pinned Unity 6000.4.9f1. Mirrors the blocker in `open-issues.md`. Documentation only; no production, schema, gameplay, RNG, or A→B result change. |

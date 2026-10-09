@@ -465,6 +465,23 @@ variance of home/away goals, plus the raw rows. It **records the engine commit S
 engine change invalidates the fit rather than merely aging it. That is a re-capture trigger, and
 naming it now is cheaper than rediscovering it.
 
+**PM-2 anchor coordination (October 9, 2026).** The owner selects the PM-2 engine scope and exact
+anchor before the next milestone corpus capture; see the decision register and step 10 in
+[roadmap §5.1](path-to-playable-roadmap.md#51-current-implementation-lanes-and-decision-register--october-9-2026).
+PM-2 may use an earlier explicitly selected engine anchor while later fidelity work continues.
+Freeze the selected scope, complete any included calibration, then recapture/refit for that anchor
+rather than after every development landing. Any subsequent engine invalidator requires fresh
+affected corpus/fit evidence before shipping the newer engine. This does not weaken KD-8's trigger.
+
+Budget 198 × ~2.6 min = **~8.6 worker-hours** for the core capture, plus Step 0, W/D/L depth and
+extra samples required by the acceptance contract. Wall time depends on declared workers/platform
+and measured current throughput; the August capture's ~90 s/match, four-worker ~1.4 h elapsed run
+is historical evidence, not a promised runtime. Re-fitting existing rows is cheap. Record engine
+SHA, snapshot schema, harness/fit invocation and retained raw rows. Owner decisions on the PM-2
+anchor and shape treatment block PM-2 closeout. KD-7a remains HELD until its owning gates and
+explicit adoption decision are met; a mean-parameter fit does not cure ERR-030-034 or explain the
+separate draw deficit. No model family, acceptance bar or `[GT]` is changed by this scheduling note.
+
 **Fit + lock.** Least-squares over the three KD-7 parameters against the per-bucket means. The lock
 is **not** a statistical sample at test time (the #27 AR-2 precedent: "direct constant assertions,
 not statistical sampling") — it is a pinned table: for each bucket, the quick-sim's mean goals over
@@ -841,3 +858,4 @@ Windows certification host.
 | 1.5 | 2026-08-17 | — | **KD-7a HOLD ratified (owner decision) — S9 added; S7 condition 4 corrected in place.** No successor adopted and none rejected: the corpus that would determine `α` predates tackle wiring, so S7's own condition 4 fails and conditions 1–3 would be re-tested against a corpus KD-8's re-capture trigger replaces anyway. Condition 4's wording was written on August 12 when the tackle challenge did not exist; W2 landed that same day and **ships disabled** (`TackleContactRadiusM = 0`), so "no player has ever made a tackle" is now false about the code and still true about a shipped match — condition 4 is read as post-***arming***, not post-building, or the tripwire would fire against a corpus statistically identical to the one it exists to reject. **Rowless-edit note (FR-CS-057):** this table stopped at v1.4 (July 25) while the August 12 A4a calibration pass added the whole KD-7a section, S1–S8, and the `ERR-030-033`/`ERR-030-034` records. Those edits are left as found per the no-edit rule and are not retro-rowed; this row records that the gap exists so the next reader does not read v1.4 as the file's true state. |
 | 1.6 | 2026-08-17 | — | **Adversarial-review fixes over the v1.5 landing (M16, M19), documentation only.** **M19:** v1.5 claimed S7 condition 4 was "corrected in place"; it was not — the correction sat ~30 lines below, past S8 and the football-check paragraph, so a reader working the four-condition tripwire in order never reached it. The amendment now sits **at condition 4 itself**, with S9 retained as the decision record. **M16:** the file's status header still read "A4a is designed here but NOT executed" five days after A4a ran — corrected to record the run, the committed corpus, the re-fitted `[GT]`s and KD-8's split PASS/FAIL verdict. No decision changed: KD-7a remains HELD, and no successor distribution is adopted or rejected. |
 | 1.7 | 2026-08-18 | — | **Adversarial-review round-6 corrections (H1, H2), documentation only — no decision changed.** **H1:** the KD-8 callout was still headlined "BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN" — the retracted flat verdict, contradicted by the callout's own first bullet (mean bar RESOLVED → PASS), by the verdict paragraph directly above it, and by `round-resolution-corpus.md`; re-titled to the two-part verdict (mean agreement PASS, distribution shape FAIL). **H2:** the same callout quoted the pooled home/away correlation as "+0.004 ± 0.052, n=378", contradicting S6's "+0.044 ± 0.073 (n = 198), ~3σ" in this same file — the n=378 figure is reproducible only by pooling the 180 W/D/L depth rows into the fit corpus, an unsanctioned invocation that also flips the α verdict to DETERMINED and so contradicts the α figures S7 condition 2 and S9 rely on; corrected to the sanctioned invocation's printed value, **+0.044 ± 0.073 (n=198), ~3σ**. Verified by re-running `tools/round-resolution-fit.py` on the four sanctioned slices with `--wdl-csv`: `-> MEAN: PASS`, `-> SHAPE (W/D/L): FAIL`, `pooled within-bucket home/away corr = +0.044 +/- 0.073 (n=198)`. |
+| 1.8 | 2026-10-09 | — | Coordinates selected PM-2 engine anchor and milestone corpus recapture/refit with roadmap §5.1; distinguishes worker-hours from elapsed time and capture from cheap fitting; retains KD-7a HOLD and separate mean/shape verdicts. No model, acceptance or parameter change. |

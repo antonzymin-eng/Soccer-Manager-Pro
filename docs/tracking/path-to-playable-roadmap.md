@@ -17,6 +17,10 @@
 
 ## 0. The finding that motivates this document
 
+**Historical motivation (July 25, 2026), not a current implementation inventory.**
+The zero-assembly claims below describe the starting point. The current sequencing and
+decision register are in §5.1; the dated landing rows retain their evidence.
+
 The project has run a specification-first strategy to a measurable position:
 
 | Layer | Specified | Implemented |
@@ -114,6 +118,10 @@ The work splits cleanly on one line: **does it need a Unity host?**
 
 **They must run in parallel, and Track S must not wait on Track C.** The single worst outcome
 available is blocking the season loop — which has no blocker — behind a Unity host that does.
+
+Development and host-free checks remain parallel; Unity-affecting **landings** share the owner's
+single Windows 11 / Unity 6000.4.9f1 host. Host-free development is not an exemption from the
+final-PR-head Unity compile requirement. The proposed queue and its owner decision are in §5.1.
 
 ---
 
@@ -234,6 +242,111 @@ queue today.
 ---
 
 ## 5. The roadmap
+
+### 5.1 Current implementation lanes and decision register — October 9, 2026
+
+This section is the current ordering authority. It supersedes the serial 95-step and 12-step
+conversation plans, not the approved contracts in the owning documents. The numbered rows express
+dependencies, not a requirement to finish an entire row before starting the next. Track S career
+work and Track C client work continue alongside the measured match-engine lane. No gameplay,
+approved-spec amendment, calibration, or owner decision is authorized by this scheduling update.
+
+**Evidence anchor:** production `main` is `93de60f6` (PR #491). PR #492 at `773ecb67` records
+0 Unity compile errors but **1,025 passed / 6 failed / 3 skipped** across two EditMode runs.
+Review and merge that evidence PR first; this roadmap sync follows it. #466's compile condition
+was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 telemetry and real
+`PassWorldAdapter.IsGoalkeeperOfTeam` test obligations remain. These are not a passing EditMode gate.
+
+| Step / lane | Work and owning document | Blocking dependencies | Exit criterion |
+|---|---|---|---|
+| 1 / governance | Review #492, then synchronize this roadmap and owning records | #492 review and required checks | Compile-pass/EditMode-fail evidence and current sequencing agree |
+| 2 / verification | Repair four structural test root lookups using `TestContext.CurrentContext.TestDirectory`; investigate two SeasonSave timeouts; retain sentinels, non-vacuity and assertions | Final-head host slot; independent of spec-only PRs | Six previously failing cases and the applicable full EditMode suite pass with pinned commit/NUnit evidence |
+| 3 / specifications | Split #20 historical drift from proposed #19/#20 normative rules; land bounded #7/#8/#11/#3 corrections | Consumer-specific gates below; normative amendments require D-02 sign-off | Each correction names wording, source evidence, replacement and acceptance; no new rule is represented as approved |
+| 4 / substitutions | Amend [match-flow §6](match-flow-completion-design.md), then implement serialized requests and stoppage execution/client outcomes | Approved execution contract and final-head host slot; **not** a pre-B prerequisite when census proves no affected requests | No mid-play roster replacement; exactly-once execution/cancellation and restore tests; host compile passes |
+| 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; continue finance T3b2, progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
+| 6 / engine baseline | Settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | D-03/D-04/D-05; substitution census and any relevant invalidator | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
+| 7 / W8 B | Wire six policies under the approved [W8 B contract](w8-goalkeeper-distribution-decision.md), including receiver validation, suppression, canonical CONTACT, terminal feedback, clocks and restore; measure A→B and LongKick landing | Step 6, B contract/remaining #466 obligations and final-head host slot; **no #7/#8 reaction gate** | Governing tests, compile and isolated A→B evidence complete |
+| 8 / W8 C | Separate #11 Law-12 amendment and hand-control implementation; measure B→C | Step 7 evidence, approved C law contract, D-07 closeout disposition and final-head host slot | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
+| 9 / engine fidelity | #441 reachability before W9; implement W9 and W10; land owner-included #434/#440 fixes separately | W9: #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. Each landing has its own host slot | Included behavior is reachable, tested and separately attributable |
+| 10 / engine and quick-sim | Freeze the **D-08 selected PM-2 engine anchor**, complete its included calibration, then recapture A4a/refit under [KD-7/KD-7a/KD-8](league-bootstrap-design.md) | Selected scope complete; D-09 shape disposition; declared compute slot | Current corpus, mean/shape verdicts, governed model and deterministic locks match that anchor |
+| 11 / PM-2 | C3/C4 converge: new game, fixtures, play/quick-resolve, report, table/suspensions/board objectives, 38 rounds and save/resume | Client/season criteria in §1; D-08/D-09 and fit valid for selected anchor; final-head host acceptance | Existing playable-season criteria pass; D-10 save-compatibility decision is recorded |
+| 12 / PM-3 and maintenance | Multi-season progression, finances, training, medical, transfers, retirement/regeneration; localization/#488 and #19 A3.4 continue in parallel | Owning career contracts and host slots; release evidence follows acceptance | Multi-season acceptance, then stability/performance/release evidence |
+
+**Specification gates.** #7/#8 correct the actual `KeeperPerceptionGate` → `SaveAvailable`
+producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1
+omits `OnThreatDeflected` and the visible-threat fallback rule; its reaction correction also gates
+**W10**, not W8 B. Land that bounded #11 documentation correction before the C law-amendment PR,
+or rebase C onto it and reconcile all shared version/history citations before C review. The
+reaction correction alone is not a behavioral prerequisite for C. #3 FR-03 omits production
+`AgentBallCollisionData.AgentPosition` (the agent center, separate from contact point); shot-outcome
+deflection already consumes it, so that documentation correction has **no blocking consumer**.
+Land it any time. Do not reopen already-completed #13 work.
+
+**#19/#20 split.** The drift PR covers FR-CS-008's stale inactive language-version claim,
+related §§3/5/7 text and ERR-020-008; the certified-platform record needs cross-references only.
+A separate owner-reviewed normative amendment covers direct `.asmdef` verification, NUnit
+ownership in #19, a `TD_*` exception limited to test assemblies, observation-only instrumentation,
+and the standing Unity verification policy. Keep that policy in one owning spec with references
+elsewhere. This roadmap does not approve those rules or imply unbuilt analyzers/profiling exist.
+
+**Single-host scheduling proposal (D-01).** Prepare reviews and Linux checks before booking the
+host. First repair the known red EditMode cases; next prioritize ready landings that open or close
+an isolated engine-evidence window; then take ready client/career landings in request order.
+Reserve a client/career slot in each agreed host cycle so engine work cannot starve that lane.
+Anton owns bookings and any priority override. Batch distinct PR checkouts in one host session,
+but compile/test and retain evidence at **each PR's actual final head**; a combined checkout or
+later `main` build does not certify untested heads. A new source/package/assembly-affecting head
+requires fresh applicable evidence. Substitutions, test repairs, P5b changes, C3/C4, W8 B/C, W9
+and W10 all enter this queue. Licensed Unity CI is an early owner licensing/cost/governance
+decision, not assumed capacity and not an automatic waiver of host acceptance/profiling.
+
+**Isolation and schema allocation.** Census the frozen W8 and foul/card drivers for substitution
+requests before deciding ordering. Zero relevant requests removes the substitution → pre-B edge;
+nonzero requests require inclusion before baseline or a separately approved attribution plan.
+Whichever substitution/B/C landing first changes durable layout takes the next free snapshot
+version (currently after v24); later landings rebase, allocate from the landed tree and rerun codec,
+restore, replay and schema locks. Never reserve v25/v26 by calendar. Digests are fingerprints,
+not cross-schema equality tests. A behavior-affecting merge during an A→B or B→C window invalidates
+that comparison; independent client/career/documentation work can continue with neutrality evidence
+where relevant. Activating keeper action suppression or receiver validation is measured behavior,
+even if dormant query scaffolding was landed earlier.
+
+**PM-2 anchor and capture budget.** D-08 chooses exactly which engine landings/calibrations PM-2
+ships; it need not include every later W8/W9/W10 or realism improvement. Freeze that chosen anchor
+before its expensive corpus capture, then refit once for the milestone. A later engine invalidator
+reopens the affected capture/fit before shipping that newer engine; it does not force a capture
+after every development PR. At 198 matches × ~2.6 min, budget **~8.6 worker-hours**, plus pilot,
+W/D/L depth and any required extra samples. This is compute work, not necessarily host elapsed
+time: the recorded August capture used ~90 s/match and four workers (~1.4 h elapsed). Re-measure
+current throughput and declare workers/platform under the applicable acceptance contract; do not
+promise either historic timing. Fitting an existing corpus is cheap. Mean fitting cannot close
+ERR-030-034's dispersion/shape failure or establish the separate draw-deficit mechanism.
+
+**Decision register.** All entries below are **pending decisions**, not approvals. Anton Zymin
+(project owner) is the decision owner; the implementing agent prepares the source-backed options,
+cost and evidence. Deadlines are explicit blocking events because host dates are not booked yet;
+record an actual host date when booking, rather than inventing one here. Record each decision in
+the owning document and link it here before the blocked landing/capture/closeout proceeds.
+
+| ID | Decision / decision owner | Blocking deadline | Record owner |
+|---|---|---|---|
+| D-01 | Anton: single-host queue and licensed Unity CI posture | Before the next Unity-affecting landing is booked/merged (steps 2 onward) | #19/#20 policy amendment; host evidence linked here |
+| D-02 | Anton: explicit sign-off on proposed #19/#20 normative amendments | Before step 3 normative amendments land | Owning spec approval/version records |
+| D-03 | Anton: `Recovering` claim/save eligibility; no cooldown tuning by this decision | Before step 6 pre-B freeze | #11 and open Recovering issue |
+| D-04 | Anton: retain or correct W2 foul-cooldown policy | Before step 6 pre-B freeze; any correction measured separately | #435 characterization/preregistration and owning contract |
+| D-05 | Anton: include/defer #434/#440 and place included landings before B or after B→C | Before step 6 pre-B freeze | Issues/PR and engine backlog; included work before its selected final anchor |
+| D-06 | Anton: W9 ActionType/encoding representation | Before step 9 W9 implementation/landing | #8/#10 and engine serialization contract |
+| D-07 | Anton: outside-area handling implementation or explicit governed deferral | Before step 8 W8 C closeout | W8 OD-W8-1 and separate offence work item; C never classifies it as eight-second corner |
+| D-08 | Anton: PM-2 engine anchor, included gameplay/calibration and realism closure scope | Before step 10 capture; blocks step 11 | This roadmap and owning engine/calibration decisions; KD-W1 amended before any newly authorized tuning |
+| D-09 | Anton: quick-sim shape/model treatment under KD-7a/KD-8 | Before step 10 model adoption/acceptance; blocks step 11 | League-bootstrap supplement and ERR-030-034; no silent PASS or assumed successor adoption |
+| D-10 | Anton: breakable saves through PM-3 or pull #50 migration forward | At step 11 PM-2 exit, before compatibility is promised | #50/save contract and client disclosure |
+
+Deferred substitutions still need their own execution contract: same-slot duplicate requests,
+outgoing dismissal/injury, incoming eligibility, keeper replacement and full-time cancellation;
+serialized waiting requests must not be confused with today's transient `_pendingSub*` event queue.
+W8 C separately defines elapsed frame 0 as the claim frame: release at elapsed 480 is legal,
+qualifying control at 481 is sanctioned before CONTACT. Put the `[FIXED]` constant and worked
+example in #11's approved C amendment; do not implement it through this roadmap.
 
 Sequenced by dependency, annotated with owning governance and gate. "Landing" = one T-phase with
 tests, adversarial review to convergence, and a green full gate — the project's established unit
@@ -550,6 +663,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.48 | October 9, 2026 | Consolidated parallel implementation lanes; single-host queue proposal; named spec consumers; census-dependent substitution/schema ordering; selected PM-2 engine anchor/capture budget; owner decision deadlines. Sequencing only, with no gameplay or normative approval. |
 | v0.47 | October 9, 2026 | Pinned-host compile and EditMode run of main `93de60f6` (covers #487 L2, #489 screens, #491 T3b1): 0 compile errors after the Editor resolved `com.unity.ugui`; 1,025 passed / 6 failed across two runs (four tracked repo-root locks, two SeasonSave Unity-timeout tests that predate all three PRs; overall status Failed). B9b's compile check is discharged; a passing EditMode run, real-client I-Q01–19, B8/B9b/B10 and Gate J remain due. Evidence `docs/tracking/evidence/host-93de60f6-20261009/`. |
 | v0.46 | October 8, 2026 | #40 T3b1 implemented: day-completion slot 11a, zero inputs, sole disabled gate, no finance save cursor. Final-head Unity compile pending; T3b2 amount model remains next. |
 | v0.45 | October 8, 2026 | B9b: complete screens merged to main through #489 at `1c8366d` before host acceptance; screens record v0.11 retargets the pinned-host run to main. Host acceptance remains open. |
