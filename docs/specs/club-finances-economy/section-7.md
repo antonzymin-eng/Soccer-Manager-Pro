@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v1.7 — daily all-club staging and non-zero T3b2 retry/count obligations)
+**Last Updated:** October 9, 2026 (v1.8 — ERR-030-053: require final-day completion and non-zero boundary attribution at T3b2)
+**Last Updated (prior):** October 8, 2026 (v1.7 — daily all-club staging and non-zero T3b2 retry/count obligations)
 **Last Updated (prior):** October 8, 2026 (v1.6 — T3b1 consumed; T3b2 amount model remains next)
 **Last Updated (prior):** September 11, 2026 (v1.5 — ERR-040-003 review: bounded unconsumed T3a API, #40-owned gate, and wire-first T3b sequencing)
 **Last Updated (prior):** September 11, 2026 (v1.4 — T3a foundation: pure daily-revenue accounting + season accumulator lifecycle; live producers/tick/RNG remain T3b+)
@@ -12,7 +13,7 @@
 **Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
 **Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 1.7
+**Version:** 1.8
 **Status:** APPROVED
 
 ---
@@ -80,7 +81,10 @@
   `ClubFinancesConstants.DEEP_REVENUE_ENABLED = false` [FIXED]. No formula, tuning, draw or new save
   cursor. This closes T3a's unconsumed-API remainder; T-FN-DAY-001–006 cover identity, invocation, order,
   save/restore and the season break. DAY-007 adds late-club refusal/retry and detached publication.
-  All clubs are staged before any result is published. T3b2 remains the next slice.
+  All clubs are staged before any result is published. ERR-030-053 requires final-day completion
+  through `AdvanceDays(1)` before settlement; DAY-008 locks refusal and saved continuation. T3b2 remains
+  the next slice and MUST prove non-zero final-fixture revenue is attributed to the completed season
+  before settlement resets its accumulator.
 - **T3b2 — deterministic amount model + gate ownership.** Only after T3b1 is live, define the deterministic
   sponsorship/matchday formulas and their `[GT]` catalogue, then feed those #40-owned results through the
   existing #30 invocation while preserving all-club staging. Add behavioural non-zero daily counts,
@@ -229,4 +233,5 @@ otherwise have to re-derive them:
 | 1.5 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Records T3a's public `AccrueDailyRevenue` as a bounded unconsumed prerequisite, makes T3b1 an identity-zero #30 wiring slice that closes it before economic tuning, moves deterministic formulas/`[GT]` values to T3b2, and assigns the single future `deepRevenueEnabled` producer to #40/config ownership rather than #30. |
 | 1.6 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T3b1 consumed; T3b2 amount model remains next. |
 | 1.7 | 2026-10-08 | — | **PR #491 review.** daily all-club staging and non-zero T3b2 retry/count obligations. |
+| 1.8 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** require final-day completion and non-zero boundary attribution at T3b2. |
 #endregion

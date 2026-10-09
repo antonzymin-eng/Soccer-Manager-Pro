@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** October 8, 2026 (v2.22 — finance slot 11a publishes only after every club succeeds)
+**Last Updated:** October 9, 2026 (v2.23 — ERR-030-053: complete the final fixture day before settlement; preserve refused-roll atomicity)
+**Last Updated (prior):** October 8, 2026 (v2.22 — finance slot 11a publishes only after every club succeeds)
 **Last Updated (prior):** October 8, 2026 (v2.21 — finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged)
 **Last Updated (prior):** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
 **Last Updated:** August 18, 2026, even later still (v2.19 — **adversarial-review round-7 finding M7**,
@@ -231,7 +232,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.22
+**Version:** 2.23
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -958,6 +959,9 @@ final table results regardless of the order fixtures within a round are resolved
 
 ```
 RollToNextSeason():
+    RequireEveryFixturePlayed()
+    require World.CurrentWorldTick > Calendar.DayOfRound(Calendar.RoundCount - 1)
+    # Refuse before all boundary writes; AdvanceDays(1) completes a pending final fixture day.
     finalTable := Table.OrderedView()                 # (a) finalize
     Board.Evaluate(finalTable)                         # (b) board pass/fail + job-security
     # (b'') <-- #54 EvaluateTenure inserts HERE (ERR-030-021) — after the board's verdict, which it
@@ -993,6 +997,17 @@ RollToNextSeason():
     # state untouched, same as the roster sync.
     DisciplineRules?.RollToNextSeason()
 ```
+
+**Final-day precondition (ERR-030-053):** playing the last round closes its fixtures, not its world
+day. After every fixture is played, `RollToNextSeason` MUST refuse while
+`WorldStore.CurrentWorldTick <= Calendar.DayOfRound(Calendar.RoundCount - 1)`, before staging or
+committing boundary work. Callers use `AdvanceDays(1)` to complete a pending final fixture day through
+slot 11a, against the completed season, before settlement resets `SeasonRevenueAccrued`. The roll never
+implicitly advances the world. Its refusal preserves the whole save, and Save/Load/Restore preserves this
+precondition through the existing world clock. Already-completed final days require no additional step.
+The next opening date and `SeasonBreakDays` remain unchanged; completion consumes the first break advance.
+T-FN-DAY-008 in #40 §5.9 covers refusal, continuation and the boundary clock contract. T3b2 MUST also
+prove that non-zero final-fixture revenue belongs to the completed season before settlement.
 
 **Step (d) is only partly landed (ERR-030-030).** #28's daily step — derived age, the deterministic
 weighted growth spend, and hard retirement FLAGGING at `RETIREMENT_AGE` — has been LIVE since T2a at
@@ -1155,4 +1170,5 @@ formula inputs and tuning remain T3b2; this back-prop grants no amount-productio
 | 2.20 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** Step (b') becomes live. The complete finance result is computed there from the final table before regeneration, then installed only after `BeginNextSeason` succeeds; refused rolls leave finance state untouched. The prior mid-roll-save wording is retired because `RollToNextSeason()` is synchronous and exposes no such save seam. |
 | 2.21 | 2026-10-08 | — | **T3b1 / ERR-030-052.** finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged. |
 | 2.22 | 2026-10-08 | — | **PR #491 review.** finance slot 11a publishes only after every club succeeds. |
+| 2.23 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** complete the final fixture day before settlement; preserve refused-roll atomicity. |
 #endregion

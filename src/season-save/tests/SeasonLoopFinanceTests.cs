@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/season-save/tests/SeasonLoopFinanceTests.cs
 // Created:  2026-09-11
-// Modified: 2026-10-08
+// Modified: 2026-10-09
 // Author:   —
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
@@ -180,6 +180,7 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonLoop loop = league.CreateLoop(world, managedClubId: 0, RoundResolutionMode.QuickSimAll);
 
             CompleteSeason(loop, league);
+            loop.AdvanceDays(1);
 
             int championClubId = ClubAtPosition(loop.State, 1);
             int bottomClubId = ClubAtPosition(loop.State, ClubCount);
@@ -214,6 +215,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             // T-FN-LIFE-001 across-roll half: the same stable ClubIds survive another full boundary.
             CompleteSeason(loop, league);
+            loop.AdvanceDays(1);
             loop.RollToNextSeason();
             ClubFinanceEntry[] afterSecondRoll = loop.FinanceEntriesForSave();
             Assert.That(afterSecondRoll, Has.Length.EqualTo(ClubCount));
@@ -495,6 +497,45 @@ namespace TacticalDirector.SeasonSave.Tests
             AssertEntriesEqual(settled, loop.FinanceEntriesForSave());
         }
 
+        /// <summary>T-FN-DAY-008: settlement cannot consume a day still awaiting daily accounting.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(3)]
+        public void FinalFixtureDay_MustCompleteBeforeSettlement_WithoutMovingTheRollClock(int completedDays)
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            CompleteSeason(loop, league);
+            uint finalDay = loop.State.Calendar.DayOfRound(loop.State.Calendar.RoundCount - 1);
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(finalDay));
+
+            if (completedDays == 0)
+            {
+                byte[] beforeSeason = loop.Snapshot();
+                byte[] beforeWorld = world.Snapshot();
+                ClubFinanceEntry[] published = LiveEntries(loop);
+                ClubFinanceEntry[] beforeFinances = loop.FinanceEntriesForSave();
+
+                var error = Assert.Throws<InvalidOperationException>(() => loop.RollToNextSeason());
+
+                Assert.That(error.Message, Does.Contain("Complete the final fixture day with AdvanceDays(1) before rolling"));
+                Assert.That(loop.Snapshot(), Is.EqualTo(beforeSeason));
+                Assert.That(world.Snapshot(), Is.EqualTo(beforeWorld));
+                Assert.That(LiveEntries(loop), Is.SameAs(published));
+                AssertEntriesEqual(beforeFinances, loop.FinanceEntriesForSave());
+                return;
+            }
+
+            loop.AdvanceDays(completedDays);
+            uint settledDay = loop.CurrentWorldDay;
+            int oldSeasonNumber = loop.State.SeasonNumber;
+            loop.RollToNextSeason();
+
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(settledDay), "Rolling must not advance the clock implicitly.");
+            Assert.That(loop.State.SeasonNumber, Is.EqualTo(oldSeasonNumber + 1));
+        }
+
         private static ProgressionEngine SeedProgression(League league)
         {
             var squads = new Squad[league.ClubCount];
@@ -569,4 +610,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | preservation coverage, and independent position economics.  |
 // | 1.4     | 2026-10-08 | —      | T3b1: identity, per-club live invocation, fixture timing and IL ownership/order locks. |
 // | 1.5     | 2026-10-08 | —      | PR #491 review: detached publication, late-club refusal/retry, and explicit IL scan scope. |
+// | 1.6 | 2026-10-09 | — | ERR-030-053: lock pending-day refusal and already-completed day settlement. |
 #endregion

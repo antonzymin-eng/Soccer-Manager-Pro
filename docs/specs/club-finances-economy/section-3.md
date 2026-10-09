@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
+**Last Updated:** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
+**Last Updated (prior):** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
 **Last Updated (prior):** October 8, 2026 (v0.10 — zero inputs, sole gate ownership and fixture/save timing pinned)
 **Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
 **Last Updated (prior):** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -305,6 +306,17 @@ the same world day; a save after advancement keeps the next day. No finance curs
 change, or RNG draw is added. Zero-day and refused advances invoke no accounting. Season-break advances
 use the same slot. T3b2 must feed its model through this completion seam, rather than adding a second caller.
 
+**Final-day precondition (ERR-030-053):** playing the last round closes its fixtures, not its world
+day. After every fixture is played, `RollToNextSeason` MUST refuse while
+`WorldStore.CurrentWorldTick <= Calendar.DayOfRound(Calendar.RoundCount - 1)`, before staging or
+committing boundary work. Callers use `AdvanceDays(1)` to complete a pending final fixture day through
+slot 11a, against the completed season, before settlement resets `SeasonRevenueAccrued`. The roll never
+implicitly advances the world. Its refusal preserves the whole save, and Save/Load/Restore preserves this
+precondition through the existing world clock. Already-completed final days require no additional step.
+The next opening date and `SeasonBreakDays` remain unchanged; completion consumes the first break advance.
+T-FN-DAY-008 in #40 §5.9 covers refusal, continuation and the boundary clock contract. T3b2 MUST also
+prove that non-zero final-fixture revenue belongs to the completed season before settlement.
+
 **Worked identity example (integer currency units):** day 5, club 2, coherent prior
 `{ Balance: -102, TransferBudget: 202, WageBudget: 302, WageBillAggregate: 402,
 SeasonRevenueAccrued: 502, FfpBalanceWindow: -602 }`. Revenue inputs are `0 + 0 = 0`; the disabled gate
@@ -325,4 +337,5 @@ FFP-window values remain representable; budgets, liability and accrued revenue m
 | 0.9 | 2026-09-11 | Claude | **ERR-040-003 close-out.** v0.8's `completedSeasonRevenue` local and `CloseCompletedSeasonRevenue(...)` call were removed from `FinanceStep.cs` (v1.8) as a misleading indirection, but §3.1's pseudocode and §3.1's prose still described both — an APPROVED spec instructing the next implementer to rebuild a construct the code had just deleted. §3.1 now shows the shipped `result.SeasonRevenueAccrued = 0` with the FFP insertion point pinned **above** the reset and reading `prior.SeasonRevenueAccrued`, and records why no intermediate carrier is reintroduced. No requirement, arithmetic or worked-example value changes. |
 | 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** zero inputs, sole gate ownership and fixture/save timing pinned. |
 | 0.11 | 2026-10-08 | — | **PR #491 review.** stage the complete daily finance result before publication. |
+| 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** keep final-fixture day accounting in the completed season before settlement. |
 #endregion

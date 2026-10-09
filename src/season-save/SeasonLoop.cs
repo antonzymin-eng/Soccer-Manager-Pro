@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-08 (#40 T3b1: daily identity invocation at day completion)
+// Modified: 2026-10-09
 //           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
 //           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
@@ -1088,7 +1088,8 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="System.InvalidOperationException">
         /// The season is not over (F5 — rounds remain, or a fixture in a resolved round was never
         /// played), or the world clock has already passed the day the new season would open on, which
-        /// would install a state violating the KD-4 cursor invariant (FR-SN-011).
+        /// would install a state violating the KD-4 cursor invariant (FR-SN-011); or the final fixture
+        /// day has not been completed through day advancement (ERR-030-053).
         /// </exception>
         public SeasonRollOutcome RollToNextSeason()
         {
@@ -1100,6 +1101,17 @@ namespace TacticalDirector.SeasonSave
             }
 
             RequireEveryFixturePlayed();
+
+            // The last round closes its fixtures, not its world day. Slot 11a must still account for
+            // that day against this season before settlement resets its revenue accumulator. Refuse
+            // before any boundary writes; AdvanceDays owns completion and its persisted clock cursor.
+            uint finalFixtureDay = _state.Calendar.DayOfRound(_state.Calendar.RoundCount - 1);
+            if (_world.CurrentWorldTick <= finalFixtureDay)
+            {
+                throw new System.InvalidOperationException(
+                    "Complete the final fixture day with AdvanceDays(1) before rolling to the next "
+                    + "season; daily finance accounting must precede settlement (ERR-030-053).");
+            }
 
             // ── (a) finalize ────────────────────────────────────────────────────────────────────
             // The table is already final; what the roll needs from it is the managed club's position.
@@ -2228,4 +2240,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ordinary generic composition is validation-only and fail-loud.    |
 // | 1.34    | 2026-10-08 | —      | ERR-030-052 / #40 T3b1: slot 11a daily identity accounting before clock advance; no fixture-day replay or save cursor. |
 // | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
+// | 1.36 | 2026-10-09 | — | ERR-030-053: require final fixture day completion before season settlement. |
 #endregion

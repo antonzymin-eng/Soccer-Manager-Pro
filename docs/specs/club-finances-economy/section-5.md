@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v0.11 — bound structural and continuation evidence; lock detached daily publication)
+**Last Updated:** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
+**Last Updated (prior):** October 8, 2026 (v0.11 — bound structural and continuation evidence; lock detached daily publication)
 **Last Updated (prior):** October 8, 2026 (v0.10 — T-FN-DAY-001–006 name executable daily identity and continuation locks)
 **Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review: traceability IDs, gate-order lock, and negative-revenue restore coherence)
 **Last Updated (prior):** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -204,6 +205,13 @@ Tests land at T-phase; this is the acceptance contract.
   Together with DAY-001 this locks staging/publication. Zero inputs cannot reveal partial monetary writes;
   the non-zero failure/retry accounting assertion remains required at T3b2.
 
+- **T-FN-DAY-008:** rolling immediately after the final round refuses before any state change, including
+  after Save/Load/Restore; the refused save is byte-identical and the published finance array is retained.
+  Completing that day with `AdvanceDays(1)` permits settlement; restoring after completion continues with
+  identical save bytes. Rolls after one or three completed days preserve their entry world clock. Existing
+  season-roll tests retain the opening date and total `SeasonBreakDays`. These checks prove the boundary
+  precondition and continuation with zero revenue; non-zero completed-season attribution remains T3b2 work.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -218,4 +226,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.9 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Every new T3a acceptance ID is now cited by executable test summaries; T-FN-NEU-004 pins coherence-before-gate ordering, and T-FN-FAIL-003 expands to reject negative restored `SeasonRevenueAccrued`. |
 | 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T-FN-DAY-001–006 name executable daily identity and continuation locks. |
 | 0.11 | 2026-10-08 | — | **PR #491 review.** bound structural and continuation evidence; lock detached daily publication. |
+| 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** add T-FN-DAY-008 for pending-final-day refusal and save continuation. |
 #endregion
