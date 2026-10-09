@@ -2,8 +2,8 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 9, 2026\
-**Version:** 0.12\
-**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile + EditMode PASSED on main `93de60f6` October 9; real-client/host acceptance OPEN\
+**Version:** 0.13\
+**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile PASSED on main `93de60f6` October 9; EditMode FAILED overall (this slice's suites green; six tracked pre-existing failures keep main red on the governing build); real-client/host acceptance OPEN\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
 **Base:** main `574b0344db3cfe24ee6bef5db459e1b34e6365f4`, after L2 PR #487 merged. The coordinator's pinned-host acceptance is recorded separately in [lifecycle validation](p5b-lifecycle-validation.md) v0.5; that evidence is not carried forward as a screen compile.
@@ -420,7 +420,10 @@ Run October 9, 2026 (03:51–04:46 UTC) on the owner's Windows 11 host, Unity 60
 against main `93de60f629dd4d948debb96aa594b53f8fdeefd0` (#489 plus #490/#491), clean, with the
 existing `Assets/Scripts` → `src` junction. Raw evidence and `SHA256SUMS`:
 [`evidence/host-93de60f6-20261009/`](evidence/host-93de60f6-20261009/README.md). This discharges
-procedure steps 1–2 below. It does not discharge any real-client I-Q item.
+procedure step 1 and the compile half of step 2. **Step 2's EditMode half is not passed.** Both
+runs ended `Failed` on six tracked, pre-existing failures. Under the v0.11 rule above, main stays
+red on the governing build until those are fixed forward. Every suite this slice owns is green. It
+does not discharge any real-client I-Q item.
 
 - **Package resolution.** The first forced reimport is void. The Editor was already open when
   #489 changed `Packages/manifest.json` and had not re-resolved, so `match-client-unity` reported
@@ -440,14 +443,23 @@ procedure steps 1–2 below. It does not discharge any real-client I-Q item.
   Localization **67/67**. The native allocation tests passed and none was Inconclusive:
   `RefreshWithSettledCommandHistoryDoesNotAllocateOnUnchangedFrames` and
   `ConditionalOutcomesAreAtomicImmutableAndUnchangedPollingDoesNotAllocate`.
+- **Analytics/framework regressions (v0.13).** The first run omitted MatchAnalytics and
+  UiFramework (Codex review on PR #492). A second run at PR head `5cc06ed5`, whose `src/` is
+  identical to `93de60f6`, gave MatchAnalytics **58/59** and UiFramework **49/50**. Each failure
+  is that assembly's `AppContext.BaseDirectory` repo-root lock
+  (`NoOtherAssemblyReferencesMatchAnalytics`, `NoOtherAssemblyReferencesTheUiFramework`).
+- **Overall EditMode status: Failed (918 + 107 passed, 4 + 2 failed, 3 skipped).** The six
+  failures are the four repo-root locks (tracked) and two SeasonSave real-engine tests over Unity's
+  180 s default timeout (tracked; they predate #489). None is in this slice.
 - **Repo-root lookup.** `S0ContentContractTests` (2/2) and `LocalizationCoreContractTests` (17/17)
   **passed under Unity**. The `TestContext.CurrentContext.TestDirectory` lookup that the v0.11 note
   flagged as unobserved does reach the repository on this host.
 - **Loaded content hash.** This record captures no runtime binding. `LoadedContentSha256` and font
   fallback stay I-Q16 obligations.
 
-Still open: real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling,
-B9b/B10 and Gate J.
+Still open: a passing EditMode run (blocked on the repo-root resolver and the SeasonSave
+`[Timeout]` follow-ups), real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10×
+profiling, B9b/B10 and Gate J.
 
 ## Content and dependency boundary
 
@@ -577,3 +589,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.10 | October 8, 2026 | Records the owner decision to ship keyboard pitch inspection; journey v0.36 and binding contracts v0.5 now include it. Docs only; host gates remain open. |
 | 0.11 | October 8, 2026 | Records the #489 merge to main (`1c8366d` from `307b145`, CI 37848750594 green, Unity job skipped) ahead of host acceptance; the host procedure now targets main, and the repo-root lookup risk for the two contract tests is noted. All host gates remain open. |
 | 0.12 | October 9, 2026 | Pinned-host compile and EditMode on main `93de60f6`: 0 errors after Editor package resolution (the first round is void because the package state was stale), ClientApp 125/125, MatchClientCore 183/183, Localization 67/67, allocation tests passing, TestDirectory repo-root lookup observed working. Editor-regenerated package lock landed. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |
+| 0.13 | October 9, 2026 | Codex review on PR #492. A second run covers the omitted MatchAnalytics (58/59) and UiFramework (49/50) regressions; each failure is that assembly's repo-root lock. The status no longer calls the EditMode run passed. Its overall result is Failed on six tracked, pre-existing failures, so step 2's EditMode half and main's governing-build status stay red until they are fixed forward. |
