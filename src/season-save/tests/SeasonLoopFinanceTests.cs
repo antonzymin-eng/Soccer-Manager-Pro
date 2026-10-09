@@ -1,15 +1,21 @@
 // ============================================================================
 // File:     src/season-save/tests/SeasonLoopFinanceTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11
+// Modified: 2026-10-09
 // Author:   —
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
 //           Code Standards #20 §3.9.4
 // Purpose:  Locks #40's production bootstrap, Restore-only legacy migration, runtime ledger surface,
-//           boundary settlement ordering, across-roll identity, refused-roll atomicity, and preservation
+//           daily publication/refusal, boundary settlement ordering, across-roll identity, and preservation
 //           of already-composed runtime subsystems at the #30 composition root.
+//           General unit tests (Code Standards #20 §3.9.4): reflection/allocation rules relaxed.
 // ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 
 using NUnit.Framework;
 
@@ -174,6 +180,7 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonLoop loop = league.CreateLoop(world, managedClubId: 0, RoundResolutionMode.QuickSimAll);
 
             CompleteSeason(loop, league);
+            loop.AdvanceDays(1);
 
             int championClubId = ClubAtPosition(loop.State, 1);
             int bottomClubId = ClubAtPosition(loop.State, ClubCount);
@@ -208,6 +215,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             // T-FN-LIFE-001 across-roll half: the same stable ClubIds survive another full boundary.
             CompleteSeason(loop, league);
+            loop.AdvanceDays(1);
             loop.RollToNextSeason();
             ClubFinanceEntry[] afterSecondRoll = loop.FinanceEntriesForSave();
             Assert.That(afterSecondRoll, Has.Length.EqualTo(ClubCount));
@@ -237,6 +245,295 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.Throws<System.InvalidOperationException>(() => loop.RollToNextSeason());
             AssertEntriesEqual(before, loop.FinanceEntriesForSave());
+        }
+
+        /// <summary>T-FN-DAY-001: both gate paths preserve every populated field with zero inputs.</summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void DailyAccounting_ZeroInputsPreserveAllClubFields(bool enabled)
+        {
+            ClubFinanceEntry[] entries = PopulatedFinances();
+            ClubFinanceEntry[] published = entries;
+            ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
+
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
+
+            Assert.That(entries, Is.Not.SameAs(published), "Success must publish a detached result.");
+            AssertEntriesEqual(before, published);
+            AssertEntriesEqual(before, entries);
+            Assert.That(ClubFinancesConstants.DEEP_REVENUE_ENABLED, Is.False);
+        }
+
+        /// <summary>T-FN-DAY-007: a late-club refusal publishes nothing; repairing it permits retry.</summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void DailyAccounting_LateClubFailurePreservesPublishedArrayAndAllowsRetry(bool enabled)
+        {
+            ClubFinanceEntry[] expected = PopulatedFinances();
+            ClubFinanceEntry[] entries = (ClubFinanceEntry[])expected.Clone();
+            int last = entries.Length - 1;
+            var corrupt = entries[last].Finances;
+            corrupt.SeasonRevenueAccrued = -1L;
+            entries[last] = new ClubFinanceEntry(entries[last].ClubId, in corrupt);
+            ClubFinanceEntry[] published = entries;
+            ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
+
+            var error = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled));
+
+            Assert.That(error.ParamName, Is.EqualTo("finances"));
+            Assert.That(error.Message, Does.Contain("SeasonRevenueAccrued must be non-negative current-season revenue (F1)."));
+            Assert.That(entries, Is.SameAs(published), "Refusal must retain the published array.");
+            AssertEntriesEqual(before, published);
+
+            // Repair the injected corruption and retry from the same published state.
+            entries[last] = expected[last];
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
+
+            Assert.That(entries, Is.Not.SameAs(published));
+            AssertEntriesEqual(expected, published);
+            AssertEntriesEqual(expected, entries);
+            // Zero inputs cannot expose partial monetary writes; T3b2 must add non-zero retry tests.
+        }
+
+        /// <summary>T-FN-DAY-002: day advance reaches the primitive for every club, even gate-off.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void DayAdvance_ValidatesEveryClubBeforeIncrementingClock(int corruptIndex)
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            ClubFinanceEntry[] entries = LiveEntries(loop);
+            var corrupt = entries[corruptIndex].Finances;
+            corrupt.SeasonRevenueAccrued = -1L;
+            entries[corruptIndex] = new ClubFinanceEntry(entries[corruptIndex].ClubId, in corrupt);
+            ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
+
+            var error = Assert.Throws<ArgumentOutOfRangeException>(() => loop.AdvanceDays(1));
+
+            Assert.That(error.ParamName, Is.EqualTo("finances"));
+            Assert.That(error.Message, Does.Contain("SeasonRevenueAccrued must be non-negative current-season revenue (F1)."));
+            Assert.That(loop.CurrentWorldDay, Is.Zero, "Finance failure must precede the clock increment.");
+            Assert.That(LiveEntries(loop), Is.SameAs(entries), "A refused day must not publish a finance array.");
+            AssertEntriesEqual(before, entries);
+        }
+
+        /// <summary>T-FN-DAY-003: fixture preparation and resolution do not complete the finance day.</summary>
+        [Test]
+        public void FixtureDay_AccountsOnlyOnFollowingDayAdvance()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            loop.AdvanceToNextFixtureDay();
+            uint fixtureDay = loop.CurrentWorldDay;
+            ClubFinanceEntry[] entries = LiveEntries(loop);
+            var corrupt = entries[ClubCount - 1].Finances;
+            corrupt.TransferBudget = -1L;
+            entries[ClubCount - 1] = new ClubFinanceEntry(ClubCount - 1, in corrupt);
+
+            loop.AdvanceDays(0);
+            Assert.That(loop.AdvanceToNextFixtureDay(), Is.Zero);
+            loop.AdvanceAndPlayNextRound(league);
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(fixtureDay));
+            Assert.Throws<ArgumentOutOfRangeException>(() => loop.AdvanceDays(1));
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(fixtureDay));
+        }
+
+        /// <summary>T-FN-DAY-001: real day commands preserve finances and the living-world identity.</summary>
+        [Test]
+        public void DayAdvance_PreservesPopulatedFinancesAndWorldIdentity()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            var bareWorld = new WorldStore(0, WorldSeed);
+            ClubFinanceEntry[] expected = PopulatedFinances();
+            var loop = new SeasonLoop(world, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, financesOrNull: expected);
+            ClubFinanceEntry[] published = LiveEntries(loop);
+
+            loop.AdvanceDays(3);
+            for (int i = 0; i < 3; i++)
+            {
+                bareWorld.AdvanceDay();
+            }
+
+            Assert.That(LiveEntries(loop), Is.Not.SameAs(published), "Day advancement must install the staged result.");
+            AssertEntriesEqual(expected, published);
+            AssertEntriesEqual(expected, loop.FinanceEntriesForSave());
+            Assert.That(world.Snapshot(), Is.EqualTo(bareWorld.Snapshot()));
+        }
+
+        /// <summary>T-FN-DAY-004: cardinality/order of an identity invocation is a compiled-call-graph lock.</summary>
+        [Test]
+        public void DailyAccounting_SeasonLoopHasOneClockAdvanceCallerOutsideFixturePreparation()
+        {
+            // §3.9.4 general-unit-test — reflection/allocation rules relaxed in test body.
+            // Identity output alone cannot distinguish zero, one or two calls. Inspect decoded IL,
+            // not source substrings, so this lock runs under both the Linux and Unity test runners.
+            // Scope: methods/constructors declared directly on SeasonLoop, excluding generated types.
+            // T3b2 must supplement this lock with behavioural counts using non-zero daily amounts.
+            MethodInfo daily = typeof(SeasonFinanceRuntime).GetMethod("PrepareDailyRevenue",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            MethodInfo tick = typeof(SeasonLoop).GetMethod("RunWorldTickInFixedOrder",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var callers = new List<MethodBase>();
+            var methods = new List<MethodBase>(typeof(SeasonLoop).GetMethods(
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.DeclaredOnly));
+            methods.AddRange(typeof(SeasonLoop).GetConstructors(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+            foreach (MethodBase method in methods)
+            {
+                foreach (MethodBase called in CalledMethods(method))
+                {
+                    if (called == daily)
+                    {
+                        callers.Add(method);
+                    }
+                }
+            }
+
+            Assert.That(callers, Is.EqualTo(new[] { tick }),
+                "SeasonLoop's declared methods/constructors must contain exactly one direct finance call site.");
+            List<MethodBase> calls = CalledMethods(tick);
+            int careerIndex = calls.FindIndex(m => m.Name == "RunCareerDaySteps");
+            int financeIndex = calls.IndexOf(daily);
+            int clockIndex = calls.FindIndex(m => m.DeclaringType == typeof(WorldStore) && m.Name == "AdvanceDay");
+            Assert.That(careerIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(financeIndex, Is.GreaterThan(careerIndex));
+            Assert.That(clockIndex, Is.GreaterThan(financeIndex));
+        }
+
+        /// <summary>General-test-only corruption injection; production keeps finance state private.</summary>
+        private static ClubFinanceEntry[] LiveEntries(SeasonLoop loop) =>
+            (ClubFinanceEntry[])typeof(SeasonLoop).GetField("_finances",
+                BindingFlags.Instance | BindingFlags.NonPublic).GetValue(loop);
+
+        private static ClubFinanceEntry[] PopulatedFinances()
+        {
+            var entries = new ClubFinanceEntry[ClubCount];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                var finances = new TacticalDirector.ClubFinances.ClubFinances
+                {
+                    Balance = -100L - i,
+                    TransferBudget = 200L + i,
+                    WageBudget = 300L + i,
+                    WageBillAggregate = 400L + i,
+                    SeasonRevenueAccrued = 500L + i,
+                    FfpBalanceWindow = -600L - i
+                };
+                entries[i] = new ClubFinanceEntry(i, in finances);
+            }
+            return entries;
+        }
+
+        private static List<MethodBase> CalledMethods(MethodBase method)
+        {
+            var codes = new Dictionary<short, OpCode>();
+            foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (field.FieldType == typeof(OpCode))
+                {
+                    var code = (OpCode)field.GetValue(null);
+                    codes[code.Value] = code;
+                }
+            }
+            var calls = new List<MethodBase>();
+            byte[] il = method.GetMethodBody()?.GetILAsByteArray();
+            if (il == null)
+            {
+                return calls;
+            }
+            for (int offset = 0; offset < il.Length;)
+            {
+                short value = il[offset++];
+                if (value == 0xFE)
+                {
+                    value = unchecked((short)(0xFE00 | il[offset++]));
+                }
+                OpCode code = codes[value];
+                if (code.OperandType == OperandType.InlineMethod)
+                {
+                    calls.Add(method.Module.ResolveMethod(BitConverter.ToInt32(il, offset)));
+                }
+                switch (code.OperandType)
+                {
+                    case OperandType.InlineNone: break;
+                    case OperandType.ShortInlineBrTarget:
+                    case OperandType.ShortInlineI:
+                    case OperandType.ShortInlineVar: offset += 1; break;
+                    case OperandType.InlineVar: offset += 2; break;
+                    case OperandType.InlineI8:
+                    case OperandType.InlineR: offset += 8; break;
+                    case OperandType.InlineSwitch:
+                        offset += 4 + 4 * BitConverter.ToInt32(il, offset);
+                        break;
+                    default: offset += 4; break;
+                }
+            }
+            return calls;
+        }
+
+        /// <summary>T-FN-DAY-006: the daily slot continues through the break and a season roll.</summary>
+        [Test]
+        public void SeasonBreakAndNextSeason_DailyPassPreservesCurrentFinanceValues()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            CompleteSeason(loop, league);
+            ClubFinanceEntry[] beforeBreak = loop.FinanceEntriesForSave();
+
+            loop.AdvanceDays(1);
+            AssertEntriesEqual(beforeBreak, loop.FinanceEntriesForSave());
+            loop.RollToNextSeason();
+            ClubFinanceEntry[] settled = loop.FinanceEntriesForSave();
+            loop.AdvanceDays(1);
+            AssertEntriesEqual(settled, loop.FinanceEntriesForSave());
+        }
+
+        /// <summary>T-FN-DAY-008: settlement cannot consume a day still awaiting daily accounting.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(3)]
+        public void FinalFixtureDay_MustCompleteBeforeSettlement_WithoutMovingTheRollClock(int completedDays)
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(0, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(world, 0, RoundResolutionMode.QuickSimAll);
+            CompleteSeason(loop, league);
+            uint finalDay = loop.State.Calendar.DayOfRound(loop.State.Calendar.RoundCount - 1);
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(finalDay));
+
+            if (completedDays == 0)
+            {
+                byte[] beforeSeason = loop.Snapshot();
+                byte[] beforeWorld = world.Snapshot();
+                ClubFinanceEntry[] published = LiveEntries(loop);
+                ClubFinanceEntry[] beforeFinances = loop.FinanceEntriesForSave();
+
+                var error = Assert.Throws<InvalidOperationException>(() => loop.RollToNextSeason());
+
+                Assert.That(error.Message, Does.Contain("Complete the final fixture day with AdvanceDays(1) before rolling"));
+                Assert.That(loop.Snapshot(), Is.EqualTo(beforeSeason));
+                Assert.That(world.Snapshot(), Is.EqualTo(beforeWorld));
+                Assert.That(LiveEntries(loop), Is.SameAs(published));
+                AssertEntriesEqual(beforeFinances, loop.FinanceEntriesForSave());
+                return;
+            }
+
+            loop.AdvanceDays(completedDays);
+            uint settledDay = loop.CurrentWorldDay;
+            int oldSeasonNumber = loop.State.SeasonNumber;
+            loop.RollToNextSeason();
+
+            Assert.That(loop.CurrentWorldDay, Is.EqualTo(settledDay), "Rolling must not advance the clock implicitly.");
+            Assert.That(loop.State.SeasonNumber, Is.EqualTo(oldSeasonNumber + 1));
         }
 
         private static ProgressionEngine SeedProgression(League league)
@@ -311,4 +608,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.2     | 2026-09-11 | —      | First review locks for empty-state and subsystem handling.   |
 // | 1.3     | 2026-09-11 | —      | Claude review: Restore-only migration, career/progression    |
 // |         |            |        | preservation coverage, and independent position economics.  |
+// | 1.4     | 2026-10-08 | —      | T3b1: identity, per-club live invocation, fixture timing and IL ownership/order locks. |
+// | 1.5     | 2026-10-08 | —      | PR #491 review: detached publication, late-club refusal/retry, and explicit IL scan scope. |
+// | 1.6 | 2026-10-09 | — | ERR-030-053: lock pending-day refusal and already-completed day settlement. |
 #endregion

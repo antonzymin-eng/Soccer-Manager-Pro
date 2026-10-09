@@ -1,11 +1,12 @@
 # Club Finances & Economy #40 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.7 — ERR-040-003: T3 autonomous accrual exception, revenue coherence, and gate-order review correction)
+**Last Updated:** October 8, 2026 (v0.8 — cadence requirements distinguish identity invocation from non-zero accrual)
+**Last Updated (prior):** September 11, 2026 (v0.7 — ERR-040-003: T3 autonomous accrual exception, revenue coherence, and gate-order review correction)
 **Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: SeasonRevenueAccrued closes at settlement; FFP window remains carried)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a back-prop: reconcile FR-FN-003 with the planned deep revenue mutation path)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 follow-up: non-positive BoardModifier values fail loud)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -13,8 +14,8 @@
 ## 2.1 Functional requirements
 
 **Cadence & ownership**
-- **FR-FN-001** — `SettleFinances` MUST run only at the season-boundary roll (KD-1/KD-6); #40 MUST NOT run a
-  per-day step at Stage 2 and MUST NOT read or advance the world tick or the 10 Hz/60 Hz match loops.
+- **FR-FN-001** — `SettleFinances` MUST run only at the season-boundary roll (KD-1/KD-6); #40 MUST NOT accrue
+  non-zero daily revenue at Stage 2 and MUST NOT read or advance the world tick or the 10 Hz/60 Hz match loops.
 - **FR-FN-002** — Per-club `ClubFinances` (`Balance`, `TransferBudget`, `WageBudget`, `WageBillAggregate`,
   and the deep-tier `SeasonRevenueAccrued`/`FfpBalanceWindow` accumulators) is #40-owned state, keyed by
   `ClubId`, serialized under #40's sub-blob (KD-7). It is the single source of truth for a club's financial
@@ -42,7 +43,8 @@
   returned-field reset; T3a MUST NOT invent an FFP-window update ahead of the FFP slice.
 - **FR-FN-006** — The Stage-2 budget projection MUST be `budget = f(finalTablePosition, prizeMoney)` — a
   pure integer function of the final league position (and the fixed prize-money table it derives from) —
-  with no per-day step and no per-day accrual state at Stage 2 (KD-1).
+  with no non-zero daily accrual or additional daily cursor at Stage 2 (KD-1). T3b1's
+  zero-input invocation is an exact identity after coherence validation (ERR-030-052).
 - **FR-FN-007** — `finalTablePosition` MUST be in `[1, clubCount]`; a value outside that range reaching
   `SettleFinances` MUST **fail loud** (F7).
 
@@ -188,7 +190,7 @@ public static void ApplyTransaction(ref ClubFinances f, in FinanceTransaction tx
 // prior state the disabled path is an exact identity and does not interpret the deep-only amounts. Prior
 // coherence is validated before the gate. Enabled amounts are non-negative revenue and are added, with
 // checked arithmetic, to Balance + SeasonRevenueAccrued only. Amount production, stochastic variance, and
-// #30 daily invocation are later T3 slices; this primitive performs no RNG draw and consumes no reserved
+// #30 day-completion invocation is T3b1; non-zero amounts are T3b2. This primitive performs no RNG draw and consumes no reserved
 // namespace identifier.
 public static ClubFinances AccrueDailyRevenue(in ClubFinances prior, long sponsorshipRevenue,
                                                long matchdayRevenue, bool deepRevenueEnabled);
@@ -246,4 +248,5 @@ remains the single externally-commanded ledger mutation path; T3a adds the separ
 | 0.5 | 2026-09-11 | OpenAI | **T3a implementation back-prop.** FR-FN-003's Stage-2-only ledger exclusivity is reconciled with the already-planned deep revenue accrual path; `AccrueDailyRevenue` is named as a #40-owned autonomous mutation limited to `Balance` + `SeasonRevenueAccrued`, with F8/F9 fail-loud rules. |
 | 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle back-prop.** FR-FN-005 defines `SeasonRevenueAccrued` as current-season state reset by settlement, requires future FFP consumption to occur before reset, and leaves `FfpBalanceWindow` carried until that slice defines its update. |
 | 0.7 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Formally scopes FR-FN-003's Stage-2 sole-mutation rule to the externally-commanded ledger while permitting #40-owned T3 accrual, makes `SeasonRevenueAccrued >= 0` an F1 coherence invariant enforced on restore/consumption, and pins coherence validation before the disabled T3a gate. |
+| 0.8 | 2026-10-08 | — | **T3b1 / ERR-030-052.** cadence requirements distinguish identity invocation from non-zero accrual. |
 #endregion

@@ -1,8 +1,10 @@
 # Club Finances & Economy #40 — Section 6: Performance & Cadence
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** October 8, 2026 (v0.3 — daily atomicity uses one off-pitch staging array)
+**Last Updated (prior):** October 8, 2026 (v0.2 — identity daily pass is linear in initialized clubs and allocation-free)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -12,7 +14,7 @@
 `SettleFinances` runs **once per club, once per season**, invoked by #30's `RollToNextSeason()` at the new
 KD-6 step (b') — **not** the world tick (`WorldClock`), and **not** the 60 Hz physics or 10 Hz tactical match
 loops. This is an even coarser cadence than #28/#29/#41's per-world-day steps: #40's minimal tier has no
-per-day component at all (KD-1). `ApplyTransaction` runs on demand, whenever #31/#34 commit a deal — bounded
+non-zero daily revenue at minimal (KD-1); T3b1's daily identity composition is described in §6.4. `ApplyTransaction` runs on demand, whenever #31/#34 commit a deal — bounded
 by transfer-window/contract activity, not any tick loop. Both are therefore in the off-pitch band and exempt
 from the 60 Hz zero-allocation / `ProfilerMarker` hot-path rules (the #22/#27/#28/#29/#41 off-pitch
 precedent).
@@ -35,12 +37,16 @@ even the world-tick cadence, let alone the match loops.
 
 Off-pitch, at most once per simulated season for `SettleFinances` and on-demand for `ApplyTransaction` —
 orders of magnitude below any per-tick or even per-world-day budget. No perf gate is required at Stage 0/1;
-the FR-PO-052 per-tick gate is a match-loop concern and does not apply. The (deferred) deep-tier per-day
-revenue accrual, if it lands, would add an O(`clubCount`) daily step — still off-pitch and cheap, comparable
+the FR-PO-052 per-tick gate is a match-loop concern and does not apply. T3b1 adds the zero-input O(`clubCount`) daily accounting pass at #30 day completion
+(slot 11a), with one detached O(`clubCount`) staging array and no RNG. Publication follows only after
+all clubs succeed. This off-pitch allocation preserves retry atomicity; it is transient and introduces no
+save field. The non-zero T3b2 model will use the same slot and staging contract, comparable
 to #41's per-day cost analysis.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial performance analysis: cadence, per-season cost, `ApplyTransaction` cost, budget. Status IN REVIEW. |
+| 0.2 | 2026-10-08 | — | **T3b1 / ERR-030-052.** identity daily pass is linear in initialized clubs and allocation-free. |
+| 0.3 | 2026-10-08 | — | **PR #491 review.** daily atomicity uses one off-pitch staging array. |
 #endregion

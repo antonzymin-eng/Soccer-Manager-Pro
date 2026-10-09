@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-09-28 (FM-03 closeout: remove broad composed-engine Error suppression — v1.18)
+// Modified: 2026-10-09
 // Modified: 2026-09-22 (W3 trajectory fallout: make the within-fixture ban-order lock deterministic and trajectory-independent; retain scoped composed-engine Error-log containment — v1.17)
 // Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
 //           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
@@ -1315,6 +1315,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 loop.AdvanceAndPlayNextRound(league);
             }
 
+            loop.AdvanceDays(1);
             int carriedIn = Ban(state, player);
             Assert.That(carriedIn, Is.GreaterThan(0),
                 "Precondition: the ban must still be outstanding when the boundary arrives.");
@@ -1685,4 +1686,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.18    | 2026-09-28 | —      | FM-03 closeout: the two full-engine fold/neutrality runs no longer use     |
 // |         |            |        | ignoreFailingMessages. CONTACT-time shot possession loss is Warning-level, |
 // |         |            |        | so unrelated unexpected Error logs are visible to teardown policing again. |
+// | 1.19 | 2026-10-09 | — | ERR-030-053: complete the final day before boundary discipline assertions. |
 #endregion

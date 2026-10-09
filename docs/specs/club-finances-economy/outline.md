@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring from the converged design supplement)
-**Version:** 0.1
+**Last Updated:** October 8, 2026 (v0.2 — daily identity wiring reflected in cadence summary)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring from the converged design supplement)
+**Version:** 0.2
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 **FR prefix:** FR-FN · **Wave:** 2 · **Master-plan home:** §5 Stage 3 (financials)
@@ -37,7 +38,7 @@ computed once per season at #30's boundary roll.
 
 - **KD-1** Accounting cadence — season-boundary minimal, per-day deep: the minimal tier settles **once per
   season** at the boundary roll (`SettleFinances`); there is no per-day step and no per-day accrual state at
-  Stage 2. The deep-tier per-day revenue accrual is a future daily slot, deferred.
+  Stage 2. T3b1's zero-input daily slot 11a is wired; non-zero accrual remains T3b2.
 - **KD-2** Minimal is pure, no draw — reserve, don't promote: `budget = f(finalTablePosition, prizeMoney)` is
   a pure integer projection; #40 registers **no** RNG stream and `_RESERVED_0x29_` / `SubsystemOrdinals` 91
   stay **RESERVED** until the deep-tier stochastic sponsorship-variance draw exists.
@@ -62,4 +63,5 @@ computed once per season at #30's boundary roll.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from the converged design supplement. Status IN REVIEW. |
+| 0.2 | 2026-10-08 | — | **T3b1 / ERR-030-052.** daily identity wiring reflected in cadence summary. |
 #endregion
