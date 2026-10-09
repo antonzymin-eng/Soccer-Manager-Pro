@@ -1,9 +1,9 @@
 # P5b screens — implementation and validation
 
 **Created:** October 8, 2026\
-**Last Updated:** October 8, 2026\
-**Version:** 0.11\
-**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); Unity/host acceptance OPEN\
+**Last Updated:** October 9, 2026\
+**Version:** 0.12\
+**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile + EditMode PASSED on main `93de60f6` October 9; real-client/host acceptance OPEN\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
 **Base:** main `574b0344db3cfe24ee6bef5db459e1b34e6365f4`, after L2 PR #487 merged. The coordinator's pinned-host acceptance is recorded separately in [lifecycle validation](p5b-lifecycle-validation.md) v0.5; that evidence is not carried forward as a screen compile.
@@ -414,6 +414,41 @@ Still open: Unity 6000.4.9f1 compile and EditMode runs, Editor-regenerated packa
 real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling, B9b/B10 and
 Gate J. No code, copy or content-hash change in this revision.
 
+## Pinned-host compile and EditMode on main (v0.12)
+
+Run October 9, 2026 (03:51–04:46 UTC) on the owner's Windows 11 host, Unity 6000.4.9f1 (Mono),
+against main `93de60f629dd4d948debb96aa594b53f8fdeefd0` (#489 plus #490/#491), clean, with the
+existing `Assets/Scripts` → `src` junction. Raw evidence and `SHA256SUMS`:
+[`evidence/host-93de60f6-20261009/`](evidence/host-93de60f6-20261009/README.md). This discharges
+procedure steps 1–2 below. It does not discharge any real-client I-Q item.
+
+- **Package resolution.** The first forced reimport is void. The Editor was already open when
+  #489 changed `Packages/manifest.json` and had not re-resolved, so `match-client-unity` reported
+  378 `error CS` lines (CS0234/CS0246 on `UnityEngine.UI` / `UnityEngine.EventSystems`). After
+  `PackageManager.Client.Resolve()` registered built-in `com.unity.ugui@2.0.0`, the build
+  succeeded. A fresh checkout opened in the Editor would resolve on load; this was host state, not
+  a source defect.
+- **Editor-regenerated lock.** The regenerated `Packages/packages-lock.json` lands with this record.
+  It has the same packages and versions as the hand-authored candidate. It moves the
+  `com.unity.ugui` entry and corrects `com.unity.modules.ui` from depth 2 to depth 1, because ugui
+  now references it directly from the manifest.
+- **Compile.** The second forced recursive reimport gave `Tundra build success`, 0 `error CS`.
+  The warnings are only the three known ones: `BallIntegrationTests.cs(330,19)` CS0219 and
+  `ClientShellBehaviour.cs` (146,34)/(154,17) CS0618 `GetInstanceID()`.
+- **EditMode.** ClientApp **125/125**, which includes all S0 screen-layout, presentation and
+  text-formatter cases and the full-match comparison (1,534 s). MatchClientCore **183/183**.
+  Localization **67/67**. The native allocation tests passed and none was Inconclusive:
+  `RefreshWithSettledCommandHistoryDoesNotAllocateOnUnchangedFrames` and
+  `ConditionalOutcomesAreAtomicImmutableAndUnchangedPollingDoesNotAllocate`.
+- **Repo-root lookup.** `S0ContentContractTests` (2/2) and `LocalizationCoreContractTests` (17/17)
+  **passed under Unity**. The `TestContext.CurrentContext.TestDirectory` lookup that the v0.11 note
+  flagged as unobserved does reach the repository on this host.
+- **Loaded content hash.** This record captures no runtime binding. `LoadedContentSha256` and font
+  fallback stay I-Q16 obligations.
+
+Still open: real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling,
+B9b/B10 and Gate J.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -541,3 +576,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.9 | October 8, 2026 | Explicit journey §9.3 Match View Tab order (Codex: statistics before history), pitch entry placed after the approved sequence pending owner decision, and permanent 141-role binding-contract parity test. Not compiled locally; host gates remain open. |
 | 0.10 | October 8, 2026 | Records the owner decision to ship keyboard pitch inspection; journey v0.36 and binding contracts v0.5 now include it. Docs only; host gates remain open. |
 | 0.11 | October 8, 2026 | Records the #489 merge to main (`1c8366d` from `307b145`, CI 37848750594 green, Unity job skipped) ahead of host acceptance; the host procedure now targets main, and the repo-root lookup risk for the two contract tests is noted. All host gates remain open. |
+| 0.12 | October 9, 2026 | Pinned-host compile and EditMode on main `93de60f6`: 0 errors after Editor package resolution (the first round is void because the package state was stale), ClientApp 125/125, MatchClientCore 183/183, Localization 67/67, allocation tests passing, TestDirectory repo-root lookup observed working. Editor-regenerated package lock landed. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |
