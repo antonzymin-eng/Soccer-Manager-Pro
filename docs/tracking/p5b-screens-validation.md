@@ -2,8 +2,8 @@
 
 **Created:** October 8, 2026\
 **Last Updated:** October 9, 2026\
-**Version:** 0.13\
-**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile PASSED on main `93de60f6` October 9; EditMode FAILED overall (this slice's suites green; six tracked pre-existing failures keep main red on the governing build); real-client/host acceptance OPEN\
+**Version:** 0.14\
+**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile PASSED on main `93de60f6` October 9; EditMode CLEAN after the repo-root/timeout follow-up (1,064 passed / 0 failed, October 9); real-client/host acceptance OPEN\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
 **Base:** main `574b0344db3cfe24ee6bef5db459e1b34e6365f4`, after L2 PR #487 merged. The coordinator's pinned-host acceptance is recorded separately in [lifecycle validation](p5b-lifecycle-validation.md) v0.5; that evidence is not carried forward as a screen compile.
@@ -461,6 +461,17 @@ Still open: a passing EditMode run (blocked on the repo-root resolver and the Se
 `[Timeout]` follow-ups), real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10×
 profiling, B9b/B10 and Gate J.
 
+## EditMode clean after the follow-up (v0.14)
+
+The six failures above are fixed by the change that lands with [`evidence/host-clean-editmode-20261009/`](evidence/host-clean-editmode-20261009/README.md).
+
+- **Repo-root locks.** The four structural locks resolve the root through the shared `TestingStrategy.RepositoryRoot`. It is anchored at the test directory and requires the `docs/specs/SPEC_INDEX.md` sentinel.
+- **SeasonSave timeouts.** The two real-engine SeasonSave tests carry `[Timeout(7200000)]`.
+- **Compile.** Unity 6000.4.9f1 compiled with 0 errors and the three known warnings.
+- **EditMode.** The full run covered Localization, ClubFinances, SeasonSave, ClientApp, MatchClientCore, MatchAnalytics, UiFramework and TestingStrategy. It gave **1,064 passed / 0 failed / 3 ignored**; the ignored tests are the opt-in harnesses.
+
+Step 2 of the procedure below is now discharged, compile and EditMode both. Still open: real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling, B9b/B10 and Gate J.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -590,3 +601,4 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.11 | October 8, 2026 | Records the #489 merge to main (`1c8366d` from `307b145`, CI 37848750594 green, Unity job skipped) ahead of host acceptance; the host procedure now targets main, and the repo-root lookup risk for the two contract tests is noted. All host gates remain open. |
 | 0.12 | October 9, 2026 | Pinned-host compile and EditMode on main `93de60f6`: 0 errors after Editor package resolution (the first round is void because the package state was stale), ClientApp 125/125, MatchClientCore 183/183, Localization 67/67, allocation tests passing, TestDirectory repo-root lookup observed working. Editor-regenerated package lock landed. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |
 | 0.13 | October 9, 2026 | Codex review on PR #492. A second run covers the omitted MatchAnalytics (58/59) and UiFramework (49/50) regressions; each failure is that assembly's repo-root lock. The status no longer calls the EditMode run passed. Its overall result is Failed on six tracked, pre-existing failures, so step 2's EditMode half and main's governing-build status stay red until they are fixed forward. |
+| 0.14 | October 9, 2026 | EditMode clean on the pinned host after the shared repo-root resolver and the SeasonSave `[Timeout]`s: 1,064 passed / 0 failed / 3 ignored across the eight assemblies, so step 2 is discharged. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |

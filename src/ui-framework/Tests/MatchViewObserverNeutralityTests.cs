@@ -1,6 +1,6 @@
 // File:     src/ui-framework/Tests/MatchViewObserverNeutralityTests.cs
 // Created:  2026-07-25
-// Modified: 2026-09-28
+// Modified: 2026-10-09
 // Author:   —
 // Spec:     UI / Client Framework #38 §5.1 (T-UI-NEU-001, T-UI-LAYER-001, FR-UI-001/017),
 //           Code Standards #20
@@ -16,6 +16,7 @@ using NUnit.Framework;
 
 using TacticalDirector.MatchEngine;
 using TacticalDirector.MatchViewer;
+using TacticalDirector.TestingStrategy;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.UiFramework.Tests
@@ -108,9 +109,9 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void NoOtherAssemblyReferencesTheUiFramework()
         {
-            DirectoryInfo root = FindRepoRoot();
+            DirectoryInfo root = RepositoryRoot.Find(TestContext.CurrentContext.TestDirectory);
             Assert.IsNotNull(root,
-                "could not locate the repo root from " + AppContext.BaseDirectory +
+                "could not locate the repo root from " + TestContext.CurrentContext.TestDirectory +
                 " — this lock must fail loud rather than scan nothing and pass.");
 
             FileInfo[] asmdefs = new DirectoryInfo(Path.Combine(root.FullName, "src"))
@@ -168,21 +169,6 @@ namespace TacticalDirector.UiFramework.Tests
                 mustNeverReference, present,
                 "the never-reference list names an assembly that no longer exists.");
         }
-
-        private static DirectoryInfo FindRepoRoot()
-        {
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
-            while (dir != null)
-            {
-                if (Directory.Exists(Path.Combine(dir.FullName, "src")) &&
-                    Directory.Exists(Path.Combine(dir.FullName, "tools")))
-                {
-                    return dir;
-                }
-                dir = dir.Parent;
-            }
-            return null;
-        }
     }
 }
 
@@ -198,4 +184,7 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | B9b/P5b, whose shell binding references UiFramework for        |
 // |         |            |        | ScreenId. PR #361's gate run was cancelled, so the scan never  |
 // |         |            |        | ran against that asmdef; a Unity EditMode run surfaced it.     |
+// | 1.3     | 2026-10-09 | —      | T-UI-LAYER-001 resolves the root through the shared            |
+// |         |            |        | TestingStrategy.RepositoryRoot from the test directory; the    |
+// |         |            |        | AppContext.BaseDirectory walk never reached the repo in Unity. |
 #endregion

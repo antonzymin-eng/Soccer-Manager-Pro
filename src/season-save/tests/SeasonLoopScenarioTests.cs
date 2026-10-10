@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopScenarioTests.cs
 // Created:  2026-07-26
+// Modified: 2026-10-09 ([Timeout(7200000)] for Unity's 180 s default — v1.2)
 // Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-26
 // Author:   —
@@ -18,8 +19,12 @@ namespace TacticalDirector.SeasonSave.Tests
     internal class SeasonLoopScenarioTests
     {
         [Test]
+        [Timeout(7200000)]
         public void sim_season_multi_fixture()
         {
+            // Unity applies a 180 s default per-test timeout that NUnit on the Linux shim does not; on the
+            // pinned 6000.4.9f1 host (Mono) this test ran 560 s on October 9, 2026 and was failed for the
+            // timeout alone. 2 h matches S0DemoFixtureComparisonTests and leaves headroom for a loaded host.
             // Boots one real MatchEngine match (~2 min): the FR-SN-013b routing proof. The rest of the
             // scenario — two full head-less seasons plus the per-day KD-8 floor — costs milliseconds.
             var runner = new ScenarioRunner(SeasonLoopScenarios.BuildIndex());
@@ -37,4 +42,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.0     | 2026-07-26 | —      | Initial implementation (#30 §5.7): runs the season-multi-fixture     |
 // |         |            |        | capstone through the ScenarioRunner.                                |
 // | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.2     | 2026-10-09 | —      | [Timeout(7200000)]: 560 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion
