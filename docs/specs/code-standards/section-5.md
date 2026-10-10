@@ -186,7 +186,8 @@ constants-only file) are marked N/A.
 
 [ ] 8. Language version — Source stays within the C# 9.0 working ceiling (§3.1.3);
         no C# 10+ syntax (file-scoped namespaces, `required` members, primary
-        constructors, …)? (FR-CS-008; ERR-020-008)
+        constructors, …)? Mandatory for `src/match-client-unity/`: no compiler
+        check covers it. (FR-CS-008; ERR-020-008)
 
 FR-CS-009 is MAY-level; no pass/fail check required.
 ```
@@ -404,7 +405,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-005 | Style — §5.4.1 item 2 | `CS20-STYLE-001` | E |
 | FR-CS-006 | Style — §5.4.1 item 3 | `.editorconfig` using-order | W |
 | FR-CS-007 | Style — §5.4.1 item 4 | `CS20-STYLE-002` | E |
-| FR-CS-008 | Style — §5.4.1 item 8 | Compiler `<LangVersion>9.0</LangVersion>` (Linux gate, already enforced) and the pinned Unity editor compile | E |
+| FR-CS-008 | Style — §5.4.1 item 8 | Compiler `<LangVersion>9.0</LangVersion>` (Linux gate, already enforced) for every assembly except the Unity-only `TacticalDirector.MatchClientUnity`, which the gate excludes and which is review-only (the pinned Unity compile's ceiling is unrecorded) | E; W (manual) for `TacticalDirector.MatchClientUnity` |
 | FR-CS-009 | MAY — no pass/fail check | N/A | – |
 | FR-CS-010 | Style — §5.4.1 item 5 | `BannedSymbols.txt` (`dynamic`); `CS20-STYLE-003` | E |
 | FR-CS-011 | Style — §5.4.1 item 6 | `.editorconfig` `indent_size = 4` | E |
@@ -530,7 +531,7 @@ belongs to Spec #16 and Spec #19.
 | 1.5 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** §5.4 gains the eighth Architecture Integration & Activation checklist category; §5.5 gains FR-CS-074–081, making 81 numbered FRs / 83 traceability rows including 046a/046b. Pending A4 cross-registry/discovery facts are explicitly report-only and Spec #19 retains proof/gate ownership. | PENDING — A3.4 |
 | 1.6 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live §5.4 category count to eight and aligns FR-CS-074/075 review coverage with §2.2.9: FR-CS-074 now checks explicit integration owner, exact integration point and orthogonal activation state (while retaining durable identity/selector checks); FR-CS-075 now requires every production host/composition root in the approved discovery universe to be classified and mechanically accounted for. §5.5 routes those FRs to the corrected checklist items/A4 evidence. | PENDING — A3.4 |
 | 1.7 | September 3, 2026 | Claude Code | **Post-merge review finding — FR-CS-074 verification mechanism restored.** v1.6 replaced that row's "A4 canonical-selector / identity resolver" with the owner/point/state resolver rather than adding to it, while §5.4.8 item 1 still requires stable `component_id`, canonical selector, rename preservation and selector history, and §3.5.6 makes those identity mechanics mandatory with cross-registry selector resolution itself deferred to A4. Following the row as written would have left ambiguous selectors and identity-breaking renames with no planned verification path. Both resolvers are now named. Severity stays report-only until A4/A8 activation; no checklist item, FR text or count changed. | PENDING — A3.4 |
-| 1.8 | October 10, 2026 | — | **`ERR-020-008` — FR-CS-008 review path activated.** §5.4.1 replaces the "FR-CS-008 is INACTIVE" note with checklist item 8, which checks for nothing newer than the C# 9.0 working ceiling. §5.5's FR-CS-008 row is no longer INACTIVE: it routes to that item, with severity E, enforced today by the compiler `<LangVersion>9.0</LangVersion>` setting plus the pinned Unity compile. The coverage paragraph and the manual-review scope sentence no longer mention inactive FRs. No other FR row changed. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
+| 1.8 | October 10, 2026 | — | **`ERR-020-008` — FR-CS-008 review path activated.** §5.4.1 replaces the "FR-CS-008 is INACTIVE" note with checklist item 8, which checks for nothing newer than the C# 9.0 working ceiling. §5.5's FR-CS-008 row is no longer INACTIVE: it routes to that item, with severity E, enforced today by the compiler `<LangVersion>9.0</LangVersion>` setting, except for the Linux-gate-excluded `TacticalDirector.MatchClientUnity`, which is W (manual) through item 8 (PR #495 Codex review). The coverage paragraph and the manual-review scope sentence no longer mention inactive FRs. No other FR row changed. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 

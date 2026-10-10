@@ -124,7 +124,11 @@ The project's **working ceiling is C# 9.0**. The Linux gate, which runs on every
 to `main` and every PR targeting `main`, compiles every assembly with
 `<LangVersion>9.0</LangVersion>` (`tools/dotnet-ci/generate_projects.py`, which records
 that value as its own toolchain choice, not one inferred from the Unity revision), and
-the pinned Unity editor compiles the same tree. Source therefore **MUST NOT** use syntax
+the pinned Unity editor compiles the same tree. **The one exception:** the Unity-only
+`TacticalDirector.MatchClientUnity` (`src/match-client-unity/`) is excluded from the
+Linux gate (`SHIM_EXCLUDED_ASMDEFS`). Unity's own ceiling is unrecorded, so no compiler
+is known to reject C# 10+ syntax there. For that assembly the ceiling is enforced by
+review alone, through §5.4.1 item 8, until a check covers it. Source therefore **MUST NOT** use syntax
 newer than C# 9.0, for example file-scoped namespaces (C# 10), `required` members
 (C# 11) or primary constructors (C# 12). A compiler that accepts newer syntax does not
 change the target. Whether Unity 6000.4.9f1's compiler would accept a later language
@@ -1372,7 +1376,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.17 | 2026-10-06 | — | Record consumed P5b client fixture/tactic and session analytics dependencies; ordered taxonomy and simulation boundary unchanged. | — |
 
 | 1.18 | October 8, 2026 | — | Record consumed P5b localization/clock/choice edges and exact built-in UGUI package evidence; simulation bans and tier rules unchanged. | — |
-| 1.19 | October 10, 2026 | — | **`ERR-020-008` — language-version mechanics activated.** §3.1.3 no longer treats the certified platform as a placeholder. FR-CS-008 is active, and the working ceiling is C# 9.0: the value the Linux gate already compiles with, on the same tree the pinned Unity editor compiles. Post-C# 9.0 syntax is excluded. The exact Unity 6000.4.9f1 ceiling is recorded as unknown, so raising the ceiling needs host evidence first. The FR-CS-009 Records row gains the `IsExternalInit` prerequisite for positional records and `init` accessors; no assembly in the repository defines that type. Header correction: the header still read v1.17 / October 6 although a v1.18 row existed; both header fields now match this row. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
+| 1.19 | October 10, 2026 | — | **`ERR-020-008` — language-version mechanics activated.** §3.1.3 no longer treats the certified platform as a placeholder. FR-CS-008 is active, and the working ceiling is C# 9.0: the value the Linux gate already compiles with, on the same tree the pinned Unity editor compiles. Post-C# 9.0 syntax is excluded. The Linux gate does not compile the Unity-only `TacticalDirector.MatchClientUnity`, so for that assembly the ceiling is recorded as review-enforced (PR #495 Codex review). The exact Unity 6000.4.9f1 ceiling is recorded as unknown, so raising the ceiling needs host evidence first. The FR-CS-009 Records row gains the `IsExternalInit` prerequisite for positional records and `init` accessors; no assembly in the repository defines that type. Header correction: the header still read v1.17 / October 6 although a v1.18 row existed; both header fields now match this row. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 
