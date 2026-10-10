@@ -250,7 +250,7 @@ queue today.
 
 ## 5. The roadmap
 
-### 5.1 Current implementation lanes and decision register — October 9, 2026
+### 5.1 Current implementation lanes and decision register — October 9, 2026 (evidence anchor refreshed October 10)
 
 This section is the current ordering authority. It supersedes the serial 95-step and 12-step
 conversation plans, not the approved contracts in the owning documents. The numbered rows express
@@ -258,16 +258,19 @@ dependencies, not a requirement to finish an entire row before starting the next
 work and Track C client work continue alongside the measured match-engine lane. No gameplay,
 approved-spec amendment, calibration, or owner decision is authorized by this scheduling update.
 
-**Evidence anchor:** production `main` is `93de60f6` (PR #491). PR #492 at `773ecb67` records
-0 Unity compile errors but **1,025 passed / 6 failed / 3 skipped** across two EditMode runs.
-Review and merge that evidence PR first; this roadmap sync follows it. #466's compile condition
+**Evidence anchor (refreshed October 10, 2026):** production `main` is `ad64d02` (PR #494). PR #492
+recorded 0 Unity compile errors but **1,025 passed / 6 failed / 3 skipped** on `93de60f6`. PR #494
+fixed all six failures, and its pinned-host run at `3927a13b` is **1,064 passed / 0 failed /
+3 ignored** across the eight affected EditMode assemblies
+([evidence](evidence/host-clean-editmode-20261009/README.md)). Steps 1 and 2 below are therefore
+done. #466's compile condition
 was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 telemetry and real
 `PassWorldAdapter.IsGoalkeeperOfTeam` test obligations remain. These are not a passing EditMode gate.
 
 | Step / lane | Work and owning document | Blocking dependencies | Exit criterion |
 |---|---|---|---|
-| 1 / governance | Review #492, then synchronize this roadmap and owning records | #492 review and required checks | Compile-pass/EditMode-fail evidence and current sequencing agree |
-| 2 / verification | Repair four structural test root lookups using `TestContext.CurrentContext.TestDirectory`; investigate two SeasonSave timeouts; retain sentinels, non-vacuity and assertions | Final-head host slot under D-01a; independent of spec-only PRs, D-02 and licensed-CI D-01b | Six previously failing cases and the applicable full EditMode suite pass with pinned commit/NUnit evidence |
+| 1 / governance | ✅ **Done** (#492 merged; this roadmap synchronized to post-#494 `main`). Review #492, then synchronize this roadmap and owning records | #492 review and required checks | Compile-pass/EditMode-fail evidence and current sequencing agree |
+| 2 / verification | ✅ **Done October 9, 2026 (PR #494).** Repair four structural test root lookups using `TestContext.CurrentContext.TestDirectory`; investigate two SeasonSave timeouts; retain sentinels, non-vacuity and assertions | Final-head host slot under D-01a; independent of spec-only PRs, D-02 and licensed-CI D-01b | Six previously failing cases and the applicable full EditMode suite pass with pinned commit/NUnit evidence |
 | 3 / specifications | Split #20 historical drift from proposed #19/#20 normative rules; land bounded #7/#8/#11/#3 corrections | Consumer-specific gates below; normative amendments require D-02 sign-off | Each correction names wording, source evidence, replacement and acceptance; no new rule is represented as approved |
 | 4 / substitutions | Amend [match-flow §6](match-flow-completion-design.md), then implement serialized requests and stoppage execution/client outcomes | Approved execution contract and final-head host slot; **not** a pre-B prerequisite: the census found no affected requests (October 10, 2026) | No mid-play roster replacement; exactly-once execution/cancellation and restore tests; host compile passes |
 | 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; continue finance T3b2, progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
@@ -299,7 +302,7 @@ licensed-CI decision does not gate repairs or belong to the normative amendment'
 This roadmap does not approve those rules or imply unbuilt analyzers/profiling exist.
 
 **Single-host operational queue (D-01a; owner-ratified October 10, 2026).** Prepare reviews and Linux
-checks before booking the host. First repair the known red EditMode cases; next prioritize ready landings that open or close
+checks before booking the host. First repair the known red EditMode cases (done: PR #494); next prioritize ready landings that open or close
 an isolated engine-evidence window; then take ready client/career landings in request order.
 Reserve a client/career slot in each agreed host cycle so engine work cannot starve that lane.
 Anton owns bookings and any priority override. Anton Zymin ratified this queue as written on
@@ -693,6 +696,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.52 | October 10, 2026 | Codex review on PR #493: §5.1's evidence anchor still described `93de60f6` as production `main` and left steps 1–2 pending after `main` (#492, #494) was merged in. The anchor is now `ad64d02` with #494's 1,064 / 0 / 3 EditMode result, steps 1–2 are marked done, and the queue's "repair red EditMode first" item is marked done. Sequencing only. |
 | v0.51 | October 10, 2026 | D-01a ratified by the owner. Substitution census recorded: zero requests from the four frozen drivers, so the substitution → pre-B edge is removed (step 6 no longer waits on it). Merged `main` (#492/#494); this PR's roadmap rows were renumbered v0.48/v0.49 → v0.49/v0.50 because #494 claimed v0.48. Sequencing only. |
 | v0.50 | October 9, 2026 | PR #493 review corrections: operational host queue applies now; licensed CI has no blocking deadline and scheduling stays outside normative specs. Capture budget uses measured ~90 s/match; C1 lower-bound claim is disproved. Historical phase/graph labels point to current PM-2 anchor/refit gates. |
 | v0.49 | October 9, 2026 | Consolidated parallel implementation lanes; single-host queue proposal; named spec consumers; census-dependent substitution/schema ordering; selected PM-2 engine anchor/capture budget; owner decision deadlines. Sequencing only, with no gameplay or normative approval. |
