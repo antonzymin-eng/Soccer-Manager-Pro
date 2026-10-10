@@ -609,7 +609,7 @@ math are host-free and test-locked in `match-client-core` today.
 ## 8. Dependency graph
 
 **Historical dependency sketch:** the graph and critical-path text below preserve the original
-phase sequencing. Current dependencies are owned by [§5.1](#51-current-implementation-lanes-and-decision-register--october-9-2026).
+phase sequencing. Current dependencies are owned by [§5.1](#51-current-implementation-lanes-and-decision-register--october-9-2026-evidence-anchor-refreshed-october-10).
 In particular, current PM-2 requires D-08's selected engine anchor, D-09's shape disposition and
 that anchor's A4a recapture/refit to converge with C3/C4 and client acceptance. The old C3 → C4
 path alone does not describe today's PM-2 closeout; its original landing-count estimates are history.

@@ -38,6 +38,11 @@ decision to eligibility only: **no cooldown tuning**.
 - `MatchEngine.TryCommitClaimIntents` (`src/match-engine/MatchEngine.cs:4763`) and the rush
   producer (`:4890`) commit only from `Set`/`Anticipate`. A dive needs `Anticipate`, which is not
   reachable from `Recovering`.
+- **Save commitment is not gated (found in PR #496 review):** `RunMechanicsAI` sets `SaveAvailable`
+  without reading keeper state, and `HostSaveDispatch.CommitSave` → `CommitSaveIntent` stores the
+  intent in any state. A visible threat during `Recovering` therefore banks a `SaveIntent` and opens
+  the reaction window, and the dive can happen only after the keeper exits to `Set` and reaches
+  `Anticipate`. Option A documents this as-is; withholding it is a behavior change (D-08 candidate).
 - **What a `Recovering` keeper can still do:** `RunFirstTouch` (`:6066`) and `RunLooseBallPickup`
   (`:6217`) do not check keeper state. A ground-level ball reaching the keeper can still be first-touched or
   picked up like any outfield player. The block covers only hand claims, rushes and dives.
@@ -200,5 +205,6 @@ Recorded in `match-engine-wiring-backlog.md` v1.34 and in decision comments on #
 
 | Version | Date | Change |
 |---|---|---|
+| v0.3 | October 10, 2026 | PR #496 review: D-03 facts add the ungated save-commitment path (a `SaveIntent` can be held during `Recovering`; the dive waits for exit). |
 | v0.2 | October 10, 2026 | Owner decisions recorded: D-03 A, D-04 A (whistled foul stops play), D-05 as recommended, with #434 formation/Duty in PM-2 scope. |
 | v0.1 | October 10, 2026 | Created: D-03/D-04/D-05 option packets with code facts verified at `7d9ce8b`. Prepared, not decided. |
