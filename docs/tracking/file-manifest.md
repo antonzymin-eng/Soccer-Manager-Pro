@@ -1,6 +1,6 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 10, 2026 — **Owner decisions D-03/D-04/D-05 recorded.** No file added or removed. **Modified:** `docs/specs/goalkeeper-mechanics/section-3.md` v0.19, `docs/tracking/foul-discipline-balance-design.md` v1.5, `docs/tracking/foul-card-w3-w9-preregistration.md` (dated disposition note), `docs/tracking/match-engine-wiring-backlog.md` v1.34, `docs/tracking/w8-goalkeeper-distribution-decision.md` v0.30, `docs/tracking/path-to-playable-roadmap.md` v0.55, `docs/tracking/pre-b-decision-packets.md` v0.2, `docs/tracking/open-issues.md` (two owner-decision blocks), `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** October 10, 2026 — **Owner decisions D-03/D-04/D-05 recorded.** No file added or removed. **Modified:** `docs/specs/goalkeeper-mechanics/section-3.md` v0.19, `docs/tracking/foul-discipline-balance-design.md` v1.5, `docs/tracking/foul-card-w3-w9-preregistration.md` (dated disposition note), `docs/tracking/match-engine-wiring-backlog.md` v1.34, `docs/tracking/w8-goalkeeper-distribution-decision.md` v0.30, `docs/tracking/path-to-playable-roadmap.md` v0.55, `docs/tracking/pre-b-decision-packets.md` v0.2, `docs/tracking/open-issues.md` (two owner-decision blocks), `docs/tracking/branch-cleanup-disposition.md` v0.4 (#434 closed; branch kept until its rewrite lands), `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** October 10, 2026 — **Docs-only: D-03/D-04/D-05 decision packets.** **New:** `docs/tracking/pre-b-decision-packets.md` v0.1. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.54, `docs/tracking/CHANGELOG.md` and this manifest.
 
@@ -3640,7 +3640,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 
 | File | Purpose |
 |------|---------|
-| `docs/tracking/branch-cleanup-disposition.md` | v0.3 audited branch dispositions, provenance archive messages and gates, plus the executed record: owner authorization, verified annotated archive tags, eight lease-protected deletions and post-delete remote checks; deferred-work reviewer assignments open |
+| `docs/tracking/branch-cleanup-disposition.md` | v0.4 audited branch dispositions (v0.4: #434 closed, branch kept until its rewrite lands), provenance archive messages and gates, plus the executed record: owner authorization, verified annotated archive tags, eight lease-protected deletions and post-delete remote checks; deferred-work reviewer assignments open |
 | `docs/tracking/PROGRESS.md` | Stage progress, milestones, and current status notes |
 | `docs/tracking/spec-error-log.md` | Cross-spec error tracking (`ERR-*`) |
 | `docs/tracking/spec-error-log-err012-addendum.md` | ERR-012 addendum details |

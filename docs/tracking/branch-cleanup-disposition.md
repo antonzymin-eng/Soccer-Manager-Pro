@@ -2,7 +2,7 @@
 
 **Created:** October 6, 2026  
 **Purpose:** Record deletion candidates, preserve cited provenance, and track retained work branches.  
-**Version:** 0.3  
+**Version:** 0.4  
 **Status:** EXECUTED October 6, 2026 — owner-authorized; both annotated archive tags published and verified; all eight candidate branches deleted; the fourteen retained snapshot refs remain. Deferred-work reviewer assignments remain open.
 
 ## Audited snapshot
@@ -25,7 +25,7 @@ is made from a shallow checkout.
 | `BLOCKED-ui/p5b-shell-foundation` | `509a9f5dc43878d134d4356146bc313ebe8062b5` | Delete after authorization and fresh ancestry/head check; merged PR #470. |
 | `claude/fervent-ride-gmknin` | `f7f44b513f5b496ef0d9b2853c2920e49aeb6660` | Archive to annotated tag `archive/fervent-ride-gmknin`, verify remote tag, then delete after authorization; cited provenance, no PR. |
 | `codex/spec20-unity-verification-drift` | `97966ddc5c8208a9f4dbd503a054cbf2ffb2cdbc` | Keep: 9 branch-only commits; owner to assign #20 reviewer at the next A3.4/KD-4 modernization review. |
-| `codex/trace-variable-in-positioning-ai-system` | `7b39161dbe101805e019bcba1e789b360430c431` | Keep: open draft PR #434; PR author/reviewer resolves its disposition when #434 closes. |
+| `codex/trace-variable-in-positioning-ai-system` | `7b39161dbe101805e019bcba1e789b360430c431` | Keep: open draft PR #434; PR author/reviewer resolves its disposition when #434 closes. **Update October 10, 2026:** PR #434 closed unmerged by owner decision D-05 (the work is re-authored on current `main` after W8 B→C, split into three parts). Keep the branch as rewrite reference until the re-authored formation/Duty PR lands, then delete after a fresh head check; the commits also stay reachable as `refs/pull/434/head`. |
 | `docs/p5b-lifecycle-identity-plan` | `705b5ff91eec5b98f490e2e53063a773fc647929` | Delete after authorization and fresh ancestry/head check; merged PR #479. |
 | `evidence/a1c-green-arm` | `d689f2bfd2823f72fa646c0a3b92a2541fce3657` | Keep: A1c enforcement record explicitly prohibits deletion; project owner must resolve that policy before reconsideration. |
 | `evidence/a1c-red-arm` | `d497a4d4c7248acc2d7c935cd7df7480f7956334` | Keep: A1c enforcement record explicitly prohibits deletion; project owner must resolve that policy before reconsideration. |
@@ -177,3 +177,4 @@ depend on the archive tags but still requires authorization and its own fresh ch
 | 0.1 | October 6, 2026 | Initial audited dispositions, annotated archive messages, remote verification and authorization gates; execution pending. |
 | 0.2 | October 6, 2026 | PR #480 review correction: W12 annotation adds the W6 pre-registration closeout provenance citation and the CHANGELOG/file-manifest references; execution remains pending. |
 | 0.3 | October 6, 2026 | Execution recorded: owner authorization, PR #480 landing, pre-execution checks (ordering against audited and refreshed main stated), published tag-object and peeled OIDs, eight lease-protected deletions and post-delete remote verification. Audited table and gates unchanged. |
+| 0.4 | October 10, 2026 | PR #434 closed unmerged under owner decision D-05; `codex/trace-variable-in-positioning-ai-system` kept until the re-authored formation/Duty PR lands, then deleted after a fresh head check. |
