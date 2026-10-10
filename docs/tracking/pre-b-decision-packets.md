@@ -185,7 +185,7 @@ behavior-affecting merge there as invalidating the comparison.
 **Decision record:** Anton Zymin accepted the recommendation on October 10, 2026: #440 included, after
 B→C; #434 included, after B→C, re-authored and split. The owner also placed #434's formation and Duty
 part in PM-2 scope; PM-2 inclusion of the `ScoreDiff` and sent-off parts remains a D-08 question.
-Recorded in `match-engine-wiring-backlog.md` v1.34.
+Recorded in `match-engine-wiring-backlog.md` v1.34 and in decision comments on #440 and #434.
 
 ---
 
