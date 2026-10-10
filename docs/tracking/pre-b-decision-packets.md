@@ -3,9 +3,9 @@
 > **Created:** October 10, 2026
 > **Purpose:** The source-backed options, costs and evidence that roadmap §5.1 asks the implementing
 > agent to prepare for the three owner decisions blocking step 6 (the pre-B engine baseline freeze).
-> **Status:** PREPARED, NOT DECIDED. Nothing here is an approval, a spec amendment, a `[GT]` change
-> or a KD-W1 exception. Each decision is recorded by Anton Zymin in its owning document and linked
-> from the roadmap's decision register (§5.1) before step 6 proceeds.
+> **Status:** DECIDED October 10, 2026 by Anton Zymin: D-03 option A, D-04 option A, D-05 as
+> recommended. Decisions are recorded in the owning documents named below and linked from the
+> roadmap's decision register (§5.1). Nothing here is a `[GT]` change or a KD-W1 exception.
 > **Evidence anchor:** `main` at `7d9ce8b` (PR #495). Code facts below were read at that commit.
 
 ---
@@ -74,8 +74,8 @@ decision to eligibility only: **no cooldown tuning**.
   `Recovering`, broken down by entry cause, on the six frozen seeds. This is optional and not a
   prerequisite for A.
 
-**Decision record:** _(owner)_ Option ___ · date ___ · recorded in #11 §3.1.1 version history and the
-open-issues entry.
+**Decision record:** Anton Zymin chose **option A** on October 10, 2026. Recorded in #11 Section 3 v0.19
+(§3.1.1 note) and the open `Recovering` issue.
 
 ---
 
@@ -114,8 +114,11 @@ evidence `evidence/foul-card-six-seed/`.
 - Record the instant-restart observation as an input to the eventual KD-W1 discipline calibration
   (option C territory). Do not act on it now.
 
-**Decision record:** _(owner)_ Option ___ · date ___ · recorded in `foul-discipline-balance-design.md`
-KD-F3 and the #435 preregistration.
+**Decision record:** Anton Zymin chose **option A** on October 10, 2026, reasoning that a tackle foul
+the referee whistles stops the game, so a cooldown is moot for it. Recorded in
+`foul-discipline-balance-design.md` v1.5 KD-F3, the #435 preregistration §2.1 and the open foul/card
+issue. The engine's stoppage is zero-length (instant restart); that stays a separate restart-flow and
+KD-W1 calibration question.
 
 ---
 
@@ -179,8 +182,10 @@ behavior-affecting merge there as invalidating the comparison.
   with them is then a D-08 scope question. I recommend that it does, because formation choice is a
   stated PM-1 capability.
 
-**Decision record:** _(owner)_ #440: include/defer, placement ___ · #434: include/defer, placement ___ ·
-date ___ · recorded on #440, #434 and in the engine backlog.
+**Decision record:** Anton Zymin accepted the recommendation on October 10, 2026: #440 included, after
+B→C; #434 included, after B→C, re-authored and split. The owner also placed #434's formation and Duty
+part in PM-2 scope; PM-2 inclusion of the `ScoreDiff` and sent-off parts remains a D-08 question.
+Recorded in `match-engine-wiring-backlog.md` v1.34.
 
 ---
 
@@ -195,4 +200,5 @@ date ___ · recorded on #440, #434 and in the engine backlog.
 
 | Version | Date | Change |
 |---|---|---|
+| v0.2 | October 10, 2026 | Owner decisions recorded: D-03 A, D-04 A (whistled foul stops play), D-05 as recommended, with #434 formation/Duty in PM-2 scope. |
 | v0.1 | October 10, 2026 | Created: D-03/D-04/D-05 option packets with code facts verified at `7d9ce8b`. Prepared, not decided. |

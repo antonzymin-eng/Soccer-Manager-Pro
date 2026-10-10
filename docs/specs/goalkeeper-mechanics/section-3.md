@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 10, 2026 (v0.18 — ERR-011-019: §3.2.1 adds the `OnThreatDeflected` stamp producer, records that the threat-onset fallback is visibility-gated, and states that a screened threat clears the stamp; prior: v0.17 ERR-011-018 §3.3.0.1 names the real #12 baseline surface)
-**Version:** 0.18
+**Last Updated:** October 10, 2026 (v0.19 — owner decision D-03: §3.1.1 states that `Recovering` is not claim-, rush- or save-eligible; prior: v0.18 ERR-011-019 §3.2.1 adds the `OnThreatDeflected` stamp producer)
+**Version:** 0.19
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -50,6 +50,16 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `OneOnOne` | `Smothered` | GK closes within `SMOTHER_TRIGGER_RADIUS_M` of attacker AND attacker shot pending | 60 Hz | #11 |
 | `OneOnOne` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without ever closing to a smother (ERR-011-009). `OneOnOne` is reachable only from `Rushing` and inherits the identical gap | 60 Hz | ERR-011-009 / §3.7.2 |
 | `Resting` | `Resting` | Default holding state when ball is in own / middle thirds with own possession | 10 Hz | #11 |
+
+**`Recovering` is not claim-, rush- or save-eligible (owner decision D-03, October 10, 2026).**
+The table has no row from `Recovering` to `Anticipate`, `Diving`, `Rushing` or a hand claim, and
+that absence is intentional. Until it leaves `Recovering` for `Set` or `Resting`, a keeper commits
+no `ClaimIntent`, `RushIntent` or dive, whatever the cause of entry and for as long as neither exit
+condition above is met (cooldown elapsed, or already within `GK_REACTIVE_RADIUS_M` of the slot). This restricts only #11-owned actions: the keeper remains an ordinary
+agent for the Match Engine's first-touch and loose-ball pickup paths. Distinguishing `Recovering`
+entries by cause (a ground event versus a completed distribution or rush) is a candidate for the
+PM-2 engine scope (roadmap D-08) after W8 B, not part of this contract. No cooldown value is
+changed by this decision.
 
 Iteration order is deterministic per #16 §3.2. With one GK per
 side, iteration-order ambiguity is restricted to multi-attacker
@@ -1439,3 +1449,4 @@ standard rebound physics.
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
 | 0.17 | September 27, 2026 | ERR-011-018 baseline-slot wiring | §3.3.0.1 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real surface: #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot, canonical attack-+X frame), mapped to world space by the composition root with the keeper's `MOVE_TO_POSITION` map, read after #12's tick in the same stride; the keeper's own position is ruled out as a stand-in (it made `Recovering → Set` immediate). Units, range, mirrored worked example and the 6 m / tick 1001 → 1006 cooldown example added. §3.1.1 unchanged. No `[GT]`, schema or RNG change. | spec + code, same commit |
 | 0.18 | October 10, 2026 | ERR-011-019 spec-text drift | §3.2.1 listed two stamp producers. W4 (PR #403) had added a third, `GoalkeeperMechanics.OnThreatDeflected`, which always overwrites and does not set the pending-shot flag. W4 also made the threat-onset fallback visibility-owned and made a screened armed tick clear the stamp unless a dive is in flight. §3.2.1 now describes all three producers and the screened-clear rule, with a worked example. Spec text only; code unchanged. Determinism impact: none. | — |
+| 0.19 | October 10, 2026 | Owner decision D-03 | §3.1.1 records that the missing `Recovering` → `Anticipate`/`Diving`/`Rushing`/claim rows are intentional: a `Recovering` keeper commits no claim, rush or dive until it exits to `Set`/`Resting`, while remaining an ordinary agent for Match Engine first touch and pickup. A cause-split is deferred to D-08 after W8 B. Clarification of existing behavior; no code, constant or schema change. Packet: `docs/tracking/pre-b-decision-packets.md`. |
