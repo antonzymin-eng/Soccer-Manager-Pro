@@ -6,8 +6,8 @@ dependency contracts for Spec #20. Authoritative reference for what this specifi
 owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
-**Modified:** September 2, 2026
-**Version:** 1.2
+**Modified:** October 10, 2026
+**Version:** 1.3
 **Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.0.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
@@ -251,13 +251,13 @@ rule and the enforced rule.
 - `docs/planning/development-best-practices.md` — allocation budget values cited in
   §3.3.4 and §6.1.
 
-**Upstream — consulted at coding-start; placeholder during spec drafting:**
-- `docs/tracking/certification-platform.md` — Unity LTS revision and C# language
-  version pin. Spec #20 references this file by path in §3.1.3 (FR-CS-008). The
-  concrete language-version value is not required for spec approval; it is required
-  before the first Stage 1 implementation commit. Activation of FR-CS-008 is gated on
-  this document resolving from placeholder status (see root `CLAUDE.md` open issue:
-  "Stage 0 host platform pin").
+**Upstream — pinned implementation authority (`ERR-020-008`):**
+- `docs/tracking/certification-platform.md` — the certified Stage 0 host: Windows 11 /
+  Unity **6000.4.9f1** / Mono, certified July 19, 2026. Spec #20 references this file
+  by path in §3.1.3 (FR-CS-008). FR-CS-008's activation was gated on this document
+  resolving from placeholder status, and it has resolved, so FR-CS-008 is **active**.
+  §3.1.3 states the project's working language ceiling (C# 9.0) and what is needed
+  before that ceiling can be raised.
 
 **Downstream (every Stage 1+ source file depends on this spec):**
 - Every `.cs` file under `src/` cites Spec #20 in its file header (FR-CS-057).
@@ -295,6 +295,7 @@ checks. Unsupported semantic claims remain report-only.
 | 1.0.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M3.** The 1.0.3 row above fixed §1's prose scope list but missed the §1.3 Authority Matrix row two sections later, which still enumerated five tags (`[GT]`/`[EST]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`) — the same six-vs-five gap the 1.0.3 row exists to close, left standing in a second table. `[CROSS-PENDING]` added to the Authority Matrix row; no other content change. | — |
 | 1.1 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Extends scope/authority/dependency text to FR-CS-074–081, Project Architecture Governance, and Spec #19's proof/gate ownership; states that A3 approval is distinct from A4/A8 mechanical activation. No new runtime dependency or enforcement is introduced. | PENDING — A3.4 |
 | 1.2 | September 3, 2026 | Claude Code | **A3.1b stale-claim sweep completed here.** §1.4's downstream bullet still described `src/CLAUDE.md` as future work ("The future `src/CLAUDE.md` will contain concrete paths and assembly definitions"); the file exists, and §1.4's own architecture-governance bullets and both other outline tiers had already been corrected in A3.1b. Restated as existing. **KD-4 deliberately NOT modernized here.** An automated review of PR #351 asked for the normative KD-4 text to be updated to match live tooling; the owner declined that scope for this slice — A3.1b is a synchronization and finding-closure pass, and rewriting a Key Design Decision's statement is a governance-semantic change, not a stale-wording fix. §5.1's "Tooling status" paragraph already frames KD-4 as the historical Stage 0 decision and records that the Stage 0+1 transition has since arrived, which is where reviewers meet the question. Tracked separately for A3.4. No FR, count, KD, authority-matrix row or scope boundary changed. | PENDING — A3.4 |
+| 1.3 | October 10, 2026 | — | **`ERR-020-008` — expired platform-placeholder dependency corrected.** §1.4 still described `certification-platform.md` as a placeholder gating FR-CS-008. The pin was certified on July 19, 2026, so the gate has fired. §1.4 now records the pinned host and points to §3.1.3 for the working C# 9.0 ceiling. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 

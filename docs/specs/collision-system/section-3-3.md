@@ -545,6 +545,15 @@ public struct AgentBallCollisionData
     public Vector3 ContactPoint;
     
     /// <summary>
+    /// Agent centre in world coordinates (meters) at moment of contact.
+    /// NOT the contact point: Ball Physics #1 §3.1.10.1 derives the planar
+    /// (vertical-cylinder) deflection normal from it; Z is ignored by the consumer.
+    /// ERR-003-009 (October 10, 2026): back-prop of ERR-003-007 (July 27, 2026),
+    /// which added the field in code and §3.4.3 but not here.
+    /// </summary>
+    public Vector3 AgentPosition;
+
+    /// <summary>
     /// Agent velocity at moment of contact (m/s).
     /// Used by Ball Physics for momentum transfer calculation.
     /// </summary>

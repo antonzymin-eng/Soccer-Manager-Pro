@@ -11,8 +11,9 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** August 9, 2026 (v1.8 — CORRECTION to v1.7: `ERR-008-024`'s fix was implemented, measured, and REFUSED, not landed. §3.1.5.2's pseudocode reverted to match the shipped code — `best_direction = argmax(space_in_dir)`, ties to the earliest sector — and the ERR-008-024 callout now records a KNOWN, MEASURED, UNFIXED defect with the refusal evidence. See the version-history table.)
-**Version:** 1.8
+**Updated:** October 10, 2026 (v1.9 — `ERR-008-025`: §3.1.13 names the real `SaveAvailable` producer, `KeeperPerceptionGate` (raw `SaveArmed` geometry plus current-frame all-body line of sight), and states that the rush veto stays on raw geometry. Spec text only; the code already does this. Prior update below.)
+**Updated (prior):** August 9, 2026 (v1.8 — CORRECTION to v1.7: `ERR-008-024`'s fix was implemented, measured, and REFUSED, not landed. §3.1.5.2's pseudocode reverted to match the shipped code — `best_direction = argmax(space_in_dir)`, ties to the earliest sector — and the ERR-008-024 callout now records a KNOWN, MEASURED, UNFIXED defect with the refusal evidence. See the version-history table.)
+**Version:** 1.9
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -1000,16 +1001,30 @@ PressOption pressOption = new PressOption
 
 ## 3.1.13 SAVE generation (ERR-008-013 back-prop anchor)
 
-The off-ball branch generates one additional candidate, `ActionType.SAVE = 7` (the DT-emitted
-goalkeeper save the #11 `SaveIntent` doc anticipates the DT committing). It is gated on the new
-`TacticalContext.SaveAvailable` fact — set only for the threatened keeper, only under the match
-engine's opt-in `EnableGkHeading` flag (from `GkHeadingIntentSource.SaveArmed` geometry). When
-`SaveAvailable`, the off-ball branch emits **SAVE alone** (MOVE/PRESS/INTERCEPT suppressed), so the
-keeper's save is selected robustly rather than competing on utility (a must-happen, geometry-gated
-action must not depend on out-scoring INTERCEPT, which can reach the utility ceiling under an
-aggressive tactic). Flag-off / non-keeper ⇒ `SaveAvailable` false ⇒ this section is inert and the
-off-ball branch is byte-identical to §3.1.7–§3.1.9. Owned by ERR-008-013 + the code
-(`OptionGenerator.GenerateSaveCandidate`); scoring is §3.2, dispatch §3.5.
+The off-ball branch generates one additional candidate, `ActionType.SAVE = 7` (the DT-emitted goalkeeper
+save the #11 `SaveIntent` doc anticipates the DT committing). It is gated on the new
+`TacticalContext.SaveAvailable` fact — set only for the threatened, non-sent-off keeper, only under the
+match engine's opt-in `EnableGkHeading` flag. **Producer (`ERR-008-025`):** the match engine's
+`KeeperPerceptionGate.SaveAvailable` (W4, PR #403), which is true only when (1) the raw
+`GkHeadingIntentSource.SaveArmed` save-flight geometry is armed **and** (2) no participating agent body,
+of either team, screens a body-height ball from the keeper in the current frame
+(`OcclusionFilter.IsOccludedByAnyAgent`). A ball above `CollisionPhysicsConstants.AgentReachHeight` is
+never screened. Raw geometry alone is therefore not sufficient: an armed but screened threat leaves
+`SaveAvailable` false, and the match engine clears that keeper's save intent (a dive already in flight
+is preserved). The #11 rush-priority veto deliberately stays on **raw** `SaveArmed`, because an
+unsighted keeper must not become eligible to rush at a ball driving at the keeper's goal. The two
+consumers share the raw geometry and differ only in the visibility term. Worked example: a loose ball
+1.0 m high, inside `GkSaveTriggerRangeM`, moving toward the goal line above
+`GkSaveTriggerMinBallSpeedMps`, has `SaveArmed` true (that predicate has no height gate). With a
+defender standing on the keeper–ball line, `SaveAvailable` is false (no SAVE; RUSH still vetoed). With
+the line clear, `SaveAvailable` is true (SAVE alone). The same ball at 2.5 m, above the 2.0 m reach
+height, gives `SaveAvailable` true whatever bodies stand on the line. When `SaveAvailable`, the off-ball
+branch emits **SAVE alone** (MOVE/PRESS/INTERCEPT suppressed), so the keeper's save is selected robustly
+rather than competing on utility (a must-happen, geometry-gated action must not depend on out-scoring
+INTERCEPT, which can reach the utility ceiling under an aggressive tactic). Flag-off / non-keeper ⇒
+`SaveAvailable` false ⇒ this section is inert and the off-ball branch is byte-identical to
+§3.1.7–§3.1.9. Owned by ERR-008-013 + the code (`OptionGenerator.GenerateSaveCandidate`); scoring is
+§3.2, dispatch §3.5.
 
 ---
 
@@ -1068,3 +1083,4 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.6 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-015-002 §3.1.7 update: Stage 1+ RUNNER override note added to §3.1.7.2 — when AttackIntent.role == RUNNER, MOVE_TO_POSITION target is runTargetPosition from #15 §3.4 instead of formation slot. Stage 0 behavior unchanged (AttackIntent null). Approval status preserved. |
 | 1.7 | August 9, 2026 | — | ERR-008-024 (spec + code, same commit). §3.1.5.2's 8-sector scan now ranks on `space_in_dir(dir) × DirectionQuality_DRIBBLE(dir, toGoal)` instead of `space_in_dir` alone. `space_in_dir` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old strict-improvement scan always kept the first sector visited — sector 0, `AgentFacingDirection` by construction — whenever two or more sectors were clear, the common case in the final third: goal direction never entered the choice of `best_direction` at all, which is why ERR-008-018's scoring-stage fix could suppress a retreating dribble but never redirect it (close-chance-creation KD-CC3 / §7 item 6, now closed). Ranks on the SAME `DirectionQuality_DRIBBLE` term §3.2.4.1 already applies at scoring — no new constant; the floor is `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80 (§3.2.4.1, unchanged), so direction can outrank at most a 20% space deficit. `SpaceScore` itself (§3.1.5.3) is unaffected — it remains the raw space fraction of whichever sector the ranking picks. Consumers: `OptionGenerator.cs` v1.11, `UtilityWeights.cs` v1.14, `UtilityScorer.cs` v1.16, `OptionGeneratorTests.cs` v1.11. Measured: `sim_match_engine_close_chance` meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); `DecisionTree.Tests` 131 passed / 4 skipped / 0 failed. **[CORRECTED at v1.8 below — this fix was implemented, measured, and REFUSED. It was never actually landed: the same build stalls `sim_match_engine_play_develops` outright and zeroes `goals-still-scored`. The pseudocode and callout described here have been reverted.]** |
 | 1.8 | August 9, 2026 | — | CORRECTION to v1.7: `ERR-008-024`'s tie-break fix was implemented, measured, and REFUSED — not landed. §3.1.5.2's pseudocode reverted to `best_direction = argmax(space_in_dir)`, ties to the earliest sector — the code `OptionGenerator.cs` actually runs, byte-identical in logic to the pre-fix baseline. The "sector selection is no longer space-only" claim and the ERR-008-024 callout are corrected to record a KNOWN, MEASURED, UNFIXED defect with the refusal evidence: the tie-break form passes `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but stalls play outright (`sim_match_engine_play_develops` fails, ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. Kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` (the hoisted §3.2.4.1 formula) and `UtilityScorer`'s delegation to it. The two v1.7 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `close-chance-creation-design.md` §7 item 6 (reopened). |
+| 1.9 | October 10, 2026 | — | `ERR-008-025` (spec-text drift; no code change). §3.1.13 said `SaveAvailable` came from `GkHeadingIntentSource.SaveArmed` geometry. Since W4 (PR #403, September 13, 2026), the producer has been `KeeperPerceptionGate.SaveAvailable`: raw `SaveArmed` AND current-frame all-body line of sight via `OcclusionFilter.IsOccludedByAnyAgent`, with balls above `AgentReachHeight` never screened. §3.1.13 now names that producer, says the rush veto stays on raw `SaveArmed`, and adds a worked example. SAVE generation, scoring and dispatch are unchanged. Determinism impact: none (text only). |
