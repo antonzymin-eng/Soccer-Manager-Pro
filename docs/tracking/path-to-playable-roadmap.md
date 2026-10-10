@@ -345,7 +345,8 @@ Mean fitting cannot close ERR-030-034's dispersion/shape failure or establish th
 
 **Decision register.** Entries are **pending owner decisions**, not approvals, except D-01a, which
 the owner ratified on October 10, 2026. Anton Zymin (project owner) is the decision owner; the implementing agent
-prepares the source-backed options, cost and evidence. Where a decision blocks work, deadlines
+prepares the source-backed options, cost and evidence. Packets for D-03, D-04 and D-05 (prepared, not decided) are in
+[`pre-b-decision-packets.md`](pre-b-decision-packets.md). Where a decision blocks work, deadlines
 name that event because host dates are not booked yet;
 record an actual host date when booking, rather than inventing one here. Record each decision in
 the owning document and link it here before the blocked landing/capture/closeout proceeds.
@@ -696,6 +697,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.54 | October 10, 2026 | Decision register links the new D-03/D-04/D-05 option packets (`pre-b-decision-packets.md`). Prepared, not decided; no sequencing change. |
 | v0.53 | October 10, 2026 | Step 3 status: the #8/#11/#3 spec-text corrections and the narrowed #20 FR-CS-008 erratum have landed (`ERR-008-025`, `ERR-011-019`, `ERR-003-009`, `ERR-020-008`). #7, the #19/#20 normative amendment and the certification-platform C# row remain open. Sequencing only. |
 | v0.52 | October 10, 2026 | Codex review on PR #493: §5.1's evidence anchor still described `93de60f6` as production `main` and left steps 1–2 pending after `main` (#492, #494) was merged in. The anchor is now `ad64d02` with #494's 1,064 / 0 / 3 EditMode result, steps 1–2 are marked done, and the queue's "repair red EditMode first" item is marked done. Sequencing only. |
 | v0.51 | October 10, 2026 | D-01a ratified by the owner. Substitution census recorded: zero requests from the four frozen drivers, so the substitution → pre-B edge is removed (step 6 no longer waits on it). Merged `main` (#492/#494); this PR's roadmap rows were renumbered v0.48/v0.49 → v0.49/v0.50 because #494 claimed v0.48. Sequencing only. |
