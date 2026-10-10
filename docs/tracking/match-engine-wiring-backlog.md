@@ -10,7 +10,13 @@
 
 ---
 
-> **UPDATED October 9, 2026 (v1.33):** Current landing order and pending owner decisions are in
+> **UPDATED October 10, 2026 (v1.34):** Owner decisions D-03/D-04/D-05 are taken, so the pre-B
+> freeze (roadmap step 6) has no pending decision. D-03: a `Recovering` keeper stays unable to claim,
+> rush or dive (#11 §3.1.1 note). D-04: the W2 tackle-foul cooldown bypass is retained. D-05: #440 and
+> a re-authored, split #434 are included and land after B→C (see the W3 section). None of these
+> changes engine behavior before B.
+>
+> **UPDATED (prior) October 9, 2026 (v1.33):** Current landing order and pending owner decisions are in
 > `path-to-playable-roadmap.md` §5.1. W2 is active and W3 is wired but Head reachability remains
 > owned by #441. W8 B's approved contract and merged #466 substrate exist; the substrate Unity
 > compile condition is met, while live B wiring/feedback/telemetry/identity obligations remain.
@@ -271,6 +277,16 @@ cross-claim plumbing are live; production Head participation is dormant upstream
 **#441**. `successfulKeeperClaims=753` still has no common pre-W3 comparator, and foul/slide-tackle
 movements remain characterization only, not attributed W3 effects. #440 remains deferred to a separate
 gameplay PR; no gameplay `[GT]` calibration is authorized here.
+
+**Owner decision D-05, October 10, 2026:** #440 and #434 are both **included** and both land **after
+the W8 B→C comparison**, before the D-08 PM-2 anchor, each as its own measured landing. #440 and the
+behavior-changing #434 parts never land inside an A→B or B→C window. #440 is a spec+code landing against #14 §3.6.5 (`BALL_LOOSE` must not behave
+like `MISSED`). #434 is re-authored on current `main`, not merged from the stale draft, and split into
+(i) formation and Duty routing, (ii) live `ScoreDiff` routing and (iii) the sent-off
+`ActiveOutfieldCount` exclusion. The single exception: part (i) may land earlier, including inside a
+window, only with digest-identity evidence at default tactics on the frozen seeds; otherwise it waits
+for B→C. The owner has placed part (i) in PM-2 scope; PM-2 inclusion of
+(ii) and (iii) remains a D-08 question. Packet: `pre-b-decision-packets.md`.
 
 **Durable evidence pointer:** `docs/tracking/evidence/pr439-w3/` preserves the result-bearing six-seed tables and run/artifact provenance. Its pre-W3 W3-specific zeros are explicitly structural placeholders, not measured activity; the table delta is not a pure W3 effect because the landing state also contains the W6 reattachment correction, #442/#443 merge and review-closure gameplay fixes. `docs/tracking/evidence/pr439-ref-archive/` preserves all 16 evidence-ref histories plus cited-run/ref/disposition ledgers. On 2026-09-25 all 16 `evidence/pr439-*` refs were deleted by the authorized exact-head atomic cleanup; `ref-disposition.tsv` records all 16 rows as `delete_now=true`, while `run-heads.tsv` remains the 15-row cited-run ledger. Deleted ref names remain provenance and their histories are retained in the archive.
 
@@ -717,6 +733,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.34 | 2026-10-10 | — | Records owner decisions D-03 (Recovering stays ineligible), D-04 (tackle-foul cooldown bypass retained) and D-05 (#440 and a re-authored, split #434 included after B→C; #434 formation/Duty in PM-2 scope). No pre-B behavior change; no `[GT]` or code change. |
 | 1.33 | 2026-10-09 | — | Synchronizes W8 substrate/compile and W3 reachability status; points current parallel ordering to roadmap §5.1, with single-host queue, census-dependent substitution edge, landing-order schemas, W10 contract gates and selected PM-2 quick-sim anchor. KD-W1 and pending decisions unchanged. |
 | 1.32 | 2026-09-25 | — | **W8 decision-gate investigation.** Adds the pointer to `w8-goalkeeper-distribution-decision.md` and records that W8 first needs an explicit current-vs-legacy Laws edition decision (current IFAB Law 12 is eight seconds + opponent corner kick, not six-second forced release) and has four unresolved pre-preregistration contract groups: hand-only Law-12 authority versus the broader engine stall guard; producer/RNG policy versus the DT ordinal-8 ceiling; FR-GK-043/F-05 forced-release/receiver-validation defects; #11 §3.8.3–§3.8.4's phantom `PassIntent` / `ConsumePassIntent` / `DeliveryKind` contract; and a missing faithful Pass Mechanics executor/pass-registration seam behind the currently event-only #11 distribution path. No gameplay, approved-spec, schema, RNG or `[GT]` change. |
 | 1.31 | 2026-09-25 | — | **PR #439 evidence-ref post-delete reconciliation.** Records the successful 16-ref atomic deletion and the final green `main` CI run `36080899633`, corrects the durable-evidence pointer to the 15-row cited-run ledger, and keeps deleted branch names as provenance backed by `pr439-ref-archive/`. No gameplay, spec, schema, RNG or `[GT]` change. |

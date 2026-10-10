@@ -5,6 +5,7 @@
 // Modified: 2026-07-28 (gk-catch-parry-conversion KD-C3 [GT] recalibration, all inside #11 §3.4 spec ranges)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac (the SS3.3.6 commit-lead floor))
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: + [GT] RushTargetReachedRadiusM (the SS3.1.1 rush-completion rows))
+// Modified: 2026-10-10 (#11 SS3.1.0: Stage0AnticipationScoreActive summary corrected; comment only)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -512,7 +513,10 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // ── Stage 0 Stubs / Approximations ───────────────────────────────────────────
 
-        /// <summary>[GT] Stage 0 stub: anticipation score used when ball is in attacking third (full DT integration at Stage 1). §3.1.</summary>
+        /// <summary>[GT] Stage 0 stand-in for the Decision Tree #8 anticipation score (#11 §3.1.0): fed to the
+        /// §3.1.1 Set → Anticipate row while the ball threatens the keeper's OWN goal (ballThreateningOwnGoal),
+        /// 0 otherwise. Must exceed <see cref="AnticipateThreshold"/> or that row is unreachable. Replaced
+        /// by the #8 score at Stage 1.</summary>
         public static readonly float Stage0AnticipationScoreActive = 0.6f; // TODO: replace with Decision Tree #8 anticipation score (Stage 1)
 
         /// <summary>[GT] Stage 0 stub: fallback deflection projection distance (m) when SaveIntent has no DeflectionTarget. §3.5.3.</summary>
@@ -545,4 +549,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | rush that REACHED its locked target had no exit in SS3.1.1, and for a loose |
 // |     |            |   | ball the 1v1/smother triggers cannot fire at all (they require a possessor),|
 // |     |            |   | so a swept ball stranded the keeper in Rushing for the rest of the match.   |
+// | 1.6 | 2026-10-10 | — | #11 SS3.1.0 documents the Stage-0 anticipation stub. Comment only:       |
+// |     |            |   | Stage0AnticipationScoreActive's summary said "attacking third" (the       |
+// |     |            |   | ERR-011-002 naming trap); it is keyed to ballThreateningOwnGoal. Value,   |
+// |     |            |   | behavior and digests unchanged.                                           |
 #endregion

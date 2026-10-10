@@ -33,7 +33,8 @@ evidence is not certification of future wiring.
 ### Landing coordination — October 9, 2026
 
 - **Baseline:** owner decisions on Recovering eligibility, W2 cooldown and #434/#440 placement
-  precede the new pre-B freeze. Deferred substitutions are not an unconditional predecessor:
+  precede the new pre-B freeze. **Taken October 10, 2026 (D-03/D-04/D-05):** none of them changes behavior
+  before B; #434/#440 land after B→C. See `pre-b-decision-packets.md`. Deferred substitutions are not an unconditional predecessor:
   census the frozen drivers first; zero relevant requests removes that behavioral dependency.
   Otherwise include the change before freeze or approve an attribution plan. Later relevant
   engine merges reopen a measured comparison even when digests are treated as fingerprints.
@@ -427,6 +428,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.30 | 2026-10-10 | owner decisions D-03/D-04/D-05 | Landing-coordination baseline bullet records that the three pre-B decisions are taken (Recovering stays ineligible; tackle-foul cooldown bypass retained; #434/#440 after B→C), so none changes behavior before B. No contract change. |
 | 0.29 | 2026-10-09 | PR #493 review corrections | Labels c50726e as historical pre-A production audit, not current comparison anchor; distinguishes active interim host queue from optional CI and retains the explicit #492 merge dependency for October 9 compile evidence. |
 | 0.28 | 2026-10-09 | landing coordination; decisions pending | Records met #466 compile condition and remaining live-wiring obligations; links roadmap owner/host queue; removes unconditional substitution/schema reservations; names W10-only reaction gates and separate C law/history coordination; outside-area handling disposition before C closeout. No contract approval or gameplay change. |
 | 0.27 | 2026-09-28 | PR #466 PX-001 fix; owner approval recorded; fresh CI required | CI `36461159668` on `cc51730` failed only `PX001_ExecuteWhileInProgress_RejectsWithoutStompingLastResult`, whose regex still expected the retired "in progress" diagnostic; the test now expects the v1.18 unavailable-executor text. The owner explicitly approved the #5 §3.8.13 v1.6 / §4.3 v1.2 goalkeeper/team identity amendment on September 28, 2026 (a hand-held distribution may be started only by the team's own live goalkeeper; goal kicks are restarts and are not routed through this mode). `open-issues.md` adds an engine-level `IsGoalkeeperOfTeam` test obligation. Test/tracking only. |

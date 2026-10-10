@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 10, 2026 (v0.18 — ERR-011-019: §3.2.1 adds the `OnThreatDeflected` stamp producer, records that the threat-onset fallback is visibility-gated, and states that a screened threat clears the stamp; prior: v0.17 ERR-011-018 §3.3.0.1 names the real #12 baseline surface)
-**Version:** 0.18
+**Last Updated:** October 10, 2026 (v0.20 — completes the July 27 ERR-011-002/003 spec back-props: new §3.1.0 ball-region inputs, `Set → Resting` and `Anticipate → Set` rows, possession-free `Resting`/`Recovering` rows, §3.3.1 dive direction and `DIVE_PREDICTION_HORIZON_S`; also documents the Stage-0 anticipation stub; prior: v0.19 owner decision D-03, §3.1.1 states that `Recovering` is not claim-, rush- or save-eligible; prior: v0.18 ERR-011-019 §3.2.1 adds the `OnThreatDeflected` stamp producer)
+**Version:** 0.20
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -17,16 +17,66 @@ States: `Resting`, `Set`, `Anticipate`, `Diving`, `Airborne`,
 `HandsOnBall`, `Recovering`, `Distributing`, `Rushing`, `OneOnOne`,
 `Smothered`.
 
+### 3.1.0 Ball-region inputs (ERR-011-002)
+
+The tactical rows read two predicates. Both derive from ONE distance, measured from the goal the
+keeper defends, so they cannot disagree about which end of the pitch is meant:
+
+```
+ownGoalX            = 0                if the keeper defends the x = 0 goal (team 0)
+                      PITCH_LENGTH_M   otherwise                               // m
+ballDistToOwnGoalM  = abs(ball.x − ownGoalX)                                   // m, [0, PITCH_LENGTH_M]
+ballThreateningOwnGoal = ballDistToOwnGoalM ≤ PITCH_LENGTH_M − BALL_ATTACKING_THIRD_X_M   // near third
+ballSafelyUpfield      = ballDistToOwnGoalM ≥ BALL_ATTACKING_THIRD_X_M                    // far third
+```
+
+Neither predicate reads possession. With `PITCH_LENGTH_M` = 105 m and `BALL_ATTACKING_THIRD_X_M`
+= 70 m, the near third is 0–35 m from the keeper's own goal and the far third is 70–105 m.
+**Worked example:** the team-1 keeper defends x = 105. A ball at x = 80 is 25 m away, so
+`ballThreateningOwnGoal` is true and `ballSafelyUpfield` false. A ball at x = 20 is 85 m away, so
+the reverse holds. A ball at x = 55 (50 m away) is in neither region. The defended goal comes from the
+keeper's goalkeeper index, never from an attribute snapshot: a default snapshot would make both
+keepers defend x = 0.
+
+**Stage-0 anticipation stub.** Decision Tree #8 publishes no `gkAnticipationScore` at Stage 0, so
+#11 supplies a stand-in keyed to the same predicate:
+
+```
+gkAnticipationScore = STAGE0_ANTICIPATION_SCORE_ACTIVE   if ballThreateningOwnGoal   // 0.6, dimensionless
+                    = 0                                  otherwise
+```
+
+Consequences while the stub stands:
+
+- `STAGE0_ANTICIPATION_SCORE_ACTIVE` (0.6) exceeds `ANTICIPATE_THRESHOLD` (0.55), so `Set → Anticipate`
+  fires on the first 10 Hz tick a `Set` keeper has the ball in its near third.
+- `ANTICIPATE_THRESHOLD` has no effect anywhere below 0.6. At 0.6 or above, inside its listed range,
+  the row becomes unreachable.
+- `Set` evaluates `Set → Anticipate` before `Set → Rushing`, so while the ball is in the near third a
+  rush starts from `Anticipate`, not from `Set`.
+- The `ShotExecutedEvent` route into `Anticipate` (the second `Set → Anticipate` row) is not wired at
+  Stage 0, so the stub is the only way into `Anticipate`.
+
+The stub is replaced when #8 publishes a real score (Stage 1).
+
+**Worked example:** a `Resting` team-0 keeper, with the ball arriving 25 m from x = 0. The state
+machine takes one transition per keeper per tactical tick. On tick N the keeper goes
+`Resting → Set` (`ballThreateningOwnGoal`). On tick N + 1 the score is 0.6 > 0.55, so it goes
+`Set → Anticipate`. When the ball goes back beyond 35 m, it goes `Anticipate → Set` on the next
+tick and `Set → Resting` on the tick after.
+
 ### 3.1.1 Transition table
 
 Each row is `(from, to, trigger, tick-rate, source spec)`.
 
 | From | To | Trigger | Tick-rate | Source |
 |------|----|---------|-----------|--------|
-| `Resting` | `Set` | `BallState.position` enters attacking third (`x` past `BALL_ATTACKING_THIRD_X_M` for attacker-controlled possession) | 10 Hz | #11 / #8 |
-| `Set` | `Anticipate` | Decision Tree #8 sets `gkAnticipationScore > ANTICIPATE_THRESHOLD` | 10 Hz | #8 |
+| `Resting` | `Set` | `ballThreateningOwnGoal` (§3.1.0): the ball is in the third in front of the goal this keeper defends, whoever has possession (ERR-011-002) | 10 Hz | #11 |
+| `Set` | `Anticipate` | `gkAnticipationScore > ANTICIPATE_THRESHOLD`. Decision Tree #8 owns the score; at Stage 0 it is the §3.1.0 stub | 10 Hz | #8 / §3.1.0 |
+| `Set` | `Resting` | No `Set → Anticipate` or `Set → Rushing` row fired AND NOT `ballThreateningOwnGoal` (§3.1.0): the ball has left the keeper's defensive third (ERR-011-002) | 10 Hz | #11 |
 | `Set` | `Anticipate` | `ShotExecutedEvent` consumed (early predictive) | 60 Hz event | #6 §4.5 |
 | `Anticipate` | `Diving` | Decision Tree #8 commits `SaveIntent` with valid `targetHand` AND the ball's predicted time-to-plane ≤ the §3.3.6 commit lead (ERR-011-007 — a committed keeper HOLDS `Anticipate` until the dive's envelope covers the arrival; a ball already inside the lead dives immediately, and a ball that stops closing disarms via the engine's `ClearSaveIntent` path, so the hold cannot deadlock) | 10 Hz | #8 / §3.3.6 |
+| `Anticipate` | `Set` | No `Anticipate → Diving` or `Anticipate → Rushing` row fired AND NOT `ballThreateningOwnGoal` (§3.1.0): the threat has passed. Without this exit a keeper that entered `Anticipate` never left (measured 76–92% of every match before ERR-011-002; 11–18% after) | 10 Hz | #11 (ERR-011-002) |
 | `Diving` | `Airborne` | Dive launch impulse applied (60 Hz physics) | 60 Hz | #11 §3.3 |
 | `Airborne` | `HandsOnBall` | #3 hand-ball contact event with positive `handlingQualityScalar ≥ MIN_HANDLING_QUALITY` AND `≥ CATCH_THRESHOLD` (caught path) | 60 Hz | #3 / #11 §3.5 |
 | `Airborne` | `Recovering` | #3 hand-ball contact event with `handlingQualityScalar < CATCH_THRESHOLD` (parry / deflect / spill paths) | 60 Hz | #3 / #11 §3.5 |
@@ -37,7 +87,7 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `Distributing` | `HandsOnBall` | Accepted #5 request is cancelled before CONTACT while the same keeper still owns controlled possession: clear intent, preserve claim/release clocks | 60 Hz feedback | W8 B / #5 feedback |
 | `Distributing` | `Recovering` | Successful #5 CONTACT completes, or cancellation/teardown accompanies real possession loss/restart/takeover | 60 Hz | W8 B / #5 / Match Engine |
 | `Recovering` | `Set` | Recovery-to-line cooldown elapsed (`RECOVERY_COOLDOWN_TICKS`) OR GK XY already within `GK_REACTIVE_RADIUS_M` of #12 baseline (v0.2 AR-S1-M5: OR not AND — prevents stall when GK is already at baseline after distribution release) | 10 Hz | #11 §3.3.0 |
-| `Recovering` | `Resting` | Possession transitions to GK's own team in defensive third | 10 Hz | #11 / #8 |
+| `Recovering` | `Resting` | The `Set` exit above did not fire AND `ballSafelyUpfield` (§3.1.0): the ball is in the far third from the keeper's own goal, whoever has possession (ERR-011-002) | 10 Hz | #11 (ERR-011-002) |
 | `Set` | `Rushing` | Decision Tree #8 commits `RushIntent` with `commitmentLevel > RUSH_COMMIT_THRESHOLD` | 10 Hz | #8 |
 | `Anticipate` | `Rushing` | Decision Tree #8 commits `RushIntent` (preferred over `SaveIntent` per #8 priority) | 10 Hz | #8 |
 | `Rushing` | `Smothered` | #3 hand-ball contact event during rush | 60 Hz | #3 / #11 §3.7 |
@@ -49,7 +99,23 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `OneOnOne` | `Diving` | Decision Tree #8 commits `SaveIntent` (1v1 dive path; KD-20 coefficients apply) | 10 Hz | #8 |
 | `OneOnOne` | `Smothered` | GK closes within `SMOTHER_TRIGGER_RADIUS_M` of attacker AND attacker shot pending | 60 Hz | #11 |
 | `OneOnOne` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without ever closing to a smother (ERR-011-009). `OneOnOne` is reachable only from `Rushing` and inherits the identical gap | 60 Hz | ERR-011-009 / §3.7.2 |
-| `Resting` | `Resting` | Default holding state when ball is in own / middle thirds with own possession | 10 Hz | #11 |
+| `Resting` | `Resting` | Default holding state while NOT `ballThreateningOwnGoal` (§3.1.0), whoever has possession | 10 Hz | #11 |
+
+**`Recovering` is not claim-, rush- or save-eligible (owner decision D-03, October 10, 2026).**
+The table has no row from `Recovering` to `Anticipate`, `Diving`, `Rushing` or a hand claim, and
+that absence is intentional. A keeper in `Recovering` commits no `ClaimIntent` or `RushIntent` and
+starts no dive, whatever the cause of entry, until it leaves through one of the two exits above:
+to `Set` (cooldown elapsed, or already within `GK_REACTIVE_RADIUS_M` of the slot) or, failing
+that, to `Resting` (ball in the far third from its own goal). **Save commitment is not gated:** a
+visible save threat during `Recovering` may still commit and hold a `SaveIntent` and open the §3.2
+reaction window, but that intent can produce a dive only after the keeper exits to `Set` and then
+reaches `Anticipate` through the ordinary rows. This matches the engine at D-03 and changes no
+behavior. This restricts only #11-owned actions: the keeper remains an ordinary agent for the
+Match Engine's first-touch and loose-ball pickup paths. Two refinements are candidates for the
+PM-2 engine scope (roadmap D-08) after W8 B, not part of this contract: distinguishing `Recovering`
+entries by cause (a ground event versus a completed distribution or rush), and withholding save
+commitment while `Recovering`. Either would change behavior and need its own measurement. No
+cooldown value is changed by this decision.
 
 Iteration order is deterministic per #16 §3.2. With one GK per
 side, iteration-order ambiguity is restricted to multi-attacker
@@ -300,7 +366,13 @@ the dive's vertical component until that migration.
 ```
 // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so
 // the keeper dives left/right across the goal along Y, NOT along goal-to-goal X (§1.2).
-diveDirectionY     = sign(targetHandY - gkY)      // ∈ {-1, 0, +1}
+// ERR-011-003: an explicit SaveIntent.DeflectionTarget wins; otherwise the
+// ball decides, through the same plane-crossing predictor as §3.3.6.
+targetY            = SaveIntent.DeflectionTarget.y       if DeflectionTarget is set
+                   = predictedY (§3.3.6)                  if the ball crosses the keeper's
+                                                          plane within DIVE_PREDICTION_HORIZON_S
+                   = ball.y                               otherwise (not closing, or too far out)
+diveDirectionY     = sign(targetY − gkY)                  // ∈ {-1, 0, +1}
 diveLaunchImpulse  = DIVE_LAUNCH_BASE_MPS
                    + DIVE_LAUNCH_K_STRENGTH · Strength_norm
                    + DIVE_LAUNCH_K_AERIAL   · Aerial_norm
@@ -309,6 +381,15 @@ diveLaunchImpulse  = DIVE_LAUNCH_BASE_MPS
 
 `diveLaunchImpulse` is applied as a single-frame XY velocity
 addition to `gk.kinematics` per AM #2 §3.5.1 update protocol.
+
+**Why the ball decides (ERR-011-003).** `DeflectionTarget` is where the keeper wants to *put*
+the ball (§3.5.3), not where to *dive*. The engine's only producer leaves it unset, so a
+direction taken from it alone was 0 for every dive ever launched (measured mean
+`|diveDirectionLateral|` = 0.000; contacts 0 → 15 after the fix). **Worked example:** keeper at
+(103, 34), no `DeflectionTarget`, ball at (88, 30) moving (+15, +3) m/s. `timeToPlaneS` =
+(103 − 88) / 15 = 1.0 s ≤ 2.0 s, `predictedY` = 30 + 3 × 1.0 = 33 m, so `diveDirectionY` =
+sign(33 − 34) = −1. The same ball moving (−15, +3) m/s is not closing, so `targetY` = 30 and
+the direction is still −1, from the ball's current position.
 
 ### 3.3.2 Dive timing jitter
 
@@ -387,10 +468,17 @@ ball's predicted plane crossing, so the dive's fixed
 than opening and closing during its flight:
 
 ```
-// Shared derivation with §3.3.4's dive direction (one predictor,
+// Shared derivation with §3.3.1's dive direction (one predictor,
 // two consumers — direction and timing cannot drift apart):
-timeToPlaneS = (gk.x − ball.x) / ball.vx        // only when closing
-predictedY   = ball.y + ball.vy × timeToPlaneS  // the crossing point
+// ε = DEGENERACY_EPSILON (§3.4.4), a numerical-zero guard, not a gameplay value
+closing = |ball.vx| > ε  and  sign(gk.x − ball.x) = sign(ball.vx)
+if closing and (gk.x − ball.x) / ball.vx ≤ DIVE_PREDICTION_HORIZON_S:
+    timeToPlaneS = (gk.x − ball.x) / ball.vx       // s
+    predictedY   = ball.y + ball.vy × timeToPlaneS // m; the crossing point
+else if not closing and |gk.x − ball.x| ≤ ε:       // already AT the plane, any velocity:
+    timeToPlaneS = 0, predictedY = ball.y          //   an immediate crossing (a smother)
+else:
+    no crossing                                    // hold; §3.3.1 falls back to ball.y
 
 lateralNeedM = |predictedY − gk.y|
 commitLeadS  = clamp(lateralNeedM / DIVE_LAUNCH_DISPLACEMENT_M,
@@ -408,9 +496,11 @@ short sharp commit (floored by `DIVE_COMMIT_MIN_LEAD_FRAC` so the
 lead never degenerates below the 10 Hz decision grid). A ball
 already inside the lead when `SaveIntent` commits dives at the next
 tactical tick — the pre-ERR-011-007 behaviour, preserved for
-close-range shots. A ball that is not closing on the keeper's
-plane, or whose crossing lies beyond `DivePredictionHorizonS`,
-holds: diving at an extrapolation of a ball that is not coming is
+close-range shots. A ball already at the keeper's plane (within ε) is an immediate
+crossing at t = 0 and its current Y, whatever its velocity, so the
+dive commits at once: a smother, never a hold. Any other ball that
+is not closing on the plane, or whose crossing lies beyond
+`DIVE_PREDICTION_HORIZON_S`, holds: diving at an extrapolation of a ball that is not coming is
 the "dive at nothing" failure the `ClearSaveIntent` doc describes,
 and the episode's disarm path ends the hold.
 
@@ -524,6 +614,7 @@ mirrors this table.
 | `GK_HOLD_MAX_TICKS` | `[FIXED]` | ticks @10 Hz | 60 | n/a (rule constant) | Laws of the Game (6-second rule); §3.1 / FR-GK-028 |
 | `RECOVERY_COOLDOWN_TICKS` | `[GT]` | ticks @10 Hz | 6 | [2, 20] | §3.1 |
 | `ANTICIPATE_THRESHOLD` | `[GT]` | dimensionless | 0.55 | [0.30, 0.80] | §3.1 / #8 |
+| `STAGE0_ANTICIPATION_SCORE_ACTIVE` | `[GT]` | dimensionless | 0.6 | (`ANTICIPATE_THRESHOLD`, 1.0] | §3.1.0 (Stage-0 stand-in for the #8 anticipation score while `ballThreateningOwnGoal`; at or below `ANTICIPATE_THRESHOLD` it makes `Set → Anticipate` unreachable. Removed at Stage 1. Code: `GoalkeeperConstants.Stage0AnticipationScoreActive`, a literal that is not config-loaded) |
 | `RUSH_COMMIT_THRESHOLD` | `[GT]` | dimensionless | 0.60 | [0.40, 0.85] | §3.1 / §3.7 |
 | `ONE_VS_ONE_TRIGGER_RADIUS_M` | `[GT]` | m | 8.0 | [5.0, 14.0] | §3.7 |
 | `SMOTHER_TRIGGER_RADIUS_M` | `[GT]` | m | 1.8 | [1.0, 3.0] | §3.7 |
@@ -554,6 +645,9 @@ mirrors this table.
 | `DIVE_LAUNCH_K_AERIAL` | `[GT]` | m/s | 0.8 | [0.3, 1.5] | §3.3 |
 | `DIVE_LAUNCH_FATIGUE_COEFF` | `[GT]` | m/s | 0.7 | [0.3, 1.5] | §3.3 / KD-8 |
 | `DIVE_PHASE_DURATION_MS` | `[GT]` | ms | 600 | [400, 900] | §3.3 (Stage 0 flat; attribute-scaling deferred per §7.4) |
+| `DEGENERACY_EPSILON_SQ` | `[FIXED]` | m² (or (m/s)²) | 1e-6 | n/a (numerical guard) | §3.3 / §3.5 (squared-magnitude guard against division by zero; code `GoalkeeperConstants.DEGENERACY_EPSILON_SQ`) |
+| `DEGENERACY_EPSILON` | `[DERIVED]` | m (or m/s) | `sqrt(DEGENERACY_EPSILON_SQ)` (= 0.001) | derived | §3.3.6 (single-axis guard: "closing" needs `abs(ball.vx)` > ε, and `abs(gk.x − ball.x)` ≤ ε is "at the plane"; code `GoalkeeperConstants.DegeneracyEpsilon`) |
+| `DIVE_PREDICTION_HORIZON_S` | `[GT]` | s | 2.0 | [DIVE_PHASE_DURATION_MS / 1000, 5.5] | §3.3.1 / §3.3.6 (ERR-011-003 — longest plane-crossing extrapolation trusted. 2.0 s covers a 16.5 m shot at ≥ 8 m/s, every shot worth diving at. Below one dive duration the commit gate could not see a crossing early enough to time a full dive. 5.5 s is the slowest armable ball (16.5 m at 3 m/s); beyond it, longer extrapolations only admit balls that will be touched first. Code: `GoalkeeperConstants.DivePredictionHorizonS`) |
 | `DIVE_COMMIT_MIN_LEAD_FRAC` | `[GT]` | — | 0.25 | [0.17, 0.50] | §3.3.6 (ERR-011-007 — floor on the commit lead as a fraction of dive duration; below ~0.17 a central commit is quantisation-dominated by the 10 Hz grid) |
 | `DIVE_PEAK_Z_BASE_M` | `[GT]` | m | 1.20 | [0.80, 1.70] | §3.3 |
 | `DIVE_PEAK_Z_K_AERIAL` | `[GT]` | m | 0.70 | [0.30, 1.00] | §3.3 |
@@ -1439,3 +1533,5 @@ standard rebound physics.
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
 | 0.17 | September 27, 2026 | ERR-011-018 baseline-slot wiring | §3.3.0.1 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real surface: #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot, canonical attack-+X frame), mapped to world space by the composition root with the keeper's `MOVE_TO_POSITION` map, read after #12's tick in the same stride; the keeper's own position is ruled out as a stand-in (it made `Recovering → Set` immediate). Units, range, mirrored worked example and the 6 m / tick 1001 → 1006 cooldown example added. §3.1.1 unchanged. No `[GT]`, schema or RNG change. | spec + code, same commit |
 | 0.18 | October 10, 2026 | ERR-011-019 spec-text drift | §3.2.1 listed two stamp producers. W4 (PR #403) had added a third, `GoalkeeperMechanics.OnThreatDeflected`, which always overwrites and does not set the pending-shot flag. W4 also made the threat-onset fallback visibility-owned and made a screened armed tick clear the stamp unless a dive is in flight. §3.2.1 now describes all three producers and the screened-clear rule, with a worked example. Spec text only; code unchanged. Determinism impact: none. | — |
+| 0.19 | October 10, 2026 | Owner decision D-03 | §3.1.1 records that the missing `Recovering` → `Anticipate`/`Diving`/`Rushing`/claim rows are intentional: a `Recovering` keeper commits no claim or rush and starts no dive until it exits to `Set` or `Resting` (both exits named), while remaining an ordinary agent for Match Engine first touch and pickup. Save commitment is documented as ungated: a `SaveIntent` may be held during `Recovering` and dives only after exit, matching the engine. A cause-split and gating save commitment are D-08 candidates after W8 B. Clarification of existing behavior; no code, constant or schema change. Packet: `docs/tracking/pre-b-decision-packets.md`. | — |
+| 0.20 | October 10, 2026 | ERR-011-002 / ERR-011-003 back-prop completion (owner-directed) | The July 27 code fixes' spec text, pending owner sign-off since then, lands now. **ERR-011-002:** new §3.1.0 defines `ballThreateningOwnGoal` / `ballSafelyUpfield` from one distance to the keeper's own goal, with a worked example; `Resting → Set`, `Recovering → Resting` and the `Resting` hold row read those predicates and no possession condition; new `Set → Resting` and `Anticipate → Set` rows. **ERR-011-003:** §3.3.1 dive direction comes from an explicit `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the ball's current Y, with a worked example; §3.3.6's predictor states its closing/horizon conditions; new `[GT] DIVE_PREDICTION_HORIZON_S` = 2.0 s in §3.4.4. Matches production; no code, constant value or schema change. ERR-011-004's text already landed through §3.2.1 (ERR-011-006/019). **Also (owner-directed):** §3.1.0 documents the Stage-0 anticipation stub (0.6 while `ballThreateningOwnGoal`, else 0), with its consequences: `ANTICIPATE_THRESHOLD` is inert below 0.6 and makes the row unreachable at or above it, rushes start from `Anticipate` in the near third, and the `ShotExecutedEvent` row is unwired so the stub is the only route into `Anticipate`. Includes a worked example. New `[GT] STAGE0_ANTICIPATION_SCORE_ACTIVE` row in §3.4.2. **Review fix:** §3.3.6's predictor and hold text state the at-plane exception (abs(dx) ≤ ε is an immediate crossing at t = 0 and the current Y, any velocity), which `Predict_BallAtPlane_IsImmediateCrossingAtCurrentY` locks; §3.4.4 catalogues `DEGENERACY_EPSILON_SQ` / `DEGENERACY_EPSILON`, the guard the predictor uses. | — |

@@ -122,6 +122,12 @@ reviewed runtime slice. If corrected, that landing is an §8 invalidation trigge
 must be rerun. If retained, the final calibration must model the bypass explicitly; it may not call
 `FoulCooldownTicks` a symmetric/global source suppressor.
 
+**✅ Owner disposition recorded October 10, 2026 (D-04): RETAINED.** The bypass is intended semantics
+(a whistled tackle foul stops play, so it needs no debounce). No runtime slice follows, so §8 item 5
+is not triggered by this decision; the retained branch above governs the final calibration. This note
+records the decision this section required; it changes no frozen measurement definition. Record:
+`foul-discipline-balance-design.md` v1.5 KD-F3; packet `pre-b-decision-packets.md`.
+
 ---
 
 ## 3. Frozen calibration corpus

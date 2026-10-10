@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.73
-**Updated:** October 10, 2026 (v2.73 — **ERR-008-025, ERR-011-019, ERR-003-009 and ERR-020-008 filed and RESOLVED, spec text only.** #8 §3.1.13 names the real `KeeperPerceptionGate` producer of `SaveAvailable`. #11 §3.2.1 adds the `OnThreatDeflected` producer, the visibility-owned fallback and the screened-clear rule. #3 FR-03/§1/§3.3/§3.4 document `AgentBallCollisionData.AgentPosition`, completing ERR-003-007's back-prop. #20 FR-CS-008 is active with a C# 9.0 working ceiling; the exact Unity ceiling stays open. No code change. Error Index 255 → 259.)
+**Version:** 2.74
+**Updated:** October 10, 2026 (v2.74 — **ERR-011-002 / ERR-011-003 / ERR-011-004 spec back-prop COMPLETE (PR #496, owner-directed).** #11 Section 3 v0.20 lands the July 27 state-machine (§3.1.0/§3.1.1) and dive-direction (§3.3.1/§3.3.6/§3.4.4) text; ERR-011-004's text was already in §3.2.1. Matches production; no code change.)
+**Updated (prior):** October 10, 2026 (v2.73 — **ERR-008-025, ERR-011-019, ERR-003-009 and ERR-020-008 filed and RESOLVED, spec text only.** #8 §3.1.13 names the real `KeeperPerceptionGate` producer of `SaveAvailable`. #11 §3.2.1 adds the `OnThreatDeflected` producer, the visibility-owned fallback and the screened-clear rule. #3 FR-03/§1/§3.3/§3.4 document `AgentBallCollisionData.AgentPosition`, completing ERR-003-007's back-prop. #20 FR-CS-008 is active with a C# 9.0 working ceiling; the exact Unity ceiling stays open. No code change. Error Index 255 → 259.)
 **Updated (prior):** October 9, 2026 (v2.72 — **ERR-030-053 filed and RESOLVED in PR #491.** Last-round resolution did not complete its world day, so an immediate roll could settle before slot 11a. Require the existing world clock to be past the final fixture day before any boundary write; callers use `AdvanceDays(1)`. No new cursor or implicit advance. Error Index 254 → 255.)
 **Updated (prior):** October 8, 2026 (v2.71 — **ERR-030-052 filed and RESOLVED with #40 T3b1.** The planned daily finance position was unnumbered and the existing slots 0–11 replay on fixture days. Slot 11a now completes a finance day outside that replay, before the unchanged clock slot 12. #40 forwards zero amounts and owns the disabled gate; no save cursor/layout or RNG change. Minimal cadence text now distinguishes structural identity invocation from non-zero accrual. Error Index 253 → 254.)
 
@@ -3145,7 +3146,12 @@ root — so #53 fits seams that already existed and invents no design change to 
 ## ERR-011-002 / ERR-011-003 / ERR-011-004: Goalkeeper Mechanics #11 — the save pipeline was unreachable in production
 
 **Filed:** July 27, 2026. **Status:** ✅ code-resolved same day; spec-text back-prop pending #11 owner
-sign-off. **Owner document:** `docs/tracking/goalkeeper-save-pipeline-design.md`; match-engine
+sign-off. **✅ Spec-text back-prop COMPLETE October 10, 2026 (PR #496, owner-directed):** #11 Section 3
+v0.20 lands ERR-011-002 (new §3.1.0 ball-region predicates; `Resting → Set`, `Recovering → Resting` and
+the `Resting` hold row possession-free; new `Set → Resting` and `Anticipate → Set` rows) and ERR-011-003
+(§3.3.1 dive direction from `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the
+ball's Y; new `[GT] DIVE_PREDICTION_HORIZON_S`). ERR-011-004's text had already landed through §3.2.1
+(ERR-011-006 / ERR-011-019). ERR-011-003's target is §3.3.1, not §3.3.4 as filed. **Owner document:** `docs/tracking/goalkeeper-save-pipeline-design.md`; match-engine
 `§5.Z.17`.
 
 **How found.** Measurement, not review. `match-engine-design.md` §5.Z.15 recorded the next lever on the

@@ -274,7 +274,7 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | 3 / specifications | ◑ **Mostly landed October 10, 2026:** `ERR-008-025` (#8 §3.1.13), `ERR-011-019` (#11 §3.2.1), `ERR-003-009` (#3 FR-03) and the narrowed #20 drift erratum `ERR-020-008`. **Still open:** #7's `OcclusionFilter.IsOccludedByAnyAgent` text (paired with #8 for W10), the #19/#20 normative verification amendment, and the `certification-platform.md` C# row. Split #20 historical drift from proposed #19/#20 normative rules; land bounded #7/#8/#11/#3 corrections | Consumer-specific gates below; normative amendments require D-02 sign-off | Each correction names wording, source evidence, replacement and acceptance; no new rule is represented as approved |
 | 4 / substitutions | Amend [match-flow §6](match-flow-completion-design.md), then implement serialized requests and stoppage execution/client outcomes | Approved execution contract and final-head host slot; **not** a pre-B prerequisite: the census found no affected requests (October 10, 2026) | No mid-play roster replacement; exactly-once execution/cancellation and restore tests; host compile passes |
 | 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; continue finance T3b2, progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
-| 6 / engine baseline | Settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | D-03/D-04/D-05; any relevant invalidator (substitution census done October 10: no affected requests) | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
+| 6 / engine baseline | Settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | ~~D-03/D-04/D-05~~ decided October 10, 2026 with no pre-B behavior change; any relevant invalidator (substitution census done October 10: no affected requests) | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
 | 7 / W8 B | Wire six policies under the approved [W8 B contract](w8-goalkeeper-distribution-decision.md), including receiver validation, suppression, canonical CONTACT, terminal feedback, clocks and restore; measure A→B and LongKick landing | Step 6, B contract/remaining #466 obligations and final-head host slot; **no #7/#8 reaction gate** | Governing tests, compile and isolated A→B evidence complete |
 | 8 / W8 C | Separate #11 Law-12 amendment and hand-control implementation; measure B→C | Step 7 evidence, approved C law contract, D-07 closeout disposition and final-head host slot | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
 | 9 / engine fidelity | #441 reachability before W9; implement W9 and W10; land owner-included #434/#440 fixes separately | W9: #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. Each landing has its own host slot | Included behavior is reachable, tested and separately attributable |
@@ -345,7 +345,8 @@ Mean fitting cannot close ERR-030-034's dispersion/shape failure or establish th
 
 **Decision register.** Entries are **pending owner decisions**, not approvals, except D-01a, which
 the owner ratified on October 10, 2026. Anton Zymin (project owner) is the decision owner; the implementing agent
-prepares the source-backed options, cost and evidence. Where a decision blocks work, deadlines
+prepares the source-backed options, cost and evidence. Packets for D-03, D-04 and D-05 are in
+[`pre-b-decision-packets.md`](pre-b-decision-packets.md); the owner decided all three on October 10, 2026. Where a decision blocks work, deadlines
 name that event because host dates are not booked yet;
 record an actual host date when booking, rather than inventing one here. Record each decision in
 the owning document and link it here before the blocked landing/capture/closeout proceeds.
@@ -355,9 +356,9 @@ the owning document and link it here before the blocked landing/capture/closeout
 | D-01a | Anton: ratify/adjust the interim operational host queue | **RATIFIED October 10, 2026** by Anton Zymin, as written in the queue paragraph above | This roadmap and host bookings/evidence; scheduling does not amend #19/#20 |
 | D-01b | Anton: optional licensed Unity CI posture | **No blocking deadline:** repairs and subsequent landings continue on the pinned host | CI licensing/cost/governance record linked here; final-head compile requirement alone belongs in the owning spec |
 | D-02 | Anton: explicit sign-off on proposed #19/#20 normative amendments | Before step 3 normative amendments land | Owning spec approval/version records |
-| D-03 | Anton: `Recovering` claim/save eligibility; no cooldown tuning by this decision | Before step 6 pre-B freeze | #11 and open Recovering issue |
-| D-04 | Anton: retain or correct W2 foul-cooldown policy | Before step 6 pre-B freeze; any correction measured separately | #435 characterization/preregistration and owning contract |
-| D-05 | Anton: include/defer #434/#440 and place included landings before B or after B→C | Before step 6 pre-B freeze | Issues/PR and engine backlog; included work before its selected final anchor |
+| D-03 | Anton: `Recovering` claim/save eligibility; no cooldown tuning by this decision | **DECIDED October 10, 2026:** a `Recovering` keeper stays unable to claim, rush or dive (option A); cause-split is a D-08 candidate after W8 B | #11 Section 3 v0.19 §3.1.1 note and the open Recovering issue |
+| D-04 | Anton: retain or correct W2 foul-cooldown policy | **DECIDED October 10, 2026:** tackle-foul bypass retained (a whistled foul stops play); no invalidator | `foul-discipline-balance-design.md` v1.5 KD-F3 and #435 preregistration §2.1 |
+| D-05 | Anton: include/defer #434/#440 and place included landings before B or after B→C | **DECIDED October 10, 2026:** both included, after B→C; #434 re-authored and split; its formation/Duty part is in PM-2 scope | Engine backlog v1.34; included work before its selected final anchor |
 | D-06 | Anton: W9 ActionType/encoding representation | Before step 9 W9 implementation/landing | #8/#10 and engine serialization contract |
 | D-07 | Anton: outside-area handling implementation or explicit governed deferral | Before step 8 W8 C closeout | W8 OD-W8-1 and separate offence work item; C never classifies it as eight-second corner |
 | D-08 | Anton: PM-2 engine anchor, included gameplay/calibration and realism closure scope | Before step 10 capture; blocks step 11 | This roadmap and owning engine/calibration decisions; KD-W1 amended before any newly authorized tuning |
@@ -608,7 +609,7 @@ math are host-free and test-locked in `match-client-core` today.
 ## 8. Dependency graph
 
 **Historical dependency sketch:** the graph and critical-path text below preserve the original
-phase sequencing. Current dependencies are owned by [§5.1](#51-current-implementation-lanes-and-decision-register--october-9-2026).
+phase sequencing. Current dependencies are owned by [§5.1](#51-current-implementation-lanes-and-decision-register--october-9-2026-evidence-anchor-refreshed-october-10).
 In particular, current PM-2 requires D-08's selected engine anchor, D-09's shape disposition and
 that anchor's A4a recapture/refit to converge with C3/C4 and client acceptance. The old C3 → C4
 path alone does not describe today's PM-2 closeout; its original landing-count estimates are history.
@@ -696,6 +697,8 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.55 | October 10, 2026 | Owner decided D-03 (`Recovering` stays ineligible), D-04 (tackle-foul cooldown bypass retained) and D-05 (#434/#440 included after B→C; #434 formation/Duty in PM-2 scope). None changes behavior before B, so step 6 has no pending decision and freezes current behavior. |
+| v0.54 | October 10, 2026 | Decision register links the new D-03/D-04/D-05 option packets (`pre-b-decision-packets.md`). Prepared, not decided; no sequencing change. |
 | v0.53 | October 10, 2026 | Step 3 status: the #8/#11/#3 spec-text corrections and the narrowed #20 FR-CS-008 erratum have landed (`ERR-008-025`, `ERR-011-019`, `ERR-003-009`, `ERR-020-008`). #7, the #19/#20 normative amendment and the certification-platform C# row remain open. Sequencing only. |
 | v0.52 | October 10, 2026 | Codex review on PR #493: §5.1's evidence anchor still described `93de60f6` as production `main` and left steps 1–2 pending after `main` (#492, #494) was merged in. The anchor is now `ad64d02` with #494's 1,064 / 0 / 3 EditMode result, steps 1–2 are marked done, and the queue's "repair red EditMode first" item is marked done. Sequencing only. |
 | v0.51 | October 10, 2026 | D-01a ratified by the owner. Substitution census recorded: zero requests from the four frozen drivers, so the substitution → pre-B edge is removed (step 6 no longer waits on it). Merged `main` (#492/#494); this PR's roadmap rows were renumbered v0.48/v0.49 → v0.49/v0.50 because #494 claimed v0.48. Sequencing only. |
