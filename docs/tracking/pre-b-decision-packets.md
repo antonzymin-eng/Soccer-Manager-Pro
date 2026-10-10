@@ -171,7 +171,8 @@ on #440: a separate gameplay PR, not folded into #439 or #442.
 | **After B→C, before the D-08 anchor (step 9 lane)** | None to W8 B/C | Separately measured; invalidates only the later calibration basis, which D-08/KD-W1 already expect |
 | Defer past PM-2 | None | PM-2 ships with `BALL_LOOSE` acting like `MISSED` (#440), or with formation/Duty inert (#434) |
 
-Landing either item **during** an A→B or B→C window is excluded: the roadmap treats a
+A behavior-changing landing **during** an A→B or B→C window is excluded (the one exception,
+a digest-identical #434 part (i), is in the recommendation below): the roadmap treats a
 behavior-affecting merge there as invalidating the comparison.
 
 ### Recommendation
@@ -188,7 +189,10 @@ behavior-affecting merge there as invalidating the comparison.
   stated PM-1 capability.
 
 **Decision record:** Anton Zymin accepted the recommendation on October 10, 2026: #440 included, after
-B→C; #434 included, after B→C, re-authored and split. The owner also placed #434's formation and Duty
+B→C; #434 included, after B→C, re-authored and split. The one exception the owner accepted with the
+recommendation: part (i), formation and Duty routing, may land earlier, including inside an A→B or
+B→C window, but only with digest-identity evidence at default tactics on the frozen seeds. Without that
+evidence it waits for B→C like the rest. #440 and parts (ii)–(iii) never land inside a window. The owner also placed #434's formation and Duty
 part in PM-2 scope; PM-2 inclusion of the `ScoreDiff` and sent-off parts remains a D-08 question.
 Recorded in `match-engine-wiring-backlog.md` v1.34 and in decision comments on #440 and #434.
 
@@ -205,6 +209,7 @@ Recorded in `match-engine-wiring-backlog.md` v1.34 and in decision comments on #
 
 | Version | Date | Change |
 |---|---|---|
+| v0.4 | October 10, 2026 | GPT review of PR #496: D-05 window wording reconciled. Only a digest-identical #434 part (i) may land inside a window; #440 and the behavior-changing #434 parts never do. |
 | v0.3 | October 10, 2026 | PR #496 review: D-03 facts add the ungated save-commitment path (a `SaveIntent` can be held during `Recovering`; the dive waits for exit). |
 | v0.2 | October 10, 2026 | Owner decisions recorded: D-03 A, D-04 A (whistled foul stops play), D-05 as recommended, with #434 formation/Duty in PM-2 scope. |
 | v0.1 | October 10, 2026 | Created: D-03/D-04/D-05 option packets with code facts verified at `7d9ce8b`. Prepared, not decided. |

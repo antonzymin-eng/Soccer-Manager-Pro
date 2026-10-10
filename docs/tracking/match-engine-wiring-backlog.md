@@ -279,12 +279,13 @@ movements remain characterization only, not attributed W3 effects. #440 remains 
 gameplay PR; no gameplay `[GT]` calibration is authorized here.
 
 **Owner decision D-05, October 10, 2026:** #440 and #434 are both **included** and both land **after
-the W8 B→C comparison**, before the D-08 PM-2 anchor, each as its own measured landing (never inside
-an A→B or B→C window). #440 is a spec+code landing against #14 §3.6.5 (`BALL_LOOSE` must not behave
+the W8 B→C comparison**, before the D-08 PM-2 anchor, each as its own measured landing. #440 and the
+behavior-changing #434 parts never land inside an A→B or B→C window. #440 is a spec+code landing against #14 §3.6.5 (`BALL_LOOSE` must not behave
 like `MISSED`). #434 is re-authored on current `main`, not merged from the stale draft, and split into
 (i) formation and Duty routing, (ii) live `ScoreDiff` routing and (iii) the sent-off
-`ActiveOutfieldCount` exclusion. Part (i) may land earlier only with digest-identity evidence at
-default tactics on the frozen seeds. The owner has placed part (i) in PM-2 scope; PM-2 inclusion of
+`ActiveOutfieldCount` exclusion. The single exception: part (i) may land earlier, including inside a
+window, only with digest-identity evidence at default tactics on the frozen seeds; otherwise it waits
+for B→C. The owner has placed part (i) in PM-2 scope; PM-2 inclusion of
 (ii) and (iii) remains a D-08 question. Packet: `pre-b-decision-packets.md`.
 
 **Durable evidence pointer:** `docs/tracking/evidence/pr439-w3/` preserves the result-bearing six-seed tables and run/artifact provenance. Its pre-W3 W3-specific zeros are explicitly structural placeholders, not measured activity; the table delta is not a pure W3 effect because the landing state also contains the W6 reattachment correction, #442/#443 merge and review-closure gameplay fixes. `docs/tracking/evidence/pr439-ref-archive/` preserves all 16 evidence-ref histories plus cited-run/ref/disposition ledgers. On 2026-09-25 all 16 `evidence/pr439-*` refs were deleted by the authorized exact-head atomic cleanup; `ref-disposition.tsv` records all 16 rows as `delete_now=true`, while `run-heads.tsv` remains the 15-row cited-run ledger. Deleted ref names remain provenance and their histories are retained in the archive.
