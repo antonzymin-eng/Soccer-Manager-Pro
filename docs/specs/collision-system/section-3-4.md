@@ -308,6 +308,7 @@ public class CollisionSystem
         var collisionData = new AgentBallCollisionData
         {
             ContactPoint = contactPoint,
+            AgentPosition = props.Position, // ERR-003-009: agent centre, deflection-normal input
             AgentVelocity = props.Velocity,
             BodyPart = BodyPart.Torso, // Stage 0 simplification
             AgentID = agentId,

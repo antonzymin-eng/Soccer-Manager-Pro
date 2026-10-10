@@ -6,8 +6,8 @@ conformance levels, failure-to-comply modes, and the data-structures note for Sp
 This section is the authoritative FR catalogue; §3 and §6 provide rule mechanics.
 
 **Created:** May 7, 2026
-**Modified:** September 2, 2026
-**Version:** 1.8
+**Modified:** October 10, 2026
+**Version:** 1.9
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.5 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
@@ -89,7 +89,7 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 | FR-CS-005 | Each file **MUST** contain exactly one public type; the filename **MUST** match the type name (e.g., `BallState.cs` for `public struct BallState`). | MUST | §3.1.2 | §3.1.2 |
 | FR-CS-006 | `using` directives **SHOULD** appear in the order: System namespaces → Unity namespaces → project namespaces, each group separated by a blank line. | SHOULD | §3.1.2 | §3.1.2 |
 | FR-CS-007 | The namespace declared in a file **MUST** match the folder path from `src/` root, modulo the flat-namespace rule in §4.3 (one namespace per assembly; sub-folders do not introduce sub-namespaces). | MUST | §3.1.2; §4.3 | §3.1.2 |
-| FR-CS-008 | Code **MUST** target the C# language version specified by the Unity LTS revision pinned in `docs/tracking/certification-platform.md`. *Deferred activation: this FR is INACTIVE until `certification-platform.md` resolves from placeholder status. Tracked under root `CLAUDE.md` open issue "Stage 0 host platform pin".* | MUST (inactive) | §3.1.3; `docs/tracking/certification-platform.md` | §3.1.3 |
+| FR-CS-008 | Code **MUST** target the C# language version specified by the Unity LTS revision pinned in `docs/tracking/certification-platform.md` (Unity 6000.4.9f1, certified July 19, 2026). *Active since that pin resolved this FR's activation condition (`ERR-020-008`). Working ceiling: C# 9.0; see §3.1.3.* | MUST | §3.1.3; `docs/tracking/certification-platform.md` | §3.1.3 |
 | FR-CS-009 | Allowed language features (records for DTOs only, pattern matching, expression-bodied members, `readonly struct`, default interface methods where Unity LTS supports) **MAY** be used. | MAY | §3.1.3 | §3.1.3 |
 | FR-CS-010 | The following language features **MUST NOT** be used in game-logic code: `dynamic`; `async`/`await` for game-state work; `unsafe` blocks without lead-developer sign-off recorded in the PR description. | MUST NOT | §3.1.3 | §3.1.3 |
 | FR-CS-011 | Indentation **MUST** use 4 spaces. Tabs **MUST NOT** be used. | MUST | §3.1.4 | §3.1.4 |
@@ -360,6 +360,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 | 1.6.1 | September 2, 2026 | Codex | **A3.1a review correction.** Repairs the catalogue introduction's renumbering pointer after the architecture partition moved the FR Table Footer from §2.2.9 to §2.2.10. No FR text, count, conformance level, or exception behavior changed. | PENDING — A3.4 |
 | 1.7 | September 2, 2026 | Codex | **A3.1a review correction.** FR-CS-078 now reproduces Governance FR-AG-025's "prohibited or explicitly classified" rule instead of narrowing the permitted terminal without rationale to "supported." Plan v0.34 and §3.5.7 are synchronized. The draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.8 | September 2, 2026 | Codex | **A3.1a automated-review correction.** FR-CS-076 now names §3.5.6's exact `not-applicable`/`na_fields` representation instead of advertising an undefined generic N/A or claiming the frozen schema enforces the pairing. The amendment-plan pointer advances to v0.35. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
+| 1.9 | October 10, 2026 | — | **`ERR-020-008` — FR-CS-008 activation drift corrected.** The July 19, 2026 certification of Unity 6000.4.9f1 met the FR's documented activation condition, but this catalogue still marked it `MUST (inactive)`. The conformance level is now `MUST`. The rule text (target the pinned Unity revision's C# version) is unchanged; the row points to §3.1.3 for the C# 9.0 working ceiling. FR count unchanged at 81. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 

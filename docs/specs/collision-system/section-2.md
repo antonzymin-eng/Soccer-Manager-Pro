@@ -5,12 +5,17 @@ and failure mode recovery for Collision System Specification #3 (Stage 0 Physics
 This section establishes the "what" and "why" before Section 3 defines the "how."
 
 **Created:** February 15, 2026, 3:30 PM PST
-**Revised:** March 05, 2026, audit session
-**Version:** 1.2
+**Revised:** October 10, 2026 (ERR-003-009); prior: March 05, 2026, audit session
+**Version:** 1.3
 **Status:** Draft â€” Revised
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification:** #3 of 20 (Stage 0 Physics Foundation)
 **Prerequisite:** Section 1 (Purpose & Scope) v1.1
+**Changelog:**
+- v1.3 (Oct 10, 2026): ERR-003-009. FR-03's `AgentBallCollisionData` field list gains
+  `AgentPosition`, the agent-centre input to Ball Physics deflection added by ERR-003-007
+  (July 27, 2026). That entry's back-prop updated only Section 3.4.3. Documentation only; the
+  code has carried the field since July 27.
 
 **Changelog:**
 - v1.2 (Mar 5, 2026): Comprehensive audit fixes. (1) BeginFrame seed formula in
@@ -107,8 +112,15 @@ concerns prevents circular dependencies.
 - Collision condition: `distance_2D(agent, ball) < agent.HitboxRadius + ball.Radius`
   AND `ball.Position.z <= AGENT_REACH_HEIGHT` (2.0m; Stage 0 fixed value)
 - ball.Radius = 0.11m (from `BallPhysicsConstants.Ball.RADIUS`)
-- `AgentBallCollisionData` fields: ContactPoint, AgentVelocity, BodyPart (TORSO in Stage 0),
-  AgentID, TeamID, IsGoalkeeper
+- `AgentBallCollisionData` fields: ContactPoint, AgentPosition, AgentVelocity, BodyPart (TORSO in
+  Stage 0), AgentID, TeamID, IsGoalkeeper
+- `AgentPosition` (ERR-003-009, back-prop of ERR-003-007): the agent's centre, in world 3-D metres,
+  at the moment of contact (production: the collision snapshot's `Position`). It is NOT the contact
+  point: `ContactPoint` lies on the hitbox surface, while `AgentPosition` is the body axis from which
+  Ball Physics #1 Section 3.1.10.1 (`BallCollision.ApplyAgentDeflection`) derives the planar,
+  vertical-cylinder deflection normal. The consumer ignores Z. Example: an agent centred at
+  (50.0, 34.0, 0) with hitbox radius 0.40 m touches a ball at (50.50, 34.0, 0.11). ContactPoint is
+  about (50.40, 34.0, 0.11), AgentPosition is (50.0, 34.0, 0), and the deflection normal is +X.
 - `Ball.OnCollision()` invoked exactly once per agent-ball overlap per frame
 - Per-limb body part classification deferred to Stage 1
 

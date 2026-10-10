@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** September 27, 2026 (v0.17 — ERR-011-018: §3.3.0.1 names the real #12 baseline surface and its world-frame mapping; prior: v0.16 W8 B amendment approved by owner)
-**Version:** 0.17
+**Last Updated:** October 10, 2026 (v0.18 — ERR-011-019: §3.2.1 adds the `OnThreatDeflected` stamp producer, records that the threat-onset fallback is visibility-gated, and states that a screened threat clears the stamp; prior: v0.17 ERR-011-018 §3.3.0.1 names the real #12 baseline surface)
+**Version:** 0.18
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -118,17 +118,59 @@ it is cleared when the episode disarms without a dive and when a
 save attempt resolves. An un-cleared stamp dated later dives against
 shots struck minutes earlier (measured mean elapsed-when-airborne
 34–174 s), clamping §3.2.3's window to 0 for nearly every contact.
-Two producers write the stamp:
+Three producers write the stamp (`ERR-011-019`; the third and the
+visibility conditions were wired by W4, PR #403, September 13, 2026):
 
 1. `ShotExecutedEvent` — the precise anchor, `matchTimeMs` = the
    strike frame, always overwriting (the newest shot is the live
-   threat);
-2. **threat-onset fallback** — save episodes with no #6 shot event
-   (deflections, rebounds, mis-hit passes driving at the goal) are
-   stamped at the moment the save-trigger geometry arms, through the
-   same §3.2.1/§3.2.2 formulas, ONLY when no stamp is live. A live
-   stamp always wins, so the fallback is idempotent within an
-   episode and needs no edge-detection state of its own.
+   threat). Sets the pending-shot flag. Not visibility-gated at the
+   moment of the strike.
+2. **threat-onset fallback** (`OnThreatArmed`) — save episodes with
+   no #6 shot event (rebounds, mis-hit passes driving at the goal) are
+   stamped through the same §3.2.1/§3.2.2 formulas, ONLY when no
+   stamp is live. A live stamp always wins, so the fallback is
+   idempotent within an episode and needs no edge-detection state of
+   its own. **Visibility-owned:** the match engine calls it at the
+   10 Hz tactical tick only when the threat is both armed and
+   *visible* to the keeper (#8 §3.1.13's `KeeperPerceptionGate`
+   condition: raw save geometry plus current-frame all-body line of
+   sight). The stamp therefore dates the moment the keeper can first
+   see the threat, not the moment hidden geometry arms.
+3. **deflection reset** (`OnThreatDeflected`) — when an agent body
+   actually changes the ball's flight during Resolve (Collision #3 →
+   Ball Physics deflection), the match engine evaluates the
+   *post-deflection* flight and calls this producer only for the
+   keeper whose goal is now threatened and who can currently see the
+   threat. Unlike (2) it **always overwrites** a live stamp, because
+   a deflection is a changed threat whose reaction window restarts.
+   Unlike (1) it does **not** set the pending-shot flag: a deflection
+   is not a newly struck shot. A hidden deflection writes nothing; (2)
+   stamps the episode when the ball emerges from the screen.
+
+**Screened threats clear the stamp.** At a 10 Hz tick where the raw
+save geometry is armed but the keeper's line of sight is blocked, the
+match engine clears the save intent and, with it, the stamp
+(`ClearSaveIntent`) — including a stamp written by (1) — unless a
+dive is already in flight (`Diving`/`Airborne`), which keeps its
+stamp. A screened shot therefore restarts its reaction window when it
+becomes visible, through (2). The raw geometry still vetoes RUSH while
+the threat is screened (#8 §3.1.13).
+
+*Worked example.* A shot is struck in Resolve at t = 10 000 ms, and
+producer (1) stamps it. A defender screens the keeper at the next
+tactical tick (Mechanics/AI runs before Resolve, so that is
+t = 10 100 ms); that tick clears the stamp. At the following tick,
+t = 10 200 ms, the ball has cleared the defender, and producer (2)
+stamps
+`10 200 + PERCEPTION_BASE_LATENCY_MS · perceptionLatencyScale(gk)`.
+If the ball then clips a defender at t = 10 250 ms and still drives
+at the goal in view, producer (3) overwrites the 10 200 ms stamp with
+`10 250 + PERCEPTION_BASE_LATENCY_MS · perceptionLatencyScale(gk)` and
+recomputes `requiredReactionMs` from the post-deflection speed.
+
+Determinism: no new state. All three producers write the existing
+serialized per-keeper stamp and required-reaction fields; no RNG
+draw, schema field, or event type is added.
 
 ### 3.2.2 `requiredReactionMs`
 
@@ -1396,3 +1438,4 @@ standard rebound physics.
 | 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
 | 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
 | 0.17 | September 27, 2026 | ERR-011-018 baseline-slot wiring | §3.3.0.1 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real surface: #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot, canonical attack-+X frame), mapped to world space by the composition root with the keeper's `MOVE_TO_POSITION` map, read after #12's tick in the same stride; the keeper's own position is ruled out as a stand-in (it made `Recovering → Set` immediate). Units, range, mirrored worked example and the 6 m / tick 1001 → 1006 cooldown example added. §3.1.1 unchanged. No `[GT]`, schema or RNG change. | spec + code, same commit |
+| 0.18 | October 10, 2026 | ERR-011-019 spec-text drift | §3.2.1 listed two stamp producers. W4 (PR #403) had added a third, `GoalkeeperMechanics.OnThreatDeflected`, which always overwrites and does not set the pending-shot flag. W4 also made the threat-onset fallback visibility-owned and made a screened armed tick clear the stamp unless a dive is in flight. §3.2.1 now describes all three producers and the screened-clear rule, with a worked example. Spec text only; code unchanged. Determinism impact: none. | — |

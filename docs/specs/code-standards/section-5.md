@@ -6,8 +6,8 @@ threshold policy, paste-ready review-time checklist (§5.4), 83-row FR-to-verifi
 traceability table (§5.5), and the determinism/architecture verification handoff.
 
 **Created:** May 7, 2026
-**Modified:** September 2, 2026
-**Version:** 1.7
+**Modified:** October 10, 2026
+**Version:** 1.8
 **Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -67,7 +67,7 @@ numeric thresholds remain deferred (§7.5) pending a profiled baseline.
 
 **Scope of manual review:** All MUST and MUST NOT FRs are subject to review. SHOULD
 FRs are reviewed with the understanding that documented deviation is acceptable
-(§2.1). MAY and inactive FRs are not subject to review.
+(§2.1). MAY FRs are not subject to pass/fail review.
 
 **Reviewer qualification:** Any team member familiar with §3 mechanics may serve as
 reviewer. For determinism FRs (FR-CS-036–045, FR-CS-071–073), the reviewer must
@@ -184,8 +184,12 @@ constants-only file) are marked N/A.
 [ ] 7. Access modifiers — Explicit on every declaration; internal not used
         for cross-assembly surface? (FR-CS-014–015)
 
-Note: FR-CS-008 (language version pin) is INACTIVE until certification-platform.md
-resolves. FR-CS-009 is MAY-level; no pass/fail check required.
+[ ] 8. Language version — Source stays within the C# 9.0 working ceiling (§3.1.3);
+        no C# 10+ syntax (file-scoped namespaces, `required` members, primary
+        constructors, …)? Mandatory for `src/match-client-unity/`: no compiler
+        check covers it. (FR-CS-008; ERR-020-008)
+
+FR-CS-009 is MAY-level; no pass/fail check required.
 ```
 
 ---
@@ -401,7 +405,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-005 | Style — §5.4.1 item 2 | `CS20-STYLE-001` | E |
 | FR-CS-006 | Style — §5.4.1 item 3 | `.editorconfig` using-order | W |
 | FR-CS-007 | Style — §5.4.1 item 4 | `CS20-STYLE-002` | E |
-| FR-CS-008 | **INACTIVE** — deferred until `certification-platform.md` resolves | Activated on platform pin | E (when active) |
+| FR-CS-008 | Style — §5.4.1 item 8 | Compiler `<LangVersion>9.0</LangVersion>` (Linux gate, already enforced) for every assembly except the Unity-only `TacticalDirector.MatchClientUnity`, which the gate excludes and which is review-only (the pinned Unity compile's ceiling is unrecorded) | E; W (manual) for `TacticalDirector.MatchClientUnity` |
 | FR-CS-009 | MAY — no pass/fail check | N/A | – |
 | FR-CS-010 | Style — §5.4.1 item 5 | `BannedSymbols.txt` (`dynamic`); `CS20-STYLE-003` | E |
 | FR-CS-011 | Style — §5.4.1 item 6 | `.editorconfig` `indent_size = 4` | E |
@@ -479,7 +483,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-081 | Architecture — §5.4.8 item 7 | A4 typed-record resolution + Spec #19 proof freshness | – (report-only until A4/A8 activation) |
 
 **Traceability coverage:** All 81 numbered FRs have a review path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 83 rows in total. The sub-clauses are listed for traceability and are **outside the 81-FR count** (§2.2.10's partition Count column reports numbered FR IDs, not traceability rows). FR-CS-074–081 are deliberately report-only in the Stage 1/mechanical columns until A4 supplies the resolver/discovery evidence and the later activation stage enables verified checks; this table does not manufacture enforcement from declarations. FR-CS-008 is
-marked INACTIVE with a defined activation condition. FR-CS-009, FR-CS-024, and
+active (`ERR-020-008`): its activation condition fired with the July 19, 2026 platform pin. FR-CS-009, FR-CS-024, and
 FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are
 verified by manual review because their correctness depends on cross-document matching
 (Python tooling, spec ID validity) that cannot be automated without custom tooling
@@ -527,6 +531,7 @@ belongs to Spec #16 and Spec #19.
 | 1.5 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** §5.4 gains the eighth Architecture Integration & Activation checklist category; §5.5 gains FR-CS-074–081, making 81 numbered FRs / 83 traceability rows including 046a/046b. Pending A4 cross-registry/discovery facts are explicitly report-only and Spec #19 retains proof/gate ownership. | PENDING — A3.4 |
 | 1.6 | September 2, 2026 | Codex | **A3.1b post-merge Codex-review correction.** Corrects the live §5.4 category count to eight and aligns FR-CS-074/075 review coverage with §2.2.9: FR-CS-074 now checks explicit integration owner, exact integration point and orthogonal activation state (while retaining durable identity/selector checks); FR-CS-075 now requires every production host/composition root in the approved discovery universe to be classified and mechanically accounted for. §5.5 routes those FRs to the corrected checklist items/A4 evidence. | PENDING — A3.4 |
 | 1.7 | September 3, 2026 | Claude Code | **Post-merge review finding — FR-CS-074 verification mechanism restored.** v1.6 replaced that row's "A4 canonical-selector / identity resolver" with the owner/point/state resolver rather than adding to it, while §5.4.8 item 1 still requires stable `component_id`, canonical selector, rename preservation and selector history, and §3.5.6 makes those identity mechanics mandatory with cross-registry selector resolution itself deferred to A4. Following the row as written would have left ambiguous selectors and identity-breaking renames with no planned verification path. Both resolvers are now named. Severity stays report-only until A4/A8 activation; no checklist item, FR text or count changed. | PENDING — A3.4 |
+| 1.8 | October 10, 2026 | — | **`ERR-020-008` — FR-CS-008 review path activated.** §5.4.1 replaces the "FR-CS-008 is INACTIVE" note with checklist item 8, which checks for nothing newer than the C# 9.0 working ceiling. §5.5's FR-CS-008 row is no longer INACTIVE: it routes to that item, with severity E, enforced today by the compiler `<LangVersion>9.0</LangVersion>` setting, except for the Linux-gate-excluded `TacticalDirector.MatchClientUnity`, which is W (manual) through item 8 (PR #495 Codex review). The coverage paragraph and the manual-review scope sentence no longer mention inactive FRs. No other FR row changed. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 

@@ -5,7 +5,7 @@
 complexity targets that code written under Spec #20 must satisfy. §3.3 defines *how* to
 write zero-allocation code; §6 defines *what rate* the resulting code is measured against.
 **Created:** May 8, 2026
-**Version:** 1.2
+**Version:** 1.3
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 6; `outline-mid.md` v1.2, §6.1–§6.5
@@ -247,7 +247,9 @@ constraint.
 ### Quantitative Thresholds (Deferred)
 
 Microsecond budgets per system are **not set at Stage 0**. They depend on the host platform
-pinned in `docs/tracking/certification-platform.md`, which remains `_TBD_` as of May 2026.
+pinned in `docs/tracking/certification-platform.md`. That pin was `_TBD_` when this section was
+written (May 2026). It has been certified since July 19, 2026 (`ERR-020-008`), so only the
+profiler baselines are still missing.
 Stage 1 profiler baselines establish the concrete per-system microsecond ceilings; these
 ceilings become FR-level requirements in `src/CLAUDE.md` once measured.
 
@@ -280,6 +282,7 @@ and supply the implementation detail that the FR row itself cannot fit.
 | 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H4.** §6.1 was the one section still scoping FR-CS-067 to the retired "UI layer (menus, HUD, overlays)" after section-2.md v1.2 rescoped the FR to the Presentation and Client tiers (§3.5.2 tiers 8–9) plus Unity host code outside the gate — the FR's Mechanics-§ column routes readers HERE, so the stale wording read `match-viewer`, `match-analytics`, `match-client-core`, `ui-framework`, `client-app`, `match-client-unity` and `match-client-web` out of the budget. Fixed: the §6.1 budget-table row and its "Layer" column header (→ "Tier", per the v1.3 vocabulary standardisation), the budget rationale paragraph (now enumerating the tier-8/9 assemblies from §3.5.2's table), the §6.5 summary row, the §6.1 *Implements* line, and §6.2's scope sentence ("do not apply to … UI code" → Presentation/Client-tier code, which carries the FR-CS-067 budget instead). No budget value changed — 0 bytes/frame and < 1 MB/frame stand as approved. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings L1 + L2.** L1: the v1.1 header rename "Layer" → "Tier" was itself wrong — row 1 of the budget table ("Game loop (60 Hz physics path)") is not a §3.5.2 tier, only row 2 is; header restated as "Scope", which covers both a tier and a non-tier row without asserting either is a tier. L2: §6.2's scope sentence still read "game-loop and physics-layer assemblies" — retired three-layer vocabulary the v1.1 pass was supposed to have cleared; restated as "tier-1 Physics assemblies" per §3.5.2. No budget value changed. | — |
+| 1.3 | October 10, 2026 | — | **`ERR-020-008` — stale platform-pin claim corrected.** The "Quantitative Thresholds (Deferred)" paragraph said `certification-platform.md` "remains `_TBD_`". It has been certified since July 19, 2026. The deferral itself stands, because the per-system ceilings still wait on Stage 1 profiler baselines. No rule changed. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 
