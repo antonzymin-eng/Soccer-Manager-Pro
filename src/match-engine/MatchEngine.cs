@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-10 (#441: test-only TestOnly_Heading seam for the reachability observer; no runtime change)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
 // Modified: 2026-09-27 (W8 B snapshot-proof correction: PassExecutor state codec private→internal for direct canonical write/read tests; no runtime behavior change)
 // Modified: 2026-09-27 (W8 B dormant #5 executor snapshot/query seams merged after ERR-011-018; gameplay path remains unwired)
@@ -2981,6 +2982,12 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only W3 seam over #10's authoritative cross-tick state.</summary>
         internal HeadingTickState TestOnly_HeadingState => _heading.CaptureState();
+
+        /// <summary>
+        /// Test-only #441 seam: the live #10 orchestrator, so the reachability instrument can attach
+        /// <c>TestOnly_ReachabilityObserver</c>. Observation only; never read by simulation code.
+        /// </summary>
+        internal TacticalDirector.HeadingMechanics.HeadingMechanics TestOnly_Heading => _heading;
 
         /// <summary>
         /// Stages one committed #10 header so the CURRENT frame is its synthetic jump apex, but does
@@ -10648,4 +10655,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.94    | 2026-09-27 | —      | W8 B snapshot-proof correction after CI 36328692042: PassExecutor state's canonical writer/reader are internal static instead of private so tests can exercise the real v24 codec directly. Test visibility only; serialized order, gameplay, schema v24 and RNG are unchanged. |
 // | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
 // | 1.96    | 2026-10-06 | —      | Read-only scalar occupant identity consumed by live frame capture; no schema/RNG change. |
+// | 1.97    | 2026-10-10 | —      | #441: internal TestOnly_Heading exposes the #10 orchestrator to the match-engine tests so the reachability instrument can attach its observer. No runtime, schema or RNG change. |
 #endregion

@@ -7,6 +7,7 @@
 // Modified: 2026-09-22 (W3: expose geometry-qualified current-frame Head participants to one composition arbitration hook before Heading duel/application)
 // Modified: 2026-08-09 (ERR-010-002: contact-geometry rewritten around a single ResolveContactGeometry
 //           owner read by both Update passes, carrying the 3-D contact point directly; see §3.5.1 / HeadingAim.cs)
+// Modified: 2026-10-10 (#441: internal, null-by-default reachability observer; observation only, no behavior change)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2–§3.9 dispatch, §4.6, KD-9, KD-17, KD-18, Code Standards #20
 // Purpose:  60 Hz physics-tick orchestrator. Manages per-agent intent tracking, jump kinematics,
@@ -74,6 +75,10 @@ namespace TacticalDirector.HeadingMechanics
         // W3 same-frame feed lifecycle. True only between BeginPhysicsFrame and Update; never
         // survives a completed physics tick and therefore is not cross-tick snapshot state.
         private bool _collisionFramePrepared;
+
+        // #441 observation hook (docs/tracking/header-reachability-441-counters.md). Null in production.
+        // Read-only: it receives copies, is never serialized or digested, and no simulation path reads it.
+        internal Action<HeadingReachabilitySample> TestOnly_ReachabilityObserver;
 
         // ── Profiler Markers ─────────────────────────────────────────────────────────
 
@@ -238,6 +243,12 @@ namespace TacticalDirector.HeadingMechanics
             // the matching note at MatchEngine.cs's HeaderIntent commit site).
             intent.ContactPointIntent = ClampToHeadEnvelope(intent.ContactPointIntent);
 
+            if (TestOnly_ReachabilityObserver != null)
+            {
+                ObserveReachability(HeadingReachabilityKind.Commit, agentId, currentFrame,
+                    _intentActive[agentId], default, in currentBall, 0.0f, -1, 0.0f, default, default);
+            }
+
             _intents[agentId]           = intent;
             _agentAttrs[agentId]        = attrs;
             _intentActive[agentId]      = true;
@@ -253,6 +264,12 @@ namespace TacticalDirector.HeadingMechanics
             if ((uint)agentId >= (uint)HeadingMechanicsConstants.MaxAgents)
             {
                 return;
+            }
+
+            if (TestOnly_ReachabilityObserver != null)
+            {
+                ObserveReachability(HeadingReachabilityKind.Cancel, agentId, -1,
+                    _intentActive[agentId], default, default, 0.0f, -1, 0.0f, default, default);
             }
 
             _intentActive[agentId] = false;
@@ -354,6 +371,12 @@ namespace TacticalDirector.HeadingMechanics
                         contactState.JumpStartFrame      = currentFrame;
                         contactState.JumpReachM          = HeadingJumpKinematics.ComputeJumpReach(attrs);
                         contactState.PrevFrameFacingDirection = agentState.FacingDirection;
+                        if (TestOnly_ReachabilityObserver != null)
+                        {
+                            ObserveReachability(HeadingReachabilityKind.JumpStart, agentId, currentFrame, true,
+                                in agentState, in currentBall, 0.0f, contactState.JumpStartFrame,
+                                contactState.JumpReachM, default, default);
+                        }
                     }
                     else
                     {
@@ -365,6 +388,12 @@ namespace TacticalDirector.HeadingMechanics
                 int landingFrame = HeadingJumpKinematics.ComputeLandingFrame(contactState.JumpStartFrame);
                 if (currentFrame > landingFrame)
                 {
+                    if (TestOnly_ReachabilityObserver != null)
+                    {
+                        ObserveReachability(HeadingReachabilityKind.LandingDrop, agentId, currentFrame, true,
+                            in agentState, in currentBall, 0.0f, contactState.JumpStartFrame,
+                            contactState.JumpReachM, default, default);
+                    }
                     _intentActive[agentId] = false;
                     continue;
                 }
@@ -408,6 +437,12 @@ namespace TacticalDirector.HeadingMechanics
 
                         EmitFailedAttempt(agentId, cause, currentBall, currentMatchTime, contactState.TimingOffsetMs, agentStates);
                         _intentActive[agentId] = false;
+                        if (TestOnly_ReachabilityObserver != null)
+                        {
+                            ObserveReachability(HeadingReachabilityKind.Failed, agentId, currentFrame, true,
+                                in agentState, in freshBall, agentHeadZ, contactState.JumpStartFrame,
+                                contactState.JumpReachM, in eligibility, cause);
+                        }
                     }
                     else if (eligibility.PredictedContactFrame < 0)
                     {
@@ -416,7 +451,20 @@ namespace TacticalDirector.HeadingMechanics
                         {
                             EmitFailedAttempt(agentId, FailureCause.PositionedPoorly, currentBall, currentMatchTime, 0.0f, agentStates);
                             _intentActive[agentId] = false;
+                            if (TestOnly_ReachabilityObserver != null)
+                            {
+                                ObserveReachability(HeadingReachabilityKind.Failed, agentId, currentFrame, true,
+                                    in agentState, in freshBall, agentHeadZ, contactState.JumpStartFrame,
+                                    contactState.JumpReachM, in eligibility, FailureCause.PositionedPoorly);
+                            }
                         }
+                    }
+
+                    if (_intentActive[agentId] && TestOnly_ReachabilityObserver != null)
+                    {
+                        ObserveReachability(HeadingReachabilityKind.Pending, agentId, currentFrame, true,
+                            in agentState, in freshBall, agentHeadZ, contactState.JumpStartFrame,
+                            contactState.JumpReachM, in eligibility, default);
                     }
 
                     // Update per-frame tracking even when not eligible this tick.
@@ -484,6 +532,16 @@ namespace TacticalDirector.HeadingMechanics
                     _preparedHeadAgentIds[_preparedHeadCount] = agentId;
                     _preparedHeadCenters[_preparedHeadCount] = headCentre_ws;
                     _preparedHeadCount++;
+                }
+
+                if (TestOnly_ReachabilityObserver != null)
+                {
+                    ObserveReachability(
+                        currentFrame == eligibility.PredictedContactFrame
+                            ? HeadingReachabilityKind.Prepared
+                            : HeadingReachabilityKind.Pending,
+                        agentId, currentFrame, true, in agentState, in freshBall, agentHeadZ,
+                        contactState.JumpStartFrame, contactState.JumpReachM, in eligibility, default);
                 }
 
                 // Do not update PrevFrameFacingDirection on the contact frame; Pass 2 needs the
@@ -577,6 +635,12 @@ namespace TacticalDirector.HeadingMechanics
                         agentStates);
                     _telemetry.RecordDuelOutcome(false, true);
                     _intentActive[agentId] = false;
+                    if (TestOnly_ReachabilityObserver != null)
+                    {
+                        ObserveReachability(HeadingReachabilityKind.Failed, agentId, currentFrame, true,
+                            in agentState, in currentBall, agentHeadZ, contactState.JumpStartFrame,
+                            contactState.JumpReachM, default, FailureCause.DisturbedInDuel);
+                    }
                     continue;
                 }
 
@@ -613,6 +677,12 @@ namespace TacticalDirector.HeadingMechanics
                     EmitFailedAttempt(agentId, FailureCause.DisturbedInDuel, currentBall, currentMatchTime, contactState.TimingOffsetMs, agentStates);
                     _telemetry.RecordDuelOutcome(false, false);
                     _intentActive[agentId] = false;
+                    if (TestOnly_ReachabilityObserver != null)
+                    {
+                        ObserveReachability(HeadingReachabilityKind.Failed, agentId, currentFrame, true,
+                            in agentState, in currentBall, agentHeadZ, contactState.JumpStartFrame,
+                            contactState.JumpReachM, default, FailureCause.DisturbedInDuel);
+                    }
                     continue;
                 }
 
@@ -676,10 +746,41 @@ namespace TacticalDirector.HeadingMechanics
                 // Landing: set GROUNDED with DIVING_HEADER if appropriate (AM #2 §3.1.2).
                 // Stage 0: aerial exit is managed externally; #10 just deactivates intent.
                 _intentActive[agentId] = false;
+                if (TestOnly_ReachabilityObserver != null)
+                {
+                    ObserveReachability(HeadingReachabilityKind.Executed, agentId, currentFrame, true,
+                        in agentState, in currentBall, agentHeadZ, contactState.JumpStartFrame,
+                        contactState.JumpReachM, default, default);
+                }
             }
         }
 
         // ── Private helpers ──────────────────────────────────────────────────────────
+
+        // #441: callers check TestOnly_ReachabilityObserver first, so production builds no sample.
+        private void ObserveReachability(
+            HeadingReachabilityKind kind,
+            int agentId,
+            int frame,
+            bool wasActive,
+            in AgentState agent,
+            in BallState ball,
+            float headZ,
+            int jumpStartFrame,
+            float jumpReachM,
+            in EligibilityResult eligibility,
+            FailureCause cause)
+        {
+            Action<HeadingReachabilitySample> observer = TestOnly_ReachabilityObserver;
+            if (observer == null)
+            {
+                return;
+            }
+
+            observer(new HeadingReachabilitySample(
+                kind, agentId, frame, wasActive, in agent, in ball, headZ,
+                jumpStartFrame, jumpReachM, in eligibility, cause));
+        }
 
         private void EmitFailedAttempt(
             int agentId,
@@ -893,4 +994,5 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | no further logic change from this row itself.                                     |
 // | 1.8     | 2026-09-22 | —      | W3: prepared Head geometry hook runs between #10 contact qualification and duel/application; host may suppress only already-prepared participants, preserving direct-call behavior when no arbiter is supplied. |
 // | 1.9     | 2026-09-22 | —      | W3 provenance: a Head surviving mixed Hand/Head arbitration retains the cross-system duel id in HeaderExecutedEvent instead of being mislabeled uncontested after loser suppression. Frame-local only; no snapshot/RNG change. |
+// | 1.10    | 2026-10-10 | —      | #441 counters: internal TestOnly_ReachabilityObserver (null in production) receives a copied HeadingReachabilitySample at commit, cancel, jump start, each Pass-1 evaluation, prepared contact, failure, landing drop and execution. Every call site is guarded by a null check; no state, snapshot, RNG, event or ball path reads it. |
 #endregion
