@@ -10,7 +10,7 @@ All constants are audit-tagged. All formulas include worked examples with numeri
 verification.
 
 **Created:** February 24, 2026, 3:00 PM PST  
-**Version:** 1.5  
+**Version:** 1.6  
 **Status:** DRAFT — Awaiting Lead Developer Review  
 **Specification Number:** 7 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -27,6 +27,7 @@ verification.
 | 1.1 | February 25, 2026 | Four fixes: (1) Peripheral arc boundary derived from BASE_FOV_HALF_ANGLE/2 (40°) — removes arbitrary 60° magic number. (2) Confirmation expiry reduced to 1 tick [DERIVED] — minimum sufficient to absorb single-tick boundary noise, not GT-tuned. (3) Noise changed to additive-only (+0/+1) — preserves L_MIN floor algebraically without secondary clamp. (4) Constants table updated: 12 GT, 3 CROSS, 2 DERIVED (was 12 GT, 3 CROSS, 1 GT). |
 | 1.2 | February 26, 2026 | One fix: (1) §3.3.2 — L_rec rounding convention made explicit: floor() required (Mathf.FloorToInt). Previously the formula showed a float result with no documented conversion to integer ticks. Verification table updated to show float and floored-tick columns separately. This is a clarification only — the floor convention was always implied by the integer tick system; no constant values change. |
 | 1.5 | September 17, 2026 | ERR-007-004: §3.5.1 defines exact projected co-location as a zero-bearing case. A ball at the observer's exact XY is inside the FoV test regardless of facing direction; range and occlusion still apply. This closes the artificial `atan2(0,0)` world-East bearing exposed by PR #416 without changing non-zero-distance visibility. No constants, schema, RNG, or draw order change. |
+| 1.6 | October 10, 2026 | `ERR-007-005` (spec-text drift; no code change). New §3.2.7 documents `OcclusionFilter.IsOccludedByAnyAgent`, the goalkeeper all-body line-of-sight query shipped in W4 (PR #403): same §3.2.3/§3.2.4 geometry, either team occludes, full agent array, observer and excluded (sent-off) bodies skipped, short mask fails loud, no height term (the caller owns the 2.0 m reach-height bypass). §3.2.1 points to it as the one exception to OQ-1, outside the `FilteredView` pipeline. OQ-1/FR-17 and ordinary perception unchanged. Worked example included. Pairs with #8 §3.1.13 (`ERR-008-025`) as the roadmap's W10 specification gate. No constants, schema, RNG or draw order change. |
 | 1.4 | April 22, 2026 | NB-1/NB-4 fix: §3.10 legend corrected — `[PHYS]` removed (no rows used it; `[FIXED]` is the CLAUDE.md canonical equivalent); paragraph text updated to 18 constants total (12 [GT], 2 [DERIVED], 4 [CROSS]) and 4 `[CROSS]` entries — matching the actual 18-row table. Section 3 Summary §3.10 line updated to match. `[CROSS]` tag formalized in `CLAUDE.md` (Option A). | §3.7 retitled from "PerceptionSnapshot Struct Definition" to "Output Struct Definitions: FilteredView + PerceptionDiagnostics". `PerceptionSnapshot` replaced by two structs: `FilteredView` (9 fields — pure consumer output delivered to Decision Tree) and `PerceptionDiagnostics` (7 fields — filter metadata NOT delivered to DT). `PerceivedAgent` reduced from 5→4 fields: `RecognitionLatencyRemaining` moved to editor-only `PerceivedAgentDebug`. Pipeline step 6 renamed BuildFilteredView. Worked examples (§3.9) updated to show FilteredView and PerceptionDiagnostics outputs separately. Prerequisite updated to Section 2 v1.2. |
 
 **Cross-Specification Constants Consumed (read-only):**
@@ -250,6 +251,8 @@ slightly over-occludes at very close range — which produces the correct behavi
 direction: agents err toward *caution*, not toward *false confidence*. (KD-3).
 
 Only opponents cast shadow cones at Stage 0. Teammate occlusion is deferred (OQ-1).
+The one exception is outside the `FilteredView` pipeline: the goalkeeper all-body
+line-of-sight query in §3.2.7.
 
 ### 3.2.2 Occluder Body Radius
 
@@ -343,6 +346,70 @@ O(n × k) where n = candidate entities, k = nearby opponents. At n=22, k ≤ 10 
 play. Peak case: 21 candidates × 10 opponents = 210 angular interval tests per agent per
 heartbeat. This is trivially fast; per-operation cost is two float comparisons and an
 angle wrap. Section 6 confirms this is within budget.
+
+### 3.2.7 Goalkeeper All-Body Line-of-Sight Query (`ERR-007-005`)
+
+**Status of this subsection:** documents production behaviour that has shipped since W4
+(PR #403, September 13, 2026). It adds no rule beyond what `OcclusionFilter.cs` v1.1 already
+executes. Consumers outside this spec: the match engine's `KeeperPerceptionGate.SaveAvailable`
+(Decision Tree #8 §3.1.13, `ERR-008-025`) and the `OnThreatDeflected` producer (Goalkeeper #11
+§3.2.1, `ERR-011-019`).
+
+`OcclusionFilter` exposes two queries over the **same** §3.2.3 shadow-cone geometry and §3.2.4
+depth/bearing test:
+
+| Query | Occluder set | Candidate source | Used by |
+|-------|--------------|------------------|---------|
+| `IsOccluded` | Opponents of the observer only (OQ-1, FR-17) | Spatial-hash candidate list (§3.0 Step 1) | The `FilteredView` pipeline, §3.0 Step 4 |
+| `IsOccludedByAnyAgent` | Every agent body, **either team** | The full agent array, index order 0..N−1 | Match-engine goalkeeper save gating only |
+
+`IsOccludedByAnyAgent(observerPos, targetPos, observerId, agentStates, excludedAgents = null)`
+returns `true` when at least one agent body casts a §3.2.3 shadow cone that contains the target
+bearing and stands closer to the observer than the target. Each candidate agent `O` is skipped when:
+
+1. `O == observerId` (the keeper does not occlude itself);
+2. `excludedAgents != null && excludedAgents[O]` (the body no longer participates, for example a
+   sent-off player whose last position is retained for deterministic bookkeeping; the match engine
+   passes its sent-off mask);
+3. `|O − observer|² ≥ |target − observer|²` (depth ordering, §3.2.4).
+
+There is no target-id skip, because the target is always the ball. There is no range or FoV
+filter: a physical screen blocks the keeper's line of sight whatever the keeper's facing.
+`excludedAgents`, when supplied, MUST be at least as long as `agentStates`. A shorter mask throws
+`ArgumentException` rather than silently treating the uncovered agents as present.
+
+**Scope.** OQ-1 and FR-17 govern the `FilteredView` pipeline and are unchanged. Ordinary agent
+perception, including the goalkeeper's own `FilteredView.BallVisible`, still ignores teammates.
+The all-body query exists because a keeper screened by a team-mate cannot see the shot, and the
+save gate must not inherit `BallVisible`'s FoV/range semantics (a keeper with stale facing would be
+falsely unsighted). The query is purely 2D and has **no height term**. The caller owns any height
+rule: `KeeperPerceptionGate` bypasses this query for a ball above
+`CollisionPhysicsConstants.AgentReachHeight` (2.0 m), because an infinite-height 2D cylinder cannot
+honestly represent a screen for a ball over a player's head (#8 §3.1.13).
+
+**Worked example** (body radius 0.4 m [GT], `MIN_SHADOW_HALF_ANGLE` = 5° [GT]). Keeper (agent 0)
+at (0, 0), ball at (10, 0), own defender (agent 1) at (5, 0), all other bodies farther than 10 m:
+
+```
+shadowHalfAngle(agent 1) = Max(arcsin(0.4 / 5.0), 5°) = Max(4.59°, 5°) = 5°   [degrees]
+depth:   |agent 1 − keeper|² = 25 m²  <  |ball − keeper|² = 100 m²   → candidate
+bearing: ball 0°, agent 1 0°, bearingDiff = 0° ≤ 5°                → occluded
+
+IsOccludedByAnyAgent(keeper, ball, 0, states)                 = true   (team-mate screens)
+IsOccluded(..., observerTeamId = keeper's team, candidates {1}) = false  (OQ-1: team-mates ignored)
+IsOccludedByAnyAgent(..., excludedAgents[1] = true)           = false  (sent-off body skipped)
+```
+
+Moving the ball to (10, 1) gives a bearing of 5.71° > 5°, so it is not occluded by either query.
+
+**Determinism.** Pure, static and allocation-free. It reads only its arguments and draws no RNG.
+The result is an any-hit boolean, so iteration order cannot change it. Cost is one pass over the
+agent array (22 bodies at Stage 0): at most 21 shadow-cone tests per call.
+
+**Verification.** `KeeperOcclusionTests.cs` locks: a team-mate screen occludes; the same geometry
+through `IsOccluded` does not (OQ-1 isolation); the keeper does not self-occlude; and a short
+exclusion mask throws. The skipped excluded body (the third line of the worked example) is locked
+one layer up, by `KeeperPerceptionGateTests.W4_ExcludedBody_DoesNotDisarmSaveAvailability`.
 
 ---
 
