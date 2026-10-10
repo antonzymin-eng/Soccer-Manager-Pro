@@ -10,7 +10,8 @@
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.AgentMovement",
-        "TacticalDirector.BallPhysics"
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.TestingStrategy"
     ],
     "includePlatforms": [
         "Editor"

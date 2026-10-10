@@ -5,7 +5,8 @@
         "TacticalDirector.MatchAnalytics",
         "TacticalDirector.MatchEngine",
         "TacticalDirector.BallPhysics",
-        "TacticalDirector.EventSystem"
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.TestingStrategy"
     ],
     "includePlatforms": [
         "Editor"

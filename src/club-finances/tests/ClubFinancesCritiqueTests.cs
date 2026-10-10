@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesCritiqueTests.cs
 // Created:  2026-09-06
-// Modified: 2026-09-11 (#40 T3a — review traceability + coherence locks)
+// Modified: 2026-10-09 (shared TestingStrategy.RepositoryRoot; Unity-reachable anchor)
 // Author:   —
 // Specs:    Club Finances & Economy #40 §5/§7.1; Code Standards #20
 // Purpose:  Locks the current T3a dependency boundary, RNG-free save shape, upper
@@ -16,6 +16,7 @@ using System.Reflection;
 
 using NUnit.Framework;
 
+using TacticalDirector.TestingStrategy;
 namespace TacticalDirector.ClubFinances.Tests
 {
     /// <summary>Regression locks added by the PR #363 critique/revision pass and advanced through T3a.</summary>
@@ -26,7 +27,7 @@ namespace TacticalDirector.ClubFinances.Tests
         [Test]
         public void AssemblyReferences_AreExactlyCurrentPhaseDependencies()
         {
-            DirectoryInfo root = FindRepoRoot();
+            DirectoryInfo root = RepositoryRoot.Find(TestContext.CurrentContext.TestDirectory);
             Assert.That(root, Is.Not.Null, "could not locate repository root; dependency lock must fail loud");
 
             // Read the asmdef itself rather than Assembly.GetReferencedAssemblies(): runtime reflection can
@@ -68,7 +69,7 @@ namespace TacticalDirector.ClubFinances.Tests
                 }
             }
 
-            DirectoryInfo root = FindRepoRoot();
+            DirectoryInfo root = RepositoryRoot.Find(TestContext.CurrentContext.TestDirectory);
             Assert.That(root, Is.Not.Null, "could not locate repository root; RNG-shape lock must fail loud");
             DirectoryInfo financeDir = new DirectoryInfo(Path.Combine(root.FullName, "src", "club-finances"));
             FileInfo[] productionFiles = financeDir.GetFiles("*.cs", SearchOption.TopDirectoryOnly);
@@ -312,23 +313,6 @@ namespace TacticalDirector.ClubFinances.Tests
             bytes[offset + 2] = (byte)(raw >> 16);
             bytes[offset + 3] = (byte)(raw >> 24);
         }
-
-        private static DirectoryInfo FindRepoRoot()
-        {
-            DirectoryInfo dir = new DirectoryInfo(AppContext.BaseDirectory);
-            while (dir != null)
-            {
-                if (Directory.Exists(Path.Combine(dir.FullName, "src")) &&
-                    Directory.Exists(Path.Combine(dir.FullName, "tools")))
-                {
-                    return dir;
-                }
-
-                dir = dir.Parent;
-            }
-
-            return null;
-        }
     }
 }
 
@@ -344,4 +328,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.7     | 2026-09-11 | OpenAI | Critique: lock true off-state and each checked-arithmetic overflow site. |
 // | 1.8     | 2026-09-11 | OpenAI | T3a lifecycle: lock season revenue reset and unchanged future FFP window. |
 // | 1.9     | 2026-09-11 | OpenAI | Review: trace every new acceptance ID in code and lock coherence-before-off-gate ordering. |
+// | 1.10    | 2026-10-09 | —      | Both structural locks resolve the root through the shared TestingStrategy.RepositoryRoot from the test directory; the private AppContext.BaseDirectory walk could not reach the repo under Unity. |
 #endregion
