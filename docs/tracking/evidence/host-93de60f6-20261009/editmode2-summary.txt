@@ -1,0 +1,7 @@
+Host: owner Windows 11, Unity 6000.4.9f1 editor (Mono). Source: PR #492 head 5cc06ed553644c253f7d0dd103541fa3a9686bc9, whose src/ tree is identical to main 93de60f629dd4d948debb96aa594b53f8fdeefd0 (git diff 93de60f6 5cc06ed5 -- src is empty); no recompile was needed.
+Filter: EditMode, assemblies MatchAnalytics.Tests and UiFramework.Tests (the analytics/framework regressions required by p5b-screens-validation.md procedure step 2, omitted from the first run; Codex review on PR #492).
+STARTED 2026-10-09T05:10:40.1882202Z
+FAIL TacticalDirector.MatchAnalytics.Tests.MatchAnalyticsValueTypeTests.NoOtherAssemblyReferencesMatchAnalytics :: could not locate the repo root from C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor — this lock must fail loud rather than scan nothing and pass.
+FAIL TacticalDirector.UiFramework.Tests.MatchViewObserverNeutralityTests.NoOtherAssemblyReferencesTheUiFramework :: could not locate the repo root from C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor — this lock must fail loud rather than scan nothing and pass.
+FINISHED 2026-10-09T05:10:56.7237584Z passed=107 failed=2 skipped=0 inconclusive=0 status=Failed
+Per assembly: MatchAnalytics 58 passed / 1 failed; UiFramework 49 passed / 1 failed. Both failures are the tracked AppContext.BaseDirectory repo-root locks.

@@ -1,0 +1,30 @@
+# Unity 6000.4.9f1 Editor.log excerpt — pinned-host compile of main 93de60f6 (forced recursive reimport)
+
+## Round 1 — forced reimport before the Editor re-resolved Packages/manifest.json (VOID: stale package state)
+5:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+6:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+718:*** Tundra build failed (5.33 seconds), 57 items updated, 1151 evaluated
+891:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+892:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+893:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+894:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+1805:*** Tundra build failed (11.28 seconds), 75 items updated, 1151 evaluated
+error CS lines: 378 (all in match-client-unity; CS0234/CS0246 on UnityEngine.UI / UnityEngine.EventSystems — com.unity.ugui not yet registered)
+
+## Package resolution — UnityEditor.PackageManager.Client.Resolve()
+37:[Package Manager] Registered 17 packages:
+47:    com.unity.ugui@2.0.0 (location: C:\Users\azymi\Desktop\Soccer-Manager-Pro\Library\PackageCache\com.unity.ugui@1f2d1ab0d950)
+853:*** Tundra build success (27.83 seconds), 664 items updated, 1203 evaluated
+error CS lines after resolve: 0
+
+## Round 2 — forced recursive reimport on the resolved package state (THE RESULT)
+222:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+223:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+593:*** Tundra build success (9.89 seconds), 75 items updated, 1203 evaluated
+597:Reloading assemblies after finishing script compilation.
+598:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+unique warnings:
+BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius'
+ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()'
+ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()'

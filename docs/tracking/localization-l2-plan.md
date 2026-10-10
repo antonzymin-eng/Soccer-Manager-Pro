@@ -1,9 +1,9 @@
 # System XI — Localization #49 L2 Implementation Plan
 
 **Created:** October 6, 2026\
-**Last Updated:** October 7, 2026\
-**Version:** 0.7\
-**Status:** IMPLEMENTED — Q1–Q4 recommendations selected under the owner’s October 7 work instruction; Linux PR gate and exact-head pinned Unity compile pending before merge\
+**Last Updated:** October 9, 2026\
+**Version:** 0.8\
+**Status:** LANDED — merged October 8, 2026 through #487 at `574b0344` before the pinned Unity gate ran; that gate then passed post-merge on main `93de60f6` (October 9, 2026: compile 0 errors, Localization EditMode 67/67)\
 **Purpose:** plan the #49 L2 slice (immutable in-memory catalogue, template expander and the production `ILocalizer`), and the ERR-049-005 discharge that ships with it.\
 **Baseline:** `main` at `ce2e2a36152590e623602ec633ce568fdfe8b04d` (PR #482 merge). L1 core landed at `f4e8bed4648e5b3e7b7c1437d3065472981fb288`.
 **Implementation base:** current `main` `0381b2bbc909ac8d51b4069a0cf3e80e7eb0433d` (PR #486 merge).
@@ -314,7 +314,7 @@ RNG change, so the full Linux gate is runnable on a worker.
 - [x] No file or Unity dependency is introduced; `localization.asmdef` references remain empty.
 - [ ] `bash tools/run-tests-local.sh --pr` passes with no new failures.
 - [x] Tracking surfaces are current, and the doc-consistency check passes.
-- [ ] Pinned Unity compile passes on the PR head before merge.
+- [x] Pinned Unity compile passes on the PR head before merge. *(Not met as worded: #487 merged first. Discharged post-merge on main `93de60f6`, October 9, 2026 — 0 `error CS`, Localization EditMode 67/67; evidence `docs/tracking/evidence/host-93de60f6-20261009/`.)*
 
 L2 does not unblock captions on its own: audio D49 still needs the approved #49/#51 caption boundary.
 After the remaining merge gates pass and L2 lands, P5b copy/scale/screens can inject the production `ILocalizer`.
@@ -363,3 +363,4 @@ The standard prior-head CI pass is separate evidence and is not carried forward 
 | 0.5 | October 6, 2026 | PR #483 Codex review: the base catalogue now rejects every selector kind at construction (a gender selector was previously accepted, contradicting KD-3/FR-LC-009 and weakening FR-LC-016 identity); T14 covers base plural and base gender selectors. |
 | 0.6 | October 7, 2026 | Q1–Q4 recommendations selected and L2 implemented; T1–T16/structural evidence and negative controls recorded; both ERRs back-propagated together. Canonical PR and pinned Unity gates remain open. |
 | 0.7 | October 7, 2026 | Codex review: selected English content must be the canonical base instance; five rejection and two identity cases bring localization to 67 local passes. Records prior-head standard CI 60/60 and full gate pass, with corrected-head CI and pinned Unity still due. |
+| 0.8 | October 9, 2026 | Records the #487 merge (`574b0344`, October 8) and the post-merge pinned-host gate on main `93de60f6`: Unity 6000.4.9f1 compile 0 errors, Localization EditMode 67/67. The pre-merge wording of the exit criterion was not met; the record says so rather than back-dating it. |
