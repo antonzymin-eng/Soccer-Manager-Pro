@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
+**Last Updated:** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
+**Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
 **Last Updated (prior):** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
 **Last Updated (prior):** October 8, 2026 (v0.10 — zero inputs, sole gate ownership and fixture/save timing pinned)
 **Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
@@ -323,6 +324,111 @@ SeasonRevenueAccrued: 502, FfpBalanceWindow: -602 }`. Revenue inputs are `0 + 0 
 returns all six fields identically, and only #30 advances the world clock to day 6. Negative balance and
 FFP-window values remain representable; budgets, liability and accrued revenue must stay non-negative.
 
+## 3.7 T3b2 deterministic daily revenue model
+
+**Status:** specified October 10, 2026 as the T3b2 formula half of §7.1. **No code implements this
+section yet.** Until the T3b2 implementation slice lands, production still runs §3.6's zero-input identity.
+Every magnitude below is `[GT]` and illustrative, like the rest of Appendix A, pending a balance pass.
+
+**Ownership.** #40 owns both formulas, every constant and the single gate producer. #30 owns only timing
+(slot 11a, §3.6) and forwards three facts it already holds for the day being completed. It chooses no
+amount and adds no flag. The model is integer-only and draw-free; the reserved `0x29`/91 namespace stays
+reserved (T3c+).
+
+### 3.7.1 Gate
+
+`DeepRevenueEnabled` replaces the T3b1 `[FIXED] DEEP_REVENUE_ENABLED = false` as the **only** producer of
+`deepRevenueEnabled`: a `[GT]` boolean read once through the shared config loader
+(`[club-finances] DeepRevenueEnabled`), **default `false`**. With the default, §3.6's behaviour and every
+T3b1 lock hold unchanged (KD-8): #30 passes `0L, 0L, false` and does not evaluate §3.7.2. Turning the gate on
+is a gameplay change for career saves. It belongs to the balance pass or an owner decision, not to the
+T3b2 code landing.
+
+### 3.7.2 Daily amounts (`DailyRevenue`, pure, #40)
+
+Inputs per club for completed world day `d`, supplied by #30:
+
+| Input | Meaning | Range |
+|---|---|---|
+| `homeFixturesCompleted` | league fixtures scheduled on `d` in which the club is the home side | `0..` (0 or 1 in the Stage-2 double round robin) |
+| `leaguePosition` | the club's live league-table position at slot 11a, after `d`'s fixtures | `1..clubCount` |
+| `clubCount` | clubs in the league | `≥ 2` |
+
+```
+DailyRevenue(homeFixturesCompleted, leaguePosition, clubCount) -> (sponsorship, matchday):
+    assert homeFixturesCompleted >= 0
+    assert clubCount >= 2 and 1 <= leaguePosition <= clubCount
+    sponsorship = DAILY_SPONSORSHIP_REVENUE                                  # every completed day
+
+    fillSpan     = MATCHDAY_FILL_TOP_PERMILLE - MATCHDAY_FILL_BOTTOM_PERMILLE  # >= 0 (catalogue invariant)
+    fillPermille = MATCHDAY_FILL_TOP_PERMILLE
+                   - fillSpan * (leaguePosition - 1) / (clubCount - 1)       # integer division, as §3.1.1
+    attendance   = MATCHDAY_STADIUM_CAPACITY * fillPermille / PERMILLE_DENOM   # spectators, floored
+    matchday     = checked(homeFixturesCompleted * attendance * MATCHDAY_REVENUE_PER_SPECTATOR)
+    return (sponsorship, matchday)
+```
+
+Units: currency amounts are integer currency units (the unit of `Balance`); `fillPermille` is per-mille of
+capacity (600..950 with the default catalogue); `attendance` is spectators. All arithmetic is `long` and
+checked. `fillPermille` is linear in table position, the same shape as §3.1.1 prize money: position 1 fills
+`MATCHDAY_FILL_TOP_PERMILLE`, last place fills `MATCHDAY_FILL_BOTTOM_PERMILLE`.
+
+`MATCHDAY_STADIUM_CAPACITY` is `[CROSS-PENDING]` against #53's `STADIUM_BASE_CAPACITY` (20,000). The
+intended input is #53's per-club `StadiumCapacity(clubId)` (FR-IN-025, ERR-040-002), but #53 has no
+assembly. When #53's T0 lands, that query replaces this constant per club; until then every club uses the
+same capacity, and #40 builds no #53 interface (CLAUDE.md: nothing is wired ahead of a T0 landing).
+
+### 3.7.3 Composition at slot 11a
+
+With the gate on, #30 computes the three inputs for each initialized club and passes the result into the
+unchanged T3a primitive: `AccrueDailyRevenue(prior, sponsorship, matchday, true)`. §3.6's all-club staging
+and detached publication are unchanged: any club's refusal, including a `DailyRevenue` assertion, publishes
+nothing and leaves the clock on `d`.
+
+**Why the inputs are already settled at slot 11a.** #30's KD-4 guard (`AdvanceDays`, FR-SN-011) refuses to
+move the clock past a pending round's fixture day, so every fixture scheduled on `d` has a result before
+`d` completes. The table at slot 11a therefore already includes `d`'s results. `homeFixturesCompleted`
+counts scheduled fixtures; an implementation MUST assert that each counted fixture has a result rather
+than silently counting an unplayed one.
+
+**Timing consequences (follow from §3.6, restated for amounts):**
+
+- A fixture day's matchday revenue is accrued once, on the advance that completes it, after its fixtures.
+- The final round's day is completed by `AdvanceDays(1)` before `RollToNextSeason` (ERR-030-053). Its
+  sponsorship and matchday revenue land in the **completed** season's `SeasonRevenueAccrued` before
+  settlement reads the handoff and resets it.
+- Season-break days accrue sponsorship only, into the new season, because the roll precedes them.
+- No new save field: `d`, the fixtures, their results and the table are all restored from the existing
+  season save, so a save at any point continues identically.
+
+### 3.7.4 Worked example (default catalogue, gate on)
+
+Club 12, `clubCount = 20`, completing day `d`, on which club 12 hosted its round fixture; after `d`'s
+results it sits 4th. Prior is §3.5's post-transaction state: `Balance = 2,315,790`,
+`SeasonRevenueAccrued = 0`.
+
+```
+sponsorship  = 1,000
+fillSpan     = 950 − 600 = 350
+fillPermille = 950 − 350 × (4 − 1) / (20 − 1) = 950 − 1,050 / 19 = 950 − 55 = 895      [per-mille]
+attendance   = 20,000 × 895 / 1,000 = 17,900                                           [spectators]
+matchday     = 1 × 17,900 × 2 = 35,800                                                 [currency]
+daily        = 1,000 + 35,800 = 36,800
+Balance      = 2,315,790 + 36,800 = 2,352,590;  SeasonRevenueAccrued = 0 + 36,800 = 36,800
+```
+
+On a day with no home fixture (an away day, a free day or a break day) the same club accrues `1,000`. The
+endpoints with one home fixture are: position 1 → `950‰ → 19,000 → 38,000`; position 20 →
+`600‰ → 12,000 → 24,000`. Over a 38-round season that is roughly 0.46–0.72 M of matchday revenue, plus
+`1,000` per completed day, against 0.2–2.0 M of prize money (Appendix A). It is the same order of
+magnitude, and the balance pass may retune it.
+
+### 3.7.5 Failure rows
+
+`DailyRevenue` fails loud (`ArgumentOutOfRangeException`) on `homeFixturesCompleted < 0`, `clubCount < 2`
+or `leaguePosition` outside `1..clubCount`, and (`OverflowException`) on checked overflow. These are F8's
+sibling rows: they are evaluated only with the gate on, so the default gate cannot surface them.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -338,4 +444,5 @@ FFP-window values remain representable; budgets, liability and accrued revenue m
 | 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** zero inputs, sole gate ownership and fixture/save timing pinned. |
 | 0.11 | 2026-10-08 | — | **PR #491 review.** stage the complete daily finance result before publication. |
 | 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** keep final-fixture day accounting in the completed season before settlement. |
+| 0.13 | 2026-10-10 | — | **T3b2 formula half (§7.1).** New §3.7: `[GT]` config-owned `DeepRevenueEnabled` (default false) replaces the `[FIXED]` T3b1 gate; pure integer `DailyRevenue` (flat daily sponsorship; per home fixture, attendance = capacity × position-linear fill × per-spectator price); `MATCHDAY_STADIUM_CAPACITY` `[CROSS-PENDING]` on #53; slot-11a composition reusing §3.6 staging; KD-4 settledness argument; worked example; failure rows. No code yet; production remains §3.6 identity. |
 #endregion

@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
+**Last Updated:** October 10, 2026 (v0.13 — §5.10 T3b2 revenue acceptance T-FN-REV-001–008, specified ahead of the code slice)
+**Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
 **Last Updated (prior):** October 8, 2026 (v0.11 — bound structural and continuation evidence; lock detached daily publication)
 **Last Updated (prior):** October 8, 2026 (v0.10 — T-FN-DAY-001–006 name executable daily identity and continuation locks)
 **Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review: traceability IDs, gate-order lock, and negative-revenue restore coherence)
@@ -212,6 +213,35 @@ Tests land at T-phase; this is the acceptance contract.
   season-roll tests retain the opening date and total `SeasonBreakDays`. These checks prove the boundary
   precondition and continuation with zero revenue; non-zero completed-season attribution remains T3b2 work.
 
+## 5.10 T3b2 revenue acceptance (specified October 10, 2026; no test exists yet)
+
+The T3b2 code slice MUST land these locks with the §3.7 implementation. SeasonLoop-level locks run with
+the gate on through a test-only forwarding seam; no production path may set the gate except the §3.7.1
+config producer.
+
+- **T-FN-REV-001 (formula):** `DailyRevenue` returns the §3.7.4 figures exactly: position 4/20 with one home
+  fixture → `(1,000, 35,800)`; positions 1 and 20 → matchday `38,000` and `24,000`; no home fixture →
+  matchday `0`; two home fixtures double the matchday amount. Integer floors are asserted at a position
+  whose division is inexact.
+- **T-FN-REV-002 (failure rows):** each §3.7.5 row fails loud with its stated exception type, and a
+  checked overflow at a large `homeFixturesCompleted` fails rather than wrapping.
+- **T-FN-REV-003 (default identity):** with the default gate, every T-FN-DAY lock passes unchanged and
+  `DailyRevenue` is not evaluated (a refusing stub in its place is never reached).
+- **T-FN-REV-004 (non-zero counts):** over a multi-round span, each club's `SeasonRevenueAccrued` equals
+  `completedDays × DAILY_SPONSORSHIP_REVENUE + Σ` (its home-day matchday amounts at its position on each of those
+  days). This is the behavioural count DAY-004 requires: one call too many or too few changes the total.
+- **T-FN-REV-005 (save/restore):** Save/Load/Restore before a fixture, after resolving it but before the
+  completing advance, and after that advance each continue to the same totals and save bytes as an
+  uninterrupted run. The fixture day is accounted exactly once.
+- **T-FN-REV-006 (late-club failure and retry):** an incoherent last club refuses the day: no club's
+  fields change and the clock stays on `d`. After repair, retry accrues each earlier club exactly once
+  (non-zero totals asserted, not only field identity).
+- **T-FN-REV-007 (final-fixture attribution):** the final round's home club's matchday revenue is
+  inside the completed season's `SeasonRevenueAccrued` when settlement reads it (asserted before the
+  reset). After the roll, the new season's accumulator holds only break-day sponsorship.
+- **T-FN-REV-008 (unplayed-fixture assertion):** a scheduled home fixture on `d` without a result fails
+  loud instead of being counted. This guards §3.7.3 against a future change to #30's KD-4 guard.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -227,4 +257,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T-FN-DAY-001–006 name executable daily identity and continuation locks. |
 | 0.11 | 2026-10-08 | — | **PR #491 review.** bound structural and continuation evidence; lock detached daily publication. |
 | 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** add T-FN-DAY-008 for pending-final-day refusal and save continuation. |
+| 0.13 | 2026-10-10 | — | **T3b2 formula half.** New §5.10 names T-FN-REV-001–008 (formula, failure rows, default identity, non-zero counts, save/restore, late-club retry, final-fixture attribution, unplayed-fixture assertion) for the §3.7 code slice. No test exists yet. |
 #endregion
