@@ -1,7 +1,7 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsValueTypeTests.cs
 // Created:  2026-07-27
-// Modified: 2026-10-06 (P5b lifecycle/identity)
-// Modified (prior): 2026-07-27
+// Modified: 2026-10-09 (shared TestingStrategy.RepositoryRoot; Unity-reachable anchor)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §2.2 / §2.3 (FR-AN-015/018, F1/F2/F4) + §4.1 KD-4,
 //           Code Standards #20
@@ -15,6 +15,7 @@ using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.TestingStrategy;
 namespace TacticalDirector.MatchAnalytics.Tests
 {
     [TestFixture]
@@ -157,9 +158,9 @@ namespace TacticalDirector.MatchAnalytics.Tests
         [Test]
         public void NoOtherAssemblyReferencesMatchAnalytics()
         {
-            DirectoryInfo root = FindRepoRoot();
+            DirectoryInfo root = RepositoryRoot.Find(TestContext.CurrentContext.TestDirectory);
             Assert.IsNotNull(root,
-                "could not locate the repo root from " + AppContext.BaseDirectory +
+                "could not locate the repo root from " + TestContext.CurrentContext.TestDirectory +
                 " — this lock must fail loud rather than scan nothing and pass.");
 
             FileInfo[] asmdefs = new DirectoryInfo(Path.Combine(root.FullName, "src"))
@@ -219,21 +220,6 @@ namespace TacticalDirector.MatchAnalytics.Tests
                 "the never-reference list names an assembly that no longer exists — a renamed " +
                 "assembly would silently drop out of this guard.");
         }
-
-        private static DirectoryInfo FindRepoRoot()
-        {
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
-            while (dir != null)
-            {
-                if (Directory.Exists(Path.Combine(dir.FullName, "src")) &&
-                    Directory.Exists(Path.Combine(dir.FullName, "tools")))
-                {
-                    return dir;
-                }
-                dir = dir.Parent;
-            }
-            return null;
-        }
     }
 }
 
@@ -244,4 +230,6 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | incl. the F4 xG-without-a-producer refusal, and the mechanical |
 // |         |            |        | KD-4 reverse-reference scan.                                   |
 // | 1.1     | 2026-10-06 | —      | Sanction actually consumed P5b client/report references; sim ban remains explicit. |
+// | 1.2     | 2026-10-09 | —      | KD-4 scan resolves the root through the shared RepositoryRoot from the test directory; |
+// |         |            |        | the private AppContext.BaseDirectory walk could not reach the repo under Unity.        |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-10-09
+// Modified: 2026-10-09 ([Timeout(7200000)] on the real-engine fold test for Unity's 180 s default — v1.20)
+// Modified (prior): 2026-10-09 (ERR-030-053 boundary day — v1.19)
 // Modified: 2026-09-22 (W3 trajectory fallout: make the within-fixture ban-order lock deterministic and trajectory-independent; retain scoped composed-engine Error-log containment — v1.17)
 // Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
 //           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
@@ -1047,8 +1048,12 @@ namespace TacticalDirector.SeasonSave.Tests
         // ── the fold, against a real match ────────────────────────────────────────────────
 
         [Test]
+        [Timeout(7200000)]
         public void ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse()
         {
+            // Unity applies a 180 s default per-test timeout that NUnit on the Linux shim does not; on the
+            // pinned 6000.4.9f1 host (Mono) this test ran 1,106 s on October 9, 2026 and was failed for the
+            // timeout alone. 2 h matches S0DemoFixtureComparisonTests and leaves headroom for a loaded host.
             // The load-bearing case of this suite, and the one that costs real 90-minute matches.
             //
             // It is written as ONE test with two halves on purpose. #44 §5's T-DC-NEU-001 asks only
@@ -1687,4 +1692,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | ignoreFailingMessages. CONTACT-time shot possession loss is Warning-level, |
 // |         |            |        | so unrelated unexpected Error logs are visible to teardown policing again. |
 // | 1.19 | 2026-10-09 | — | ERR-030-053: complete the final day before boundary discipline assertions. |
+// | 1.20 | 2026-10-09 | — | [Timeout(7200000)] on ARealEngineFixtureFoldsItsCards…: 1,106 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion
