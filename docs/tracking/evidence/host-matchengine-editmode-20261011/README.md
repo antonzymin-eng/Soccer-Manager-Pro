@@ -1,7 +1,7 @@
 # Pinned-host MatchEngine EditMode run — PR #497 head `fce91e53`
 
 **Captured:** October 11, 2026, 04:38–15:10 UTC (evening of October 10 into October 11 on the host's
-Pacific clock)\
+Pacific clock); timeout rerun 16:50–19:10 UTC (§1.1)\
 **Purpose:** First run of `TacticalDirector.MatchEngine.Tests` on the governing build, taken to check
 PR #497's always-on observer-neutrality gate under Unity before merge. #497 merged at 04:36 UTC, before
 the run started; its head and the merge commit have the same `src` tree, so this is also a run of
@@ -50,17 +50,49 @@ The inconclusive test, `ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice` ("too
 challenges to judge the share"), is also inconclusive on Linux. The 14 skips are env-gated diagnostic
 instruments. `editmode-summary.txt` lists every failure with its duration.
 
+### 1.1 Timeout rerun at `e6b71350`
+
+Commit `e6b71350` (this evidence branch) adds `[Timeout(7200000)]` to the eleven methods behind the
+twelve long cases: the nine scenarios, `SaveAndRestoreCarryTheTackleLatches` (two seeds) and
+`sim_match_engine_inposs_gate`. The inposs gate also ran past 180 s, and Unity reported its failed
+assertion only because the assertion failed. The change touches no assertion, bound or seed (`src`
+diff from `fce91e53`: 11 files, 33 insertions, all attribute, header and history lines). Unity compiled
+it with 0 errors and the three known warnings. All twelve cases then ran in one filtered EditMode run
+with its own result files: **11 passed, 1 failed**, 2 h 15 m.
+
+| Test | Result | Unity time |
+| --- | --- | --- |
+| `sim_match_engine_shot_speed` | Passed | 1,495.4 s |
+| `sim_match_engine_close_chance` | Passed | 1,147.1 s |
+| `sim_match_engine_keeper_claim` | Passed | 860.7 s |
+| `sim_match_engine_keeper_conversion` | Passed | 545.8 s |
+| `sim_match_engine_keeper_contact` | Passed | 491.1 s |
+| `sim_match_engine_shot_outcomes` | Passed | 384.6 s |
+| `sim_match_engine_goalkeeper_saves` | Passed | 369.7 s |
+| `sim_match_engine_discipline_plausible` | Passed | 330.4 s |
+| `sim_match_engine_play_develops` | Passed | 298.5 s |
+| `SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)` | Passed | 123.9 s |
+| `SaveAndRestoreCarryTheTackleLatches(3517370462UL)` | Passed | 119.7 s |
+| `sim_match_engine_inposs_gate` | **Failed**, same 2 of 6 predicates: home and away view 0.361 on seed `0x0F1E2D3C4B5A6978` | 1,075.6 s |
+
+So all eleven formerly timed-out cases complete under Unity, and their own assertions hold. The
+inposs-gate result is unchanged from §1 and from the pre-PR baseline, and its cause is still unknown.
+Durations here are shorter than in the full run (for example `shot_speed` 1,495 s against 2,369 s),
+so editor load varies between runs. Every case stays well inside the 2 h timeout.
+
 ## 2. Files
 
 | File | What it is |
 | --- | --- |
-| `source-identity.txt` | Commit and tree hashes for `src`, `Packages`, `ProjectSettings` and `Assets`; empty porcelain listings; Unity version; junction target. Captured during the run, after it, and for the baseline checkout. |
-| `compile.txt` | Editor.log excerpts for the forced recursive reimports at `fce91e53` and at the baseline `2a396d56`. |
+| `source-identity.txt` | Commit and tree hashes for `src`, `Packages`, `ProjectSettings` and `Assets`; empty porcelain listings; Unity version; junction target. Captured during the run, after it, for the baseline checkout and for the `e6b71350` timeout rerun. |
+| `compile.txt` | Editor.log excerpts for the forced recursive reimports at `fce91e53`, at the baseline `2a396d56` and at `e6b71350`. |
 | `editmode-log.txt` | The full run's per-test log: status, duration and full name for all 574 results, failure messages truncated at 300 characters, framed by its own `STARTED` and `FINISHED` lines. |
 | `editmode-summary.txt` | Times, counts, every failure, the baseline and Linux comparison, the sleep interruption, and the lost XML. |
 | `targeted-runs-log.txt` | The three single-test runs: the observer gate alone, the sleep-affected case rerun, and the baseline inposs gate. |
 | `rerun-results.xml.xz` | NUnit XML for the sleep-affected case rerun at `fce91e53`. |
 | `baseline-inposs-results.xml.xz` | NUnit XML for `sim_match_engine_inposs_gate` at `2a396d56`, with the full predicate message. |
+| `timeouts-log.txt` | Per-test log of the §1.1 rerun at `e6b71350`, with a `BEGIN` line per case and untruncated failure messages. |
+| `timeouts-results.xml.xz` | NUnit XML for the §1.1 rerun: 12 cases, 11 passed, 1 failed. |
 
 ## 3. Caveats
 
@@ -70,8 +102,9 @@ instruments. `editmode-summary.txt` lists every failure with its duration.
 - **The full run's NUnit XML is lost.** `TestRunnerApi.RegisterCallbacks` registers callbacks for the
   whole editor process, so the later rerun also fired the full run's `RunFinished` callback and
   overwrote its XML. `editmode-log.txt` was written test by test by the full run's own callback and
-  holds exactly its 574 results, so it is the record. The two targeted runs' XML files are intact. A
-  later run should unregister its callbacks or write to a per-run path.
+  holds exactly its 574 results, so it is the record. The two targeted runs' XML files are intact. The
+  §1.1 rerun used a per-run file prefix and a callback that ignores events after its own
+  `RunFinished` and then calls `UnregisterCallbacks`, so its XML cannot be overwritten that way.
 - Runs were driven through the editor's `unity-mcp` `RunCommand` tool with `TestRunnerApi`. No project
   asset, scene or setting was modified.
 
@@ -80,3 +113,4 @@ instruments. `editmode-summary.txt` lists every failure with its duration.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | October 11, 2026 | Initial evidence set: first pinned-host run of `TacticalDirector.MatchEngine.Tests`, at PR #497 head `fce91e53`, with the pre-PR inposs-gate baseline. |
+| 1.1 | October 11, 2026 | Review: corrected the cause (unknown, not isolated to Mono), the timeout claim (assertions unverified) and the `homeShare` meaning. Added §1.1: `[Timeout(7200000)]` at `e6b71350`; all eleven formerly timed-out cases pass under Unity, and the inposs gate still fails 0.361 / 0.361. |

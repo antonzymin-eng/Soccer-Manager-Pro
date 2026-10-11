@@ -31,3 +31,12 @@ tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
 tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
 porcelain_src_Packages_ProjectSettings_including_untracked_and_ignored: 0 entries
 src diff fce91e53 vs baseline:  8 files changed, 896 insertions(+), 1 deletion(-)
+
+# Timeout rerun at e6b71350 (branch claude/host-matchengine-editmode-20261011), captured after the run
+captured_utc: 2026-10-11T19:09:40Z (the porcelain check also returned 0 entries immediately before 'git checkout --detach e6b71350')
+head_commit: e6b71350c6370c693b7219af6493effbeadd81dc
+tree_src: cf43262524090aeda96d0b314f7acd467ee3c843
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+porcelain_src_Packages_ProjectSettings_including_untracked_and_ignored: 0 entries
+src diff fce91e53 vs e6b71350:  11 files changed, 33 insertions(+) (11 test files: [Timeout(7200000)] + header/history lines only)

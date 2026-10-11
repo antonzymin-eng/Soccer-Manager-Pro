@@ -30,3 +30,11 @@ Inconclusive (1): MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJ
 Skipped (14): env-gated diagnostic instruments, by design (CloseChance, FoulRate, GkContactRate, GkRush, GkSave x2, GoalConversion, HeaderReachability, MatchBalance x2, ShotOutcome, TackleIntent, W12GateFiring, W8StageA).
 
 Lost artifact: the full run's NUnit XML. TestRunnerApi.RegisterCallbacks registers callbacks process-wide, so the later targeted rerun also fired the full run's RunFinished callback and overwrote full-results.xml. editmode-log.txt (written per test by the full run's callback, verified to hold exactly its 574 results between its own STARTED and FINISHED lines) is the record for the full run; failure messages there are truncated at 300 characters. The two targeted runs' XML files are intact.
+
+Timeout rerun (README section 1.1). Source: commit e6b71350c6370c693b7219af6493effbeadd81dc, src tree cf43262524090aeda96d0b314f7acd467ee3c843; src diff from fce91e53 is 11 test files, 33 insertions ([Timeout(7200000)] plus header and history lines; no assertion, bound or seed). Compile: Tundra build success (64.80 s), 0 error CS, the three known warnings (compile.txt).
+Filter: EditMode, TacticalDirector.MatchEngine.Tests, groupNames regex over the 11 methods (12 cases). Callback writes timeouts-e6b71350-* only, ignores events after its own RunFinished, then unregisters.
+STARTED 2026-10-11T16:54:06.2021257Z
+FINISHED 2026-10-11T19:09:08.5972315Z passed=11 failed=1 skipped=0 inconclusive=0 status=Failed
+Passed: shot_speed 1495.4 s, close_chance 1147.1 s, keeper_claim 860.7 s, keeper_conversion 545.8 s, keeper_contact 491.1 s, shot_outcomes 384.6 s, goalkeeper_saves 369.7 s, discipline_plausible 330.4 s, play_develops 298.5 s, SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL) 123.9 s, SaveAndRestoreCarryTheTackleLatches(3517370462UL) 119.7 s.
+Failed: sim_match_engine_inposs_gate 1075.6 s, predicates_failed=2: home view homeShare=0.361 and away view awayShare=0.361 on seed 0x0F1E2D3C4B5A6978, bound > 0.70. Same as the fce91e53 run and the 2a396d56 baseline.
+All eleven formerly timed-out cases complete and pass under Unity. Durations vary between runs (shot_speed 2369.4 s in the full run, 1495.4 s here).
