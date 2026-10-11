@@ -81,7 +81,7 @@ same gravity-only predictor and radius:
 
 - `replicaMismatchFrames`: frames where the restated `StaticHeight` search disagrees with #10's own
   `PredictedContactFrame ≥ 0`. **Must be 0**, or the counterfactuals are not comparable and the run
-  is invalid.
+  is invalid. The instrument asserts this after printing its report, so an invalid run fails the lane.
 - `cfTrajectoryHit` / `cfTrajectoryMovingHit`: `PositionedPoorly` episodes in which the counterfactual
   search would have found a contact frame on at least one evaluated frame.
 

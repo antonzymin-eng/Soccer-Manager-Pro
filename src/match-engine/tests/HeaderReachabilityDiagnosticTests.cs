@@ -87,6 +87,10 @@ namespace TacticalDirector.MatchEngine
                 Assert.That(total.Executed, Is.LessThanOrEqualTo(total.Prepared), "executed headers exceed prepared contacts");
                 Assert.That(total.FailedPoorly, Is.EqualTo(total.PoorlyAerialCheck + total.PoorlyNoContactFrame),
                     "PositionedPoorly decomposition does not sum");
+                // The counterfactuals are comparable only if the restated predictor reproduces #10 exactly
+                // (header-reachability-441-counters.md §3.3). Report first, then fail the run as invalid.
+                Assert.That(total.ReplicaMismatchFrames, Is.EqualTo(0),
+                    "restated §3.2 predictor disagrees with HeadingEligibility; counterfactual counters are invalid");
             }
             finally
             {
