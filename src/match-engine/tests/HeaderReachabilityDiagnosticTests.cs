@@ -600,14 +600,14 @@ namespace TacticalDirector.MatchEngine
                 }
                 e.TerminalAgentState = terminalState;
 
-                _report.AppendLine(Inv(
-                    $"ep,0x{_seed:X16},{e.Agent},{outcome},{e.CommitFrame},{e.JumpStartFrame},{e.ApexFrame},{terminalFrame},"
-                    + $"{e.CommitBall.Position.x:F3},{e.CommitBall.Position.y:F3},{e.CommitBall.Position.z:F3},"
-                    + $"{e.CommitBall.Velocity.x:F3},{e.CommitBall.Velocity.y:F3},{e.CommitBall.Velocity.z:F3},"
-                    + $"{e.JumpAgentPosition.x:F3},{e.JumpAgentPosition.y:F3},{e.JumpAgentState},{e.JumpReachM:F3},{e.Evaluations},"
-                    + $"{Finite(e.MinDist3d)},{Finite(e.MinDistXy)},{e.DzAtMinXy:F3},{e.EverPredicted},{e.BodyPartMismatch},"
-                    + $"{e.CfTrajectoryHit},{e.CfTrajectoryMovingHit},{Finite(e.ForecastMinXy)},{e.ForecastFrameMinusApex},{Finite(e.ForecastZAtMin)},"
-                    + $"{e.TerminalAgentState}"));
+                _report.AppendLine(
+                    Inv($"ep,0x{_seed:X16},{e.Agent},{outcome},{e.CommitFrame},{e.JumpStartFrame},{e.ApexFrame},{terminalFrame},")
+                    + Inv($"{e.CommitBall.Position.x:F3},{e.CommitBall.Position.y:F3},{e.CommitBall.Position.z:F3},")
+                    + Inv($"{e.CommitBall.Velocity.x:F3},{e.CommitBall.Velocity.y:F3},{e.CommitBall.Velocity.z:F3},")
+                    + Inv($"{e.JumpAgentPosition.x:F3},{e.JumpAgentPosition.y:F3},{e.JumpAgentState},{e.JumpReachM:F3},{e.Evaluations},")
+                    + Inv($"{Finite(e.MinDist3d)},{Finite(e.MinDistXy)},{e.DzAtMinXy:F3},{e.EverPredicted},{e.BodyPartMismatch},")
+                    + Inv($"{e.CfTrajectoryHit},{e.CfTrajectoryMovingHit},{Finite(e.ForecastMinXy)},{e.ForecastFrameMinusApex},{Finite(e.ForecastZAtMin)},")
+                    + Inv($"{e.TerminalAgentState}"));
             }
 
             private static string Finite(float value) =>
