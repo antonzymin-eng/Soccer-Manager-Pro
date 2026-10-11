@@ -117,6 +117,14 @@ INSTRUMENTS = {
         "FullyQualifiedName~MatchBalanceDiagnostic_ReportsContactStream",
         "=== §5.Z.9 recorded finding: the CONTACT STREAM itself ===",
     ),
+    "header-reachability": Instrument(
+        "header-reachability",
+        "TD_HEADER441_DIAGNOSTIC",
+        "src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters",
+        "=== #441 header reachability counters (frozen six seeds) ===",
+    ),
     "engine-scoring": Instrument(
         "engine-scoring",
         "TD_ENGINE_DIAGNOSTIC",
