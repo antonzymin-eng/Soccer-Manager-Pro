@@ -24,20 +24,27 @@ empty each time. The baseline in §3 ran at pre-PR `main` `2a396d56` (`src` tree
 | PR #497 gate `HeaderReachabilityObserver_DoesNotChangeSnapshotDigests` | **Passed twice**: alone (62.8 s) and in the full run (60.9 s). 18,000 frames, every per-frame snapshot digest identical with the observer attached |
 | Full `TacticalDirector.MatchEngine.Tests` | 574 results: **547 passed, 12 failed, 14 skipped, 1 inconclusive** |
 
-**No failure is caused by PR #497.** The 12 failures are two pre-existing kinds:
+The 12 failures are of two kinds. **This run does not show that they are all unrelated to PR #497.**
+Eleven never reached their assertions, so their behavior under Unity is unverified.
 
 1. **11 Unity default timeouts (180 s).** Nine full-match `sim_match_engine_*` scenarios and both
    `SaveAndRestoreCarryTheTackleLatches` cases carry no `[Timeout]`. The Linux gate has no per-test
-   timeout, and Unity's Mono run is about three times slower (for example `shot_speed` takes 12 m 14 s
-   on Linux and 39 m 29 s here). A timeout hides each test's own predicate result. SeasonSave hit the
-   same pattern and took `[Timeout(7200000)]` on October 9 (`../host-clean-editmode-20261009/`).
-2. **`sim_match_engine_inposs_gate` fails 2 of 6 predicates on Mono, and the failure predates the PR.**
-   On seed `0x0F1E2D3C4B5A6978` the final-third possession share is **0.361** for both home and away
-   views, against a bound of > 0.70. The same test at pre-PR `main` `2a396d56` gives the identical
-   0.361 / 0.361. At `fce91e53` the Linux gate passes it with **0.928** on the same seed (CI run
-   `38108462714`), and its quarantine and owner-held-red lists are empty. Full-match digests are
-   known to differ between Mono and .NET 8 until Stage 5+. This is a large outcome difference on one
-   seed, though, not a rounding margin, and it sits on the certified platform.
+   timeout, and the Unity editor run is about three times slower (for example `shot_speed` takes
+   12 m 14 s on Linux and 39 m 29 s here). A timeout replaces each test's own result, so these runs
+   do not show whether the assertions hold under Unity, with or without #497. SeasonSave hit the same
+   pattern and took `[Timeout(7200000)]` on October 9 (`../host-clean-editmode-20261009/`).
+2. **`sim_match_engine_inposs_gate` fails 2 of 6 predicates under Unity, and the failure predates
+   #497.** The predicate counts final-third samples in which a team's committed positioning phase is a
+   possession phase (`InPoss` or `OutOfPoss`) rather than a transition, from each team's view. It is
+   not that team's share of possession. On seed `0x0F1E2D3C4B5A6978` the home-view and away-view
+   shares are both **0.361**, against a bound of > 0.70. The same test at pre-PR `main` `2a396d56`
+   gives the identical 0.361 / 0.361, so #497 did not cause it. At `fce91e53` the Linux gate passes it
+   with **0.928** on the same seed (CI run `38108462714`), and its quarantine and owner-held-red lists
+   are empty. **The cause is unknown.** The two runs differ in more than the runtime: Linux uses the
+   `tools/dotnet-ci/UnityShim` replacements for `Mathf`, `Vector2` and `Vector3`, while Unity uses
+   the engine's own. Small numerical differences can accumulate over a full match into a large
+   outcome difference, so this result does not isolate Mono, the math implementations or a
+   behavior-level path.
 
 The inconclusive test, `ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice` ("too few connecting
 challenges to judge the share"), is also inconclusive on Linux. The 14 skips are env-gated diagnostic

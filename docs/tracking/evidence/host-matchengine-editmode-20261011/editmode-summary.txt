@@ -8,7 +8,7 @@ Interruption: the host slept 07:36:00Z-14:01:26Z (Kernel-Power 42/107/1, "Button
 PR #497 observer-neutrality gate: HeaderReachabilityObserver_DoesNotChangeSnapshotDigests PASSED twice: alone before the full run (62.8 s) and inside it (60.9 s). 18,000 frames, per-frame snapshot digests identical with the observer attached.
 
 Failures (12):
-- 11 x Unity default per-test timeout (180,000 ms). These tests carry no [Timeout]; the Linux gate has no per-test timeout. Their own predicates' outcome is not observable from a timeout result.
+- 11 x Unity default per-test timeout (180,000 ms). These tests carry no [Timeout]; the Linux gate has no per-test timeout. A timeout replaces the test's own result, so these runs do not show whether their assertions hold under Unity, with or without PR #497.
     sim_match_engine_shot_speed 2369.4 s
     sim_match_engine_keeper_claim 1159.4 s
     sim_match_engine_close_chance 950.5 s
@@ -20,9 +20,10 @@ Failures (12):
     sim_match_engine_discipline_plausible 284.4 s
     SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL) 231.6 s
     SaveAndRestoreCarryTheTackleLatches(3517370462UL) 216.9 s on clean rerun (23384.0 s in the full run, sleep)
-- 1 x predicate failure, sim_match_engine_inposs_gate (1225.8 s): predicates_total=6 predicates_failed=2. Logged message (truncated at 300 chars): first failed predicate final-third-play-is-somebodys-possession-home-view on seed 0x0F1E2D3C4B5A6978, homeShare=0.361, bound > 0.70 (pre-fix corpus ~0.24).
-  Baseline: the same test alone at pre-PR main 2a396d56 (src tree 5253abe2, compiled 0 errors) fails the same two predicates, both on seed 0x0F1E2D3C4B5A6978: home view homeShare=0.361 and away view awayShare=0.361; 1180.2 s (baseline-inposs-results.xml.xz holds the full message). Not caused by PR #497.
-  Linux (.NET 8) at the same commit fce91e53, CI run 38108462714 (PR functional gate, executed-tests TRX): Passed in 6 m 9 s, INPOSS_GATE_SEED_BASELINE seed=0x0F1E2D3C4B5A6978 homeShare=0.927719, seed=0x1A2B3C4D5E6F7081 homeShare=0.937539. The quarantine and owner-held-red lists are empty. So on this seed the two runtimes differ by 0.928 vs 0.361, not by a rounding margin.
+- 1 x predicate failure, sim_match_engine_inposs_gate (1225.8 s): predicates_total=6 predicates_failed=2. Logged message (truncated at 300 chars): first failed predicate final-third-play-is-somebodys-possession-home-view on seed 0x0F1E2D3C4B5A6978, homeShare=0.361, bound > 0.70 (pre-fix corpus ~0.24). homeShare/awayShare = fraction of final-third samples in which that team's committed positioning phase is InPoss or OutOfPoss (a possession phase, not a transition); it is not that team's share of possession. This test also ran past 180 s; Unity reported its failed assertion rather than the timeout, so had its predicates passed it would have shown as a timeout.
+  Baseline: the same test alone at pre-PR main 2a396d56 (src tree 5253abe2, compiled 0 errors) fails the same two predicates, both on seed 0x0F1E2D3C4B5A6978: home view homeShare=0.361 and away view awayShare=0.361; 1180.2 s (baseline-inposs-results.xml.xz holds the full message). The failure predates PR #497.
+  Linux at the same commit fce91e53, CI run 38108462714 (PR functional gate, executed-tests TRX): Passed in 6 m 9 s, INPOSS_GATE_SEED_BASELINE seed=0x0F1E2D3C4B5A6978 homeShare=0.927719, seed=0x1A2B3C4D5E6F7081 homeShare=0.937539. The quarantine and owner-held-red lists are empty.
+  Cause unknown. The Linux shim differs from Unity in more than the runtime: it substitutes tools/dotnet-ci/UnityShim implementations of Mathf, Vector2 and Vector3 for the engine's. Small numerical differences can accumulate over a full match into a large outcome difference, so 0.928 vs 0.361 does not isolate Mono, the math implementations, or a behavior-level path.
 
 Inconclusive (1): MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice -- "too few connecting challenges to judge the share (won=3 loose=10 foul=1 missed=57 dispossessions=3)". Also inconclusive on Linux at fce91e53 (TRX outcome NotExecuted, "won=9 loose=13 foul=3 missed=56 dispossessions=9"), so not Unity-specific.
 
