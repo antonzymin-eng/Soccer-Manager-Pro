@@ -13,10 +13,12 @@
 > **UPDATED October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
 > `0eb36aa8`, replica check 0). Over the six seeds there were 1,861 commits, 0 executed and 1,841 `PositionedPoorly`.
 > A trajectory-height head finds 0 timing-valid contacts, so Heading #10's static-height search is not the cause.
-> The commit trigger is: 96% of commits fire on a low ball rising past the agent (95% below 1.0 m), the jump
-> starts the same frame, and in 1,816 of 1,841 the ball's closest pass is before the contact window. By the apex the
-> ball is above the head and 1–2 m away. Not measured: missed genuine aerial arrivals and launch origin.
-> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.3 §6.
+> The commit trigger is: 96% of commits fire on a low ball rising past the agent (95% below 1.0 m), and the jump
+> starts the same frame. In 1,816 of 1,841 the forecast closest pass is before the contact window (on the take-off
+> frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
+> horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
+> Not measured: missed genuine aerial arrivals and launch origin.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 §6.
 >
 > **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a

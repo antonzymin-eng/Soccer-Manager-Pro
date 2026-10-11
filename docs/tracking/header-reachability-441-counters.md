@@ -5,7 +5,7 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.3 — first result recorded in §6 (run `38104571610`, October 11, 2026). It supports
+> **Status:** v0.4 — first result recorded in §6 (run `38104571610`, October 11, 2026). It supports
 > (O), an opportunity problem at the commit trigger, and not (R). #441 stays open: no fix is chosen here.
 > **Authority:** a measurement record, not a spec. It changes no `[GT]` value, gameplay path, schema,
 > RNG stream or draw order. KD-W1 still applies: nothing here authorizes tuning.
@@ -203,11 +203,20 @@ contact on these episodes.
 **(O) is supported, at the commit trigger.** The trigger fires as soon as a loose ball at
 `z ≥ 0.5 m` is within 1.5 m of the nearest outfielder. In this run that is almost always a low ball
 going up: 95% are below 1.0 m at commit and 96% are rising, at about +4 m/s. The jump starts on the
-same frame (1,727 of 1,861 have zero lag). The ball is already at its closest to the take-off point at
-take-off (`beforeWindow` 1,816 of 1,841) and then moves away. By the apex 20 frames later it is above
-the head (`ballAboveHead` 1,740) and 1–2 m away horizontally (1,398). §3.5 anticipated commits that
-fire too early for an arriving ball (`afterWindow`). The data show the opposite case: the ball is
-passing the committer, not arriving at them.
+same frame (1,727 of 1,861 have zero lag). Of the 1,841 `PositionedPoorly` episodes:
+
+- The forecast closest pass to the take-off point falls before the timing window
+  (`apex − FramesEarlyTolerance`) in 1,816 (`beforeWindow`). The per-episode rows put it on the
+  take-off frame itself in 1,721.
+- Over the observed frames (up to the terminal frame, apex + 1), the minimum horizontal ball–head
+  distance stays above 1 m in 1,528 (`poorlyMinDistXy`: 1,398 at 1–2 m, 9 at 2–5 m, 121 beyond).
+- At that minimum-horizontal-distance frame, the ball is above the ±0.22 m head band in 1,740
+  (`ballAboveHead`).
+
+These counters locate the ball at its closest pass, not at the apex. They do not record where the
+ball is at the apex itself. §3.5 anticipated commits that fire too early for an arriving ball
+(`afterWindow`). The data show the opposite case: the ball's closest pass to the committer comes
+before the window, mostly at take-off, so it is passing them rather than arriving at them.
 
 **What this run does not show:**
 
@@ -233,3 +242,4 @@ committed episodes. Choosing it is #441's decision, not this record's.
 | v0.1 | October 10, 2026 | Created with the instrument: definitions, code facts, neutrality gate, run procedure. No result. |
 | v0.2 | October 11, 2026 | PR #497 review: §3.3 splits geometric counterfactual hits from timing-valid first frames and reads (R) only from the latter; the replica check compares the exact first frame; the instrument fails on any mismatch. No result yet. |
 | v0.3 | October 11, 2026 | First result recorded (§6): run `38104571610` at `0eb36aa8`, replica check 0. It supports (O) at the commit trigger: commits fire on low, rising balls already passing the agent, and the timing-valid counterfactual is 0 of 1,841. It does not support (R). §5 runtime corrected to the measured 18 minutes. |
+| v0.4 | October 11, 2026 | PR #497 review (Low): §6.2 v0.3 read `beforeWindow`, `ballAboveHead` and the 1–2 m `poorlyMinDistXy` bucket as positions at the apex. They are a before-window forecast, the offset at the minimum-horizontal-distance frame, and a minimum over the observed frames. §6.2 now states each as measured and adds the per-episode counts (take-off frame 1,721; minimum above 1 m 1,528). The (O) reading is unchanged. |
