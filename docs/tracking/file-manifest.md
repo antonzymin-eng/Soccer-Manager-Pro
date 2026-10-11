@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 11, 2026 — **PR #497 review fixes.** No file added or removed. **Modified:** `docs/specs/club-finances-economy/section-3.md` v0.14, `appendices.md` v0.9, `section-5.md` v0.14, `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` v1.1, `docs/tracking/header-reachability-441-counters.md` v0.2, `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** October 11, 2026 — **PR #497 review follow-up.** No file added or removed. **Modified:** `docs/specs/club-finances-economy/section-5.md` v0.15, `section-3.md` v0.15, `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** October 11, 2026 — **PR #497 review fixes.** No file added or removed. **Modified:** `docs/specs/club-finances-economy/section-3.md` v0.14, `appendices.md` v0.9, `section-5.md` v0.14, `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` v1.1, `docs/tracking/header-reachability-441-counters.md` v0.2, `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** October 10, 2026 — **Substitution contract draft (not in force).** **New:** `docs/tracking/match-flow-s6-substitution-contract-draft.md` v0.1. **Modified:** `docs/tracking/match-flow-completion-design.md` v1.1 (pointer only), `docs/tracking/CHANGELOG.md` and this manifest.
 

@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 11, 2026 (v0.14 — PR #497 review: break days accrue no sponsorship, so attribution is independent of roll timing)
+**Last Updated:** October 11, 2026 (v0.15 — PR #497 review: break-advance citation states its starting day)
+**Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: break days accrue no sponsorship, so attribution is independent of roll timing)
 **Last Updated (prior):** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
 **Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
 **Last Updated (prior):** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
@@ -401,8 +402,9 @@ than silently counting an unplayed one.
   sponsorship and matchday revenue land in the **completed** season's `SeasonRevenueAccrued` before
   settlement reads the handoff and resets it.
 - **Season-break days accrue nothing**, before or after the roll. #30 lets a caller advance the whole break
-  before rolling (`AdvanceDays` refuses only a step past the next opening day; `SeasonRollTests` advances
-  `SeasonBreakDays` and then rolls). Break days after the final round day are outside the completed
+  before rolling (`AdvanceDays` refuses only a step past the next opening day; from the final round day,
+  `SeasonRollTests` advances `SeasonBreakDays` and then rolls, the first of those advances completing the
+  final day). Break days after the final round day are outside the completed
   season's span; once the roll installs the next calendar, the remaining break days precede its
   `DayOfRound(0)`. Either way `inSeasonDay` is false, so the completed season's `SeasonRevenueAccrued` at
   settlement is the same whether the roll happens immediately after final-day completion or at the end
@@ -455,4 +457,5 @@ sibling rows: they are evaluated only with the gate on, so the default gate cann
 | 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** keep final-fixture day accounting in the completed season before settlement. |
 | 0.13 | 2026-10-10 | — | **T3b2 formula half (§7.1).** New §3.7: `[GT]` config-owned `DeepRevenueEnabled` (default false) replaces the `[FIXED]` T3b1 gate; pure integer `DailyRevenue` (flat daily sponsorship; per home fixture, attendance = capacity × position-linear fill × per-spectator price); `MATCHDAY_STADIUM_CAPACITY` `[CROSS-PENDING]` on #53; slot-11a composition reusing §3.6 staging; KD-4 settledness argument; worked example; failure rows. No code yet; production remains §3.6 identity. |
 | 0.14 | 2026-10-11 | — | **PR #497 review (delayed roll).** #30 permits advancing the whole break before `RollToNextSeason`, so v0.13's "break days accrue into the new season" was false and made completed-season revenue depend on roll timing. `DailyRevenue` gains `inSeasonDay` (`DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` of the live season): sponsorship accrues only in-season, break and pre-season days accrue nothing, and a home fixture outside that span fails loud. Worked example and failure rows updated. Still spec only. |
+| 0.15 | 2026-10-11 | — | **PR #497 review.** §3.7.3 states that the cited `SeasonRollTests` break advance starts from the final round day, so its first advance is the final-day completion. Wording only. |
 #endregion

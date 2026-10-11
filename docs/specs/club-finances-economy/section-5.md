@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 11, 2026 (v0.14 — PR #497 review: T-FN-REV-009 delayed-roll attribution lock)
+**Last Updated:** October 11, 2026 (v0.15 — PR #497 review: REV-009 delayed-roll day count)
+**Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: T-FN-REV-009 delayed-roll attribution lock)
 **Last Updated (prior):** October 10, 2026 (v0.13 — §5.10 T3b2 revenue acceptance T-FN-REV-001–009, specified ahead of the code slice)
 **Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
 **Last Updated (prior):** October 8, 2026 (v0.11 — bound structural and continuation evidence; lock detached daily publication)
@@ -244,10 +245,14 @@ config producer.
 - **T-FN-REV-008 (unplayed-fixture assertion):** a scheduled home fixture on `d` without a result fails
   loud instead of being counted. This guards §3.7.3 against a future change to #30's KD-4 guard.
 - **T-FN-REV-009 (delayed roll, PR #497 review):** two runs from the same save after final-day completion,
-  one rolling immediately and one advancing the whole `SeasonBreakDays` first, produce the same
+  one rolling immediately and one first advancing to the next opening day, produce the same
   completed-season `SeasonRevenueAccrued` at settlement, the same per-club `Balance` after the roll, and
   the same totals at the next opening day. Also asserts `DailyRevenue` refuses a home fixture on a day
-  that is not `inSeasonDay`, and that first-season pre-season days accrue `0`.
+  that is not `inSeasonDay`, and that first-season pre-season days accrue `0`. The delayed run advances
+  `Calendar.DayOfRound(RoundCount − 1) + SeasonBreakDays − CurrentWorldTick` days (the next opening
+  day minus the clock, from public state), not a literal. Completion already consumed one break advance, so this is `SeasonBreakDays − 1`
+  (`SeasonRollTests.RollToNextSeason_ThenAdvance_ReachesTheNewOpeningDay`). Advancing the full
+  `SeasonBreakDays` would pass the opening day and be refused.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -266,4 +271,5 @@ config producer.
 | 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** add T-FN-DAY-008 for pending-final-day refusal and save continuation. |
 | 0.13 | 2026-10-10 | — | **T3b2 formula half.** New §5.10 names T-FN-REV-001–008 (formula, failure rows, default identity, non-zero counts, save/restore, late-club retry, final-fixture attribution, unplayed-fixture assertion) for the §3.7 code slice. No test exists yet. |
 | 0.14 | 2026-10-11 | — | **PR #497 review.** REV-004/REV-007 count in-season days only; new T-FN-REV-009 locks roll-timing independence (immediate roll vs advancing the whole break first), the out-of-season home-fixture refusal and zero pre-season sponsorship. |
+| 0.15 | 2026-10-11 | — | **PR #497 review.** T-FN-REV-009's delayed run advances to the opening day computed from the clock (`SeasonBreakDays − 1` after final-day completion), not the full `SeasonBreakDays`, which `AdvanceDays` refuses. |
 #endregion
