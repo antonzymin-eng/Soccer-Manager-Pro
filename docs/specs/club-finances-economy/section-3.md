@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
+**Last Updated:** October 11, 2026 (v0.14 — PR #497 review: break days accrue no sponsorship, so attribution is independent of roll timing)
+**Last Updated (prior):** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
 **Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
 **Last Updated (prior):** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
 **Last Updated (prior):** October 8, 2026 (v0.10 — zero inputs, sole gate ownership and fixture/save timing pinned)
@@ -331,7 +332,7 @@ section yet.** Until the T3b2 implementation slice lands, production still runs 
 Every magnitude below is `[GT]` and illustrative, like the rest of Appendix A, pending a balance pass.
 
 **Ownership.** #40 owns both formulas, every constant and the single gate producer. #30 owns only timing
-(slot 11a, §3.6) and forwards three facts it already holds for the day being completed. It chooses no
+(slot 11a, §3.6) and forwards four facts it already holds for the day being completed. It chooses no
 amount and adds no flag. The model is integer-only and draw-free; the reserved `0x29`/91 namespace stays
 reserved (T3c+).
 
@@ -353,12 +354,14 @@ Inputs per club for completed world day `d`, supplied by #30:
 | `homeFixturesCompleted` | league fixtures scheduled on `d` in which the club is the home side | `0..` (0 or 1 in the Stage-2 double round robin) |
 | `leaguePosition` | the club's live league-table position at slot 11a, after `d`'s fixtures | `1..clubCount` |
 | `clubCount` | clubs in the league | `≥ 2` |
+| `inSeasonDay` | `d` lies in the live season's playing span, `DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` | bool |
 
 ```
-DailyRevenue(homeFixturesCompleted, leaguePosition, clubCount) -> (sponsorship, matchday):
+DailyRevenue(homeFixturesCompleted, leaguePosition, clubCount, inSeasonDay) -> (sponsorship, matchday):
     assert homeFixturesCompleted >= 0
     assert clubCount >= 2 and 1 <= leaguePosition <= clubCount
-    sponsorship = DAILY_SPONSORSHIP_REVENUE                                  # every completed day
+    assert inSeasonDay or homeFixturesCompleted == 0                         # fixtures only occur in-season
+    sponsorship = inSeasonDay ? DAILY_SPONSORSHIP_REVENUE : 0                # in-season days only (§3.7.3)
 
     fillSpan     = MATCHDAY_FILL_TOP_PERMILLE - MATCHDAY_FILL_BOTTOM_PERMILLE  # >= 0 (catalogue invariant)
     fillPermille = MATCHDAY_FILL_TOP_PERMILLE
@@ -380,7 +383,7 @@ same capacity, and #40 builds no #53 interface (CLAUDE.md: nothing is wired ahea
 
 ### 3.7.3 Composition at slot 11a
 
-With the gate on, #30 computes the three inputs for each initialized club and passes the result into the
+With the gate on, #30 computes the four inputs for each initialized club and passes the result into the
 unchanged T3a primitive: `AccrueDailyRevenue(prior, sponsorship, matchday, true)`. §3.6's all-club staging
 and detached publication are unchanged: any club's refusal, including a `DailyRevenue` assertion, publishes
 nothing and leaves the clock on `d`.
@@ -397,7 +400,13 @@ than silently counting an unplayed one.
 - The final round's day is completed by `AdvanceDays(1)` before `RollToNextSeason` (ERR-030-053). Its
   sponsorship and matchday revenue land in the **completed** season's `SeasonRevenueAccrued` before
   settlement reads the handoff and resets it.
-- Season-break days accrue sponsorship only, into the new season, because the roll precedes them.
+- **Season-break days accrue nothing**, before or after the roll. #30 lets a caller advance the whole break
+  before rolling (`AdvanceDays` refuses only a step past the next opening day; `SeasonRollTests` advances
+  `SeasonBreakDays` and then rolls). Break days after the final round day are outside the completed
+  season's span; once the roll installs the next calendar, the remaining break days precede its
+  `DayOfRound(0)`. Either way `inSeasonDay` is false, so the completed season's `SeasonRevenueAccrued` at
+  settlement is the same whether the roll happens immediately after final-day completion or at the end
+  of the break. The same rule gives no sponsorship on the first season's pre-season days before round 0.
 - No new save field: `d`, the fixtures, their results and the table are all restored from the existing
   season save, so a save at any point continues identically.
 
@@ -417,16 +426,16 @@ daily        = 1,000 + 35,800 = 36,800
 Balance      = 2,315,790 + 36,800 = 2,352,590;  SeasonRevenueAccrued = 0 + 36,800 = 36,800
 ```
 
-On a day with no home fixture (an away day, a free day or a break day) the same club accrues `1,000`. The
-endpoints with one home fixture are: position 1 → `950‰ → 19,000 → 38,000`; position 20 →
+On an in-season day with no home fixture (an away day or a free day) the same club accrues `1,000`; on a
+break or pre-season day it accrues `0`. The endpoints with one home fixture are: position 1 → `950‰ → 19,000 → 38,000`; position 20 →
 `600‰ → 12,000 → 24,000`. Over a 38-round season that is roughly 0.46–0.72 M of matchday revenue, plus
-`1,000` per completed day, against 0.2–2.0 M of prize money (Appendix A). It is the same order of
+`1,000` per in-season day, against 0.2–2.0 M of prize money (Appendix A). It is the same order of
 magnitude, and the balance pass may retune it.
 
 ### 3.7.5 Failure rows
 
-`DailyRevenue` fails loud (`ArgumentOutOfRangeException`) on `homeFixturesCompleted < 0`, `clubCount < 2`
-or `leaguePosition` outside `1..clubCount`, and (`OverflowException`) on checked overflow. These are F8's
+`DailyRevenue` fails loud (`ArgumentOutOfRangeException`) on `homeFixturesCompleted < 0`, `clubCount < 2`,
+`leaguePosition` outside `1..clubCount`, or a home fixture on a day that is not `inSeasonDay`, and (`OverflowException`) on checked overflow. These are F8's
 sibling rows: they are evaluated only with the gate on, so the default gate cannot surface them.
 
 #region VersionHistory
@@ -445,4 +454,5 @@ sibling rows: they are evaluated only with the gate on, so the default gate cann
 | 0.11 | 2026-10-08 | — | **PR #491 review.** stage the complete daily finance result before publication. |
 | 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** keep final-fixture day accounting in the completed season before settlement. |
 | 0.13 | 2026-10-10 | — | **T3b2 formula half (§7.1).** New §3.7: `[GT]` config-owned `DeepRevenueEnabled` (default false) replaces the `[FIXED]` T3b1 gate; pure integer `DailyRevenue` (flat daily sponsorship; per home fixture, attendance = capacity × position-linear fill × per-spectator price); `MATCHDAY_STADIUM_CAPACITY` `[CROSS-PENDING]` on #53; slot-11a composition reusing §3.6 staging; KD-4 settledness argument; worked example; failure rows. No code yet; production remains §3.6 identity. |
+| 0.14 | 2026-10-11 | — | **PR #497 review (delayed roll).** #30 permits advancing the whole break before `RollToNextSeason`, so v0.13's "break days accrue into the new season" was false and made completed-season revenue depend on roll timing. `DailyRevenue` gains `inSeasonDay` (`DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` of the live season): sponsorship accrues only in-season, break and pre-season days accrue nothing, and a home fixture outside that span fails loud. Worked example and failure rows updated. Still spec only. |
 #endregion

@@ -5,7 +5,7 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.1 — instrument landed; **no result recorded yet.** Results go in §6 when a run on the
+> **Status:** v0.2 — instrument landed; **no result recorded yet.** Results go in §6 when a run on the
 > frozen seeds exists.
 > **Authority:** a measurement record, not a spec. It changes no `[GT]` value, gameplay path, schema,
 > RNG stream or draw order. KD-W1 still applies: nothing here authorizes tuning.
@@ -79,14 +79,24 @@ same gravity-only predictor and radius:
 | `TrajectoryHeight` | §3.3 parabola at each searched frame | this frame's |
 | `TrajectoryMoving` | §3.3 parabola at each searched frame | moves at the agent's current velocity |
 
-- `replicaMismatchFrames`: frames where the restated `StaticHeight` search disagrees with #10's own
-  `PredictedContactFrame ≥ 0`. **Must be 0**, or the counterfactuals are not comparable and the run
-  is invalid. The instrument asserts this after printing its report, so an invalid run fails the lane.
-- `cfTrajectoryHit` / `cfTrajectoryMovingHit`: `PositionedPoorly` episodes in which the counterfactual
-  search would have found a contact frame on at least one evaluated frame.
+Each search returns the **first** frame inside the head volume, as #10 does, or none.
 
-Reading: a large `cfTrajectoryHit` share supports (R) via fact 3. A small one means the ball does not
-pass through a 0.18 m sphere around a correctly-timed head, which points to (O) or to geometry/radius.
+- `replicaMismatchFrames`: frames where the restated `StaticHeight` search's first frame differs from
+  #10's own `PredictedContactFrame` (including −1 against −1). **Must be 0**, or the counterfactuals are
+  not comparable and the run is invalid. The instrument asserts this after printing its report, so an
+  invalid run fails the lane.
+- `cfTrajectoryHit` / `cfTrajectoryMovingHit`: `PositionedPoorly` episodes in which the counterfactual
+  search found a **geometric** hit on at least one evaluated frame.
+- `cfTrajectoryTimingValid` / `cfTrajectoryMovingTimingValid`: the subset whose first hit frame also lies
+  in #10's timing window, `[apex − FramesEarlyTolerance, apex + FramesLateTolerance]` (§3.2 step 5).
+  A geometric hit whose first frame falls outside that window would end as `MistimedEarly`/`MistimedLate`,
+  not as a contact (PR #497 review: a hit at frame 5 against a window of 11–26 is such a case).
+
+Reading: use the **timing-valid** counts, never the geometric ones, to argue (R). A large timing-valid
+share supports (R) via fact 3. A large geometric share with a small timing-valid share means the
+trajectory head meets the ball too early or too late, which is a timing/commit problem and points to (O).
+A small geometric share means the ball does not pass through a 0.18 m sphere around the head at all,
+which points to (O) or to geometry/radius.
 
 ### 3.4 Observed miss geometry
 
@@ -144,3 +154,4 @@ reading against §1 that says which of (O)/(R) the numbers support and what they
 | Version | Date | Change |
 |---|---|---|
 | v0.1 | October 10, 2026 | Created with the instrument: definitions, code facts, neutrality gate, run procedure. No result. |
+| v0.2 | October 11, 2026 | PR #497 review: §3.3 splits geometric counterfactual hits from timing-valid first frames and reads (R) only from the latter; the replica check compares the exact first frame; the instrument fails on any mismatch. No result yet. |

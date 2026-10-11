@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs
 // Created:  2026-10-10
-// Modified: 2026-10-10
+// Modified: 2026-10-11 (PR #497 review: timing-valid counterfactuals; exact-frame replica check)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2/§3.3/§4.6; issue #441; docs/tracking/header-reachability-441-counters.md
 // Purpose:  Env-gated, observation-only #441 instrument. Decomposes why committed headers never reach a
@@ -193,8 +193,10 @@ namespace TacticalDirector.MatchEngine
             TrajectoryMoving,   // as above, and the head moves at the agent's current velocity
         }
 
-        // Searches [frame, apex + late] as §3.2 FindContactFrame does, under a chosen head model.
-        private static bool AnyContactFrame(in HeadingReachabilitySample s, HeadModel model)
+        // Searches [frame, apex + late] as §3.2 FindContactFrame does, under a chosen head model, and returns
+        // the FIRST frame whose predicted ball centre is inside the head volume, or -1. A hit is geometric
+        // only: #10 then rejects a first frame outside the timing window (§3.2 step 5), see IsTimingValid.
+        private static int FirstContactFrame(in HeadingReachabilitySample s, HeadModel model)
         {
             float radiusSq = HeadingMechanicsConstants.HeadContactVolumeRadiusM * HeadingMechanicsConstants.HeadContactVolumeRadiusM;
             int apex = HeadingJumpKinematics.ComputeApexFrame(s.JumpStartFrame);
@@ -218,10 +220,19 @@ namespace TacticalDirector.MatchEngine
                 float dz = ball.z - headZ;
                 if (dx * dx + dy * dy + dz * dz <= radiusSq)
                 {
-                    return true;
+                    return f;
                 }
             }
-            return false;
+            return -1;
+        }
+
+        // §3.2 step 5: a first contact frame earlier than apex - early is MistimedEarly, later than
+        // apex + late is MistimedLate. Only a frame inside the window could become a prepared contact.
+        private static bool IsTimingValid(int contactFrame, int jumpStartFrame)
+        {
+            int apex = HeadingJumpKinematics.ComputeApexFrame(jumpStartFrame);
+            return contactFrame >= apex - HeadingMechanicsConstants.FramesEarlyTolerance
+                && contactFrame <= apex + HeadingMechanicsConstants.FramesLateTolerance;
         }
 
         private static bool IsAerialCheckFailure(in AgentState agent) =>
@@ -234,7 +245,7 @@ namespace TacticalDirector.MatchEngine
                 + "commitBallX,commitBallY,commitBallZ,commitBallVx,commitBallVy,commitBallVz,"
                 + "jumpAgentX,jumpAgentY,jumpAgentState,jumpReachM,evaluations,"
                 + "minDist3dM,minDistXyM,dzAtMinXyM,everPredicted,bodyPartMismatch,"
-                + "cfTrajectoryHit,cfTrajectoryMovingHit,forecastMinXyM,forecastFrameMinusApex,forecastZAtMinM,"
+                + "cfTrajectoryHit,cfTrajectoryTimingValid,cfTrajectoryMovingHit,cfTrajectoryMovingTimingValid,forecastMinXyM,forecastFrameMinusApex,forecastZAtMinM,"
                 + "terminalAgentState";
 
             internal int Agent;
@@ -252,7 +263,9 @@ namespace TacticalDirector.MatchEngine
             internal bool EverPredicted;
             internal bool BodyPartMismatch;
             internal bool CfTrajectoryHit;
+            internal bool CfTrajectoryTimingValid;
             internal bool CfTrajectoryMovingHit;
+            internal bool CfTrajectoryMovingTimingValid;
             internal float ForecastMinXy = float.NaN;
             internal int ForecastFrameMinusApex;
             internal float ForecastZAtMin = float.NaN;
@@ -266,7 +279,8 @@ namespace TacticalDirector.MatchEngine
             internal int FailedEarly, FailedLate, FailedPoorly, FailedDisturbed, LandingDrops;
             internal int OpenAtEnd, NeverJumped;
             internal int PoorlyAerialCheck, PoorlyNoContactFrame;
-            internal int PoorlyCfTrajectoryHit, PoorlyCfTrajectoryMovingHit;
+            internal int PoorlyCfTrajectoryHit, PoorlyCfTrajectoryTimingValid;
+            internal int PoorlyCfTrajectoryMovingHit, PoorlyCfTrajectoryMovingTimingValid;
             internal int ReplicaMismatchFrames;
             internal int[] PoorlyMinDist3d = new int[DistanceEdgesM.Length + 1];
             internal int[] PoorlyMinDistXy = new int[DistanceEdgesM.Length + 1];
@@ -287,7 +301,9 @@ namespace TacticalDirector.MatchEngine
                 LandingDrops += o.LandingDrops; OpenAtEnd += o.OpenAtEnd; NeverJumped += o.NeverJumped;
                 PoorlyAerialCheck += o.PoorlyAerialCheck; PoorlyNoContactFrame += o.PoorlyNoContactFrame;
                 PoorlyCfTrajectoryHit += o.PoorlyCfTrajectoryHit;
+                PoorlyCfTrajectoryTimingValid += o.PoorlyCfTrajectoryTimingValid;
                 PoorlyCfTrajectoryMovingHit += o.PoorlyCfTrajectoryMovingHit;
+                PoorlyCfTrajectoryMovingTimingValid += o.PoorlyCfTrajectoryMovingTimingValid;
                 ReplicaMismatchFrames += o.ReplicaMismatchFrames;
                 AddArray(PoorlyMinDist3d, o.PoorlyMinDist3d);
                 AddArray(PoorlyMinDistXy, o.PoorlyMinDistXy);
@@ -327,7 +343,7 @@ namespace TacticalDirector.MatchEngine
             internal void Write(StringBuilder report, string label)
             {
                 report.AppendLine(Inv($"{label},lifecycle,commits={Commits},overwrites={Overwrites},liveCancels={LiveCancels},jumpStarts={JumpStarts},neverJumped={NeverJumped},evaluations={Evaluations},everPredicted={EverPredicted},bodyPartMismatch={BodyPartMismatch},prepared={Prepared},executed={Executed},failedEarly={FailedEarly},failedLate={FailedLate},failedPositionedPoorly={FailedPoorly},failedDisturbed={FailedDisturbed},landingDrops={LandingDrops},openAtEnd={OpenAtEnd},replicaMismatchFrames={ReplicaMismatchFrames}"));
-                report.AppendLine(Inv($"{label},poorly,aerialCheck={PoorlyAerialCheck},noContactFrame={PoorlyNoContactFrame},cfTrajectoryHit={PoorlyCfTrajectoryHit},cfTrajectoryMovingHit={PoorlyCfTrajectoryMovingHit},ballAboveHead={PoorlyBallAboveHead},ballWithinHeadBand={PoorlyBallWithinHeadBand},ballBelowHead={PoorlyBallBelowHead}"));
+                report.AppendLine(Inv($"{label},poorly,aerialCheck={PoorlyAerialCheck},noContactFrame={PoorlyNoContactFrame},cfTrajectoryHit={PoorlyCfTrajectoryHit},cfTrajectoryTimingValid={PoorlyCfTrajectoryTimingValid},cfTrajectoryMovingHit={PoorlyCfTrajectoryMovingHit},cfTrajectoryMovingTimingValid={PoorlyCfTrajectoryMovingTimingValid},ballAboveHead={PoorlyBallAboveHead},ballWithinHeadBand={PoorlyBallWithinHeadBand},ballBelowHead={PoorlyBallBelowHead}"));
                 report.AppendLine(Inv($"{label},poorlyMinDist3d[r/0.5/1/2/5/inf]={Join(PoorlyMinDist3d)},poorlyMinDistXy[r/0.5/1/2/5/inf]={Join(PoorlyMinDistXy)}"));
                 report.AppendLine(Inv($"{label},poorlyForecast,minXy[r/0.5/1/2/5/inf]={Join(PoorlyForecastMinXy)},beforeWindow={PoorlyForecastBeforeWindow},inWindow={PoorlyForecastInWindow},afterWindow={PoorlyForecastAfterWindow}"));
                 report.AppendLine(Inv($"{label},commits,ballZ[1.0/1.6/2.0/2.6/inf]={Join(CommitBallZ)},jumpLagFrames[0/5/11/inf]={Join(JumpLag)}"));
@@ -477,18 +493,32 @@ namespace TacticalDirector.MatchEngine
                     return;
                 }
 
-                // Self-check: the restated predictor must agree with #10 on the shipped head model.
-                if (AnyContactFrame(in s, HeadModel.StaticHeight) != (s.Eligibility.PredictedContactFrame >= 0))
+                // Self-check: the restated predictor must reproduce #10's first contact frame exactly on the
+                // shipped head model (#10 returns that frame, or -1, from every branch past the aerial check).
+                if (FirstContactFrame(in s, HeadModel.StaticHeight) != s.Eligibility.PredictedContactFrame)
                 {
                     Counters.ReplicaMismatchFrames++;
                 }
-                if (!e.CfTrajectoryHit && AnyContactFrame(in s, HeadModel.TrajectoryHeight))
+
+                // Counterfactuals keep #10's first-frame semantics: a geometric hit whose first frame is
+                // outside the timing window would be a Mistimed failure, not a contact.
+                int trajectoryFrame = FirstContactFrame(in s, HeadModel.TrajectoryHeight);
+                if (trajectoryFrame >= 0)
                 {
                     e.CfTrajectoryHit = true;
+                    if (IsTimingValid(trajectoryFrame, s.JumpStartFrame))
+                    {
+                        e.CfTrajectoryTimingValid = true;
+                    }
                 }
-                if (!e.CfTrajectoryMovingHit && AnyContactFrame(in s, HeadModel.TrajectoryMoving))
+                int movingFrame = FirstContactFrame(in s, HeadModel.TrajectoryMoving);
+                if (movingFrame >= 0)
                 {
                     e.CfTrajectoryMovingHit = true;
+                    if (IsTimingValid(movingFrame, s.JumpStartFrame))
+                    {
+                        e.CfTrajectoryMovingTimingValid = true;
+                    }
                 }
             }
 
@@ -548,9 +578,17 @@ namespace TacticalDirector.MatchEngine
                 {
                     Counters.PoorlyCfTrajectoryHit++;
                 }
+                if (e.CfTrajectoryTimingValid)
+                {
+                    Counters.PoorlyCfTrajectoryTimingValid++;
+                }
                 if (e.CfTrajectoryMovingHit)
                 {
                     Counters.PoorlyCfTrajectoryMovingHit++;
+                }
+                if (e.CfTrajectoryMovingTimingValid)
+                {
+                    Counters.PoorlyCfTrajectoryMovingTimingValid++;
                 }
 
                 Counters.PoorlyMinDist3d[Bucket(e.MinDist3d, _distanceEdges)]++;
@@ -610,7 +648,7 @@ namespace TacticalDirector.MatchEngine
                     + Inv($"{e.CommitBall.Velocity.x:F3},{e.CommitBall.Velocity.y:F3},{e.CommitBall.Velocity.z:F3},")
                     + Inv($"{e.JumpAgentPosition.x:F3},{e.JumpAgentPosition.y:F3},{e.JumpAgentState},{e.JumpReachM:F3},{e.Evaluations},")
                     + Inv($"{Finite(e.MinDist3d)},{Finite(e.MinDistXy)},{e.DzAtMinXy:F3},{e.EverPredicted},{e.BodyPartMismatch},")
-                    + Inv($"{e.CfTrajectoryHit},{e.CfTrajectoryMovingHit},{Finite(e.ForecastMinXy)},{e.ForecastFrameMinusApex},{Finite(e.ForecastZAtMin)},")
+                    + Inv($"{e.CfTrajectoryHit},{e.CfTrajectoryTimingValid},{e.CfTrajectoryMovingHit},{e.CfTrajectoryMovingTimingValid},{Finite(e.ForecastMinXy)},{e.ForecastFrameMinusApex},{Finite(e.ForecastZAtMin)},")
                     + Inv($"{e.TerminalAgentState}"));
             }
 
@@ -625,4 +663,6 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                       |
 // | 1.0     | 2026-10-10 | —      | #441 counters: env-gated six-seed instrument plus observer digest gate.     |
+// | 1.1     | 2026-10-11 | —      | PR #497 review: counterfactuals split geometric hits from timing-valid     |
+// |         |            |        | first frames (§3.2 step 5); replica self-check compares the exact frame.    |
 #endregion
