@@ -1,11 +1,13 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v0.7 — sole disabled T3b1 gate added to catalogue)
+**Last Updated:** October 11, 2026 (v0.9 — PR #497 review: sponsorship is in-season only)
+**Last Updated (prior):** October 10, 2026 (v0.8 — T3b2 revenue constants; the T3b1 `[FIXED]` gate becomes the `[GT]` config-owned `DeepRevenueEnabled`)
+**Last Updated (prior):** October 8, 2026 (v0.7 — sole disabled T3b1 gate added to catalogue)
 **Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051: season-boundary worked example corrected to synchronous atomic RollToNextSeason semantics)
 **Last Updated (prior):** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
 **Last Updated (prior):** September 4, 2026 (v0.4 — T1 self-identifying save framing back-prop)
-**Version:** 0.7
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -21,7 +23,13 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `FINANCE_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #40 T1a sub-blob generation (KD-7), independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / sibling management sub-blob versions. |
 | `FINANCE_SAVE_HEADER_BYTES` | 12 | [FIXED] | `u32` magic + `u32` version + `u32` club-record count (§4.4). |
 | `FINANCE_SAVE_RECORD_BYTES` | 52 | [FIXED] | Exact T1a record width: `i32 ClubId` + six `i64` `ClubFinances` fields (§4.4). Used by the overflow-safe count bound. |
-| `DEEP_REVENUE_ENABLED` | false | [FIXED] | T3b1 identity gate, owned solely by #40; T3b2 replaces this fixed disabled posture only with its specified amount/config model (§3.6/§7.1). |
+| `DEEP_REVENUE_ENABLED` | false | [FIXED] | T3b1 identity gate, owned solely by #40. **Superseded by `DeepRevenueEnabled` when the T3b2 code lands** (§3.7.1); retained here until then because it is still the live producer. |
+| `DeepRevenueEnabled` | false | [GT] | T3b2 sole producer of `deepRevenueEnabled` (§3.7.1), config key `[club-finances] DeepRevenueEnabled`. Default keeps Stage-2 identity; enabling is a balance-pass/owner decision. |
+| `DAILY_SPONSORSHIP_REVENUE` | 1,000 | [GT] | Sponsorship accrued by every club on every completed **in-season** day while the gate is on; break and pre-season days accrue nothing (§3.7.2–§3.7.3). |
+| `MATCHDAY_FILL_TOP_PERMILLE` | 950 | [GT] | Stadium fill for league position 1 (§3.7.2). MUST be `≤ 1000` and `≥ MATCHDAY_FILL_BOTTOM_PERMILLE`. |
+| `MATCHDAY_FILL_BOTTOM_PERMILLE` | 600 | [GT] | Stadium fill for last place (§3.7.2). MUST be `≥ 0`. |
+| `MATCHDAY_REVENUE_PER_SPECTATOR` | 2 | [GT] | Currency units per spectator per completed home fixture (§3.7.2). |
+| `MATCHDAY_STADIUM_CAPACITY` | 20,000 | [CROSS-PENDING] | #53 `STADIUM_BASE_CAPACITY`; replaced per club by #53 FR-IN-025 `StadiumCapacity(clubId)` when #53's T0 lands (§3.7.2). |
 | `PERMILLE_DENOM` | 1000 | [FIXED] | Shared per-mille denominator for `BoardModifier` and the prize-money-share weights (§3.1) — keeps every ratio integer, no float. |
 | `BOARD_MODIFIER_IDENTITY_PERMILLE` | 1000 | [FIXED] | Per-mille identity for `BoardModifier.BudgetMultiplierMillPermille` (= ×1.0). `BoardModifier.Identity` sets this; `default(BoardModifier)` (all-zero) is NOT valid (FR-FN-018 / F4). |
 | `STARTING_CLUB_BALANCE` | 500,000 | [GT] | `ClubFinances.CreateInitial`'s default starting `Balance` at league/game bootstrap. |
@@ -85,4 +93,6 @@ reserving `_RESERVED_0x29_`/91 leaves every existing stream cursor byte-identica
 | 0.5 | 2026-09-06 | — | **PR #363 critique correction.** Uses T1a terminology for the standalone codec and discloses that shared `GameplayConfig.GetInt` currently caps config-sourced currency tuning at signed Int32 range while #40 accounting remains `long`. |
 | 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b correction.** Replaces the impossible mid-`RollToNextSeason()` save example with the supported synchronous contract: stage finance settlement at (b'), leave live values untouched on refusal, install once after a successful season commit, and round-trip before/after-call saves field-identically. |
 | 0.7 | 2026-10-08 | — | **T3b1 / ERR-030-052.** sole disabled T3b1 gate added to catalogue. |
+| 0.8 | 2026-10-10 | — | **T3b2 formula half.** Adds `DeepRevenueEnabled` [GT] (default false), `DAILY_SPONSORSHIP_REVENUE`, the two fill per-mille endpoints, `MATCHDAY_REVENUE_PER_SPECTATOR` and the `[CROSS-PENDING]` `MATCHDAY_STADIUM_CAPACITY`. `DEEP_REVENUE_ENABLED` stays until the code slice replaces it. |
+| 0.9 | 2026-10-11 | — | **PR #497 review.** `DAILY_SPONSORSHIP_REVENUE` accrues on in-season days only (§3.7 v0.14), so roll timing cannot move break-day sponsorship between seasons. |
 #endregion

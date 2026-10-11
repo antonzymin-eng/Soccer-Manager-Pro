@@ -10,7 +10,24 @@
 
 ---
 
-> **UPDATED October 10, 2026 (v1.34):** Owner decisions D-03/D-04/D-05 are taken, so the pre-B
+> **UPDATED October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
+> `0eb36aa8`, replica check 0). Over the six seeds there were 1,861 commits, 0 executed and 1,841 `PositionedPoorly`.
+> A trajectory-height head finds 0 timing-valid contacts, so Heading #10's static-height search is not the cause.
+> The commit trigger is: 96% of commits fire on a low ball rising past the agent (95% below 1.0 m), and the jump
+> starts the same frame. In 1,816 of 1,841 the forecast closest pass is before the contact window (on the take-off
+> frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
+> horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
+> Not measured: missed genuine aerial arrivals and launch origin.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 §6.
+>
+> **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
+> `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
+> per-frame snapshot-digest identity gate. They split `PositionedPoorly` into aerial-check vs no-contact-frame,
+> test the shipped static-head prediction against trajectory-head counterfactuals, and record miss geometry and
+> arrival timing (`header-reachability-441-counters.md`). **No result yet**; #441 stays open and still precedes W9.
+> No gameplay, `[GT]`, schema or RNG change.
+>
+> **UPDATED (prior) October 10, 2026 (v1.34):** Owner decisions D-03/D-04/D-05 are taken, so the pre-B
 > freeze (roadmap step 6) has no pending decision. D-03: a `Recovering` keeper stays unable to claim,
 > rush or dive (#11 §3.1.1 note). D-04: the W2 tackle-foul cooldown bypass is retained. D-05: #440 and
 > a re-authored, split #434 are included and land after B→C (see the W3 section). None of these
@@ -733,6 +750,8 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.36 | 2026-10-11 | — | First #441 result recorded (run `38104571610`, PR #497 head `0eb36aa8`): 1,861 commits → 0 executed; timing-valid trajectory-head counterfactual 0/1,841, so not a #10 realization problem; commits fire on low rising balls already passing the agent (opportunity problem at the commit trigger). #441 stays open; no behavior, `[GT]`, schema or RNG change. |
+| 1.35 | 2026-10-10 | — | #441 observation-only counters landed (`HeadingMechanics` v1.10 observer, `HeaderReachabilityDiagnosticTests` v1.0, `header-reachability` instrument, definitions in `header-reachability-441-counters.md` v0.1). No run yet; no behavior, `[GT]`, schema or RNG change. |
 | 1.34 | 2026-10-10 | — | Records owner decisions D-03 (Recovering stays ineligible), D-04 (tackle-foul cooldown bypass retained) and D-05 (#440 and a re-authored, split #434 included after B→C; #434 formation/Duty in PM-2 scope). No pre-B behavior change; no `[GT]` or code change. |
 | 1.33 | 2026-10-09 | — | Synchronizes W8 substrate/compile and W3 reachability status; points current parallel ordering to roadmap §5.1, with single-host queue, census-dependent substitution edge, landing-order schemas, W10 contract gates and selected PM-2 quick-sim anchor. KD-W1 and pending decisions unchanged. |
 | 1.32 | 2026-09-25 | — | **W8 decision-gate investigation.** Adds the pointer to `w8-goalkeeper-distribution-decision.md` and records that W8 first needs an explicit current-vs-legacy Laws edition decision (current IFAB Law 12 is eight seconds + opponent corner kick, not six-second forced release) and has four unresolved pre-preregistration contract groups: hand-only Law-12 authority versus the broader engine stall guard; producer/RNG policy versus the DT ordinal-8 ceiling; FR-GK-043/F-05 forced-release/receiver-validation defects; #11 §3.8.3–§3.8.4's phantom `PassIntent` / `ConsumePassIntent` / `DeliveryKind` contract; and a missing faithful Pass Mechanics executor/pass-registration seam behind the currently event-only #11 distribution path. No gameplay, approved-spec, schema, RNG or `[GT]` change. |

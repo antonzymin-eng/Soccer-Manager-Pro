@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 9, 2026 (v1.8 — ERR-030-053: require final-day completion and non-zero boundary attribution at T3b2)
+**Last Updated:** October 10, 2026 (v1.9 — T3b2 split: formula half specified in §3.7/Appendix A/§5.10; code half pending)
+**Last Updated (prior):** October 9, 2026 (v1.8 — ERR-030-053: require final-day completion and non-zero boundary attribution at T3b2)
 **Last Updated (prior):** October 8, 2026 (v1.7 — daily all-club staging and non-zero T3b2 retry/count obligations)
 **Last Updated (prior):** October 8, 2026 (v1.6 — T3b1 consumed; T3b2 amount model remains next)
 **Last Updated (prior):** September 11, 2026 (v1.5 — ERR-040-003 review: bounded unconsumed T3a API, #40-owned gate, and wire-first T3b sequencing)
@@ -85,7 +86,9 @@
   through `AdvanceDays(1)` before settlement; DAY-008 locks refusal and saved continuation. T3b2 remains
   the next slice and MUST prove non-zero final-fixture revenue is attributed to the completed season
   before settlement resets its accumulator.
-- **T3b2 — deterministic amount model + gate ownership.** Only after T3b1 is live, define the deterministic
+- **T3b2 — deterministic amount model + gate ownership.** *(Formula half specified October 10, 2026 in
+  §3.7, Appendix A and §5.10; code half pending. The gate defaults off, so the code landing changes no
+  behaviour until the balance pass or an owner decision enables it.)* Only after T3b1 is live, define the deterministic
   sponsorship/matchday formulas and their `[GT]` catalogue, then feed those #40-owned results through the
   existing #30 invocation while preserving all-club staging. Add behavioural non-zero daily counts,
   save/restore counts, and a late-club failure followed by retry proving earlier clubs accrue only once. The `deepRevenueEnabled` value MUST have exactly one #40-owned/config-owned
@@ -100,8 +103,8 @@
 
 ## 7.2 Deferred after T3b1
 
-- **Deterministic revenue production (T3b2).** Sponsorship/matchday formulas and their `[GT]` values remain
-  unspecified. They land only after identity-zero invocation proves the lifecycle path. Their values and the
+- **Deterministic revenue production (T3b2).** Sponsorship/matchday formulas and their `[GT]` values are
+  specified in §3.7 (October 10, 2026) but not yet implemented. They land only after identity-zero invocation proves the lifecycle path. Their values and the
   single `deepRevenueEnabled` producer are #40-owned; #30 is composition/timing only.
 - **Periodic wage cash-out.** Stage-2 `ApplyTransaction` records a wage as a change to the liability
   `WageBillAggregate` only (never `Balance`, §3.2/FR-FN-016). The periodic (weekly/monthly) *payment* of that
@@ -234,4 +237,5 @@ otherwise have to re-derive them:
 | 1.6 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T3b1 consumed; T3b2 amount model remains next. |
 | 1.7 | 2026-10-08 | — | **PR #491 review.** daily all-club staging and non-zero T3b2 retry/count obligations. |
 | 1.8 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** require final-day completion and non-zero boundary attribution at T3b2. |
+| 1.9 | 2026-10-10 | — | **T3b2 split.** Formula half specified (§3.7, Appendix A v0.8, §5.10); code half (pure `DailyRevenue`, gate producer, #30 forwarding, T-FN-REV locks) remains. No behavior change. |
 #endregion
