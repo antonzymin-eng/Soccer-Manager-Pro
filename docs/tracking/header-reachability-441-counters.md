@@ -5,8 +5,8 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.2 — instrument landed; **no result recorded yet.** Results go in §6 when a run on the
-> frozen seeds exists.
+> **Status:** v0.3 — first result recorded in §6 (run `38104571610`, October 11, 2026). It supports
+> (O), an opportunity problem at the commit trigger, and not (R). #441 stays open: no fix is chosen here.
 > **Authority:** a measurement record, not a spec. It changes no `[GT]` value, gameplay path, schema,
 > RNG stream or draw order. KD-W1 still applies: nothing here authorizes tuning.
 
@@ -141,13 +141,90 @@ The instrument prints each seed's final digest so a run can be tied to the unobs
 ## 5. How to run
 
 Measurement lane (`.github/workflows/measure.yml`), instrument id **`header-reachability`**
-(`TD_HEADER441_DIAGNOSTIC`). Six full 90-minute seeds; expect roughly 10 minutes. No host machine is
-needed; this is not a certified measurement.
+(`TD_HEADER441_DIAGNOSTIC`). Six full 90-minute seeds; the first run's test took 18 minutes and the
+whole lane 20. No host machine is needed; this is not a certified measurement.
 
 ## 6. Results
 
-None yet. Record: run id, head SHA, artifact id, the AGGREGATE lines, `replicaMismatchFrames`, and a
-reading against §1 that says which of (O)/(R) the numbers support and what they do not show.
+### 6.1 Run 1 — October 11, 2026
+
+- **Run:** measurement lane `38104571610`, instrument `header-reachability`, branch
+  `claude/ecstatic-einstein-877edo` (PR #497) at head `0eb36aa8e318597a41384629da6a67f3e4126f42`. Lane
+  verification PASS (one test passed in 18 m 4 s; report sentinel captured).
+- **Artifact:** `measurement-38104571610`, id `11689855947`,
+  `sha256:e684ad3b8f5f0179e4c0207531bf7e5a39863c02f01260e354ad9a0c79bf8cc0`. GitHub expires it; the
+  numbers below are the record.
+- **Validity:** `replicaMismatchFrames=0` on every seed, so the counterfactual searches are comparable
+  with #10's own search. Every seed ran to tick 324,000 with `openAtEnd=0`. Linux .NET 8, not the Unity
+  host; Unity Mono gives different full-match digests for the same seed (expected until Stage 5+).
+
+AGGREGATE lines, verbatim:
+
+```text
+AGGREGATE,lifecycle,commits=1861,overwrites=0,liveCancels=0,jumpStarts=1861,neverJumped=0,evaluations=40578,everPredicted=21,bodyPartMismatch=0,prepared=0,executed=0,failedEarly=20,failedLate=0,failedPositionedPoorly=1841,failedDisturbed=0,landingDrops=0,openAtEnd=0,replicaMismatchFrames=0
+AGGREGATE,poorly,aerialCheck=26,noContactFrame=1815,cfTrajectoryHit=1,cfTrajectoryTimingValid=0,cfTrajectoryMovingHit=0,cfTrajectoryMovingTimingValid=0,ballAboveHead=1740,ballWithinHeadBand=29,ballBelowHead=72
+AGGREGATE,poorlyMinDist3d[r/0.5/1/2/5/inf]=0/17/67/1627/8/122,poorlyMinDistXy[r/0.5/1/2/5/inf]=31/27/255/1398/9/121
+AGGREGATE,poorlyForecast,minXy[r/0.5/1/2/5/inf]=12/22/264/1413/9/121,beforeWindow=1816,inWindow=23,afterWindow=2
+AGGREGATE,commits,ballZ[1.0/1.6/2.0/2.6/inf]=1773/63/18/7/0,jumpLagFrames[0/5/11/inf]=1727/2/2/130
+```
+
+Per seed:
+
+| Seed | commits | `PositionedPoorly` | `MistimedEarly` | Final digest (tick 324,000) |
+|---|---|---|---|---|
+| `0x0F1E2D3C4B5A6978` | 326 | 320 | 6 | `0d019bbf34ca29ad05385b3289ff15140c3de386140785d1a1d81c65697917b5` |
+| `0x00000000D1A6D05E` | 329 | 327 | 2 | `4c19d44c7761152ddfdbbeb80753f8019f1df2d8b43b4aa29d781d16ec2ab643` |
+| `0x0000000000000001` | 319 | 313 | 6 | `2517376ed7ee21dbaa304786b2d5cbf80812a6e54e46e51978fef1ebcd2f9387` |
+| `0x00000000ABCDEF12` | 295 | 293 | 2 | `e2537ed15f7590446e7f50b3dbd564e870b3a25a6a06f935b2b62d85de999bc3` |
+| `0x0000000099887766` | 313 | 312 | 1 | `dd92348f001dac5ac8c7b620f733b5ea667fdfbdc0e289a7f0189aba5f814b11` |
+| `0x000000005A5A5A5A` | 279 | 276 | 3 | `21226b56c4e9b005c43791781a4e57db2b7682b7976bbe0e0b1117c50d0e4954` |
+
+Derived from the per-episode `ep,` rows. Each row is printed twice in the captured output; the 1,861
+unique rows match `commits`.
+
+- At commit the ball is rising in 1,785 of 1,861 episodes (96%). For `PositionedPoorly` episodes,
+  commit `vz` is p10/p50/p90 = 3.35 / 4.28 / 4.88 m/s.
+- The forecast closest pass falls on the take-off frame itself (`forecastFrameMinusApex = −20`) in
+  1,722 of 1,861 episodes (93%). For `PositionedPoorly` episodes, that closest pass is p10/p50/p90 =
+  0.93 / 1.23 / 1.60 m from the take-off point, and below 1.6 m high in 1,790 of 1,841 (97%).
+
+**Comparison with September 23** (run `35887487201`, production `f40f085`): 1,811 → 1,861 commits,
+18 → 21 ever-predicted, 1,793 → 1,841 `PositionedPoorly`, 16 → 20 `MistimedEarly`, 0 → 0 prepared. The
+shape is unchanged on newer production.
+
+### 6.2 Reading against §1
+
+**(R) is not supported.** The timing-valid counterfactual count is 0 of 1,841 for both
+`TrajectoryHeight` and `TrajectoryMoving`; the geometric counts are 1 and 0. A head that rises along
+the §3.3 parabola, with or without moving at the agent's velocity, still almost never meets the
+predicted ball. Fact 3 (the static-height search) is real, but changing it alone would not produce a
+contact on these episodes.
+
+**(O) is supported, at the commit trigger.** The trigger fires as soon as a loose ball at
+`z ≥ 0.5 m` is within 1.5 m of the nearest outfielder. In this run that is almost always a low ball
+going up: 95% are below 1.0 m at commit and 96% are rising, at about +4 m/s. The jump starts on the
+same frame (1,727 of 1,861 have zero lag). The ball is already at its closest to the take-off point at
+take-off (`beforeWindow` 1,816 of 1,841) and then moves away. By the apex 20 frames later it is above
+the head (`ballAboveHead` 1,740) and 1–2 m away horizontally (1,398). §3.5 anticipated commits that
+fire too early for an arriving ball (`afterWindow`). The data show the opposite case: the ball is
+passing the committer, not arriving at them.
+
+**What this run does not show:**
+
+- **Missed genuine chances.** The counters observe committed episodes only. They do not measure
+  whether real aerial arrivals (a dropping cross or long ball at 1.6–2.6 m passing within reach of an
+  outfielder) occur and draw no commit, or are pre-empted by an earlier commit.
+- **Where the rising balls come from.** Kicker identity and launch type are not recorded, so the run
+  cannot say whether these are lofted passes and clearances leaving a nearby foot, or bounces.
+- **The latch's effect.** `_headerCommittedThisEpisode` clears for every agent that is not the current
+  nearest candidate, so the trigger is not strictly once per flight. Whether that adds or suppresses
+  commits is not counted.
+- **The 121 episodes with a minimum distance above 5 m.** These are unexplained; the forecast ignores
+  bounces and deflections.
+
+None of this authorizes tuning (KD-W1). #441 stays open and still precedes W9. The next measurement
+question is an arrival census that does not depend on the commit trigger, plus launch attribution for
+committed episodes. Choosing it is #441's decision, not this record's.
 
 ## Version history
 
@@ -155,3 +232,4 @@ reading against §1 that says which of (O)/(R) the numbers support and what they
 |---|---|---|
 | v0.1 | October 10, 2026 | Created with the instrument: definitions, code facts, neutrality gate, run procedure. No result. |
 | v0.2 | October 11, 2026 | PR #497 review: §3.3 splits geometric counterfactual hits from timing-valid first frames and reads (R) only from the latter; the replica check compares the exact first frame; the instrument fails on any mismatch. No result yet. |
+| v0.3 | October 11, 2026 | First result recorded (§6): run `38104571610` at `0eb36aa8`, replica check 0. It supports (O) at the commit trigger: commits fire on low, rising balls already passing the agent, and the timing-valid counterfactual is 0 of 1,841. It does not support (R). §5 runtime corrected to the measured 18 minutes. |

@@ -10,7 +10,15 @@
 
 ---
 
-> **UPDATED October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
+> **UPDATED October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
+> `0eb36aa8`, replica check 0). Over the six seeds there were 1,861 commits, 0 executed and 1,841 `PositionedPoorly`.
+> A trajectory-height head finds 0 timing-valid contacts, so Heading #10's static-height search is not the cause.
+> The commit trigger is: 96% of commits fire on a low ball rising past the agent (95% below 1.0 m), the jump
+> starts the same frame, and in 1,816 of 1,841 the ball's closest pass is before the contact window. By the apex the
+> ball is above the head and 1–2 m away. Not measured: missed genuine aerial arrivals and launch origin.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.3 §6.
+>
+> **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
 > per-frame snapshot-digest identity gate. They split `PositionedPoorly` into aerial-check vs no-contact-frame,
 > test the shipped static-head prediction against trajectory-head counterfactuals, and record miss geometry and
@@ -740,6 +748,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.36 | 2026-10-11 | — | First #441 result recorded (run `38104571610`, PR #497 head `0eb36aa8`): 1,861 commits → 0 executed; timing-valid trajectory-head counterfactual 0/1,841, so not a #10 realization problem; commits fire on low rising balls already passing the agent (opportunity problem at the commit trigger). #441 stays open; no behavior, `[GT]`, schema or RNG change. |
 | 1.35 | 2026-10-10 | — | #441 observation-only counters landed (`HeadingMechanics` v1.10 observer, `HeaderReachabilityDiagnosticTests` v1.0, `header-reachability` instrument, definitions in `header-reachability-441-counters.md` v0.1). No run yet; no behavior, `[GT]`, schema or RNG change. |
 | 1.34 | 2026-10-10 | — | Records owner decisions D-03 (Recovering stays ineligible), D-04 (tackle-foul cooldown bypass retained) and D-05 (#440 and a re-authored, split #434 included after B→C; #434 formation/Duty in PM-2 scope). No pre-B behavior change; no `[GT]` or code change. |
 | 1.33 | 2026-10-09 | — | Synchronizes W8 substrate/compile and W3 reachability status; points current parallel ordering to roadmap §5.1, with single-host queue, census-dependent substitution edge, landing-order schemas, W10 contract gates and selected PM-2 quick-sim anchor. KD-W1 and pending decisions unchanged. |
