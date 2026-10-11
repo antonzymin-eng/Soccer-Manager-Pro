@@ -34,6 +34,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "p5b-host-20261007": ("manifest", FULL_MANIFEST),
     "host-93de60f6-20261009": ("manifest", FULL_MANIFEST),
     "host-clean-editmode-20261009": ("manifest", FULL_MANIFEST),
+    "host-matchengine-editmode-20261011": ("manifest", FULL_MANIFEST),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be

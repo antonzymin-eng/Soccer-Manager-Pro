@@ -1,0 +1,26 @@
+STARTED 2026-10-11T16:54:06.2021257Z
+BEGIN 2026-10-11T16:54:07.6337102Z TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+Passed 1147.1s TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+BEGIN 2026-10-11T17:13:16.2142954Z TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+Passed 330.4s TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+BEGIN 2026-10-11T17:18:46.9217899Z TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+Passed 369.7s TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+BEGIN 2026-10-11T17:24:57.1336137Z TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+Failed 1075.6s TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate ::   scenario=match-engine-inposs-gate run_seed=1089357896855742840 manifest_seed=1089357896855742840 predicates_total=6 predicates_failed=2 failed predicate=final-third-play-is-somebodys-possession-home-view-0x0F1E2D3C4B5A6978 expected=true seed=0x0F1E2D3C4B5A6978 homeShare=0.361 (bound 0.70; pre-fix corpus ≈ 0.24) failed predicate=final-third-play-is-somebodys-possession-away-view-0x0F1E2D3C4B5A6978 expected=true seed=0x0F1E2D3C4B5A6978 awayShare=0.361 (bound 0.70; pre-fix corpus ≈ 0.24)    Expected: Passed    But was:  Failed  
+BEGIN 2026-10-11T17:42:54.2681366Z TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+Passed 860.7s TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+BEGIN 2026-10-11T17:57:16.3688267Z TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+Passed 491.1s TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+BEGIN 2026-10-11T18:05:28.7183846Z TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+Passed 545.8s TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+BEGIN 2026-10-11T18:14:35.0132576Z TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+Passed 298.5s TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+BEGIN 2026-10-11T18:19:33.7319589Z TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+Passed 384.6s TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+BEGIN 2026-10-11T18:25:58.6639381Z TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+Passed 1495.4s TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+BEGIN 2026-10-11T19:05:03.8672428Z TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+Passed 123.9s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+BEGIN 2026-10-11T19:07:07.7817839Z TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)
+Passed 119.7s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)
+FINISHED 2026-10-11T19:09:08.5972315Z passed=11 failed=1 skipped=0 inconclusive=0 status=Failed

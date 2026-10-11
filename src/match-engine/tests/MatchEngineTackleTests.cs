@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineTackleTests.cs
 // Created:  2026-08-12
+// Modified: 2026-10-11 ([Timeout(7200000)] for Unity's 180 s default — v1.5)
 // Modified: 2026-09-28 (FM-03 closeout: restore unexpected-Error policing in restore lock — v1.4)
 // Modified: 2026-09-23 (#442 approved W2 deterministic-corpus sizing contract — six pooled corpus seeds; two restore seeds retained)
 // Author:   —
@@ -310,6 +311,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        [Timeout(7200000)]
         public void SaveAndRestoreCarryTheTackleLatches([ValueSource(nameof(RestoreSeeds))] ulong seed)
         {
             // This test's oracle is the serialized tackle-latch state and replay-count equality below.
@@ -387,4 +389,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.2     | 2026-09-17 | —      | PR #416: save/restore lock ignores unrelated composed-play error logs; two-seed latch/replay assertions remain the oracle and pass on the live production head. |
 // | 1.3     | 2026-09-23 | —      | #442 approved contract: pooled composed-play corpus uses the six frozen #435 seeds at 150k ticks each; save/restore remains on the original two seeds. No assertion, guard, threshold, bound, or tick horizon changed. |
 // | 1.4     | 2026-09-28 | —      | FM-03 closeout: restore lock no longer suppresses unexpected Error logs; CONTACT-time shot possession loss is Warning-level. |
+// | 1.5     | 2026-10-11 | —      | [Timeout(7200000)]: 232 s and 217 s per case in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion

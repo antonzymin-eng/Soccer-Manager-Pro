@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineCloseChanceTests.cs
 // Created:  2026-08-04
+// Modified: 2026-10-11 ([Timeout(7200000)] for Unity's 180 s default — v1.2)
 // Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-08-04
 // Author:   —
@@ -19,6 +20,7 @@ namespace TacticalDirector.MatchEngine
     public sealed class MatchEngineCloseChanceTests
     {
         [Test]
+        [Timeout(7200000)]
         public void sim_match_engine_close_chance()
         {
             var runner = new ScenarioRunner(MatchEngineCloseChanceScenarios.BuildIndex());
@@ -36,4 +38,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-08-04 | —      | Initial: runs the close-chance-creation scenario.         |
 // | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.2     | 2026-10-11 | —      | [Timeout(7200000)]: 951 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion

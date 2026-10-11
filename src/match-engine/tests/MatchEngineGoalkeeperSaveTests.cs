@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGoalkeeperSaveTests.cs
 // Created:  2026-07-27
+// Modified: 2026-10-11 ([Timeout(7200000)] for Unity's 180 s default — v1.2)
 // Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-27
 // Author:   —
@@ -19,6 +20,7 @@ namespace TacticalDirector.MatchEngine
     public sealed class MatchEngineGoalkeeperSaveTests
     {
         [Test]
+        [Timeout(7200000)]
         public void sim_match_engine_goalkeeper_saves()
         {
             var runner = new ScenarioRunner(MatchEngineGoalkeeperSaveScenarios.BuildIndex());
@@ -37,4 +39,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-27 | —      | Initial: runs the §5.Z.17 goalkeeper save acceptance      |
 // |         |            |        | scenario.                                                 |
 // | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.2     | 2026-10-11 | —      | [Timeout(7200000)]: 389 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion
