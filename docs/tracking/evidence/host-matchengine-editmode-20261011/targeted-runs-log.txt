@@ -1,0 +1,14 @@
+# Observer-neutrality test run alone at fce91e53, before the full run
+STARTED 2026-10-11T04:41:46.7272073Z tests=4041
+Passed 62.8s TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityObserver_DoesNotChangeSnapshotDigests
+FINISHED 2026-10-11T04:42:50.4187276Z passed=1 failed=0 skipped=0 inconclusive=0 status=Passed
+
+# Sleep-affected case rerun alone at fce91e53, after the full run
+STARTED 2026-10-11T14:06:53.0241174Z
+Failed 216.9s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL) :: Timeout value of 180000 ms was exceeded. If this is intended, increase the timeout value using a TimeoutAttribute.
+FINISHED 2026-10-11T14:44:47.6953696Z passed=0 failed=1 skipped=0 inconclusive=0 status=Failed
+
+# Baseline: sim_match_engine_inposs_gate alone at pre-PR main 2a396d56
+STARTED 2026-10-11T14:49:04.0877661Z
+Failed 1180.2s TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate ::   scenario=match-engine-inposs-gate run_seed=1089357896855742840 manifest_seed=1089357896855742840 predicates_total=6 predicates_failed=2 failed predicate=final-third-play-is-somebodys-possession-home-view-0x0F1E2D3C4B5A6978 expected=true seed=0x0F1E2D3C4B5A6978 homeShare=0.361 (bound 0.70; pre-fix corpus ≈ 0.24) failed predicate=final-third-play-is-somebodys-possession-away-view-0x0F1E2D3C4B5A6978 expected=true seed=0x0F1E2D3C4B5A6978 awayShare=0.361 (bound 0.70; pre-fix corpus ≈ 0.24)    Expected: Passed    But was:  Failed  
+FINISHED 2026-10-11T15:08:46.8433853Z passed=0 failed=1 skipped=0 inconclusive=0 status=Failed

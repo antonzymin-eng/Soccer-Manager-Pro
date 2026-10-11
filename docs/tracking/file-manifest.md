@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 11, 2026 — **PR #497 review: #441 §6.2 wording.** No file added or removed. **Modified:** `docs/tracking/header-reachability-441-counters.md` v0.4, `docs/tracking/match-engine-wiring-backlog.md` (v1.36 banner reworded in place, no version change), `docs/tracking/open-issues.md` (pointer only), `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** October 11, 2026 — **First pinned-host MatchEngine EditMode evidence (PR #497 head `fce91e53`).** **New:** `docs/tracking/evidence/host-matchengine-editmode-20261011/`, containing `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-log.txt`, `editmode-summary.txt`, `targeted-runs-log.txt`, `rerun-results.xml.xz` and `baseline-inposs-results.xml.xz`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (registers the directory, 13 contracts), `tools/tests/test_evidence_manifests.py` (count 12 → 13), `docs/tracking/open-issues.md` (two new entries), `docs/agent-guides/project-reference.md` (index and count 33 / 64), `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** October 11, 2026 — **PR #497 review: #441 §6.2 wording.** No file added or removed. **Modified:** `docs/tracking/header-reachability-441-counters.md` v0.4, `docs/tracking/match-engine-wiring-backlog.md` (v1.36 banner reworded in place, no version change), `docs/tracking/open-issues.md` (pointer only), `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** October 11, 2026 — **#441 first result recorded (docs only).** No file added or removed. **Modified:** `docs/tracking/header-reachability-441-counters.md` v0.3 (§6 results; row added below, which the October 10 landing omitted), `docs/tracking/match-engine-wiring-backlog.md` v1.36, `docs/tracking/open-issues.md` (version pointer and one sentence), `docs/tracking/CHANGELOG.md` and this manifest.
 

@@ -1,0 +1,33 @@
+# Source identity captured while the MatchEngine EditMode run was in progress
+# (after the compile; the same porcelain check returned 0 entries immediately before 'git checkout --detach fce91e53')
+captured_utc: 2026-10-11T14:02:37Z
+branch: (detached HEAD; PR #497 branch claude/ecstatic-einstein-877edo)
+head_commit: fce91e5365530cbe22f2599a023ac721961b6ee9
+head_tree: 40cdf49afc9e483b859da61a9e032bf312b3c18b
+tree_src: a59653e020640c237cf71c0284e2112a7fb54824
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree_Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain_tracked_and_untracked (git status --porcelain=v1 --untracked-files=all): 0 entries
+porcelain_ignored_under_src_Packages_ProjectSettings (git status --porcelain=v1 --ignored -- src Packages ProjectSettings): 0 entries
+unity_editor: 6000.4.9f1 (6000.4.9f1 (f7258d6eebbe))
+assets_scripts_junction: C:\Users\azymi\Desktop\Soccer-Manager-Pro\src
+
+# Re-captured after the full run and the sleep-affected rerun finished
+captured_utc: 2026-10-11T14:45:13Z
+head_commit: fce91e5365530cbe22f2599a023ac721961b6ee9
+tree_src: a59653e020640c237cf71c0284e2112a7fb54824
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+porcelain_src_Packages_ProjectSettings_including_untracked_and_ignored (git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings): 0 entries
+verify: git rev-parse fce91e53:src  ->  a59653e020640c237cf71c0284e2112a7fb54824
+main identity: git rev-parse 82505636:src (PR #497 merge commit, main head)  ->  a59653e020640c237cf71c0284e2112a7fb54824
+
+# Baseline: pre-PR main (first parent of merge 82505636), checked out after the fce91e53 runs
+captured_utc: 2026-10-11T15:09:42Z (after the baseline run; the porcelain check returned 0 entries immediately after checkout as well)
+head_commit: 2a396d56ec5ddcbbfe2f5340a74b6dcaca33f1d4
+tree_src: 5253abe23f402fb8a38e5fd6adbced578115d63d
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+porcelain_src_Packages_ProjectSettings_including_untracked_and_ignored: 0 entries
+src diff fce91e53 vs baseline:  8 files changed, 896 insertions(+), 1 deletion(-)

@@ -1,0 +1,31 @@
+Host: owner Windows 11, Unity 6000.4.9f1 (f7258d6eebbe) editor (Mono). Source: commit fce91e5365530cbe22f2599a023ac721961b6ee9 (PR #497 head), src tree a59653e020640c237cf71c0284e2112a7fb54824, identical to main 82505636 (the #497 merge); 0 untracked or ignored files under src/Packages/ProjectSettings before and after (source-identity.txt). Assets/Scripts junction -> src.
+Compile: AssetDatabase.Refresh(ForceUpdate) + forced recursive reimport of Assets/Scripts; Tundra build success (50.03 s), 0 error CS, 0 shim build-output references, only the three known warnings (compile.txt).
+Run: EditMode, assembly TacticalDirector.MatchEngine.Tests only. First Unity run of this assembly on the pinned host. ("tests=4041" in the logs is the whole project's test-tree count reported by RunStarted, not the filtered set.)
+STARTED 2026-10-11T04:43:15.4255525Z
+FINISHED 2026-10-11T14:05:57.3477019Z passed=547 failed=12 skipped=14 inconclusive=1 status=Failed (574 results)
+Interruption: the host slept 07:36:00Z-14:01:26Z (Kernel-Power 42/107/1, "Button or Lid"). Only SaveAndRestoreCarryTheTackleLatches(3517370462UL) was running across it (23384.0 s recorded); rerun alone afterwards: Failed, 216.9 s, same 180 s timeout (targeted-runs-log.txt, rerun-results.xml.xz).
+
+PR #497 observer-neutrality gate: HeaderReachabilityObserver_DoesNotChangeSnapshotDigests PASSED twice: alone before the full run (62.8 s) and inside it (60.9 s). 18,000 frames, per-frame snapshot digests identical with the observer attached.
+
+Failures (12):
+- 11 x Unity default per-test timeout (180,000 ms). These tests carry no [Timeout]; the Linux gate has no per-test timeout. Their own predicates' outcome is not observable from a timeout result.
+    sim_match_engine_shot_speed 2369.4 s
+    sim_match_engine_keeper_claim 1159.4 s
+    sim_match_engine_close_chance 950.5 s
+    sim_match_engine_keeper_conversion 573.7 s
+    sim_match_engine_keeper_contact 558.5 s
+    sim_match_engine_shot_outcomes 458.9 s
+    sim_match_engine_goalkeeper_saves 389.1 s
+    sim_match_engine_play_develops 359.0 s
+    sim_match_engine_discipline_plausible 284.4 s
+    SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL) 231.6 s
+    SaveAndRestoreCarryTheTackleLatches(3517370462UL) 216.9 s on clean rerun (23384.0 s in the full run, sleep)
+- 1 x predicate failure, sim_match_engine_inposs_gate (1225.8 s): predicates_total=6 predicates_failed=2. Logged message (truncated at 300 chars): first failed predicate final-third-play-is-somebodys-possession-home-view on seed 0x0F1E2D3C4B5A6978, homeShare=0.361, bound > 0.70 (pre-fix corpus ~0.24).
+  Baseline: the same test alone at pre-PR main 2a396d56 (src tree 5253abe2, compiled 0 errors) fails the same two predicates, both on seed 0x0F1E2D3C4B5A6978: home view homeShare=0.361 and away view awayShare=0.361; 1180.2 s (baseline-inposs-results.xml.xz holds the full message). Not caused by PR #497.
+  Linux (.NET 8) at the same commit fce91e53, CI run 38108462714 (PR functional gate, executed-tests TRX): Passed in 6 m 9 s, INPOSS_GATE_SEED_BASELINE seed=0x0F1E2D3C4B5A6978 homeShare=0.927719, seed=0x1A2B3C4D5E6F7081 homeShare=0.937539. The quarantine and owner-held-red lists are empty. So on this seed the two runtimes differ by 0.928 vs 0.361, not by a rounding margin.
+
+Inconclusive (1): MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice -- "too few connecting challenges to judge the share (won=3 loose=10 foul=1 missed=57 dispossessions=3)". Also inconclusive on Linux at fce91e53 (TRX outcome NotExecuted, "won=9 loose=13 foul=3 missed=56 dispossessions=9"), so not Unity-specific.
+
+Skipped (14): env-gated diagnostic instruments, by design (CloseChance, FoulRate, GkContactRate, GkRush, GkSave x2, GoalConversion, HeaderReachability, MatchBalance x2, ShotOutcome, TackleIntent, W12GateFiring, W8StageA).
+
+Lost artifact: the full run's NUnit XML. TestRunnerApi.RegisterCallbacks registers callbacks process-wide, so the later targeted rerun also fired the full run's RunFinished callback and overwrote full-results.xml. editmode-log.txt (written per test by the full run's callback, verified to hold exactly its 574 results between its own STARTED and FINISHED lines) is the record for the full run; failure messages there are truncated at 300 characters. The two targeted runs' XML files are intact.
