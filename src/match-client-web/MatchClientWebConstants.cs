@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientWebConstants.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-10-11
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6 renderer decision — option (b)), interactive Unity
 //           client design note §5-P3/§5-P5, Code Standards #20
@@ -27,6 +27,16 @@ namespace TacticalDirector.MatchClientWeb
         /// the hang guard against a client that never sends a terminator. Mirrors the spectator
         /// viewer's guard; a request line longer than this is refused, not buffered.</summary>
         public const int MAX_HTTP_REQUEST_LINE_BYTES = 8_192;
+
+        /// <summary>[FIXED] Upper bound (ms) on the lingering close: how long a connection thread
+        /// keeps draining a peer's unread request bytes after the response, waiting for it to close,
+        /// before closing anyway. Mirrors the spectator viewer's bound.</summary>
+        public const int LINGERING_CLOSE_TIMEOUT_MS = 2_000;
+
+        /// <summary>[FIXED] Upper bound on the bytes the lingering close drains — room for the rest
+        /// of a maximal request line plus a browser's header block. A peer still sending past it is
+        /// closed on regardless. Mirrors the spectator viewer's bound.</summary>
+        public const int LINGERING_CLOSE_MAX_DRAIN_BYTES = 16_384;
 
         #endregion
 
@@ -77,4 +87,6 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | first (Fixed before GT), and FramePollIntervalMs' doc fixed —  |
 // |         |            |        | it claimed 100 ms was "well below the ~16 ms tick" and sized   |
 // |         |            |        | for an interpolation the page does not do.                     |
+// | 1.2     | 2026-10-11 | —      | Lingering-close bounds (timeout, drain bytes) for the server's |
+// |         |            |        | half-close-and-drain before closing a connection.              |
 #endregion

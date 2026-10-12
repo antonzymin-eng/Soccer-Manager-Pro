@@ -1,6 +1,6 @@
 // File:     src/match-viewer/MatchViewerConstants.cs
 // Created:  2026-07-02
-// Modified: 2026-07-24
+// Modified: 2026-10-11
 // Author:   —
 // Spec:     Match viewer (presentation tooling; not a numbered spec — see docs/tracking/match-engine-design.md
 //           for the engine it observes) + interactive Unity client (docs/tracking/interactive-unity-client-design.md
@@ -98,6 +98,12 @@ namespace TacticalDirector.MatchViewer
         /// <summary>[GT] Maximum bytes <c>LiveMatchServer</c> will read while looking for the end of an HTTP request line before abandoning the connection (abuse/hang guard against a client that never sends CRLF).</summary>
         public static readonly int MaxHttpRequestLineBytes = Config.GetInt("match-viewer", "MaxHttpRequestLineBytes", 8192);
 
+        /// <summary>[GT] Upper bound (ms) on <c>LiveMatchServer</c>'s lingering close: how long a connection thread keeps draining a peer's unread request bytes after the response, waiting for it to close, before closing anyway.</summary>
+        public static readonly int LingeringCloseTimeoutMs = Config.GetInt("match-viewer", "LingeringCloseTimeoutMs", 2000);
+
+        /// <summary>[GT] Upper bound on the bytes <c>LiveMatchServer</c>'s lingering close drains — room for the rest of a maximal request line plus a browser's header block. A peer still sending past it is closed on regardless.</summary>
+        public static readonly int LingeringCloseMaxDrainBytes = Config.GetInt("match-viewer", "LingeringCloseMaxDrainBytes", 16384);
+
         /// <summary>[GT] Milliseconds <c>LiveMatchStreamer</c>'s pacing loop sleeps between checks while paused (user-paused or auto-paused at full time), instead of spinning.</summary>
         public static readonly int LivePausedPollIntervalMs = Config.GetInt("match-viewer", "LivePausedPollIntervalMs", 100);
 
@@ -122,4 +128,6 @@ namespace TacticalDirector.MatchViewer
 // | 1.4     | 2026-07-24 | —      | Interactive Unity client §5-P0: MaxLiveSpeedMultiplier default |
 // |         |            |        | 8 → 10 so the master-plan speed set {Pause,1,3,5,10} is         |
 // |         |            |        | deliverable (the streamer clamps to this cap).                 |
+// | 1.5     | 2026-10-11 | —      | LingeringCloseTimeoutMs / LingeringCloseMaxDrainBytes [GT] for |
+// |         |            |        | LiveMatchServer's half-close-and-drain before closing.         |
 #endregion

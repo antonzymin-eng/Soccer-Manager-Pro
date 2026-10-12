@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 11, 2026 — **MatchEngine Unity timeouts and evidence v1.1.** No file removed. **New** in `docs/tracking/evidence/host-matchengine-editmode-20261011/`: `timeouts-log.txt`, `timeouts-results.xml.xz`. **Modified:** `src/match-engine/tests/MatchEngineShotSpeedTests.cs`, `MatchEngineKeeperClaimTests.cs`, `MatchEngineCloseChanceTests.cs`, `MatchEngineKeeperConversionTests.cs`, `MatchEngineKeeperContactTests.cs`, `MatchEngineShotOutcomeTests.cs`, `MatchEngineGoalkeeperSaveTests.cs`, `MatchEnginePlayDevelopmentTests.cs`, `MatchEngineDisciplineTests.cs`, `MatchEngineInPossGateTests.cs` (all v1.2), `MatchEngineTackleTests.cs` v1.5; the evidence `README.md` v1.1, `editmode-summary.txt`, `source-identity.txt`, `compile.txt` and `SHA256SUMS`; `docs/tracking/open-issues.md` and `open-issues-resolved.md` (timeout entry archived); `docs/agent-guides/project-reference.md` (32 / 65); `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.185 and this manifest.
+**Last Updated:** October 11, 2026 — **Lingering close for the two loopback HTTP servers (Windows RST fix).** No file added or removed. **Modified:** `src/match-client-web/MatchClientServer.cs` v1.2, `MatchClientWebConstants.cs` v1.2, `tests/MatchClientServerTests.cs` v1.2; `src/match-viewer/LiveMatchServer.cs` v1.6, `MatchViewerConstants.cs` v1.5, `tests/LiveMatchServerTests.cs` v1.2; `docs/tracking/browser-match-client-design.md` v1.4; `docs/tracking/interactive-match-view-design.md` v0.5; `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.186 and this manifest.
+
+**Last Updated (prior):** October 11, 2026 — **MatchEngine Unity timeouts and evidence v1.1.** No file removed. **New** in `docs/tracking/evidence/host-matchengine-editmode-20261011/`: `timeouts-log.txt`, `timeouts-results.xml.xz`. **Modified:** `src/match-engine/tests/MatchEngineShotSpeedTests.cs`, `MatchEngineKeeperClaimTests.cs`, `MatchEngineCloseChanceTests.cs`, `MatchEngineKeeperConversionTests.cs`, `MatchEngineKeeperContactTests.cs`, `MatchEngineShotOutcomeTests.cs`, `MatchEngineGoalkeeperSaveTests.cs`, `MatchEnginePlayDevelopmentTests.cs`, `MatchEngineDisciplineTests.cs`, `MatchEngineInPossGateTests.cs` (all v1.2), `MatchEngineTackleTests.cs` v1.5; the evidence `README.md` v1.1, `editmode-summary.txt`, `source-identity.txt`, `compile.txt` and `SHA256SUMS`; `docs/tracking/open-issues.md` and `open-issues-resolved.md` (timeout entry archived); `docs/agent-guides/project-reference.md` (32 / 65); `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.185 and this manifest.
 
 **Last Updated (prior):** October 11, 2026 — **First pinned-host MatchEngine EditMode evidence (PR #497 head `fce91e53`).** **New:** `docs/tracking/evidence/host-matchengine-editmode-20261011/`, containing `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-log.txt`, `editmode-summary.txt`, `targeted-runs-log.txt`, `rerun-results.xml.xz` and `baseline-inposs-results.xml.xz`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (registers the directory, 13 contracts), `tools/tests/test_evidence_manifests.py` (count 12 → 13), `docs/tracking/open-issues.md` (two new entries), `docs/agent-guides/project-reference.md` (index and count 33 / 64), `docs/tracking/CHANGELOG.md` and this manifest.
 
@@ -3225,7 +3227,7 @@ Nine v1.0 source/test files; each matching `.meta` is inventoried separately. Ex
 | File | Purpose |
 |---|---|
 | `src/match-viewer/match-viewer.asmdef` | Assembly definition `TacticalDirector.MatchViewer`; references MatchEngine + DeterministicSim + BallPhysics + AgentMovement + ProjectConstants |
-| `src/match-viewer/MatchViewerConstants.cs` | Catalogue: IFAB pitch-marking geometry `[FIXED]` (const) + canvas/recording presentation `[GT]` (config-resolved via `GameplayConfig`, `"match-viewer"` section; presentation-only — nothing feeds the sim or digest) |
+| `src/match-viewer/MatchViewerConstants.cs` | Catalogue: IFAB pitch-marking geometry `[FIXED]` (const) + canvas/recording presentation `[GT]` (config-resolved via `GameplayConfig`, `"match-viewer"` section; presentation-only — nothing feeds the sim or digest). v1.5 adds `LingeringCloseTimeoutMs` / `LingeringCloseMaxDrainBytes` |
 | `src/match-viewer/ReplayFrame.cs` | One sampled frame: tick / ball position / possessing agent / agent positions (value copies, never aliasing live buffers) |
 | `src/match-viewer/MatchReplay.cs` | Immutable frame sequence + roster (teamIds, GK flags) / pitch / cadence metadata; ReadOnlyCollection + cloned arrays; fail-loud ctor (frame coherence, strictly-increasing ticks, non-empty, metadata NaN-gates) + roster-index guards |
 | `src/match-viewer/MatchReplayRecorder.cs` | Ticks an engine, sampling between ticks; seed + pre-configured-engine overloads; fail-loud guards; kickoff frame + final tick always captured |
@@ -3239,9 +3241,9 @@ Nine v1.0 source/test files; each matching `.meta` is inventoried separately. Ex
 | `src/match-viewer/Scoreline.cs` | P1 AR-1 M-6: the home/away score pair as one carrier; owns the non-negative gate, so a negative score is refused before it can reach a frame |
 | `src/match-viewer/RestartBanner.cs` | P1 AR-1 M-6: the latched restart (cue + awarded team + tick). Team and tick are DERIVED from the cue, so `default(RestartBanner)` reports `NO_RESTART_TEAM` / 0 rather than "home team, tick 0" |
 | `src/match-viewer/LiveMatchStreamer.cs` | Real-time-paced `MatchEngine` tick loop (July 15, 2026); lock-protected latest-frame handoff; pause/resume/speed; full-time auto-pause; optional sim-thread pre-tick hook. Owns the P1 cross-tick restart latch — deliberately here, not in the engine, so nothing about it reaches the snapshot (KD-P1-3) |
-| `src/match-viewer/LiveMatchServer.cs` | Loopback-only hand-rolled HTTP server (July 15, 2026): `GET /` viewer page, `/frame` polled JSON, `/control` playback-only. Holds a streamer, never an engine. The `/frame` payload still carries only the pre-P1 fields — rendering the P1 additions is roadmap B6 |
+| `src/match-viewer/LiveMatchServer.cs` | Loopback-only hand-rolled HTTP server (July 15, 2026): `GET /` viewer page, `/frame` polled JSON, `/control` playback-only. Holds a streamer, never an engine. The `/frame` payload still carries only the pre-P1 fields — rendering the P1 additions is roadmap B6. v1.6 (Oct 11, 2026): lingering close (half-close + bounded drain) so Windows does not RST the response over unread request bytes |
 | `src/match-viewer/tests/LiveMatchStreamerTests.cs` | Latest-frame handoff; observer-neutrality digest; full-time auto-pause; speed/lifecycle guards; roster accessors; threaded start/stop smoke test |
-| `src/match-viewer/tests/LiveMatchServerTests.cs` | Real-loopback-socket routing / control / error-path / abuse-guard / shutdown locks |
+| `src/match-viewer/tests/LiveMatchServerTests.cs` | Real-loopback-socket routing / control / error-path / abuse-guard / shutdown locks; v1.2 adds the browser-shaped (unread header lines) whole-response lock |
 | `src/match-viewer/tests/LiveMatchFrameCueTests.cs` | P1: per-agent cue lockstep with positions, per-team substitution counts, derived period, and the restart LATCH (with a non-vacuity guard — restarts are sparse, so a bound that stopped working must fail rather than skip the property) |
 
 ### `src/ui-framework/` — UI / Client Framework #38 T0 substrate (July 25, 2026; spec APPROVED July 22, 2026)
@@ -3409,16 +3411,16 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | File | Purpose |
 |------|---------|
 | `match-client-web.asmdef` | `TacticalDirector.MatchClientWeb`; references MatchClientCore + UiFramework + MatchAnalytics + MatchViewer + MatchEngine + TacticalInstructions + ProjectConstants + DeterministicSim |
-| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound |
+| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound and (v1.2) lingering-close timeout / drain bounds |
 | `MatchClientHost.cs` | KD-W1/W4 composition: `MatchSession` + the #38 projection + the intent dispatcher + the live #37 aggregator, pumped by a sim-thread post-tick observer under an analytics lock |
 | `MatchClientResponse.cs` | KD-W6 — the router/transport seam value |
 | `MatchClientRouter.cs` | KD-W2/W3/W7 — the four routes and their privilege split; #38 frame + #37 report serialization; fail-loud parsing incl. the `Enum.IsDefined` guard |
 | `MatchClientPage.cs` | KD-W9 — the self-contained page (pitch, HUD, playback, tactics, statistics); renders the view model, reads pitch geometry from the streamer |
-| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route |
+| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route. v1.2: lingering close (half-close + bounded drain) before closing |
 | `tests/match-client-web-tests.asmdef` | `TacticalDirector.MatchClientWeb.Tests` (Editor-only) |
 | `tests/MatchClientRouterTests.cs` | Routing table + the privilege split asserted against the command queue + fail-loud parsing |
 | `tests/MatchClientHostTests.cs` | The every-tick pump over a really-running match (F6 self-checks it), `ServiceOnce` not advancing it, the disarm-and-latch fault path, intent delivery |
-| `tests/MatchClientServerTests.cs` | Real-loopback framing, routing, request-line bound, post-`Stop` refusal, rebind |
+| `tests/MatchClientServerTests.cs` | Real-loopback framing, routing, request-line bound, post-`Stop` refusal, rebind; v1.2 browser-shaped request gets the whole framed response |
 
 ---
 

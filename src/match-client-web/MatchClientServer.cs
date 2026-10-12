@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientServer.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-11
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6, option (b)), Code Standards #20
 // Purpose:  Loopback-only HTTP transport for the browser match client. Owns sockets and threads and
@@ -10,7 +10,9 @@
 //           LiveMatchServer already uses).
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -147,28 +149,72 @@ namespace TacticalDirector.MatchClientWeb
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
-                    string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
-                    {
-                        Write(stream, MatchClientResponse.Text(400, "Bad Request"));
-                        return;
-                    }
-
-                    if (_shuttingDown)
-                    {
-                        Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
-                        return;
-                    }
-
-                    Write(stream, _router.Route(method, pathAndQuery));
+                    Respond(stream);
+                    CloseGracefully(client.Client);
                 }
             }
             catch (Exception)
             {
                 // One malformed or aborted request must not take down the accept loop or another
                 // connection. Networking code, not the simulation inner loop FR-CS-069 targets.
+            }
+        }
+
+        private void Respond(Stream stream)
+        {
+            string requestLine = ReadRequestLine(stream);
+            if (requestLine == null) { return; }
+
+            if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+            {
+                Write(stream, MatchClientResponse.Text(400, "Bad Request"));
+                return;
+            }
+
+            if (_shuttingDown)
+            {
+                Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
+                return;
+            }
+
+            Write(stream, _router.Route(method, pathAndQuery));
+        }
+
+        /// <summary>
+        /// Lingering close. Only the request line is ever read, so the peer's header lines — or the
+        /// tail of a rejected or oversized request — are still unread when the response is done.
+        /// Windows answers a close over unread received bytes with RST instead of FIN, and a peer
+        /// that takes the RST before reading discards the response it was sent. Half-closing first
+        /// delimits the response with FIN; draining until the peer closes leaves the final close
+        /// nothing to reset over. Both the bytes drained and the wait are bounded, so a peer that
+        /// keeps sending or never closes costs at most the bound, after which the plain close
+        /// (and, if bytes remain, the RST) is the right answer to it.
+        /// </summary>
+        private static void CloseGracefully(Socket socket)
+        {
+            socket.Shutdown(SocketShutdown.Send);
+
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(MatchClientWebConstants.LINGERING_CLOSE_MAX_DRAIN_BYTES);
+            try
+            {
+                var clock = Stopwatch.StartNew();
+                int drained = 0;
+                while (drained < MatchClientWebConstants.LINGERING_CLOSE_MAX_DRAIN_BYTES)
+                {
+                    long remainingMs = MatchClientWebConstants.LINGERING_CLOSE_TIMEOUT_MS - clock.ElapsedMilliseconds;
+                    if (remainingMs <= 0) { return; }
+                    int waitMicroseconds = (int)Math.Min(remainingMs * 1_000, int.MaxValue);
+                    if (!socket.Poll(waitMicroseconds, SelectMode.SelectRead)) { return; }
+
+                    int read = socket.Receive(buffer, 0,
+                        MatchClientWebConstants.LINGERING_CLOSE_MAX_DRAIN_BYTES - drained, SocketFlags.None);
+                    if (read <= 0) { return; }
+                    drained += read;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 
@@ -296,4 +342,8 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | lifecycle, request-line bound and post-Stop 503 refusal.       |
 // | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, raw    |
 // |         |            |        | non-ASCII octets, and non-origin-form targets before routing.  |
+// | 1.2     | 2026-10-11 | —      | Lingering close: half-close after the response, then drain the |
+// |         |            |        | peer's unread bytes (bounded) before closing. Windows RSTs a   |
+// |         |            |        | close over unread input, which made the peer drop the response |
+// |         |            |        | (32 of 60 shim tests on the owner's host; Linux unaffected).   |
 #endregion

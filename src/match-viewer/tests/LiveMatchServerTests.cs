@@ -1,6 +1,6 @@
 // File:     src/match-viewer/tests/LiveMatchServerTests.cs
 // Created:  2026-07-15
-// Modified: 2026-09-09
+// Modified: 2026-10-11
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchServer, driven over real loopback TCP sockets (bound to an
@@ -89,6 +89,29 @@ namespace TacticalDirector.MatchViewer.Tests
                 Assert.AreEqual(200, status);
                 StringAssert.Contains("\"hasFrame\":false", body);
                 StringAssert.Contains("\"roster\":[", body);
+            }
+            finally { server.Stop(); }
+        }
+
+        [Test]
+        public void BrowserShapedRequest_WithUnreadHeaderLines_GetsTheWholeResponse()
+        {
+            // The server reads only the request line, so a browser's header lines are still unread
+            // when it closes. Without the lingering close, Windows resets the connection over them
+            // and the client loses the response; the JSON body must arrive whole.
+            LiveMatchServer server = StartServer(out _);
+            try
+            {
+                byte[] request = Encoding.ASCII.GetBytes(
+                    "GET /frame HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: LiveMatchServerTests\r\n" +
+                    "Accept: application/json\r\nConnection: close\r\n\r\n");
+
+                (int status, string body) = SendRequest(server.Port, request);
+
+                Assert.AreEqual(200, status);
+                StringAssert.StartsWith("{", body);
+                StringAssert.Contains("\"hasFrame\":false", body);
+                StringAssert.EndsWith("}", body);
             }
             finally { server.Stop(); }
         }
@@ -303,4 +326,7 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | idempotent shutdown.                                            |
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw    |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                    |
+// | 1.2     | 2026-10-11 | —      | Browser-shaped request with unread header lines receives the   |
+// |         |            |        | whole JSON response — locks the server's lingering close       |
+// |         |            |        | against the Windows RST on a close over unread input.          |
 #endregion

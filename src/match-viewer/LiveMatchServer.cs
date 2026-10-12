@@ -5,6 +5,7 @@
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
 // Modified: 2026-09-09 (strict request-line grammar and origin-form validation)
+// Modified: 2026-10-11 (lingering close: half-close + bounded drain so Windows does not RST the response)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -16,7 +17,9 @@
 //           apply here (same carve-out MatchReplayRecorder / HtmlReplayExporter already use).
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -159,16 +162,8 @@ namespace TacticalDirector.MatchViewer
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
-                    string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
-                    {
-                        WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
-                        return;
-                    }
-
-                    Route(stream, method, pathAndQuery);
+                    Respond(stream);
+                    CloseGracefully(client.Client);
                 }
             }
             catch (Exception)
@@ -176,6 +171,58 @@ namespace TacticalDirector.MatchViewer
                 // A single malformed/aborted request must not affect the accept loop or any other
                 // connection — this is networking/presentation code, not the 60 Hz simulation inner
                 // loop the project's try/catch ban targets (FR-CS-069 scope).
+            }
+        }
+
+        private void Respond(Stream stream)
+        {
+            string requestLine = ReadRequestLine(stream);
+            if (requestLine == null) { return; }
+
+            if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+            {
+                WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
+                return;
+            }
+
+            Route(stream, method, pathAndQuery);
+        }
+
+        /// <summary>
+        /// Lingering close. Only the request line is ever read, so the peer's header lines — or the
+        /// tail of a rejected or oversized request — are still unread when the response is done.
+        /// Windows answers a close over unread received bytes with RST instead of FIN, and a peer
+        /// that takes the RST before reading discards the response it was sent. Half-closing first
+        /// delimits the response with FIN; draining until the peer closes leaves the final close
+        /// nothing to reset over. Both the bytes drained and the wait are bounded, so a peer that
+        /// keeps sending or never closes costs at most the bound, after which the plain close
+        /// (and, if bytes remain, the RST) is the right answer to it.
+        /// </summary>
+        private static void CloseGracefully(Socket socket)
+        {
+            socket.Shutdown(SocketShutdown.Send);
+
+            int maxDrainBytes = MatchViewerConstants.LingeringCloseMaxDrainBytes;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(Math.Max(1, maxDrainBytes));
+            try
+            {
+                var clock = Stopwatch.StartNew();
+                int drained = 0;
+                while (drained < maxDrainBytes)
+                {
+                    long remainingMs = MatchViewerConstants.LingeringCloseTimeoutMs - clock.ElapsedMilliseconds;
+                    if (remainingMs <= 0) { return; }
+                    int waitMicroseconds = (int)Math.Min(remainingMs * 1_000, int.MaxValue);
+                    if (!socket.Poll(waitMicroseconds, SelectMode.SelectRead)) { return; }
+
+                    int read = socket.Receive(buffer, 0, maxDrainBytes - drained, SocketFlags.None);
+                    if (read <= 0) { return; }
+                    drained += read;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 
@@ -702,4 +749,10 @@ poll();
 // | 1.5     | 2026-09-09 | —      | Request parsing now requires exact HTTP/1.1 grammar, a valid   |
 // |         |            |        | method token, raw ASCII octets, and an origin-form target      |
 // |         |            |        | before routing.                                                |
+// | 1.6     | 2026-10-11 | —      | Lingering close: half-close after the response, then drain the |
+// |         |            |        | peer's unread bytes (bounded by LingeringCloseTimeoutMs and    |
+// |         |            |        | LingeringCloseMaxDrainBytes) before closing. Windows RSTs a    |
+// |         |            |        | close over unread input, so a rejected or oversized request    |
+// |         |            |        | (and any browser's unread headers) reset the peer instead of   |
+// |         |            |        | ending the response cleanly; Linux was unaffected.             |
 #endregion

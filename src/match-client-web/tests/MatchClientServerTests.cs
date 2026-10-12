@@ -1,6 +1,6 @@
 // File:     src/match-client-web/tests/MatchClientServerTests.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-11
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6), Code Standards #20
 // Purpose:  Drives the transport over real loopback sockets — the part the router tests cannot
@@ -82,6 +82,30 @@ namespace TacticalDirector.MatchClientWeb.Tests
             StringAssert.Contains("Content-Type: text/html; charset=utf-8", response);
             StringAssert.Contains("Content-Length: ", response);
             StringAssert.Contains("<canvas", response);
+        }
+
+        [Test]
+        public void BrowserShapedRequest_WithUnreadHeaderLines_GetsTheWholeFramedResponse()
+        {
+            // The server reads only the request line, so a browser's header lines are still unread
+            // when it closes. Without the lingering close, Windows resets the connection over them
+            // and the client loses the response; the body must arrive whole, matching its framing.
+            string response = Request(Encoding.ASCII.GetBytes(
+                "GET /frame HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: MatchClientServerTests\r\n" +
+                "Accept: application/json\r\nConnection: close\r\n\r\n"));
+
+            StringAssert.StartsWith("HTTP/1.1 200 OK", response);
+            int headerEnd = response.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+            Assert.Greater(headerEnd, 0, "The response carries a complete header block.");
+
+            const string LengthField = "Content-Length: ";
+            int lengthStart = response.IndexOf(LengthField, StringComparison.Ordinal) + LengthField.Length;
+            int lengthEnd = response.IndexOf("\r\n", lengthStart, StringComparison.Ordinal);
+            int contentLength = int.Parse(response.Substring(lengthStart, lengthEnd - lengthStart));
+            string body = response.Substring(headerEnd + 4);
+
+            Assert.Greater(contentLength, 0);
+            Assert.AreEqual(contentLength, Encoding.UTF8.GetByteCount(body), "The body is not truncated.");
         }
 
         [Test]
@@ -208,4 +232,7 @@ namespace TacticalDirector.MatchClientWeb.Tests
 // |         |            |        | request-line bound, post-Stop refusal and lifecycle idempotence|
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw   |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                   |
+// | 1.2     | 2026-10-11 | —      | Browser-shaped request with unread header lines receives the   |
+// |         |            |        | whole response (Content-Length matches the body) — locks the   |
+// |         |            |        | server's lingering close against the Windows RST.              |
 #endregion
