@@ -1,0 +1,22 @@
+# sim_match_engine_inposs_gate engine-log traces (Debug.Log stream, level prefixes stripped; analysis/cmp_traces.py)
+# linux = CI run 38108462714 TRX (fce91e53, ubuntu .NET 8); win-net8 = this host, .NET 8.0.425 shim at main 9d70dc8b;
+# unity = docs/tracking/evidence/host-matchengine-editmode-20261011/timeouts-results.xml.xz (e6b71350, Unity 6000.4.9f1)
+linux  events 1979 sha256(normalised) 6f78a70c07882f32993b770e0a5fb5dd924d417562e38260cd35dcb2900e4d93
+win    events 1979 sha256(normalised) 6f78a70c07882f32993b770e0a5fb5dd924d417562e38260cd35dcb2900e4d93
+unity  events 1775 sha256(normalised) f918b2bbb230ad44d5d416930616ae656196f218c5bfe53cfeb2f40d5888dbb3
+
+win-net8 vs linux:
+identical over common prefix of 1979
+win-net8 vs unity:
+first divergence at line 1
+ A 1 | [FirstTouch] Agent=5 Outcome=Controlled q=0.785 r=0.377m PossessingID=5 InterceptingID=-1
+ B 1 | [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+
+INPOSS_GATE lines, win-net8:
+INPOSS_GATE_SEED_BASELINE seed=0x0F1E2D3C4B5A6978 samples=15924 homeShare=0.927719 awayShare=0.927719
+INPOSS_GATE_SEED_BASELINE seed=0x1A2B3C4D5E6F7081 samples=16234 homeShare=0.937539 awayShare=0.937539
+INPOSS_GATE_POOLED_DIAGNOSTIC samples=32158 homeShare=0.932676 awayShare=0.932676
+INPOSS_GATE lines, linux:
+INPOSS_GATE_SEED_BASELINE seed=0x0F1E2D3C4B5A6978 samples=15924 homeShare=0.927719 awayShare=0.927719
+INPOSS_GATE_SEED_BASELINE seed=0x1A2B3C4D5E6F7081 samples=16234 homeShare=0.937539 awayShare=0.937539
+INPOSS_GATE_POOLED_DIAGNOSTIC samples=32158 homeShare=0.932676 awayShare=0.932676

@@ -1,0 +1,36 @@
+# Source identity for the six-seed platform-divergence runs (October 11, 2026)
+base_commit: 9d70dc8badf630ca0d37adbd685dd5437aba4b3f (origin/main, PR #498 merge)
+base_tree_src: cf43262524090aeda96d0b314f7acd467ee3c843
+run_tree_src: 1839bb0f4cecb67947d36cd31c43fb3193b7123a
+  = base + src/match-engine/tests/MatchEngineInPossGateScenarios.cs v1.4
+         + src/match-engine/tests/PlatformDivergenceDiagnosticTests.cs v1.0 (+ .meta)
+  computed independently in both checkouts with `git rev-parse $(git write-tree):src` after staging
+  exactly those files; the landing commit carries the same src tree (verify: git rev-parse <commit>:src).
+production_src_change_vs_base: none (both files are under src/match-engine/tests/)
+
+unity_lane:
+  host: owner's Windows 11 machine (certified determinism host)
+  editor: Unity 6000.4.9f1 (f7258d6eebbe), Mono, Assets/Scripts junction -> C:\Users\azymi\Desktop\Soccer-Manager-Pro\src
+  checkout: C:\Users\azymi\Desktop\Soccer-Manager-Pro, branch claude/inposs-platform-divergence
+  porcelain before compile (git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings):
+    M src/match-engine/tests/MatchEngineInPossGateScenarios.cs
+    ?? src/match-engine/tests/PlatformDivergenceDiagnosticTests.cs
+    (no ignored build output under src/)
+  compile: forced AssetDatabase.ImportAsset ... ForceUpdate; Editor.log "Tundra build success", 0 error CS
+  run: TestRunnerApi, EditMode, one test, 2026-10-11T21:32:55Z -> Passed 1890.8 s (unity-status.txt)
+  probes (tick3-5-agent-state-unity.txt, stall-window-unity.txt): unity-mcp RunCommand against the same compiled assemblies
+
+net8_lane:
+  host: same Windows 11 machine, .NET SDK 8.0.425, generated shim projects (tools/dotnet-ci/generate_projects.py), Debug
+  checkout: sparse git worktree of 9d70dc8b (src/, tools/, Packages/, docs/specs/SPEC_INDEX.md) in the session scratchpad,
+            with the two test files copied in byte-identical (cmp) — separate from the Unity checkout so no shim
+            bin/obj output could reach Unity's import
+  run: dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --filter PlatformDivergenceDiagnostic -> Passed 20 m 6 s
+  probe (tick3-5-agent-state-net8.txt): console app referencing that worktree's Debug net8.0 build output
+
+linux_equivalence:
+  The .NET lane ran on Windows, not Linux. gate-trace-comparison.txt shows that, for sim_match_engine_inposs_gate,
+  this host's .NET 8 shim and Linux CI run 38108462714 (fce91e53; production src identical to 9d70dc8b) emit the
+  same 1,979-event engine log (identical normalised SHA-256) and the same INPOSS_GATE lines, so the Windows .NET
+  lane stands in for the Linux measurement lane. Seeds 0x0F1E2D3C4B5A6978 and 0x1A2B3C4D5E6F7081 in net8-shares.tsv
+  reproduce CI's 15,924 / 0.927719 and 16,234 / 0.937539 exactly.

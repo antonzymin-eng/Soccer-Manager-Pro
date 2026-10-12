@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineInPossGateScenarios.cs
 // Created:  2026-08-08
+// Modified: 2026-10-11 (PlayOne/BuildSquad internal + optional per-tick observer for the platform-divergence diagnostic — v1.4)
 // Modified: 2026-09-17 (PR #416 corrected-baseline floors frozen from exact post-fix head)
 // Author:   —
 // Spec:     Positioning AI #12 §3.0.1 / §3.0.2 / FR-PA-022 (ERR-012-011);
@@ -49,7 +50,7 @@ namespace TacticalDirector.MatchEngine
         // PR #416 detector hardening preregistration freezes this run length before the corrected
         // W2-active baseline counts are observed. Full matches are required because §5.Z.23 AR-1
         // established that these distributions are not stationary within a match.
-        private const int NumTicks = 324000;
+        internal const int NumTicks = 324000;
 
         /// <summary>
         /// The two worst separators on this measure, deliberately adversarial. The broader six-seed
@@ -174,14 +175,26 @@ namespace TacticalDirector.MatchEngine
         }
 
         private static void PlayOne(
-            ulong seed, ref int samples, ref int homeViewPossession, ref int awayViewPossession)
+            ulong seed, ref int samples, ref int homeViewPossession, ref int awayViewPossession) =>
+            PlayOne(seed, NumTicks, null, ref samples, ref homeViewPossession, ref awayViewPossession);
+
+        /// <summary>
+        /// The gate's own match loop. <paramref name="observer"/>, when non-null, sees the engine
+        /// once before the first tick (tick = -1) and after every tick; it must only read. The
+        /// platform-divergence diagnostic uses it so its shares are this measurement, not a copy.
+        /// </summary>
+        internal static void PlayOne(
+            ulong seed, int numTicks, Action<int, MatchEngine> observer,
+            ref int samples, ref int homeViewPossession, ref int awayViewPossession)
         {
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
+            observer?.Invoke(-1, engine);
 
-            for (int tick = 0; tick < NumTicks; tick++)
+            for (int tick = 0; tick < numTicks; tick++)
             {
                 engine.RunTick();
+                observer?.Invoke(tick, engine);
                 if (tick % SampleStrideTicks != 0) continue;
 
                 UnityEngine.Vector3 ballPos = engine.BallView.Position;
@@ -204,7 +217,7 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Position-coherent squad on the ConfigureSquads path — the §5.Z.20–§5.Z.23
         /// measurement recipe, identical to the sibling close-chance scenario so the two read the
         /// same corpus.</summary>
-        private static Squad BuildSquad(ulong seed, int clubId)
+        internal static Squad BuildSquad(ulong seed, int clubId)
         {
             var rng = new DeterministicRngService(seed ^ (ulong)clubId);
             int stream = rng.RegisterStream(
@@ -224,6 +237,10 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.4     | 2026-10-11 | —      | PlayOne gains an internal overload (tick count + read-only     |
+// |         |            |        |   per-tick observer) and BuildSquad/NumTicks become internal,  |
+// |         |            |        |   so the platform-divergence diagnostic reuses this loop. The  |
+// |         |            |        |   gate's own path, seeds, floors and bounds are unchanged.     |
 // | 1.3     | 2026-09-17 | —      | PR #416 post-fix capture frozen: per-seed sample floors 12,664 |
 // |         |            |        |   / 13,138 derived before freezing from 15,830 / 16,423 at 80%;|
 // |         |            |        |   mirrored >0.70 checks remain independent; pooled diagnostic. |

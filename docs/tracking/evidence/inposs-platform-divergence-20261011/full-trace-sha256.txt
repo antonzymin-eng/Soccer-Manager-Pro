@@ -1,0 +1,15 @@
+# SHA-256 of the FULL per-seed fingerprint traces as written by PlatformDivergenceDiagnosticTests
+# (every tick -1..3599, then every 600th tick). The committed *-trimmed.tsv files keep ticks -1..60
+# and the 600-tick checkpoints from 3600; the full files were not committed for size.
+86e40303854794e60148b413105f9a40c30e97b98cf1be8388019a47b3eb8e19  unity-trace-0x00000000D1A6D05E.tsv  (4135 rows, 1045956 bytes)
+802713d4f6e7753f2df9d8de5cabe16d61084c8174c2b471208f56080a73f781  unity-trace-0x00000000D1A6D05F.tsv  (4135 rows, 1045956 bytes)
+e359e6003a5b13e98d6763d7f5518d7a6feca200017eada2b3a4e4593e6490ca  unity-trace-0x0F1E2D3C4B5A6978.tsv  (4135 rows, 1045956 bytes)
+fd959ea7c2c91cd98453bc0d427b0d9183b7331e2ab745b3e2c16cb12a879449  unity-trace-0x1A2B3C4D5E6F7081.tsv  (4135 rows, 1045956 bytes)
+8059e33521d1f83938e9859e39c62330f62924652572f22a53178af1079933e1  unity-trace-0x5EED000000000003.tsv  (4135 rows, 1045956 bytes)
+b32c68342ae9dd48be3e5e6da1a2d72bcd37bdccec9d230fd1da8deb8c842640  unity-trace-0x5EED000000000004.tsv  (4135 rows, 1045956 bytes)
+41d0396dc3bc69291659393674918b97ab4bd77f6bdafeb5aa022887dc189938  net8-trace-0x00000000D1A6D05E.tsv  (4135 rows, 1045956 bytes)
+a00ff277f03429a6173668b27b76cd06961542677004bab66d6863dff0218beb  net8-trace-0x00000000D1A6D05F.tsv  (4135 rows, 1045956 bytes)
+c2b4df56eca5c11cd45f9db8789f12c13558c470de49af40dd7cc42984ae748a  net8-trace-0x0F1E2D3C4B5A6978.tsv  (4135 rows, 1045956 bytes)
+1431fb38ab466f1e5a6fee250df6a75f3df0735814ee40f205366dca13c64936  net8-trace-0x1A2B3C4D5E6F7081.tsv  (4135 rows, 1045956 bytes)
+4d161ce71a673caf0dfb563d8ec97d0f7636f768153105bd0547c3348d7e69ad  net8-trace-0x5EED000000000003.tsv  (4135 rows, 1045956 bytes)
+a878f099b7099dd35478473f83ee5403ac00ffb42a1018f61d34c93c5d3e97ad  net8-trace-0x5EED000000000004.tsv  (4135 rows, 1045956 bytes)
