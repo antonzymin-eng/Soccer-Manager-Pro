@@ -1,5 +1,5 @@
-**Version:** 1.4
-**Modified:** October 12, 2026 — PR #500 review, clear C.7 flow and consistent revision metadata.
+**Version:** 1.5
+**Modified:** October 12, 2026 — PR #500 review, C.7 detail reference and explicit sweep-start capture.
 
 ## Appendix C: Visual Diagrams
 
@@ -252,6 +252,13 @@ This appendix provides text-based diagrams for specification clarity. These are 
 
 ### C.7 Physics Update Loop Flowchart
 
+This diagram summarizes update ordering. The detailed force selection, integration,
+spin-decay and validation rules remain authoritative in
+[§3.1.9 Numerical Integration](section-3-1-8-to-3-1-14.md#319-numerical-integration),
+including the validation clamp limits; this summary does not replace those rules.
+The sweep start is captured after bounce handling and force calculation, immediately
+before integration. A bounce can first snap the ball to ground height.
+
 **ERR-001-007:** between the diagram's validation and state-machine steps, resolve the
 eligible swept goal-frame contact against the saved pre-integration position (§3.1.9).
 A prior full boundary crossing wins; a prior frame contact shortens the segment before
@@ -263,7 +270,8 @@ flowchart TD
     A["Save valid checkpoint; normalize height"] --> B["Apply bounce if needed"]
     B --> S{"Active physics state?"}
     S -- No --> R["Return; no frame hit"]
-    S -- Yes --> I["Integrate; decay spin"]
+    S -- Yes --> P["Calculate forces; capture sweep start"]
+    P --> I["Integrate; decay spin"]
     I --> V["Validate physics"]
     V --> F{"Eligible swept contact?"}
     F -- Yes --> C["Apply frame response"]
@@ -332,7 +340,7 @@ flowchart TD
 - Appendix C diagrams are text-based Ã¢â‚¬â€ proper vector graphics deferred to Stage 1
 
 **Page Count:** ~22 pages  
-**Status:** Post-approval correction v1.4 — final-head Unity validation pending.
+**Status:** Post-approval correction v1.5 — final-head Unity validation pending.
 
 **Historical completion inventory (retained from the initial combined appendix):**
 - Sections 1-2 (Purpose, Requirements) v1.1
@@ -342,7 +350,7 @@ flowchart TD
 - Section 6 (Performance Analysis) v1.0
 - Section 7 (Future Extensions) v1.0
 - Section 8 (References) v1.2
-- Appendix C is now v1.4; Appendix A/B retains its separate revision record.
+- Appendix C is now v1.5; Appendix A/B retains its separate revision record.
 
 ## Revision History
 
@@ -351,3 +359,4 @@ flowchart TD
 | 1.3 | October 12, 2026 | ERR-001-007: C.7 places eligible swept frame contact between validation and final state classification. |
 
 | 1.4 | October 12, 2026 | PR #500 review: replace C.7 garbled tree with a rendered flowchart; align current footer/header metadata and identify the retained completion inventory as historical. |
+| 1.5 | October 12, 2026 | PR #500 follow-up review: identify C.7 as an ordering summary of §3.1.9's detailed force/integration/spin/validation rules; show capture of the sweep start after bounce handling and force calculation, before integration. |
