@@ -1,7 +1,7 @@
 # Goal-frame state ordering — ERR-001-007
 
 **Created:** October 12, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Purpose:** Preserve executable failing-before and passing-after evidence for the PR #499
 outside-post `OutOfPlay` deadlock. This is non-certifying .NET 8 / repository UnityShim evidence.
 
@@ -22,6 +22,18 @@ position and no restart. Both goals and both halves are staged using normal engi
 The correction advances the rebound next tick and awards the later genuine exit. The
 crossing-before-contact cases lock both corner and goal-kick awards. Restore is compared
 sequentially, using the existing canonical header/payload codec and per-tick snapshot digests.
+
+## Behaviour scope
+
+Every eligible integrated woodwork strike now reaches final state classification at its
+post-contact position and velocity. The usual outcome can remain the same, but a transition
+between Airborne, Bouncing, Rolling or Stationary can change even when the old match did not
+deadlock. Such differences can alter later trajectories, digests and RNG consumption. The
+completed-crossing guard also removes later frame contacts from the woodwork counter.
+The internal sweep start is captured after bounce handling; for a Bouncing input, ApplyBounce
+can change Z to the resting radius first, so that starting geometry can differ from the old
+pre-update host capture. It is not strictly true that the starting point is always unchanged. No
+production executable code is changed by this review follow-up.
 
 ## Execution boundary
 
@@ -63,8 +75,30 @@ exact selections and outcomes.
 Unity 6000.4.9f1 final-head compile; the new engine and Ball Physics regression cases; then the
 unchanged `sim_match_engine_inposs_gate`. No Unity instance is attached to this container.
 The deadlock and original inposs entries remain open until that evidence is recorded.
-The broader engine run and GitHub CI results will be recorded separately once complete.
-Static checks pass: document consistency, assembly layering, Unity metadata, evidence integrity
+A post-fix match-corpus stall audit is also still owed; none is claimed by the regression
+fixture or by a passing share alone. On the final head run
+`PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace` with
+`TD_PLATFORM_DIVERGENCE_OUT=<dir>` and a platform-specific prefix, without a ticks override,
+on both the pinned Unity host and the .NET lane. Retain all six complete match traces and
+inspect both halves for repeated `OutOfPlay` ball states (state ordinal 5) with unchanged
+position. After tick 3600 the existing instrument samples every 600 frames (10 seconds);
+consecutive such checkpoints are evidence of a long stall, but this sampled trace does not
+prove the exact duration of a shorter episode. Record every candidate's seed, start/end
+checkpoint, interval and period; reject a corpus with a long stall and obtain a per-tick
+window for diagnosis rather than recalibrating the share floor. This audit is a closure
+check, not an additional completed result.
+No completed result was retained for the supplementary broader local engine attempt; it is
+not evidence of a pass. GitHub's full functional gate on `97a0576` completed successfully: 37 suites,
+3,837 passed / 0 failed / 221 skipped; Match Engine 569/0/15 and Ball Physics 120/0/0.
+`ci-97a0576-functional-summary.txt` preserves the per-suite summaries. The unchanged
+frozen scenario bounds passed; this does not supply the pending corpus stall audit. The Markdown link job failed on an external 503 in unchanged
+`docs/specs/deterministic-sim/golden-vectors/siphash-2-4-kat.md` (workflow `38280459956`, job
+`114916213832`). The initial retry request was refused because the workflow was still running.
+After completion, the one accepted retry passed (job `114939623604`);
+`ci-97a0576-link-retry.txt` records that outcome.
+`link-check-97a0576-failure.txt` preserves the original failing URL/status. The next published
+head must receive fresh CI; no blanket "static CI passed" claim is made.
+Local static checks passed: document consistency, assembly layering, Unity metadata, evidence integrity
 and the CI-scoped Markdown lint. Evidence-manifest unit tests are 17/17. The tooling sweep is
 343 passed / 1 failed / 2 skipped out of 346; the one failure is
 `test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required`, with Git exit 128
@@ -78,6 +112,13 @@ rely on either boundary to resume play.
 
 ## Integrity
 
-`SHA256SUMS` covers every member other than itself. `source-identity.txt` states the baseline,
-source fingerprints and the comment-only metadata timing. The original PR #499 Unity trace
+`SHA256SUMS` covers every member other than itself. `source-identity.txt` preserves the initial head's baseline/fingerprints, and
+`review-source-identity.txt` verifies unchanged executable/assertion lines in this follow-up.
+The original record also states the comment-only metadata timing. The original PR #499 Unity trace
 remains in the separate `inposs-platform-divergence-20261011` evidence directory.
+
+## Revision history
+
+| Version | Date | Change |
+|---|---|---|
+| 1.1 | October 12, 2026 | Review corrections: broader contact/state impact, final 120/120 count, honest incomplete local/CI status and explicit pending post-fix corpus stall audit. Recorded test XML/logs unchanged. |

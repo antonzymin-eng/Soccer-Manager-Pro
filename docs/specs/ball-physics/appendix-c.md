@@ -1,5 +1,5 @@
-**Version:** 1.3
-**Modified:** October 12, 2026 — ERR-001-007.
+**Version:** 1.4
+**Modified:** October 12, 2026 — PR #500 review, clear C.7 flow and consistent revision metadata.
 
 ## Appendix C: Visual Diagrams
 
@@ -50,6 +50,7 @@ This appendix provides text-based diagrams for specification clarity. These are 
 ```
 
 **Hysteresis detail:**
+
 ```
   Height (z, ball center)
     Ã¢â€â€š
@@ -257,44 +258,18 @@ A prior full boundary crossing wins; a prior frame contact shortens the segment 
 classification. The host consumes the contact result only and must not run a second swept
 collision. `OUT_OF_PLAY` stays absorbing. This amendment is part of the flow below.
 
-```
-  UpdateBallPhysics(ball, dt, surface, wind)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Save last valid state
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Is state BOUNCING?
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ YES Ã¢â€ â€™ ApplyBounce() Ã¢â€ â€™ continue (don't return)
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ NO  Ã¢â€ â€™ continue
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Calculate forces by state:
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ AIRBORNE Ã¢â€ â€™ gravity + drag + Magnus
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ ROLLING  Ã¢â€ â€™ drag + rolling friction
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ BOUNCING Ã¢â€ â€™ drag only (bounce already applied)
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ OTHER    Ã¢â€ â€™ return (no physics)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Semi-implicit Euler integration:
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ v += (F_net / m) Ãƒâ€” dt
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ x += v Ãƒâ€” dt    (uses NEW velocity)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Update spin (AIRBORNE only):
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ Ãâ€° = UpdateSpinDecay(Ãâ€°, v, dt)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Validate state (ALWAYS):
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ NaN/Infinity check Ã¢â€ â€™ recover if detected
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ Velocity clamp (50 m/s max)
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ Spin clamp (80 rad/s max)
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ Height clamp (50m max)
-  Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ Ground penetration fix (z Ã¢â€°Â¥ RADIUS)
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ Position bounds (pitch + 20m buffer)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬ Resolve eligible swept goal-frame contact (ERR-001-007):
-      Contact before full crossing -> rebound; full crossing before contact -> no hit
-
-  Ã¢â€Å“Ã¢â€â‚¬ Update state machine (ALWAYS):
-  Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ Evaluate transitions with hysteresis
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬ Log snapshot (ALWAYS):
-      Ã¢â€â€Ã¢â€â‚¬ TryLogSnapshot() at configured interval
+```mermaid
+flowchart TD
+    A["Save valid checkpoint; normalize height"] --> B["Apply bounce if needed"]
+    B --> S{"Active physics state?"}
+    S -- No --> R["Return; no frame hit"]
+    S -- Yes --> I["Integrate; decay spin"]
+    I --> V["Validate physics"]
+    V --> F{"Eligible swept contact?"}
+    F -- Yes --> C["Apply frame response"]
+    F -- No --> U["Classify state"]
+    C --> U
+    U --> L["Log snapshot"]
 ```
 
 ---
@@ -357,9 +332,9 @@ collision. `OUT_OF_PLAY` stays absorbing. This amendment is part of the flow bel
 - Appendix C diagrams are text-based Ã¢â‚¬â€ proper vector graphics deferred to Stage 1
 
 **Page Count:** ~22 pages  
-**Status:** DRAFT v1.1 Ã¢â‚¬â€ Revision pass complete
+**Status:** Post-approval correction v1.4 — final-head Unity validation pending.
 
-**With these appendices, Ball Physics Specification #1 now has all template-required sections complete:**
+**Historical completion inventory (retained from the initial combined appendix):**
 - Sections 1-2 (Purpose, Requirements) v1.1
 - Section 3.1 (Core Formulas) v2.3
 - Section 4 (Implementation) v1.1
@@ -367,10 +342,12 @@ collision. `OUT_OF_PLAY` stays absorbing. This amendment is part of the flow bel
 - Section 6 (Performance Analysis) v1.0
 - Section 7 (Future Extensions) v1.0
 - Section 8 (References) v1.2
-- Appendices A, B, C v1.1 Ã¢â€ Â this document
+- Appendix C is now v1.4; Appendix A/B retains its separate revision record.
 
 ## Revision History
 
 | Version | Date | Change |
 |---|---|---|
 | 1.3 | October 12, 2026 | ERR-001-007: C.7 places eligible swept frame contact between validation and final state classification. |
+
+| 1.4 | October 12, 2026 | PR #500 review: replace C.7 garbled tree with a rendered flowchart; align current footer/header metadata and identify the retained completion inventory as historical. |

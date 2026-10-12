@@ -1,0 +1,14 @@
+Parent reviewed head: 97a0576e87e277bc36b77cb8946f09bece6de32c
+This follow-up changes source comments/history formatting only.
+Verification: compare all nonblank lines other than whole-line // comments, stripping surrounding whitespace. Executable code, string literals and test assertions are unchanged.
+Original source-identity.txt remains dated initial-head evidence; this file identifies the review follow-up.
+c7f98640ef99af836ee70b8e6271f00efd6bef39986018e3c5c380aafa45bc45  executable/assertion-lines-unchanged  src/ball-physics/BallPhysicsCore.cs
+805b648b2ff8b60c5e65938a01ba3e25d1bf2558f0ce0f3368ab40e79a39a021  full-source  src/ball-physics/BallPhysicsCore.cs
+05dce8f03e10073f877ce0ddd453ac7e3c2de546f7ed80cf2bcd9570a6351006  executable/assertion-lines-unchanged  src/ball-physics/BallCollision.cs
+0ef5b98cb56249f4d093a49d387a9eae79ebcf54af010e8b5b996dc9336e1248  full-source  src/ball-physics/BallCollision.cs
+5e570ae7a5cac4704b09a59f8a98198a4db037951d07cbca70194c5e965a0d2b  executable/assertion-lines-unchanged  src/ball-physics/tests/SweptGoalFrameTests.cs
+7cc8bc89fe9a3565a562a9be516a41f85d2e0f3d7e6661cba89947c563a729a9  full-source  src/ball-physics/tests/SweptGoalFrameTests.cs
+ffa06a9636bb0d18adda96172847b303011a6c95e1f5137ef161b6b122721574  executable/assertion-lines-unchanged  src/match-engine/MatchEngine.cs
+3f89f185985a62b1c88641112be299aec9f7a491d835b01be2bc926b07a55a19  full-source  src/match-engine/MatchEngine.cs
+f8c72b90db0654e2ec4a78f5546e9e730eba051781edd65a0e54d942f6603162  executable/assertion-lines-unchanged  src/match-engine/tests/MatchEngineRestartTests.cs
+90b08c6643f32c1183194066e19313a451616f02502ae897ab3f158a2ed799ab  full-source  src/match-engine/tests/MatchEngineRestartTests.cs

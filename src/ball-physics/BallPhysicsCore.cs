@@ -449,5 +449,7 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
 // |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
 // |         |            |        | in-engine. No functional change.                                   |
-// | 1.6 | 2026-10-12 | — | ERR-001-007: resolve the swept goal frame before final ball-state classification; overload exposes a within-step contact result to the host. |
+// | 1.6     | 2026-10-12 | —      | ERR-001-007: resolve the swept goal frame before final ball-state  |
+// |         |            |        | classification; overload exposes a within-step contact result to   |
+// |         |            |        | the host.                                                          |
 #endregion

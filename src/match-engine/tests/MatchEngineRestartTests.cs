@@ -293,5 +293,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   locks (award-team unification, position by type/side) +      |
 // |         |            |        |   MatchEngine integration (ball placement, possession clear,   |
 // |         |            |        |   goal path untouched) + two-run determinism.                  |
-// | 1.1 | 2026-10-12 | — | ERR-001-007: ten cases reproduce PR #499 at both goals/in both halves, lock crossing-before-contact corner/goal-kick awards and digest-identical restore continuation. |
+// | 1.1     | 2026-10-12 | —      | ERR-001-007: ten cases reproduce PR #499 at both goals/in both |
+// |         |            |        | halves, lock crossing-before-contact corner/goal-kick awards   |
+// |         |            |        | and digest-identical restore continuation.                     |
 #endregion

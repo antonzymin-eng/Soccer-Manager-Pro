@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
+// Modified: 2026-10-12 (PR #500 review: clarify host crossing-position capture; comment only)
+// Modified (prior): 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-10-10 (#441: test-only TestOnly_Heading seam for the reachability observer; no runtime change)
 // Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
@@ -5000,8 +5001,9 @@ namespace TacticalDirector.MatchEngine
 
             // ERR-001-005 / shot-speed design KD-6 — capture the ball's pre-integration position.
             // WITHIN-TICK state (the RestartAppliedThisTick class): written here at the top of every
-            // Physics phase, consumed by the swept frame test below and the Resolve-phase
-            // crossing-point adjudication the same tick, never read across ticks — so it is NOT
+            // Physics phase and consumed by Resolve-phase crossing-point adjudication the same
+            // tick. Ball Physics captures its sweep start after bounce handling. This
+            // host field is never read across ticks — so it is NOT
             // serialized and needs no exclusion-proof entry beyond this note.
             _prevTickBallPosition = _ball.Position;
 
@@ -10659,5 +10661,10 @@ namespace TacticalDirector.MatchEngine
 // | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
 // | 1.96    | 2026-10-06 | —      | Read-only scalar occupant identity consumed by live frame capture; no schema/RNG change. |
 // | 1.97    | 2026-10-10 | —      | #441: internal TestOnly_Heading exposes the #10 orchestrator to the match-engine tests so the reachability instrument can attach its observer. No runtime, schema or RNG change. |
-// | 1.98 | 2026-10-12 | — | ERR-001-007: consume Ball Physics contact result once; remove the post-state-classification swept call. No schema/GT/RNG change. |
+// | 1.98    | 2026-10-12 | —      | ERR-001-007: consume Ball Physics contact result once; remove  |
+// |         |            |        | the post-state-classification swept call. No schema/GT/RNG     |
+// |         |            |        | change.                                                        |
+// | 1.99    | 2026-10-12 | —      | PR #500 review: _prevTickBallPosition is the Resolve           |
+// |         |            |        | crossing-point input; Ball Physics owns the swept start.       |
+// |         |            |        | Comment only.                                                  |
 #endregion

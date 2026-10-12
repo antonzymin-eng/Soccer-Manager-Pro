@@ -515,5 +515,6 @@ namespace TacticalDirector.BallPhysics
 // | 2.0     | 2026-09-15 | —      | ERR-001-006: ApplyKick and non-kick Controlled release preserve Airborne    |
 // |         |            |        | state whenever the ball centre is above AirborneEnterThreshold, preventing  |
 // |         |            |        | force-free elevated Stationary balls.                                       |
-// | 2.1 | 2026-10-12 | — | ERR-001-007: Controlled/OutOfPlay stand down; a completed boundary crossing before contact takes precedence over a later frame hit. |
+// | 2.1     | 2026-10-12 | —      | ERR-001-007: Controlled/OutOfPlay stand down; a completed boundary |
+// |         |            |        | crossing before contact takes precedence over a later frame hit.   |
 #endregion

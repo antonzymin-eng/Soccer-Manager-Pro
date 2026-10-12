@@ -288,5 +288,7 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | mouth/over-frame non-clips, Controlled/degenerate/starts-inside    |
 // |         |            |        | gates, crossing-point adjudication both ends + the position-only   |
 // |         |            |        | overload's retained semantics.                                     |
-// | 1.1 | 2026-10-12 | — | ERR-001-007: nine cases lock airborne/rolling post and crossbar rebounds at both goals, full-crossing precedence and absorbing OutOfPlay. |
+// | 1.1     | 2026-10-12 | —      | ERR-001-007: nine cases lock airborne/rolling post and crossbar    |
+// |         |            |        | rebounds at both goals, full-crossing precedence and absorbing     |
+// |         |            |        | OutOfPlay.                                                         |
 #endregion
