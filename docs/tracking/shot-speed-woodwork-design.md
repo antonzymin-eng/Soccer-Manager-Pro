@@ -1,7 +1,7 @@
 # Shot Speed & Physical Woodwork — Design Supplement
 
 > **Created:** July 28, 2026
-> **Version:** 1.1
+> **Version:** 1.2
 > **Status:** DESIGN SUPPLEMENT (class (b) — governs a cross-spec balance/correctness pass;
 > the owning specs are #8 Decision Tree, #6 Shot Mechanics, #1 Ball Physics, and the
 > match-engine composition root)
@@ -324,3 +324,5 @@ compile-gated pre-fix (the symbols do not exist) — structural, not executed.
 |---|---|---|---|
 | 1.0 | 2026-07-28 | — | Initial converged design: KD-1..KD-7 for the shot-speed residual + swept woodwork, measurement + acceptance plan, three ERR back-props. AR-1 (1M+3L) + AR-2 (convergence). |
 | 1.1 | 2026-07-28 | — | Implementation + measurement folded in: AR-3 (2M — the underside-bar probe legitimately scores off the rebound, both frame probes moved to front-face strikes; the rising-crossing geometry solved analytically against the bar's combined radius), §5 pre-fix execution record (5 of 7 predicates fail on the unmodified tree, by execution), §4.1 measured table over two calibration iterations (VFloor 20 → 24; means 6.9–10.3 → 14.7–16.1 m/s, shots/match 59–70 → 31–45, goals/shot 0.14–0.25 → 0.38–0.42, woodwork 0 → 1/0/5), KD-2 rewritten to the calibrated value. Residual levers recorded: keeper conversion (now dominant, measured against real pace for the first time), the remaining half of shot volume. |
+
+| 1.2 | 2026-10-12 | — | ERR-001-007 supersedes the KD-4/KD-6 integration order: #1 §3.1.9 now resolves the eligible frame before final state classification, with full-crossing precedence; the host consumes one telemetry result. PR #499 captured a 29-minute first-half freeze. Ten engine pre-fix failures become passes; Ball Physics 120/120 and restart fixture 19/19 through NUnitLite. Governing Unity compile and inposs gate pending; no tuning/schema/RNG-definition change. |

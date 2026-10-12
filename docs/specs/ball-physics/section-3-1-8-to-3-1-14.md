@@ -1,3 +1,6 @@
+**Version:** 2.11
+**Modified:** October 12, 2026 — ERR-001-007, frame contact before final state classification.
+
 ## 3.1.8 Ground Interaction
 
 ### 3.1.8.1 Impulse-Based Bounce with Proper Contact Mechanics
@@ -149,8 +152,10 @@ public void UpdateBallPhysics(
     SurfaceType surface,
     Vector3 windVelocity,
     BallEventLogger logger,
-    float matchTime)
+    float matchTime,
+    out bool hitGoalFrame)
 {
+    hitGoalFrame = false; // within this step only; false on all early returns
     #if UNITY_EDITOR || DEVELOPMENT_BUILD
     UnityEngine.Profiling.Profiler.BeginSample("BallPhysics.Update");
     #endif
@@ -204,6 +209,7 @@ public void UpdateBallPhysics(
     // ================================================================
     // STEP 3: Semi-Implicit Euler integration
     // ================================================================
+    Vector3 prevPosition = ball.Position;
     Vector3 acceleration = netForce / BallPhysicsConstants.Ball.MASS;
     ball.Velocity += acceleration * dt;
     ball.Position += ball.Velocity * dt;
@@ -235,6 +241,11 @@ public void UpdateBallPhysics(
     ValidatePhysicsState(ref ball);
     
     // ================================================================
+    // STEP 5.5: resolve an eligible frame contact before final state classification.
+    // A full crossing before the contact wins; the collision method returns false.
+    hitGoalFrame = ApplySweptGoalFrameCollision(ref ball, prevPosition);
+
+    // ================================================================
     // STEP 6: ALWAYS update state machine
     // ================================================================
     ball.State = UpdateBallState(ball);
@@ -249,6 +260,12 @@ public void UpdateBallPhysics(
     #endif
 }
 ```
+
+The six-argument `UpdateBallPhysics` entry remains available and delegates to this loop
+with `out _`; every caller receives the same collision/state ordering. The host overload
+reports `hitGoalFrame` only for observation (one woodwork count per applied contact). The
+host MUST NOT apply a second swept frame collision after this loop. Both entries retain
+zero heap allocation and use the same `BallPhysics.Update` profiler scope.
 
 ### Validation with NaN/Infinity Handling
 
@@ -420,9 +437,33 @@ z ∈ [0, GOAL_HEIGHT + POST_DIAMETER]) and one horizontal crossbar (axis half a
 ABOVE the 2.44 m lower edge, capped between the post axes) — inflated by the ball radius. The
 earliest parametric hit places the ball at the contact point and applies the response above
 against the normal from the closest point on the struck cylinder's axis. Gates: a `Controlled`
-ball never deflects; a degenerate segment or one starting inside the contact radius is a no-op
+ball or an `OutOfPlay` ball never deflects; a degenerate segment or one starting inside the contact radius is a no-op
 (the prior tick handled the approach — no repeated-deflection loop); an X-band prefilter skips
 the cylinder tests away from the goal lines. Pure, drawless, no cross-tick state.
+
+**ERR-001-007 — ordering and crossing precedence (October 12, 2026).** The earliest frame
+contact is resolved inside §3.1.9, after integration/validation and before final state
+classification. Let `p(t) = prevPosition + t × (integratedPosition − prevPosition)`, with
+positions in metres and `t` dimensionless in `[0,1]`. Reject a frame contact if the start
+or the contact centre is already fully outside any pitch boundary (`IsOutOfBounds`). A
+straight segment from a not-out start to a not-out contact cannot have crossed and returned
+through a pitch boundary earlier. Thus an earlier full crossing cannot be rewound by a
+later rear-side collision. Equality with the existing out-plane is still not out: the
+classifier keeps its strict `<` / `>` tests. A valid contact shortens the segment to that
+point, applies the unchanged restitution/spin response, and then the classifier evaluates
+that actual position. No general `OutOfPlay → Airborne` recovery is introduced.
+
+**Worked reproduction (PR #499):** at 60 Hz, the home-goal approach starts at
+`(0.0341889262, 30.1042576, 0.468117356)` m with velocity
+`(−12.580143, +14.4362392, −2.21744323)` m/s. The unconstrained endpoint passes the
+`x = −0.11` m out-plane, but the swept post contact occurs first, at approximately
+`(0.0273, 30.1122, 0.4668)` m in the captured Unity run. The old loop classified the
+unconstrained endpoint as `OutOfPlay`, then the host rewound the position and awarded no
+restart. The corrected loop classifies the contact as `Airborne`, so the rebound advances
+on the next tick. It is a glancing hit with outward X velocity: a subsequent genuine exit
+still receives its normal corner/goal kick. The away-goal lock mirrors X and X velocity;
+first- and second-half engine locks use the same setup. Exact post-contact floats need not
+match across runtimes; contact, valid state, movement and restart outcomes are asserted.
 
 ### 3.1.10.3 Boundary Detection
 
@@ -1103,6 +1144,8 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.8 | Jun 9, 2026 | AI | ERR-001-001: §3.1.8.1 bounce normal Vector3.up (Unity +Y) → new Vector3(0,0,1) — pseudocode contradicted the §1.2 Z-up coordinate system and Appendix B's "vertical" v_n definition. ERR-001-002: J_t_required gains the rotational-coupling divisor (1 + m·r²/I = 2.5). Both errors were faithfully implemented in src/ball-physics and fixed there in the same commit (AR-7 H-1 / M-1). |
 | 2.9 | Jul 28, 2026 | AI | ERR-001-005 (shot-speed & woodwork design KD-4/KD-5): §3.1.10.3 goal-line adjudication moves to the segment's interpolated crossing of the out-plane (the detected position is up to ~0.42 m past the plane at shot speeds); §3.1.10.2 gains the swept frame detection paragraph — `ApplySweptGoalFrameCollision`, the six-cylinder segment test that finally calls `ApplyGoalPostCollision` in production (a discrete test tunnels a 0.12 m post at shot speeds). |
 | 2.10 | Sep 15, 2026 | AI | ERR-001-006: elevated uncontrolled `STATIONARY`/`ROLLING` states are invalid; altitude takes precedence over the low-speed stop rule, `ApplyKick` includes current height in state selection, and elevated controlled release remains `AIRBORNE` so gravity cannot be disabled by a force-free mid-air state. |
+
+| 2.11 | Oct 12, 2026 | — | ERR-001-007: swept frame resolution moves inside §3.1.9 before final state classification; a full boundary crossing before contact wins; absorbing OutOfPlay and strict out-plane semantics remain. Six-argument entry delegates to the telemetry overload. PR #499 reproduction and mirrored half/goal locks. |
 
 ---
 

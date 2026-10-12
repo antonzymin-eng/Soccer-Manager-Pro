@@ -1,3 +1,6 @@
+**Version:** 1.3
+**Modified:** October 12, 2026 — ERR-001-007.
+
 ## Appendix C: Visual Diagrams
 
 This appendix provides text-based diagrams for specification clarity. These are intended to be recreated as proper graphics during Stage 1 (2D Rendering Specification) but serve as authoritative references for implementation.
@@ -248,6 +251,12 @@ This appendix provides text-based diagrams for specification clarity. These are 
 
 ### C.7 Physics Update Loop Flowchart
 
+**ERR-001-007:** between the diagram's validation and state-machine steps, resolve the
+eligible swept goal-frame contact against the saved pre-integration position (§3.1.9).
+A prior full boundary crossing wins; a prior frame contact shortens the segment before
+classification. The host consumes the contact result only and must not run a second swept
+collision. `OUT_OF_PLAY` stays absorbing. This amendment is part of the flow below.
+
 ```
   UpdateBallPhysics(ball, dt, surface, wind)
   Ã¢â€â€š
@@ -278,6 +287,9 @@ This appendix provides text-based diagrams for specification clarity. These are 
   Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬ Ground penetration fix (z Ã¢â€°Â¥ RADIUS)
   Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ Position bounds (pitch + 20m buffer)
   Ã¢â€â€š
+  Ã¢â€Å“Ã¢â€â‚¬ Resolve eligible swept goal-frame contact (ERR-001-007):
+      Contact before full crossing -> rebound; full crossing before contact -> no hit
+
   Ã¢â€Å“Ã¢â€â‚¬ Update state machine (ALWAYS):
   Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬ Evaluate transitions with hysteresis
   Ã¢â€â€š
@@ -356,3 +368,9 @@ This appendix provides text-based diagrams for specification clarity. These are 
 - Section 7 (Future Extensions) v1.0
 - Section 8 (References) v1.2
 - Appendices A, B, C v1.1 Ã¢â€ Â this document
+
+## Revision History
+
+| Version | Date | Change |
+|---|---|---|
+| 1.3 | October 12, 2026 | ERR-001-007: C.7 places eligible swept frame contact between validation and final state classification. |

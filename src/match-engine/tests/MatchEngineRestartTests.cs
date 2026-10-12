@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineRestartTests.cs
 // Created:  2026-07-14
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-07-14
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §5, Code Standards #20
@@ -18,6 +19,118 @@ namespace TacticalDirector.MatchEngine
     public sealed class MatchEngineRestartTests
     {
         private const ulong MatchSeed = 0x00C0FFEE5EEDBA11UL;
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(bool awayGoal, bool secondHalf)
+        {
+            // PR #499 tick 56,955: reproduce the actual outside-post approach, independently of
+            // the full-match trajectory and runtime. Mirror X to lock the other goal as well.
+            var engine = new MatchEngine(MatchSeed);
+            if (secondHalf)
+            {
+                engine.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK);
+                engine.RunTick();
+            }
+            Assert.AreEqual(secondHalf ? MatchPeriod.SecondHalf : MatchPeriod.FirstHalf, engine.CurrentPeriod);
+
+            int lastTouchTeam = awayGoal ? 0 : 1;
+            engine.TestOnly_SetPossession(lastTouchTeam * MatchEngineConstants.PLAYERS_PER_TEAM);
+            engine.RunTick(); // establish the last settled holder used by restart classification
+
+            float x = awayGoal ? MatchEngineConstants.PITCH_LENGTH_M - 0.0341889262f : 0.0341889262f;
+            float vx = awayGoal ? 12.580143f : -12.580143f;
+            engine.TestOnly_ForceBallLoose(new Vector3(x, 30.1042576f, 0.468117356f),
+                new Vector3(vx, 14.4362392f, -2.21744323f));
+
+            engine.RunTick();
+            BallState rebound = engine.TestOnly_BallSnapshot;
+            Assert.AreEqual(1, engine.TestOnly_WoodworkStrikes, "The fixture must actually strike the post.");
+            Assert.IsFalse(BallStateMachine.IsOutOfBounds(rebound.Position));
+            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick,
+                "Contact before a full crossing must not manufacture a restart.");
+            Assert.AreEqual(BallStateType.Airborne, rebound.State,
+                "The pre-fix engine left this in-play rebound OutOfPlay until half-time.");
+
+            engine.RunTick();
+            Assert.AreNotEqual(rebound.Position, engine.TestOnly_BallSnapshot.Position,
+                "Play must progress on the very next tick, without waiting for a period reset.");
+            // This glancing rebound still travels outward in X. It leaves the field a few ticks
+            // later, outside the mouth, and must receive an ordinary restart rather than freeze.
+            for (int i = 0; i < 4 && engine.RestartAppliedThisTick == RestartCue.None; i++)
+                engine.RunTick();
+            Assert.AreEqual(RestartCue.GoalKick, engine.RestartAppliedThisTick);
+            Assert.AreEqual(1 - lastTouchTeam, engine.RestartAwardedTeam);
+            Assert.AreNotEqual(BallStateType.OutOfPlay, engine.TestOnly_BallSnapshot.State);
+            Assert.AreEqual(secondHalf ? MatchPeriod.SecondHalf : MatchPeriod.FirstHalf, engine.CurrentPeriod);
+        }
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(bool awayGoal, bool defenderLast)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            int defender = awayGoal ? 1 : 0;
+            int lastTouchTeam = defenderLast ? defender : 1 - defender;
+            engine.TestOnly_SetPossession(lastTouchTeam * MatchEngineConstants.PLAYERS_PER_TEAM);
+            engine.RunTick();
+            float goalX = awayGoal ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+            float direction = awayGoal ? 1f : -1f;
+            float postY = BallPhysicsConstants.Pitch.WIDTH * 0.5f + BallPhysicsConstants.GoalFrame.PostAxisOffsetY;
+            engine.TestOnly_ForceBallLoose(new Vector3(goalX + direction * 0.05f, postY + 0.4f, 1f),
+                new Vector3(direction * 8.4f, -30f, 0f));
+
+            engine.RunTick();
+
+            Assert.AreEqual(0, engine.TestOnly_WoodworkStrikes,
+                "A rear-side contact after the full crossing must not override the exit.");
+            Assert.AreEqual(defenderLast ? RestartCue.Corner : RestartCue.GoalKick, engine.RestartAppliedThisTick);
+            Assert.AreEqual(1 - lastTouchTeam, engine.RestartAwardedTeam);
+            Assert.AreEqual(0, engine.HomeScore);
+            Assert.AreEqual(0, engine.AwayScore);
+            Assert.AreEqual(BallStateType.Stationary, engine.TestOnly_BallSnapshot.State);
+            Assert.AreEqual(1 - lastTouchTeam, engine.AgentTeamId(engine.TestOnly_PossessingAgentId));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(bool awayGoal)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            float x = awayGoal ? MatchEngineConstants.PITCH_LENGTH_M - 0.0341889262f : 0.0341889262f;
+            float vx = awayGoal ? 12.580143f : -12.580143f;
+            engine.TestOnly_ForceBallLoose(new Vector3(x, 30.1042576f, 0.468117356f),
+                new Vector3(vx, 14.4362392f, -2.21744323f));
+            engine.RunTick();
+            Assert.AreEqual(BallStateType.Airborne, engine.TestOnly_BallSnapshot.State);
+            var header = engine.CaptureDurableHeader();
+            var payload = engine.CaptureDurablePayload();
+            var digests = new byte[5][];
+            var cues = new RestartCue[5];
+            // Sequential references follow the engine's established restore-test protocol;
+            // concurrent engines share the EventBus phase lifecycle and are not independent.
+            for (int i = 0; i < digests.Length; i++)
+            {
+                engine.RunTick();
+                digests[i] = engine.CurrentSnapshotDigest;
+                cues[i] = engine.RestartAppliedThisTick;
+            }
+            var restored = MatchEngine.RestoreFromSnapshot(in header, payload, MatchSeed);
+            Vector3 rebound = restored.TestOnly_BallSnapshot.Position;
+            for (int i = 0; i < digests.Length; i++)
+            {
+                restored.RunTick();
+                CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest,
+                    "The correction must survive the existing canonical snapshot codec.");
+                Assert.AreEqual(cues[i], restored.RestartAppliedThisTick);
+                if (i == 0)
+                    Assert.AreNotEqual(rebound, restored.TestOnly_BallSnapshot.Position);
+            }
+        }
 
         // ── Pure RestartResolver tests ────────────────────────────────────────────────
 
@@ -180,4 +293,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   locks (award-team unification, position by type/side) +      |
 // |         |            |        |   MatchEngine integration (ball placement, possession clear,   |
 // |         |            |        |   goal path untouched) + two-run determinism.                  |
+// | 1.1 | 2026-10-12 | — | ERR-001-007: ten cases reproduce PR #499 at both goals/in both halves, lock crossing-before-contact corner/goal-kick awards and digest-identical restore continuation. |
 #endregion

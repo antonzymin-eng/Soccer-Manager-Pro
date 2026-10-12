@@ -1,5 +1,6 @@
 // File:     src/ball-physics/tests/SweptGoalFrameTests.cs
 // Created:  2026-07-28
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-07-28
 // Author:   —
 // Spec:     Ball Physics #1 §3.1.10 (ERR-001-005); shot-speed & woodwork design KD-4/KD-5;
@@ -29,6 +30,87 @@ namespace TacticalDirector.BallPhysics.Tests
             ball.Velocity = velocity;
             ball.State = BallStateType.Airborne;
             return ball;
+        }
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(bool homeGoal, bool crossbar)
+        {
+            float goalX = homeGoal ? 0f : GoalLineX;
+            float direction = homeGoal ? -1f : 1f;
+            float y = crossbar ? CentreY : PostY;
+            float z = crossbar ? BarZ : 1f;
+            BallState ball = Flying(new Vector3(goalX - direction * 0.3f, y, z),
+                new Vector3(direction * 30f, 0f, 0f));
+
+            BallPhysicsCore.UpdateBallPhysics(ref ball, 1f / 60f, SurfaceType.GrassDry,
+                Vector3.zero, null, 0f);
+
+            Assert.AreEqual(BallStateType.Airborne, ball.State);
+            Assert.IsFalse(BallStateMachine.IsOutOfBounds(ball.Position));
+            Assert.Less(direction * ball.Velocity.x, 0f, "The front face must reflect into play.");
+            Vector3 rebound = ball.Position;
+            BallPhysicsCore.UpdateBallPhysics(ref ball, 1f / 60f, SurfaceType.GrassDry,
+                Vector3.zero, null, 0f);
+            Assert.AreNotEqual(rebound, ball.Position, "A rebound must keep moving on the next tick.");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PhysicsUpdate_RollingPostRebound_RemainsRollingAndMoves(bool homeGoal)
+        {
+            float goalX = homeGoal ? 0f : GoalLineX;
+            float direction = homeGoal ? -1f : 1f;
+            BallState ball = Flying(new Vector3(goalX - direction * 0.3f, PostY,
+                BallPhysicsConstants.Ball.RADIUS), new Vector3(direction * 30f, 0f, 0f));
+            ball.State = BallStateType.Rolling;
+
+            BallPhysicsCore.UpdateBallPhysics(ref ball, 1f / 60f, SurfaceType.GrassDry,
+                Vector3.zero, null, 0f);
+
+            Assert.AreEqual(BallStateType.Rolling, ball.State, "The fix must retain the ground force model.");
+            Assert.IsFalse(BallStateMachine.IsOutOfBounds(ball.Position));
+            Assert.Less(direction * ball.Velocity.x, 0f);
+            Vector3 rebound = ball.Position;
+            BallPhysicsCore.UpdateBallPhysics(ref ball, 1f / 60f, SurfaceType.GrassDry,
+                Vector3.zero, null, 0f);
+            Assert.AreNotEqual(rebound, ball.Position);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PhysicsUpdate_FullCrossingBeforeFrameContact_PreservesTheExit(bool homeGoal)
+        {
+            float goalX = homeGoal ? 0f : GoalLineX;
+            float direction = homeGoal ? -1f : 1f;
+            BallState ball = Flying(new Vector3(goalX + direction * 0.05f, PostY + 0.4f, 1f),
+                new Vector3(direction * 8.4f, -30f, 0f));
+            Vector3 previous = ball.Position;
+
+            BallPhysicsCore.UpdateBallPhysics(ref ball, 1f / 60f, SurfaceType.GrassDry,
+                Vector3.zero, null, 0f);
+
+            Assert.AreEqual(BallStateType.OutOfPlay, ball.State);
+            Assert.IsTrue(BallStateMachine.IsOutOfBounds(ball.Position));
+            Assert.Less(ball.Velocity.y, 0f, "A later rear-side frame contact cannot reflect an already-out ball.");
+            var boundary = BallCollision.CheckBoundaries(ball, previous, homeGoal ? 1 : 0);
+            Assert.IsTrue(boundary.isOut);
+            Assert.AreEqual(RestartType.GoalKick, boundary.restart);
+        }
+
+        [Test]
+        public void OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision()
+        {
+            BallState ball = Flying(new Vector3(GoalLineX + 0.4f, PostY, 1f), new Vector3(30f, 0f, 0f));
+            ball.State = BallStateType.OutOfPlay;
+            BallState before = ball;
+            Assert.IsFalse(BallCollision.ApplySweptGoalFrameCollision(ref ball,
+                new Vector3(GoalLineX - 0.5f, PostY, 1f)));
+            Assert.AreEqual(before.Position, ball.Position);
+            Assert.AreEqual(before.Velocity, ball.Velocity);
+            Assert.AreEqual(before.State, ball.State);
         }
 
         // ── The tunneling discriminator ──────────────────────────────────────────────────────
@@ -206,4 +288,5 @@ namespace TacticalDirector.BallPhysics.Tests
 // |         |            |        | mouth/over-frame non-clips, Controlled/degenerate/starts-inside    |
 // |         |            |        | gates, crossing-point adjudication both ends + the position-only   |
 // |         |            |        | overload's retained semantics.                                     |
+// | 1.1 | 2026-10-12 | — | ERR-001-007: nine cases lock airborne/rolling post and crossbar rebounds at both goals, full-crossing precedence and absorbing OutOfPlay. |
 #endregion

@@ -1,11 +1,12 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-06-12
 // Modified: 2026-09-15 (ERR-001-006: normalize elevated ground states before force selection)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.
-//           Pure calculations — no state management, no ownership of BallState.
+//           Composes integration, frame response and state classification; BallState is host-owned.
 
 using UnityEngine;
 using Unity.Profiling;
@@ -14,7 +15,7 @@ namespace TacticalDirector.BallPhysics
 {
     /// <summary>
     /// Main physics update loop and force calculations for the ball.
-    /// Pure calculations — no state management, no ownership of BallState.
+    /// Composes integration, frame response and state classification; BallState remains host-owned.
     /// All methods static; side-effect free except validation warnings.
     /// </summary>
     public static class BallPhysicsCore
@@ -39,7 +40,24 @@ namespace TacticalDirector.BallPhysics
             BallEventLogger logger,
             float matchTime)
         {
+            UpdateBallPhysics(ref ball, dt, surface, windVelocity, logger, matchTime, out _);
+        }
+
+        /// <summary>
+        /// Main physics update with a within-step goal-frame contact result for host telemetry.
+        /// Resolves the swept frame contact before final state classification (ERR-001-007).
+        /// </summary>
+        public static void UpdateBallPhysics(
+            ref BallState ball,
+            float dt,
+            SurfaceType surface,
+            Vector3 windVelocity,
+            BallEventLogger logger,
+            float matchTime,
+            out bool hitGoalFrame)
+        {
             using var _ = s_updateMarker.Auto();
+            hitGoalFrame = false;
 
             // Only update the recovery checkpoint when the incoming state is valid.
             // If ball.Position already contains NaN/Infinity, preserving the existing
@@ -99,6 +117,7 @@ namespace TacticalDirector.BallPhysics
             }
 
             // Semi-implicit Euler integration.
+            Vector3 prevPosition = ball.Position;
             Vector3 acceleration = netForce / BallPhysicsConstants.Ball.MASS;
             ball.Velocity += acceleration * dt;
             ball.Position += ball.Velocity * dt;
@@ -114,6 +133,10 @@ namespace TacticalDirector.BallPhysics
                 ball.AngularVelocity = UpdateRollingSpinDecay(ball.AngularVelocity, dt);
 
             ValidatePhysicsState(ref ball);
+            // ERR-001-007: classify the actual, collision-shortened movement, not the endpoint
+            // the ball would have reached through the post. OutOfPlay is absorbing, so calling
+            // the frame resolver after UpdateBallState could leave an in-play rebound frozen.
+            hitGoalFrame = BallCollision.ApplySweptGoalFrameCollision(ref ball, prevPosition);
             ball.State = BallStateMachine.UpdateBallState(ball);
             logger?.TryLogSnapshot(ball, matchTime);
         }
@@ -426,4 +449,5 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | Unity.Profiling; the old using was CS0246 under Unity and the      |
 // |         |            |        | Linux compile gate alike, so this assembly could not have compiled |
 // |         |            |        | in-engine. No functional change.                                   |
+// | 1.6 | 2026-10-12 | — | ERR-001-007: resolve the swept goal frame before final ball-state classification; overload exposes a within-step contact result to the host. |
 #endregion

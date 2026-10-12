@@ -1,0 +1,9 @@
+Baseline production: a17aa82e3a0d1aa38f2749356c8e73709a63d14f
+Baseline source changed: only the two existing test files (new regression methods).
+Header/version-history comments were finalized after these recorded runs; executable method bodies are identical to the recorded runs. A final-head host compile is still required.
+Current review source SHA-256 (not an assertion that these metadata bytes were compiled for the earlier engine/baseline runs; the final Ball Physics run includes all current nine new cases):
+4d0c8027e927f09ce2e89ef8f5eb884cfe3a90eb36c6c2a9acfba7a037778ef7  src/ball-physics/BallPhysicsCore.cs
+da89f9918f426d81ae5f3ffbe6e316897d4ba27ac9d2b4972b5745b4dc4828db  src/ball-physics/BallCollision.cs
+134d26fb95efaa3f96a5b7c840b449ae35d7ac722162b92b3415ead539622b08  src/match-engine/MatchEngine.cs
+e3cc68256f6ec0b78e0ad0c058895e69def5de401c0b34b2aa7dd38f2ebf7879  src/ball-physics/tests/SweptGoalFrameTests.cs
+41581795d2b6c0a150b62334f5da740a93e9b1cbbf8ac1fe7e298141271f51a4  src/match-engine/tests/MatchEngineRestartTests.cs

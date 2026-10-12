@@ -1,0 +1,10 @@
+MSBuild version 17.11.48+02bf66295 for .NET
+  UnityShim -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  deterministic-sim.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  ball-physics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  performance-optimization.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  testing-strategy.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  UnityShim.TestTools -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used [/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/ball-physics-tests.gen.csproj]
+  ball-physics-tests.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll

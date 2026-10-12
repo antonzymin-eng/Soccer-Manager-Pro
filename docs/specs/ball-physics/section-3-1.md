@@ -3,8 +3,13 @@
 **Document:** Ball Physics Specification  
 **Section:** 3.1 Core Formulas  
 **Created:** February 2, 2026, 10:45 PM PST  
-**Version:** 2.10  
+**Version:** 2.11
 **Status:** READY FOR IMPLEMENTATION — ERR-006 resolved (AM-001-001 applied)
+
+**Modified:** October 12, 2026
+**Changes from v2.10:**
+- **ERR-001-007:** §3.1.9 resolves the swept frame contact before final §3.1.3 state classification. A collision before a full boundary crossing shortens the movement segment; a crossing before contact wins and remains out.
+- The continuation file owns the corrected loop, collision gates, worked example and revision-history row.
 
 **Changes from v2.9:**
 - **ERR-001-006:** an uncontrolled ball above `AIRBORNE_ENTER_THRESHOLD` cannot be `STATIONARY` or remain `ROLLING`; altitude takes precedence over the low-speed stop rule so gravity cannot be disabled for an elevated ball.
@@ -592,6 +597,11 @@ public enum BallStateType
 
 ### State Transition with Hysteresis
 
+**ERR-001-007 (October 12, 2026):** during an integrated step, call this classifier only
+after §3.1.10.2 has resolved any eligible swept goal-frame contact. `OUT_OF_PLAY` remains
+absorbing; it is never cleared to repair an earlier provisional classification. The restart
+owner still consumes genuine exits. §3.1.9 is the ordering authority.
+
 ```csharp
 /// <summary>
 /// Updates ball state based on current physics conditions.
@@ -1106,3 +1116,9 @@ public Vector3 UpdateRollingSpinDecay(Vector3 angularVelocity, float dt)
 
 ---
 
+
+## Revision History
+
+| Version | Date | Change |
+|---|---|---|
+| 2.11 | October 12, 2026 | ERR-001-007: §3.1.3 classifier runs after the eligible swept frame response owned by §3.1.9; OUT_OF_PLAY remains absorbing. Shared earlier history is in the continuation file. |

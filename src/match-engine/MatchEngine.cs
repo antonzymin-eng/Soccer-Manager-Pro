@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-10-10 (#441: test-only TestOnly_Heading seam for the reachability observer; no runtime change)
 // Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-09-28 (W8 B review — authoritative goalkeeper/team identity query)
@@ -5007,15 +5008,17 @@ namespace TacticalDirector.MatchEngine
             // Ball: a null logger drops matchTime (the logger is its sole consumer — design note B2),
             // so no allocation and no non-load-bearing time enters the digest. No wind at Stage 0.
             BallPhysicsCore.UpdateBallPhysics(
-                ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+                ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f,
+                out bool hitGoalFrame);
 
             // ERR-001-005 / KD-4 — the goal frame is physical: a ball whose movement segment meets
             // a post or the crossbar rebounds (restitution + spin retention) instead of flying
             // through a 0.12 m cylinder the discrete per-tick test tunnels past at shot speeds.
-            // Runs immediately after the ball integrates so the Resolve-phase boundary check sees
-            // the post-rebound, in-play position. The counter is diagnostic observation only
+            // ERR-001-007: Ball Physics now resolves the frame BEFORE final state classification;
+            // the host consumes its within-step result instead of applying a second collision.
+            // The counter is diagnostic observation only
             // (the AiPhaseRunCount class — not serialized, not digest-load-bearing).
-            if (BallCollision.ApplySweptGoalFrameCollision(ref _ball, _prevTickBallPosition))
+            if (hitGoalFrame)
             {
                 _woodworkStrikes++;
             }
@@ -10656,4 +10659,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.95    | 2026-09-28 | —      | W8 B review: PassWorldAdapter exposes authoritative live goalkeeper/team identity so #5 rejects wrong-team and non-goalkeeper dedicated distribution requests before WINDUP. Dormant until #21/#11 wiring; no schema/RNG change. |
 // | 1.96    | 2026-10-06 | —      | Read-only scalar occupant identity consumed by live frame capture; no schema/RNG change. |
 // | 1.97    | 2026-10-10 | —      | #441: internal TestOnly_Heading exposes the #10 orchestrator to the match-engine tests so the reachability instrument can attach its observer. No runtime, schema or RNG change. |
+// | 1.98 | 2026-10-12 | — | ERR-001-007: consume Ball Physics contact result once; remove the post-state-classification swept call. No schema/GT/RNG change. |
 #endregion
