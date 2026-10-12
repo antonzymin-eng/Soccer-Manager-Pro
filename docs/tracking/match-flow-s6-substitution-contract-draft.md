@@ -4,7 +4,7 @@
 > **Purpose:** Proposed replacement for `match-flow-completion-design.md` §6 so that substitutions follow the
 > owner rule of September 25, 2026: a manager may request a substitution while the ball is in play, and it is
 > executed only at the next stoppage. Roadmap step 4 requires this approved contract before implementation.
-> **Status:** v0.2 **DRAFT — owner decisions recorded October 12, 2026 (§7); revised text awaiting owner
+> **Status:** v0.3 **DRAFT — owner decisions recorded October 12, 2026 (§7); revised text awaiting owner
 > sign-off.** Nothing here is in force. §6 and the code keep today's immediate-effect behaviour until the
 > owner signs off this revised text and it is folded into §6. **No code, schema, event or `[GT]` change is
 > made by this document.**
@@ -103,6 +103,11 @@ and any goalkeeper hand episode is ended, and **before** `SelectRestartTaker`. A
 cannot be chosen as the taker, and an incoming player can be. Each request is re-validated at execution
 (§3.4) because the match may have changed since it was accepted.
 
+Order at each stoppage: first the §3.4 cancellation checks run over **every** queued request, for both
+teams, whether or not that team can execute now. Then the window gate decides which of the remaining
+requests execute. A request held by the gate is therefore never kept alive for a player who has been sent
+off, and it never keeps its bench player reserved after cancellation.
+
 Window gate: at a stoppage that is not free, a team's requests execute only if that team has a window
 left; executing them uses one window. If the team has none left, its requests stay queued for the free
 half-time execution. Each team is gated separately, so one team's execution never uses the other's window.
@@ -119,8 +124,10 @@ velocity are untouched (no re-entry ceremony). The `SubstitutionEvent` (outgoing
 
 ### 3.4 Engine cancellation
 
-At execution, a request whose outgoing slot has been sent off since acceptance is removed with outcome
-`NotApplied(OutgoingSentOff)`; the count is unchanged. Re-validation of bench availability and the limit
+At every stoppage, before the window gate (§3.2), a queued request whose outgoing slot has been sent off
+since acceptance is removed with outcome `NotApplied(OutgoingSentOff)`; the count is unchanged and its bench
+player becomes available again. A dismissal is always followed by its own free-kick stoppage, so the
+cancellation happens in the tick of the dismissal. Re-validation of bench availability and the limit
 cannot fail when §3.1 counted pending requests, and an implementation MUST assert this rather than handle
 it silently. The role rule (§3.1.1) cannot fail at execution either: a keeper cannot return once sent off,
 and only one fallback request may be pending. A request held back by the window gate (§3.2) is not
@@ -186,13 +193,17 @@ October 10 census and must re-run it.
 
 ## 6. Acceptance (the implementation's locks)
 
-1. A request accepted in open play leaves every on-pitch field of the outgoing slot unchanged for each
-   tick until the next stoppage, then applies exactly once on that restart tick, before taker selection.
+1. A request accepted in open play, by a team with a window left (or arriving at a free stoppage), leaves
+   every on-pitch field of the outgoing slot unchanged for each tick until the next stoppage, then applies
+   exactly once on that restart tick, before taker selection. A request held by the window gate applies
+   exactly once at the half-time kickoff instead (lock 12).
 2. FIFO: two requests for one team executed at one stoppage apply in `sequence` order. A duplicate
    outgoing slot or bench index is refused at request time.
 3. Limit: `used + pending` at the cap refuses with `LimitReached`; counts change only at execution.
 4. Dismissal: the outgoing player sent off while the request is pending gives `NotApplied(OutgoingSentOff)`
-   at the free-kick restart, and the count is unchanged.
+   at the free-kick restart, and the count is unchanged. This holds also when the request is held by the
+   window gate in the first half: it is cancelled at that free kick, not kept until half-time, and its
+   bench player can be named by a new request straight away.
 5. Full time cancels every pending request with `NotApplied(MatchEnded)`; nothing executes after full time.
 6. Pre-kickoff requests execute immediately.
 7. Save/restore with a pending request, at the request tick, mid-play and on the stoppage tick, continues
@@ -204,11 +215,13 @@ October 10 census and must re-run it.
 10. Role rule: keeper-for-outfielder and outfielder-for-keeper requests are refused while the team has a
     keeper on the pitch.
 11. Fallback (1): after the team's keeper is sent off, an outfield-slot-off / bench-keeper-on request is
-    accepted and executes at the next stoppage. The new keeper is the team's keeper for #11
-    (`_gkAgentIds`), for the loose-ball collector restriction, and for positioning (takes the goalkeeper
-    position). A second fallback request while one is pending is refused. With no substitution, window or
-    bench keeper left, the request is refused and the team plays on without a keeper. Home and away
-    mirrored.
+    accepted and executes at the next stoppage when the team has a window left. The new keeper is the
+    team's keeper for #11 (`_gkAgentIds`), for the loose-ball collector restriction, and for positioning
+    (takes the goalkeeper position). A second fallback request while one is pending is refused. In the
+    first half with no window left, the fallback request is accepted, the team plays without a keeper
+    until half-time, and the keeper comes on at the half-time kickoff without using a window. With no
+    substitution left, no bench keeper, or no window left in the second half, the request is refused and
+    the team plays on without a keeper. Home and away mirrored.
 12. Windows: three non-free stoppages with executions use three windows; a fourth open-play request in the
     second half is refused with `NoWindowsLeft`; one in the first half waits and executes at half-time
     without using a window. Two requests executed at one stoppage use one window. One team's execution
@@ -249,3 +262,4 @@ October 10 census and must re-run it.
 |---|---|---|
 | v0.1 | October 10, 2026 | Draft for owner approval: request/stoppage/execution/cancellation contract, snapshot obligations, client outcome mapping, acceptance locks and five decision points. Not in force. |
 | v0.2 | October 12, 2026 | Owner decisions recorded: S-1 (a), R1 with a no-keeper-on-the-pitch fallback (§3.1.1), W1 (a) with withdrawal as a future item, E1 (a), L1 (b) modelled in this slice (§2, §3.2, `NoWindowsLeft`, window counts serialized). Adds fallback implementation obligations found at `a17aa82`, locks 10–13 and §8 follow-ups (withdrawal, emergency keeper, injured keeper, UX copy). Revised text awaits owner sign-off; not in force. |
+| v0.3 | October 12, 2026 | PR #501 review: §3.2/§3.4 run dismissal cancellation over every queued request at each stoppage **before** the window gate, so a held request never outlives its player or keeps a bench player reserved. Locks 1, 4 and 11 now cover requests held by the window gate, including the keeper fallback waiting until half-time. Not in force. |
