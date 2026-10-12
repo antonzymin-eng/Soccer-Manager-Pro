@@ -1,0 +1,19 @@
+import sys,re
+def load(p):
+    out=[]
+    for l in open(p,encoding='utf-8'):
+        l=l.rstrip('\n').rstrip('\r')
+        l=re.sub(r'^\[(Log|Warning|Error|Assert|Exception)\] ','',l)
+        if not l or l.startswith('INPOSS_GATE'): continue
+        out.append(l)
+    return out
+a=load(sys.argv[1]); b=load(sys.argv[2])
+print(sys.argv[1],len(a)); print(sys.argv[2],len(b))
+n=min(len(a),len(b))
+for i in range(n):
+    if a[i]!=b[i]:
+        print('first divergence at line',i+1)
+        for j in range(max(0,i-3),min(n,i+4)):
+            print(' A' if a[j]!=b[j] else '  ',j+1,'|',a[j]); print(' B' if a[j]!=b[j] else '  ',j+1,'|',b[j])
+        break
+else: print('identical over common prefix of',n)
