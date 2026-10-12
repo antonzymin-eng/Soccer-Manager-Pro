@@ -1,7 +1,7 @@
 # Goal-frame state ordering — ERR-001-007
 
 **Created:** October 12, 2026
-**Version:** 1.1
+**Version:** 1.2
 **Purpose:** Preserve executable failing-before and passing-after evidence for the PR #499
 outside-post `OutOfPlay` deadlock. This is non-certifying .NET 8 / repository UnityShim evidence.
 
@@ -87,6 +87,16 @@ prove the exact duration of a shorter episode. Record every candidate's seed, st
 checkpoint, interval and period; reject a corpus with a long stall and obtain a per-tick
 window for diagnosis rather than recalibrating the share floor. This audit is a closure
 check, not an additional completed result.
+
+**.NET half recorded (v1.2).** On merged head `0a82a51` (src/tools identical to `c5f8c8b`) the
+test ran on this Linux container with the Ubuntu .NET 8.0.131 SDK / 8.0.31 runtime, Debug build,
+no ticks override. `stall-audit-net8-linux.txt` keeps the command, shares, per-seed audit output
+and full-trace SHA-256s; `stall_audit.py.txt` is the audit script. No seed has a sampled
+`OutOfPlay` row in either half; the script does flag the pre-fix Unity freeze on
+`0x0F1E2D3C4B5A6978`. All six traces are byte-identical to the pre-fix .NET traces in
+`inposs-platform-divergence-20261011/full-trace-sha256.txt`, so the correction never takes
+effect in these six .NET matches. The result shows no stall and no regression on .NET; it does
+not show that the fix removes the Unity stall. The Unity half remains owed.
 No completed result was retained for the supplementary broader local engine attempt; it is
 not evidence of a pass. GitHub's full functional gate on `97a0576` completed successfully: 37 suites,
 3,837 passed / 0 failed / 221 skipped; Match Engine 569/0/15 and Ball Physics 120/0/0.
@@ -121,4 +131,5 @@ remains in the separate `inposs-platform-divergence-20261011` evidence directory
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2 | October 12, 2026 | .NET half of the six-seed corpus stall audit: no candidate; traces byte-identical to pre-fix .NET. Added `stall-audit-net8-linux.txt` and `stall_audit.py.txt`. Unity half still owed. |
 | 1.1 | October 12, 2026 | Review corrections: broader contact/state impact, final 120/120 count, honest incomplete local/CI status and explicit pending post-fix corpus stall audit. Recorded test XML/logs unchanged. |

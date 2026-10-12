@@ -1,0 +1,71 @@
+"""Post-fix corpus stall audit over PlatformDivergenceDiagnostic traces.
+
+Criterion (goal-frame-state-ordering-20261012/README.md, "Remaining governing checks"):
+repeated OutOfPlay ball states (ordinal 5) with unchanged position. After tick 3600 the trace
+samples every 600 ticks (10 s); before that, every tick. A candidate is >= 2 consecutive
+sampled rows in OutOfPlay at an identical position. Also reports the longest run of
+consecutive 10 s checkpoints with the ball within 1 m (any state), as ballrun.py did.
+
+usage: python3 -I stall_audit.py <trace.tsv>...
+"""
+import struct
+import sys
+
+HALF_TICK = 162000  # 45 min at 60 Hz; NumTicks = 324000
+
+
+def f(h):
+    return struct.unpack('>f', bytes.fromhex(h))[0]
+
+
+def period(t):
+    return 1 if t < HALF_TICK else 2
+
+
+for path in sys.argv[1:]:
+    rows = []
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith('tick'):
+                continue
+            t, b, _ = line.split('\t')
+            rows.append((int(t), b[0:8], b[8:16], b[16:24], int(b[48:])))
+    seed = path.split('trace-')[1][:18]
+
+    # OutOfPlay runs at an identical position (bitwise x, y, z), consecutive sampled rows.
+    cands = []
+    run = None
+    for prev, cur in zip(rows, rows[1:]):
+        same = cur[4] == 5 and prev[4] == 5 and cur[1:4] == prev[1:4]
+        if same:
+            if run is None:
+                run = [prev[0], cur[0], prev]
+            else:
+                run[1] = cur[0]
+        elif run is not None:
+            cands.append(run)
+            run = None
+    if run is not None:
+        cands.append(run)
+
+    oop_rows = sum(1 for r in rows if r[4] == 5)
+    coarse = [r for r in rows if r[0] >= 3600 and r[0] % 600 == 0]
+    best, cur_len, start, best_start = 0, 0, 0, 0
+    for a, b in zip(coarse, coarse[1:]):
+        if abs(f(b[1]) - f(a[1])) < 1 and abs(f(b[2]) - f(a[2])) < 1:
+            if cur_len == 0:
+                start = a[0]
+            cur_len += 1
+            if cur_len > best:
+                best, best_start = cur_len, start
+        else:
+            cur_len = 0
+    last = rows[-1][0]
+    p2 = sum(1 for r in coarse if period(r[0]) == 2)
+    print(f'{seed} rows={len(rows)} lastTick={last} p2Checkpoints={p2} oopRows={oop_rows} '
+          f'longestStaticAnyState={best * 10}s@tick{best_start} oopIdenticalRuns={len(cands)}')
+    for s, e, r in cands:
+        coarse_span = s >= 3600
+        print(f'   CANDIDATE start={s} end={e} spanTicks={e - s} '
+              f'({"10s-sampled" if coarse_span else "per-tick"}) period={period(s)} '
+              f'ball=({f(r[1]):.3f},{f(r[2]):.3f},{f(r[3]):.3f})')
