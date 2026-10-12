@@ -5,8 +5,9 @@
 the Unity editor measured a share of 0.361 and the Linux shim 0.928 at the same commit. Is that gap
 systematic across seeds, so that Linux measurements might not describe the game that ships, or is it
 specific to one seed?\
-**Answer:** It is one seed, and the cause is an engine defect, not the platform. The two runtimes do
-play different matches from tick 5 onward, starting from a one-ulp difference. On five of the six
+**Answer:** It is one seed, and the cause is an engine defect, not the platform. The two platforms do
+play different matches from tick 5 onward, starting from a one-ulp difference whose cause is not
+isolated (see below). On five of the six
 frozen seeds, though, the share agrees to within ±0.025 with no consistent sign. On the sixth, the
 Unity match reaches a ball-state deadlock: a shot strikes the outside of the near post, the ball is
 left `OutOfPlay` but back on the pitch side of the goal line, no restart is ever awarded, and the ball
@@ -48,12 +49,17 @@ of −0.002 with differences of both signs. Every run except the deadlocked one 
   direction, speed and velocity components (for example agent 1 facing `3F7B9218,BE3DA912` against
   `3F7B9219,BE3DA913`; agent 3 speed `3D088888` against `3D088889`).
 
-That is an evaluation-precision difference between the Unity Mono runtime and CoreCLR, which the match
-then amplifies chaotically. It is not a logic or set-up difference, and it is not an OS math-library
-difference: the .NET 8 shim on this Windows host reproduces the Linux CI run of the gate test exactly
-(`gate-trace-comparison.txt`, identical 1,979-event engine log). The project already records
-cross-runtime bit-equality as Stage 5+ (Fixed64) work, so this run confirms the existing position
-rather than opening a new one.
+So the platforms diverge numerically from tick 5, and the match then amplifies that chaotically. Set-up
+is ruled out (identical rosters and bit-identical state through tick 4). The host operating system is
+ruled out *between the two .NET lanes*: the .NET 8 shim on this Windows host reproduces the Linux CI
+run of the gate test exactly (`gate-trace-comparison.txt`, identical 1,979-event engine log). **The
+cause of the Unity/.NET split is not isolated.** This evidence does not separate the Mono runtime's
+float evaluation from the math and vector implementations each side links: Unity's own `Mathf`,
+`Vector2` and `Vector3` (and whatever math library Mono calls) against the shim's
+`tools/dotnet-ci/UnityShim` replacements and CoreCLR's. Isolating it would need, for example, the
+shim's types run under Unity's Mono, or a per-operation comparison at the tick-5 sites. The project
+already records cross-platform bit-equality as Stage 5+ (Fixed64) work, and none of the conclusions
+below depend on which of these it is.
 
 ## The deadlock on seed `0x0F1E2D3C4B5A6978` (Unity)
 
@@ -107,3 +113,4 @@ crossing the goal line is turned back by the outside of a post within the same t
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | October 11, 2026 | Initial evidence set: six-seed Unity vs .NET 8 shares, per-tick divergence, and the goal-frame `OutOfPlay` deadlock on the gate seed. |
+| 1.1 | October 11, 2026 | Review: 1.0 attributed the tick-5 divergence to Mono versus CoreCLR evaluation. The evidence shows a numerical divergence but does not separate the runtime from Unity's math/vector implementations versus the shim's; the cause is now stated as not isolated. No data file changed. |
