@@ -464,7 +464,7 @@ namespace TacticalDirector.ClientApp
                 if (_context.IsFullTime)
                 {
                     ClientMatchReport report = _coordinator.Report.Project();
-                    _context.Changes.Reconcile(report.Applied, report.Refused, true);
+                    _context.Changes.Reconcile(report.Applied, report.Refused, false);
                 }
                 else if (_context.Session.Driver.TryGetCommandOutcomes(_appliedCount, _refusedCount, out var applied, out var refused))
                 {
@@ -488,6 +488,14 @@ namespace TacticalDirector.ClientApp
 
                     if (changed)
                         Revision++;
+                }
+
+                // Last-frame roster evidence must settle an executed request before the
+                // end barrier marks every still-unexecuted order NotApplied.
+                if (_context.IsFullTime)
+                {
+                    ClientMatchReport report = _coordinator.Report.Project();
+                    _context.Changes.Reconcile(report.Applied, report.Refused, true);
                 }
 
                 if (_lastPaused != IsPaused)
