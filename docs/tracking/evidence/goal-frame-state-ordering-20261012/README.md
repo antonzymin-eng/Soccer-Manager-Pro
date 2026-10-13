@@ -1,9 +1,11 @@
 # Goal-frame state ordering — ERR-001-007
 
 **Created:** October 12, 2026
-**Version:** 1.3
+**Version:** 1.4
 **Purpose:** Preserve executable failing-before and passing-after evidence for the PR #499
-outside-post `OutOfPlay` deadlock. This is non-certifying .NET 8 / repository UnityShim evidence.
+outside-post `OutOfPlay` deadlock. The sections up to "Remaining governing checks" are non-certifying
+.NET 8 / repository UnityShim evidence; "Governing Unity checks (v1.4)" records the pinned-host
+Unity 6000.4.9f1 results.
 
 ## Results
 
@@ -13,6 +15,10 @@ outside-post `OutOfPlay` deadlock. This is non-certifying .NET 8 / repository Un
 | Corrected complete restart fixture | 19 passed / 0 failed |
 | New front-frame / already-out physics regressions on unmodified production | 0 passed / 5 failed |
 | Corrected complete Ball Physics assembly | 120 passed / 0 failed |
+| Unity 6000.4.9f1, final head `c1ad3043`: compile | 0 errors |
+| Unity: Ball Physics assembly + complete restart fixture | 139 passed / 0 failed |
+| Unity: unchanged `sim_match_engine_inposs_gate` | passed (820.1 s) |
+| Unity: six-seed corpus stall audit | no candidate on any seed, either half |
 
 The baseline engine cases fail for the intended reasons: all four captured-approach variants
 and both restore cases retain `OutOfPlay` at the in-play rebound; all four rear-contact
@@ -124,6 +130,40 @@ invalid absorbing state in that half; source inspection shows full-time sets `_m
 without resetting the ball, whereas half-time applies a centre-spot restart. The fix does not
 rely on either boundary to resume play.
 
+## Governing Unity checks (v1.4)
+
+All four checks listed above ran on October 13, 2026 (UTC) on the pinned host: the owner's Windows 11
+PC, Unity 6000.4.9f1 editor, at the final head `c1ad30434e896e071cf349bc1f300e697f41e387` (src tree
+`71d6ce45…`, the same tree as the .NET half). Tests ran through `TestRunnerApi` in the open editor,
+EditMode.
+
+- **Compile** (`unity-compile.txt`): Refresh plus a forced recursive reimport of `Assets/Scripts`
+  (junction to `src/`). Tundra build succeeded with 0 `error CS` lines, no reference to shim build output,
+  and the same three warnings as the earlier pinned-host baselines.
+- **Regressions** (`unity-editmode-status.txt`, run A): the whole `TacticalDirector.BallPhysics.Tests`
+  assembly plus `MatchEngineRestartTests`, 139 passed / 0 failed / 0 skipped (120 + 19). That includes
+  all nine new Ball Physics cases and all ten new engine cases. Run A's NUnit XML was not retained (its
+  callback stayed registered and overwrote that XML with run B's); its per-test status lines are kept.
+- **`sim_match_engine_inposs_gate`** (run B; NUnit XML `unity-gate-diag-results.xml.xz`): passed,
+  820.1 s. Before the fix it failed on this host at 0.361 / 0.361 on seed `0x0F1E2D3C4B5A6978`. The test
+  prints its shares only on failure; the diagnostic below runs the same `PlayOne` loop and measures
+  that seed at 0.949485 and `0x1A2B3C4D5E6F7081` at 0.943910 (bound 0.70).
+- **Stall audit** (`stall-audit-unity.txt`; run B, `TD_PLATFORM_DIVERGENCE_PREFIX=unity`, no ticks
+  override): `stall_audit.py.txt` finds no sampled `OutOfPlay` row on any seed, in either half. Over the
+  pre-fix Unity trace, the same script reports the known candidate (57,000–161,400, period 1). Five of
+  the six full traces are byte-identical to the pre-fix Unity traces in
+  `inposs-platform-divergence-20261011/full-trace-sha256.txt`, with bit-identical shares. The sixth,
+  `0x0F1E2D3C4B5A6978`, matches its pre-fix trimmed trace through sampled tick 56,400 and first differs
+  at checkpoint 57,000, the first one after the tick-56,956 post strike. Post-fix the ball is in play there,
+  and the share is 0.949 (16,708 samples, previously 0.361 with 28,363). That is the correction taking
+  effect on the governing build at the match that exposed the defect, with no recorded change elsewhere
+  in the corpus. Same sampling caveat as the .NET half.
+
+With both halves of the audit recorded, every check named under "Remaining governing checks" is complete.
+Retained: `unity-trace-<seed>.tsv.xz` (six full traces, xz -9), `unity-shares.tsv`,
+`unity-gate-diag-results.xml.xz`, `unity-editmode-status.txt`, `unity-compile.txt` and
+`stall-audit-unity.txt`.
+
 ## Integrity
 
 `SHA256SUMS` covers every member other than itself. `source-identity.txt` preserves the initial head's baseline/fingerprints, and
@@ -135,6 +175,7 @@ remains in the separate `inposs-platform-divergence-20261011` evidence directory
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4 | October 13, 2026 | Governing Unity 6000.4.9f1 checks at final head `c1ad3043`: compile clean; 139/139 Ball Physics + restart fixture; `sim_match_engine_inposs_gate` passes; Unity half of the six-seed stall audit finds no candidate, with five traces byte-identical to pre-fix Unity and the formerly frozen seed diverging only from checkpoint 57,000. Added the six Unity traces, shares, NUnit XML, status lines, compile excerpt and `stall-audit-unity.txt`. |
 | 1.3 | October 13, 2026 | Review follow-up: retain the six full .NET traces, shares file, TRX and console log; narrow the comparison to "every recorded sample unchanged" instead of "the correction never takes effect". |
 | 1.2 | October 12, 2026 | .NET half of the six-seed corpus stall audit: no candidate; traces byte-identical to pre-fix .NET. Added `stall-audit-net8-linux.txt` and `stall_audit.py.txt`. Unity half still owed. |
 | 1.1 | October 12, 2026 | Review corrections: broader contact/state impact, final 120/120 count, honest incomplete local/CI status and explicit pending post-fix corpus stall audit. Recorded test XML/logs unchanged. |
