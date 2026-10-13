@@ -314,7 +314,7 @@ namespace TacticalDirector.MatchEngine
         /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
         /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
         /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 24;
+        public const uint SNAPSHOT_SCHEMA_VERSION = 25;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -358,6 +358,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Maximum substitutions permitted per team per match (current IFAB
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
+
+        /// <summary>[FIXED] Law 3, maximum substitution windows during play for each team.
+        /// Before kickoff and at the second-half kickoff, substitutions are free windows.</summary>
+        public const int MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3;
 
         /// <summary>
         /// [FIXED] Sentinel for "no player identity is known for this agent id"
