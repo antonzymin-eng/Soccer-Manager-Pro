@@ -547,6 +547,15 @@ namespace TacticalDirector.MatchEngine
         // config — same B3 exclusion proof as _attrs/_perfs — so it is NOT serialized.
         private readonly int[] _activeBenchSlot;    // [SQUAD_SIZE], -1 = original starter
         private readonly int[] _substitutionsUsed;  // [TEAM_COUNT]
+        // v25: accepted requests are cross-tick. The _pendingSub* event queue below is transient.
+        private readonly int[] _substitutionWindowsUsed; // [TEAM_COUNT], Law 3
+        private readonly uint[] _subRequestSequence;
+        private readonly byte[] _subRequestTeam;
+        private readonly byte[] _subRequestOutSlot;
+        private readonly byte[] _subRequestBench;
+        private readonly byte[] _subRequestReason;
+        private int _subRequestCount;
+        private uint _nextSubRequestSequence;
 
         // #27 T3 (squad-roster-reference-design.md): per-team roster reference — the ClubId of the
         // Squad ConfigureSquads loaded for the team, or NO_ROSTER_CLUB_ID (-1) when no squad was
@@ -886,6 +895,7 @@ namespace TacticalDirector.MatchEngine
                 _activeBenchSlot[i] = -1;
             }
             _substitutionsUsed = new int[MatchEngineConstants.TEAM_COUNT];
+            _substitutionWindowsUsed = new int[MatchEngineConstants.TEAM_COUNT];
             // #27 T3: no squad configured yet — both teams reference the sentinel until ConfigureSquads.
             _rosterClubId = new int[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
@@ -898,6 +908,13 @@ namespace TacticalDirector.MatchEngine
             _pendingSubTeam = new byte[maxPendingSubs];
             _pendingSubReason = new byte[maxPendingSubs];
             _pendingSubCount = 0;
+            _subRequestSequence = new uint[maxPendingSubs];
+            _subRequestTeam = new byte[maxPendingSubs];
+            _subRequestOutSlot = new byte[maxPendingSubs];
+            _subRequestBench = new byte[maxPendingSubs];
+            _subRequestReason = new byte[maxPendingSubs];
+            _subRequestCount = 0;
+            _nextSubRequestSequence = 1u;
 
             // Bench roster (design note §6): a Stage-0 in-code source, mirroring the TeamTacticConfig
             // precedent — the on-disk loader is a Stage 1+ parser swap. Every slot defaults to the
@@ -1554,6 +1571,158 @@ namespace TacticalDirector.MatchEngine
                     nameof(agentId), agentId, "agentId must be a roster index in [0, SQUAD_SIZE).");
             }
             _pendingPlayerTactics[agentId] = tactic;
+        }
+
+        /// <summary>Number of accepted but not yet executed substitution requests.</summary>
+        public int PendingSubstitutionCount => _subRequestCount;
+
+        /// <summary>Copies a pending request. Call only on the simulation owner thread.</summary>
+        public PendingSubstitution GetPendingSubstitution(int index)
+        {
+            if (index < 0 || index >= _subRequestCount)
+                throw new System.ArgumentOutOfRangeException(nameof(index));
+            return new PendingSubstitution(
+                _subRequestSequence[index], _subRequestTeam[index], _subRequestOutSlot[index],
+                _subRequestBench[index], (SubstitutionReason)_subRequestReason[index]);
+        }
+
+        /// <summary>Number of Law 3 substitution windows consumed by this team.</summary>
+        public int SubstitutionWindowsUsed(int teamId)
+        {
+            GuardTeamId(teamId);
+            return _substitutionWindowsUsed[teamId];
+        }
+
+        /// <summary>
+        /// Validates and queues a substitution for its next eligible stoppage. Malformed indices
+        /// throw, but football-rule refusals are typed outcomes and mutate no state.
+        /// </summary>
+        public SubstitutionRequestResult RequestSubstitution(
+            int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+        {
+            GuardTeamId(teamId);
+            if (outSlotIndex < 0 || outSlotIndex >= MatchEngineConstants.SQUAD_SIZE)
+                throw new System.ArgumentOutOfRangeException(nameof(outSlotIndex));
+            if (_teamIds[outSlotIndex] != teamId)
+                throw new System.ArgumentException("Outgoing slot does not belong to team.", nameof(outSlotIndex));
+            if (benchIndex < 0 || benchIndex >= MatchEngineConstants.SUBSTITUTES_PER_TEAM)
+                throw new System.ArgumentOutOfRangeException(nameof(benchIndex));
+
+            if (_matchEnded)
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.MatchEnded);
+            if (_isSentOff[outSlotIndex])
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.OutgoingSentOff);
+            if (_activeBenchSlot[outSlotIndex] != -1)
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.OutgoingAlreadyReplaced);
+
+            int teamPending = 0;
+            bool pendingKeeperFallback = false;
+            for (int i = 0; i < _subRequestCount; i++)
+            {
+                if (_subRequestTeam[i] != teamId) continue;
+                teamPending++;
+                if (_subRequestOutSlot[i] == outSlotIndex)
+                    return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.OutgoingAlreadyPending);
+                if (_subRequestBench[i] == benchIndex)
+                    return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.BenchPlayerUnavailable);
+                if (_benchIsGoalkeeper[teamId][_subRequestBench[i]] && !_isGoalkeeper[_subRequestOutSlot[i]])
+                    pendingKeeperFallback = true;
+            }
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_teamIds[i] == teamId && _activeBenchSlot[i] == benchIndex)
+                    return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.BenchPlayerUnavailable);
+            }
+            if (_substitutionsUsed[teamId] + teamPending >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.LimitReached);
+            if (_secondHalfStarted &&
+                _substitutionWindowsUsed[teamId] >= MatchEngineConstants.MAX_SUBSTITUTION_WINDOWS_PER_TEAM)
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.NoWindowsLeft);
+
+            bool incomingKeeper = _benchIsGoalkeeper[teamId][benchIndex];
+            bool outgoingKeeper = _isGoalkeeper[outSlotIndex];
+            bool allowedFallback = incomingKeeper && !outgoingKeeper &&
+                FirstGoalkeeperOnTeam(teamId) == MatchEngineConstants.NO_POSSESSION &&
+                !pendingKeeperFallback;
+            if (incomingKeeper != outgoingKeeper && !allowedFallback)
+                return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.GoalkeeperRoleMismatch);
+
+            uint sequence = _nextSubRequestSequence++;
+            if (_clock.CurrentTick == 0UL)
+            {
+                // Pre-kickoff is a free stoppage. Publish through the existing first-tick
+                // Resolve notification buffer (publishing between ticks is forbidden).
+                SubstitutePlayer(teamId, outSlotIndex, benchIndex, reason);
+                return SubstitutionRequestResult.Accept(sequence);
+            }
+
+            int at = _subRequestCount++;
+            _subRequestSequence[at] = sequence;
+            _subRequestTeam[at] = (byte)teamId;
+            _subRequestOutSlot[at] = (byte)outSlotIndex;
+            _subRequestBench[at] = (byte)benchIndex;
+            _subRequestReason[at] = (byte)reason;
+            return SubstitutionRequestResult.Accept(sequence);
+        }
+
+        private void RemoveSubstitutionRequest(int index)
+        {
+            for (int i = index + 1; i < _subRequestCount; i++)
+            {
+                _subRequestSequence[i - 1] = _subRequestSequence[i];
+                _subRequestTeam[i - 1] = _subRequestTeam[i];
+                _subRequestOutSlot[i - 1] = _subRequestOutSlot[i];
+                _subRequestBench[i - 1] = _subRequestBench[i];
+                _subRequestReason[i - 1] = _subRequestReason[i];
+            }
+            _subRequestCount--;
+        }
+
+        /// <summary>Called after hand-episode teardown and before restart-taker selection.</summary>
+        private void ExecutePendingSubstitutionsAtRestart(bool freeWindow, bool publishNow)
+        {
+            // Cancellation always precedes the per-team window gate, even for a team
+            // whose requests have to wait until half-time.
+            for (int i = 0; i < _subRequestCount;)
+            {
+                if (_isSentOff[_subRequestOutSlot[i]]) RemoveSubstitutionRequest(i);
+                else i++;
+            }
+
+            int chargedTeams = 0;
+            for (int i = 0; i < _subRequestCount;)
+            {
+                int team = _subRequestTeam[i];
+                if (!freeWindow &&
+                    _substitutionWindowsUsed[team] >= MatchEngineConstants.MAX_SUBSTITUTION_WINDOWS_PER_TEAM)
+                {
+                    i++;
+                    continue;
+                }
+                int outgoing = _subRequestOutSlot[i];
+                int bench = _subRequestBench[i];
+                if (_activeBenchSlot[outgoing] != -1 ||
+                    _substitutionsUsed[team] >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
+                    throw new System.InvalidOperationException("Pending substitution slot/limit invariant violated.");
+                for (int s = 0; s < MatchEngineConstants.SQUAD_SIZE; s++)
+                {
+                    if (_teamIds[s] == team && _activeBenchSlot[s] == bench)
+                        throw new System.InvalidOperationException("Pending substitution bench invariant violated.");
+                }
+                SubstitutePlayer(team, outgoing, bench, (SubstitutionReason)_subRequestReason[i]);
+                RemoveSubstitutionRequest(i);
+
+                int mask = 1 << team;
+                if (!freeWindow && (chargedTeams & mask) == 0)
+                {
+                    _substitutionWindowsUsed[team]++;
+                    chargedTeams |= mask;
+                }
+            }
+            // The Resolve entry flush happened before this restart, so an execution
+            // there must publish now; half-time and test-triggered restarts buffer.
+            if (publishNow)
+                PublishPendingSubstitutions();
         }
 
         /// <summary>
@@ -2966,7 +3135,7 @@ namespace TacticalDirector.MatchEngine
         /// restart paths do, so the "same keeper awarded the restart" teardown case — which the possession
         /// seam alone cannot see — is lockable without staging a whole foul.</summary>
         internal void TestOnly_ApplyRestart(Vector2 position, int awardedTeam) =>
-            ApplyRestart(position, awardedTeam, RestartCue.FreeKick);
+            ApplyRestart(position, awardedTeam, RestartCue.FreeKick, publishSubstitutionsNow: false);
 
         /// <summary>Test-only W3 seam: current 60 Hz frame used by the staged mixed-contact locks.</summary>
         internal int TestOnly_CurrentPhysicsFrame => (int)_clock.CurrentTick;
@@ -3178,7 +3347,9 @@ namespace TacticalDirector.MatchEngine
                 ApplyRestart(
                     new Vector2(MatchEngineConstants.KickoffBallXM, MatchEngineConstants.KickoffBallYM),
                     awardedTeam: MatchEngineConstants.SECOND_HALF_KICKOFF_TEAM,
-                    cue: RestartCue.KickOff);
+                    cue: RestartCue.KickOff,
+                    freeSubstitutionWindow: true,
+                    publishSubstitutionsNow: false);
 
                 var evt = new MatchPhaseChangedEvent(newPhase: 0, homeScore: _goals[0], awayScore: _goals[1]);
                 EventBus.Publish(in evt);
@@ -3190,6 +3361,8 @@ namespace TacticalDirector.MatchEngine
             if (!_matchEnded && tick >= MatchEngineConstants.MATCH_TICKS_TOTAL)
             {
                 _matchEnded = true;
+                // An unexecuted order cannot survive full time. The view observes removal.
+                _subRequestCount = 0;
 
                 var evt = new MatchPhaseChangedEvent(newPhase: 1, homeScore: _goals[0], awayScore: _goals[1]);
                 EventBus.Publish(in evt);
@@ -5512,7 +5685,8 @@ namespace TacticalDirector.MatchEngine
         /// <param name="position">Restart position for the ball (pitch plane, m).</param>
         /// <param name="awardedTeam">Team id (0/1) awarded the restart; its nearest eligible agent takes it.</param>
         /// <param name="cue">What kind of restart this is. Observation only — never read by gameplay.</param>
-        private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue)
+        private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue,
+            bool freeSubstitutionWindow = false, bool publishSubstitutionsNow = true)
         {
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
@@ -5523,6 +5697,7 @@ namespace TacticalDirector.MatchEngine
             {
                 EndGoalkeeperHandEpisode(_gkAgentIds[k]);
             }
+            ExecutePendingSubstitutionsAtRestart(freeSubstitutionWindow, publishSubstitutionsNow);
             SetPossessingAgent(SelectRestartTaker(position, awardedTeam));
             if (_possessingAgentId >= 0)
                 ObserveW8(W8StageAKind.Acquire, _possessingAgentId);
@@ -5609,7 +5784,7 @@ namespace TacticalDirector.MatchEngine
         {
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                if (_teamIds[i] == teamId && _isGoalkeeper[i])
+                if (_teamIds[i] == teamId && _isGoalkeeper[i] && !_isSentOff[i])
                 {
                     return i;
                 }
@@ -6873,6 +7048,21 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, latest.MatchTime);
             }
 
+            // v25 — pending requests + window use and sequence identity. This is cross-tick
+            // gameplay state; the transient publication queue is intentionally excluded.
+            CanonicalSerializer.WriteU32(buf, ref o, _nextSubRequestSequence);
+            CanonicalSerializer.WriteU8(buf, ref o, (byte)_subRequestCount);
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)_substitutionWindowsUsed[t]);
+            for (int i = 0; i < _subRequestCount; i++)
+            {
+                CanonicalSerializer.WriteU32(buf, ref o, _subRequestSequence[i]);
+                CanonicalSerializer.WriteU8(buf, ref o, _subRequestTeam[i]);
+                CanonicalSerializer.WriteU8(buf, ref o, _subRequestOutSlot[i]);
+                CanonicalSerializer.WriteU8(buf, ref o, _subRequestBench[i]);
+                CanonicalSerializer.WriteU8(buf, ref o, _subRequestReason[i]);
+            }
+
             payload.BytesWritten = o;
         }
 
@@ -7148,6 +7338,27 @@ namespace TacticalDirector.MatchEngine
                     MatchTime = CanonicalSerializer.ReadF32(buf, ref o),
                 };
                 _passRings[t].Push(latest);
+            }
+
+            // v25 — symmetric request/window decode. Invalid count is a corrupt payload,
+            // not a reason to silently truncate the deterministic continuation.
+            _nextSubRequestSequence = CanonicalSerializer.ReadU32(buf, ref o);
+            _subRequestCount = CanonicalSerializer.ReadU8(buf, ref o);
+            if (_subRequestCount > _subRequestSequence.Length)
+                throw new System.InvalidOperationException("Snapshot pending substitution count exceeds capacity.");
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                _substitutionWindowsUsed[t] = CanonicalSerializer.ReadU8(buf, ref o);
+                if (_substitutionWindowsUsed[t] > MatchEngineConstants.MAX_SUBSTITUTION_WINDOWS_PER_TEAM)
+                    throw new System.InvalidOperationException("Snapshot substitution window count invalid.");
+            }
+            for (int i = 0; i < _subRequestCount; i++)
+            {
+                _subRequestSequence[i] = CanonicalSerializer.ReadU32(buf, ref o);
+                _subRequestTeam[i] = CanonicalSerializer.ReadU8(buf, ref o);
+                _subRequestOutSlot[i] = CanonicalSerializer.ReadU8(buf, ref o);
+                _subRequestBench[i] = CanonicalSerializer.ReadU8(buf, ref o);
+                _subRequestReason[i] = CanonicalSerializer.ReadU8(buf, ref o);
             }
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
