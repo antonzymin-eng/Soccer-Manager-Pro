@@ -221,6 +221,10 @@ namespace TacticalDirector.ClientApp.Tests
             _view.TogglePause();
             Tick();
             Assert.AreEqual(ClientChangeStatus.Applied, first.Status);
+            Assert.AreEqual(ClientChangeStatus.Pending, sub.Status,
+                "Acceptance is not execution: the player must wait for a stoppage.");
+            _shell.Session.TestOnly_Engine.TestOnly_ApplyRestart(new Vector2(52.5f, 34f), 0);
+            Tick();
             Assert.AreEqual(ClientChangeStatus.Applied, sub.Status);
             Assert.AreEqual(Mentality.Attacking, _view.CurrentMentality);
             _view.OpenMentality();
