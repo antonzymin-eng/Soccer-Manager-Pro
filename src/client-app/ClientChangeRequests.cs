@@ -124,8 +124,24 @@ namespace TacticalDirector.ClientApp
             LiveAgentCue cue = frame.AgentCues[pending.Command.OutSlotIndex];
             if (cue.BenchSlot == pending.Command.BenchIndex)
                 Settle(pending, ClientChangeStatus.Applied, frame.Tick);
-            else if (cue.IsSentOff)
+            else if (cue.IsSentOff || WasRemovedFromAuthoritativeQueue(in frame, pending))
                 Settle(pending, ClientChangeStatus.NotApplied, frame.Tick);
+        }
+
+        private static bool WasRemovedFromAuthoritativeQueue(
+            in LiveMatchFrame frame, ClientChangeRecord row)
+        {
+            PendingSubstitution[] requests = frame.PendingSubstitutions;
+            if (requests == null)
+                return false; // Older snapshots do not carry a queue; do not infer cancellation.
+            for (int i = 0; i < requests.Length; i++)
+            {
+                if (requests[i].Team == row.Command.TeamId &&
+                    requests[i].OutSlot == row.Command.OutSlotIndex &&
+                    requests[i].Bench == row.Command.BenchIndex)
+                    return false;
+            }
+            return true;
         }
 
         private void Settle(ClientChangeRecord row, ClientChangeStatus status, ulong tick)

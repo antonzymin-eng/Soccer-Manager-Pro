@@ -378,6 +378,15 @@ namespace TacticalDirector.MatchViewer
                     restartThisTick, _engine.RestartAwardedTeam, _engine.CurrentTick);
             }
 
+            // The queue is part of v25's authoritative state. Copy it once under
+            // _tickGate with the rest of the captured frame, never expose mutable engine arrays.
+            int requestCount = _engine.PendingSubstitutionCount;
+            PendingSubstitution[] pending = requestCount == 0
+                ? System.Array.Empty<PendingSubstitution>()
+                : new PendingSubstitution[requestCount];
+            for (int i = 0; i < pending.Length; i++)
+                pending[i] = _engine.GetPendingSubstitution(i);
+
             return new LiveMatchFrame(
                 _engine.CurrentTick,
                 _engine.BallView.Position,
@@ -388,7 +397,8 @@ namespace TacticalDirector.MatchViewer
                 new Scoreline(_engine.HomeScore, _engine.AwayScore),
                 _engine.MatchEnded,
                 _engine.CurrentPeriod,
-                _lastRestart);
+                _lastRestart,
+                pending);
         }
 
         /// <summary>

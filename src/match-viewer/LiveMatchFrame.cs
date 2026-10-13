@@ -55,6 +55,13 @@ namespace TacticalDirector.MatchViewer
         /// convention as the two arrays above.</summary>
         public readonly int[] SubstitutionsUsed;
 
+        /// <summary>
+        /// Authoritative cross-tick substitution queue, with sequence identities.
+        /// Null means an older/test-built frame did not provide queue observation;
+        /// an empty array in a captured production frame means the queue is empty.
+        /// </summary>
+        public readonly PendingSubstitution[] PendingSubstitutions;
+
         /// <summary>Goals, home and away.</summary>
         public readonly Scoreline Score;
 
@@ -85,7 +92,8 @@ namespace TacticalDirector.MatchViewer
             Scoreline score,
             bool matchEnded,
             MatchPeriod period,
-            RestartBanner restart)
+            RestartBanner restart,
+            PendingSubstitution[] pendingSubstitutions = null)
         {
             Tick              = tick;
             BallPosition      = ballPosition;
@@ -97,6 +105,7 @@ namespace TacticalDirector.MatchViewer
             MatchEnded        = matchEnded;
             Period            = period;
             Restart           = restart;
+            PendingSubstitutions = pendingSubstitutions;
         }
     }
 }
