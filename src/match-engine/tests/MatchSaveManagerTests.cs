@@ -119,6 +119,46 @@ namespace TacticalDirector.MatchEngine
                 squads: Provider(home, away));
         }
 
+        [Test]
+        public void SaveAtAcceptedSubstitutionTick_PreservesPendingAndDigestContinuation()
+        {
+            var e = new MatchEngine(MatchSeed);
+            for (int i = 0; i < 5; i++) e.RunTick();
+            Assert.IsTrue(e.RequestSubstitution(0, 1, 0, SubstitutionReason.Tactical).IsAccepted);
+            Assert.AreEqual(1, e.PendingSubstitutionCount);
+            byte[] save = MatchSaveManager.Encode(e);
+            Assert.AreEqual(5UL, e.CurrentTick, "Save cannot advance the clock.");
+            const int continuation = 10;
+            var reference = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                e.RunTick();
+                reference[i] = (byte[])e.CurrentSnapshotDigest.Clone();
+            }
+            MatchEngine restored = MatchSaveManager.Restore(save);
+            Assert.AreEqual(1, restored.PendingSubstitutionCount);
+            Assert.AreEqual(5UL, restored.CurrentTick);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.RunTick();
+                CollectionAssert.AreEqual(reference[i], restored.CurrentSnapshotDigest,
+                    "Saved off-tick request diverged at continuation tick " + i);
+            }
+        }
+
+        [Test]
+        public void PostSnapshotOverlayTampering_IsDetectedBeforeRestore()
+        {
+            var e = new MatchEngine(MatchSeed);
+            e.RunTick();
+            Assert.IsTrue(e.RequestSubstitution(0, 1, 0, SubstitutionReason.Tactical).IsAccepted);
+            byte[] blob = MatchSaveManager.Encode(e);
+            blob[blob.Length - 1] ^= 0x01;
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => MatchSaveManager.Restore(blob));
+            StringAssert.Contains("overlay digest", error.Message);
+        }
+
         // ── MatchSaveManager fail-loud ─────────────────────────────────────────────
 
         [Test]
