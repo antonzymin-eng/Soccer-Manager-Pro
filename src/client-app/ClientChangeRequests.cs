@@ -12,6 +12,7 @@ using TacticalDirector.MatchClientCore;
 using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
 using TacticalDirector.MatchViewer;
+using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.ClientApp
 {
