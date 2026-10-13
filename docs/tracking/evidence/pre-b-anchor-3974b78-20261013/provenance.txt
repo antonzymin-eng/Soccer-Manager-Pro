@@ -1,0 +1,38 @@
+## anchor-w8
+# worktree anchor HEAD 3974b78b0383adca3e9546bb47a7b93a62b3cf92 src-tree 71d6ce456f563d6070aa8953561c1367599a359f
+# instrument blob 520ba31c71e06ed408fd5c282b5fd5611cf74879
+# env TD_W8_STAGE_A=1 filter FullyQualifiedName~W8StageADiagnostic_ReportsFrozenSixSeedBaseline
+# start 2026-10-13T19:28:24Z
+# exit 0 end 2026-10-13T19:54:34Z
+
+## anchor-foul
+# worktree anchor HEAD 3974b78b0383adca3e9546bb47a7b93a62b3cf92 src-tree 71d6ce456f563d6070aa8953561c1367599a359f
+# instrument blob 520ba31c71e06ed408fd5c282b5fd5611cf74879
+# env TD_FOUL_DIAGNOSTIC=1 filter FullyQualifiedName~FoulRateDiagnostic
+# start 2026-10-13T19:28:24Z
+# exit 0 end 2026-10-13T19:54:39Z
+
+## anchor-trace
+# worktree anchor HEAD 3974b78b0383adca3e9546bb47a7b93a62b3cf92 src-tree 71d6ce456f563d6070aa8953561c1367599a359f
+# instrument blob 520ba31c71e06ed408fd5c282b5fd5611cf74879
+# env TD_W8_STALL_TRACE_OUT=<scratch>/out/stall-trace.csv filter FullyQualifiedName~W8Corpus_PerTickOutOfPlayStallTrace
+# start 2026-10-13T19:28:24Z
+# exit 0 end 2026-10-13T19:54:20Z
+
+## check-w8
+# worktree check HEAD 692db6674cdf4164d7f0199f870ece4a279b9582 src-tree 8a884625214dcbd0e38f183756a88af6890f26e1
+# instrument blob 520ba31c71e06ed408fd5c282b5fd5611cf74879
+# env TD_W8_STAGE_A=1 filter FullyQualifiedName~W8StageADiagnostic_ReportsFrozenSixSeedBaseline
+# start 2026-10-13T19:28:24Z
+# exit 0 end 2026-10-13T19:53:56Z
+
+## host
+Ubuntu 24.04.5 LTS container, 4 vCPU; .NET SDK 8.0.131 (Ubuntu package), Microsoft.NETCore.App 8.0.31 [/usr/lib/dotnet/shared/Microsoft.NETCore.App]
+Debug build of src/match-engine/tests/match-engine-tests.gen.csproj after tools/dotnet-ci/generate_projects.py; the four runs executed concurrently.
+
+## instrument identity
+W8StageADiagnosticTests-520ba31c.cs.txt git hash-object: 520ba31c71e06ed408fd5c282b5fd5611cf74879
+source of that blob: origin/measure/w8-clock-correction-six-seed-20260926 at 3aea8a4
+main's own instrument blob at 3974b78: 7348650ed74e4a73c92c0a6ea71a87442f63e77b (lacks the 9-line same/opponent-keeper reclaim split)
+FoulRateDiagnosticTests.cs blob at 3974b78: 3bdc02172b0cc6c4428151d8f81feaaca802b910, unchanged from 692db66
+SNAPSHOT_SCHEMA_VERSION: 23 at 692db66, 24 at 3974b78
