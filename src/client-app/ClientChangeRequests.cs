@@ -32,7 +32,8 @@ namespace TacticalDirector.ClientApp
         public Mentality CurrentMentality => _currentTactic.Mentality;
         /// <summary>Whether another Mentality request must wait.</summary>
         public bool IsMentalityPending => _mentalityPending != null;
-        /// <summary>Whether another substitution request must wait.</summary>
+        /// <summary>Whether an outgoing substitution order is awaiting its command-channel receipt.
+        /// Accepted orders stay in Records until execution, but do not block another order.</summary>
         public bool IsSubstitutionPending => _substitutionPending != null;
         /// <summary>Changes only on registration or new outcome evidence.</summary>
         public int Revision { get; private set; }
@@ -88,8 +89,15 @@ namespace TacticalDirector.ClientApp
             _completed = true;
             if (_mentalityPending != null)
                 Settle(_mentalityPending, ClientChangeStatus.NotApplied, 0);
-            if (_substitutionPending != null)
-                Settle(_substitutionPending, ClientChangeStatus.NotApplied, 0);
+            // Both accepted-but-not-executed and in-flight requests must be settled.
+            // Only the latter occupies _substitutionPending; neither can survive full time.
+            for (int i = 0; i < _records.Count; i++)
+            {
+                ClientChangeRecord row = _records[i];
+                if (row.Status == ClientChangeStatus.Pending &&
+                    row.Command.Kind == ManagerCommandKind.Substitute)
+                    Settle(row, ClientChangeStatus.NotApplied, 0);
+            }
         }
 
         private void Consume(TickStampedCommand evidence, ClientChangeStatus status)
@@ -107,6 +115,9 @@ namespace TacticalDirector.ClientApp
                 // The driver proves request acceptance, not a roster replacement.
                 pending.EngineAccepted = true;
                 pending.AcceptedTick = evidence.AppliedTick;
+                // One at a time on the outbound command channel, *not* one per
+                // stoppage: additional accepted requests may share the same window.
+                _substitutionPending = null;
                 Revision++;
                 return;
             }
@@ -119,14 +130,23 @@ namespace TacticalDirector.ClientApp
         /// </summary>
         internal void ObserveFrame(in LiveMatchFrame frame)
         {
-            ClientChangeRecord pending = _substitutionPending;
-            if (pending == null || !pending.EngineAccepted || frame.Tick <= pending.AcceptedTick)
-                return;
-            LiveAgentCue cue = frame.AgentCues[pending.Command.OutSlotIndex];
-            if (cue.BenchSlot == pending.Command.BenchIndex)
-                Settle(pending, ClientChangeStatus.Applied, frame.Tick);
-            else if (cue.IsSentOff || WasRemovedFromAuthoritativeQueue(in frame, pending))
-                Settle(pending, ClientChangeStatus.NotApplied, frame.Tick);
+            // A previous accepted request must not block later requests for the same
+            // stoppage. Reconcile every unfinished accepted record, in submission order.
+            for (int i = 0; i < _records.Count; i++)
+            {
+                ClientChangeRecord pending = _records[i];
+                if (pending.Command.Kind != ManagerCommandKind.Substitute ||
+                    pending.Status != ClientChangeStatus.Pending ||
+                    !pending.EngineAccepted ||
+                    frame.Tick <= pending.AcceptedTick)
+                    continue;
+
+                LiveAgentCue cue = frame.AgentCues[pending.Command.OutSlotIndex];
+                if (cue.BenchSlot == pending.Command.BenchIndex)
+                    Settle(pending, ClientChangeStatus.Applied, frame.Tick);
+                else if (cue.IsSentOff || WasRemovedFromAuthoritativeQueue(in frame, pending))
+                    Settle(pending, ClientChangeStatus.NotApplied, frame.Tick);
+            }
         }
 
         private static bool WasRemovedFromAuthoritativeQueue(
