@@ -50,7 +50,7 @@ namespace TacticalDirector.ClientApp.Tests
         {
             // The truncation defect cut these sentences at an internal semicolon.
             Dictionary<string, string> contract = ReadContract();
-            StringAssert.EndsWith("; it does not wait for a stoppage.", contract["context.substitution"]);
+            StringAssert.EndsWith("; with no windows left in the first half, it waits for half-time.", contract["context.substitution"]);
             StringAssert.EndsWith("; Away A attacks left. Goals, penalty areas and ball shown.", contract["pitch.description"]);
             StringAssert.EndsWith("; the two teams need not total 100%.", contract["statistics.loose_ball"]);
             Assert.AreEqual("Least risk in on-ball choices; deepest defensive line.", contract["effect.very_defensive"]);
