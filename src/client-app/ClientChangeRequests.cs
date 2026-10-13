@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
+using TacticalDirector.MatchViewer;
 
 namespace TacticalDirector.ClientApp
 {
@@ -100,7 +101,31 @@ namespace TacticalDirector.ClientApp
                 throw new InvalidOperationException("Foreign or unmatched home command evidence.");
             if (status == ClientChangeStatus.Applied && command.Kind == ManagerCommandKind.SetTeamTactic)
                 _currentTactic = command.NewTeamTactic;
+            if (status == ClientChangeStatus.Applied && command.Kind == ManagerCommandKind.Substitute)
+            {
+                // The driver proves request acceptance, not a roster replacement.
+                pending.EngineAccepted = true;
+                pending.AcceptedTick = evidence.AppliedTick;
+                Revision++;
+                return;
+            }
             Settle(pending, status, evidence.AppliedTick);
+        }
+
+        /// <summary>
+        /// Settles a previously accepted substitution from authoritative roster cues.
+        /// Never predicts execution from request acceptance or a restart banner alone.
+        /// </summary>
+        internal void ObserveFrame(in LiveMatchFrame frame)
+        {
+            ClientChangeRecord pending = _substitutionPending;
+            if (pending == null || !pending.EngineAccepted || frame.Tick <= pending.AcceptedTick)
+                return;
+            LiveAgentCue cue = frame.AgentCues[pending.Command.OutSlotIndex];
+            if (cue.BenchSlot == pending.Command.BenchIndex)
+                Settle(pending, ClientChangeStatus.Applied, frame.Tick);
+            else if (cue.IsSentOff)
+                Settle(pending, ClientChangeStatus.NotApplied, frame.Tick);
         }
 
         private void Settle(ClientChangeRecord row, ClientChangeStatus status, ulong tick)

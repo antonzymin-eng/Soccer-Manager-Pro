@@ -22,6 +22,8 @@ namespace TacticalDirector.ClientApp
         public ClientChangeStatus Status { get; internal set; }
         /// <summary>Driver-stamped outcome tick; meaningful only for Applied/Refused.</summary>
         public ulong OutcomeTick { get; internal set; }
+        internal bool EngineAccepted { get; set; }
+        internal ulong AcceptedTick { get; set; }
 
         internal ClientChangeRecord(in ManagerCommand command, in MatchPlayerIdentity outgoing, in MatchPlayerIdentity incoming)
         {

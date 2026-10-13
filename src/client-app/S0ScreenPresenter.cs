@@ -475,6 +475,7 @@ namespace TacticalDirector.ClientApp
                 if (_context.TryGetLatestFrame(out LiveMatchFrame frame) && (_frame.IsEmpty || frame.Tick != _lastFrameTick))
                 {
                     _frame = _coordinator.MatchView.Project();
+                    _context.Changes.ObserveFrame(in frame);
                     _lastFrameTick = frame.Tick;
                     bool changed = UpdateFrame(in frame);
                     if (_context.IsFullTime || !_hasStatistics || frame.Tick - _statisticsTick >= DeterministicSimConstants.PHYSICS_TICK_HZ || (!_analytics.IsIncomplete && _context.Session.Streamer.PostTickObserverFault != null))

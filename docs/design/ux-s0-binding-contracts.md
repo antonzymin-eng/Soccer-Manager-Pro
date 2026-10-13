@@ -299,13 +299,13 @@ typed components and final role output without rewriting old request identities.
 | `feedback.mentality_pending_paused` | Pending — Mentality: {0} — waiting; resume to continue. |
 | `feedback.mentality_applied` | Applied — Mentality: {0} at minute {1}. |
 | `feedback.mentality_refused` | Refused — Mentality: {0} — current Mentality unchanged. |
-| `feedback.mentality_not_applied` | Not applied — Mentality: {0} — match ended before it could apply. |
+| `feedback.mentality_not_applied` | Not applied — Mentality: {0} — the request was cancelled or the match ended before it could apply. |
 | `feedback.mentality_send_failure` | Send failure — Mentality: {0} — request could not be sent; current Mentality unchanged. |
 | `feedback.substitution_pending` | Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting to be applied. |
 | `feedback.substitution_pending_paused` | Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting; resume to continue. |
 | `feedback.substitution_applied` | Applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}) at minute {7}. |
 | `feedback.substitution_refused` | Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); substitution count unchanged. |
-| `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); match ended before it could apply. |
+| `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the request was cancelled or the match ended before it could apply. |
 | `feedback.substitution_send_failure` | Send failure — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); request could not be sent; substitution count unchanged. |
 
 Base-copy example: “Pending — Ben Calder (shirt 2) → Miles West (shirt 13, bench slot 2);

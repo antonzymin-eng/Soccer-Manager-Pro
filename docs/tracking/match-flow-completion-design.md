@@ -424,7 +424,7 @@ pending queue (entries and their `sequence`), and a cancellation removes the ent
 | executed (`SubstitutionEvent`, with minute) | `feedback.substitution_applied` |
 | `Refused(*)` | `feedback.substitution_refused` |
 | `NotApplied(MatchEnded)` | `feedback.substitution_not_applied` |
-| `NotApplied(OutgoingSentOff)` | **no current key.** UX copy decision, outside this engine contract |
+| `NotApplied(OutgoingSentOff)` | `feedback.substitution_not_applied` (cancelled or ended; no new event) |
 | command never reached the engine | `feedback.substitution_send_failure` (client-side, unchanged) |
 
 `context.substitution` currently tells the manager that a substitution "does not wait" for a stoppage. That
