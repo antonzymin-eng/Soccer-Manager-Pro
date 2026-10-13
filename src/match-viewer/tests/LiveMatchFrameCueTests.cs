@@ -94,6 +94,30 @@ namespace TacticalDirector.MatchViewer.Tests
         }
 
         [Test]
+        public void CapturedFrame_CopiesPendingRequestsAndSequenceIdentity()
+        {
+            var engine = new MatchEngine.MatchEngine(Seed);
+            var streamer = new LiveMatchStreamer(engine);
+            LiveMatchFrame before = streamer.TickOnce();
+            Assert.IsNotNull(before.PendingSubstitutions);
+            Assert.AreEqual(0, before.PendingSubstitutions.Length);
+
+            SubstitutionRequestResult accepted = engine.RequestSubstitution(
+                0, 1, 0, SubstitutionReason.Tactical);
+            Assert.IsTrue(accepted.IsAccepted);
+            LiveMatchFrame after = streamer.TickOnce();
+            Assert.AreEqual(1, after.PendingSubstitutions.Length);
+            Assert.AreEqual(accepted.Sequence, after.PendingSubstitutions[0].Sequence);
+            Assert.AreEqual(0, after.PendingSubstitutions[0].Team);
+            Assert.AreEqual(1, after.PendingSubstitutions[0].OutSlot);
+            Assert.AreEqual(0, after.PendingSubstitutions[0].Bench);
+            Assert.AreEqual(-1, after.AgentCues[1].BenchSlot,
+                "A captured pending request does not replace the player before restart.");
+            Assert.AreEqual(0, before.PendingSubstitutions.Length,
+                "Previously published frames must not alias a later queue.");
+        }
+
+        [Test]
         public void CapturedFrame_CarriesPerTeamSubstitutionCounts()
         {
             var engine   = new MatchEngine.MatchEngine(Seed);
