@@ -1683,7 +1683,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>Called after hand-episode teardown and before restart-taker selection.</summary>
-        private void ExecutePendingSubstitutionsAtRestart(bool freeWindow, bool publishNow)
+        private bool ExecutePendingSubstitutionsAtRestart(bool freeWindow, bool publishNow)
         {
             // Cancellation always precedes the per-team window gate, even for a team
             // whose requests have to wait until half-time.
@@ -1694,6 +1694,7 @@ namespace TacticalDirector.MatchEngine
             }
 
             int chargedTeams = 0;
+            bool anyExecuted = false;
             for (int i = 0; i < _subRequestCount;)
             {
                 int team = _subRequestTeam[i];
@@ -1714,6 +1715,7 @@ namespace TacticalDirector.MatchEngine
                         throw new System.InvalidOperationException("Pending substitution bench invariant violated.");
                 }
                 SubstitutePlayer(team, outgoing, bench, (SubstitutionReason)_subRequestReason[i]);
+                anyExecuted = true;
                 RemoveSubstitutionRequest(i);
 
                 int mask = 1 << team;
@@ -1727,6 +1729,7 @@ namespace TacticalDirector.MatchEngine
             // there must publish now; half-time and test-triggered restarts buffer.
             if (publishNow)
                 PublishPendingSubstitutions();
+            return anyExecuted;
         }
 
         /// <summary>
@@ -5733,10 +5736,12 @@ namespace TacticalDirector.MatchEngine
             {
                 EndGoalkeeperHandEpisode(_gkAgentIds[k]);
             }
-            ExecutePendingSubstitutionsAtRestart(freeSubstitutionWindow, publishSubstitutionsNow);
-            // Resolve started with the old GK occupant map. A keeper inserted at this
-            // stoppage must become authoritative for all remaining same-tick consumers.
-            RefreshGkAgentIds();
+            bool substitutionExecuted = ExecutePendingSubstitutionsAtRestart(
+                freeSubstitutionWindow, publishSubstitutionsNow);
+            // The #11 slot state is dormant when the feature is disabled; never reset it
+            // just because a keeper was dismissed at an unrelated restart.
+            if (_gkHeadingEnabled && substitutionExecuted)
+                RefreshGkAgentIds();
             SetPossessingAgent(SelectRestartTaker(position, awardedTeam));
             if (_possessingAgentId >= 0)
                 ObserveW8(W8StageAKind.Acquire, _possessingAgentId);

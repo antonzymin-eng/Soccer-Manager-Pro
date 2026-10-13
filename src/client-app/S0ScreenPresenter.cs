@@ -591,7 +591,7 @@ namespace TacticalDirector.ClientApp
                 if (_context.Identity.Roster.TeamId(i) != 0)
                     continue;
                 LiveAgentCue cue = frame.AgentCues[i];
-                if (!cue.IsSentOff && !cue.IsSubstitute)
+                if (!cue.IsSentOff && !cue.IsSubstitute && !PendingSlotReserved(i))
                 {
                     MatchPlayerIdentity p = _context.Identity.Resolve(in frame, i);
                     string label = cue.IsGoalkeeper ? Text.Format("out." + slot, "identity.player_keeper", Text.Label("team.home"), p.FirstName, p.LastName, p.ShirtNumber, Text.Label("identity.goalkeeper")) : Text.Format("out." + slot, "identity.player", Text.Label("team.home"), p.FirstName, p.LastName, p.ShirtNumber);
@@ -603,7 +603,7 @@ namespace TacticalDirector.ClientApp
 
             for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
             {
-                if (_context.Identity.IsBenchUsed(in frame, 0, b))
+                if (_context.Identity.IsBenchUsed(in frame, 0, b) || PendingBenchReserved(b))
                     continue;
                 MatchPlayerIdentity p = _context.Identity.Bench(0, b);
                 bool keeper = _coordinator.Fixture.IsAuthoredGoalkeeper(p.PlayerId);
@@ -616,6 +616,73 @@ namespace TacticalDirector.ClientApp
             return true;
         }
 
+        /// <summary>Prevents duplicate selections from pending engine and client commands.</summary>
+        private bool PendingSlotReserved(int slot)
+        {
+            if (_frame.PendingSubstitutions != null)
+                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                    if (_frame.PendingSubstitutions[i].Team == 0 &&
+                        _frame.PendingSubstitutions[i].OutSlot == slot)
+                        return true;
+            for (int i = 0; i < _context.Changes.Records.Count; i++)
+            {
+                ClientChangeRecord row = _context.Changes.Records[i];
+                if (row.Status == ClientChangeStatus.Pending &&
+                    row.Command.Kind == ManagerCommandKind.Substitute &&
+                    row.Command.OutSlotIndex == slot)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool PendingBenchReserved(int bench)
+        {
+            if (_frame.PendingSubstitutions != null)
+                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                    if (_frame.PendingSubstitutions[i].Team == 0 &&
+                        _frame.PendingSubstitutions[i].Bench == bench)
+                        return true;
+            for (int i = 0; i < _context.Changes.Records.Count; i++)
+            {
+                ClientChangeRecord row = _context.Changes.Records[i];
+                if (row.Status == ClientChangeStatus.Pending &&
+                    row.Command.Kind == ManagerCommandKind.Substitute &&
+                    row.Command.BenchIndex == bench)
+                    return true;
+            }
+            return false;
+        }
+
+        private int CountPendingHomeSubstitutions()
+        {
+            int count = 0;
+            if (_frame.PendingSubstitutions != null)
+                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                    if (_frame.PendingSubstitutions[i].Team == 0)
+                        count++;
+            // Commands accepted since this frame was captured, and in-flight commands,
+            // are not yet represented in its engine queue. Count each exactly once.
+            for (int i = 0; i < _context.Changes.Records.Count; i++)
+            {
+                ClientChangeRecord row = _context.Changes.Records[i];
+                if (row.Status != ClientChangeStatus.Pending ||
+                    row.Command.Kind != ManagerCommandKind.Substitute)
+                    continue;
+                bool presentInFrame = false;
+                if (_frame.PendingSubstitutions != null)
+                    for (int j = 0; j < _frame.PendingSubstitutions.Length; j++)
+                        if (_frame.PendingSubstitutions[j].Team == 0 &&
+                            _frame.PendingSubstitutions[j].OutSlot == row.Command.OutSlotIndex &&
+                            _frame.PendingSubstitutions[j].Bench == row.Command.BenchIndex)
+                        {
+                            presentInFrame = true;
+                            break;
+                        }
+                if (!presentInFrame) count++;
+            }
+            return count;
+        }
+
         private void UpdateAvailability()
         {
             MatchControlAvailability a = _frame.IsEmpty ? MatchControlAvailability.AwaitingFirstFrame : IsFullTime ? MatchControlAvailability.FullTime : MatchControlAvailability.Live;
@@ -625,7 +692,8 @@ namespace TacticalDirector.ClientApp
             CanFaster = CanPause && _speedIndex != PlaybackSpeedLadder.FastestIndex;
             SlowerReason = CanPause && !CanSlower ? Text.Label("reason.slowest") : "";
             FasterReason = CanPause && !CanFaster ? Text.Label("reason.fastest") : "";
-            bool capped = !_frame.IsEmpty && _frame.SubstitutionsUsed[0] >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM;
+            bool capped = !_frame.IsEmpty &&
+                _frame.SubstitutionsUsed[0] + CountPendingHomeSubstitutions() >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM;
             CanChangeMentality = a.TacticalInputEnabled && !_context.Changes.IsMentalityPending;
             CanSubstitute = a.SubstitutionEnabled && !_context.Changes.IsSubstitutionPending && !capped && _outgoing.Count != 0 && _incoming.Count != 0;
             MentalityReason = _context.Changes.IsMentalityPending ? Text.Label("reason.mentality_pending") : "";
