@@ -620,7 +620,7 @@ namespace TacticalDirector.ClientApp
         private bool PendingSlotReserved(int slot)
         {
             if (_frame.PendingSubstitutions != null)
-                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                for (int i = 0; i < _frame.PendingSubstitutions.Count; i++)
                     if (_frame.PendingSubstitutions[i].Team == 0 &&
                         _frame.PendingSubstitutions[i].OutSlot == slot)
                         return true;
@@ -638,7 +638,7 @@ namespace TacticalDirector.ClientApp
         private bool PendingBenchReserved(int bench)
         {
             if (_frame.PendingSubstitutions != null)
-                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                for (int i = 0; i < _frame.PendingSubstitutions.Count; i++)
                     if (_frame.PendingSubstitutions[i].Team == 0 &&
                         _frame.PendingSubstitutions[i].Bench == bench)
                         return true;
@@ -657,7 +657,7 @@ namespace TacticalDirector.ClientApp
         {
             int count = 0;
             if (_frame.PendingSubstitutions != null)
-                for (int i = 0; i < _frame.PendingSubstitutions.Length; i++)
+                for (int i = 0; i < _frame.PendingSubstitutions.Count; i++)
                     if (_frame.PendingSubstitutions[i].Team == 0)
                         count++;
             // Commands accepted since this frame was captured, and in-flight commands,
@@ -670,7 +670,7 @@ namespace TacticalDirector.ClientApp
                     continue;
                 bool presentInFrame = false;
                 if (_frame.PendingSubstitutions != null)
-                    for (int j = 0; j < _frame.PendingSubstitutions.Length; j++)
+                    for (int j = 0; j < _frame.PendingSubstitutions.Count; j++)
                         if (_frame.PendingSubstitutions[j].Team == 0 &&
                             _frame.PendingSubstitutions[j].OutSlot == row.Command.OutSlotIndex &&
                             _frame.PendingSubstitutions[j].Bench == row.Command.BenchIndex)

@@ -75,6 +75,7 @@ namespace TacticalDirector.UiFramework
         private readonly ReadOnlyCollection<Vector2> _agentPositions;
         private readonly ReadOnlyCollection<LiveAgentCue> _agentCues;
         private readonly ReadOnlyCollection<int> _substitutionsUsed;
+        private readonly ReadOnlyCollection<PendingSubstitution> _pendingSubstitutions;
 
         /// <summary>
         /// Agent positions (x, y) in metres, indexed by roster index. Read-only over this view's own
@@ -93,6 +94,13 @@ namespace TacticalDirector.UiFramework
         /// <summary>Substitutions used, indexed by team id. Empty on an empty view.</summary>
         public IReadOnlyList<int> SubstitutionsUsed =>
             _substitutionsUsed ?? EmptySubs;
+
+        /// <summary>Copied immutable pending substitution queue (v25, S0).</summary>
+        public IReadOnlyList<PendingSubstitution> PendingSubstitutions =>
+            _pendingSubstitutions ?? EmptyPending;
+
+        private static readonly ReadOnlyCollection<PendingSubstitution> EmptyPending =
+            new ReadOnlyCollection<PendingSubstitution>(Array.Empty<PendingSubstitution>());
 
         private static readonly ReadOnlyCollection<Vector2> EmptyPositions =
             new ReadOnlyCollection<Vector2>(new Vector2[0]);
@@ -193,6 +201,11 @@ namespace TacticalDirector.UiFramework
             _agentPositions    = new ReadOnlyCollection<Vector2>(copy);
             _agentCues         = new ReadOnlyCollection<LiveAgentCue>(cueCopy);
             _substitutionsUsed = new ReadOnlyCollection<int>(subsCopy);
+            PendingSubstitution[] requests = frame.PendingSubstitutions;
+            var requestCopy = new PendingSubstitution[requests == null ? 0 : requests.Length];
+            if (requests != null)
+                Array.Copy(requests, requestCopy, requests.Length);
+            _pendingSubstitutions = new ReadOnlyCollection<PendingSubstitution>(requestCopy);
         }
 
         // Non-finite covers NaN AND ±Infinity: a NaN-only gate passes an infinity straight through to a
