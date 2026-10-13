@@ -4322,7 +4322,7 @@ namespace TacticalDirector.MatchEngine
                     slotIndex: k,
                     position: MirrorPitchIfAway(team, _agents[i].Position),
                     isActive: !_isSentOff[i],       // match-flow completion: red-carded agents excluded
-                    role: formation[k].Role,
+                    role: isGk ? RoleId.GK : formation[k].Role,
                     isGoalkeeper: isGk);
 
                 if (!isGk) activeOutfield++;

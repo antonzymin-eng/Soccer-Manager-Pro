@@ -39,7 +39,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("context.setup", "You manage Home. Away is AI-managed.", ""),
             new S0TextRole("context.speed_steps", "Speed steps: 1×, 3×, 5×, 10×.", ""),
             new S0TextRole("context.submit", "Choose a change, then submit it. Your team changes only when you see Applied.", ""),
-            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution takes effect when the request is applied; it does not wait for a stoppage.", ""),
+            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution waits for the next eligible stoppage; with no windows left in the first half, it waits for half-time.", ""),
             new S0TextRole("dialog.mentality", "Change Home Mentality", ""),
             new S0TextRole("dialog.substitution", "Make Home substitution", ""),
             new S0TextRole("effect.attacking", "More risk in on-ball choices; higher defensive line.", ""),
