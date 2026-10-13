@@ -1,0 +1,6 @@
+Head: 97a0576e87e277bc36b77cb8946f09bece6de32c
+Workflow: 38280459956
+Retry job: 114939623604 (Markdown link check)
+Conclusion: success
+Initial job 114916213832 failed on external SipHash vectors.h HTTP 503. The one accepted retry passed after the functional gate completed.
+Unity tests in this workflow were skipped; no governing Unity evidence is supplied.

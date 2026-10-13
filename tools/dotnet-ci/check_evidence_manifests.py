@@ -36,6 +36,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-clean-editmode-20261009": ("manifest", FULL_MANIFEST),
     "host-matchengine-editmode-20261011": ("manifest", FULL_MANIFEST),
     "inposs-platform-divergence-20261011": ("manifest", FULL_MANIFEST),
+    "goal-frame-state-ordering-20261012": ("manifest", FULL_MANIFEST),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be

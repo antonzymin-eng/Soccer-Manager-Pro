@@ -1,0 +1,62 @@
+# Post-fix six-seed corpus stall audit — .NET lane (Linux container), October 12, 2026
+# Non-certifying. Covers the .NET half only; the pinned Unity 6000.4.9f1 half is still owed.
+
+PR #500 head:   0a82a51 (merge of main 2c87c2b into c5f8c8b; src/ and tools/ identical to c5f8c8b)
+src tree:       71d6ce456f563d6070aa8953561c1367599a359f
+Host:           Ubuntu 24.04.5 LTS, Linux x86-64 container, 4 vCPU
+SDK/runtime:    .NET SDK 8.0.131 (Ubuntu package), Microsoft.NETCore.App 8.0.31; Debug build (CI default)
+Command:        python3 tools/dotnet-ci/generate_projects.py
+                TD_PLATFORM_DIVERGENCE_OUT=<dir> TD_PLATFORM_DIVERGENCE_PREFIX=net8-linux \
+                  dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+                  --filter FullyQualifiedName~PlatformDivergenceDiagnostic
+                (no ticks override: 324,000 ticks per seed, both halves)
+VSTest result:  Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1, Duration: 23 m 58 s - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+
+## Shares (net8-linux-shares.tsv, verbatim)
+seed	ticks	samples	homeShare	awayShare	homeShareBits	awayShareBits	squadHome	squadAway
+0x0F1E2D3C4B5A6978	324000	15924	0.927719	0.927719	3F6D7F01	3F6D7F01	97B7D5CF	7ABE9B55
+0x00000000D1A6D05E	324000	17116	0.963660	0.963660	3F76B268	3F76B268	5F7DB9C7	0AC1F179
+0x5EED000000000003	324000	16178	0.952343	0.952343	3F73CCBB	3F73CCBB	99A15134	5A109369
+0x5EED000000000004	324000	14386	0.954192	0.954192	3F7445E6	3F7445E6	2DF2255D	3EC3FE0D
+0x00000000D1A6D05F	324000	17051	0.952613	0.952613	3F73DE6E	3F73DE6E	3B19B300	24989F3B
+0x1A2B3C4D5E6F7081	324000	16234	0.937539	0.937539	3F700286	3F700286	4CAE18A0	9946AA57
+
+## Stall audit (stall_audit.py.txt, run with python3 -I over the six full traces)
+0x00000000D1A6D05E rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick53400 oopIdenticalRuns=0
+0x00000000D1A6D05F rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=0s@tick0 oopIdenticalRuns=0
+0x0F1E2D3C4B5A6978 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick86400 oopIdenticalRuns=0
+0x1A2B3C4D5E6F7081 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick216000 oopIdenticalRuns=0
+0x5EED000000000003 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=0s@tick0 oopIdenticalRuns=0
+0x5EED000000000004 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick64200 oopIdenticalRuns=0
+
+Reading: oopRows counts sampled rows (every tick -1..3599, then every 600th) whose ball state is
+OutOfPlay (ordinal 5); oopIdenticalRuns counts runs of >=2 consecutive sampled rows in OutOfPlay at a
+bitwise-identical position. Zero everywhere: no candidate in either half of any seed. The same script
+flags the pre-fix Unity trace of 0x0F1E2D3C4B5A6978 (inposs-platform-divergence-20261011) as one
+candidate, ticks 57000-161400, period 1, ball (0.027, 30.112, 0.467), so it detects the known defect.
+Sampling limit: after tick 3600 a stall shorter than ~10-20 s can fall between checkpoints.
+
+## Full-trace SHA-256 (of the uncompressed traces; committed as net8-linux-trace-<seed>.tsv.xz)
+41d0396dc3bc69291659393674918b97ab4bd77f6bdafeb5aa022887dc189938  net8-linux-trace-0x00000000D1A6D05E.tsv
+a00ff277f03429a6173668b27b76cd06961542677004bab66d6863dff0218beb  net8-linux-trace-0x00000000D1A6D05F.tsv
+c2b4df56eca5c11cd45f9db8789f12c13558c470de49af40dd7cc42984ae748a  net8-linux-trace-0x0F1E2D3C4B5A6978.tsv
+1431fb38ab466f1e5a6fee250df6a75f3df0735814ee40f205366dca13c64936  net8-linux-trace-0x1A2B3C4D5E6F7081.tsv
+4d161ce71a673caf0dfb563d8ec97d0f7636f768153105bd0547c3348d7e69ad  net8-linux-trace-0x5EED000000000003.tsv
+a878f099b7099dd35478473f83ee5403ac00ffb42a1018f61d34c93c5d3e97ad  net8-linux-trace-0x5EED000000000004.tsv
+
+## Comparison with the pre-fix .NET lane
+All six digests above equal the net8-trace-*.tsv digests in
+inposs-platform-divergence-20261011/full-trace-sha256.txt (pre-fix src 1839bb0f, Windows .NET 8 shim),
+and the shares and their float bits equal its net8-shares.tsv. So every recorded sample is identical
+before and after the ERR-001-007 correction: every tick from -1 to 3599, then every 600th tick to
+323400, plus the six shares.
+What this does not show: the traces are sampled, so they cannot exclude a difference at an
+unsampled tick that left every later sample unchanged. Nor does it show the fix working, because no
+.NET match on these seeds reached the defect before the fix. The result is no stall and no recorded
+difference on .NET; whether the fix removes the Unity stall needs the pinned-host Unity run.
+
+## Retained artifacts (added October 13, 2026)
+net8-linux-trace-<seed>.tsv.xz  the six full traces as written by the test (xz -9)
+net8-linux-shares.tsv           the shares file as written by the test
+diag-net8-linux.trx.xz          the VSTest TRX result (xz -9)
+run-net8-linux.log              the complete dotnet test console output

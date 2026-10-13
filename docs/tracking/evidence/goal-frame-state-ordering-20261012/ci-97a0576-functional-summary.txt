@@ -1,0 +1,51 @@
+Head: 97a0576e87e277bc36b77cb8946f09bece6de32c
+Workflow: 38280459956
+Attempt: 1
+Job: 114916214159 (PR functional gate, Linux shim, non-certifying)
+Policy: bash tools/run-tests-local.sh --pr
+Conclusion: success
+Suites: 37
+Totals from per-suite completed summaries: 3837 passed / 0 failed / 221 skipped
+MatchEngine: 569 passed / 0 failed / 15 skipped
+BallPhysics: 120 passed / 0 failed / 0 skipped
+Quarantine and owner-held RED ledgers: empty
+The existing frozen acceptance scenario bounds passed; no bound or seed was changed.
+This is not Unity certification or the post-fix stall corpus audit.
+
+2026-10-12T16:54:08.0464809Z Passed!  - Failed:     0, Passed:    67, Skipped:    23, Total:    90, Duration: 610 ms - TacticalDirector.AttackingAI.Tests.dll (net8.0)
+2026-10-12T16:54:08.0700323Z Passed!  - Failed:     0, Passed:    94, Skipped:     0, Total:    94, Duration: 579 ms - TacticalDirector.AgentMovement.Tests.dll (net8.0)
+2026-10-12T16:54:08.1416026Z Passed!  - Failed:     0, Passed:   120, Skipped:     0, Total:   120, Duration: 626 ms - TacticalDirector.BallPhysics.Tests.dll (net8.0)
+2026-10-12T16:54:13.4490523Z Passed!  - Failed:     0, Passed:   129, Skipped:     4, Total:   133, Duration: 1 s - TacticalDirector.DecisionTree.Tests.dll (net8.0)
+2026-10-12T16:54:13.5015886Z Passed!  - Failed:     0, Passed:    54, Skipped:     0, Total:    54, Duration: 768 ms - TacticalDirector.ClubFinances.Tests.dll (net8.0)
+2026-10-12T16:54:13.6801605Z Passed!  - Failed:     0, Passed:    38, Skipped:     9, Total:    47, Duration: 537 ms - TacticalDirector.CollisionSystem.Tests.dll (net8.0)
+2026-10-12T16:54:18.9606194Z Passed!  - Failed:     0, Passed:    78, Skipped:    28, Total:   106, Duration: 1 s - TacticalDirector.DefensiveAI.Tests.dll (net8.0)
+2026-10-12T16:54:19.2246200Z Passed!  - Failed:     0, Passed:   146, Skipped:     0, Total:   146, Duration: 825 ms - TacticalDirector.Discipline.Tests.dll (net8.0)
+2026-10-12T16:54:20.0186050Z Passed!  - Failed:     0, Passed:    86, Skipped:     1, Total:    87, Duration: 946 ms - TacticalDirector.DeterministicSim.Tests.dll (net8.0)
+2026-10-12T16:54:22.7896122Z Passed!  - Failed:     0, Passed:    71, Skipped:     8, Total:    79, Duration: 577 ms - TacticalDirector.FirstTouch.Tests.dll (net8.0)
+2026-10-12T16:54:23.1475986Z Passed!  - Failed:     0, Passed:    54, Skipped:    10, Total:    64, Duration: 351 ms - TacticalDirector.EventSystem.Tests.dll (net8.0)
+2026-10-12T16:54:24.0938489Z Passed!  - Failed:     0, Passed:    99, Skipped:    27, Total:   126, Duration: 460 ms - TacticalDirector.GoalkeeperMechanics.Tests.dll (net8.0)
+2026-10-12T16:54:26.1485978Z Passed!  - Failed:     0, Passed:    75, Skipped:    15, Total:    90, Duration: 513 ms - TacticalDirector.HeadingMechanics.Tests.dll (net8.0)
+2026-10-12T16:54:26.6157085Z Passed!  - Failed:     0, Passed:    76, Skipped:     0, Total:    76, Duration: 381 ms - TacticalDirector.InjuriesMedical.Tests.dll (net8.0)
+2026-10-12T16:54:27.2816002Z Passed!  - Failed:     0, Passed:   129, Skipped:     0, Total:   129, Duration: 464 ms - TacticalDirector.LivingWorld.Tests.dll (net8.0)
+2026-10-12T16:54:29.3706133Z Passed!  - Failed:     0, Passed:    67, Skipped:     0, Total:    67, Duration: 373 ms - TacticalDirector.Localization.Tests.dll (net8.0)
+2026-10-12T16:54:32.5603755Z Passed!  - Failed:     0, Passed:   183, Skipped:     0, Total:   183, Duration: 2 s - TacticalDirector.MatchClientCore.Tests.dll (net8.0)
+2026-10-12T16:54:35.7245855Z Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 6 s - TacticalDirector.MatchAnalytics.Tests.dll (net8.0)
+2026-10-12T16:54:35.9646090Z Passed!  - Failed:     0, Passed:    60, Skipped:     0, Total:    60, Duration: 3 s - TacticalDirector.MatchClientWeb.Tests.dll (net8.0)
+2026-10-12T16:54:38.9556433Z Passed!  - Failed:     0, Passed:    95, Skipped:    12, Total:   107, Duration: 379 ms - TacticalDirector.PassMechanics.Tests.dll (net8.0)
+2026-10-12T16:54:42.2365879Z Passed!  - Failed:     0, Passed:    54, Skipped:    15, Total:    69, Duration: 737 ms - TacticalDirector.PerceptionSystem.Tests.dll (net8.0)
+2026-10-12T16:54:44.6366499Z Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 110 ms - TacticalDirector.PerformanceOptimization.Tests.dll (net8.0)
+2026-10-12T16:54:47.6615926Z Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50, Duration: 418 ms - TacticalDirector.PlayerDatabase.Tests.dll (net8.0)
+2026-10-12T16:54:48.3195927Z Passed!  - Failed:     0, Passed:    75, Skipped:     0, Total:    75, Duration: 9 s - TacticalDirector.MatchViewer.Tests.dll (net8.0)
+2026-10-12T16:54:50.5225924Z Passed!  - Failed:     0, Passed:   152, Skipped:     0, Total:   152, Duration: 653 ms - TacticalDirector.PlayerProgression.Tests.dll (net8.0)
+2026-10-12T16:54:50.9971402Z Passed!  - Failed:     0, Passed:   134, Skipped:    13, Total:   147, Duration: 455 ms - TacticalDirector.PositioningAI.Tests.dll (net8.0)
+2026-10-12T16:54:53.4955793Z Passed!  - Failed:     0, Passed:    65, Skipped:    26, Total:    91, Duration: 396 ms - TacticalDirector.PressingAI.Tests.dll (net8.0)
+2026-10-12T16:54:53.8385771Z Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26, Duration: 357 ms - TacticalDirector.ProjectConstants.Tests.dll (net8.0)
+2026-10-12T16:54:56.6485812Z Passed!  - Failed:     0, Passed:    89, Skipped:    12, Total:   101, Duration: 500 ms - TacticalDirector.ShotMechanics.Tests.dll (net8.0)
+2026-10-12T16:54:59.7155570Z Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 301 ms - TacticalDirector.TacticalInstructions.Tests.dll (net8.0)
+2026-10-12T16:55:02.5671178Z Passed!  - Failed:     0, Passed:    33, Skipped:     0, Total:    33, Duration: 341 ms - TacticalDirector.TestingStrategy.Tests.dll (net8.0)
+2026-10-12T16:55:05.1003529Z Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 320 ms - TacticalDirector.TrainingSystem.Tests.dll (net8.0)
+2026-10-12T16:55:07.5306040Z Passed!  - Failed:     0, Passed:    21, Skipped:     0, Total:    21, Duration: 239 ms - TacticalDirector.Transfers.Tests.dll (net8.0)
+2026-10-12T16:55:10.8915997Z Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50, Duration: 1 s - TacticalDirector.UiFramework.Tests.dll (net8.0)
+2026-10-12T17:07:35.6637877Z Passed!  - Failed:     0, Passed:   493, Skipped:     3, Total:   496, Duration: 12 m 39 s - TacticalDirector.SeasonSave.Tests.dll (net8.0)
+2026-10-12T17:10:24.1318097Z Passed!  - Failed:     0, Passed:   125, Skipped:     0, Total:   125, Duration: 16 m 17 s - TacticalDirector.ClientApp.Tests.dll (net8.0)
+2026-10-12T17:55:53.3307746Z Passed!  - Failed:     0, Passed:   569, Skipped:    15, Total:   584, Duration: 1 h 1 m - TacticalDirector.MatchEngine.Tests.dll (net8.0)

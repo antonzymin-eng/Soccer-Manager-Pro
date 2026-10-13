@@ -1,5 +1,6 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-07-27 (shot-outcome pass)
 // Modified: 2026-07-28 (shot-speed pass: swept goal-frame collision + crossing-point adjudication (ERR-001-005))
 // Modified: 2026-09-14 (W6: production Controlled entry + explicit non-kick release transition)
@@ -95,7 +96,8 @@ namespace TacticalDirector.BallPhysics
         /// position test TUNNELS straight through a 0.12 m post — the segment test cannot. On the
         /// EARLIEST parametric hit the ball centre is placed at the contact parameter and the
         /// existing restitution/spin-retention response runs against the normal from the closest
-        /// point on the struck cylinder's axis. Gates: a <c>Controlled</c> ball never deflects (a
+        /// point on the struck cylinder's axis. ERR-001-007: contact must precede a full boundary
+        /// crossing, and an <c>OutOfPlay</c> ball never deflects. A <c>Controlled</c> ball never deflects (a
         /// possessed ball is driven at the holder's feet — the ApplyAgentDeflection precedent);
         /// a degenerate segment is a no-op; an X-band prefilter
         /// (<see cref="BallPhysicsConstants.GoalFrame.SweptPrefilterBandM"/>) skips the cylinder
@@ -106,7 +108,7 @@ namespace TacticalDirector.BallPhysics
         /// <returns>True when a frame strike was applied; false otherwise.</returns>
         public static bool ApplySweptGoalFrameCollision(ref BallState ball, Vector3 prevPosition)
         {
-            if (ball.State == BallStateType.Controlled)
+            if (ball.State == BallStateType.Controlled || ball.State == BallStateType.OutOfPlay)
                 return false;
 
             Vector3 d = ball.Position - prevPosition;
@@ -133,6 +135,10 @@ namespace TacticalDirector.BallPhysics
                 return false;
 
             Vector3 contactPoint = prevPosition + bestT * d;
+            // ERR-001-007: a full boundary crossing earlier on the straight segment wins over
+            // a later rear-side frame hit. Never rewind an already-out trajectory into play.
+            if (BallStateMachine.IsOutOfBounds(prevPosition) || BallStateMachine.IsOutOfBounds(contactPoint))
+                return false;
             ball.Position = contactPoint;
             ApplyGoalPostCollision(ref ball, contactPoint, bestAxisPoint, logger: null, matchTime: 0f);
             return true;
@@ -509,4 +515,6 @@ namespace TacticalDirector.BallPhysics
 // | 2.0     | 2026-09-15 | —      | ERR-001-006: ApplyKick and non-kick Controlled release preserve Airborne    |
 // |         |            |        | state whenever the ball centre is above AirborneEnterThreshold, preventing  |
 // |         |            |        | force-free elevated Stationary balls.                                       |
+// | 2.1     | 2026-10-12 | —      | ERR-001-007: Controlled/OutOfPlay stand down; a completed boundary |
+// |         |            |        | crossing before contact takes precedence over a later frame hit.   |
 #endregion

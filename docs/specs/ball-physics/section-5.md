@@ -1,11 +1,13 @@
 # Ball Physics Specification - Section 5: Testing
 
 **Created:** February 4, 2026, 1:15 AM PST  
-**Version:** 1.1 (Rolling distance correction per REV-001)  
+**Version:** 1.2 (ERR-001-007)
 **Status:** Ready for Approval  
 **Purpose:** Define test requirements and acceptance criteria for Ball Physics System
 
 ---
+
+**Modified:** October 12, 2026 — goal-frame state-ordering regression.
 
 ## 5. TESTING
 
@@ -502,6 +504,26 @@
 - Agent: Position = (50.3, 34, 0), Velocity = (1, 0, 0) m/s  
 **Expected:** CheckPossession() = true (within 0.5m, relative velocity <2 m/s)  
 **Tolerance:** Boolean (exact)
+
+---
+
+**Test ID: IT-COL-004**
+**Name:** `int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod`
+**Purpose:** Lock ERR-001-007 using the PR #499 captured approach in §3.1.10.2.
+**Setup:** Stage the loose ball with that position/velocity, establish an explicit attacking-team
+last holder, then execute normal engine ticks. Mirror X for both goals; stage each half separately.
+**Expected:** One real woodwork strike, in-play `Airborne` contact, no premature restart, next-tick
+position changes, then the glancing rebound's genuine wide exit receives a goal kick for the
+defending team before any period transition. All four cases fail at the in-play state assertion
+on pre-fix production `a17aa82e` (executed).
+**Adjacent locks:** Front-face post and crossbar rebounds at both goals remain playable; an
+already `OutOfPlay` ball cannot be moved by a frame contact; a full crossing before a rear-side
+contact remains an exit (corner versus goal kick and awarded team both verified); save/restore
+immediately after the captured rebound preserves next-tick movement and the continuation digest.
+**Tolerance:** State, contact count, restart kind/team and digest exact; movement requires a
+changed position rather than cross-runtime coordinate equality.
+**Governing validation:** Compile and run these locks in Unity 6000.4.9f1, then rerun
+`sim_match_engine_inposs_gate` on the final head. Linux/NUnitLite evidence is non-certifying.
 
 ---
 
@@ -1186,3 +1208,9 @@ Derivation:
 **Ready for:** Approval and implementation (Stage 0 Months 1-2)
 
 **Next Sections:** 6 (Performance Analysis), 7 (Future Extensions), 8 (References), Appendices A-C
+
+## Revision History
+
+| Version | Date | Change |
+|---|---|---|
+| 1.2 | October 12, 2026 | ERR-001-007: IT-COL-004, mirrored first/second-half progress, chronological crossing precedence and canonical restore coverage. |
