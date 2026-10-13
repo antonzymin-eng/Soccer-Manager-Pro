@@ -122,7 +122,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("team.home_short", "H", ""),
             new S0TextRole("feedback.earlier", "Earlier change feedback ({0})", "I"),
             new S0TextRole("feedback.mentality_applied", "Applied — Mentality: {0} at minute {1}.", "SI"),
-            new S0TextRole("feedback.mentality_not_applied", "Not applied — Mentality: {0} — the request was cancelled or the match ended before it could apply.", "S"),
+            new S0TextRole("feedback.mentality_not_applied", "Not applied — Mentality: {0} — match ended before it could apply.", "S"),
             new S0TextRole("feedback.mentality_pending", "Pending — Mentality: {0} — waiting to be applied.", "S"),
             new S0TextRole("feedback.mentality_pending_paused", "Pending — Mentality: {0} — waiting; resume to continue.", "S"),
             new S0TextRole("feedback.mentality_refused", "Refused — Mentality: {0} — current Mentality unchanged.", "S"),
