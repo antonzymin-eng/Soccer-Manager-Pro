@@ -1,7 +1,9 @@
 # CLAUDE.md — Change Log
 
 > **Created:** July 31, 2026
-> **Purpose:** The `**Last Updated:**` entry chain formerly carried in the header of
+> **Purpose:** The `**Last Updated:** October 13, 2026 — **#40 T3b2 revenue amounts implemented, default off.** `FinanceStep.DailyRevenue` v1.9 derives checked integer in-season sponsorship and position-based home-fixture income; `ClubFinancesConstants` v1.5 supplies the sole config-owned `DeepRevenueEnabled` (default false), governed revenue keys and the pending #53 capacity. `SeasonFinanceRuntime` v1.6 composes settled day/fixture/table facts at the existing slot 11a and retains all-club staging; `SeasonLoop` v1.37 forwards the sole gate and exposes a parameter-only test seam into its guarded advance. `DailyRevenueTests` and `SeasonDailyRevenueTests` v1.0 cover formula/failure/default locks, non-zero counts, saved continuation, late-club retry, unplayed fixtures, final-day attribution and roll-timing independence. Supplementary direct Linux compile/NUnitLite: **70 ClubFinances + 502 SeasonSave = 572 passed / 0 failed**, with 3 diagnostic/calibration cases filtered; 40 focused cases are included. Six isolated production config probes pass; both test assemblies and the shim compile against NUnit 3.5. The ordinary gate cannot start at CLI process metadata lookup. [Retained evidence](evidence/finance-t3b2-20261013/README.md) pins sources and results. #40 algorithm/architecture/acceptance/cadence/plan/Appendix A/checklist and roadmap D4/step 5 are synchronized. Final-head CI and Unity 6000.4.9f1 compilation remain open; the draft does not enable revenue. Save layouts/versions, assembly edges and RNG namespaces/streams/draws are unchanged.
+
+**Last Updated (prior):**` entry chain formerly carried in the header of
 > `CLAUDE.md`. Newest first; each entry records what landed, what was measured, and
 > what was deliberately not done.
 > Split out of `CLAUDE.md` on July 31, 2026. Content is **verbatim** — entries were moved, never edited, reordered, or deduplicated.

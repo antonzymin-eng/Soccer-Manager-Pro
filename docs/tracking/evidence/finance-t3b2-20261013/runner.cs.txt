@@ -1,0 +1,7 @@
+using System.Reflection;
+using NUnitLite;
+public static class Program {
+    public static int Main(string[] args) {
+        return new AutoRun(Assembly.LoadFrom(args[0])).Execute(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Skip(args, 1)));
+    }
+}

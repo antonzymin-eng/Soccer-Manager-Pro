@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/season-save/tests/SeasonLoopFinanceTests.cs
 // Created:  2026-09-11
-// Modified: 2026-10-09
+// Modified: 2026-10-13
 // Author:   —
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
@@ -256,12 +256,13 @@ namespace TacticalDirector.SeasonSave.Tests
             ClubFinanceEntry[] published = entries;
             ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
 
-            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled,
+                enabled ? LeagueBootstrap.Generate(WorldSeed, ClubCount).CreateSeason(0) : null, 0u);
 
             Assert.That(entries, Is.Not.SameAs(published), "Success must publish a detached result.");
             AssertEntriesEqual(before, published);
             AssertEntriesEqual(before, entries);
-            Assert.That(ClubFinancesConstants.DEEP_REVENUE_ENABLED, Is.False);
+            Assert.That(ClubFinancesConstants.DeepRevenueEnabled, Is.False);
         }
 
         /// <summary>T-FN-DAY-007: a late-club refusal publishes nothing; repairing it permits retry.</summary>
@@ -279,7 +280,8 @@ namespace TacticalDirector.SeasonSave.Tests
             ClubFinanceEntry[] before = (ClubFinanceEntry[])entries.Clone();
 
             var error = Assert.Throws<ArgumentOutOfRangeException>(() =>
-                entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled));
+                entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled,
+                enabled ? LeagueBootstrap.Generate(WorldSeed, ClubCount).CreateSeason(0) : null, 0u));
 
             Assert.That(error.ParamName, Is.EqualTo("finances"));
             Assert.That(error.Message, Does.Contain("SeasonRevenueAccrued must be non-negative current-season revenue (F1)."));
@@ -288,7 +290,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             // Repair the injected corruption and retry from the same published state.
             entries[last] = expected[last];
-            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled);
+            entries = SeasonFinanceRuntime.PrepareDailyRevenue(entries, enabled,
+                enabled ? LeagueBootstrap.Generate(WorldSeed, ClubCount).CreateSeason(0) : null, 0u);
 
             Assert.That(entries, Is.Not.SameAs(published));
             AssertEntriesEqual(expected, published);
@@ -611,4 +614,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.4     | 2026-10-08 | —      | T3b1: identity, per-club live invocation, fixture timing and IL ownership/order locks. |
 // | 1.5     | 2026-10-08 | —      | PR #491 review: detached publication, late-club refusal/retry, and explicit IL scan scope. |
 // | 1.6 | 2026-10-09 | — | ERR-030-053: lock pending-day refusal and already-completed day settlement. |
+// | 1.7 | 2026-10-13 | — | Preserve T3b1 identity locks using zero-revenue pre-season inputs under the config-owned gate. |
 #endregion

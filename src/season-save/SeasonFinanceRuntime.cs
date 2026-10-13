@@ -1,10 +1,10 @@
 // ============================================================================
 // File:     src/season-save/SeasonFinanceRuntime.cs
 // Created:  2026-09-11
-// Modified: 2026-10-08
+// Modified: 2026-10-13
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-001/002/003/004/012/013/023/025/027,
-//           §3.4/§3.6, §4.1-§4.3, §7.1 T2b/T3b1; Season Loop #30 §3.3/§3.5/§4.3;
+//           §3.4/§3.6/§3.7, §4.1-§4.3, §7.1 T2b/T3b2; Season Loop #30 §3.3/§3.5/§4.3;
 //           Code Standards #20
 // Purpose:  #30-owned composition mechanics for the live #40 state: keyed access, ledger routing,
 //           staged daily accounting and season-boundary settlement for SeasonLoop.
@@ -27,11 +27,13 @@ namespace TacticalDirector.SeasonSave
     {
         /// <summary>
         /// Invokes #40's accounting primitive once per initialized club for the day being completed.
-        /// T3b1 supplies zero amounts and forwards the sole #40-owned gate; T3b2 owns amount production.
+        /// With the gate on, forwards settled calendar/fixture/table facts into #40's amount model.
+        /// With the gate off, does not inspect deep-only season inputs and supplies zero amounts.
         /// Returns all clubs in a detached array only after every calculation succeeds. SeasonLoop
         /// publishes that complete result; a refusal preserves live state for retry without a day cursor.
         /// </summary>
-        internal static ClubFinanceEntry[] PrepareDailyRevenue(ClubFinanceEntry[] entries, bool deepRevenueEnabled)
+        internal static ClubFinanceEntry[] PrepareDailyRevenue(
+            ClubFinanceEntry[] entries, bool deepRevenueEnabled, SeasonState season, uint day)
         {
             if (entries == null)
             {
@@ -43,15 +45,56 @@ namespace TacticalDirector.SeasonSave
                 throw new InvalidOperationException("Daily finance accounting requires initialized club finances.");
             }
 
+            bool inSeasonDay = false;
+            int clubCount = 0;
+            if (deepRevenueEnabled)
+            {
+                if (season == null)
+                {
+                    throw new ArgumentNullException(nameof(season));
+                }
+
+                clubCount = season.ClubIds.Count;
+                inSeasonDay = day >= season.Calendar.DayOfRound(0)
+                    && day <= season.Calendar.DayOfRound(season.Calendar.RoundCount - 1);
+            }
+
             var accrued = new ClubFinanceEntry[entries.Length];
             for (int i = 0; i < entries.Length; i++)
             {
                 ClubFinanceEntry entry = entries[i];
                 ClubFinanceState prior = entry.Finances;
+                long sponsorship = 0L;
+                long matchday = 0L;
+                if (deepRevenueEnabled)
+                {
+                    long homeFixturesCompleted = 0L;
+                    for (int fixtureIndex = 0; fixtureIndex < season.FixtureCount; fixtureIndex++)
+                    {
+                        Fixture fixture = season.FixtureAt(fixtureIndex);
+                        if (fixture.HomeClubId != entry.ClubId
+                            || season.Calendar.DayOfRound(fixture.RoundIndex) != day)
+                        {
+                            continue;
+                        }
+
+                        // Played is #30's persisted assertion that the result was applied to the table.
+                        if (!fixture.Played)
+                        {
+                            throw new InvalidOperationException("Daily revenue cannot count an unplayed home fixture.");
+                        }
+
+                        homeFixturesCompleted = checked(homeFixturesCompleted + 1L);
+                    }
+
+                    (sponsorship, matchday) = FinanceStep.DailyRevenue(
+                        homeFixturesCompleted, season.PositionOf(entry.ClubId), clubCount, inSeasonDay);
+                }
+
                 ClubFinanceState next = FinanceStep.AccrueDailyRevenue(
                     in prior,
-                    sponsorshipRevenue: 0L,
-                    matchdayRevenue: 0L,
+                    sponsorshipRevenue: sponsorship,
+                    matchdayRevenue: matchday,
                     deepRevenueEnabled);
                 accrued[i] = new ClubFinanceEntry(entry.ClubId, in next);
             }
@@ -199,4 +242,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | migration; BoardModifier.Identity explicitly pinned to T2b.   |
 // | 1.4     | 2026-10-08 | —      | T3b1: allocation-free, per-club zero daily accounting invocation. |
 // | 1.5     | 2026-10-08 | —      | PR #491 review: publish daily state only after every club succeeds. |
+// | 1.6     | 2026-10-13 | —      | T3b2: compose settled day/fixture/table facts through #40 amounts, only when enabled. |
 #endregion

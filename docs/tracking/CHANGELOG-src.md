@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 12, 2026 — (v2.188 — **PR #500 review corrections.** `MatchEngine.cs` v1.99 corrects the `_prevTickBallPosition` ownership comment; Ball Physics owns its own swept start. The new history rows in the five touched C# files are aligned with their tables. No production executable code or assertions change; the recorded 120/120 Ball Physics and 19/19 restart results remain supplementary, not final-head Unity evidence.)
+> **Last Updated:** October 13, 2026 — (v2.189 — **#40 T3b2.** `ClubFinancesConstants` v1.5, `FinanceStep` v1.9, `SeasonFinanceRuntime` v1.6, `SeasonLoop` v1.37 and `SeasonLoopFinanceTests` v1.7; new `DailyRevenueTests` and `SeasonDailyRevenueTests` v1.0 with metadata. Checked deterministic amounts through existing staged slot 11a; config gate defaults off. 572 selected direct Linux tests pass, 6 isolated config probes pass; NUnit 3.5 compile compatibility verified. Ordinary CLI runner unavailable; final-head Unity compile pending. Evidence and registry updated; no save/RNG/assembly-edge change.)
+
+> **Last Updated (prior):** October 12, 2026 — (v2.188 — **PR #500 review corrections.** `MatchEngine.cs` v1.99 corrects the `_prevTickBallPosition` ownership comment; Ball Physics owns its own swept start. The new history rows in the five touched C# files are aligned with their tables. No production executable code or assertions change; the recorded 120/120 Ball Physics and 19/19 restart results remain supplementary, not final-head Unity evidence.)
 
 > **Last Updated (prior):** October 12, 2026 — (v2.187 — **ERR-001-007.** `BallPhysicsCore.cs` v1.6 adds the `out bool hitGoalFrame` overload; its six-argument entry delegates to the same loop. `BallCollision.cs` v2.1 rejects already-out/Controlled balls and later contact after a full crossing. `MatchEngine.cs` v1.98 consumes the contact result and removes the second swept collision. `SweptGoalFrameTests.cs` v1.1 adds nine cases; `MatchEngineRestartTests.cs` v1.1 adds ten cases (both goals/halves, correct restart and sequential digest-identical restore). Ball Physics 120/120, restart 19/19 under NUnitLite; normal local PR gate blocked by container process lookup. Governing Unity compile and inposs gate pending. No schema/GT/RNG-definition change.)
 
@@ -2743,6 +2745,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.189 | October 13, 2026 | — | #40 T3b2 deterministic amounts, default-off config catalogue and atomic daily composition; new formula/count/save/retry/season locks. 572 selected supplementary Linux passes; governing host compile pending. |
 | 2.188 | October 12, 2026 | — | PR #500 review: MatchEngine v1.99 crossing-position comment and aligned new source history rows. No executable/serialized/assertion changes. |
 | 2.187 | October 12, 2026 | — | ERR-001-007: `BallPhysicsCore` v1.6, `BallCollision` v2.1, `MatchEngine` v1.98, `SweptGoalFrameTests` v1.1 and `MatchEngineRestartTests` v1.1; eligible swept frame before final state, single contact telemetry and 19 new test cases. Unity validation pending. |
 | 2.186 | October 11, 2026 | — | `PlatformDivergenceDiagnosticTests` v1.0 (new, env-gated `TD_PLATFORM_DIVERGENCE_OUT`; six-seed shares + per-tick state fingerprints, no assertions); `MatchEngineInPossGateScenarios` v1.4 (internal `PlayOne` overload with read-only per-tick observer; `NumTicks`, `BuildSquad` internal; gate unchanged); `check_evidence_manifests.py` registers `inposs-platform-divergence-20261011`. Test/tooling only. |

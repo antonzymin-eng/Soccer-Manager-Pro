@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** October 9, 2026 (v0.10 — ERR-030-053: record final-day boundary evidence; leave pinned Unity compilation open)
+**Last Updated:** October 13, 2026 (v0.11 — T3b2 source and acceptance anchors recorded with Unity compile left open)
+**Last Updated (prior):** October 9, 2026 (v0.10 — ERR-030-053: record final-day boundary evidence; leave pinned Unity compilation open)
 **Last Updated (prior):** October 8, 2026 (v0.9 — staged source anchor and bounded daily acceptance evidence)
 **Last Updated (prior):** October 8, 2026 (v0.8 — T3b1 source status recorded; pinned Unity compile remains open)
 **Last Updated (prior):** September 11, 2026 (v0.7 — PR #395 named as the T2b landing under gate; T2a/T2b boxes remain open pending corrected-head CI)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** September 10, 2026 (v0.4 — ERR-030-050: T1b resume seam/coherence close-out; T2 runtime scope corrected. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v0.3 — §9.2 refreshed against real source at the T1b landing; it had published T0/T1a as NOT STARTED since PR #363 merged)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 **Source:** `docs/tracking/club-finances-economy-design.md` v0.2
 
@@ -147,6 +148,16 @@ beyond `APPROVED` itself.
 - Canonical Linux PR composition is supplied by CI; direct Roslyn/NUnitLite fallback results are reported
   separately in the PR and are not represented as the policy runner or Unity evidence.
 
+## 9.8 T3b2 implementation evidence
+
+- Source: `ClubFinancesConstants.DeepRevenueEnabled` (shared loader, default false) → production
+  day commands → slot-11a `PrepareDailyRevenue` → `FinanceStep.DailyRevenue` and `AccrueDailyRevenue`.
+- Executable locks: `DailyRevenueTests` and `SeasonDailyRevenueTests` (§5.10 REV-001–009); the latter
+  uses a parameter-only forwarding seam into the guarded command, with no stored gate override.
+- Supplementary Linux results and exact source hashes: [T3b2 evidence](../../tracking/evidence/finance-t3b2-20261013/README.md).
+- No assembly edge, save-layout/version, finance cursor or RNG namespace/stream/draw change.
+- [ ] Exact-final-head Unity 6000.4.9f1 editor compile before merge.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -160,4 +171,5 @@ beyond `APPROVED` itself.
 | 0.8 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T3b1 source status recorded; pinned Unity compile remains open. |
 | 0.9 | 2026-10-08 | — | **PR #491 review.** staged source anchor and bounded daily acceptance evidence. |
 | 0.10 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** record final-day boundary evidence; leave pinned Unity compilation open. |
+| 0.11 | 2026-10-13 | — | **T3b2 implementation.** T3b2 source and acceptance anchors recorded with Unity compile left open. Default remains off; pinned Unity compilation pending. |
 #endregion
