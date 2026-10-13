@@ -187,6 +187,103 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void PreKickoffRequestAppliesImmediatelyWithNoWindow()
+        {
+            var e = new MatchEngine(Seed);
+            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(0, e.TestOnly_ActiveBenchSlot(1));
+            Assert.AreEqual(1, e.TestOnly_SubstitutionsUsed(0));
+            Assert.AreEqual(0, e.SubstitutionWindowsUsed(0));
+            Assert.DoesNotThrow(() => e.RunTick());
+        }
+
+        [Test]
+        public void FullTimeRemovesPreviouslyAcceptedUnexecutedRequest()
+        {
+            MatchEngine e = Started();
+            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.MATCH_TICKS_TOTAL - 1);
+            e.RunTick();
+            Assert.IsTrue(e.MatchEnded);
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(1));
+            Assert.AreEqual(0, e.TestOnly_SubstitutionsUsed(0));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MirroredTeamsExecuteAndCancelOnlyOwnRequests(int team)
+        {
+            MatchEngine e = Started();
+            int outgoing = team * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.IsTrue(e.RequestSubstitution(team, outgoing, 0, SubstitutionReason.Tactical).IsAccepted);
+            e.TestOnly_ApplyRestart(RestartSpot, team);
+            Assert.AreEqual(0, e.TestOnly_ActiveBenchSlot(outgoing));
+            Assert.AreEqual(1, e.SubstitutionWindowsUsed(team));
+            Assert.AreEqual(0, e.SubstitutionWindowsUsed(1 - team));
+
+            int secondOutgoing = outgoing + 1;
+            Assert.IsTrue(e.RequestSubstitution(team, secondOutgoing, 1, SubstitutionReason.Tactical).IsAccepted);
+            e.TestOnly_SetIsSentOff(secondOutgoing, true);
+            e.TestOnly_ApplyRestart(RestartSpot, team);
+            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(secondOutgoing));
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(1, e.SubstitutionWindowsUsed(team));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void RestoredPendingRequestMatchesEveryContinuationDigestThroughRestart(int team)
+        {
+            var original = Started();
+            int outgoing = team * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.IsTrue(original.RequestSubstitution(team, outgoing, 0, SubstitutionReason.Tactical).IsAccepted);
+            original.RunTick();
+            SnapshotHeader header = original.CaptureDurableHeader();
+            SnapshotPayload payload = original.CaptureDurablePayload();
+
+            const int continuation = 8;
+            var reference = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                if (i == 3) original.TestOnly_ApplyRestart(RestartSpot, team);
+                original.RunTick();
+                reference[i] = (byte[])original.CurrentSnapshotDigest.Clone();
+            }
+
+            var restored = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            Assert.AreEqual(1, restored.PendingSubstitutionCount);
+            for (int i = 0; i < continuation; i++)
+            {
+                if (i == 3) restored.TestOnly_ApplyRestart(RestartSpot, team);
+                restored.RunTick();
+                CollectionAssert.AreEqual(reference[i], restored.CurrentSnapshotDigest,
+                    "Restored substitution diverged at continuation tick " + i);
+            }
+            Assert.AreEqual(0, restored.PendingSubstitutionCount);
+            Assert.AreEqual(0, restored.TestOnly_ActiveBenchSlot(outgoing));
+            Assert.AreEqual(1, restored.SubstitutionWindowsUsed(team));
+        }
+
+        [Test]
+        public void ActualThrowInExecutesOnItsResolveTick()
+        {
+            var e = new MatchEngine(Seed);
+            e.TestOnly_SetPossession(0);
+            e.RunTick();
+            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            e.TestOnly_SetBall(TacticalDirector.BallPhysics.BallState.CreateAtPosition(
+                new Vector3(52.5f, -0.5f, MatchEngineConstants.BALL_REST_HEIGHT_M)));
+            e.RunTick();
+            Assert.AreEqual(RestartCue.ThrowIn, e.RestartAppliedThisTick,
+                "The fixture must exercise an actual production Resolve restart.");
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(0, e.TestOnly_ActiveBenchSlot(1));
+            Assert.AreEqual(1, e.SubstitutionWindowsUsed(0));
+        }
+
+        [Test]
         public void MidplayRequestChangesNextTickDigest()
         {
             MatchEngine a = Started();
@@ -202,5 +299,5 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-10-13 | —      | Eleven deferred substitution test locks. |
+// | 1.0     | 2026-10-13 | —      | Deferred substitution, mirror, restart and restore locks. |
 #endregion
