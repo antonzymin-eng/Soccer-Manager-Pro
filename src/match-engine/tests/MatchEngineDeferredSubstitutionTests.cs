@@ -124,6 +124,18 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void AcceptedOffTickRequestCannotBeSilentlyOmittedFromSave()
+        {
+            MatchEngine e = Started();
+            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            Assert.Throws<InvalidOperationException>(() => e.CaptureDurableHeader());
+            Assert.Throws<InvalidOperationException>(() => e.CaptureDurablePayload());
+            e.RunTick();
+            Assert.DoesNotThrow(() => e.CaptureDurableHeader());
+            Assert.Greater(e.CaptureDurablePayload().BytesWritten, 0);
+        }
+
+        [Test]
         public void PendingQueueAndWindowsRoundTripViaCanonicalSnapshot()
         {
             MatchEngine original = Started();
@@ -159,5 +171,5 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-10-13 | —      | Eight deferred substitution test locks. |
+// | 1.0     | 2026-10-13 | —      | Nine deferred substitution test locks. |
 #endregion
