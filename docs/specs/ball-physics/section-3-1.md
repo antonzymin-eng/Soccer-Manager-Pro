@@ -3,8 +3,12 @@
 **Document:** Ball Physics Specification  
 **Section:** 3.1 Core Formulas  
 **Created:** February 2, 2026, 10:45 PM PST  
-**Version:** 2.10  
+**Version:** 2.11  
+**Modified:** October 11, 2026 (ERR-001-007)  
 **Status:** READY FOR IMPLEMENTATION — ERR-006 resolved (AM-001-001 applied)
+
+**Changes from v2.10:**
+- **ERR-001-007:** §3.1.10.2 (continuation file) — when the swept goal-frame test moves a ball the state machine already set `OUT_OF_PLAY` back to an in-play contact point, the ball's state is re-derived, so `OUT_OF_PLAY` holds exactly when `IsOutOfBounds(position)`. Before, a post or bar strike within the same tick as a goal-line crossing left the ball frozen on the pitch with no restart until the next period reset.
 
 **Changes from v2.9:**
 - **ERR-001-006:** an uncontrolled ball above `AIRBORNE_ENTER_THRESHOLD` cannot be `STATIONARY` or remain `ROLLING`; altitude takes precedence over the low-speed stop rule so gravity cannot be disabled for an elevated ball.

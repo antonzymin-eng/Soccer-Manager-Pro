@@ -4,6 +4,7 @@
 // Modified: 2026-07-28 (shot-speed pass: swept goal-frame collision + crossing-point adjudication (ERR-001-005))
 // Modified: 2026-09-14 (W6: production Controlled entry + explicit non-kick release transition)
 // Modified: 2026-09-15 (ERR-001-006: elevated uncontrolled balls cannot become Stationary)
+// Modified: 2026-10-11 (ERR-001-007: a frame rebound that returns an OutOfPlay ball to the pitch re-derives its state)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
@@ -100,6 +101,10 @@ namespace TacticalDirector.BallPhysics
         /// a degenerate segment is a no-op; an X-band prefilter
         /// (<see cref="BallPhysicsConstants.GoalFrame.SweptPrefilterBandM"/>) skips the cylinder
         /// tests when the segment is nowhere near a goal line. Pure — no RNG, no logging state.
+        /// ERR-001-007: when the integrated position was past a goal line the ball arrives here
+        /// <c>OutOfPlay</c>; if the rebound returns it inside the pitch its state is re-derived
+        /// (<see cref="ReturnedToPlayState"/>), so <c>OutOfPlay</c> holds exactly when the ball
+        /// is out of bounds — the precondition the restart check depends on.
         /// </summary>
         /// <param name="ball">Ball state, modified in place on a hit.</param>
         /// <param name="prevPosition">Ball centre at the start of this tick's integration.</param>
@@ -135,7 +140,32 @@ namespace TacticalDirector.BallPhysics
             Vector3 contactPoint = prevPosition + bestT * d;
             ball.Position = contactPoint;
             ApplyGoalPostCollision(ref ball, contactPoint, bestAxisPoint, logger: null, matchTime: 0f);
+
+            // ERR-001-007: the state machine ran on the integrated position, which may lie past the
+            // goal line, so the ball can arrive here OutOfPlay. The rebound has moved it back to the
+            // contact point; if that is inside the pitch it is in play again. Left OutOfPlay, the
+            // restart check (which reads the position) awards nothing and OutOfPlay freezes the ball.
+            if (ball.State == BallStateType.OutOfPlay && !BallStateMachine.IsOutOfBounds(ball.Position))
+            {
+                ball.State = ReturnedToPlayState(ball);
+            }
+
             return true;
+        }
+
+        /// <summary>
+        /// The in-play state for a ball a frame rebound has returned to the pitch (ERR-001-007).
+        /// Above <see cref="BallPhysicsConstants.State.AirborneExitThreshold"/> it is Airborne, so
+        /// gravity acts and the normal Airborne → Bouncing path lands it; at ground height it is
+        /// Rolling, or Stationary below <see cref="BallPhysicsConstants.State.MinVelocity"/>.
+        /// </summary>
+        private static BallStateType ReturnedToPlayState(BallState ball)
+        {
+            if (ball.Position.z > BallPhysicsConstants.State.AirborneExitThreshold)
+                return BallStateType.Airborne;
+            if (ball.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+                return BallStateType.Stationary;
+            return BallStateType.Rolling;
         }
 
         /// <summary>Tests one goal's two posts + crossbar against the segment, keeping the
@@ -509,4 +539,9 @@ namespace TacticalDirector.BallPhysics
 // | 2.0     | 2026-09-15 | —      | ERR-001-006: ApplyKick and non-kick Controlled release preserve Airborne    |
 // |         |            |        | state whenever the ball centre is above AirborneEnterThreshold, preventing  |
 // |         |            |        | force-free elevated Stationary balls.                                       |
+// | 2.1     | 2026-10-11 | —      | ERR-001-007: ApplySweptGoalFrameCollision re-derives the state of a ball    |
+// |         |            |        | the state machine set OutOfPlay when the rebound returns it inside the      |
+// |         |            |        | pitch (Airborne above AirborneExitThreshold, else Rolling/Stationary), so   |
+// |         |            |        | OutOfPlay again holds exactly when the ball is out of bounds. Before, the   |
+// |         |            |        | ball froze on the pitch with no restart until the next period reset.        |
 #endregion

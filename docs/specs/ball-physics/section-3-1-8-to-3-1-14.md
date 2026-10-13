@@ -424,6 +424,46 @@ ball never deflects; a degenerate segment or one starting inside the contact rad
 (the prior tick handled the approach — no repeated-deflection loop); an X-band prefilter skips
 the cylinder tests away from the goal lines. Pure, drawless, no cross-tick state.
 
+**State after a frame rebound (ERR-001-007, October 11, 2026).** `ApplySweptGoalFrameCollision`
+runs after `UpdateBallPhysics`, so the state machine (§3.1.9 STEP 6) has already classified the
+ball at its *integrated* position. When that position is past a goal line (x < −r or
+x > LENGTH + r) the ball arrives `OUT_OF_PLAY`, but the rebound then moves it back to the contact
+point, which can be on the pitch side of the line — the outside of a post or the front of the bar
+struck within the same tick as the crossing. The detection above originally left `State`
+untouched in that case. The ball was then `OUT_OF_PLAY` at an in-play position: §3.1.10.3
+`CheckBoundaries` reads the position, reports "not out", and no restart is awarded, while
+`OUT_OF_PLAY` applies no forces (§3.1.9 STEP 2) and nothing else leaves that state. The ball froze
+until the next period reset. The response therefore re-derives the state when it returns an
+`OUT_OF_PLAY` ball inside the pitch:
+
+```csharp
+// After placing the ball at the contact point and applying ApplyGoalPostCollision:
+if (ball.State == BallStateType.OUT_OF_PLAY && !BallStateMachine.IsOutOfBounds(ball.Position))
+{
+    if (ball.Position.z > BallPhysicsConstants.State.AIRBORNE_EXIT_THRESHOLD)
+        ball.State = BallStateType.AIRBORNE;   // gravity acts; AIRBORNE → BOUNCING lands it
+    else if (ball.Velocity.magnitude < BallPhysicsConstants.State.MIN_VELOCITY)
+        ball.State = BallStateType.STATIONARY;
+    else
+        ball.State = BallStateType.ROLLING;
+}
+```
+
+Invariant restored: **`OUT_OF_PLAY` holds exactly when `IsOutOfBounds(ball.Position)`**, the
+precondition §3.1.10.3's restart adjudication depends on. A contact point that is itself out of
+bounds (the ball wrapped behind the line before striking) stays `OUT_OF_PLAY` and is restarted
+normally; a strike that never crossed the line keeps its integrated state.
+
+*Worked example (the measured case).* Unity 6000.4.9f1, seed `0x0F1E2D3C4B5A6978`, tick 56,955:
+ball centre (0.034, 30.104, 0.468) m, velocity (−12.58, +14.44, −2.22) m/s, `AIRBORNE`. One
+60 Hz step integrates x to about −0.18 m (< −r = −0.11 m), so the state machine sets
+`OUT_OF_PLAY`. The segment meets the near-post cylinder (axis y = 34 − 3.66 − 0.06 = 30.28 m,
+test radius 0.06 + 0.11 = 0.17 m) and the ball is placed at the contact point
+(0.027, 30.112, 0.467) with vy reflected (+14.44 → −13.63 m/s). x = 0.027 m > −0.11 m is in play
+and z = 0.467 m > AIRBORNE_EXIT_THRESHOLD (0.13 m), so the state becomes `AIRBORNE` and play
+continues. Before the fix the ball stayed `OUT_OF_PLAY` there for about 29 minutes of match time.
+Units: positions m, velocities m/s; valid for any strike the swept test reports.
+
 ### 3.1.10.3 Boundary Detection
 
 ```csharp
@@ -454,6 +494,10 @@ public enum RestartType
 /// segment falls back to the detected position). Per-position callers
 /// (BallStateMachine.IsOutOfBounds) keep the position-only form — out-NESS is identical
 /// under both, only the goal-vs-over/wide classification refines.
+/// ERR-001-007 (October 11, 2026): callers adjudicate restarts from the POSITION, so a ball
+/// must be OUT_OF_PLAY exactly when it is out of bounds. §3.1.10.2's frame rebound restores
+/// that after moving an OUT_OF_PLAY ball back inside the pitch; otherwise this returns
+/// (false, NONE) for a ball physics will never move again.
 /// </summary>
 public (bool isOut, RestartType restart) CheckBoundaries(
     BallState ball, Vector3 prevPosition, int lastTouchTeamID)
@@ -1103,6 +1147,7 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.8 | Jun 9, 2026 | AI | ERR-001-001: §3.1.8.1 bounce normal Vector3.up (Unity +Y) → new Vector3(0,0,1) — pseudocode contradicted the §1.2 Z-up coordinate system and Appendix B's "vertical" v_n definition. ERR-001-002: J_t_required gains the rotational-coupling divisor (1 + m·r²/I = 2.5). Both errors were faithfully implemented in src/ball-physics and fixed there in the same commit (AR-7 H-1 / M-1). |
 | 2.9 | Jul 28, 2026 | AI | ERR-001-005 (shot-speed & woodwork design KD-4/KD-5): §3.1.10.3 goal-line adjudication moves to the segment's interpolated crossing of the out-plane (the detected position is up to ~0.42 m past the plane at shot speeds); §3.1.10.2 gains the swept frame detection paragraph — `ApplySweptGoalFrameCollision`, the six-cylinder segment test that finally calls `ApplyGoalPostCollision` in production (a discrete test tunnels a 0.12 m post at shot speeds). |
 | 2.10 | Sep 15, 2026 | AI | ERR-001-006: elevated uncontrolled `STATIONARY`/`ROLLING` states are invalid; altitude takes precedence over the low-speed stop rule, `ApplyKick` includes current height in state selection, and elevated controlled release remains `AIRBORNE` so gravity cannot be disabled by a force-free mid-air state. |
+| 2.11 | Oct 11, 2026 | AI | ERR-001-007: §3.1.10.2 gains *State after a frame rebound* — when the swept frame test moves a ball the state machine already set `OUT_OF_PLAY` back to an in-play contact point, its state is re-derived (`AIRBORNE` above `AIRBORNE_EXIT_THRESHOLD`, else `ROLLING`, or `STATIONARY` below `MIN_VELOCITY`), restoring the invariant `OUT_OF_PLAY` ⇔ `IsOutOfBounds(position)` that §3.1.10.3's position-based restart adjudication depends on; worked example from the measured Unity deadlock (seed `0x0F1E2D3C4B5A6978`, ball frozen 29 minutes). §3.1.10.3 doc comment states the dependency. |
 
 ---
 
