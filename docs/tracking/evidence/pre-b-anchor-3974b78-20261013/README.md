@@ -1,7 +1,7 @@
 # Pre-B engine anchor freeze at `3974b78` (roadmap step 6)
 
 **Created:** October 13, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Purpose:** Freeze the latest pre-B engine anchor that W8 B (roadmap step 7) is compared against:
 frozen seeds, outcome counts and terminal fingerprints, plus the long-`OutOfPlay`-stall check that
 ERR-001-007 made a condition of any new baseline capture. Non-certifying Linux .NET evidence, the same
@@ -22,8 +22,12 @@ platform class as every earlier W8 Stage A baseline.
 | Host | Ubuntu 24.04.5 container, .NET SDK 8.0.131 / runtime 8.0.31 (Ubuntu package), Debug |
 
 `provenance.txt` records each run's worktree commit, `src` tree, env, filter and wall-clock times.
-`run-lane-equivalent.sh.txt` is the exact runner: the `measure.yml` lane's `dotnet test` invocation
-(`TreatNoTestsAsError`, detailed console and TRX loggers) without its preceding whole-tree gate.
+`run-lane-equivalent.sh.txt` is the script as run: the `measure.yml` lane's `dotnet test` invocation
+(`TreatNoTestsAsError`, detailed console and TRX loggers) without its preceding whole-tree gate. Its
+scratch path is redacted to `<scratch>`, and it records but does not return `dotnet test`'s exit
+status; all four recorded statuses are 0 (`provenance.txt`) and each TRX shows the test passed.
+`run-lane-template.sh.txt` is the corrected reproduction template: same invocation, scratch
+directory as an argument, exit status returned.
 `tools/dotnet-ci/measurement_catalog.py verify-run` passes on all three instrument runs.
 
 ## Host-agreement check
@@ -93,7 +97,8 @@ whose seeds and squad set-up differ.
 | `w8-corpus-stall-trace.csv` | Stall-trace result: per-seed counts, longest runs and terminal digests |
 | `w8-corpus-stall-trace.cs.txt` | Source of the scratch stall-trace test |
 | `W8StageADiagnosticTests-520ba31c.cs.txt` | The frozen W8 instrument source used for both W8 runs |
-| `run-lane-equivalent.sh.txt` | Runner script |
+| `run-lane-equivalent.sh.txt` | Runner script as run (scratch path redacted; does not return the test exit status) |
+| `run-lane-template.sh.txt` | Corrected reproduction template (returns the test exit status) |
 | `provenance.txt` | Per-run commit, tree, env, filter, timing; host; instrument identities |
 
 ## Reproduction
@@ -103,11 +108,12 @@ whose seeds and squad set-up differ.
    stall check, add `w8-corpus-stall-trace.cs.txt` as a `.cs` file in the same folder.
 2. `python3 tools/dotnet-ci/generate_projects.py`, then build
    `src/match-engine/tests/match-engine-tests.gen.csproj` (Debug).
-3. Run `run-lane-equivalent.sh.txt` with `TD_W8_STAGE_A=1`, `TD_FOUL_DIAGNOSTIC=1` and
+3. Run `run-lane-template.sh.txt` (scratch directory and worktree as its first two arguments) with `TD_W8_STAGE_A=1`, `TD_FOUL_DIAGNOSTIC=1` and
    `TD_W8_STALL_TRACE_OUT=<file>` and the filters listed in `provenance.txt`.
 
 ## Revision history
 
 | Version | Date | Change |
 |---|---|---|
+| 1.1 | October 13, 2026 | PR #504 review: add `run-lane-template.sh.txt`, which returns the test exit status; describe the as-run script's redaction and status handling. The as-run script and all results are unchanged. |
 | 1.0 | October 13, 2026 | Initial capture: anchor `3974b78`, host-agreement check at `692db66`, per-tick stall trace. |
