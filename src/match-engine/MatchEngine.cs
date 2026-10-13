@@ -3070,6 +3070,11 @@ namespace TacticalDirector.MatchEngine
         internal SnapshotHeader CaptureDurableHeader()
         {
             EnsureSubstitutionSaveSynchronized();
+            return CaptureCommittedSnapshotHeader();
+        }
+
+        internal SnapshotHeader CaptureCommittedSnapshotHeader()
+        {
             SnapshotHeader live = _orchestrator.CurrentHeader;
             SnapshotHeader copy = new SnapshotHeader
             {
@@ -3091,11 +3096,43 @@ namespace TacticalDirector.MatchEngine
         internal SnapshotPayload CaptureDurablePayload()
         {
             EnsureSubstitutionSaveSynchronized();
+            return CaptureCommittedSnapshotPayload();
+        }
+
+        internal SnapshotPayload CaptureCommittedSnapshotPayload()
+        {
             SnapshotPayload live = _orchestrator.CurrentPayload;
             SnapshotPayload copy = new SnapshotPayload();
             Array.Copy(live.PayloadBytes, 0, copy.PayloadBytes, 0, live.BytesWritten);
             copy.BytesWritten = live.BytesWritten;
             return copy;
+        }
+
+        /// <summary>The live between-tick state, kept out of the committed digest chain.
+        /// A save uses a separate authenticated off-tick overlay in format v3.</summary>
+        internal SnapshotPayload CapturePostSnapshotWorldState()
+        {
+            var payload = new SnapshotPayload();
+            SerializeWorldState(payload);
+            int o = payload.BytesWritten;
+            CanonicalSerializer.WriteU8(payload.PayloadBytes, ref o,
+                EventSystemConstants.DomainTagEventLedger);
+            CanonicalSerializer.WriteU32(payload.PayloadBytes, ref o, 0u);
+            payload.BytesWritten = o;
+            return payload;
+        }
+
+        /// <summary>Restore overlay state without disturbing last committed digest.</summary>
+        internal void ApplyPostSnapshotWorldState(SnapshotPayload payload, ISquadProvider squads)
+        {
+            if (payload == null) throw new ArgumentNullException(nameof(payload));
+            ulong tick = _clock.CurrentTick;
+            DeserializeWorldState(payload);
+            if (_clock.CurrentTick != tick)
+                throw new InvalidOperationException("Post-snapshot overlay changed tick.");
+            ReprojectDistinctSquads(squads);
+            ResyncGkAgentIdsAfterRestore();
+            _subRequestDirtySinceSnapshot = true;
         }
 
         private void EnsureSubstitutionSaveSynchronized()
