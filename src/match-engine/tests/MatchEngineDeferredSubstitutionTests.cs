@@ -248,13 +248,21 @@ namespace TacticalDirector.MatchEngine
         public void FullTimeRemovesPreviouslyAcceptedUnexecutedRequest()
         {
             MatchEngine e = Started();
-            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            for (int i = 0; i < 3; i++)
+            {
+                Assert.IsTrue(Request(e, 1 + i, i).IsAccepted);
+                e.TestOnly_ApplyRestart(RestartSpot, 0);
+            }
+            Assert.AreEqual(3, e.SubstitutionWindowsUsed(0));
+            Assert.IsTrue(Request(e, 4, 3).IsAccepted);
+            // The queue is blocked by three exhausted windows and therefore cannot
+            // accidentally execute at an in-play restart on the full-time boundary.
             e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.MATCH_TICKS_TOTAL - 1);
             e.RunTick();
             Assert.IsTrue(e.MatchEnded);
             Assert.AreEqual(0, e.PendingSubstitutionCount);
-            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(1));
-            Assert.AreEqual(0, e.TestOnly_SubstitutionsUsed(0));
+            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(4));
+            Assert.AreEqual(3, e.TestOnly_SubstitutionsUsed(0));
         }
 
         [TestCase(0)]
