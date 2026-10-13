@@ -100,7 +100,8 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.Throws<InvalidOperationException>(() => requests.Reconcile(Empty, Empty, false));
         }
 
-        private static LiveMatchFrame Frame(ulong tick, int bench, bool sentOff = false)
+        private static LiveMatchFrame Frame(
+            ulong tick, int bench, bool sentOff = false, PendingSubstitution[] pending = null)
         {
             var cues = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
             cues[1] = new LiveAgentCue(0, sentOff, bench, false, MatchEngineConstants.NO_PLAYER_ID);
@@ -108,7 +109,7 @@ namespace TacticalDirector.ClientApp.Tests
                 tick, default(Vector3), MatchEngineConstants.NO_POSSESSION,
                 new Vector2[MatchEngineConstants.SQUAD_SIZE], cues,
                 new int[MatchEngineConstants.TEAM_COUNT], default(Scoreline),
-                false, MatchPeriod.FirstHalf, RestartBanner.None);
+                false, MatchPeriod.FirstHalf, RestartBanner.None, pending);
         }
 
         private static ClientChangeRecord SubmitSubstitution(ClientChangeRequests requests, Dispatcher dispatcher)
@@ -146,6 +147,23 @@ namespace TacticalDirector.ClientApp.Tests
             requests.ObserveFrame(in dismissed);
             Assert.AreEqual(ClientChangeStatus.NotApplied, row.Status);
             Assert.IsFalse(requests.IsSubstitutionPending);
+        }
+
+        [Test]
+        public void PendingQueueDisappearanceIsCancellationEvidenceWithoutNewEvent()
+        {
+            var requests = new ClientChangeRequests(TeamTactic.Balanced);
+            ClientChangeRecord row = SubmitSubstitution(requests, new Dispatcher());
+            requests.Reconcile(new[] { new TickStampedCommand(10, row.Command) }, Empty, false);
+            LiveMatchFrame present = Frame(11, -1, pending: new[]
+            {
+                new PendingSubstitution(1u, 0, 1, 0, SubstitutionReason.Tactical)
+            });
+            requests.ObserveFrame(in present);
+            Assert.AreEqual(ClientChangeStatus.Pending, row.Status);
+            LiveMatchFrame cancelled = Frame(12, -1, pending: new PendingSubstitution[0]);
+            requests.ObserveFrame(in cancelled);
+            Assert.AreEqual(ClientChangeStatus.NotApplied, row.Status);
         }
 
         [Test]
