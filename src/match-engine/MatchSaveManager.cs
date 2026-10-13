@@ -51,9 +51,13 @@ namespace TacticalDirector.MatchEngine
             {
                 throw new ArgumentNullException(nameof(engine));
             }
-            SnapshotHeader  header  = engine.CaptureDurableHeader();
-            SnapshotPayload payload = engine.CaptureDurablePayload();
-            return MatchSaveCodec.Encode(engine.MatchSeed, header, payload);
+            // Preserve the exact committed header/digest chain and append an independently
+            // verified live-state overlay. Manager commands can be drained by ServiceOnce()
+            // between ticks without changing the previous tick's certified digest.
+            SnapshotHeader header = engine.CaptureCommittedSnapshotHeader();
+            SnapshotPayload payload = engine.CaptureCommittedSnapshotPayload();
+            SnapshotPayload overlay = engine.CapturePostSnapshotWorldState();
+            return MatchSaveCodec.Encode(engine.MatchSeed, header, payload, overlay);
         }
 
         /// <summary>
@@ -68,8 +72,11 @@ namespace TacticalDirector.MatchEngine
         public static MatchEngine Restore(byte[] blob, ISquadProvider squads = null)
         {
             MatchSaveContents contents = MatchSaveCodec.Decode(blob);
-            return MatchEngine.RestoreFromSnapshot(
+            MatchEngine engine = MatchEngine.RestoreFromSnapshot(
                 contents.Header, contents.Payload, contents.MatchSeed, squads);
+            if (contents.PostSnapshotPayload != null)
+                engine.ApplyPostSnapshotWorldState(contents.PostSnapshotPayload, squads);
+            return engine;
         }
 
         /// <summary>

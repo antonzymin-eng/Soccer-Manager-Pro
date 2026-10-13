@@ -32,12 +32,17 @@ namespace TacticalDirector.MatchEngine
         /// <summary>The reconstructed snapshot payload (the cross-tick world-state bytes).</summary>
         public readonly SnapshotPayload Payload;
 
+        /// <summary>An independently hashed off-tick world-state overlay, or null for a committed-only save.</summary>
+        public readonly SnapshotPayload PostSnapshotPayload;
+
         /// <summary>Constructs the decoded save contents.</summary>
-        public MatchSaveContents(ulong matchSeed, SnapshotHeader header, SnapshotPayload payload)
+        public MatchSaveContents(ulong matchSeed, SnapshotHeader header, SnapshotPayload payload,
+            SnapshotPayload postSnapshotPayload = null)
         {
             MatchSeed = matchSeed;
             Header    = header;
             Payload   = payload;
+            PostSnapshotPayload = postSnapshotPayload;
         }
     }
 }

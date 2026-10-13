@@ -335,7 +335,7 @@ namespace TacticalDirector.MatchEngine
         /// <c>buildHash</c> string between <c>Cursor.PhaseOrdinal</c> and the fingerprint-present flag.
         /// KD-1 stands — a v1 blob is refused, not migrated.
         /// </para></summary>
-        public const uint MATCH_SAVE_FORMAT_VERSION = 2;
+        public const uint MATCH_SAVE_FORMAT_VERSION = 3;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
