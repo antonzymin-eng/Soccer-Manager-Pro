@@ -238,6 +238,78 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void PausedOffTickSubstitution_SaveRestore_ContinuesIdenticalDigestChain()
+        {
+            // Real command channel + paused ServiceOnce: the request is accepted before
+            // the same tick's save, and it MUST be represented in the restored engine.
+            var live = new MatchSession(MatchSetup.NeutralDemo(Seed));
+            for (int i = 0; i < 10; i++) live.TickOnce();
+            live.Streamer.Pause();
+            live.Commands.Enqueue(ManagerCommand.Substitute(
+                0, 1, 0, SubstitutionReason.Tactical));
+            ulong savedTick = live.CurrentTick;
+            byte[] save = live.CaptureSave();
+            Assert.AreEqual(savedTick, live.CurrentTick, "Saving cannot advance a paused match.");
+            Assert.AreEqual(1, live.Driver.Log.Count, "Command must be drained before save.");
+            Assert.AreEqual(1, live.TestOnly_Engine.PendingSubstitutionCount);
+            Assert.AreEqual(-1, live.TestOnly_Engine.TestOnly_ActiveBenchSlot(1));
+
+            const int continuation = 12;
+            var digests = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                live.TickOnce();
+                digests[i] = (byte[])live.CurrentSnapshotDigest.Clone();
+            }
+
+            MatchSession restored = MatchSession.RestoreFrom(save);
+            Assert.AreEqual(savedTick, restored.CurrentTick);
+            Assert.AreEqual(1, restored.TestOnly_Engine.PendingSubstitutionCount);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.TickOnce();
+                CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest,
+                    "Off-tick substitution restore diverged at continuation " + i);
+            }
+        }
+
+        [Test]
+        public void PausedOffTickMentality_SaveRestore_ContinuesIdenticalDigestChain()
+        {
+            var live = new MatchSession(MatchSetup.NeutralDemo(Seed));
+            for (int i = 0; i < 10; i++) live.TickOnce();
+            live.Streamer.Pause();
+            TeamTactic balanced = TeamTactic.Balanced;
+            var changed = new TeamTactic(
+                Mentality.Attacking, balanced.Formation, balanced.Tempo, balanced.Width,
+                balanced.Passing, balanced.Pressing, balanced.LineOfEngagement,
+                balanced.DefensiveLine, balanced.DefensiveWidth, balanced.TransitionWon,
+                balanced.TransitionLost, balanced.OffsideTrap, balanced.TriggerPressMask,
+                balanced.FocusPlay, balanced.GkDistribution, balanced.TimeWasting,
+                balanced.MarkingOrientation, balanced.DismarkIntensity,
+                balanced.BuildUpStructure, balanced.RotationFreedom);
+            live.Commands.Enqueue(ManagerCommand.SetTeamTactic(0, changed));
+            ulong savedTick = live.CurrentTick;
+            byte[] save = live.CaptureSave();
+            Assert.AreEqual(savedTick, live.CurrentTick);
+            Assert.AreEqual(1, live.Driver.Log.Count);
+            const int continuation = 12;
+            var digests = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                live.TickOnce();
+                digests[i] = (byte[])live.CurrentSnapshotDigest.Clone();
+            }
+            MatchSession restored = MatchSession.RestoreFrom(save);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.TickOnce();
+                CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest,
+                    "Off-tick mentality restore diverged at continuation " + i);
+            }
+        }
+
+        [Test]
         public void RestoreFrom_ResumesAtTheSavedTick_WithAFreshCommandLog()
         {
             var session = new MatchSession(MatchSetup.NeutralDemo(Seed));
