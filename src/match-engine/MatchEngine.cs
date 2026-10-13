@@ -2242,6 +2242,28 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: a team's substitutions-used count (design note §6; v15).</summary>
         internal int TestOnly_SubstitutionsUsed(int teamId) => _substitutionsUsed[teamId];
+        /// <summary>Observation only: the #11 team's current goalkeeper roster identity.</summary>
+        internal int TestOnly_GoalkeeperAgentId(int teamId)
+        {
+            GuardTeamId(teamId);
+            return _gkAgentIds[teamId];
+        }
+
+        /// <summary>Observation only: same exclusion rule as loose-ball pickup uses.</summary>
+        internal int TestOnly_FirstEligibleGoalkeeper(int teamId)
+        {
+            GuardTeamId(teamId);
+            return FirstGoalkeeperOnTeam(teamId);
+        }
+
+        /// <summary>Observation only: live #12 input for a roster slot, after its latest AI fill.</summary>
+        internal RoleId TestOnly_PositioningRole(int agentId)
+        {
+            GuardRosterIndex(agentId);
+            int team = _teamIds[agentId];
+            return _posSnapshots[team].Agents[agentId % MatchEngineConstants.PLAYERS_PER_TEAM].Role;
+        }
+
 
         /// <summary>Test-only: a team's roster reference — the configured <c>Squad.ClubId</c>, or
         /// <see cref="MatchEngineConstants.NO_ROSTER_CLUB_ID"/> if no squad was configured (#27 T3; v16).</summary>
