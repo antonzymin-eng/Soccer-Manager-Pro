@@ -68,8 +68,9 @@ namespace TacticalDirector.MatchEngine
             // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
             // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
             // (wiring backlog W3) the per-GK ClaimIntent payload + active latch, v24 (W8 B) the
-            // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state.
-            Assert.AreEqual(24u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state,
+            // v25 pending substitution queue, next sequence, and Law 3 window counters.
+            Assert.AreEqual(25u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
