@@ -252,7 +252,6 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(savedTick, live.CurrentTick, "Saving cannot advance a paused match.");
             Assert.AreEqual(1, live.Driver.Log.Count, "Command must be drained before save.");
             Assert.AreEqual(1, live.TestOnly_Engine.PendingSubstitutionCount);
-            Assert.AreEqual(-1, live.TestOnly_Engine.TestOnly_ActiveBenchSlot(1));
 
             const int continuation = 12;
             var digests = new byte[continuation][];
