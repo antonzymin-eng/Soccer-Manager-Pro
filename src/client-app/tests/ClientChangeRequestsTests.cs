@@ -10,6 +10,9 @@ using NUnit.Framework;
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.MatchViewer;
+using UnityEngine;
 
 namespace TacticalDirector.ClientApp.Tests
 {
@@ -95,6 +98,54 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.Throws<InvalidOperationException>(() => requests.Reconcile(new[] { new TickStampedCommand(10, different) }, Empty, false));
             Assert.AreEqual(ClientChangeStatus.Pending, row.Status);
             Assert.Throws<InvalidOperationException>(() => requests.Reconcile(Empty, Empty, false));
+        }
+
+        private static LiveMatchFrame Frame(ulong tick, int bench, bool sentOff = false)
+        {
+            var cues = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
+            cues[1] = new LiveAgentCue(0, sentOff, bench, false, MatchEngineConstants.NO_PLAYER_ID);
+            return new LiveMatchFrame(
+                tick, default(Vector3), MatchEngineConstants.NO_POSSESSION,
+                new Vector2[MatchEngineConstants.SQUAD_SIZE], cues,
+                new int[MatchEngineConstants.TEAM_COUNT], default(Scoreline),
+                false, MatchPeriod.FirstHalf, RestartBanner.None);
+        }
+
+        private static ClientChangeRecord SubmitSubstitution(ClientChangeRequests requests, Dispatcher dispatcher)
+        {
+            ManagerCommand command = ManagerCommand.Substitute(0, 1, 0, SubstitutionReason.Tactical);
+            ManagerIntent intent = ManagerIntent.Substitute(0, 1, 0, SubstitutionReason.Tactical);
+            return requests.Submit(command, intent, default, default, dispatcher);
+        }
+
+        [Test]
+        public void AcceptedSubstitutionRemainsPendingUntilIncomingBenchCueIsObserved()
+        {
+            var requests = new ClientChangeRequests(TeamTactic.Balanced);
+            ClientChangeRecord row = SubmitSubstitution(requests, new Dispatcher());
+            requests.Reconcile(new[] { new TickStampedCommand(10, row.Command) }, Empty, false);
+            Assert.IsTrue(requests.IsSubstitutionPending);
+            Assert.AreEqual(ClientChangeStatus.Pending, row.Status);
+            LiveMatchFrame untouched = Frame(11, -1);
+            requests.ObserveFrame(in untouched);
+            Assert.AreEqual(ClientChangeStatus.Pending, row.Status);
+            LiveMatchFrame applied = Frame(12, 0);
+            requests.ObserveFrame(in applied);
+            Assert.AreEqual(ClientChangeStatus.Applied, row.Status);
+            Assert.AreEqual(12UL, row.OutcomeTick);
+            Assert.IsFalse(requests.IsSubstitutionPending);
+        }
+
+        [Test]
+        public void DismissedOutgoingCancelsAcceptedRequestWithoutClaimingApplied()
+        {
+            var requests = new ClientChangeRequests(TeamTactic.Balanced);
+            ClientChangeRecord row = SubmitSubstitution(requests, new Dispatcher());
+            requests.Reconcile(new[] { new TickStampedCommand(10, row.Command) }, Empty, false);
+            LiveMatchFrame dismissed = Frame(11, -1, sentOff: true);
+            requests.ObserveFrame(in dismissed);
+            Assert.AreEqual(ClientChangeStatus.NotApplied, row.Status);
+            Assert.IsFalse(requests.IsSubstitutionPending);
         }
 
         [Test]
