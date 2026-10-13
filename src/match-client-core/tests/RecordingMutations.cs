@@ -48,10 +48,11 @@ namespace TacticalDirector.MatchClientCore.Tests
             Calls.Add("player:" + agentId.ToString(CultureInfo.InvariantCulture));
         }
 
-        public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+        public SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
         {
             Calls.Add(string.Format(
                 CultureInfo.InvariantCulture, "sub:{0}:{1}:{2}:{3}", teamId, outSlotIndex, benchIndex, reason));
+            return SubstitutionRequestResult.Accept(1u);
         }
     }
 }

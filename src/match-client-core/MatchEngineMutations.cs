@@ -45,8 +45,8 @@ namespace TacticalDirector.MatchClientCore
         public void SetPlayerTactic(int agentId, in PlayerTactic tactic) => _engine.SetPlayerTactic(agentId, in tactic);
 
         /// <inheritdoc/>
-        public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
-            => _engine.SubstitutePlayer(teamId, outSlotIndex, benchIndex, reason);
+        public SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+            => _engine.RequestSubstitution(teamId, outSlotIndex, benchIndex, reason);
     }
 }
 

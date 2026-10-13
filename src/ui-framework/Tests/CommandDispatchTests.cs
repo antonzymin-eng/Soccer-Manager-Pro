@@ -57,7 +57,7 @@ namespace TacticalDirector.UiFramework.Tests
 
             dispatcher.Dispatch(ManagerIntent.Substitute(0, 5, 3, SubstitutionReason.Tactical));
 
-            CollectionAssert.AreEqual(new[] { "SubstitutePlayer(0,5,3,Tactical)" }, mutations.Calls);
+            CollectionAssert.AreEqual(new[] { "RequestSubstitution(0,5,3,Tactical)" }, mutations.Calls);
         }
 
         [Test]
@@ -227,8 +227,11 @@ namespace TacticalDirector.UiFramework.Tests
             public void SetPlayerTactic(int agentId, in PlayerTactic tactic) =>
                 Calls.Add("SetPlayerTactic(" + agentId + ")");
 
-            public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason) =>
-                Calls.Add("SubstitutePlayer(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+            public SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+            {
+                Calls.Add("RequestSubstitution(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+                return SubstitutionRequestResult.Accept(1u);
+            }
         }
     }
 }

@@ -130,8 +130,7 @@ namespace TacticalDirector.MatchClientCore
                 bool applied;
                 try
                 {
-                    command.Apply(mutations);
-                    applied = true;
+                    applied = command.Apply(mutations);
                 }
                 catch (Exception)
                 {

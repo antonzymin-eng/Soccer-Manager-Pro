@@ -37,8 +37,8 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>Live, stride-committed: stages a per-agent tactic change (FR-TI-027).</summary>
         void SetPlayerTactic(int agentId, in PlayerTactic tactic);
 
-        /// <summary>Live: swaps a bench player onto the pitch (guarded against a finished match inside the engine).</summary>
-        void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason);
+        /// <summary>Live: queues a substitution for its next eligible stoppage; rule refusals return typed outcomes.</summary>
+        SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason);
     }
 }
 
