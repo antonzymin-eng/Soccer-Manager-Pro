@@ -248,21 +248,22 @@ namespace TacticalDirector.MatchEngine
         public void FullTimeRemovesPreviouslyAcceptedUnexecutedRequest()
         {
             MatchEngine e = Started();
-            for (int i = 0; i < 3; i++)
-            {
-                Assert.IsTrue(Request(e, 1 + i, i).IsAccepted);
-                e.TestOnly_ApplyRestart(RestartSpot, 0);
-            }
-            Assert.AreEqual(3, e.SubstitutionWindowsUsed(0));
-            Assert.IsTrue(Request(e, 4, 3).IsAccepted);
-            // The queue is blocked by three exhausted windows and therefore cannot
-            // accidentally execute at an in-play restart on the full-time boundary.
+            // Reach second half first. Jumping directly to full time from the first
+            // half also runs the free half-time restart, which correctly executes
+            // the queue and cannot represent a full-time cancellation fixture.
+            e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK - 1);
+            e.RunTick();
+            Assert.IsTrue(e.TestOnly_SecondHalfStarted);
+            Assert.IsTrue(Request(e, 1, 0).IsAccepted);
+            e.TestOnly_SetPossession(0);
+            e.TestOnly_SetBall(TacticalDirector.BallPhysics.BallState.CreateAtPosition(
+                new Vector3(RestartSpot.x, RestartSpot.y, MatchEngineConstants.BALL_REST_HEIGHT_M)));
             e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.MATCH_TICKS_TOTAL - 1);
             e.RunTick();
             Assert.IsTrue(e.MatchEnded);
             Assert.AreEqual(0, e.PendingSubstitutionCount);
-            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(4));
-            Assert.AreEqual(3, e.TestOnly_SubstitutionsUsed(0));
+            Assert.AreEqual(-1, e.TestOnly_ActiveBenchSlot(1));
+            Assert.AreEqual(0, e.TestOnly_SubstitutionsUsed(0));
         }
 
         [TestCase(0)]
