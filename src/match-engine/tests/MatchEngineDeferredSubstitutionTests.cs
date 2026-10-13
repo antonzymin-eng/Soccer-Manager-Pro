@@ -166,6 +166,51 @@ namespace TacticalDirector.MatchEngine
             Assert.Greater(e.CaptureDurablePayload().BytesWritten, 0);
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void FallbackKeeperImmediatelyBecomesGoalkeeperForElevenAndPositioning(int team)
+        {
+            MatchEngine e = Started();
+            int keeper = team * MatchEngineConstants.PLAYERS_PER_TEAM;
+            int outgoing = keeper + 1;
+            e.TestOnly_SetBenchSlot(team, 0, isGoalkeeper: true);
+            e.TestOnly_SetIsSentOff(keeper, true);
+            Assert.IsTrue(e.RequestSubstitution(team, outgoing, 0, SubstitutionReason.Tactical).IsAccepted);
+            Assert.AreEqual(1, e.PendingSubstitutionCount);
+            e.TestOnly_ApplyRestart(RestartSpot, team);
+
+            Assert.AreEqual(outgoing, e.TestOnly_GoalkeeperAgentId(team),
+                "#11 must not retain the sent-off slot until the next tick.");
+            Assert.AreEqual(outgoing, e.TestOnly_FirstEligibleGoalkeeper(team),
+                "The loose-ball collector restriction must use the replacement keeper.");
+            Assert.AreEqual(0, e.TestOnly_ActiveBenchSlot(outgoing));
+            for (int i = 0; i < 7; i++)
+                e.RunTick();
+            Assert.AreEqual(TacticalDirector.PositioningAI.RoleId.GK,
+                e.TestOnly_PositioningRole(outgoing),
+                "Positioning must use the keeper role, not the old outfield formation slot.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback(int team)
+        {
+            MatchEngine e = Started();
+            int keeper = team * MatchEngineConstants.PLAYERS_PER_TEAM;
+            int firstOut = keeper + 1;
+            int secondOut = keeper + 2;
+            Assert.AreEqual(SubstitutionRequestStatus.GoalkeeperRoleMismatch,
+                e.RequestSubstitution(team, keeper, 0, SubstitutionReason.Tactical).Status);
+            e.TestOnly_SetBenchSlot(team, 0, isGoalkeeper: true);
+            e.TestOnly_SetBenchSlot(team, 1, isGoalkeeper: true);
+            Assert.AreEqual(SubstitutionRequestStatus.GoalkeeperRoleMismatch,
+                e.RequestSubstitution(team, firstOut, 0, SubstitutionReason.Tactical).Status);
+            e.TestOnly_SetIsSentOff(keeper, true);
+            Assert.IsTrue(e.RequestSubstitution(team, firstOut, 0, SubstitutionReason.Tactical).IsAccepted);
+            Assert.AreEqual(SubstitutionRequestStatus.GoalkeeperRoleMismatch,
+                e.RequestSubstitution(team, secondOut, 1, SubstitutionReason.Tactical).Status);
+        }
+
         [Test]
         public void PendingQueueAndWindowsRoundTripViaCanonicalSnapshot()
         {
