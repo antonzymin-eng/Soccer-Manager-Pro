@@ -556,6 +556,9 @@ namespace TacticalDirector.MatchEngine
         private readonly byte[] _subRequestReason;
         private int _subRequestCount;
         private uint _nextSubRequestSequence;
+        // An accepted off-tick request does not appear in the previous completed tick's
+        // digest-bearing payload. Refuse stale saves until the next Snapshot phase.
+        private bool _subRequestDirtySinceSnapshot;
 
         // #27 T3 (squad-roster-reference-design.md): per-team roster reference — the ClubId of the
         // Squad ConfigureSquads loaded for the team, or NO_ROSTER_CLUB_ID (-1) when no squad was
@@ -1648,6 +1651,7 @@ namespace TacticalDirector.MatchEngine
                 return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.GoalkeeperRoleMismatch);
 
             uint sequence = _nextSubRequestSequence++;
+            _subRequestDirtySinceSnapshot = true;
             if (_clock.CurrentTick == 0UL)
             {
                 // Pre-kickoff is a free stoppage. Publish through the existing first-tick
@@ -3040,6 +3044,7 @@ namespace TacticalDirector.MatchEngine
         /// Not on the hot path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotHeader CaptureDurableHeader()
         {
+            EnsureSubstitutionSaveSynchronized();
             SnapshotHeader live = _orchestrator.CurrentHeader;
             SnapshotHeader copy = new SnapshotHeader
             {
@@ -3060,11 +3065,20 @@ namespace TacticalDirector.MatchEngine
         /// path (a save is a host action, not per-tick), so the copy allocation is fine.</summary>
         internal SnapshotPayload CaptureDurablePayload()
         {
+            EnsureSubstitutionSaveSynchronized();
             SnapshotPayload live = _orchestrator.CurrentPayload;
             SnapshotPayload copy = new SnapshotPayload();
             Array.Copy(live.PayloadBytes, 0, copy.PayloadBytes, 0, live.BytesWritten);
             copy.BytesWritten = live.BytesWritten;
             return copy;
+        }
+
+        private void EnsureSubstitutionSaveSynchronized()
+        {
+            if (_subRequestDirtySinceSnapshot)
+                throw new InvalidOperationException(
+                    "A substitution request was accepted after the last Snapshot phase. " +
+                    "Advance one simulation tick before saving so the pending queue is digest-accounted.");
         }
 
         // ── GK (#11) / Heading (#10) engine integration — public + test surface (design §1.2a / §7) ──
@@ -6624,6 +6638,7 @@ namespace TacticalDirector.MatchEngine
             EventBus.CaptureTickLedger(_tickLedger);
 
             EventBus.OnTickBoundary();
+            _subRequestDirtySinceSnapshot = false;
         }
 
         /// <summary>
