@@ -5712,6 +5712,9 @@ namespace TacticalDirector.MatchEngine
                 EndGoalkeeperHandEpisode(_gkAgentIds[k]);
             }
             ExecutePendingSubstitutionsAtRestart(freeSubstitutionWindow, publishSubstitutionsNow);
+            // Resolve started with the old GK occupant map. A keeper inserted at this
+            // stoppage must become authoritative for all remaining same-tick consumers.
+            RefreshGkAgentIds();
             SetPossessingAgent(SelectRestartTaker(position, awardedTeam));
             if (_possessingAgentId >= 0)
                 ObserveW8(W8StageAKind.Acquire, _possessingAgentId);
@@ -7374,6 +7377,37 @@ namespace TacticalDirector.MatchEngine
                 _subRequestOutSlot[i] = CanonicalSerializer.ReadU8(buf, ref o);
                 _subRequestBench[i] = CanonicalSerializer.ReadU8(buf, ref o);
                 _subRequestReason[i] = CanonicalSerializer.ReadU8(buf, ref o);
+
+                int team = _subRequestTeam[i];
+                int outgoing = _subRequestOutSlot[i];
+                int bench = _subRequestBench[i];
+                if (team >= MatchEngineConstants.TEAM_COUNT ||
+                    outgoing >= MatchEngineConstants.SQUAD_SIZE ||
+                    _teamIds[outgoing] != team ||
+                    bench >= MatchEngineConstants.SUBSTITUTES_PER_TEAM ||
+                    _subRequestReason[i] > (byte)SubstitutionReason.Injury ||
+                    _subRequestSequence[i] == 0u ||
+                    _subRequestSequence[i] >= _nextSubRequestSequence ||
+                    (i > 0 && _subRequestSequence[i] <= _subRequestSequence[i - 1]) ||
+                    _isSentOff[outgoing] || _activeBenchSlot[outgoing] != -1)
+                    throw new System.InvalidOperationException("Corrupt snapshot pending substitution entry.");
+
+                for (int prior = 0; prior < i; prior++)
+                {
+                    if (_subRequestTeam[prior] != team) continue;
+                    if (_subRequestOutSlot[prior] == outgoing || _subRequestBench[prior] == bench)
+                        throw new System.InvalidOperationException("Duplicate pending substitution in snapshot.");
+                }
+                for (int slot = 0; slot < MatchEngineConstants.SQUAD_SIZE; slot++)
+                {
+                    if (_teamIds[slot] == team && _activeBenchSlot[slot] == bench)
+                        throw new System.InvalidOperationException("Snapshot requests an already-used bench slot.");
+                }
+                int count = 0;
+                for (int prior = 0; prior <= i; prior++)
+                    if (_subRequestTeam[prior] == team) count++;
+                if (_substitutionsUsed[team] + count > MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
+                    throw new System.InvalidOperationException("Snapshot exceeds substitution limit.");
             }
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
