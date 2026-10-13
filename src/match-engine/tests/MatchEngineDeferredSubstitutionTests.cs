@@ -7,6 +7,7 @@ using System;
 using NUnit.Framework;
 using UnityEngine;
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -326,6 +327,17 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(0, e.PendingSubstitutionCount);
             Assert.AreEqual(0, e.TestOnly_ActiveBenchSlot(1));
             Assert.AreEqual(1, e.SubstitutionWindowsUsed(0));
+            bool found = false;
+            for (int i = 0; i < e.TickLedgerCount; i++)
+            {
+                if (e.TickLedgerOrdinal(i) != EventRegistry.GetOrdinal<SubstitutionEvent>())
+                    continue;
+                SubstitutionEvent applied = e.TickLedgerRecord<SubstitutionEvent>(i);
+                Assert.AreEqual(0, applied.Team);
+                Assert.AreEqual(1, applied.Outgoing);
+                found = true;
+            }
+            Assert.IsTrue(found, "A real Resolve restart must publish an executable substitution event.");
         }
 
         [Test]
