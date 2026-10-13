@@ -95,6 +95,37 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests()
+        {
+            MatchEngine e = Started();
+            for (int i = 0; i < 3; i++)
+            {
+                Assert.IsTrue(Request(e, 1 + i, i).IsAccepted);
+                e.TestOnly_ApplyRestart(RestartSpot, 0);
+            }
+            Assert.IsTrue(Request(e, 4, 3).IsAccepted);
+            e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK - 1);
+            e.RunTick();
+            Assert.IsTrue(e.TestOnly_SecondHalfStarted);
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(3, e.TestOnly_ActiveBenchSlot(4));
+            Assert.AreEqual(3, e.SubstitutionWindowsUsed(0),
+                "The half-time kickoff is a free substitution window.");
+            Assert.AreEqual(SubstitutionRequestStatus.NoWindowsLeft,
+                Request(e, 5, 4).Status);
+        }
+
+        [Test]
+        public void FullTimeRejectsRequestsWithTypedResult()
+        {
+            MatchEngine e = Started();
+            e.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.MATCH_TICKS_TOTAL - 1);
+            e.RunTick();
+            Assert.AreEqual(SubstitutionRequestStatus.MatchEnded, Request(e, 1, 0).Status);
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+        }
+
+        [Test]
         public void DismissedOutgoingCancelsBeforeTheWindowGate()
         {
             MatchEngine e = Started();
@@ -171,5 +202,5 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-10-13 | —      | Nine deferred substitution test locks. |
+// | 1.0     | 2026-10-13 | —      | Eleven deferred substitution test locks. |
 #endregion
