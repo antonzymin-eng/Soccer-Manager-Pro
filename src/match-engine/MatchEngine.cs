@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
 // Modified: 2026-10-13 (W8 B #466 prerequisite: Resolve terminal handoff, F-05 original request, host rejection and identity tests; no live policy producer)
 // Modified: 2026-10-12 (PR #500 review: clarify host crossing-position capture; comment only)
 // Modified (prior): 2026-10-12 (ERR-001-007: goal-frame/state ordering)
@@ -2678,11 +2679,12 @@ namespace TacticalDirector.MatchEngine
         internal bool TestOnly_PassWorldAdapterIsGoalkeeperOfTeam(int agentId, int teamId) =>
             new PassWorldAdapter(this).IsGoalkeeperOfTeam(agentId, teamId);
 
-        /// <summary>Test-only: use the production host's initiation/rejection path.</summary>
+        /// <summary>Test-only: use the production host's initiation/rejection path. The executor is
+        /// the one owned by <c>request.AgentId</c> (no separate slot argument to disagree with it).</summary>
         internal bool TestOnly_StartGoalkeeperDistribution(
-            int agentId, in GoalkeeperDistributionRequest request,
+            in GoalkeeperDistributionRequest request,
             out GoalkeeperDistributionFeedback feedback) =>
-            StartGoalkeeperDistributionAtHost(agentId, in request, out feedback);
+            StartGoalkeeperDistributionAtHost(in request, out feedback);
 
         /// <summary>Test-only: cancel an accepted keeper request through the real #5 seam.</summary>
         internal bool TestOnly_CancelGoalkeeperDistribution(int agentId) =>
@@ -5185,11 +5187,21 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Single host-owned #5 initiation path for later #21 policy wiring.
         /// A rejected request never sets pending terminal feedback; route its result immediately.
+        /// The executor is selected from <c>request.AgentId</c> itself: #5 validates identity and
+        /// possession against that agent, and the Physics kick adapter and Resolve drain both index
+        /// the executor by it, so a separate host slot argument could only disagree with them.
         /// #21 production callers are deliberately absent until W8 B step 7.</summary>
         private bool StartGoalkeeperDistributionAtHost(
-            int agentId, in GoalkeeperDistributionRequest request,
+            in GoalkeeperDistributionRequest request,
             out GoalkeeperDistributionFeedback feedback)
         {
+            int agentId = request.AgentId;
+            if (agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(request), agentId, "request.AgentId must be a roster index in [0, SQUAD_SIZE).");
+            }
+
             bool accepted = _passExecutors[agentId].TryStartGoalkeeperDistribution(in request, out feedback);
             if (!accepted)
                 ObserveGoalkeeperDistributionTerminal(agentId, in request, in feedback);
@@ -10733,4 +10745,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | crossing-point input; Ball Physics owns the swept start.       |
 // |         |            |        | Comment only.                                                  |
 // | 2.00    | 2026-10-13 | —      | W8 B prerequisites: host-owned initiator/rejection sink, once-only Resolve terminal drain, original-request F-05 test observer and real adapter identity seam; Restore unchanged, production distribution producer still absent. |
+// | 2.01    | 2026-10-14 | —      | PR #506 review (Codex P2): StartGoalkeeperDistributionAtHost drops its separate slot argument and selects the #5 executor from request.AgentId, so initiation, CONTACT kick lookup and Resolve feedback attribution cannot name different agents; out-of-range AgentId throws. Dormant path; no schema/GT/RNG change. |
 #endregion

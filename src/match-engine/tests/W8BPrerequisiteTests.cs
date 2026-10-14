@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/W8BPrerequisiteTests.cs
 // Created:  2026-10-13
-// Modified: 2026-10-13 (F-05 replay: state-derived CONTACT and sequential reference/restore)
+// Modified: 2026-10-14 (PR #506 review: host initiation keyed by request.AgentId; out-of-range id fails loud)
+// Modified (prior): 2026-10-13 (F-05 replay: state-derived CONTACT and sequential reference/restore)
 // Author:   —
 // Spec:     W8 B #466 follow-ups, #5 §3.8.13, #11 §3.8.2 and Match Engine Resolve
 // Purpose:  Real adapter identity, exactly-once terminal feedback and F-05 across restore.
@@ -67,7 +68,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperDistributionRequest wrongTeam = Request(HomeReceiver);
             wrongTeam.TeamId = 1;
             Assert.IsFalse(engine.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in wrongTeam, out GoalkeeperDistributionFeedback wrongTeamFeedback));
+                in wrongTeam, out GoalkeeperDistributionFeedback wrongTeamFeedback));
             Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, wrongTeamFeedback.Kind);
             Assert.IsFalse(engine.TestOnly_PassExecutorState(HomeKeeper).GoalkeeperFeedbackPending);
 
@@ -75,7 +76,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperDistributionRequest outfielder = Request(2);
             outfielder.AgentId = HomeReceiver;
             Assert.IsFalse(engine.TestOnly_StartGoalkeeperDistribution(
-                HomeReceiver, in outfielder, out GoalkeeperDistributionFeedback outfieldFeedback));
+                in outfielder, out GoalkeeperDistributionFeedback outfieldFeedback));
             Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, outfieldFeedback.Kind);
             Assert.AreEqual(0, engine.TestOnly_PassExecutorState(HomeReceiver).State);
 
@@ -85,8 +86,31 @@ namespace TacticalDirector.MatchEngine
             away.TeamId = 1;
             away.TargetPosition = new Vector3(70f, 34f, 0f);
             Assert.IsTrue(engine.TestOnly_StartGoalkeeperDistribution(
-                AwayKeeper, in away, out GoalkeeperDistributionFeedback accepted));
+                in away, out GoalkeeperDistributionFeedback accepted));
             Assert.AreEqual(1, engine.TestOnly_PassExecutorState(AwayKeeper).State);
+        }
+
+        [Test]
+        public void HostInitiation_OutOfRangeRequestAgent_FailsLoudAndStartsNoExecutor()
+        {
+            // The host selects the #5 executor from request.AgentId (PR #506 review): there is no
+            // separate slot argument, so an id with no roster executor must fail loud, not index.
+            var engine = new MatchEngine(Seed);
+            engine.TestOnly_SetPossession(HomeKeeper);
+            foreach (int badAgent in new[] { -1, MatchEngineConstants.SQUAD_SIZE })
+            {
+                GoalkeeperDistributionRequest bad = Request(HomeReceiver);
+                bad.AgentId = badAgent;
+                Assert.Throws<System.ArgumentOutOfRangeException>(() =>
+                    engine.TestOnly_StartGoalkeeperDistribution(
+                        in bad, out GoalkeeperDistributionFeedback unused));
+            }
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                Assert.AreEqual(0, engine.TestOnly_PassExecutorState(i).State,
+                    "A rejected host index must not start any executor (agent " + i + ").");
+            }
         }
 
         [Test]
@@ -96,7 +120,7 @@ namespace TacticalDirector.MatchEngine
             original.TestOnly_SetPossession(HomeKeeper);
             GoalkeeperDistributionRequest request = Request(HomeReceiver, windupFrames: 3);
             Assert.IsTrue(original.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in request, out GoalkeeperDistributionFeedback ignored));
+                in request, out GoalkeeperDistributionFeedback ignored));
             original.RunTick(); // Real Snapshot phase with WINDUP remaining 2.
             SnapshotHeader header = original.CaptureDurableHeader();
             SnapshotPayload payload = original.CaptureDurablePayload();
@@ -189,7 +213,7 @@ namespace TacticalDirector.MatchEngine
 
             GoalkeeperDistributionRequest request = Request(HomeReceiver, windupFrames: 3);
             Assert.IsTrue(engine.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in request, out GoalkeeperDistributionFeedback startFeedback));
+                in request, out GoalkeeperDistributionFeedback startFeedback));
             Assert.IsTrue(engine.TestOnly_CancelGoalkeeperDistribution(HomeKeeper));
             Assert.IsTrue(engine.TestOnly_PassExecutorState(HomeKeeper).GoalkeeperFeedbackPending);
 
@@ -233,7 +257,7 @@ namespace TacticalDirector.MatchEngine
 
             GoalkeeperDistributionRequest request = Request(HomeReceiver);
             Assert.IsFalse(engine.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in request, out GoalkeeperDistributionFeedback feedback));
+                in request, out GoalkeeperDistributionFeedback feedback));
             Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, feedback.Kind);
             Assert.IsFalse(engine.TestOnly_PassExecutorState(HomeKeeper).GoalkeeperFeedbackPending);
             engine.RunTick();
@@ -247,7 +271,7 @@ namespace TacticalDirector.MatchEngine
             source.TestOnly_SetPossession(HomeKeeper);
             GoalkeeperDistributionRequest request = Request(HomeReceiver);
             Assert.IsTrue(source.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in request, out GoalkeeperDistributionFeedback ignored));
+                in request, out GoalkeeperDistributionFeedback ignored));
             source.RunTick(); // WINDUP expires; serialized execution is waiting for CONTACT.
             PassExecutorState checkpoint = source.TestOnly_PassExecutorState(HomeKeeper);
             Assert.AreEqual(2, checkpoint.State);
@@ -296,7 +320,7 @@ namespace TacticalDirector.MatchEngine
             };
             GoalkeeperDistributionRequest request = Request(PassMechanicsConstants.AGENT_ID_NONE);
             Assert.IsTrue(engine.TestOnly_StartGoalkeeperDistribution(
-                HomeKeeper, in request, out GoalkeeperDistributionFeedback ignored));
+                in request, out GoalkeeperDistributionFeedback ignored));
             engine.RunTick(); // WINDUP -> CONTACT
             engine.RunTick(); // CONTACT -> terminal -> Resolve consumes
             Assert.AreEqual(1, count);
