@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
+// Modified: 2026-10-13 (W8 B #506 review: distinguish off-tick pending-terminal serialization from post-Resolve digests)
 // Modified: 2026-09-27 (W8 B/v24 landing: strengthen canonical codec probe with distinct non-default request/effective-target sentinels after green CI 36337174267)
 // Modified: 2026-09-27 (W8 B/v24 correction: replace vacuous pre-tick payload probes with direct canonical PassExecutor codec round-trip)
 // Modified: 2026-09-27 (W8 B/v24: direct payload probes for pending feedback, effective target and feedback contents — superseded by v1.21 after CI showed CaptureDurablePayload is empty before Snapshot phase)
@@ -153,25 +154,39 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void GoalkeeperDistributionFeedbackPending_FeedsSnapshotDigest()
+        public void GoalkeeperDistributionFeedbackPending_FeedsCanonicalSnapshotBytes_BeforeResolveConsumption()
         {
-            var baseline = new MatchEngine(MatchSeed);
-            baseline.RunTick();
-
-            var perturbed = new MatchEngine(MatchSeed);
-            PassExecutorState source = perturbed.TestOnly_PassExecutorState(0);
-            GoalkeeperDistributionRequest request = default;
-            GoalkeeperDistributionFeedback feedback = default;
-            PassExecutorState injected = WithGoalkeeperFields(
+            var engine = new MatchEngine(MatchSeed);
+            PassExecutorState source = engine.TestOnly_PassExecutorState(0);
+            GoalkeeperDistributionRequest request = source.GoalkeeperRequest;
+            GoalkeeperDistributionFeedback feedback = source.GoalkeeperFeedback;
+            PassExecutorState pending = WithGoalkeeperFields(
                 in source, source.ExecutionMode, in request,
                 source.GoalkeeperEffectiveTargetAgentId, source.GoalkeeperEffectiveTargetPosition,
                 goalkeeperFeedbackPending: true, in feedback);
-            perturbed.TestOnly_SetPassExecutorState(0, in injected);
-            perturbed.RunTick();
 
-            CollectionAssert.AreNotEqual(
-                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
-                "Changing only the W8 pending-feedback latch left the v24 digest unchanged.");
+            // The host now consumes pending terminals in Resolve, BEFORE RunTick's Snapshot
+            // phase. Testing only end-of-tick digests would be vacuous: the latch is gone.
+            // Instead lock the exact canonical v24 writer used by SerializeWorldState.
+            var regularBytes = new byte[1024];
+            var pendingBytes = new byte[1024];
+            int regularLength = 0;
+            int pendingLength = 0;
+            MatchEngine.WritePassExecutorState(regularBytes, ref regularLength, in source);
+            MatchEngine.WritePassExecutorState(pendingBytes, ref pendingLength, in pending);
+            Assert.Greater(regularLength, 0);
+            Assert.AreEqual(regularLength, pendingLength);
+            int differences = 0;
+            for (int i = 0; i < regularLength; i++)
+                if (regularBytes[i] != pendingBytes[i]) differences++;
+            Assert.AreEqual(1, differences,
+                "Only the original pending-feedback latch should differ in canonical v24 bytes.");
+
+            int consumedBytes = 0;
+            PassExecutorState decoded = MatchEngine.ReadPassExecutorState(pendingBytes, ref consumedBytes);
+            Assert.AreEqual(pendingLength, consumedBytes);
+            Assert.IsTrue(decoded.GoalkeeperFeedbackPending,
+                "Canonical save/restore must retain an off-tick pending terminal until host Resolve.");
         }
 
         [Test]
@@ -914,4 +929,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.20     | 2026-09-27 | —      | W8 B review hardening: direct pre-tick payload probes cover the pending-feedback latch, effective-target id/position and terminal feedback contents, avoiding gameplay-mediated evidence for those fields. |
 // | 1.21     | 2026-09-27 | —      | CI 36328692042 correction: v1.20's three pre-tick CaptureDurablePayload probes were vacuous because no Snapshot phase had populated the cached payload. Replaced by a direct real MatchEngine PassExecutor codec test: >0-byte guard, default-vs-nondefault byte divergence, exact writer/reader byte count, and field-for-field round-trip of every v24 goalkeeper-distribution field. Pending-feedback digest probe remains supplemental gameplay-mediated evidence only. |
 // | 1.22     | 2026-09-27 | —      | Landing hardening after green CI 36337174267: the codec round-trip now uses distinct non-default sentinels (request AgentId 11, TeamId 1, TargetAgentId 4, effective target 6) so dropped/defaulted or request/effective-target swaps cannot pass accidentally. Test-only data change; serializer/runtime/schema/RNG unchanged. |
+// | 1.22    | 2026-10-13 | —      | W8 B prewiring: pending feedback is consumed before end-of-tick Snapshot; lock exact canonical v24 bytes and decoder rather than wrongly expecting distinct settled tick digests. |
 #endregion
