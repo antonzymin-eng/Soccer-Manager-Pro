@@ -6,6 +6,7 @@
 > **Population:** frozen six seeds from `w8-stage-a-preregistration.md`; 324,000 frames per seed  
 > **Updated:** September 27, 2026 — adds the post-clock-correction (#464, `ff4dd34`) baseline section at the end; Stage A sections unchanged.  
 > **Updated:** September 27, 2026, later — adds the post-baseline-slot (ERR-011-018) section at the end; it supersedes the `ff4dd34` section as W8 B's comparison baseline. Earlier sections unchanged.  
+> **Updated:** October 13, 2026 — adds the pre-B anchor freeze at `3974b78` (roadmap step 6) at the end; it supersedes the ERR-011-018 section as W8 B's comparison anchor. Earlier sections unchanged.  
 > **Status:** descriptive Stage A record only. No B numeric policy, delivery, timing, Law-12, or gameplay decision is inferred here.
 
 The workflow branch was `measure/w8-stage-a-baseline`, but both measurement jobs checked out the pinned source commit above before running. The W8 job and unchanged `foul-rate` job both passed their test + sentinel verification.
@@ -261,3 +262,43 @@ claims well beyond the loop (non-loop claims 361 → 111) and halved dives; the 
 | `0x00000000ABCDEF12` | `44517dc781bf5a329c830ca676afe7b87029f126ee3c897741e8cf1d369924a7` |
 | `0x0000000099887766` | `d838c8813bc8a12ebca1c049c7a4b04a11746e5407ccb18df890c892fdcb1fe0` |
 | `0x000000005A5A5A5A` | `16a55b84478e208736cd5a0f1d0e34db2baaa149a405a862083694cc530e9d90` |
+
+## Pre-B anchor freeze — `3974b78` (roadmap step 6; supersedes ERR-011-018 as W8 B's comparison anchor)
+
+> **Added:** October 13, 2026. W8 B (roadmap step 7) is compared against **this** anchor. The earlier
+> sections are unchanged.
+
+**Provenance — local, not a CI artifact.** Anchor `3974b78b0383adca3e9546bb47a7b93a62b3cf92` (`main` after
+PR #500 / ERR-001-007; `src` tree `71d6ce45…`, the tree compiled and tested on the pinned Unity host at PR #500
+head `c1ad304`). Ubuntu 24.04.5, .NET SDK 8.0.131 / runtime 8.0.31, Debug. Instrument `w8-stage-a` with the frozen
+blob `520ba31c71e06ed408fd5c282b5fd5611cf74879` substituted in a scratch worktree (`main` carries `7348650e…`,
+which lacks the same/opponent-keeper reclaim split), run with the measurement lane's `dotnet test` invocation;
+`foul-rate` unchanged. The same instrument on `692db66` (PR #465, ERR-011-018) reproduces the six ERR-011-018
+terminal digests above byte for byte, so this host agrees with the earlier ones. Evidence:
+`evidence/pre-b-anchor-3974b78-20261013/` (outputs, TRX, instrument and tracer sources, `SHA256SUMS`).
+
+**Result.** The anchor's W8 report is **identical** to the ERR-011-018 report, every episode row, transition,
+counter and discipline line, except the terminal digests. Every figure in the ERR-011-018 table above therefore
+stands for the anchor: 135 hand claims, 24 (24 / 0) later-claim interruptions, 0 drops, `Recovering → Set` 344,
+`Set → Anticipate` 2,064, dives / rushes 28 / 204, restarts 64 / 88 / 20 / 70 / 1, fouls / yellows / straight reds
+49 / 7 / 2 (the unchanged foul instrument agrees: 8.17 fouls and 1.17 yellows per 90 minutes). The digests differ
+because the anchor carries snapshot schema v24 (the dormant W8 B substrate) where ERR-011-018 carried v23. Digests
+are fingerprints, not cross-schema equality tests; the identical report shows that nothing this instrument observes
+changed on these six seeds since ERR-011-018, ERR-001-007 included, not that all unobserved state is identical.
+
+**Stall check.** A scratch, uncommitted test plays the same six matches without an observer and reads the ball
+after every tick; its terminal digests equal the anchor's. No tick ends with the ball `OutOfPlay` on any seed in
+either half, and the longest stretch at a bitwise-identical ball position in any state is 420 ticks (7.0 s,
+`Stationary`). The corpus has no long stall.
+
+**Limits.** Linux .NET only; Unity plays different matches from tick 5 (PR #499), so B must be measured on the
+same lane to be comparable. Six seeds support per-claim comparison, not match-level outcome claims.
+
+| Seed | Anchor terminal digest (schema v24) |
+|---|---|
+| `0x0F1E2D3C4B5A6978` | `0d019bbf34ca29ad05385b3289ff15140c3de386140785d1a1d81c65697917b5` |
+| `0x00000000D1A6D05E` | `4c19d44c7761152ddfdbbeb80753f8019f1df2d8b43b4aa29d781d16ec2ab643` |
+| `0x0000000000000001` | `2517376ed7ee21dbaa304786b2d5cbf80812a6e54e46e51978fef1ebcd2f9387` |
+| `0x00000000ABCDEF12` | `e2537ed15f7590446e7f50b3dbd564e870b3a25a6a06f935b2b62d85de999bc3` |
+| `0x0000000099887766` | `dd92348f001dac5ac8c7b620f733b5ea667fdfbdc0e289a7f0189aba5f814b11` |
+| `0x000000005A5A5A5A` | `21226b56c4e9b005c43791781a4e57db2b7682b7976bbe0e0b1117c50d0e4954` |

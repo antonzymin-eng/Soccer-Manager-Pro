@@ -1,0 +1,11 @@
+=== W8 corpus per-tick OutOfPlay stall trace ===
+seed,tick,oopTicks,oopRuns,longestOopTicks,longestOopStart,longestOopPeriod,longestOopX,longestOopY,longestStaticTicks,longestStaticStart,longestStaticState,candidates,digest
+0x0F1E2D3C4B5A6978,324000,0,0,0,-1,0,0.000,0.000,420,45120,Stationary,0,0d019bbf34ca29ad05385b3289ff15140c3de386140785d1a1d81c65697917b5
+0x00000000D1A6D05E,324000,0,0,0,-1,0,0.000,0.000,394,169411,Stationary,0,4c19d44c7761152ddfdbbeb80753f8019f1df2d8b43b4aa29d781d16ec2ab643
+0x0000000000000001,324000,0,0,0,-1,0,0.000,0.000,403,115579,Stationary,0,2517376ed7ee21dbaa304786b2d5cbf80812a6e54e46e51978fef1ebcd2f9387
+0x00000000ABCDEF12,324000,0,0,0,-1,0,0.000,0.000,388,137507,Stationary,0,e2537ed15f7590446e7f50b3dbd564e870b3a25a6a06f935b2b62d85de999bc3
+0x0000000099887766,324000,0,0,0,-1,0,0.000,0.000,403,298400,Stationary,0,dd92348f001dac5ac8c7b620f733b5ea667fdfbdc0e289a7f0189aba5f814b11
+0x000000005A5A5A5A,324000,0,0,0,-1,0,0.000,0.000,406,92055,Stationary,0,21226b56c4e9b005c43791781a4e57db2b7682b7976bbe0e0b1117c50d0e4954
+totalLongStallCandidates(>= 600 ticks OutOfPlay)=0
+
+seed,runStartTick,runTicks,period,state,x,y,z
