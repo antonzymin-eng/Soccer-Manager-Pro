@@ -1,6 +1,6 @@
 // File:     src/match-viewer/MatchViewerConstants.cs
 // Created:  2026-07-02
-// Modified: 2026-07-24
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     Match viewer (presentation tooling; not a numbered spec — see docs/tracking/match-engine-design.md
 //           for the engine it observes) + interactive Unity client (docs/tracking/interactive-unity-client-design.md
@@ -98,6 +98,12 @@ namespace TacticalDirector.MatchViewer
         /// <summary>[GT] Maximum bytes <c>LiveMatchServer</c> will read while looking for the end of an HTTP request line before abandoning the connection (abuse/hang guard against a client that never sends CRLF).</summary>
         public static readonly int MaxHttpRequestLineBytes = Config.GetInt("match-viewer", "MaxHttpRequestLineBytes", 8192);
 
+        /// <summary>[GT] Most bytes <c>LiveMatchServer</c> will read and discard after its response (or after dropping a bad request) before closing. Draining the unread request headers lets Windows close with a FIN instead of a TCP RST, which would otherwise discard the response before the client reads it; the cap stops a hostile client from holding the drain open with endless data.</summary>
+        public static readonly int MaxHttpCloseDrainBytes = Config.GetInt("match-viewer", "MaxHttpCloseDrainBytes", 65536);
+
+        /// <summary>[GT] Total milliseconds <c>LiveMatchServer</c> waits for a client to close its side during the graceful-close drain. A well-behaved client closes as soon as it reads the <c>Connection: close</c> response, so this only bounds slow or hostile peers.</summary>
+        public static readonly int HttpCloseDrainTimeoutMs = Config.GetInt("match-viewer", "HttpCloseDrainTimeoutMs", 500);
+
         /// <summary>[GT] Milliseconds <c>LiveMatchStreamer</c>'s pacing loop sleeps between checks while paused (user-paused or auto-paused at full time), instead of spinning.</summary>
         public static readonly int LivePausedPollIntervalMs = Config.GetInt("match-viewer", "LivePausedPollIntervalMs", 100);
 
@@ -122,4 +128,6 @@ namespace TacticalDirector.MatchViewer
 // | 1.4     | 2026-07-24 | —      | Interactive Unity client §5-P0: MaxLiveSpeedMultiplier default |
 // |         |            |        | 8 → 10 so the master-plan speed set {Pause,1,3,5,10} is         |
 // |         |            |        | deliverable (the streamer clamps to this cap).                 |
+// | 1.5     | 2026-10-14 | —      | MaxHttpCloseDrainBytes / HttpCloseDrainTimeoutMs [GT]: bound   |
+// |         |            |        | LiveMatchServer's graceful-close drain (Windows RST fix).      |
 #endregion

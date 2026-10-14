@@ -1,13 +1,14 @@
 // File:     src/match-viewer/AssemblyInfo.cs
 // Created:  2026-07-15
-// Modified: 2026-08-03
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md),
 //           Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P6/§6.1),
 //           Code Standards #20 FR-CS-015
 // Purpose:  Assembly-level attributes for TacticalDirector.MatchViewer. Grants the test assembly and
 //           the match-client-core composition root access to LiveMatchStreamer's internal TickOnce()
-//           seam, so both can drive a deterministic tick sequence directly (no wall-clock dependency).
+//           seam, so both can drive a deterministic tick sequence directly (no wall-clock dependency),
+//           and grants match-client-web the shared HttpGracefulClose routine.
 
 using System.Runtime.CompilerServices;
 
@@ -23,6 +24,11 @@ using System.Runtime.CompilerServices;
 // guard rather than a comment.
 [assembly: InternalsVisibleTo("TacticalDirector.MatchClientCore")]
 
+// MatchClientServer is the second hand-rolled loopback HTTP server and has the same unread-request
+// problem LiveMatchServer had. It calls the one HttpGracefulClose routine instead of carrying a copy,
+// so the drain and its bounds cannot diverge between the two servers.
+[assembly: InternalsVisibleTo("TacticalDirector.MatchClientWeb")]
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-15 | —      | Initial creation: InternalsVisibleTo for the test assembly, so  |
@@ -30,4 +36,6 @@ using System.Runtime.CompilerServices;
 // | 1.1     | 2026-08-03 | —      | P6: InternalsVisibleTo TacticalDirector.MatchClientCore so      |
 // |         |            |        | MatchSession.TickOnce() drives the real TickOnce() seam         |
 // |         |            |        | head-lessly instead of a parallel client-side tick path.        |
+// | 1.2     | 2026-10-14 | —      | InternalsVisibleTo TacticalDirector.MatchClientWeb so           |
+// |         |            |        | MatchClientServer shares HttpGracefulClose.ShutdownAndDrain.    |
 #endregion
