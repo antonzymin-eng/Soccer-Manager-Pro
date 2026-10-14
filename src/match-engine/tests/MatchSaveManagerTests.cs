@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchSaveManagerTests.cs
 // Created:  2026-07-21
-// Modified: 2026-07-21
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §5 acceptance;
 //           Match Engine design note §5 Phase G-Phase 3; Code Standards #20
@@ -321,9 +321,10 @@ namespace TacticalDirector.MatchEngine
             (SnapshotHeader header, SnapshotPayload payload) = CaptureAt(10);
             byte[] blob = MatchSaveCodec.Encode(MatchSeed, header, payload);
 
-            // The payload-length u32 sits at (blob.Length - payloadBytes - 4). Overwrite it with a huge
+            // With no overlay, v3 ends with its zero-length u32. The payload-length u32 therefore
+            // sits at (blob.Length - payloadBytes - 8). Overwrite it with a huge
             // value: the codec must refuse it (capacity check / overflow-safe bound), never allocate/read.
-            int lenPos = blob.Length - payload.BytesWritten - 4;
+            int lenPos = blob.Length - payload.BytesWritten - 8;
             blob[lenPos] = 0xFF; blob[lenPos + 1] = 0xFF; blob[lenPos + 2] = 0xFF; blob[lenPos + 3] = 0xFF;
 
             Assert.Throws<InvalidOperationException>(() => MatchSaveCodec.Decode(blob),
@@ -414,4 +415,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | determinism (neutral / booking-cursor / distinct-squad),      |
 // |         |            |        | MatchSaveCodec round-trip + fail-loud guards, MatchSaveManager |
 // |         |            |        | missing-file / corrupt-file / no-provider / overwrite paths.   |
+// | 1.1     | 2026-10-14 | —      | Correct oversize payload-length corruption offset for the v3   |
+// |         |            |        | trailing overlay-length field when no overlay is present.     |
 #endregion
