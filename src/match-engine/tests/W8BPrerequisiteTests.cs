@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/W8BPrerequisiteTests.cs
 // Created:  2026-10-13
-// Modified: 2026-10-13 (F-05 replay: sequential reference then restore, preserving process-static EventBus ownership)
+// Modified: 2026-10-13 (F-05 replay: state-derived CONTACT and sequential reference/restore)
 // Author:   —
 // Spec:     W8 B #466 follow-ups, #5 §3.8.13, #11 §3.8.2 and Match Engine Resolve
 // Purpose:  Real adapter identity, exactly-once terminal feedback and F-05 across restore.
@@ -119,14 +119,22 @@ namespace TacticalDirector.MatchEngine
             };
             const int continuationTicks = 5;
             var referenceDigests = new byte[continuationTicks][];
+            int originalContactFrames = 0;
             for (int i = 0; i < continuationTicks; i++)
             {
-                if (i == 2) // WINDUP 2 -> 1 -> CONTACT -> Completed.
+                // #5 Update executes CONTACT only when the executor ENTERS the frame
+                // in Contact state. Do not assume a particular iteration or windup timing.
+                if (original.TestOnly_PassExecutorState(HomeKeeper).State == 2)
+                {
+                    originalContactFrames++;
+                    Assert.AreEqual(0, originalTerminals, "CONTACT must emit only once.");
                     UnityEngine.TestTools.LogAssert.Expect(
                         LogType.Warning, "gk.distribution.target_receiver_missing keeper=0 receiver=1");
+                }
                 original.RunTick();
                 referenceDigests[i] = original.CurrentSnapshotDigest;
             }
+            Assert.AreEqual(1, originalContactFrames, "Expected exactly one original CONTACT frame.");
             Assert.AreEqual(1, originalTerminals);
 
             // Restore only AFTER reference execution: its boot resets the shared EventBus.
@@ -145,15 +153,21 @@ namespace TacticalDirector.MatchEngine
                 Assert.IsTrue(missing);
                 restoredTerminals++;
             };
+            int restoredContactFrames = 0;
             for (int i = 0; i < continuationTicks; i++)
             {
-                if (i == 2)
+                if (restored.TestOnly_PassExecutorState(HomeKeeper).State == 2)
+                {
+                    restoredContactFrames++;
+                    Assert.AreEqual(0, restoredTerminals, "Replay CONTACT must emit only once.");
                     UnityEngine.TestTools.LogAssert.Expect(
                         LogType.Warning, "gk.distribution.target_receiver_missing keeper=0 receiver=1");
+                }
                 restored.RunTick();
                 CollectionAssert.AreEqual(referenceDigests[i], restored.CurrentSnapshotDigest,
                     $"F-05 must preserve deterministic continuation at replay tick {i + 1}.");
             }
+            Assert.AreEqual(1, restoredContactFrames, "Expected exactly one restored CONTACT frame.");
             Assert.AreEqual(1, restoredTerminals);
             Assert.IsFalse(restored.TestOnly_PassExecutorState(HomeKeeper).GoalkeeperFeedbackPending);
         }
@@ -293,6 +307,7 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes |
+// | 1.4     | 2026-10-13 | —      | Expect F-05 at #5 executor Contact state rather than an assumed iteration; assert one CONTACT and terminal on reference and restore with full per-tick digest chain. |
 // | 1.3     | 2026-10-13 | —      | Sequential reference/replay runs respect process-static EventBus reset; apply identical receiver invalidation after checkpoint; assert one diagnostic and each resumed digest. |
 // | 1.2     | 2026-10-13 | —      | Intermediate restore probe moved invalidation into checkpoint; superseded by 1.3. |
 // | 1.1     | 2026-10-13 | —      | Assert emitted F-05 warning on ordinary and canonical-restore CONTACT; retain one report per kick. |
