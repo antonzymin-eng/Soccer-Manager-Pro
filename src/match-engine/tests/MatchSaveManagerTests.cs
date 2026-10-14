@@ -325,10 +325,14 @@ namespace TacticalDirector.MatchEngine
             // sits at (blob.Length - payloadBytes - 8). Overwrite it with a huge
             // value: the codec must refuse it (capacity check / overflow-safe bound), never allocate/read.
             int lenPos = blob.Length - payload.BytesWritten - 8;
+            int lengthReadPos = lenPos;
+            Assert.AreEqual((uint)payload.BytesWritten, CanonicalSerializer.ReadU32(blob, ref lengthReadPos),
+                "The corruption offset must point at the payload-length field before it is overwritten.");
             blob[lenPos] = 0xFF; blob[lenPos + 1] = 0xFF; blob[lenPos + 2] = 0xFF; blob[lenPos + 3] = 0xFF;
 
-            Assert.Throws<InvalidOperationException>(() => MatchSaveCodec.Decode(blob),
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => MatchSaveCodec.Decode(blob),
                 "A payload length exceeding capacity must fail loud, not over-read (KD-6).");
+            StringAssert.Contains("exceeds SnapshotPayload capacity", error.Message);
         }
 
         [Test]
@@ -417,4 +421,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | missing-file / corrupt-file / no-provider / overwrite paths.   |
 // | 1.1     | 2026-10-14 | —      | Correct oversize payload-length corruption offset for the v3   |
 // |         |            |        | trailing overlay-length field when no overlay is present.     |
+// | 1.2     | 2026-10-14 | —      | Verify the corruption offset and capacity-guard diagnostic so |
+// |         |            |        | another framing failure cannot satisfy the oversize test.     |
 #endregion
