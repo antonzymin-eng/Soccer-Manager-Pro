@@ -16,6 +16,7 @@ using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.PassMechanics;
+using TacticalDirector.ShotMechanics;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchEngine
@@ -27,6 +28,98 @@ namespace TacticalDirector.MatchEngine
         private const ulong Seed = 0xD1A6D05EUL;
         private const int ClaimFrame = 1001;
         private static readonly byte DistributionOrdinal = EventRegistry.GetOrdinal<DistributionExecutedEvent>();
+
+        [TestCase(0, false, false)]
+        [TestCase(1, false, false)]
+        [TestCase(0, true, false)]
+        [TestCase(1, true, false)]
+        [TestCase(0, false, true)]
+        [TestCase(1, false, true)]
+        [TestCase(0, true, true)]
+        [TestCase(1, true, true)]
+        public void GenuineHandClaim_InterruptsPendingFootAction_AcrossRestore(int team, bool shot, bool contact)
+        {
+            MatchEngine engine = Fixture(GkDistributionPolicy.SlowDown, team, true);
+            int keeper = team * 11;
+            GoalkeeperTickState state = Clone(engine.TestOnly_GoalkeeperState);
+            state.States[team] = GoalkeeperState.Set;
+            engine.TestOnly_RestoreGoalkeeperState(in state);
+            if (shot)
+            {
+                var request = new ShotRequest
+                {
+                    AgentId = keeper, TeamId = team, FrameNumber = ClaimFrame,
+                    PowerIntent = 0.7f, ContactZone = ContactZone.Centre,
+                    PlacementTarget = new Vector2(0.5f, 0.5f), DistanceToGoal = 95f
+                };
+                Assert.AreEqual(ShotOutcome.Initiated, engine.TestOnly_InitiateShot(keeper, in request).Outcome);
+            }
+            else
+            {
+                var request = new PassRequest
+                {
+                    AgentId = keeper, TeamId = team, FrameNumber = ClaimFrame,
+                    PassType = PassType.Ground, TargetAgentId = keeper + 1,
+                    IntendedDistance = 10f, Urgency = 0.5f
+                };
+                Assert.AreEqual(PassOutcome.Initiated, engine.TestOnly_InitiatePass(keeper, in request).Outcome);
+            }
+            if (contact)
+            {
+                // The other interruptible state: windup ended, physical CONTACT has not run.
+                if (shot)
+                {
+                    ShotExecutorState pending = engine.TestOnly_ShotExecutorState(keeper);
+                    var atContact = new ShotExecutorState(2, pending.Request, pending.KickSpeed,
+                        pending.LaunchAngleDeg, pending.SpinVector, pending.IntendedAimDirection,
+                        pending.BodyMechanics, pending.WeakFootErrorMultiplier, pending.WindupFrames,
+                        pending.CachedAgentPosition, pending.CachedFinishing, pending.CachedLongShots,
+                        pending.CachedComposure, pending.CachedFatigue, 0,
+                        pending.FollowThroughFramesRemaining, pending.LastResult);
+                    engine.TestOnly_SetShotExecutorState(keeper, in atContact);
+                }
+                else
+                {
+                    PassExecutorState pending = engine.TestOnly_PassExecutorState(keeper);
+                    var atContact = new PassExecutorState(2, pending.Request, pending.EffectiveSubType,
+                        pending.KickSpeed, pending.LaunchAngleDeg, pending.SpinVector,
+                        pending.BaseKickDirection, pending.AimPoint, pending.LeadDistance,
+                        pending.CachedPassing, pending.CachedFatigue, pending.CachedBodyAngleDeg,
+                        pending.CachedIsWeakFoot, pending.CachedWeakFootRating, 0,
+                        pending.FollowThroughFramesRemaining, pending.LastResult, pending.ExecutionMode,
+                        pending.GoalkeeperRequest, pending.GoalkeeperEffectiveTargetAgentId,
+                        pending.GoalkeeperEffectiveTargetPosition, pending.GoalkeeperFeedbackPending,
+                        pending.GoalkeeperFeedback);
+                    engine.TestOnly_SetPassExecutorState(keeper, in atContact);
+                }
+            }
+            state.States[team] = GoalkeeperState.Smothered;
+            engine.TestOnly_RestoreGoalkeeperState(in state);
+            var ball = engine.TestOnly_BallSnapshot;
+            ball.Position = World(team, 10f, 34f); ball.Velocity = Vector3.zero;
+            engine.TestOnly_SetBall(in ball);
+            engine.RunTick(); // Genuine Physics claim; cancellation in Resolve, then canonical Snapshot.
+            Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(team));
+            Assert.IsTrue(shot ? engine.TestOnly_ShotExecutorIdle(keeper) : engine.TestOnly_PassExecutorIdle(keeper),
+                "hand-control takeover interrupts the old foot action before CONTACT");
+            SnapshotHeader header = engine.CaptureDurableHeader();
+            SnapshotPayload payload = engine.CaptureDurablePayload();
+            var digests = new byte[40][];
+            for (int i = 0; i < digests.Length; i++)
+            {
+                engine.RunTick(); digests[i] = engine.CurrentSnapshotDigest;
+                Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(team), "real smother claim remains in hands");
+                Assert.AreEqual(keeper, engine.PossessingAgentId);
+                Assert.IsTrue(shot ? engine.TestOnly_ShotExecutorIdle(keeper) : engine.TestOnly_PassExecutorIdle(keeper),
+                    "hand-control takeover interrupts the old foot action before CONTACT");
+                Assert.AreEqual(0, CountEvents(engine));
+            }
+            MatchEngine restored = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            for (int i = 0; i < digests.Length; i++)
+            {
+                restored.RunTick(); CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest, "handover replay tick " + i);
+            }
+        }
 
         private static IEnumerable<TestCaseData> Policies()
         {
@@ -459,4 +552,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-10-15 | — | Composed W8 B policy, CONTACT, cancellation, deadline and replay locks. |
+// | 1.1 | 2026-10-15 | — | Genuine smother handover interrupts ordinary PASS/SHOOT in WINDUP or CONTACT at both ends; canonical continuation. |
 #endregion

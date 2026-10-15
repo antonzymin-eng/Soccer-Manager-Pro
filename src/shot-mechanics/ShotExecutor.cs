@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-09-28  [v1.11]
+// Modified: 2026-10-15 (W8 B hand-control takeover)
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -92,6 +92,17 @@ namespace TacticalDirector.ShotMechanics
         /// Only meaningful after IsIdle returns true following a shot that was started.
         /// </summary>
         public ShotResult LastResult => _lastResult;
+
+        /// <summary>W8 B host handover before Resolve executor updates. A hand claim supersedes
+        /// an unstruck foot shot. No ShotCancelledEvent: that event remains tackle-interrupt-only.</summary>
+        public bool CancelForHandControl()
+        {
+            if (_state != ShotExecutionState.Windup && _state != ShotExecutionState.Contact)
+                return false;
+            _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
+            _state = ShotExecutionState.Idle;
+            return true;
+        }
 
         // ── Constructor ──────────────────────────────────────────────────────────────
 
@@ -571,6 +582,7 @@ namespace TacticalDirector.ShotMechanics
 }
 
 #region VersionHistory
+// | 1.12    | 2026-10-15 | —      | W8 B host can interrupt a pending foot shot when a genuine hand claim takes control; no tackle event. |
 // | Version | Date       | Author | Notes                                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                          |
 // | 1.1     | 2026-05-28 | —      | M-1: Removed unused matchTime param from AdvanceWindup. L-1: var→Vector3 explicit. |

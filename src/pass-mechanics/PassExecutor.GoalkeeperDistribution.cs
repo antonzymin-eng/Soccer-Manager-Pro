@@ -41,6 +41,17 @@ namespace TacticalDirector.PassMechanics
             _mode == PassExecutionMode.GoalkeeperDistribution
             && _state != PassExecutionState.Idle;
 
+        /// <summary>W8 B host handover, called in Resolve before executor updates. Cancels only
+        /// an ordinary foot pass that has not contacted the ball; dedicated distribution is preserved.</summary>
+        public bool CancelOrdinaryPassForHandControl(float matchTime, int frameNumber)
+        {
+            if (_mode != PassExecutionMode.Ordinary
+                || (_state != PassExecutionState.Windup && _state != PassExecutionState.Contact))
+                return false;
+            EmitPassCancelled(matchTime, frameNumber, CancelReason.HandControlTakenOver);
+            return true;
+        }
+
         /// <summary>Validates and starts the dedicated goalkeeper-distribution windup, or returns typed rejection feedback.</summary>
         public bool TryStartGoalkeeperDistribution(
             in GoalkeeperDistributionRequest request,
@@ -332,4 +343,5 @@ namespace TacticalDirector.PassMechanics
 // | 1.1     | 2026-10-13 | —      | Read-only pending-feedback and original-request accessors for exactly-once host handoff. |
 // | 1.0     | 2026-09-26 | —      | W8 B dormant dedicated executor mode: exact windup, CONTACT receiver revalidation/fallback, #5 profile/error reuse, kick application, and retained typed terminal feedback. |
 // | 1.2 | 2026-10-15 | — | Live B CONTACT publishes one canonical PassAttemptEvent for the W5 opposing pass feed. |
+// | 1.3 | 2026-10-15 | — | Explicit Resolve handover cancels an unstruck ordinary pass without changing the dedicated distribution lifecycle. |
 #endregion

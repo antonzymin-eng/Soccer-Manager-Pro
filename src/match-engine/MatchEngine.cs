@@ -2935,6 +2935,13 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: whether the agent's shot executor is idle (no shot in flight).</summary>
         internal bool TestOnly_ShotExecutorIdle(int agentId) => _shotExecutors[agentId].IsIdle;
 
+        /// <summary>Test-only canonical shot state for pending-CONTACT handover fixtures.</summary>
+        internal ShotExecutorState TestOnly_ShotExecutorState(int agentId) => _shotExecutors[agentId].CaptureState();
+
+        /// <summary>Test-only restoration of a canonical shot executor state.</summary>
+        internal void TestOnly_SetShotExecutorState(int agentId, in ShotExecutorState state) =>
+            _shotExecutors[agentId].RestoreState(in state);
+
         /// <summary>Test-only: whether the agent's DecisionTree has dispatched at least one action
         /// (proves the AI pipeline ran and produced a decision rather than aborting at validation).</summary>
         internal bool TestOnly_DtHasDispatched(int agentId) => _decisionTrees[agentId].HasDispatchedAction;
@@ -5619,6 +5626,13 @@ namespace TacticalDirector.MatchEngine
             // the TestOnly_ seam (or, from Phase D, the AI dispatcher) is mid-lifecycle here.
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
+                // W8 B exclusive hand control also supersedes foot actions started BEFORE the
+                // claim. Resolve owns cancellation events; Physics hand claims may not publish them.
+                if (HasGoalkeeperHandControl(i))
+                {
+                    _passExecutors[i].CancelOrdinaryPassForHandControl(matchTime, frameNumber);
+                    _shotExecutors[i].CancelForHandControl();
+                }
                 _passExecutors[i].Update(matchTime, frameNumber, ref _ball);
                 // Drain terminal feedback exactly once, before #5 can return to ordinary mode.
                 ConsumeGoalkeeperDistributionFeedbackAtResolve(i);
@@ -11128,4 +11142,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.04    | 2026-10-15 | —      | §6.4: SubstitutePlayer is internal (test-only immediate swap; no production caller can reach it). New internal TestOnly_PendingSubstitutionEventCount seam for §6.5 lock 8. No runtime, schema, RNG or digest change. |
 // | 2.05    | 2026-10-15 | —      | PR #505 review (High): a team already charged a Law 3 window at this stoppage keeps executing there, so two requests on its third window both execute instead of the second waiting (in the second half, until full time). §6.1: requests executed at one stoppage share one window. No schema, RNG or digest-layout change. |
 // | 2.06 | 2026-10-15 | — | W8 B live #21 producer, hand-only DT suppression, typed CONTACT release, Resolve event/completion, cancel teardown and v26 wait latch codec. |
+// | 2.07 | 2026-10-15 | — | W8 B exclusive hand-control handover cancels ordinary PASS/SHOOT WINDUP or pending CONTACT before Resolve updates; genuine smother/replay probes. |
 #endregion

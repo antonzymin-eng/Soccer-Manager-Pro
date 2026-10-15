@@ -333,7 +333,13 @@ requires adding read/restore seams — parallel to
    merely a sixfold acceleration: after frame 72, the first tactical pass following an ordinary claim
    already satisfies `currentFrame - floor(claimFrame/6) >= 60`.
 2. While a keeper has live hand control, suppress only that keeper's Decision Tree on-ball
-   PASS/SHOOT/DRIBBLE/HOLD dispatch. Keeper feet-possession remains ordinary.
+   PASS/SHOOT/DRIBBLE/HOLD dispatch and safely interrupt any unstruck foot action, as required by
+   the approved decision's exclusive hand-control rule. Keeper feet-possession remains ordinary.
+   Implementation: before Resolve executor updates, cancel an ordinary #5 WINDUP/CONTACT through
+   `CancelOrdinaryPassForHandControl` (`CancelReason.HandControlTakenOver`, appended ordinal 3),
+   and an unstruck #6 shot through `CancelForHandControl`. Both settle as Cancelled/Idle. The shot
+   path emits no tackle-only `ShotCancelledEvent`; dedicated #5 distribution is preserved. No new
+   deferred latch is needed: the existing canonical hand/executor state determines the handover.
 3. Read #21 `GkDistributionPolicy`, run its deterministic total selector, and commit #11
    `DistributeIntent` when its tactical delay and #11 release gate are both satisfied
    (**ERR-011-016**). Zero RNG draws.
