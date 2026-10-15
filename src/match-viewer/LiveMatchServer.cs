@@ -5,6 +5,7 @@
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
 // Modified: 2026-09-09 (strict request-line grammar and origin-form validation)
+// Modified: 2026-10-14 (graceful close: FIN plus a bounded drain, so Windows never resets a response away)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -160,15 +161,20 @@ namespace TacticalDirector.MatchViewer
                 using (NetworkStream stream = client.GetStream())
                 {
                     string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+                    if (requestLine != null)
                     {
-                        WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
-                        return;
+                        if (TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+                        {
+                            Route(stream, method, pathAndQuery);
+                        }
+                        else
+                        {
+                            WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
+                        }
                     }
 
-                    Route(stream, method, pathAndQuery);
+                    // The rest of the request is still unread; see HttpGracefulClose for why that matters.
+                    HttpGracefulClose.ShutdownAndDrain(client.Client);
                 }
             }
             catch (Exception)
@@ -702,4 +708,11 @@ poll();
 // | 1.5     | 2026-09-09 | —      | Request parsing now requires exact HTTP/1.1 grammar, a valid   |
 // |         |            |        | method token, raw ASCII octets, and an origin-form target      |
 // |         |            |        | before routing.                                                |
+// | 1.6     | 2026-10-14 | —      | Graceful close. Every connection now ends with                 |
+// |         |            |        | HttpGracefulClose.ShutdownAndDrain (FIN, then a bounded drain)  |
+// |         |            |        | before Close. The server reads only the request line, so closing|
+// |         |            |        | with the rest unread made Windows send RST and the client lost  |
+// |         |            |        | the response (two Unity EditMode failures; also every real      |
+// |         |            |        | browser request, whose headers were never read). Linux returned |
+// |         |            |        | the queued data first, so the Linux gate passed.                |
 #endregion
