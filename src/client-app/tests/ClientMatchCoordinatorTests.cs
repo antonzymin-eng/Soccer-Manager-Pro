@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/ClientMatchCoordinatorTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-15 (Match Flow §6: deferred roster change)
+// Modified (prior): 2026-10-06
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Exercises real session/engine composition, stable registrations and lifecycle cleanup.
@@ -228,6 +229,10 @@ namespace TacticalDirector.ClientApp.Tests
             session.ServiceOnce();
             Assert.AreEqual(1, session.Driver.Log.Count);
             Assert.AreEqual(old.PlayerId, identity.Resolve(in before, slot).PlayerId, "earlier log never patches accepted identity");
+            LiveMatchFrame pending = session.TickOnce();
+            Assert.AreEqual(old.PlayerId, pending.AgentCues[slot].PlayerId,
+                "Accepted substitution must not change the roster before the next stoppage.");
+            session.TestOnly_Engine.TestOnly_ApplyRestart(new Vector2(52.5f, 34f), teamId);
             LiveMatchFrame after = session.TickOnce();
             Assert.AreEqual(incoming.PlayerId, identity.Resolve(in after, slot).PlayerId);
             Assert.AreEqual(incoming.PlayerId, session.BootRoster.BenchPlayerId(teamId, bench), "origin is deliberately retained");
@@ -291,7 +296,11 @@ namespace TacticalDirector.ClientApp.Tests
             int incoming = identity.Bench(teamId, bench).PlayerId;
             session.Commands.Enqueue(ManagerCommand.Substitute(teamId, slot, bench, SubstitutionReason.Tactical));
             session.ServiceOnce();
-            Assert.AreEqual(1, session.Driver.Log.Count, "substitution applied");
+            Assert.AreEqual(1, session.Driver.Log.Count, "substitution request accepted");
+            LiveMatchFrame pending = session.TickOnce();
+            Assert.AreEqual(starter, pending.AgentCues[slot].PlayerId,
+                "Request is pending before a stoppage.");
+            session.TestOnly_Engine.TestOnly_ApplyRestart(new Vector2(52.5f, 34f), teamId);
             LiveMatchFrame after = session.TickOnce();
             Assert.AreEqual(incoming, after.AgentCues[slot].PlayerId);
             Assert.AreEqual(starter, session.BootRoster.StarterPlayerId(slot), "a fresh session keeps its boot starter after a substitution");
@@ -399,4 +408,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-06 | —      | Restore keeps BootRoster before any substitution; after one (either team) restore and playback continue while BootRoster refuses. |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution leaves the roster unchanged until a restart; the driver log records acceptance, not application. |
 #endregion

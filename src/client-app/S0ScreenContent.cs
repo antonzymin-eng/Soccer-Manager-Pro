@@ -1,6 +1,7 @@
 // File:     src/client-app/S0ScreenContent.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6.2.6 copy)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 binding contracts §4, Localization #49, Code Standards #20
 // Purpose:  Compiled S0 role catalogue and typed argument schemas, consumed by the shipping shell.
@@ -39,7 +40,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("context.setup", "You manage Home. Away is AI-managed.", ""),
             new S0TextRole("context.speed_steps", "Speed steps: 1×, 3×, 5×, 10×.", ""),
             new S0TextRole("context.submit", "Choose a change, then submit it. Your team changes only when you see Applied.", ""),
-            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution takes effect when the request is applied; it does not wait for a stoppage.", ""),
+            new S0TextRole("context.substitution", "Choose a player by name and shirt number, then an unused bench player. The substitution waits for the next eligible stoppage; with no windows left in the first half, it waits for half-time.", ""),
             new S0TextRole("dialog.mentality", "Change Home Mentality", ""),
             new S0TextRole("dialog.substitution", "Make Home substitution", ""),
             new S0TextRole("effect.attacking", "More risk in on-ball choices; higher defensive line.", ""),
@@ -128,7 +129,7 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("feedback.mentality_refused", "Refused — Mentality: {0} — current Mentality unchanged.", "S"),
             new S0TextRole("feedback.mentality_send_failure", "Send failure — Mentality: {0} — request could not be sent; current Mentality unchanged.", "S"),
             new S0TextRole("feedback.substitution_applied", "Applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}) at minute {7}.", "SSISSIII"),
-            new S0TextRole("feedback.substitution_not_applied", "Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); match ended before it could apply.", "SSISSII"),
+            new S0TextRole("feedback.substitution_not_applied", "Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the request was cancelled or the match ended before it could apply.", "SSISSII"),
             new S0TextRole("feedback.substitution_pending", "Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting to be applied.", "SSISSII"),
             new S0TextRole("feedback.substitution_pending_paused", "Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting; resume to continue.", "SSISSII"),
             new S0TextRole("feedback.substitution_refused", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); substitution count unchanged.", "SSISSII"),
@@ -187,4 +188,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-10-08 | —      | Localized pitch legend explains single Tab entry and read-only arrow inspection. |
 // | 1.2     | 2026-10-08 | —      | Restore owner-approved pitch legend verbatim; keyboard inspection remains in the focus binding. |
 // | 1.3     | 2026-10-08 | —      | Restore complete approved substitution, baseline pitch and loose-ball context sentences. |
+// | 1.4     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution says the request waits for the next eligible stoppage (for half-time when no window is left in the first half); feedback.substitution_not_applied covers cancellation as well as full time. |
 #endregion

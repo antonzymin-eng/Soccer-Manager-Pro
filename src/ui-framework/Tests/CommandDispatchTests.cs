@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/CommandDispatchTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
+// Modified (prior): 2026-07-25
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.3 / §5.1 (T-UI-DISPATCH-001..004, FR-UI-003/012/013/014/023,
 //           failure modes F3/F6), Code Standards #20
@@ -57,7 +58,7 @@ namespace TacticalDirector.UiFramework.Tests
 
             dispatcher.Dispatch(ManagerIntent.Substitute(0, 5, 3, SubstitutionReason.Tactical));
 
-            CollectionAssert.AreEqual(new[] { "SubstitutePlayer(0,5,3,Tactical)" }, mutations.Calls);
+            CollectionAssert.AreEqual(new[] { "RequestSubstitution(0,5,3,Tactical)" }, mutations.Calls);
         }
 
         [Test]
@@ -227,8 +228,11 @@ namespace TacticalDirector.UiFramework.Tests
             public void SetPlayerTactic(int agentId, in PlayerTactic tactic) =>
                 Calls.Add("SetPlayerTactic(" + agentId + ")");
 
-            public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason) =>
-                Calls.Add("SubstitutePlayer(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+            public SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+            {
+                Calls.Add("RequestSubstitution(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+                return SubstitutionRequestResult.Accept(1u);
+            }
         }
     }
 }
@@ -239,4 +243,5 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | F3 fail-loud (default + unmapped kind), the intent/command     |
 // |         |            |        | correspondence drift guard, and the FR-UI-023 marshaling lock  |
 // |         |            |        | (enqueue now, apply only on the sim-thread drain).             |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.4: the dispatcher test double records RequestSubstitution. |
 #endregion

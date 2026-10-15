@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-10-13 (W8 B #506 review: distinguish off-tick pending-terminal serialization from post-Resolve digests)
+// Modified: 2026-10-15 (schema v25 pin)
+// Modified (prior): 2026-10-13 (W8 B #506 review: distinguish off-tick pending-terminal serialization from post-Resolve digests)
 // Modified: 2026-09-27 (W8 B/v24 landing: strengthen canonical codec probe with distinct non-default request/effective-target sentinels after green CI 36337174267)
 // Modified: 2026-09-27 (W8 B/v24 correction: replace vacuous pre-tick payload probes with direct canonical PassExecutor codec round-trip)
 // Modified: 2026-09-27 (W8 B/v24: direct payload probes for pending feedback, effective target and feedback contents — superseded by v1.21 after CI showed CaptureDurablePayload is empty before Snapshot phase)
@@ -69,8 +70,9 @@ namespace TacticalDirector.MatchEngine
             // the per-agent tackle-interrupt flag and per-agent challenge cooldown, v22 (wiring backlog
             // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
             // (wiring backlog W3) the per-GK ClaimIntent payload + active latch, v24 (W8 B) the
-            // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state.
-            Assert.AreEqual(24u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state,
+            // v25 pending substitution queue, next sequence, and Law 3 window counters.
+            Assert.AreEqual(25u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -930,4 +932,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.21     | 2026-09-27 | —      | CI 36328692042 correction: v1.20's three pre-tick CaptureDurablePayload probes were vacuous because no Snapshot phase had populated the cached payload. Replaced by a direct real MatchEngine PassExecutor codec test: >0-byte guard, default-vs-nondefault byte divergence, exact writer/reader byte count, and field-for-field round-trip of every v24 goalkeeper-distribution field. Pending-feedback digest probe remains supplemental gameplay-mediated evidence only. |
 // | 1.22     | 2026-09-27 | —      | Landing hardening after green CI 36337174267: the codec round-trip now uses distinct non-default sentinels (request AgentId 11, TeamId 1, TargetAgentId 4, effective target 6) so dropped/defaulted or request/effective-target swaps cannot pass accidentally. Test-only data change; serializer/runtime/schema/RNG unchanged. |
 // | 1.22    | 2026-10-13 | —      | W8 B prewiring: pending feedback is consumed before end-of-tick Snapshot; lock exact canonical v24 bytes and decoder rather than wrongly expecting distinct settled tick digests. |
+// | 1.23    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION pin 24 → 25. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
+// Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
+// Modified (prior): 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
 // Modified: 2026-09-22 (wiring backlog W3 — SNAPSHOT_SCHEMA_VERSION 22 -> 23 for the per-GK ClaimIntent payload + active latch)
 // Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
 // Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
@@ -314,7 +315,7 @@ namespace TacticalDirector.MatchEngine
         /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
         /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
         /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 24;
+        public const uint SNAPSHOT_SCHEMA_VERSION = 25;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -335,7 +336,7 @@ namespace TacticalDirector.MatchEngine
         /// <c>buildHash</c> string between <c>Cursor.PhaseOrdinal</c> and the fingerprint-present flag.
         /// KD-1 stands — a v1 blob is refused, not migrated.
         /// </para></summary>
-        public const uint MATCH_SAVE_FORMAT_VERSION = 2;
+        public const uint MATCH_SAVE_FORMAT_VERSION = 3;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
@@ -358,6 +359,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Maximum substitutions permitted per team per match (current IFAB
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
+
+        /// <summary>[FIXED] Law 3, maximum substitution windows during play for each team.
+        /// Before kickoff and at the second-half kickoff, substitutions are free windows.</summary>
+        public const int MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3;
 
         /// <summary>
         /// [FIXED] Sentinel for "no player identity is known for this agent id"
@@ -1112,4 +1117,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | [GT] value changes. Row added at the #439 close-out (omitted when  |
 // |         |            |        | the bump landed).                                                  |
 // | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
+// | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
 #endregion

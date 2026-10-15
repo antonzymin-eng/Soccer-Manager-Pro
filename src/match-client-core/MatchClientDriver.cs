@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchClientDriver.cs
 // Created:  2026-07-24
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6.4: applied only when accepted)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P2/§6),
 //           Code Standards #20
@@ -130,8 +131,7 @@ namespace TacticalDirector.MatchClientCore
                 bool applied;
                 try
                 {
-                    command.Apply(mutations);
-                    applied = true;
+                    applied = command.Apply(mutations);
                 }
                 catch (Exception)
                 {
@@ -164,4 +164,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | dropped + recorded in FailedCommands — instead of escaping the  |
 // |         |            |        | pre-tick hook and killing the background pacing thread.         |
 // | 1.3     | 2026-10-08 | —      | Atomic conditional outcome snapshots for allocation-free unchanged UI polling. |
+// | 1.4     | 2026-10-15 | —      | Match Flow §6.4: a command is logged as applied only when Apply reports acceptance. |
 #endregion

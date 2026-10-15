@@ -1,8 +1,8 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 8, 2026\
-**Version:** 0.5\
+**Last Updated:** October 15, 2026\
+**Version:** 0.6\
 **Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
@@ -222,7 +222,7 @@ messages, prototype controls/captions and synthetic/captured-data warnings do no
 | playback | `action.slower` → Slower; `action.pause` → Pause; `action.resume` → Resume; `action.faster` → Faster; `context.speed_steps` → Speed steps: 1×, 3×, 5×, 10×. |
 | staging | `action.mentality` → Change Mentality; `action.substitution` → Make substitution; `action.submit` → Submit change; `action.cancel` → Cancel; `action.compare` → Compare all seven Mentalities; `dialog.mentality` → Change Home Mentality; `dialog.substitution` → Make Home substitution |
 | fields/tags | `field.requested_mentality` → Requested Mentality; `field.outgoing` → Outgoing home player; `field.incoming` → Incoming bench player; `tag.current` → Current; `tag.requested` → Requested |
-| staging instructions | `context.submit` → Choose a change, then submit it. Your team changes only when you see Applied.; `context.substitution` → Choose a player by name and shirt number, then an unused bench player. The substitution takes effect when the request is applied; it does not wait for a stoppage. |
+| staging instructions | `context.submit` → Choose a change, then submit it. Your team changes only when you see Applied.; `context.substitution` → Choose a player by name and shirt number, then an unused bench player. The substitution waits for the next eligible stoppage; with no windows left in the first half, it waits for half-time. |
 | state | `state.waiting` → Waiting for first frame; `state.clock_waiting` → Clock awaiting first frame; `state.first_half` → First half; `state.second_half` → Second half; `state.full_time` → Full time; `state.paused` → Paused; `state.score_unavailable` → — |
 | identity | `team.home` → Home; `team.away` → Away; `team.home_short` → H; `team.away_short` → A; `identity.goalkeeper` → goalkeeper |
 | outcomes | `status.pending` → Pending; `status.applied` → Applied; `status.refused` → Refused; `status.not_applied` → Not applied; `status.send_failure` → Send failure; `heading.feedback` → Change request feedback |
@@ -305,7 +305,7 @@ typed components and final role output without rewriting old request identities.
 | `feedback.substitution_pending_paused` | Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting; resume to continue. |
 | `feedback.substitution_applied` | Applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}) at minute {7}. |
 | `feedback.substitution_refused` | Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); substitution count unchanged. |
-| `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); match ended before it could apply. |
+| `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the request was cancelled or the match ended before it could apply. |
 | `feedback.substitution_send_failure` | Send failure — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); request could not be sent; substitution count unchanged. |
 
 Base-copy example: “Pending — Ben Calder (shirt 2) → Miles West (shirt 13, bench slot 2);
@@ -388,3 +388,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.3 | October 3, 2026 | Records Anton Zymin's explicit approval of the unchanged 36-name fixture list at 96f16ba. Separate long-name/pseudo/200% stress coverage remains required. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; no runtime, image or merge approval inferred. |
 | 0.4 | October 4, 2026 | Final technical handoff review PASS recorded in journey §14.11 at e8ffd89; all three contracts/reference deltas reviewed. Main release follows #478 landing; implementation, Gate-J QA and exact-head Unity evidence remain due. No approved source/image or prior history change. |
 | 0.5 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): pitch descriptions are read-only rather than noninteractive, shown on pointer or the single keyboard pitch entry of journey §9.3. Role register, copy and content hash unchanged. |
+| 0.6 | October 15, 2026 | Match Flow §6.2.6 (PR #505): `context.substitution` says a request waits for the next eligible stoppage (half-time when no window is left in the first half), and `feedback.substitution_not_applied` covers a cancelled request as well as full time. No key, argument signature or binding changed. |

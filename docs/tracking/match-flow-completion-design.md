@@ -1,7 +1,11 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** July 14, 2026 (**Implementation LANDED and a full code-adversarial-review pass
+> **Last Updated:** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
+> **Last Updated (prior):** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
+> maps all thirteen acceptance locks to their tests; schema v25 is taken; saves between ticks use match save
+> format v3. Prior entry below.)
+> **Last Updated (prior):** July 14, 2026 (**Implementation LANDED and a full code-adversarial-review pass
 > completed clean.** AR-1 through AR-6 (§12) converged the plan before any code was written; the
 > plan was then implemented in full (`RestartResolver.cs`, `OffsideEvaluator.cs`,
 > `SubstitutionReason.cs`, three new Tier A events, `MatchEngine.cs` v1.31,
@@ -276,68 +280,273 @@ three non-`None` results now route through `RestartResolver` + `ApplyRestart`
 
 ---
 
-## 6. Substitutions
+## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
-> **Pending replacement (October 10, 2026):** this section describes today's immediate-effect
-> behaviour, which the owner rule of September 25, 2026 forbids. A deferred request/stoppage contract is
-> drafted in `match-flow-s6-substitution-contract-draft.md` (v0.3: owner decisions recorded October 12, 2026;
-> revised text awaiting owner sign-off; **not in force**). This
-> section stays authoritative for the shipped code until that draft is approved and folded in here.
+The approved deferred-substitution contract (decision record: `match-flow-s6-substitution-contract-draft.md`
+v0.3, October 12) supersedes the immediate-effect text previously in this section. The Stage-0 bench
+remains `SUBSTITUTES_PER_TEAM = 7`, with `MAX_SUBSTITUTIONS_PER_TEAM = 5` and the existing
+`BenchRosterConfig` source; manager requests remain opt-in. Approval is recorded in the owner's
+October 13 step-4 instruction. PR #505 implements this contract (October 15, 2026); its final-head Linux
+and Unity 6000.4.9f1 evidence is recorded on the PR, and §6.5.1 maps each lock to its test.
 
-**Bench roster (Stage 0 in-code source, parser-swap-ready — the `TeamTacticConfig`
-precedent):** `[GT] SUBSTITUTES_PER_TEAM = 7`, `[GT] MAX_SUBSTITUTIONS_PER_TEAM = 5`.
-New `BenchRosterConfig` (mirrors `TeamTacticConfig`): `Default` seeds every bench
-slot to `PlayerAttributes.CreateDefault()` / `PerformanceContext.CreateNeutral()`
-/ `IsGoalkeeper = false` — i.e., configuring nothing changes nothing (no
-identity risk since a substitution is opt-in via an explicit API call, never
-autonomous).
+### 6.1 Definitions
 
-**API:** `public void SubstitutePlayer(int teamId, int outSlotIndex, int
-benchIndex, SubstitutionReason reason)` (new small enum: `Tactical`/`Injury`).
-Guards (fail loud, `ArgumentException`/`InvalidOperationException` — this is
-a boot/manager-decision-time call, not hot-path, so exceptions are fine, same
-class as `SetTeamTactic`): `teamId` in range; `outSlotIndex` on-pitch, belongs
-to `teamId`, not already `_isSentOff`, not already substituted
-(`_activeBenchSlot[outSlotIndex] == -1`); `benchIndex` in range and not
-already used this match for that team; `_substitutionsUsed[teamId] <
-MAX_SUBSTITUTIONS_PER_TEAM`.
+- **Request:** a manager's substitution order (team, outgoing roster slot, bench index, reason), validated
+  and stored. Requesting changes no on-pitch state.
+- **Stoppage:** any call of the engine's single restart seam, `ApplyRestart`: throw-in, corner, goal kick,
+  free kick (foul or offside), the kickoff after a goal, and the second-half kickoff. The
+  engine's restarts are zero-length (the ball is placed and a taker gets possession in the same tick), so
+  the stoppage is the restart tick itself. Before the first tick the match has not kicked off; that is
+  also a stoppage (§6.2.1).
+- **Execution:** applying one request: today's swap effect (§6.2.3).
+- **Engine cancellation:** a request removed without execution because it can no longer be executed
+  legally, or because the match ended (§6.2.4).
+- **Substitution window (L1, decided October 12, 2026):** a stoppage at which at least one of a team's
+  requests executes. Under the Laws of the Game (Law 3, five-substitution competitions), a team has at most
+  `MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3` windows during play. Executions before kick-off and at the
+  second-half kickoff (half-time) are **free**: they use no window. Any number of a team's requests
+  executed at one stoppage use **one** window for that team only. Stage 0 has no extra time, so no
+  extra-time window rule is needed yet.
 
-**Effect:** `_attrs[outSlotIndex] = _benchAttrs[teamId][benchIndex]`;
-`_perfs[outSlotIndex] = _benchPerfs[teamId][benchIndex]`;
-`_isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex]`;
-`_decisionTrees[outSlotIndex].NotifyInterrupt()` (existing seam — forces a
-fresh plan next AI stride instead of continuing whatever the outgoing player
-was mid-executing); `_activeBenchSlot[outSlotIndex] = benchIndex`;
-`_substitutionsUsed[teamId]++`. Position/velocity are left untouched (no
-re-entry ceremony — same minimalism precedent as the rest of this note).
-Queues `SubstitutionEvent(outgoing: outSlotIndex, incoming:
-SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex, team: (byte)teamId,
-substitutionReason: (byte)reason)` for publication at the top of the next
-`RunResolvePhase` (AR-5 — this method may be called between ticks, when
-`EventBus.CurrentPhase` is not a valid producer phase; the state effect above
-still applies immediately) — the synthetic incoming id gives the bench player
-a stable identity distinct from any on-pitch slot index.
+### 6.2 Contract
 
-**Documented Stage-0 simplification:** Positioning/Pressing/Defensive/
-Attacking AI hysteresis state is keyed by slot index, not player identity, so
-the incoming player inherits whatever momentary tactical state that slot held
-(e.g. mid-dwell counters). This is a minor behavioural quirk, not a
-correctness bug — the state re-converges within a few ticks, same class as
-the `RotationController` slot-identity model already accepted in #25.
+#### 6.2.1 Request (`RequestSubstitution`)
 
-**Serialization scope (AR-3 correction):** `MatchEngine` has no working
-snapshot-decode/restore path today — `SerializeWorldState` is a one-way write
-into the digest/payload (verified: no `Deserialize`/`Restore` method exists
-anywhere in the file; every prior "restore-deterministic" landing, e.g.
-ERR-021-002, means only "now serialized, so a future real save/load system
-would reconstruct it," not that one exists). So this note does the same as
-every prior field addition: `_activeBenchSlot`/`_substitutionsUsed` are new
-cross-tick fields appended to `SerializeWorldState` (§9) and digest-probed in
-tests — `_attrs`/`_perfs`/`_isGoalkeeper` stay unserialized under the existing
-B3 exclusion (still boot/config-deterministic; a substitution just mutates
-which config values populate those slots).
+`RequestSubstitution(teamId, outSlotIndex, benchIndex, reason) → SubstitutionRequestResult`
 
----
+Request-time checks. Rule refusals return a typed result and **do not throw**, so a manager command cannot
+fault the driver. Malformed indices are programming errors and still throw, as today.
+
+| Check | Result |
+|---|---|
+| `teamId`, `outSlotIndex`, `benchIndex` out of range, or `outSlotIndex` not on `teamId` | throws (unchanged) |
+| match ended | `Refused(MatchEnded)` |
+| outgoing slot sent off | `Refused(OutgoingSentOff)` |
+| outgoing slot already substituted (`_activeBenchSlot != -1`) | `Refused(OutgoingAlreadyReplaced)` |
+| a pending request already names this outgoing slot | `Refused(OutgoingAlreadyPending)` |
+| bench index already used, or named by a pending request of this team | `Refused(BenchPlayerUnavailable)` |
+| `used + pending ≥ MAX_SUBSTITUTIONS_PER_TEAM` for this team | `Refused(LimitReached)` |
+| all windows used and the second half has started (no free stoppage remains) | `Refused(NoWindowsLeft)` |
+| role rule broken (§6.2.1.1) | `Refused(GoalkeeperRoleMismatch)` |
+| otherwise | `Accepted(sequence)` |
+
+On `Accepted`, the request is appended to a FIFO queue with a monotonically increasing per-match
+`sequence`, and `_substitutionsUsed` is **not** incremented. If no tick has run yet (pre-kickoff), the
+request executes immediately instead (§6.2.3), since the ball is not in play. A request accepted in the
+first half after all three windows are used is valid: it waits for the free half-time execution (§6.2.2).
+
+#### 6.2.1.1 Goalkeeper role rule (R1, decided October 12, 2026)
+
+Keeper identity is per roster slot (`_isGoalkeeper`), and the W1/W8 goalkeeper code reads it. Requests
+must therefore preserve roles:
+
+- **Normal rule:** a slot whose occupant is a goalkeeper may be replaced only by a bench goalkeeper; an
+  outfield slot only by a bench outfielder.
+- **Fallback (1) — no keeper on the pitch:** when a team has no un-dismissed goalkeeper on the pitch (today
+  that means its keeper was sent off), and no pending request of that team already brings a bench keeper
+  on, the team may request **outfield slot off, bench goalkeeper on**. The slot takes the bench keeper's
+  goalkeeper flag, exactly as today's swap does. At most one such request may be pending per team. It
+  uses a substitution and, outside the free stoppages, a window, like any other.
+- **No fallback is available** when the team has no substitutions left, has no window left in the second
+  half, or has no goalkeeper on the bench. The team then plays on without a keeper, as it does today. In
+  the first half with no window left, the fallback request is accepted and waits for half-time (§6.2.2). The emergency-keeper rule (an
+  outfielder already on the pitch takes over in goal) is a recorded follow-up, not part of this contract
+  (§6.7).
+
+**Implementation obligations for fallback (1), found at `a17aa82`:**
+
+- `FirstGoalkeeperOnTeam` (the loose-ball collector restriction) does not skip sent-off keepers. With a
+  sent-off keeper in a lower slot it would return that slot, not the new keeper. It must skip `_isSentOff`
+  slots, as `ResolveGkAgentId` already does.
+- Positioning receives `role` from the formation slot (`formation[k].Role`) and `isGoalkeeper` from the
+  slot flag. A lock must prove that a keeper brought on into an outfield slot takes up the goalkeeper
+  position, not the slot's formation role.
+- `RefreshGkAgentIds` already detects a moved keeper slot and resets #11's per-slot state (W1 AR-2), and
+  `RoundTrip_KeeperSubstitutedOntoOutfieldSlot` already covers save/restore of a keeper in an outfield slot.
+
+#### 6.2.2 Execution point
+
+At every stoppage, `ApplyRestart` executes the whole queue in `sequence` order **after** the ball is placed
+and any goalkeeper hand episode is ended, and **before** `SelectRestartTaker`. An outgoing player therefore
+cannot be chosen as the taker, and an incoming player can be. Each request is re-validated at execution
+(§6.2.4) because the match may have changed since it was accepted.
+
+Order at each stoppage: first the §6.2.4 cancellation checks run over **every** queued request, for both
+teams, whether or not that team can execute now. Then the window gate decides which of the remaining
+requests execute. A request held by the gate is therefore never kept alive for a player who has been sent
+off, and it never keeps its bench player reserved after cancellation.
+
+Window gate: at a stoppage that is not free, a team's requests execute only if that team has a window
+left; executing them uses one window. If the team has none left, its requests stay queued for the free
+half-time execution. Each team is gated separately, so one team's execution never uses the other's window.
+
+#### 6.2.3 Execution effect
+
+Each executed request applies today's §6.5 effect unchanged: attributes, performance context, canonical
+attributes, player id, Decision Tree/perception projections, `_yellowCards = 0`, `NotifyInterrupt`,
+`_activeBenchSlot = benchIndex`, and `_substitutionsUsed[team]++`. The first execution for a team at a
+non-free stoppage also does `_substitutionWindowsUsed[team]++` (once per team per stoppage). Position and
+velocity are untouched (no re-entry ceremony). The `SubstitutionEvent` (outgoing slot, synthetic incoming id
+`SQUAD_SIZE + team × SUBSTITUTES_PER_TEAM + bench`, team, reason) is published **in the tick of execution**
+(§6.2.5).
+
+#### 6.2.4 Engine cancellation
+
+At every stoppage, before the window gate (§6.2.2), a queued request whose outgoing slot has been sent off
+since acceptance is removed with outcome `NotApplied(OutgoingSentOff)`; the count is unchanged and its bench
+player becomes available again. A dismissal is always followed by its own free-kick stoppage, so the
+cancellation happens in the tick of the dismissal. Re-validation of bench availability and the limit
+cannot fail when §6.2.1 counted pending requests, and an implementation MUST assert this rather than handle
+it silently. The role rule (§6.2.1.1) cannot fail at execution either: a keeper cannot return once sent off,
+and only one fallback request may be pending. A request held back by the window gate (§6.2.2) is not
+cancelled. At full time, every queued request is removed with `NotApplied(MatchEnded)`. Stage 0 has no
+in-match injury producer, so `reason = Injury` is a label only; no injury cancels or forces a request.
+When an injury producer lands, an injured keeper must reach fallback (1) the same way a sent-off keeper
+does (§6.7).
+
+#### 6.2.5 Events and the transient queue
+
+Two queues must not be confused:
+
+- **Request queue (new):** cross-tick state, serialized (§6.3).
+- **Event queue (`_pendingSub*`, existing):** a transient publication buffer. **It MUST be empty at every
+  tick boundary.** Execution inside the Resolve phase (throw-ins, corners, goal kicks, goals, fouls, offside) runs
+  after the top-of-Resolve flush, so it publishes directly (Resolve is the registered producer phase).
+  Execution at the second-half kickoff happens earlier in the same tick and is flushed at that tick's
+  Resolve. Pre-kickoff execution keeps today's flush at the first tick's Resolve, so its event is
+  published within the first tick.
+
+Engine cancellations are observable without a new event type: the live frame and session view expose the
+pending queue (entries and their `sequence`), and a cancellation removes the entry. Whether to add a
+`SubstitutionCancelledEvent` is option E1 (§6.6).
+
+#### 6.2.6 Client outcomes (mapping to the S0 binding contract)
+
+| Engine outcome | S0 feedback key |
+|---|---|
+| `Accepted` (ball in play) | `feedback.substitution_pending` / `_pending_paused` |
+| executed (`SubstitutionEvent`, with minute) | `feedback.substitution_applied` |
+| `Refused(*)` | `feedback.substitution_refused` |
+| `NotApplied(MatchEnded)` | `feedback.substitution_not_applied` |
+| `NotApplied(OutgoingSentOff)` | `feedback.substitution_not_applied` (cancelled or ended; no new event) |
+| command never reached the engine | `feedback.substitution_send_failure` (client-side, unchanged) |
+
+`context.substitution` currently tells the manager that a substitution "does not wait" for a stoppage. That
+copy must change in the same landing; it is a UX-document change, not part of this contract.
+
+### 6.3 Determinism and snapshot obligations
+
+- Request queue entries: `sequence (u32)`, `team (u8)`, `outSlot (u8)`, `bench (u8)`, `reason (u8)`.
+  Capacity is `2 × MAX_SUBSTITUTIONS_PER_TEAM`, bounded by the §6.2.1 limit check, so it is preallocated and
+  allocation-free.
+- `_substitutionWindowsUsed[team]` (u8 per team) is cross-tick state and is serialized with the queue.
+  `MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3` is a new `[FIXED]` constant (Laws of the Game, Law 3), beside
+  `MAX_SUBSTITUTIONS_PER_TEAM`.
+- The queue, the window counts and the next `sequence` value are serialized. This takes the **next free**
+  `SNAPSHOT_SCHEMA_VERSION` at implementation time (24 today; whichever of substitutions, W8 B or W8 C
+  lands first takes 25). The implementation follows the snapshot-schema-bump procedure: symmetric write/read,
+  version pin and a digest probe.
+- Restore needs no attribute work for pending entries: they have changed nothing yet. Executed swaps are
+  re-projected from `_activeBenchSlot` as today.
+- Manager requests enter through the tick-stamped command channel, so replay re-issues each request at its
+  original tick. No RNG is drawn; FIFO order is total.
+
+### 6.4 Callers that change
+
+`MatchEngineMutations` / `ManagerCommand` / `MatchClientDriver` and `ui-framework`'s `MatchTacticsDispatcher`
+move to `RequestSubstitution` and report its typed result. Whether `SubstitutePlayer` is deleted or
+kept as an internal test helper with immediate effect is an implementation choice. If it is kept, no
+production caller may reach it. A new engine-internal caller (AI manager, injury) would invalidate the
+October 10 census and must re-run it.
+
+### 6.5 Acceptance (the implementation's locks)
+
+1. A request accepted in open play, by a team with a window left (or arriving at a free stoppage), leaves
+   every on-pitch field of the outgoing slot unchanged for each tick until the next stoppage, then applies
+   exactly once on that restart tick, before taker selection. A request held by the window gate applies
+   exactly once at the half-time kickoff instead (lock 12).
+2. FIFO: two requests for one team executed at one stoppage apply in `sequence` order. A duplicate
+   outgoing slot or bench index is refused at request time.
+3. Limit: `used + pending` at the cap refuses with `LimitReached`; counts change only at execution.
+4. Dismissal: the outgoing player sent off while the request is pending gives `NotApplied(OutgoingSentOff)`
+   at the free-kick restart, and the count is unchanged. This holds also when the request is held by the
+   window gate in the first half: it is cancelled at that free kick, not kept until half-time, and its
+   bench player can be named by a new request straight away.
+5. Full time cancels every pending request with `NotApplied(MatchEnded)`; nothing executes after full time.
+6. Pre-kickoff requests execute immediately.
+7. Save/restore with a pending request, at the request tick, mid-play and on the stoppage tick, continues
+   with identical per-tick digests to an uninterrupted run. The request executes once, never twice or zero
+   times.
+8. The transient event queue is empty at every tick boundary in a run that executes substitutions at a
+   throw-in, a goal kickoff, a foul free kick, an offside free kick and the second-half kickoff.
+9. Home and away mirrored versions of 1, 4 and 7.
+10. Role rule: keeper-for-outfielder and outfielder-for-keeper requests are refused while the team has a
+    keeper on the pitch.
+11. Fallback (1): after the team's keeper is sent off, an outfield-slot-off / bench-keeper-on request is
+    accepted and executes at the next stoppage when the team has a window left. The new keeper is the
+    team's keeper for #11 (`_gkAgentIds`), for the loose-ball collector restriction, and for positioning
+    (takes the goalkeeper position). A second fallback request while one is pending is refused. In the
+    first half with no window left, the fallback request is accepted, the team plays without a keeper
+    until half-time, and the keeper comes on at the half-time kickoff without using a window. With no
+    substitution left, no bench keeper, or no window left in the second half, the request is refused and
+    the team plays on without a keeper. Home and away mirrored.
+12. Windows: three non-free stoppages with executions use three windows; a fourth open-play request in the
+    second half is refused with `NoWindowsLeft`; one in the first half waits and executes at half-time
+    without using a window. Two requests executed at one stoppage use one window. One team's execution
+    does not use the other team's window. Pre-kickoff execution uses none.
+13. Save/restore with windows partly used and with a request held by the window gate continues with
+    identical per-tick digests.
+
+#### 6.5.1 Lock evidence (PR #505)
+
+Engine locks are in `src/match-engine/tests/MatchEngineDeferredSubstitutionTests.cs` unless another file is named.
+
+| Lock | Test(s) |
+|---|---|
+| 1 | `OpenPlayRequestChangesNoRosterStateUntilRestart`; `PendingRequestChangesNoOnPitchStateThenIncomingPlayerCanTakeTheRestart` (no on-pitch change against a control run; the incoming player can take the restart); `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests` (held request) |
+| 2 | `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `TwoRequestsAtOneRealRestartPublishInSequenceOrder`; `DuplicateSlotAndBenchRefusalsLeaveQueueUnchanged` |
+| 3 | `LimitCountsPendingRequestsAndOnlyExecutionChangesTheCount`; `LegacySwapCannotInvalidateQueuedSlotBenchOrCapacity` |
+| 4 | `DismissedOutgoingCancelsBeforeTheWindowGate`; `DismissalCancelsARequestHeldByTheWindowGate`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests` |
+| 5 | `FullTimeRemovesPreviouslyAcceptedUnexecutedRequest`; `FullTimeRejectsRequestsWithTypedResult` |
+| 6 | `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
+| 7 | Request tick: `MatchSaveManagerTests.SaveAtAcceptedSubstitutionTick_PreservesPendingAndDigestContinuation`, `MatchSessionTests.PausedOffTickSubstitution_SaveRestore_ContinuesIdenticalDigestChain`. Mid-play: `RestoredPendingRequestMatchesEveryContinuationDigestThroughRestart`. Stoppage tick: `SaveOnTheExecutingStoppageTickContinuesIdenticallyAndAppliesOnce` |
+| 8 | `ExecutionAtEveryRestartKindPublishesInItsOwnTick` (throw-in, goal kickoff, foul free kick, second-half kickoff); `OffsideFreeKickExecutionLeavesNoBufferedEvent`; `ActualThrowInExecutesOnItsResolveTick` |
+| 9 | Every lock-1, -4 and -7 test above that takes a team parameter runs for home and away |
+| 10 | `KeeperMismatchRefusedAndSentOffKeeperEnablesBenchKeeperFallback`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback` |
+| 11 | `FallbackKeeperImmediatelyBecomesGoalkeeperForElevenAndPositioning`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback`; `FallbackKeeperHeldByTheGateComesOnFreeAtHalfTime`; `FallbackKeeperIsRefusedWithoutASecondHalfWindowOrASubstitution` |
+| 12 | `ThreeUsedWindowsHoldNextFirstHalfRequest`; `TwoRequestsAtTheThirdWindowBothExecuteThere`; `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`; `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests`; `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests`; `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
+| 13 | `SaveWithWindowsUsedAndARequestHeldContinuesIdentically` |
+
+`SubstitutePlayer` is kept as an `internal` test helper (§6.4). Within the engine only the pre-kickoff
+branch of `RequestSubstitution` calls it, and no production assembly can reach it. Saves between ticks
+use the match save format v3 off-tick overlay (`match-save-file-design.md` KD-8).
+
+### 6.6 Owner decisions (October 12, 2026)
+
+| ID | Question | Options | Decision |
+|---|---|---|---|
+| S-1 | Stoppage set | (a) every `ApplyRestart` incl. free kicks and kickoffs, plus pre-kickoff; (b) only ball-out-of-play restarts and half-time | **(a)**, as recommended. Under the Laws, any stoppage with the referee's permission allows a substitution, and (a) uses the engine's single restart seam |
+| R1 | Goalkeeper role | (R1) role-preserving: keeper slot ↔ bench keeper only; outfield ↔ outfield only. (R2) allow any, slot takes the incoming player's keeper flag (today's code, which can field two keepers or none) | **R1, with fallback (1)** (§6.2.1.1): a team with no keeper on the pitch may bring a bench keeper on for an outfielder. The emergency-keeper rule for a team with no substitution, window or bench keeper left is a follow-up (§6.7) |
+| W1 | Manager withdrawal of a pending request | (a) none in this slice; (b) add `WithdrawSubstitutionRequest` | **(a)**, as recommended. Withdrawal is recorded as a future item (§6.7) |
+| E1 | Cancellation signal | (a) observable through the frame/pending view only; (b) new `SubstitutionCancelledEvent` (event-registry ordinal) | **(a)**, as recommended. (b) only if #37 analytics or the report needs it |
+| L1 | Laws substitution-window limit (three opportunities plus half-time) | (a) not modelled (today); (b) model it | **(b), in this slice** (§6.1, §6.2.2). It shares this slice's snapshot schema bump, so it costs no second save-format change |
+
+### 6.7 Recorded follow-ups (not part of this contract)
+
+- **W1 — manager withdrawal of a pending request.** Owner-requested future item. Additive: a new command
+  that removes the manager's own pending entry; window and substitution counts are unaffected because
+  pending requests use neither.
+- **Emergency keeper.** When a team has no keeper on the pitch and fallback (1) is unavailable, an outfield
+  player already on the pitch takes over in goal. This is a role change, not a substitution. It needs keeper
+  identity to move between on-pitch slots mid-match, which touches #11 and the W8 B keeper queries, so it
+  needs its own contract. Until then the team plays without a keeper, as today.
+- **Injured keeper.** Stage 0 has no in-match injuries. When an injury producer lands, an injured keeper
+  must open fallback (1) and, later, the emergency-keeper rule, the same way a sent-off keeper does; and
+  the October 10 census must be re-run (§6.4).
+- **UX copy.** `NotApplied(OutgoingSentOff)` has no feedback key and needs one before the landing that
+  exposes it (§6.2.6). `NoWindowsLeft` and `GoalkeeperRoleMismatch` fall under the generic
+  `feedback.substitution_refused` key; whether they get specific copy, and how windows left are shown, is a
+  UX-document decision.
 
 ## 7. Half-time break & full-time end
 
@@ -502,3 +711,6 @@ project's established pattern for this environment.
 | 1.0 | 2026-07-14 | **Implementation landed; code-adversarial-review cycle closed.** All nine plan items (§3–§7) implemented per the AR-1..AR-6-converged plan above: `RestartResolver.cs` / `OffsideEvaluator.cs` / `SubstitutionReason.cs` (new), three new Tier A events (`OffsideCalledEvent` 0x18 / `RestartAwardedEvent` 0x19 / `MatchPhaseChangedEvent` 0x1A), `MatchEngine.cs` v1.31 (`CheckRestartAndApply`/`ApplyRestart`, `MatchFlowCollisionConsumer`, `ApplyFoulIfCaptured`/`DetermineCardKind`/`ApplyCardAndCheckSentOff`, `EvaluateAndApplyOffside` hooked into `RunFirstTouch`, public `SubstitutePlayer`/`PublishPendingSubstitutions`, `CheckMatchFlowTransitions`), `SNAPSHOT_SCHEMA_VERSION` 14 → 15, and five new test files (`MatchEngineRestartTests`/`MatchEngineOffsideTests`/`MatchEngineFoulCardTests`/`MatchEngineSubstitutionTests`/`MatchEngineMatchFlowTests`) plus `MatchEngineSnapshotSchemaTests` v1.12. Per the driving instruction, the implementation was then itself adversarially reviewed with the same rigor as the plan — multiple rounds reading the ENTIRE touched surface, not just the diff. This surfaced and fixed, beyond the AR-4/AR-5/AR-6 findings already logged above: a stale doc comment on `HALF_TIME_BOUNDARY_TICK` in `MatchEngineConstants.cs` that still described the AR-4-rejected ends-swap; a misleading test comment in `MatchEngineOffsideTests.cs` (`ComputeOffsideLineX_SentOffAndOpponents_Excluded`) that referenced the wrong index as if it were relevant to the excluded set; a latent agent-position/command-drift risk in the foul-card integration test (repositioning an agent via `TestOnly_SetAgent` without also refreshing its held `MovementCommand` would have let the stale boot-time command steer the agent back toward its original position during the same tick's Physics phase, before the foul is applied in Resolve); and a dead `_foulCandidateForce` field carried by the collision consumer but never read (removed, simplifying `TestOnly_InjectFoulCandidate`'s signature). A subsequent full pass — re-reading `RunResolvePhase` end-to-end, all four Mechanics-AI `IsActive` snapshot fill sites, the boot/constructor additions, the v15 serialization block byte-for-byte, all three new event structs against `EventRegistry`'s producer-phase/header-size contract, `RestartResolver`/`OffsideEvaluator` against their own tests, and all five new test files in full — found nothing further. The code-review cycle is closed per the "repeat until no new errors are found" instruction. Tracking docs (root `CLAUDE.md`, `src/CLAUDE.md`, `file-manifest.md`, `match-engine-design.md`) updated in the same pass. Full `dotnet test` gate not runnable in this environment (no SDK access, per this project's own documented precedent for the authoring environment) — verification was by exhaustive manual code review in its place.
 | 1.1 | 2026-10-10 | Pointer only: §6 notes that a deferred substitution contract is drafted for owner approval in `match-flow-s6-substitution-contract-draft.md` v0.1. §6 text and the code are unchanged. |
 | 1.2 | 2026-10-12 | Pointer only: the §6 note now cites draft v0.3 (owner decisions recorded; revised text awaiting sign-off). §6 text and the code are unchanged. |
+| 1.3 | 2026-10-13 | §6 replaced by the approved deferred-substitution contract (`match-flow-s6-substitution-contract-draft.md` v0.3 decisions S-1, R1 with fallback (1), W1, E1, L1), per the owner's October 13 step-4 instruction: request/execution definitions, Law 3 windows, cancellation, events, client outcomes, v25 snapshot obligations and thirteen acceptance locks. Row added October 15 (omitted when the text landed on the PR #505 branch). |
+| 1.4 | 2026-10-15 | PR #505 implements §6. The §6 status sentence records the implementation; new §6.5.1 maps each lock to its test, including the locks completed October 15 (1, 2, 3, 4, 7, 8, 11, 13). `SubstitutePlayer` is internal (§6.4). Saves between ticks use match save format v3 (`match-save-file-design.md` KD-8). |
+| 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |

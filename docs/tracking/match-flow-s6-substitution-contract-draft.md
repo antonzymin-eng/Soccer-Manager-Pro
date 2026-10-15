@@ -6,7 +6,10 @@
 > executed only at a stoppage. Since the owner's L1 decision (October 12, 2026), that is the next **eligible**
 > stoppage: normally the next one, but half-time for a first-half request from a team that has used all three
 > windows (§2, §3.2). Roadmap step 4 requires this approved contract before implementation.
-> **Status:** v0.3 **DRAFT — owner decisions recorded October 12, 2026 (§7); revised text awaiting owner
+> **Status (v0.4, October 15, 2026):** **SUPERSEDED — decision record only.** The owner signed off this text on
+> October 13, 2026 (step-4 instruction); it is folded into `match-flow-completion-design.md` §6, which is now the
+> governing text, and PR #505 implements it. The v0.3 status below is kept as published.
+> **Status (v0.3):** v0.3 **DRAFT — owner decisions recorded October 12, 2026 (§7); revised text awaiting owner
 > sign-off.** Nothing here is in force. §6 and the code keep today's immediate-effect behaviour until the
 > owner signs off this revised text and it is folded into §6. **No code, schema, event or `[GT]` change is
 > made by this document.**
@@ -265,3 +268,4 @@ October 10 census and must re-run it.
 | v0.1 | October 10, 2026 | Draft for owner approval: request/stoppage/execution/cancellation contract, snapshot obligations, client outcome mapping, acceptance locks and five decision points. Not in force. |
 | v0.2 | October 12, 2026 | Owner decisions recorded: S-1 (a), R1 with a no-keeper-on-the-pitch fallback (§3.1.1), W1 (a) with withdrawal as a future item, E1 (a), L1 (b) modelled in this slice (§2, §3.2, `NoWindowsLeft`, window counts serialized). Adds fallback implementation obligations found at `a17aa82`, locks 10–13 and §8 follow-ups (withdrawal, emergency keeper, injured keeper, UX copy). Revised text awaits owner sign-off; not in force. |
 | v0.3 | October 12, 2026 | PR #501 review: §3.2/§3.4 run dismissal cancellation over every queued request at each stoppage **before** the window gate, so a held request never outlives its player or keeps a bench player reserved. Locks 1, 4 and 11 now cover requests held by the window gate, including the keeper fallback waiting until half-time. The Purpose line states the owner rule as the next *eligible* stoppage. Not in force. |
+| v0.4 | October 15, 2026 | Status only: signed off October 13 and folded into match-flow §6, which governs; implemented by PR #505. Body unchanged. |

@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/S0ScreenPresentationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6: acceptance is not execution)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 I-Q01–14/16/18, Code Standards #20
 // Purpose:  Exercise real coordinator/session/driver and admitted content through the shipping presenter path.
@@ -221,6 +222,10 @@ namespace TacticalDirector.ClientApp.Tests
             _view.TogglePause();
             Tick();
             Assert.AreEqual(ClientChangeStatus.Applied, first.Status);
+            Assert.AreEqual(ClientChangeStatus.Pending, sub.Status,
+                "Acceptance is not execution: the player must wait for a stoppage.");
+            _shell.Session.TestOnly_Engine.TestOnly_ApplyRestart(new Vector2(52.5f, 34f), 0);
+            Tick();
             Assert.AreEqual(ClientChangeStatus.Applied, sub.Status);
             Assert.AreEqual(Mentality.Attacking, _view.CurrentMentality);
             _view.OpenMentality();
@@ -234,6 +239,39 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(3, _view.Feedback.Count);
             StringAssert.Contains(sub.Outgoing.FirstName, _view.Feedback[1]);
             StringAssert.Contains(sub.Incoming.FirstName, _view.Feedback[1]);
+        }
+
+        [Test]
+        public void AcceptedPendingSubstitutionRemovesBothPlayersFromLaterChoices()
+        {
+            // PR #505 review: an accepted request changes no roster cue until its stoppage, so the
+            // choice lists must also follow the reservations, or a second order could name the same
+            // outgoing player or bench player again.
+            Start();
+            Tick();
+            _view.OpenSubstitution();
+            int outCount = _view.Outgoing.Count;
+            int inCount = _view.Incoming.Count;
+            int outSlot = _view.Outgoing[0].Index;
+            int bench = _view.Incoming[0].Index;
+            _view.SelectOutgoing(outSlot);
+            _view.SelectIncoming(bench);
+            ClientChangeRecord sub = _view.SubmitSubstitution();
+            Assert.IsNotNull(sub);
+            Tick();
+            Assert.AreEqual(ClientChangeStatus.Pending, sub.Status, "precondition: accepted, not executed");
+            Assert.AreEqual(1, _shell.Session.TestOnly_Engine.PendingSubstitutionCount, "precondition: queued in the engine");
+            Assert.IsTrue(_view.CanSubstitute, "a second order may be made while the first waits");
+
+            _view.OpenSubstitution();
+            Assert.AreEqual(outCount - 1, _view.Outgoing.Count);
+            Assert.AreEqual(inCount - 1, _view.Incoming.Count);
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Outgoing)
+                Assert.AreNotEqual(outSlot, c.Index, "the reserved outgoing player is not offered again");
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+                Assert.AreNotEqual(bench, c.Index, "the reserved bench player is not offered again");
+            Assert.Throws<ArgumentException>(() => _view.SelectOutgoing(outSlot));
+            Assert.Throws<ArgumentException>(() => _view.SelectIncoming(bench));
         }
 
         [Test]
@@ -430,4 +468,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 // | 1.3     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
 // | 1.4     | 2026-10-08 | —      | Composed read-only pitch inspection reaches all 22 current player descriptions without ticking or dispatching. |
+// | 1.5     | 2026-10-15 | —      | Match Flow §6 (PR #505): the substitution stays Pending after acceptance and settles only after a restart executes it. |
+// | 1.6     | 2026-10-15 | —      | PR #505 review: after an accepted, unexecuted substitution, a second dialog offers neither the reserved outgoing player nor the reserved bench player, through the presenter. Failed before the fix. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchSaveCodec.cs
 // Created:  2026-07-21
-// Modified: 2026-08-22 (ERR-016-009 / KD-7: the header block carries the §2.3.2 buildHash; v2)
+// Modified: 2026-10-15 (Match save format v3 overlay)
+// Modified (prior): 2026-08-22 (ERR-016-009 / KD-7: the header block carries the §2.3.2 buildHash; v2)
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §3 layout / KD-1..KD-6;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §3.2.4.1
@@ -12,6 +13,7 @@
 
 using System;
 using System.Text;
+using System.Security.Cryptography;
 
 using TacticalDirector.DeterministicSim;
 
@@ -41,7 +43,8 @@ namespace TacticalDirector.MatchEngine
         /// the content. See <see cref="Decode"/> for the inverse (both kept adjacent so a layout change
         /// is edited in one place — R1).
         /// </summary>
-        public static byte[] Encode(ulong matchSeed, SnapshotHeader header, SnapshotPayload payload)
+        public static byte[] Encode(ulong matchSeed, SnapshotHeader header, SnapshotPayload payload,
+            SnapshotPayload postSnapshotPayload = null)
         {
             if (header == null)
             {
@@ -72,8 +75,14 @@ namespace TacticalDirector.MatchEngine
                     payload.Capacity + "].", nameof(payload));
             }
 
+            if (postSnapshotPayload != null &&
+                (postSnapshotPayload.BytesWritten <= 0 ||
+                 postSnapshotPayload.BytesWritten > postSnapshotPayload.Capacity))
+                throw new ArgumentException("Invalid post-snapshot overlay length.", nameof(postSnapshotPayload));
+
             EnvironmentFingerprint fp = header.Fingerprint;
-            byte[] buf = new byte[ComputeSize(fp, header.BuildHash, payload.BytesWritten)];
+            int overlayBytes = postSnapshotPayload == null ? 0 : postSnapshotPayload.BytesWritten;
+            byte[] buf = new byte[ComputeSize(fp, header.BuildHash, payload.BytesWritten, overlayBytes)];
             int o = 0;
 
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.MATCH_SAVE_FORMAT_VERSION);
@@ -107,6 +116,21 @@ namespace TacticalDirector.MatchEngine
             // ── SnapshotPayload block ─────────────────────────────────────────────────
             CanonicalSerializer.WriteU32(buf, ref o, (uint)payload.BytesWritten);
             Array.Copy(payload.PayloadBytes, 0, buf, o, payload.BytesWritten); o += payload.BytesWritten;
+
+            // v3: off-tick commands are persisted independently of the tick digest.
+            // Keep the committed snapshot untouched so replay still chains off the same
+            // original digest. Verify the overlay with its own SHA-256 at decode.
+            CanonicalSerializer.WriteU32(buf, ref o, (uint)overlayBytes);
+            if (overlayBytes != 0)
+            {
+                using (SHA256 sha = SHA256.Create())
+                {
+                    byte[] digest = sha.ComputeHash(postSnapshotPayload.PayloadBytes, 0, overlayBytes);
+                    Array.Copy(digest, 0, buf, o, DigestBytes); o += DigestBytes;
+                }
+                Array.Copy(postSnapshotPayload.PayloadBytes, 0, buf, o, overlayBytes);
+                o += overlayBytes;
+            }
 
             if (o != buf.Length)
             {
@@ -212,6 +236,29 @@ namespace TacticalDirector.MatchEngine
             Array.Copy(blob, o, payload.PayloadBytes, 0, (int)payloadLen); o += (int)payloadLen;
             payload.BytesWritten = (int)payloadLen;
 
+            // ── v3: authenticated off-tick world-state overlay ─────────────────────────
+            Require(o, 4, len, "post-snapshot overlay length");
+            uint overlayLen = CanonicalSerializer.ReadU32(blob, ref o);
+            SnapshotPayload overlay = null;
+            if (overlayLen > 0u)
+            {
+                overlay = new SnapshotPayload();
+                if (overlayLen > (uint)overlay.Capacity)
+                    throw new InvalidOperationException("Post-snapshot overlay exceeds payload capacity.");
+                Require(o, DigestBytes + (int)overlayLen, len, "post-snapshot overlay and digest");
+                using (SHA256 sha = SHA256.Create())
+                {
+                    byte[] expected = sha.ComputeHash(blob, o + DigestBytes, (int)overlayLen);
+                    for (int i = 0; i < DigestBytes; i++)
+                        if (blob[o + i] != expected[i])
+                            throw new InvalidOperationException("Corrupt post-snapshot overlay digest.");
+                }
+                o += DigestBytes;
+                Array.Copy(blob, o, overlay.PayloadBytes, 0, (int)overlayLen);
+                o += (int)overlayLen;
+                overlay.BytesWritten = (int)overlayLen;
+            }
+
             // ── Trailing-byte guard (KD-6 / R1) ───────────────────────────────────────
             if (o != len)
             {
@@ -220,12 +267,13 @@ namespace TacticalDirector.MatchEngine
                     "— truncated, padded, or corrupt (R1).");
             }
 
-            return new MatchSaveContents(matchSeed, header, payload);
+            return new MatchSaveContents(matchSeed, header, payload, overlay);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────────
 
-        private static int ComputeSize(EnvironmentFingerprint fp, string buildHash, int payloadBytes)
+        private static int ComputeSize(EnvironmentFingerprint fp, string buildHash, int payloadBytes,
+            int overlayBytes)
         {
             int size = 4                       // MATCH_SAVE_FORMAT_VERSION
                      + 8                       // matchSeed
@@ -244,6 +292,7 @@ namespace TacticalDirector.MatchEngine
                       + StringSize(fp.UnicodeNormalizationVersion);
             }
             size += 4 + payloadBytes;          // payloadLength + body
+            size += 4 + (overlayBytes == 0 ? 0 : DigestBytes + overlayBytes);
             return size;
         }
 
@@ -294,4 +343,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | cannot admit a save whose build identity is unknown. The       |
 // |         |            |        | fingerprint-flag read also gains its own bound check, which    |
 // |         |            |        | the fixed-width header Require had been covering.              |
+// | 1.2     | 2026-10-15 | —      | Format v3 (PR #505): after the payload, u32 overlay length; when non-zero, the SHA-256 of the overlay and then the overlay bytes. Decode bounds-checks length and capacity and verifies the digest before returning the overlay. |
 #endregion
