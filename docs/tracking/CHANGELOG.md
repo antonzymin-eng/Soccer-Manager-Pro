@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
+> **Last Updated:** October 15, 2026, evening — **#40 T3b2 compile issue archived.** PR #503 merged (`a76bef70`) after its exact final head `b31eabeb` compiled under Unity 6000.4.9f1 on the pinned host (0 errors) and passed its targeted EditMode run (572 passed / 0 failed / 3 env-gated skips), which is the live entry's closure condition. The entry moves to `open-issues-resolved.md` with a dated resolution note; `project-reference.md` re-derives 31 active / 70 archived; roadmap v0.64 updates step 5 and D4. `DeepRevenueEnabled` stays false: enabling it is still a separate decision. Documentation only.
+
+> **Last Updated (prior):** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
 
 > **Last Updated (prior):** October 15, 2026, after #505 merged — **Owner approval of match save format v3 recorded.** PR #505 merged (`257a84f4`) with its "owner approval of match save format v3" checklist item still unticked. The owner approved the off-tick overlay and `MATCH_SAVE_FORMAT_VERSION` 3 on October 15, 2026; `match-save-file-design.md` v0.7 KD-8 now records it. Documentation only.
 
