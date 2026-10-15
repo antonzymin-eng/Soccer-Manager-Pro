@@ -1,7 +1,7 @@
 # Perception — shared per-heartbeat pass and perceptual memory
 
 > **Created:** October 15, 2026
-> **Status:** DESIGN SUPPLEMENT — draft v0.1, not reviewed. Opens no numbered spec and changes no
+> **Status:** DESIGN SUPPLEMENT — draft v0.2, not reviewed. Opens no numbered spec and changes no
 > `SPEC_INDEX.md` row. It proposes amendments to Perception System **#7** (APPROVED), Decision Tree
 > **#8** (APPROVED) and Deterministic Simulation **#16** (APPROVED); none of them is made here.
 > **Purpose:** Records the owner's design decisions of October 14–15, 2026 for restructuring
@@ -94,14 +94,15 @@ variant against the same table.
 
 Two ring buffers, written once per AI heartbeat **after** the shared pass:
 
-| Buffer | Content | Size at H = 50 frames (5.0 s) |
+| Buffer | Content | Size at H = 30 frames (3.0 s) |
 |---|---|---|
-| `PositionHistory[frame][agent]` | 2D position + 2D velocity, ground truth, `float` | 22 × 16 B × 50 = **17,600 B** |
-| `VisibilityHistory[frame][observer]` | 22-bit mask (in a `uint`) of agents that observer **saw** this frame, i.e. passed visibility *and* is confirmed by recognition latency | 22 × 4 B × 50 = **4,400 B** |
+| `PositionHistory[frame][agent]` | 2D position + 2D velocity, ground truth, `float` | 22 × 16 B × 30 = **10,560 B** |
+| `VisibilityHistory[frame][observer]` | 22-bit mask (in a `uint`) of agents that observer **saw** this frame, i.e. passed visibility *and* is confirmed by recognition latency | 22 × 4 B × 30 = **2,640 B** |
 | write cursor + frame stamp | `int` | negligible |
 
-- `H` = 50 frames (5.0 s at 10 Hz). This is a proposed `[GT]` buffer length and is deliberately longer
-  than any memory window, so the buffer never limits retention.
+- `H` = 30 frames (3.0 s at 10 Hz), **owner decision October 15, 2026** (reduced from the v0.1 proposal
+  of 5 s to cut per-tick snapshot hashing). Constraint: `H` ≥ `W_MAX` in heartbeats, so the buffer
+  never limits retention; at the proposed `W_MAX` = 2.0 s that leaves 1.0 s of headroom.
 - Including the ball is **OQ-6**. The ball already has its own last-known/staleness mechanism.
 
 ### 3.3 Memory query
@@ -174,9 +175,9 @@ there), populated from `PlayerAttributes` at boot like the existing fields.
     `snapshot-schema-bump` procedure).
 - **Derived state is not serialized.** The pair table, pressure, FoV and current masks are recomputed
   every heartbeat.
-- **Size and cost.** The history adds ≈ **22 KB** to a payload that is 35,252 B today (+~63%). The
+- **Size and cost.** The history adds ≈ **13.2 KB** to a payload that is 35,252 B today (+~37%). The
   per-tick snapshot already costs ~35% of match time (serialize 13.7 s + digest 13.3 s per match), so
-  P3 would add roughly 15–17 s per match on the measured host unless the per-tick snapshot becomes
+  P3 would add roughly 10 s per match on the measured host unless the per-tick snapshot becomes
   on-demand. That estimate is a linear extrapolation, unmeasured.
   - **Dependency D-16:** the #16 decision on whether headless/unwatched matches need the per-tick
     digest chain (throughput profile §3.2) should be taken **before P3**. Otherwise memory consumes
@@ -189,7 +190,7 @@ there), populated from `PlayerAttributes` at boot like the existing fields.
 | P1 query fix | −24.9 s/match | measured, digest-identical |
 | P1 pair table (directed) | removes most of occlusion's ~3.5 s and the duplicate bearings | estimate; needs a function-level profile |
 | P2 symmetric table, ID-order iteration | a further small reduction | estimate |
-| P3 history write + queries | small compute; **+~22 KB snapshot per tick** | arithmetic; see §4 |
+| P3 history write + queries | small compute; **+~13.2 KB snapshot per tick** | arithmetic; see §4 |
 | P4 blind pass | DT option count rises slightly | none |
 
 ## 6. Landing plan
@@ -212,7 +213,7 @@ Blast radius for P2–P4:
 | ID | Question |
 |---|---|
 | OQ-1 | Attribute roles: Concentration → retention, Anticipation → projection, Vision → blind-pass use? Or another mapping (e.g. Decisions also affecting retention)? |
-| OQ-2 | `W_MIN`/`W_MAX` (0.5/2.0 s) and buffer length `H` (5 s): owner values or calibration targets? |
+| OQ-2 | `W_MIN`/`W_MAX` (0.5/2.0 s) are owner values or calibration targets? (`H` = 3.0 s is decided; it must stay ≥ `W_MAX`.) |
 | OQ-3 | Should a remembered target reappearing near its projected position get a shortened recognition latency? |
 | OQ-4 | Should pressure narrow the FoV for players **off** the ball (#7 §3.1.4)? The formula is borrowed from First Touch ball control. |
 | OQ-5 | Should team-level AI consume perception/memory instead of ground truth? |
@@ -237,4 +238,5 @@ Blast radius for P2–P4:
 
 | Version | Date | Change |
 |---|---|---|
+| v0.2 | October 15, 2026 | Owner decision: history buffer `H` reduced from 50 to 30 frames (5.0 → 3.0 s) to cut per-tick snapshot hashing. History size ≈ 22 KB → 13.2 KB per tick (+~63% → +~37% payload); estimated P3 snapshot cost ≈ 15–17 → ≈ 10 s/match (linear extrapolation, unmeasured). Constraint `H` ≥ `W_MAX` stated. |
 | v0.1 | October 15, 2026 | Created: owner decisions OD-1–OD-6 recorded; shared pass, history/memory, attribute scaling, snapshot impact, landing phases P1–P4 and open questions drafted. Not yet reviewed (`/advisor` pending). |
