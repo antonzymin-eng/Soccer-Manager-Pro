@@ -2759,7 +2759,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.196 | October 15, 2026 | — | W8 B six-policy live producer, canonical CONTACT/event/W5 lifecycle, schema v26 and composed coverage. Frozen A→B and governing Unity evidence pending. |
+| 2.196 | October 15, 2026 | — | W8 B six-policy live producer, canonical CONTACT/event/W5 lifecycle, schema v26 and composed coverage. Standalone #5 CONTACT fixtures now boot/reset EventBus and directly reference EventSystem; five broad-sweep failures repaired (95 passed / 12 skipped). Frozen A→B and governing Unity evidence pending. |
 | 2.195 | October 15, 2026 | — | PR #505 review fixes: third-window shared execution (`MatchEngine.cs` v2.05) and reservation-aware S0 choice lists (`S0ScreenPresenter.cs` v1.3), with failing-first locks; KD-8 restore-verification wording corrected. |
 | 2.194 | October 15, 2026 | — | Match Flow §6 deferred substitutions (PR #505): typed requests, restart execution with Law 3 windows, R1 keeper rule with fallback, dismissal/full-time cancellation, schema v25, match save format v3 off-tick overlay, internal-only `SubstitutePlayer`; thirteen §6.5 locks. |
 | 2.193 | October 13, 2026 | — | #40 T3b2 deterministic amounts, default-off config catalogue and atomic daily composition; new formula/count/save/retry/season locks. 572 selected supplementary Linux passes; governing host compile pending. |
