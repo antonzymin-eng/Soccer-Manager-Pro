@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-10-13 (W8 B: real engine Resolve consumption and restored feedback exactly once)
 // Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.15)
 // Modified: 2026-09-27 (W8 B/v24: harden mid-windup restore + add through-CONTACT deterministic continuation)
 // Modified: 2026-09-26 (W8 B/v24: goalkeeper-distribution mid-windup real writer/reader round-trip)
@@ -288,7 +289,16 @@ namespace TacticalDirector.MatchEngine
             SnapshotHeader header = a.CaptureDurableHeader();
             SnapshotPayload payload = a.CaptureDurablePayload();
 
-            const int continuationTicks = 3; // WINDUP -> CONTACT, CONTACT kick, terminal-pending idle.
+            const int continuationTicks = 3; // WINDUP -> CONTACT, CONTACT kick and Resolve feedback consumption.
+            int referenceFeedbackCount = 0;
+            GoalkeeperDistributionFeedback referenceFeedback = default;
+            a.TestOnly_W8BTerminalFeedbackObserver = (id, terminal, missing) =>
+            {
+                Assert.AreEqual(0, id);
+                Assert.IsFalse(missing);
+                referenceFeedback = terminal;
+                referenceFeedbackCount++;
+            };
             var reference = new List<byte[]>(continuationTicks);
             for (int i = 0; i < continuationTicks; i++)
             {
@@ -298,11 +308,22 @@ namespace TacticalDirector.MatchEngine
 
             PassExecutorState completed = a.TestOnly_PassExecutorState(0);
             Assert.AreEqual(0, completed.State, "Executor must be internally Idle after CONTACT.");
-            Assert.IsTrue(completed.GoalkeeperFeedbackPending,
-                "Completed CONTACT must retain terminal feedback until the host consumes it.");
-            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, completed.GoalkeeperFeedback.Kind);
+            Assert.IsFalse(completed.GoalkeeperFeedbackPending,
+                "The host must consume Completed in the CONTACT Resolve phase.");
+            Assert.AreEqual(0, completed.ExecutionMode, "Ordinary mode resumes only after terminal consumption.");
+            Assert.AreEqual(1, referenceFeedbackCount);
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, referenceFeedback.Kind);
 
             MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            int restoredFeedbackCount = 0;
+            GoalkeeperDistributionFeedback restoredFeedback = default;
+            c.TestOnly_W8BTerminalFeedbackObserver = (id, terminal, missing) =>
+            {
+                Assert.AreEqual(0, id);
+                Assert.IsFalse(missing);
+                restoredFeedback = terminal;
+                restoredFeedbackCount++;
+            };
             for (int i = 0; i < continuationTicks; i++)
             {
                 c.RunTick();
@@ -312,10 +333,13 @@ namespace TacticalDirector.MatchEngine
             }
 
             PassExecutorState restoredCompleted = c.TestOnly_PassExecutorState(0);
-            Assert.IsTrue(restoredCompleted.GoalkeeperFeedbackPending);
-            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, restoredCompleted.GoalkeeperFeedback.Kind);
-            Assert.AreEqual(completed.GoalkeeperFeedback.ContactFrame, restoredCompleted.GoalkeeperFeedback.ContactFrame);
-            Assert.AreEqual(completed.GoalkeeperFeedback.FinalVelocity, restoredCompleted.GoalkeeperFeedback.FinalVelocity);
+            Assert.IsFalse(restoredCompleted.GoalkeeperFeedbackPending);
+            Assert.AreEqual(0, restoredCompleted.ExecutionMode);
+            Assert.AreEqual(1, restoredFeedbackCount);
+            Assert.AreEqual(referenceFeedback.ContactFrame, restoredFeedback.ContactFrame);
+            Assert.AreEqual(referenceFeedback.FinalVelocity, restoredFeedback.FinalVelocity);
+            c.RunTick();
+            Assert.AreEqual(1, restoredFeedbackCount, "Restored terminal feedback must not replay.");
         }
 
         [Test]
@@ -724,5 +748,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
 // | 1.13    | 2026-09-26 | —      | W8 B/v24: real MatchEngine writer/reader round-trip saves a possessed keeper mid-distribution windup, restores non-default request/mode state, and continues an identical digest chain. |
 // | 1.14    | 2026-09-27 | —      | W8 B review hardening: mid-windup lock now asserts WINDUP + no pending feedback; second real save/restore case crosses CONTACT and proves completed terminal feedback plus post-kick digest continuation are identical. |
+// | 1.16    | 2026-10-13 | —      | Through-CONTACT restore now asserts Resolve consumes exactly one completion and clears executor mode on both branches. |
 // | 1.15    | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion
