@@ -124,6 +124,7 @@ namespace TacticalDirector.MatchEngine
                     {
                         Assert.Less(feedback.ContactFrame - claimFrame, 360, "ordinary voluntary CONTACT before inherited drop");
                         Assert.Greater(feedback.ContactFrame - claimFrame, 0);
+                        Assert.Less(feedback.ContactFrame, (claimFrame / 6 + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * 6, "CONTACT before earlier #11 guard");
                         Assert.AreEqual(0, _claimContacts[keeper], "one launch per hand claim");
                         _claimContacts[keeper]++;
                     }
@@ -158,9 +159,11 @@ namespace TacticalDirector.MatchEngine
                 _maxStationaryRun = Math.Max(_maxStationaryRun, _stationaryRun); _previousPosition = ball.Position;
                 if (_flight != null && (int)_engine.CurrentTick > _flight.Frame)
                 {
-                    if (ball.State == BallStateType.Bouncing || ball.Position.z <= BallPhysicsConstants.Ball.RADIUS)
+                    // Control can attach an intercepted ball to ground height in Resolve. Never
+                    // report that attachment as a physical landing; simultaneous contact is censored.
+                    if (_engine.PossessingAgentId >= 0) EndFlight("controlled-before-observed-ground");
+                    else if (ball.State == BallStateType.Bouncing || ball.Position.z <= BallPhysicsConstants.Ball.RADIUS)
                         EndFlight("first-ground-contact", ball.Position);
-                    else if (_engine.PossessingAgentId >= 0) EndFlight("controlled-before-ground");
                 }
                 for (int i = 0; i < _engine.TickLedgerCount; i++)
                 {
@@ -208,4 +211,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-10-15 | — | Frozen six-seed distribution census plus separately labelled LongKick landing fixtures. |
+// | 1.1 | 2026-10-15 | — | Conservative landing observation censors control attachment before testing height; assert both inherited boundaries. |
 #endregion

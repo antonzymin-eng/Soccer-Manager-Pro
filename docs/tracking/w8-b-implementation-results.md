@@ -49,6 +49,9 @@ For landing evidence, observe the first settled tick after CONTACT with `Bouncin
 height at/below the physical radius. Report its XY position, requested and actual radial distance,
 and signed radial shortfall (negative means overshoot). End earlier with an explicit reason if a
 kick, hand claim, restart or controlled acquisition intervenes; otherwise censor at the run end.
+A settled controlled acquisition is censored before testing ground height, so foot attachment is
+never invented as a physical landing. Simultaneous ground/acquisition may therefore be censored;
+this instrument does not claim sub-frame ground-contact resolution.
 A receiverless launch is a valid zone execution, with no receiver-completion denominator or ghost
 receiver latch. These observations describe the existing trajectory; they do not tune it or certify
 realistic punt length.
