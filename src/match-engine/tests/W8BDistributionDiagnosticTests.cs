@@ -61,7 +61,8 @@ namespace TacticalDirector.MatchEngine
 
         private sealed class Flight
         {
-            internal int Keeper, Frame;
+            internal int Keeper, Frame, TargetReceiver;
+            internal bool GroundObserved;
             internal Vector3 Source, Target;
             internal GkDistributionPolicy Policy;
         }
@@ -89,12 +90,27 @@ namespace TacticalDirector.MatchEngine
             private void Row(FormattableString row) => _report.AppendLine(FormattableString.Invariant(row));
             internal void Attach()
             {
+                int holder = _engine.PossessingAgentId;
+                if (holder >= 0 && _engine.TestOnly_IsGoalkeeper(holder)
+                    && _engine.TestOnly_GkState(_engine.TestOnly_W8TeamId(holder)) == GoalkeeperState.HandsOnBall)
+                {
+                    _claims[holder] = (int)_engine.CurrentTick;
+                    _claimContacts[holder] = 0;
+                }
                 _engine.TestOnly_W8StageAObserver = e =>
                 {
                     if (e.Kind == W8StageAKind.HandClaim)
                     {
-                        EndFlight("interrupted-by-hand-claim");
+                        EndFlight(_flight != null && e.Agent == _flight.Keeper
+                            ? "same-keeper-hand-reclaim" : "opponent-hand-claim", e.Agent);
                         _claims[e.Agent] = e.Frame; _claimContacts[e.Agent] = 0;
+                    }
+                    if (e.Kind == W8StageAKind.Acquire && _flight != null)
+                    {
+                        string outcome = _flight.TargetReceiver < 0 ? "zone-controlled"
+                            : e.Agent == _flight.TargetReceiver ? "receiver-controlled"
+                            : e.Agent == _flight.Keeper ? "same-keeper-feet-control" : "other-agent-controlled";
+                        EndFlight(outcome, e.Agent);
                     }
                     if (e.Kind == W8StageAKind.SixSecondDrop) _drops++;
                     if (e.Kind == W8StageAKind.KeeperDecision && e.Agent == _engine.PossessingAgentId
@@ -119,8 +135,9 @@ namespace TacticalDirector.MatchEngine
                     _lastContactKeeper = keeper; _lastContactFrame = feedback.ContactFrame;
                     GoalkeeperDistributionRequest request = _requests[keeper];
                     GkDistributionPolicy policy = _policies[keeper];
-                    _claims.TryGetValue(keeper, out int claimFrame);
-                    if (claimFrame > 0)
+                    bool observedClaim = _claims.TryGetValue(keeper, out int claimFrame);
+                    if (!observedClaim) claimFrame = -1;
+                    if (claimFrame >= 0)
                     {
                         Assert.Less(feedback.ContactFrame - claimFrame, 360, "ordinary voluntary CONTACT before inherited drop");
                         Assert.Greater(feedback.ContactFrame - claimFrame, 0);
@@ -161,9 +178,9 @@ namespace TacticalDirector.MatchEngine
                 {
                     // Control can attach an intercepted ball to ground height in Resolve. Never
                     // report that attachment as a physical landing; simultaneous contact is censored.
-                    if (_engine.PossessingAgentId >= 0) EndFlight("controlled-before-observed-ground");
-                    else if (ball.State == BallStateType.Bouncing || ball.Position.z <= BallPhysicsConstants.Ball.RADIUS)
-                        EndFlight("first-ground-contact", ball.Position);
+                    if (_engine.PossessingAgentId >= 0) EndFlight("controlled-before-observed-ground", _engine.PossessingAgentId);
+                    else if (!_flight.GroundObserved && (ball.State == BallStateType.Bouncing || ball.Position.z <= BallPhysicsConstants.Ball.RADIUS))
+                        RecordLanding("first-ground-contact", ball.Position);
                 }
                 for (int i = 0; i < _engine.TickLedgerCount; i++)
                 {
@@ -180,18 +197,27 @@ namespace TacticalDirector.MatchEngine
                     }
                 }
             }
-            private void EndFlight(string reason, Vector3? ground = null)
+            private void EndFlight(string reason, int controller = -1)
             {
                 if (_flight == null) return;
-                Flight f = _flight; _flight = null;
-                float intended = new Vector2(f.Target.x - f.Source.x, f.Target.y - f.Source.y).magnitude;
+                Flight f = _flight;
+                if (!f.GroundObserved) RecordLanding(reason);
+                Row($"passOutcome,{_seed},keeper={f.Keeper},policy={f.Policy},contactFrame={f.Frame},endFrame={_engine.CurrentTick},targetClass={(f.TargetReceiver < 0 ? "zone" : "receiver")},receiver={f.TargetReceiver},reason={reason},controller={controller}");
+                _flight = null;
+            }
+            private void RecordLanding(string reason, Vector3? ground = null)
+            {
+                Flight f = _flight;
+                if (f == null || f.GroundObserved) return;
+                f.GroundObserved = true;
+                float intended = new Vector2(f.Target.x-f.Source.x, f.Target.y-f.Source.y).magnitude;
                 if (ground.HasValue)
                 {
-                    Vector3 p = ground.Value;
-                    float actual = new Vector2(p.x - f.Source.x, p.y - f.Source.y).magnitude;
-                    Row($"landing,{_seed},keeper={f.Keeper},policy={f.Policy},contactFrame={f.Frame},endFrame={_engine.CurrentTick},reason={reason},requestedDistance={intended:R},actualDistance={actual:R},radialShortfall={intended - actual:R},groundX={p.x:R},groundY={p.y:R}");
+                    Vector3 point = ground.Value;
+                    float actual = new Vector2(point.x-f.Source.x, point.y-f.Source.y).magnitude;
+                    Row($"landing,{_seed},keeper={f.Keeper},policy={f.Policy},contactFrame={f.Frame},endFrame={_engine.CurrentTick},targetClass={(f.TargetReceiver < 0 ? "zone" : "receiver")},receiver={f.TargetReceiver},reason={reason},requestedDistance={intended:R},actualDistance={actual:R},radialShortfall={intended-actual:R},groundX={point.x:R},groundY={point.y:R}");
                 }
-                else Row($"landing,{_seed},keeper={f.Keeper},policy={f.Policy},contactFrame={f.Frame},endFrame={_engine.CurrentTick},reason={reason},requestedDistance={intended:R}");
+                else Row($"landing,{_seed},keeper={f.Keeper},policy={f.Policy},contactFrame={f.Frame},endFrame={_engine.CurrentTick},targetClass={(f.TargetReceiver < 0 ? "zone" : "receiver")},receiver={f.TargetReceiver},reason={reason},requestedDistance={intended:R}");
             }
             internal void Finish()
             {
@@ -212,4 +238,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-10-15 | — | Frozen six-seed distribution census plus separately labelled LongKick landing fixtures. |
 // | 1.1 | 2026-10-15 | — | Conservative landing observation censors control attachment before testing height; assert both inherited boundaries. |
+// | 1.2 | 2026-10-15 | — | Preserve receiver/zone outcomes beyond first landing and observed control identity; seed composed claim frame explicitly. |
 #endregion
