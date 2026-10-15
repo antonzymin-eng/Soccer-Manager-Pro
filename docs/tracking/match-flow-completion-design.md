@@ -1,7 +1,8 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
+> **Last Updated:** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
+> **Last Updated (prior):** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
 > maps all thirteen acceptance locks to their tests; schema v25 is taken; saves between ticks use match save
 > format v3. Prior entry below.)
 > **Last Updated (prior):** July 14, 2026 (**Implementation LANDED and a full code-adversarial-review pass
@@ -513,7 +514,7 @@ Engine locks are in `src/match-engine/tests/MatchEngineDeferredSubstitutionTests
 | 9 | Every lock-1, -4 and -7 test above that takes a team parameter runs for home and away |
 | 10 | `KeeperMismatchRefusedAndSentOffKeeperEnablesBenchKeeperFallback`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback` |
 | 11 | `FallbackKeeperImmediatelyBecomesGoalkeeperForElevenAndPositioning`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback`; `FallbackKeeperHeldByTheGateComesOnFreeAtHalfTime`; `FallbackKeeperIsRefusedWithoutASecondHalfWindowOrASubstitution` |
-| 12 | `ThreeUsedWindowsHoldNextFirstHalfRequest`; `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests`; `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests`; `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
+| 12 | `ThreeUsedWindowsHoldNextFirstHalfRequest`; `TwoRequestsAtTheThirdWindowBothExecuteThere`; `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`; `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests`; `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests`; `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
 | 13 | `SaveWithWindowsUsedAndARequestHeldContinuesIdentically` |
 
 `SubstitutePlayer` is kept as an `internal` test helper (§6.4). Within the engine only the pre-kickoff
@@ -712,3 +713,4 @@ project's established pattern for this environment.
 | 1.2 | 2026-10-12 | Pointer only: the §6 note now cites draft v0.3 (owner decisions recorded; revised text awaiting sign-off). §6 text and the code are unchanged. |
 | 1.3 | 2026-10-13 | §6 replaced by the approved deferred-substitution contract (`match-flow-s6-substitution-contract-draft.md` v0.3 decisions S-1, R1 with fallback (1), W1, E1, L1), per the owner's October 13 step-4 instruction: request/execution definitions, Law 3 windows, cancellation, events, client outcomes, v25 snapshot obligations and thirteen acceptance locks. Row added October 15 (omitted when the text landed on the PR #505 branch). |
 | 1.4 | 2026-10-15 | PR #505 implements §6. The §6 status sentence records the implementation; new §6.5.1 maps each lock to its test, including the locks completed October 15 (1, 2, 3, 4, 7, 8, 11, 13). `SubstitutePlayer` is internal (§6.4). Saves between ticks use match save format v3 (`match-save-file-design.md` KD-8). |
+| 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |

@@ -716,6 +716,58 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(3, restored.SubstitutionWindowsUsed(team), "half-time used no window");
         }
 
+        /// <summary>Lock 12 / lock 2 (PR #505 review): requests that share a stoppage share its window, so
+        /// two requests at a team's THIRD window both execute there. The first execution must not close
+        /// the gate on the second.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void TwoRequestsAtTheThirdWindowBothExecuteThere(int team)
+        {
+            MatchEngine e = Started();
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.IsTrue(Accept(e, team, 1 + i, i));
+                e.TestOnly_ApplyRestart(RestartSpot, team);
+            }
+            Assert.AreEqual(2, e.SubstitutionWindowsUsed(team), "precondition: one window left");
+
+            Assert.IsTrue(Accept(e, team, 3, 2));
+            Assert.IsTrue(Accept(e, team, 4, 3));
+            e.TestOnly_ApplyRestart(RestartSpot, team);
+            Assert.AreEqual(0, e.PendingSubstitutionCount, "both requests execute at the third window");
+            Assert.AreEqual(2, e.TestOnly_ActiveBenchSlot(Slot(team, 3)));
+            Assert.AreEqual(3, e.TestOnly_ActiveBenchSlot(Slot(team, 4)));
+            Assert.AreEqual(4, e.TestOnly_SubstitutionsUsed(team));
+            Assert.AreEqual(3, e.SubstitutionWindowsUsed(team), "one window for the shared stoppage");
+            Assert.AreEqual(0, e.SubstitutionWindowsUsed(1 - team));
+        }
+
+        /// <summary>The same at a real second-half restart: nothing may be left waiting for a window that
+        /// never comes, and only a later request is refused.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void SecondHalfThirdWindowExecutesEveryRequestQueuedForIt(int team)
+        {
+            MatchEngine e = Started();
+            ReachSecondHalf(e);
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.IsTrue(Accept(e, team, 1 + i, i));
+                e.TestOnly_ApplyRestart(RestartSpot, team);
+            }
+            Assert.IsTrue(Accept(e, team, 3, 2));
+            Assert.IsTrue(Accept(e, team, 4, 3));
+            e.TestOnly_SetBall(TacticalDirector.BallPhysics.BallState.CreateAtPosition(
+                new Vector3(52.5f, -0.5f, MatchEngineConstants.BALL_REST_HEIGHT_M)));
+            e.RunTick();
+            Assert.AreEqual(RestartCue.ThrowIn, e.RestartAppliedThisTick, "precondition: a real restart");
+            Assert.AreEqual(0, e.PendingSubstitutionCount, "nothing is stranded until full time");
+            Assert.AreEqual(4, e.TestOnly_SubstitutionsUsed(team));
+            Assert.AreEqual(3, e.SubstitutionWindowsUsed(team));
+            Assert.AreEqual(SubstitutionRequestStatus.NoWindowsLeft,
+                e.RequestSubstitution(team, Slot(team, 5), 4, SubstitutionReason.Tactical).Status);
+        }
+
         /// <summary>Lock 11: fallback (1) in the first half with no window left is accepted, the team
         /// plays without a keeper, and the keeper comes on free at the half-time kickoff.</summary>
         [TestCase(0)]
@@ -775,4 +827,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-10-13 | —      | Deferred substitution, mirror, restart and restore locks. |
 // | 1.1     | 2026-10-15 | —      | PR #505 Codex regression locks for reservations and malformed reasons. |
 // | 1.2     | 2026-10-15 | —      | §6.5 lock completion: open-play no-effect vs a control run and incoming-player taker (1); FIFO publication order at a real throw-in (2); LimitReached counting pending (3); dismissal cancels a gate-held request (4); stoppage-tick save via MatchSaveManager (7); execution and empty event buffer at throw-in, goal kickoff, foul and offside free kicks and the second-half kickoff (8); fallback held to half-time and its refusals (11); held-window save (13). Home/away mirrored. |
+// | 1.3     | 2026-10-15 | —      | PR #505 review: two requests at the third window both execute there (first half, via the restart seam) and at a real second-half throw-in, where nothing may be stranded and a later request is refused NoWindowsLeft. Home/away mirrored; both failed before the fix. |
 #endregion

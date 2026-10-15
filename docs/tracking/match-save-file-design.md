@@ -1,9 +1,13 @@
 # On-Disk Match Save File — Match Engine (Design Supplement)
 
 > **Created:** July 21, 2026
-> **Last Updated:** October 15, 2026 (v0.5 — **KD-8: off-tick overlay, format v3 (PR #505).** A save requested
+> **Last Updated:** October 15, 2026, later (v0.6 — **KD-8 correction (PR #505 review).** Restore does not
+> re-derive the committed snapshot digest: `RestoreFromSnapshot` adopts the stored digest through
+> `CommitLoadedDigest` without `ValidateCurrentDigest`. That gap predates v3; KD-8 now says so instead of
+> claiming the chain is verified. Prior v0.5 below.)
+> **Last Updated (prior):** October 15, 2026 (v0.5 — **KD-8: off-tick overlay, format v3 (PR #505).** A save requested
 > between ticks now writes the committed header and payload unchanged plus a separately SHA-256-checked
-> world-state overlay of the live engine; restore verifies the committed chain first, then applies the
+> world-state overlay of the live engine; restore loads the committed pair first, then applies the
 > overlay. `MATCH_SAVE_FORMAT_VERSION` 2 → 3; KD-1 stands, a v2 blob is refused. Prior v0.4 below.)
 > **Last Updated (prior):** August 22, 2026 (v0.4 — **`ERR-016-009`: the file now carries the #16 §2.3.2
 > `buildHash`.** New KD-7; §3 layout goes v2 (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one
@@ -273,7 +277,10 @@ PR #505 named a merge blocker. Silently dropping the command is not acceptable e
 
 **Decision.** Keep the committed header and payload byte-for-byte, and append the live world state as a
 separate overlay with its own SHA-256. `Restore` runs `RestoreFromSnapshot` on the committed pair, so
-the chain, build, fingerprint and schema gates run exactly as in v2. Then `ApplyPostSnapshotWorldState`
+the build, fingerprint and schema gates run exactly as in v2. `RestoreFromSnapshot` adopts the stored
+`CurrentSnapshotDigest` through `CommitLoadedDigest`; it does **not** re-derive it with
+`ValidateCurrentDigest` (only `ReplayEngine` does), so a payload edited together with a matching length
+would load. That gap predates v3 and v3 does not change it. Then `ApplyPostSnapshotWorldState`
 deserializes the overlay on top at the same tick, re-projects squads and keeper identities, and marks the
 engine dirty. The next tick commits a snapshot of the overlay state, chained from the saved digest, so a
 restored run matches an uninterrupted one tick for tick (`MatchSessionTests` paused substitution and
@@ -363,4 +370,5 @@ defect a per-method unit test would miss.
 | 0.2 | 2026-07-21 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: persist the boot `matchSeed` (the file was not self-sufficient without it — KD-2). M-2: serialize the `EnvironmentFingerprint` so the KD-6 gate runs through disk (KD-3). M-3: add the trailing-byte / length-bound fail-loud guards (KD-6). L-1: pin `MATCH_SAVE_FORMAT_VERSION` as a third distinct version (KD-1). L-2: pin the `ISquadProvider` as a Load parameter, not persisted (KD-4). |
 | 0.3 | 2026-07-21 | — | **Self-adversarial review AR-2: 0H + 0M + 1L — CONVERGENCE.** Fresh-eyes re-walk; boot-header/state split, gate order, and fingerprint round-trip verified sound with no change. L-1: clarified that `SaveManager` exposes no raw-blob atomic write, so the atomic steps are re-implemented (not delegated) in `MatchSaveManager` (KD-6). Cycle converged — ready to implement. |
 | 0.4 | 2026-08-22 | — | **`ERR-016-009` — the file carries the #16 §2.3.2 `buildHash`.** New **KD-7**; §3 layout goes **v2** (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. No presence flag and no absent case — `Encode` refuses a null/empty build hash and `Decode` refuses a blob carrying one, both sides, so the format cannot admit a save whose build identity is unknown. Sits beside the fingerprint rather than inside it: host identity and binary identity fail for unrelated reasons and carry distinct error codes. KD-1 unchanged (a v1 blob is refused, not migrated). `SNAPSHOT_SCHEMA_VERSION` untouched; no digest preimage sees the field, so no golden vector moves. |
-| 0.5 | 2026-10-15 | — | **KD-8 — off-tick overlay, format v3 (PR #505).** §3 layout appends `overlayLength`, then (when non-zero) the overlay SHA-256 and the overlay bytes after the payload. Committed header and payload unchanged; restore applies the overlay after the committed chain is verified. `MATCH_SAVE_FORMAT_VERSION` 2 → 3, KD-1 unchanged (no migration). |
+| 0.5 | 2026-10-15 | — | **KD-8 — off-tick overlay, format v3 (PR #505).** §3 layout appends `overlayLength`, then (when non-zero) the overlay SHA-256 and the overlay bytes after the payload. Committed header and payload unchanged; restore applies the overlay after the committed pair is loaded. `MATCH_SAVE_FORMAT_VERSION` 2 → 3, KD-1 unchanged (no migration). |
+| 0.6 | 2026-10-15 | — | **KD-8 correction (PR #505 review).** v0.5 said restore verifies the committed chain before the overlay. It does not: `RestoreFromSnapshot` adopts the stored digest via `CommitLoadedDigest` and never calls `ValidateCurrentDigest`. KD-8, the v0.5 header and the v0.5 row now state the pre-existing gap. No code or format change. |

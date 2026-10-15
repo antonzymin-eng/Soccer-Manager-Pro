@@ -1706,7 +1706,10 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < _subRequestCount;)
             {
                 int team = _subRequestTeam[i];
-                if (!freeWindow &&
+                int mask = 1 << team;
+                // A team already charged at this stoppage keeps executing here: every request
+                // executed at one stoppage shares its window (§6.1), including the third.
+                if (!freeWindow && (chargedTeams & mask) == 0 &&
                     _substitutionWindowsUsed[team] >= MatchEngineConstants.MAX_SUBSTITUTION_WINDOWS_PER_TEAM)
                 {
                     i++;
@@ -1726,7 +1729,6 @@ namespace TacticalDirector.MatchEngine
                 anyExecuted = true;
                 RemoveSubstitutionRequest(i);
 
-                int mask = 1 << team;
                 if (!freeWindow && (chargedTeams & mask) == 0)
                 {
                     _substitutionWindowsUsed[team]++;
@@ -11108,4 +11110,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.02    | 2026-10-15 | —      | PR #505 Codex: protect queued reservations from legacy swaps and reject undefined request reasons before mutation. |
 // | 2.03    | 2026-10-15 | —      | Match Flow §6 (approved October 13), recorded for PR #505: RequestSubstitution returns a typed SubstitutionRequestResult (rule refusals never throw) and queues a FIFO request (sequence, team, outSlot, bench, reason; capacity 2 × MAX_SUBSTITUTIONS_PER_TEAM). ApplyRestart executes the queue after ball placement and hand-episode teardown and before SelectRestartTaker: dismissal cancellations first, then the per-team Law 3 window gate (MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3; pre-kickoff and the second-half kickoff are free). R1 keeper-role rule with fallback (1); FirstGoalkeeperOnTeam skips sent-off keepers. Full time clears the queue. SNAPSHOT_SCHEMA_VERSION 24 → 25 serializes queue, next sequence and window counts. Off-tick saves: MatchSaveManager writes the committed snapshot plus a separate post-snapshot world-state overlay (MATCH_SAVE_FORMAT_VERSION 2 → 3); CaptureDurableHeader/Payload still refuse an un-ticked accepted request. Public read surface: PendingSubstitutionCount, GetPendingSubstitution, SubstitutionWindowsUsed. |
 // | 2.04    | 2026-10-15 | —      | §6.4: SubstitutePlayer is internal (test-only immediate swap; no production caller can reach it). New internal TestOnly_PendingSubstitutionEventCount seam for §6.5 lock 8. No runtime, schema, RNG or digest change. |
+// | 2.05    | 2026-10-15 | —      | PR #505 review (High): a team already charged a Law 3 window at this stoppage keeps executing there, so two requests on its third window both execute instead of the second waiting (in the second half, until full time). §6.1: requests executed at one stoppage share one window. No schema, RNG or digest-layout change. |
 #endregion

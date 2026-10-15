@@ -46,6 +46,11 @@ namespace TacticalDirector.ClientApp
         private readonly string[] _playerDescriptions = new string[MatchEngineConstants.SQUAD_SIZE];
         private readonly LiveAgentCue[] _lastCues = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
         private bool _hasChoices;
+        // Players reserved by pending requests when the choices were last built: outgoing roster
+        // slots in bits 0-31, bench indices from bit 32. Acceptance changes no roster cue, so the
+        // choice lists must also follow this set.
+        private long _reservedMask;
+        private LiveMatchFrame _choiceFrame;
         private int _scoreHome = -1, _scoreAway = -1, _minute = -1, _usedSubs = -1;
         /// <summary>The seven explicit supported choices; no enum ordinal arithmetic.</summary>
         public static ReadOnlyCollection<Mentality> Mentalities { get; } = Array.AsReadOnly(new[] { Mentality.VeryDefensive, Mentality.Defensive, Mentality.Cautious, Mentality.Balanced, Mentality.Positive, Mentality.Attacking, Mentality.VeryAttacking });
@@ -511,6 +516,8 @@ namespace TacticalDirector.ClientApp
                 {
                     _lastRequestRevision = _context.Changes.Revision;
                     UpdateFeedback();
+                    if (_hasChoices)
+                        UpdateChoices(in _choiceFrame);
                     UpdateAvailability();
                     Revision++;
                 }
@@ -564,7 +571,10 @@ namespace TacticalDirector.ClientApp
         public string PitchPlayerDescription(int agentId) => _playerDescriptions[agentId] ?? "";
         private bool UpdateChoices(in LiveMatchFrame frame)
         {
-            bool changed = !_hasChoices;
+            _choiceFrame = frame;
+            long reserved = ReservedMask();
+            bool changed = !_hasChoices || reserved != _reservedMask;
+            _reservedMask = reserved;
             for (int i = 0; i < frame.AgentCues.Length; i++)
             {
                 LiveAgentCue a = frame.AgentCues[i], b = _lastCues[i];
@@ -615,6 +625,18 @@ namespace TacticalDirector.ClientApp
             if (Dialog == DialogKind.Substitution && !PairIsCurrent())
                 CanSubmitSubstitution = false;
             return true;
+        }
+
+        private long ReservedMask()
+        {
+            long mask = 0;
+            for (int slot = 0; slot < _context.Identity.Roster.AgentCount && slot < 32; slot++)
+                if (PendingSlotReserved(slot))
+                    mask |= 1L << slot;
+            for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
+                if (PendingBenchReserved(b))
+                    mask |= 1L << (32 + b);
+            return mask;
         }
 
         /// <summary>Prevents duplicate selections from pending engine and client commands.</summary>
@@ -809,6 +831,8 @@ namespace TacticalDirector.ClientApp
         private void ResetMatch()
         {
             _hasChoices = false;
+            _reservedMask = 0;
+            _choiceFrame = default;
             _scoreHome = _scoreAway = _minute = _usedSubs = -1;
             Array.Clear(_markerText, 0, _markerText.Length);
             Array.Clear(_playerDescriptions, 0, _playerDescriptions.Length);
@@ -841,4 +865,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-08 | —      | Consumed localized screen state, owner availability, requests and analytics. |
 // | 1.1     | 2026-10-08 | —      | Poll changed command outcomes atomically; structural revision excludes ordinary frames. |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): outgoing, bench and cap selectors reserve players named by the frame pending queue and by in-flight commands, each counted once. Last-frame roster evidence settles executed orders before the end barrier marks the rest NotApplied. |
+// | 1.3     | 2026-10-15 | —      | PR #505 review (Medium): choice lists also rebuild when the set of players reserved by pending engine or client requests changes (bitmask), including on a request-state change without a new frame. An accepted request changes no roster cue, so a second dialog could offer the same outgoing or bench player. |
 #endregion
