@@ -27,6 +27,45 @@ namespace TacticalDirector.MatchEngine
         private static SubstitutionRequestResult Request(MatchEngine e, int slot, int bench) =>
             e.RequestSubstitution(0, slot, bench, SubstitutionReason.Tactical);
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void LegacySwapCannotInvalidateQueuedSlotBenchOrCapacity(int team)
+        {
+            MatchEngine e = Started();
+            int first = team * MatchEngineConstants.PLAYERS_PER_TEAM + 1;
+            Assert.IsTrue(e.RequestSubstitution(team, first, 0, SubstitutionReason.Tactical).IsAccepted);
+            Assert.Throws<InvalidOperationException>(() =>
+                e.SubstitutePlayer(team, first, 1, SubstitutionReason.Tactical));
+            Assert.Throws<InvalidOperationException>(() =>
+                e.SubstitutePlayer(team, first + 1, 0, SubstitutionReason.Tactical));
+            for (int i = 1; i < MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM; i++)
+                Assert.IsTrue(e.RequestSubstitution(team, first + i, i, SubstitutionReason.Tactical).IsAccepted);
+            Assert.Throws<InvalidOperationException>(() =>
+                e.SubstitutePlayer(team, first + 5, 5, SubstitutionReason.Tactical));
+            Assert.AreEqual(0, e.TestOnly_SubstitutionsUsed(team));
+            Assert.DoesNotThrow(() => e.TestOnly_ApplyRestart(RestartSpot, team));
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.AreEqual(MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM, e.TestOnly_SubstitutionsUsed(team));
+        }
+
+        [TestCase(2)]
+        [TestCase(256)]
+        [TestCase(-1)]
+        public void UndefinedReasonDoesNotChangeQueueSequenceOrSaveState(int reason)
+        {
+            MatchEngine e = Started();
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                e.RequestSubstitution(0, 1, 0, (SubstitutionReason)reason));
+            Assert.AreEqual(0, e.PendingSubstitutionCount);
+            Assert.DoesNotThrow(() => e.CaptureDurableHeader());
+            Assert.DoesNotThrow(() => e.CaptureDurablePayload());
+            var control = Started();
+            Assert.AreEqual(Request(control, 1, 0).Sequence, Request(e, 1, 0).Sequence);
+            e.RunTick();
+            Assert.DoesNotThrow(() => MatchEngine.RestoreFromSnapshot(
+                e.CaptureDurableHeader(), e.CaptureDurablePayload(), Seed));
+        }
+
         [Test]
         public void OpenPlayRequestChangesNoRosterStateUntilRestart()
         {
@@ -366,4 +405,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                  |
 // | 1.0     | 2026-10-13 | —      | Deferred substitution, mirror, restart and restore locks. |
+// | 1.1     | 2026-10-15 | —      | PR #505 Codex regression locks for reservations and malformed reasons. |
 #endregion

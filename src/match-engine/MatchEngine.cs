@@ -1611,6 +1611,9 @@ namespace TacticalDirector.MatchEngine
             if (benchIndex < 0 || benchIndex >= MatchEngineConstants.SUBSTITUTES_PER_TEAM)
                 throw new System.ArgumentOutOfRangeException(nameof(benchIndex));
 
+            if (reason != SubstitutionReason.Tactical && reason != SubstitutionReason.Injury)
+                throw new System.ArgumentOutOfRangeException(nameof(reason));
+
             if (_matchEnded)
                 return SubstitutionRequestResult.Refuse(SubstitutionRequestStatus.MatchEnded);
             if (_isSentOff[outSlotIndex])
@@ -1714,7 +1717,7 @@ namespace TacticalDirector.MatchEngine
                     if (_teamIds[s] == team && _activeBenchSlot[s] == bench)
                         throw new System.InvalidOperationException("Pending substitution bench invariant violated.");
                 }
-                SubstitutePlayer(team, outgoing, bench, (SubstitutionReason)_subRequestReason[i]);
+                ApplySubstitution(team, outgoing, bench, (SubstitutionReason)_subRequestReason[i]);
                 anyExecuted = true;
                 RemoveSubstitutionRequest(i);
 
@@ -1753,6 +1756,28 @@ namespace TacticalDirector.MatchEngine
         /// replacing a booked player would be sent off on their own first yellow).
         /// </summary>
         public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+        {
+            GuardTeamId(teamId);
+            if (reason != SubstitutionReason.Tactical && reason != SubstitutionReason.Injury)
+                throw new System.ArgumentOutOfRangeException(nameof(reason));
+
+            // Preserve accepted reservations when legacy integrations request an immediate swap.
+            int teamPending = 0;
+            for (int i = 0; i < _subRequestCount; i++)
+            {
+                if (_subRequestTeam[i] != teamId) continue;
+                teamPending++;
+                if (_subRequestOutSlot[i] == outSlotIndex || _subRequestBench[i] == benchIndex)
+                    throw new System.InvalidOperationException("SubstitutePlayer: slot or bench player is reserved by a pending request.");
+            }
+            if (_substitutionsUsed[teamId] + teamPending >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
+                throw new System.InvalidOperationException("SubstitutePlayer: remaining substitutions are reserved by pending requests.");
+
+            ApplySubstitution(teamId, outSlotIndex, benchIndex, reason);
+        }
+
+        /// <summary>Applies a validated request; only the deferred executor bypasses reservations.</summary>
+        private void ApplySubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
         {
             if (_matchEnded)
             {
@@ -10991,4 +11016,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.99    | 2026-10-12 | —      | PR #500 review: _prevTickBallPosition is the Resolve           |
 // |         |            |        | crossing-point input; Ball Physics owns the swept start.       |
 // |         |            |        | Comment only.                                                  |
+// | 2.00    | 2026-10-15 | —      | PR #505 Codex: protect queued reservations from legacy swaps and reject undefined request reasons before mutation. |
 #endregion
