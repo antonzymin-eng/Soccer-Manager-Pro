@@ -174,6 +174,12 @@ namespace TacticalDirector.MatchEngine
                 };
                 _engine.TestOnly_W8BTerminalFeedbackObserver = (keeper, feedback, missing) =>
                 {
+                    _requests.TryGetValue(keeper, out GoalkeeperDistributionRequest pending);
+                    _claims.TryGetValue(keeper, out int originalClaim);
+                    int terminalFrame = (int)_engine.CurrentTick;
+                    int requestFrame = feedback.Kind == GoalkeeperDistributionFeedbackKind.Rejected
+                        ? terminalFrame : pending.FrameNumber;
+                    Row($"terminal,{_seed},keeper={keeper},kind={feedback.Kind},frame={terminalFrame},requestFrame={requestFrame},claimFrame={originalClaim},commitToTerminal={terminalFrame-requestFrame},retained={_engine.PossessingAgentId == keeper},receiver={feedback.EffectiveTargetAgentId},missing={missing}");
                     if (feedback.Kind == GoalkeeperDistributionFeedbackKind.Rejected) { _rejected++; return; }
                     if (feedback.Kind == GoalkeeperDistributionFeedbackKind.Cancelled) { _cancelled++; _requests.Remove(keeper); return; }
                     _completed++; if (missing) _missing++;
@@ -268,7 +274,9 @@ namespace TacticalDirector.MatchEngine
             internal void Finish()
             {
                 EndFlight("censored-at-end");
-                Row($"bSummary,{_seed},commits={_commits},completed={_completed},cancelled={_cancelled},rejected={_rejected},events={_events},releases={_releases},w5Receiver={_w5Receiver},zones={_zones},missing={_missing},drops={_drops},dtRaces={_dtRaces},maxOutOfPlayRun={_maxOutOfPlayRun},maxStationaryRun={_maxStationaryRun},fouls={_fouls},yellows={_yellows},reds={_reds},secondYellows={_secondYellows},digest={BitConverter.ToString(_engine.CurrentSnapshotDigest).Replace("-", "").ToLowerInvariant()}");
+                foreach (var entry in _requests)
+                    Row($"pending,{_seed},keeper={entry.Key},requestFrame={entry.Value.FrameNumber},endFrame={_engine.CurrentTick},reason=censored-before-terminal");
+                Row($"bSummary,{_seed},commits={_commits},pending={_requests.Count},completed={_completed},cancelled={_cancelled},rejected={_rejected},events={_events},releases={_releases},w5Receiver={_w5Receiver},zones={_zones},missing={_missing},drops={_drops},dtRaces={_dtRaces},maxOutOfPlayRun={_maxOutOfPlayRun},maxStationaryRun={_maxStationaryRun},fouls={_fouls},yellows={_yellows},reds={_reds},secondYellows={_secondYellows},digest={BitConverter.ToString(_engine.CurrentSnapshotDigest).Replace("-", "").ToLowerInvariant()}");
                 Assert.AreEqual(_completed, _events, "executed event requires one canonical CONTACT");
                 Assert.AreEqual(_completed, _releases, "one canonical release per CONTACT");
                 Assert.AreEqual(0, _drops); Assert.AreEqual(0, _dtRaces);
@@ -285,4 +293,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0 | 2026-10-15 | — | Frozen six-seed distribution census plus separately labelled LongKick landing fixtures. |
 // | 1.1 | 2026-10-15 | — | Conservative landing observation censors control attachment before testing height; assert both inherited boundaries. |
 // | 1.2 | 2026-10-15 | — | Preserve receiver/zone outcomes beyond first landing and observed control identity; seed composed claim frame explicitly. |
+// | 1.3 | 2026-10-15 | — | Raw rejection/cancellation/completion timing and retained-possession status; explicit pending-at-end censor rows; four identity/neutrality locks. |
 #endregion
