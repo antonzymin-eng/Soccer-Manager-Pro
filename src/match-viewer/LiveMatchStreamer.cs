@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
 //           held in a single RestartBanner after AR-1 M-6)
@@ -378,6 +379,15 @@ namespace TacticalDirector.MatchViewer
                     restartThisTick, _engine.RestartAwardedTeam, _engine.CurrentTick);
             }
 
+            // The queue is part of v25's authoritative state. Copy it once under
+            // _tickGate with the rest of the captured frame, never expose mutable engine arrays.
+            int requestCount = _engine.PendingSubstitutionCount;
+            PendingSubstitution[] pending = requestCount == 0
+                ? System.Array.Empty<PendingSubstitution>()
+                : new PendingSubstitution[requestCount];
+            for (int i = 0; i < pending.Length; i++)
+                pending[i] = _engine.GetPendingSubstitution(i);
+
             return new LiveMatchFrame(
                 _engine.CurrentTick,
                 _engine.BallView.Position,
@@ -388,7 +398,8 @@ namespace TacticalDirector.MatchViewer
                 new Scoreline(_engine.HomeScore, _engine.AwayScore),
                 _engine.MatchEnded,
                 _engine.CurrentPeriod,
-                _lastRestart);
+                _lastRestart,
+                pending);
         }
 
         /// <summary>
@@ -645,4 +656,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | would have silently diverged from a streamer constructed with  |
 // |         |            |        | a non-default ticksPerSecond.                                  |
 // | 1.9     | 2026-10-06 | —      | Capture identity with position/cues under the existing tick gate. |
+// | 1.10    | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): copies the engine pending queue into each captured frame under the tick gate; never exposes engine arrays. |
 #endregion

@@ -37,6 +37,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-matchengine-editmode-20261011": ("manifest", FULL_MANIFEST),
     "inposs-platform-divergence-20261011": ("manifest", FULL_MANIFEST),
     "goal-frame-state-ordering-20261012": ("manifest", FULL_MANIFEST),
+    "finance-t3b2-20261013": ("manifest", FULL_MANIFEST),
     "pre-b-anchor-3974b78-20261013": ("manifest", FULL_MANIFEST),
 }
 

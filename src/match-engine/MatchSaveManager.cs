@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchSaveManager.cs
 // Created:  2026-07-21
-// Modified: 2026-07-22
+// Modified: 2026-10-15 (Match save format v3 overlay)
+// Modified (prior): 2026-07-22
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §4 / KD-5 / KD-6;
 //           Unified season save file (docs/tracking/unified-season-save-design.md) KD-5 (public blob API);
@@ -51,9 +52,13 @@ namespace TacticalDirector.MatchEngine
             {
                 throw new ArgumentNullException(nameof(engine));
             }
-            SnapshotHeader  header  = engine.CaptureDurableHeader();
-            SnapshotPayload payload = engine.CaptureDurablePayload();
-            return MatchSaveCodec.Encode(engine.MatchSeed, header, payload);
+            // Preserve the exact committed header/digest chain and append an independently
+            // verified live-state overlay. Manager commands can be drained by ServiceOnce()
+            // between ticks without changing the previous tick's certified digest.
+            SnapshotHeader header = engine.CaptureCommittedSnapshotHeader();
+            SnapshotPayload payload = engine.CaptureCommittedSnapshotPayload();
+            SnapshotPayload overlay = engine.CapturePostSnapshotWorldState();
+            return MatchSaveCodec.Encode(engine.MatchSeed, header, payload, overlay);
         }
 
         /// <summary>
@@ -68,8 +73,11 @@ namespace TacticalDirector.MatchEngine
         public static MatchEngine Restore(byte[] blob, ISquadProvider squads = null)
         {
             MatchSaveContents contents = MatchSaveCodec.Decode(blob);
-            return MatchEngine.RestoreFromSnapshot(
+            MatchEngine engine = MatchEngine.RestoreFromSnapshot(
                 contents.Header, contents.Payload, contents.MatchSeed, squads);
+            if (contents.PostSnapshotPayload != null)
+                engine.ApplyPostSnapshotWorldState(contents.PostSnapshotPayload, squads);
+            return engine;
         }
 
         /// <summary>
@@ -172,4 +180,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | order in Save (the v1.1 delegation had flipped it — a both-    |
 // |         |            |        | invalid call must throw ArgumentNullException, not Argument-   |
 // |         |            |        | Exception), keeping the refactor exactly behaviour-identical.  |
+// | 1.3     | 2026-10-15 | —      | Format v3 (PR #505): Encode writes the committed header and payload plus the live post-snapshot world-state overlay, so an off-tick save (paused, or after a drained command) no longer throws. Restore applies the overlay after RestoreFromSnapshot without changing the committed digest. |
 #endregion

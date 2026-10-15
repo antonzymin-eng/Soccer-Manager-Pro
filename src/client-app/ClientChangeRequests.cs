@@ -1,6 +1,7 @@
 // File:     src/client-app/ClientChangeRequests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6: pending until roster evidence)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 journey §14.5, Code Standards #20
 // Purpose:  Consume only new exact-payload suffixes; serialize one Pending request per kind on the client thread.
@@ -11,6 +12,8 @@ using System.Collections.ObjectModel;
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
+using TacticalDirector.MatchViewer;
+using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.ClientApp
 {
@@ -30,7 +33,8 @@ namespace TacticalDirector.ClientApp
         public Mentality CurrentMentality => _currentTactic.Mentality;
         /// <summary>Whether another Mentality request must wait.</summary>
         public bool IsMentalityPending => _mentalityPending != null;
-        /// <summary>Whether another substitution request must wait.</summary>
+        /// <summary>Whether an outgoing substitution order is awaiting its command-channel receipt.
+        /// Accepted orders stay in Records until execution, but do not block another order.</summary>
         public bool IsSubstitutionPending => _substitutionPending != null;
         /// <summary>Changes only on registration or new outcome evidence.</summary>
         public int Revision { get; private set; }
@@ -86,8 +90,15 @@ namespace TacticalDirector.ClientApp
             _completed = true;
             if (_mentalityPending != null)
                 Settle(_mentalityPending, ClientChangeStatus.NotApplied, 0);
-            if (_substitutionPending != null)
-                Settle(_substitutionPending, ClientChangeStatus.NotApplied, 0);
+            // Both accepted-but-not-executed and in-flight requests must be settled.
+            // Only the latter occupies _substitutionPending; neither can survive full time.
+            for (int i = 0; i < _records.Count; i++)
+            {
+                ClientChangeRecord row = _records[i];
+                if (row.Status == ClientChangeStatus.Pending &&
+                    row.Command.Kind == ManagerCommandKind.Substitute)
+                    Settle(row, ClientChangeStatus.NotApplied, 0);
+            }
         }
 
         private void Consume(TickStampedCommand evidence, ClientChangeStatus status)
@@ -100,7 +111,59 @@ namespace TacticalDirector.ClientApp
                 throw new InvalidOperationException("Foreign or unmatched home command evidence.");
             if (status == ClientChangeStatus.Applied && command.Kind == ManagerCommandKind.SetTeamTactic)
                 _currentTactic = command.NewTeamTactic;
+            if (status == ClientChangeStatus.Applied && command.Kind == ManagerCommandKind.Substitute)
+            {
+                // The driver proves request acceptance, not a roster replacement.
+                pending.EngineAccepted = true;
+                pending.AcceptedTick = evidence.AppliedTick;
+                // One at a time on the outbound command channel, *not* one per
+                // stoppage: additional accepted requests may share the same window.
+                _substitutionPending = null;
+                Revision++;
+                return;
+            }
             Settle(pending, status, evidence.AppliedTick);
+        }
+
+        /// <summary>
+        /// Settles a previously accepted substitution from authoritative roster cues.
+        /// Never predicts execution from request acceptance or a restart banner alone.
+        /// </summary>
+        internal void ObserveFrame(in LiveMatchFrame frame)
+        {
+            // A previous accepted request must not block later requests for the same
+            // stoppage. Reconcile every unfinished accepted record, in submission order.
+            for (int i = 0; i < _records.Count; i++)
+            {
+                ClientChangeRecord pending = _records[i];
+                if (pending.Command.Kind != ManagerCommandKind.Substitute ||
+                    pending.Status != ClientChangeStatus.Pending ||
+                    !pending.EngineAccepted ||
+                    frame.Tick <= pending.AcceptedTick)
+                    continue;
+
+                LiveAgentCue cue = frame.AgentCues[pending.Command.OutSlotIndex];
+                if (cue.BenchSlot == pending.Command.BenchIndex)
+                    Settle(pending, ClientChangeStatus.Applied, frame.Tick);
+                else if (cue.IsSentOff || WasRemovedFromAuthoritativeQueue(in frame, pending))
+                    Settle(pending, ClientChangeStatus.NotApplied, frame.Tick);
+            }
+        }
+
+        private static bool WasRemovedFromAuthoritativeQueue(
+            in LiveMatchFrame frame, ClientChangeRecord row)
+        {
+            PendingSubstitution[] requests = frame.PendingSubstitutions;
+            if (requests == null)
+                return false; // Older snapshots do not carry a queue; do not infer cancellation.
+            for (int i = 0; i < requests.Length; i++)
+            {
+                if (requests[i].Team == row.Command.TeamId &&
+                    requests[i].OutSlot == row.Command.OutSlotIndex &&
+                    requests[i].Bench == row.Command.BenchIndex)
+                    return false;
+            }
+            return true;
         }
 
         private void Settle(ClientChangeRecord row, ClientChangeStatus status, ulong tick)
@@ -125,4 +188,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Exact suffix reconciliation, duplicate-kind guard and end settlement. |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution stays Pending until a captured roster cue proves execution or the authoritative pending queue proves cancellation (ObserveFrame). Only the in-flight command occupies the outbound slot, so several accepted orders can wait for one stoppage. Full time settles every unexecuted order as NotApplied. |
 #endregion

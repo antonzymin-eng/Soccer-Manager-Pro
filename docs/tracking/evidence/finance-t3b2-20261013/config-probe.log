@@ -1,0 +1,12 @@
+default
+PASS gate=False total=0
+enabled
+PASS gate=True total=75360
+tuned
+PASS gate=True total=107108
+negative-off
+PASS gate=False total=0
+negative-on
+PASS invalid config refused: Revenue amounts must be non-negative and fill endpoints must satisfy 0 <= bottom <= top <= 1000.
+bad-fill
+PASS invalid config refused: Revenue amounts must be non-negative and fill endpoints must satisfy 0 <= bottom <= top <= 1000.

@@ -1,0 +1,48 @@
+from pathlib import Path
+import subprocess, xml.etree.ElementTree as ET, json, sys, os
+repo=Path(os.environ['TD_REPO']).resolve()
+out=Path(os.environ['TD_VALIDATION_OUT']).resolve()
+out.mkdir(parents=True, exist_ok=True)
+sdk=Path(os.environ['TD_DOTNET_ROOT']).resolve()
+csc=[str(sdk/'dotnet'),str(sdk/'sdk/8.0.422/Roslyn/bincore/csc.dll')]
+nsrefs=list((sdk/'packs/NETStandard.Library.Ref/2.1.0/ref/netstandard2.1').glob('*.dll'))
+netrefs=list((sdk/'packs/Microsoft.NETCore.App.Ref/8.0.28/ref/net8.0').glob('*.dll'))
+built={}
+graph={}
+def closure(p):
+    result=[]
+    for child in graph[p]: result.extend([built[child]]+closure(child))
+    return list(dict.fromkeys(result))
+def build(p):
+    p=p.resolve()
+    if p in built: return built[p]
+    tree=ET.parse(p).getroot()
+    name=tree.findtext('.//AssemblyName')
+    test=tree.findtext('.//TargetFramework')=='net8.0'
+    graph[p]=[(p.parent/item.attrib['Include']).resolve() for item in tree.findall('.//ProjectReference')]
+    for child in graph[p]: build(child)
+    sources=set()
+    includes=tree.findall('.//Compile[@Include]')
+    if not includes: sources.update(p.parent.glob('*.cs'))
+    for item in includes: sources.update(p.parent.glob(item.attrib['Include']))
+    for item in tree.findall('.//Compile[@Remove]'):
+        pattern=item.attrib['Remove'].split('/')[0]
+        sources={s for s in sources if pattern not in s.relative_to(p.parent).parts}
+    sources={s.resolve() for s in sources if not any(part in ('bin','obj') for part in s.relative_to(p.parent).parts)}
+    refs=list(netrefs if test else nsrefs)+closure(p)
+    if any(item.attrib.get('Include')=='NUnit' for item in tree.findall('.//PackageReference')): refs.append(out/'nunit.framework.dll')
+    # Unsafe is supplied by the existing package archive when needed.
+    unsafe=Path(os.environ.get('TD_UNSAFE_REF', '/nonexistent-unsafe-reference'))
+    if unsafe.exists(): refs.append(unsafe)
+    args=['-nologo','-langversion:9.0','-target:library','-deterministic','-define:DEVELOPMENT_BUILD','-out:'+str(out/(name+'.dll'))]
+    args+=['-r:'+str(r) for r in dict.fromkeys(refs)]+[str(s) for s in sorted(sources)]
+    rsp=out/(name+'.rsp'); rsp.write_text('\n'.join(args))
+    result=subprocess.run(csc+['@'+str(rsp)],capture_output=True,text=True)
+    print(name, result.returncode,flush=True)
+    if result.stdout: print(result.stdout,flush=True)
+    if result.stderr: print(result.stderr,flush=True)
+    if result.returncode: sys.exit(result.returncode)
+    built[p]=out/(name+'.dll')
+    return built[p]
+for folder in ['club-finances','season-save']:
+    build(next((repo/'src'/folder/'tests').glob('*.gen.csproj')))

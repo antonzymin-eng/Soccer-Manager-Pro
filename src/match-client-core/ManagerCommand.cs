@@ -1,6 +1,7 @@
 // File:     src/match-client-core/ManagerCommand.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-15 (Match Flow §6.4: Apply reports acceptance)
+// Modified (prior): 2026-07-24
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6),
 //           Code Standards #20
@@ -83,7 +84,7 @@ namespace TacticalDirector.MatchClientCore
         /// Applies this command onto <paramref name="mutations"/> via the single live mutator its
         /// <see cref="Kind"/> selects. Called on the sim thread by the driver's drain.
         /// </summary>
-        public void Apply(ILiveMatchMutations mutations)
+        public bool Apply(ILiveMatchMutations mutations)
         {
             if (mutations == null) { throw new ArgumentNullException(nameof(mutations)); }
             switch (Kind)
@@ -98,17 +99,16 @@ namespace TacticalDirector.MatchClientCore
                 {
                     TeamTactic tactic = NewTeamTactic;
                     mutations.SetTeamTactic(TeamId, in tactic);
-                    break;
+                    return true;
                 }
                 case ManagerCommandKind.SetPlayerTactic:
                 {
                     PlayerTactic tactic = NewPlayerTactic;
                     mutations.SetPlayerTactic(AgentId, in tactic);
-                    break;
+                    return true;
                 }
                 case ManagerCommandKind.Substitute:
-                    mutations.SubstitutePlayer(TeamId, OutSlotIndex, BenchIndex, Reason);
-                    break;
+                    return mutations.RequestSubstitution(TeamId, OutSlotIndex, BenchIndex, Reason).IsAccepted;
                 default:
                     throw new InvalidOperationException("Unknown ManagerCommandKind: " + ((int)Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
@@ -122,4 +122,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | one factory + Apply path per live mutator.                     |
 // | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: Apply fails loud on the None (default) kind   |
 // |         |            |        | instead of falling through to a malformed mutator payload.     |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6.4: Apply returns bool; a Substitute command reports whether the engine accepted the request (rule refusals are typed results, not exceptions). |
 #endregion

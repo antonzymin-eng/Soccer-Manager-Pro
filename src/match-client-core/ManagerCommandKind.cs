@@ -1,6 +1,7 @@
 // File:     src/match-client-core/ManagerCommandKind.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-15 (Match Flow §6.4: Substitute routes to RequestSubstitution; doc only)
+// Modified (prior): 2026-07-24
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6.4),
 //           Code Standards #20
@@ -37,7 +38,8 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>Stage a per-agent tactic change (→ <c>SetPlayerTactic</c>).</summary>
         SetPlayerTactic = 2,
 
-        /// <summary>Swap a bench player onto the pitch (→ <c>SubstitutePlayer</c>).</summary>
+        /// <summary>Request a substitution (→ <c>RequestSubstitution</c>); the engine executes it at the next
+        /// eligible stoppage (Match Flow §6).</summary>
         Substitute = 3,
     }
 }
@@ -49,4 +51,6 @@ namespace TacticalDirector.MatchClientCore
 // | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: added the None=0 zero-value sentinel (game    |
 // |         |            |        | kinds shifted to 1/2/3) so a default(ManagerCommand) fails      |
 // |         |            |        | loud instead of silently staging a malformed team tactic.      |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6.4: Substitute doc names RequestSubstitution and  |
+// |         |            |        | deferred execution. Doc only; ordinals unchanged.              |
 #endregion

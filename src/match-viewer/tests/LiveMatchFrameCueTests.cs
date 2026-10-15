@@ -1,6 +1,7 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy lock)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
@@ -91,6 +92,30 @@ namespace TacticalDirector.MatchViewer.Tests
                 Assert.IsTrue(streamer.IsGoalkeeper(keeperSlot),
                     "team " + team + ": the boot accessor is documented as boot-time and is expected to be stale here");
             }
+        }
+
+        [Test]
+        public void CapturedFrame_CopiesPendingRequestsAndSequenceIdentity()
+        {
+            var engine = new MatchEngine.MatchEngine(Seed);
+            var streamer = new LiveMatchStreamer(engine);
+            LiveMatchFrame before = streamer.TickOnce();
+            Assert.IsNotNull(before.PendingSubstitutions);
+            Assert.AreEqual(0, before.PendingSubstitutions.Length);
+
+            SubstitutionRequestResult accepted = engine.RequestSubstitution(
+                0, 1, 0, SubstitutionReason.Tactical);
+            Assert.IsTrue(accepted.IsAccepted);
+            LiveMatchFrame after = streamer.TickOnce();
+            Assert.AreEqual(1, after.PendingSubstitutions.Length);
+            Assert.AreEqual(accepted.Sequence, after.PendingSubstitutions[0].Sequence);
+            Assert.AreEqual(0, after.PendingSubstitutions[0].Team);
+            Assert.AreEqual(1, after.PendingSubstitutions[0].OutSlot);
+            Assert.AreEqual(0, after.PendingSubstitutions[0].Bench);
+            Assert.AreEqual(-1, after.AgentCues[1].BenchSlot,
+                "A captured pending request does not replace the player before restart.");
+            Assert.AreEqual(0, before.PendingSubstitutions.Length,
+                "Previously published frames must not alias a later queue.");
         }
 
         [Test]
@@ -203,4 +228,5 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | boot-time accessor goes stale — run for both teams.             |
 // | 1.3     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
 // | 1.4     | 2026-10-06 | —      | Positional cue test asserts a distinct PlayerId. |
+// | 1.5     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): captured frames copy pending requests and their sequence identities. The keeper-cue lock keeps the immediate swap, now an internal engine helper reached through the match-engine test friend. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/ui-framework/MatchFrameView.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart —
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue)
+// Modified (prior): 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart —
 //           the last two as Scoreline / RestartBanner carriers after AR-1 M-6)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4),
@@ -75,6 +76,7 @@ namespace TacticalDirector.UiFramework
         private readonly ReadOnlyCollection<Vector2> _agentPositions;
         private readonly ReadOnlyCollection<LiveAgentCue> _agentCues;
         private readonly ReadOnlyCollection<int> _substitutionsUsed;
+        private readonly ReadOnlyCollection<PendingSubstitution> _pendingSubstitutions;
 
         /// <summary>
         /// Agent positions (x, y) in metres, indexed by roster index. Read-only over this view's own
@@ -93,6 +95,13 @@ namespace TacticalDirector.UiFramework
         /// <summary>Substitutions used, indexed by team id. Empty on an empty view.</summary>
         public IReadOnlyList<int> SubstitutionsUsed =>
             _substitutionsUsed ?? EmptySubs;
+
+        /// <summary>Copied immutable pending substitution queue (v25, S0).</summary>
+        public IReadOnlyList<PendingSubstitution> PendingSubstitutions =>
+            _pendingSubstitutions ?? EmptyPending;
+
+        private static readonly ReadOnlyCollection<PendingSubstitution> EmptyPending =
+            new ReadOnlyCollection<PendingSubstitution>(Array.Empty<PendingSubstitution>());
 
         private static readonly ReadOnlyCollection<Vector2> EmptyPositions =
             new ReadOnlyCollection<Vector2>(new Vector2[0]);
@@ -193,6 +202,11 @@ namespace TacticalDirector.UiFramework
             _agentPositions    = new ReadOnlyCollection<Vector2>(copy);
             _agentCues         = new ReadOnlyCollection<LiveAgentCue>(cueCopy);
             _substitutionsUsed = new ReadOnlyCollection<int>(subsCopy);
+            PendingSubstitution[] requests = frame.PendingSubstitutions;
+            var requestCopy = new PendingSubstitution[requests == null ? 0 : requests.Length];
+            if (requests != null)
+                Array.Copy(requests, requestCopy, requests.Length);
+            _pendingSubstitutions = new ReadOnlyCollection<PendingSubstitution>(requestCopy);
         }
 
         // Non-finite covers NaN AND ±Infinity: a NaN-only gate passes an infinity straight through to a
@@ -229,4 +243,5 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | hence default(RestartBanner), which derives its team and tick   |
 // |         |            |        | from its own cue and so reports NO_RESTART_TEAM / 0 rather     |
 // |         |            |        | than the "home team, tick 0" the v1.1 loose fields gave.        |
+// | 1.3     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): read-only PendingSubstitutions copied from the frame (empty when absent). |
 #endregion

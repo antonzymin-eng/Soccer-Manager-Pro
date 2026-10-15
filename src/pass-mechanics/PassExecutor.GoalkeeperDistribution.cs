@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.GoalkeeperDistribution.cs
 // Created:  2026-09-26
+// Modified: 2026-10-13 (W8 B follow-up: expose original retained request read-only for host F-05)
 // Modified: 2026-09-28 (W8 B review — reject non-keeper / wrong-team requests at INITIATING)
 // Author:   —
 // Spec:     Pass Mechanics #5 §2.4.4, §3.8.13; Goalkeeper Mechanics #11 §3.8
@@ -25,6 +26,14 @@ namespace TacticalDirector.PassMechanics
         private Vector3 _goalkeeperEffectiveTargetPosition;
         private GoalkeeperDistributionFeedback _goalkeeperFeedback;
         private bool _goalkeeperFeedbackPending;
+
+        /// <summary>True while #5 retains terminal feedback not yet consumed by the host.</summary>
+        public bool HasPendingGoalkeeperDistributionFeedback => _goalkeeperFeedbackPending;
+
+        /// <summary>Original v24-serialized #5 request for a pending terminal. The host must
+        /// check <see cref="HasPendingGoalkeeperDistributionFeedback"/> before reading this;
+        /// CONTACT-time F-05 compares this original target with the effective terminal target.</summary>
+        public GoalkeeperDistributionRequest PendingGoalkeeperDistributionRequest => _goalkeeperRequest;
 
         /// <summary>True while an accepted goalkeeper-distribution request is in WINDUP or CONTACT.</summary>
         public bool IsGoalkeeperDistributionInFlight =>
@@ -298,5 +307,6 @@ namespace TacticalDirector.PassMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes |
+// | 1.1     | 2026-10-13 | —      | Read-only pending-feedback and original-request accessors for exactly-once host handoff. |
 // | 1.0     | 2026-09-26 | —      | W8 B dormant dedicated executor mode: exact windup, CONTACT receiver revalidation/fallback, #5 profile/error reuse, kick application, and retained typed terminal feedback. |
 #endregion

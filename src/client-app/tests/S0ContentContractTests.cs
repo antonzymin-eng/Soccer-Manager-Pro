@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/S0ContentContractTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6.2.6 copy pin)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 binding contracts §§4.2–4.3, Code Standards #20
 // Purpose:  Lock every compiled S0 base pattern to the approved binding-contract register.
@@ -50,7 +51,7 @@ namespace TacticalDirector.ClientApp.Tests
         {
             // The truncation defect cut these sentences at an internal semicolon.
             Dictionary<string, string> contract = ReadContract();
-            StringAssert.EndsWith("; it does not wait for a stoppage.", contract["context.substitution"]);
+            StringAssert.EndsWith("; with no windows left in the first half, it waits for half-time.", contract["context.substitution"]);
             StringAssert.EndsWith("; Away A attacks left. Goals, penalty areas and ball shown.", contract["pitch.description"]);
             StringAssert.EndsWith("; the two teams need not total 100%.", contract["statistics.loose_ball"]);
             Assert.AreEqual("Least risk in on-ball choices; deepest defensive line.", contract["effect.very_defensive"]);
@@ -121,4 +122,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Verbatim 141-role contract parity, including semicolon-bearing sentences that were previously truncated. |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution pin updated to the deferred, half-time-aware wording. |
 #endregion

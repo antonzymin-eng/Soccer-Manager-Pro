@@ -1,6 +1,7 @@
 // File:     src/client-app/ClientChangeRecord.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6: accepted is not executed)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 journey §14.5, binding contracts §2.3, Code Standards #20
 // Purpose:  Session-local request identity and persistent outcome without prediction or inferred refusal reasons.
@@ -22,6 +23,8 @@ namespace TacticalDirector.ClientApp
         public ClientChangeStatus Status { get; internal set; }
         /// <summary>Driver-stamped outcome tick; meaningful only for Applied/Refused.</summary>
         public ulong OutcomeTick { get; internal set; }
+        internal bool EngineAccepted { get; set; }
+        internal ulong AcceptedTick { get; set; }
 
         internal ClientChangeRecord(in ManagerCommand command, in MatchPlayerIdentity outgoing, in MatchPlayerIdentity incoming)
         {
@@ -50,4 +53,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Captured payload/identity and persistent request status. |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6 (PR #505): internal EngineAccepted / AcceptedTick, so an accepted substitution stays Pending until roster evidence shows it executed. |
 #endregion
