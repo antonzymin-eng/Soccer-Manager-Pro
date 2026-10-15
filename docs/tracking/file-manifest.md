@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026, later — **Perception design v0.2 (buffer 3 s).** No path added or removed. **Modified:** `docs/tracking/perception-shared-pass-design.md` v0.1 → v0.2, `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** October 15, 2026, latest — **Perception design v0.3.** No path added or removed. **Modified:** `docs/tracking/perception-shared-pass-design.md` v0.2 → v0.3, `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** October 15, 2026, later — **Perception design v0.2 (buffer 3 s).** No path added or removed. **Modified:** `docs/tracking/perception-shared-pass-design.md` v0.1 → v0.2, `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** October 15, 2026 — **Perception shared-pass design supplement.** No path removed. **New:** `docs/tracking/perception-shared-pass-design.md` v0.1. **Modified:** `docs/tracking/open-issues.md` (dated owner-decision block on the throughput entry; counts unchanged), `.claude/skills/adversarial-review/SKILL.md` (design-supplement count 62 → 63, re-derived), `docs/tracking/CHANGELOG.md` and this manifest. No `src/` change.
 
