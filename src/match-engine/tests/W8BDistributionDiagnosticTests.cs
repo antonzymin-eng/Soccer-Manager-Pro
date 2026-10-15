@@ -59,6 +59,51 @@ namespace TacticalDirector.MatchEngine
             finally { UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false; }
         }
 
+        [TestCase(GkDistributionPolicy.Quick, 0)]
+        [TestCase(GkDistributionPolicy.Quick, 1)]
+        [TestCase(GkDistributionPolicy.LongKick, 0)]
+        [TestCase(GkDistributionPolicy.LongKick, 1)]
+        public void Census_RecordsReceiverOrZoneOutcome_WithoutChangingDigestChain(GkDistributionPolicy policy, int team)
+        {
+            MatchEngine observed = W8BDistributionTests.Fixture(policy, team, true);
+            var output = new StringBuilder();
+            var census = new Census(observed, "neutrality-fixture", output);
+            census.Attach();
+            var digests = new byte[300][];
+            for (int i = 0; i < digests.Length; i++)
+            {
+                observed.RunTick(); census.AfterTick(); digests[i] = observed.CurrentSnapshotDigest;
+            }
+            census.Finish();
+            var receivers = new Dictionary<string, string>();
+            int outcomes = 0, landings = 0;
+            foreach (string line in output.ToString().Split('\n'))
+            {
+                if (line.StartsWith("contact,")) receivers[Field(line, "frame")] = Field(line, "receiver");
+                if (line.StartsWith("landing,")) landings++;
+                if (!line.StartsWith("passOutcome,")) continue;
+                outcomes++;
+                Assert.AreEqual(receivers[Field(line, "contactFrame")], Field(line, "receiver"));
+                Assert.AreEqual(policy == GkDistributionPolicy.LongKick ? "zone" : "receiver", Field(line, "targetClass"));
+            }
+            Assert.Greater(receivers.Count, 0);
+            Assert.AreEqual(receivers.Count, outcomes);
+            Assert.AreEqual(receivers.Count, landings);
+            MatchEngine plain = W8BDistributionTests.Fixture(policy, team, true);
+            for (int i = 0; i < digests.Length; i++)
+            {
+                plain.RunTick(); CollectionAssert.AreEqual(digests[i], plain.CurrentSnapshotDigest, "observational neutrality tick " + i);
+            }
+        }
+
+        private static string Field(string row, string name)
+        {
+            foreach (string cell in row.Trim().Split(','))
+                if (cell.StartsWith(name + "=")) return cell.Substring(name.Length + 1);
+            Assert.Fail("Missing diagnostic field " + name);
+            return null;
+        }
+
         private sealed class Flight
         {
             internal int Keeper, Frame, TargetReceiver;
@@ -155,7 +200,8 @@ namespace TacticalDirector.MatchEngine
                         Frame = feedback.ContactFrame,
                         Source = feedback.ReleasePoint,
                         Target = feedback.EffectiveTargetPosition,
-                        Policy = policy
+                        Policy = policy,
+                        TargetReceiver = feedback.EffectiveTargetAgentId
                     };
                     _requests.Remove(keeper);
                 };
