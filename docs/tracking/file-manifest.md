@@ -1,6 +1,6 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026, PR #508 review — **ERR-007-006/-007/-008 filed; perception design v0.4.** No path added or removed. **Modified:** `docs/tracking/spec-error-log.md` v2.77 → v2.78, `docs/tracking/perception-shared-pass-design.md` v0.3 → v0.4, `docs/tracking/CHANGELOG.md` and this manifest (including its two maintained `spec-error-log.md` "since advanced to" pointers, v2.77 → v2.78).
+**Last Updated:** October 15, 2026, PR #508 review — **ERR-007-006/-007/-008 filed; perception design v0.4.** No path added or removed. **Modified:** `docs/tracking/spec-error-log.md` v2.77 → v2.78, `docs/tracking/perception-shared-pass-design.md` v0.3 → v0.4, `docs/tracking/CHANGELOG.md` and this manifest (including its two maintained `spec-error-log.md` "since advanced to" pointers, now at the log's v2.78).
 
 **Last Updated (prior):** October 15, 2026, latest — **Perception design v0.3.** No path added or removed. **Modified:** `docs/tracking/perception-shared-pass-design.md` v0.2 → v0.3, `docs/tracking/CHANGELOG.md` and this manifest.
 
