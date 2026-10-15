@@ -1,12 +1,12 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-09-11 (#40 T3a review — direct season-revenue reset with explicit FFP ordering)
+// Modified: 2026-10-13
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
-//           Spec #40 §3.1/§7.1, FR-FN-001/005-008/011/018/028 (season settlement + T3a daily accrual)
+//           Spec #40 §3.1/§3.7/§7.1, FR-FN-001/005-008/011/018/028 (settlement + daily revenue)
 // Purpose:  Implements the pure deterministic season-boundary finance projection, prize interpolation,
-//           and the T3a accounting primitive for daily sponsorship/matchday revenue accrual.
+//           and deterministic daily sponsorship/matchday amounts and accounting.
 // ============================================================================
 
 using System;
@@ -79,8 +79,8 @@ namespace TacticalDirector.ClubFinances
 
         /// <summary>
         /// Applies one T3a calendar day's already-derived sponsorship and matchday revenue to the club's
-        /// accounting state. This method owns the mutation semantics only: later T3 slices own the
-        /// sponsorship model, matchday model, stochastic variance and #30 daily invocation.
+        /// accounting state. DailyRevenue owns deterministic amounts; #30 owns daily invocation.
+        /// Stochastic variance remains deferred to T3c+.
         /// </summary>
         /// <param name="prior">Existing coherent club finance state. Coherence is validated even when the deep gate is off.</param>
         /// <param name="sponsorshipRevenue">Non-negative sponsorship cash attributable to this day.</param>
@@ -140,6 +140,64 @@ namespace TacticalDirector.ClubFinances
 
             ClubFinances.ValidateCoherence(in result);
             return result;
+        }
+
+        /// <summary>Derives draw-free daily sponsorship and home-fixture income (#40 §3.7.2).</summary>
+        /// <param name="homeFixturesCompleted">Non-negative completed home-fixture count for this day.</param>
+        /// <param name="leaguePosition">One-based live league position after the day's results.</param>
+        /// <param name="clubCount">Number of clubs in the division, at least two.</param>
+        /// <param name="inSeasonDay">Whether the day lies between the live season's first and last round days, inclusive.</param>
+        /// <returns>Sponsorship and matchday amounts in integer currency units; break days return zero.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">A count/position is invalid or a home fixture falls outside the season.</exception>
+        /// <exception cref="InvalidOperationException">The revenue catalogue has invalid magnitudes or fill endpoints.</exception>
+        /// <exception cref="OverflowException">Checked signed-64-bit arithmetic overflows.</exception>
+        public static (long Sponsorship, long Matchday) DailyRevenue(
+            long homeFixturesCompleted, int leaguePosition, int clubCount, bool inSeasonDay)
+        {
+            if (homeFixturesCompleted < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(homeFixturesCompleted), homeFixturesCompleted,
+                    "Completed home-fixture count must be non-negative.");
+            }
+
+            if (clubCount < 2)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clubCount), clubCount, "clubCount must be at least 2.");
+            }
+
+            if (leaguePosition < 1 || leaguePosition > clubCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(leaguePosition), leaguePosition,
+                    "Live league position must be in [1, clubCount].");
+            }
+
+            if (!inSeasonDay && homeFixturesCompleted != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(homeFixturesCompleted), homeFixturesCompleted,
+                    "Home fixtures must fall on an in-season day.");
+            }
+
+            if (ClubFinancesConstants.DailySponsorshipRevenue < 0
+                || ClubFinancesConstants.MatchdayRevenuePerSpectator < 0
+                || ClubFinancesConstants.MatchdayFillBottomPermille < 0
+                || ClubFinancesConstants.MatchdayFillTopPermille < ClubFinancesConstants.MatchdayFillBottomPermille
+                || ClubFinancesConstants.MatchdayFillTopPermille > ClubFinancesConstants.PERMILLE_DENOM)
+            {
+                throw new InvalidOperationException("Revenue amounts must be non-negative and fill endpoints must satisfy 0 <= bottom <= top <= 1000.");
+            }
+
+            checked
+            {
+                long sponsorship = inSeasonDay ? ClubFinancesConstants.DailySponsorshipRevenue : 0L;
+                long fillSpan = (long)ClubFinancesConstants.MatchdayFillTopPermille
+                    - ClubFinancesConstants.MatchdayFillBottomPermille;
+                long fillPermille = ClubFinancesConstants.MatchdayFillTopPermille
+                    - fillSpan * (leaguePosition - 1L) / (clubCount - 1L);
+                long attendance = ClubFinancesConstants.MATCHDAY_STADIUM_CAPACITY * fillPermille
+                    / ClubFinancesConstants.PERMILLE_DENOM;
+                long matchday = homeFixturesCompleted * attendance * ClubFinancesConstants.MatchdayRevenuePerSpectator;
+                return (sponsorship, matchday);
+            }
         }
 
         /// <summary>Linearly interpolates integer prize money between winner and last-place endpoints.</summary>
@@ -230,4 +288,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.6     | 2026-09-11 | OpenAI | T3a: reset current-season revenue at settlement while carrying the future FFP window. |
 // | 1.7     | 2026-09-11 | OpenAI | Review: name the completed-season revenue handoff and clarify coherence-before-gate semantics. |
 // | 1.8     | 2026-09-11 | OpenAI | Review close-out: remove the misleading reset helper and name prior-season FFP consumption ordering at the direct zero reset. |
+// | 1.9     | 2026-10-13 | —      | T3b2: checked integer sponsorship/attendance amounts and catalogue/input validation. |
 #endregion

@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 11, 2026 (v0.15 — PR #497 review: REV-009 delayed-roll day count)
+**Last Updated:** October 13, 2026 (v0.16 — REV-001–009 now have executable formula and daily-composition locks)
+**Last Updated (prior):** October 11, 2026 (v0.15 — PR #497 review: REV-009 delayed-roll day count)
 **Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: T-FN-REV-009 delayed-roll attribution lock)
 **Last Updated (prior):** October 10, 2026 (v0.13 — §5.10 T3b2 revenue acceptance T-FN-REV-001–009, specified ahead of the code slice)
 **Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
@@ -14,7 +15,7 @@
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.12
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -215,9 +216,12 @@ Tests land at T-phase; this is the acceptance contract.
   season-roll tests retain the opening date and total `SeasonBreakDays`. These checks prove the boundary
   precondition and continuation with zero revenue; non-zero completed-season attribution remains T3b2 work.
 
-## 5.10 T3b2 revenue acceptance (specified October 10, 2026; no test exists yet)
+## 5.10 T3b2 revenue acceptance (implemented October 13, 2026)
 
-The T3b2 code slice MUST land these locks with the §3.7 implementation. SeasonLoop-level locks run with
+`DailyRevenueTests` implements formula/default/failure locks. `SeasonDailyRevenueTests` implements
+non-zero count, Save/Load/Restore, retry, unplayed-fixture and season-attribution locks. These IDs are
+qualified by §5.10; the earlier T3a REV-001–003 in §5.6 retain their original accounting meanings.
+SeasonLoop-level locks run with
 the gate on through a test-only forwarding seam; no production path may set the gate except the §3.7.1
 config producer.
 
@@ -228,7 +232,7 @@ config producer.
 - **T-FN-REV-002 (failure rows):** each §3.7.5 row fails loud with its stated exception type, and a
   checked overflow at a large `homeFixturesCompleted` fails rather than wrapping.
 - **T-FN-REV-003 (default identity):** with the default gate, every T-FN-DAY lock passes unchanged and
-  `DailyRevenue` is not evaluated (a refusing stub in its place is never reached).
+  `DailyRevenue` is not evaluated (a null season that refuses on the enabled composition path is never inspected).
 - **T-FN-REV-004 (non-zero counts):** over a multi-round span, each club's `SeasonRevenueAccrued` equals
   `completedInSeasonDays × DAILY_SPONSORSHIP_REVENUE + Σ` (its home-day matchday amounts at its position on
   each of those days). This is the behavioural count DAY-004 requires: one call too many or too few changes the total.
@@ -272,4 +276,5 @@ config producer.
 | 0.13 | 2026-10-10 | — | **T3b2 formula half.** New §5.10 names T-FN-REV-001–008 (formula, failure rows, default identity, non-zero counts, save/restore, late-club retry, final-fixture attribution, unplayed-fixture assertion) for the §3.7 code slice. No test exists yet. |
 | 0.14 | 2026-10-11 | — | **PR #497 review.** REV-004/REV-007 count in-season days only; new T-FN-REV-009 locks roll-timing independence (immediate roll vs advancing the whole break first), the out-of-season home-fixture refusal and zero pre-season sponsorship. |
 | 0.15 | 2026-10-11 | — | **PR #497 review.** T-FN-REV-009's delayed run advances to the opening day computed from the clock (`SeasonBreakDays − 1` after final-day completion), not the full `SeasonBreakDays`, which `AdvanceDays` refuses. |
+| 0.16 | 2026-10-13 | — | **T3b2 implementation.** REV-001–009 now have executable formula and daily-composition locks. Default remains off; pinned Unity compilation pending. |
 #endregion

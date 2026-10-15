@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v0.10 — daily composition uses the existing edge and adds no persisted state)
+**Last Updated:** October 13, 2026 (v0.11 — T3b2 model and parameter-only test seam use existing assembly and save boundaries)
+**Last Updated (prior):** October 8, 2026 (v0.10 — daily composition uses the existing edge and adds no persisted state)
 **Last Updated (prior):** September 11, 2026 (v0.9 — T3a review close-out: restore-time coherence includes accumulated revenue; canonical newline restored)
 **Last Updated (prior):** September 11, 2026 (v0.8 — T3a: record draw-free daily revenue accounting surface; dependency graph unchanged)
 **Last Updated (prior):** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
 **Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -52,6 +53,14 @@ FR-FN-027 fixes — #30 reads down into #40, never the reverse. T2a adds only th
 The foundation edges introduce no domain ownership seam and #40 introduces no alternate config/serialization
 framework. #27's assembly remains schema-untouched: T2a consumes the existing `Squad.ClubId` surface only.
 
+**T3b2:** `FinanceStep.DailyRevenue` owns deterministic amounts and validates the enabled catalogue.
+`SeasonFinanceRuntime.PrepareDailyRevenue(entries, gate, season, day)` derives only settled facts;
+`Fixture.Played` is the persisted assertion that #30 applied its result. The disabled path does not
+inspect the season or day. `SeasonLoop.TestOnly_AdvanceDays` supplies a parameter to the same guarded
+advance core for tests; it stores no override and adds no production gate producer. Production
+`AdvanceDays` and `AdvanceToNextFixtureDay` forward the sole `ClubFinancesConstants.DeepRevenueEnabled`.
+No assembly reference, save field/version or RNG namespace changes.
+
 ## 4.2 File layout (lands incrementally by T-phase)
 
 ```
@@ -63,7 +72,7 @@ src/club-finances/
 ├── ClubFinanceEntry.cs               // persisted record (T1a) + pure Squad.ClubId bootstrap factory (T2a)
 ├── FinanceTransaction.cs             // the ApplyTransaction input value (T0)
 ├── BoardModifier.cs                  // KD-4 identity routing seam (T0)
-├── FinanceStep.cs                    // SettleFinances + PrizeMoneyForPosition (T0); AccrueDailyRevenue (T3a)
+├── FinanceStep.cs                    // SettleFinances + PrizeMoneyForPosition (T0); AccrueDailyRevenue (T3a); DailyRevenue (T3b2)
 ├── FinanceLedger.cs                  // ApplyTransaction + AvailableTransferBudget (T0)
 ├── FinancesViewModel.cs              // KD-8 observer (T0)
 ├── ClubFinancesSaveCodec.cs          // self-identifying finance sub-blob (T1a)
@@ -86,8 +95,8 @@ src/club-finances/
   transform exactly once. `SeasonLoop.RollToNextSeason()` computes `SettleFinances` per club at reserved
   step (b') and stages those values until the fallible #30 season commit succeeds; only then are they
   installed (ERR-030-051). T3b1 invokes the pure `AccrueDailyRevenue` accounting transform at day-completion slot 11a,
-  outside the replayed pre-round career helper. Amounts are zero and the disabled gate is owned by
-  #40's constants catalogue; amount producers remain T3b2 work. #40 never
+  outside the replayed pre-round career helper. T3b2 supplies §3.7 deterministic amounts only when the sole #40 config gate is enabled; its
+  default-off path still supplies zero amounts. #40 never
   references #30 and never invokes its own bootstrap factory independently.
 - **T3a autonomous accounting:** `AccrueDailyRevenue` is #40-owned rather than a second caller-command
   ledger. With its gate disabled it returns the prior state exactly; enabled, it can change only `Balance`
@@ -176,4 +185,5 @@ its deterministic accounting transform leaves every existing stream cursor uncha
 | 0.8 | 2026-09-11 | OpenAI | **T3a architecture back-prop.** Records `AccrueDailyRevenue` as a draw-free #40-owned autonomous accounting transform, keeps the assembly graph unchanged, leaves #30 daily invocation deferred, and keeps `0x29`/91 reserved until the first stochastic sponsorship-variance consumer. |
 | 0.9 | 2026-09-11 | OpenAI | **T3a review close-out.** Restore-time coherence pseudocode now includes negative `SeasonRevenueAccrued` rejection and the file regains a canonical trailing newline. |
 | 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** daily composition uses the existing edge and adds no persisted state. |
+| 0.11 | 2026-10-13 | — | **T3b2 implementation.** T3b2 model and parameter-only test seam use existing assembly and save boundaries. Default remains off; pinned Unity compilation pending. |
 #endregion

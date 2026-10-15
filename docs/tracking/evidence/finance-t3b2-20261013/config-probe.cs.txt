@@ -1,0 +1,33 @@
+using System;
+using TacticalDirector.ProjectConstants;
+using TacticalDirector.ClubFinances;
+using TacticalDirector.SeasonSave;
+using TacticalDirector.LivingWorld;
+public static class Program {
+ public static int Main(string[] args) {
+  GameplayConfigHolder.Bind(GameplayConfigFileLoader.Parse(System.IO.File.ReadAllText(args[0])));
+  return Run(args.Length > 1 ? args[1] : "valid");
+ }
+ [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+ static int Run(string expectation) {
+  try {
+   var league=LeagueBootstrap.Generate(0x40B2UL,4);
+   var loop=league.CreateLoop(new WorldStore(0,0x40B2UL),0,RoundResolutionMode.QuickSimAll);
+   loop.AdvanceToNextFixtureDay(); loop.AdvanceAndPlayNextRound(league); loop.AdvanceDays(1);
+   if(expectation=="invalid") throw new Exception("Expected model refusal");
+   long total=0;
+   for(int club=0;club<4;club++) total+=loop.FinanceView(club).Balance-500000L;
+   long expected=ClubFinancesConstants.DeepRevenueEnabled ? 4L*ClubFinancesConstants.DailySponsorshipRevenue:0L;
+   // Two opening-round home sides have independent table-position fill values.
+   foreach(var f in loop.State.Fixtures) if(f.RoundIndex==0 && ClubFinancesConstants.DeepRevenueEnabled) {
+    long fill=new long[]{950,834,717,600}[loop.State.PositionOf(f.HomeClubId)-1];
+    expected+=20000L*fill/1000L*ClubFinancesConstants.MatchdayRevenuePerSpectator;
+   }
+   if(total!=expected) throw new Exception("Wrong production accounting total: "+total+" expected "+expected);
+   Console.WriteLine("PASS gate="+ClubFinancesConstants.DeepRevenueEnabled+" total="+total); return 0;
+  } catch(InvalidOperationException error) {
+   if(expectation!="invalid" || !error.Message.StartsWith("Revenue amounts must")) throw;
+   Console.WriteLine("PASS invalid config refused: "+error.Message); return 0;
+  }
+ }
+}
