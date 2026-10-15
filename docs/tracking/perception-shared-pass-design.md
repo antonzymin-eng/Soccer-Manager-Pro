@@ -1,7 +1,7 @@
 # Perception — shared per-heartbeat pass and perceptual memory
 
 > **Created:** October 15, 2026
-> **Status:** DESIGN SUPPLEMENT — draft v0.4, revised after review (advisory council integrity +
+> **Status:** DESIGN SUPPLEMENT — draft v0.5, revised after review (advisory council integrity +
 > evidence on v0.2; external review of the council's synthesis; external and automated review of
 > v0.3 in PR #508). Opens no numbered spec and changes
 > no `SPEC_INDEX.md` row. It proposes amendments to Perception System **#7**, Decision Tree **#8**
@@ -152,7 +152,12 @@ Ring buffers, written once per AI heartbeat **after** the shared pass:
 | cursor | `int` | 4 B |
 
 - **`H` is a compile-time `[FIXED]` constant**, not a `GameplayConfig` `[GT]`, because it sets the
-  payload layout. Boot asserts `H ≥ W_MAX` in heartbeats.
+  payload layout.
+- **Boundary: `H ≥ W_MAX_hb + 1`, asserted at boot.** The current heartbeat is written into the ring
+  before any query, so an `H`-slot ring holds ages `0 … H − 1`. Inclusive retention
+  (`age ≤ W_MAX_hb`) therefore needs `H − 1 ≥ W_MAX_hb`; `H ≥ W_MAX_hb` alone would silently drop
+  the oldest retained age. At `H` = 30 and the proposed `W_MAX_hb` = 20 the guard holds with nine
+  heartbeats of headroom.
 - **Per-slot stamps, not one stamp**, so sample ages stay exact after a mid-buffer restore and
   whenever a heartbeat is skipped (whether the AI phase ever skips during stoppages is unverified;
   see the §5 measurement plan).
@@ -164,7 +169,7 @@ Ring buffers, written once per AI heartbeat **after** the shared pass:
 ### 3.4 Memory query and invariants — P3
 
 `QueryMemory(observer, target, now)` returns the samples `(age, position, velocity)` from slots
-with a valid stamp, `age ≤ W(observer)`, and the observer's bit for `target` set, newest first.
+with a valid stamp, `age_hb ≤ W_hb(observer)`, and the observer's bit for `target` set, newest first.
 
 - **M-1 — no leakage.** The mask bit is set **iff** the target was in that heartbeat's built
   `FilteredView` for that observer. The test's oracle must be the built `FilteredView`, not internal
@@ -177,7 +182,8 @@ with a valid stamp, `age ≤ W(observer)`, and the observer's bit for `target` s
   the sample frame. Today perceived equals true, so storing ground truth is equivalent. Once #7
   §7.1.2 adds position error, the history must store the perceived value (or an equivalent), or
   memory would be more accurate than perception.
-- **M-3 — window bound.** `W(observer) ≤ H` heartbeats, asserted against the constants.
+- **M-3 — window bound.** `W_hb(observer) ≤ H − 1` for every attribute value, asserted against the
+  constants (equivalently `H ≥ W_MAX_hb + 1`, §3.3).
 - **M-4 — deterministic and RNG-free.**
 - **M-5 — current view unchanged.** Memory is a separate channel. It is handed to #8 **by value**
   (a remembered-agents block alongside `FilteredView`), per #7 §3.0 Step 7, not as a live handle.
@@ -282,8 +288,33 @@ exclusion proof in `SerializeWorldState` is extended.
 | E5 | **Unity-host speed** pre/post P1a with `MatchEngineCapstonePerfHarnessTests` (`TD_PERF_RUN_COUNT`). | P1a close-out | Shifts the FR-PO-052 baseline. |
 | E6 | **Observation ages at decision time.** At each on-ball decision, for each teammate and opponent: whether they are in view, and the age of the observer's most recent sighting. Plus the distribution of not-seen gaps per pair. | OD-5 ranges, P3 | Premise check: if teammates are nearly always in view, memory is inert; if ages usually exceed `W`, memory is empty when needed. Take it after the pressure fix, or both before and after. |
 | E7 | **Pressure fix effect.** Distribution of pressure scalar, effective FoV and DT pass urgency, current rule vs 3 m rule. | P2a | Offline replay gives shape; a live run gives the value. |
-| E8 | **Pass outcome diagnostic** with fixed definitions **before** collection: attempt (CONTACT of a PASS action), completion (intended receiver gains control), interception (opponent gains control first), deflection (non-controlling touch), unresolved (out of play, timeout, or match end before any of the above); plus receiver-in-view-at-decision and pass bearing vs facing. | P4 | Pass events have no producer today (#37 §1.4). |
+| E8 | **Pass outcome diagnostic**, definitions fixed **before** collection (below). | P4 | Pass events have no producer today (#37 §1.4). |
 | E9 | **P3 snapshot cost and headroom.** A dummy 13.3 KB block in a scratch build (three runs), and the peak `BytesWritten` over a full match. | P3 | Replaces the linear estimate. |
+
+**E8 pass-outcome definitions.** Each attempt is one episode with **exactly one terminal outcome**,
+so the outcome counts sum to the attempt count.
+
+- **Attempt:** the CONTACT of a PASS action by passer *P*, with intended receiver *R* (or, for a
+  space-targeted pass, the intended target point plus *R* if one was named).
+- **Non-terminal events, recorded on the episode but never ending it:**
+  - **deflection:** any touch by any player that does not give that player control, recorded with
+    the toucher's team;
+  - the receiver-in-view-at-decision flag, the blind-pass flag, and the pass bearing relative to
+    *P*'s facing.
+- **Terminal outcomes, the first of which ends the episode:**
+
+| Outcome | Condition |
+|---|---|
+| **Completed** | *R* gains control, or makes a deliberate action contact (pass, shot, clearance) |
+| **Completed to another teammate** | A teammate other than *R*, including *P*, gains control or makes a deliberate action contact first. Reported separately, never folded into Completed |
+| **Intercepted** | An opponent gains control or makes a deliberate action contact first |
+| **Out of play** | The ball leaves the field before any control, recorded with the last toucher's team |
+| **Unresolved** | A whistle stoppage, the match end, or `PASS_EPISODE_TIMEOUT` heartbeats without any terminal event. The timeout value is fixed with the instrument before collection |
+
+- **Rates:** completion rate = Completed / attempts. All five outcomes and the deflection counts
+  are reported per seed, never pooled-only.
+- **Overlap:** a new attempt cannot start while an episode is open. A deliberate PASS contact by a
+  teammate ends the open episode under the rows above, then opens the next one.
 
 ## 6. Landing plan
 
@@ -316,7 +347,7 @@ P4 acceptance asserts outcomes, not that a candidate exists (ERR-030-014 trap):
 | ID | Question |
 |---|---|
 | OQ-1 | Attribute roles: Concentration → retention, Anticipation → projection uncertainty, Vision → blind-pass use? |
-| OQ-2 | `W_MIN`/`W_MAX`: owner values, or derived from E6? (`H` = 3.0 s is decided; it must stay ≥ `W_MAX`.) |
+| OQ-2 | `W_MIN`/`W_MAX`: owner values, or derived from E6? (`H` = 30 heartbeats is decided; any `W_MAX_hb` must satisfy `H ≥ W_MAX_hb + 1`.) |
 | OQ-3 | Should a remembered target reappearing near its projection get shortened recognition latency? |
 | OQ-4 | Should pressure narrow FoV, and raise pass urgency, for players **off** the ball? |
 | OQ-5 | Should team-level AI consume perception and memory instead of ground truth? |
@@ -344,6 +375,7 @@ P4 acceptance asserts outcomes, not that a candidate exists (ERR-030-014 trap):
 
 | Version | Date | Change |
 |---|---|---|
+| v0.5 | October 15, 2026 | Second review round on PR #508. **History boundary corrected:** an `H`-slot ring with the current heartbeat written holds ages `0 … H − 1`, so inclusive retention needs `H ≥ W_MAX_hb + 1` (v0.2–v0.4 stated `H ≥ W_MAX`, which would drop the oldest retained age). The proposed 30 / 20 values satisfy it. M-3 and OQ-2 restated to match. **E8 pass outcomes made unambiguous:** deflection is non-terminal; every attempt has exactly one terminal outcome (Completed, Completed to another teammate, Intercepted, Out of play, Unresolved); deliberate action contacts count as gaining control; overlap rule stated. |
 | v0.4 | October 15, 2026 | Review of v0.3 in PR #508 (external review plus automated review). **`ERR-007-006` / `-007` / `-008` filed Open** (`spec-error-log.md` v2.78) rather than left as candidates. New fact: the shoulder-check path skips occlusion (`ERR-007-008`), so M-1, which copies the built view, would preserve that leak; repair scheduled as **P2d**, before E6 and P3. OQ-12 answered: `PassExecutor.ResolveAimPoint` overrides a projected point with live receiver state, so P4 requires a **#5 contract** carrying the projected aim and the receiver's identity, plus a test that unseen receiver movement cannot change the aim. Confidence formula made explicitly fractional (`1f − (float)age_hb / W_hb`). |
 | v0.3 | October 15, 2026 | Revised after review: advisory council (integrity and evidence) on v0.2, and an external review of the council synthesis. **Corrections:** W4 keeper query excluded from the pair table; squared distances stored; candidate order preserved in P1; no range test in P1; forced refresh computes its own row; query fix located in `SpatialHashGrid` (spec-neutral); pressure also feeds DT urgency; §3.3.6 recorded as an unimplemented spec rule (ERR candidate); D-05 does not govern this work (D-08 or a new decision does); "D-16" marked unregistered and its scope corrected (chain redefinition, audit mode kept); one schema revision if P3 + P4 land together; scanning research no longer cited as setting memory range; fixed seconds cutoff replaced by a relative threshold; hashing fix requires measured zero allocation on both runtimes. **Design changes:** P3 and P4 merged, behind approved #7 and #8 amendments; P2 split into P2a–P2c; per-slot stamps; `H` `[FIXED]`; integer heartbeat window; unbiased projection with Anticipation-scaled uncertainty (replacing the `S(A)` shortfall), capped at `T_PREDICT_MAX`; mask defined by the built `FilteredView` including shoulder checks; M-2 precision invariant; measurement plan E1–E9; motivation narrowed (not C1 parity). |
 | v0.2 | October 15, 2026 | Owner decision: history buffer `H` reduced from 50 to 30 frames (5.0 → 3.0 s) to cut per-tick snapshot hashing. History size ≈ 22 KB → 13.2 KB per tick (+~63% → +~37% payload); estimated P3 snapshot cost ≈ 15–17 → ≈ 10 s/match (linear extrapolation, unmeasured). Constraint `H` ≥ `W_MAX` stated. |
