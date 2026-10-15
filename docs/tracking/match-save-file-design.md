@@ -1,7 +1,10 @@
 # On-Disk Match Save File — Match Engine (Design Supplement)
 
 > **Created:** July 21, 2026
-> **Last Updated:** October 15, 2026, later (v0.6 — **KD-8 correction (PR #505 review).** Restore does not
+> **Last Updated:** October 15, 2026, after merge (v0.7 — **KD-8: owner approval of format v3 recorded.** The
+> owner approved the off-tick overlay and `MATCH_SAVE_FORMAT_VERSION` 3 on October 15, 2026. PR #505 merged
+> without the approval written down; this records it. No design, code or format change. Prior v0.6 below.)
+> **Last Updated (prior):** October 15, 2026, later (v0.6 — **KD-8 correction (PR #505 review).** Restore does not
 > re-derive the committed snapshot digest: `RestoreFromSnapshot` adopts the stored digest through
 > `CommitLoadedDigest` without `ValidateCurrentDigest`. That gap predates v3; KD-8 now says so instead of
 > claiming the chain is verified. Prior v0.5 below.)
@@ -296,7 +299,9 @@ a v2 blob is refused, not migrated. `SNAPSHOT_SCHEMA_VERSION` moves independentl
 no digest preimage sees the overlay, so no golden vector moves.
 
 **Status.** Implemented in PR #505. This format bump is not part of the original match-flow §6 v25
-contract, so the PR records the owner's approval of it before merge.
+contract, so it needed the owner's approval. ✅ **Approved by the owner on October 15, 2026.** PR #505
+merged (`257a84f4`) without that approval written down, so it is recorded here after the merge, at the
+owner's instruction.
 
 ---
 
@@ -372,3 +377,4 @@ defect a per-method unit test would miss.
 | 0.4 | 2026-08-22 | — | **`ERR-016-009` — the file carries the #16 §2.3.2 `buildHash`.** New **KD-7**; §3 layout goes **v2** (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. No presence flag and no absent case — `Encode` refuses a null/empty build hash and `Decode` refuses a blob carrying one, both sides, so the format cannot admit a save whose build identity is unknown. Sits beside the fingerprint rather than inside it: host identity and binary identity fail for unrelated reasons and carry distinct error codes. KD-1 unchanged (a v1 blob is refused, not migrated). `SNAPSHOT_SCHEMA_VERSION` untouched; no digest preimage sees the field, so no golden vector moves. |
 | 0.5 | 2026-10-15 | — | **KD-8 — off-tick overlay, format v3 (PR #505).** §3 layout appends `overlayLength`, then (when non-zero) the overlay SHA-256 and the overlay bytes after the payload. Committed header and payload unchanged; restore applies the overlay after the committed pair is loaded. `MATCH_SAVE_FORMAT_VERSION` 2 → 3, KD-1 unchanged (no migration). |
 | 0.6 | 2026-10-15 | — | **KD-8 correction (PR #505 review).** v0.5 said restore verifies the committed chain before the overlay. It does not: `RestoreFromSnapshot` adopts the stored digest via `CommitLoadedDigest` and never calls `ValidateCurrentDigest`. KD-8, the v0.5 header and the v0.5 row now state the pre-existing gap. No code or format change. |
+| 0.7 | 2026-10-15 | — | **Owner approval recorded.** KD-8 status: the owner approved match save format v3 (the off-tick overlay) on October 15, 2026. PR #505 merged as `257a84f4` before the approval was written down; it is recorded here at the owner's instruction. No design, code or format change. |
