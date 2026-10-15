@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
+**Last Updated:** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
+
+**Last Updated (prior):** October 15, 2026, evening — **#40 T3b2 compile issue archived.** No path added or removed. **Modified:** `docs/tracking/open-issues.md`, `open-issues-resolved.md`, `path-to-playable-roadmap.md` v0.64, `docs/agent-guides/project-reference.md` (31 active / 70 archived), `CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
 
 **Last Updated (prior):** October 15, 2026, after #505 merged — **Match save format v3 approval recorded.** No path added or removed. **Modified:** `docs/tracking/match-save-file-design.md` v0.7 (KD-8 owner approval), `docs/tracking/CHANGELOG.md`, a "since advanced to v0.7" annotation in `CHANGELOG-src.md` and this manifest.
 
