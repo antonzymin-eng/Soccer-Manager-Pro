@@ -1,8 +1,9 @@
 # Perception — shared per-heartbeat pass and perceptual memory
 
 > **Created:** October 15, 2026
-> **Status:** DESIGN SUPPLEMENT — draft v0.3, revised after review (advisory council integrity +
-> evidence on v0.2; external review of the council's synthesis). Opens no numbered spec and changes
+> **Status:** DESIGN SUPPLEMENT — draft v0.4, revised after review (advisory council integrity +
+> evidence on v0.2; external review of the council's synthesis; external and automated review of
+> v0.3 in PR #508). Opens no numbered spec and changes
 > no `SPEC_INDEX.md` row. It proposes amendments to Perception System **#7**, Decision Tree **#8**
 > and Deterministic Simulation **#16** (all APPROVED); none of them is made here.
 > **Purpose:** Records the owner's design decisions of October 14–15, 2026 for restructuring
@@ -58,10 +59,12 @@
 | Candidates arrive in grid-scan order (cell row, cell column, insertion order). That order drives the pressure float sum, the entry order of `VisibleTeammates` / `VisibleOpponents` / `BlindSidePerceivedAgents`, and ball occlusion. | `SpatialHashGrid.cs:124–139`; `PerceptionSystem.cs:375–517` |
 | Players are inserted into the perception grid as points (radius 0), so perception queries never return duplicates. Collision queries can. | `MatchEngineConstants.PERCEPTION_GRID_POINT_INSERT_RADIUS = 0f`; `PopulatePerceptionGrid` |
 | **No range test runs for agents today.** The 120 m square covers the whole pitch. Only the ball has a distance check. The pitch diagonal is 125.1 m. | `PerceptionSystem.cs:328`; `BallPerceptionEvaluator.cs:66` |
-| Pressure sums **all** opponents in the candidate list. #7 §3.6.2 / §4.4.1 specify opponents within `PRESSURE_RADIUS` = 3.0 m. | `PressureEvaluator.cs:47–64` — **ERR candidate (next free id `ERR-007-006`), not yet filed** |
-| Pressure is **not FoV-only**. It also reaches the Decision Tree as pass urgency. #7 §3.6.3's "exactly one use: FoV narrowing" is wrong. | `MatchEngine.cs:3366–3369`; `OptionGenerator.cs:145` |
+| Pressure sums **all** opponents in the candidate list. #7 §3.6.2 / §4.4.1 specify opponents within `PRESSURE_RADIUS` = 3.0 m. | `PressureEvaluator.cs:47–64` — **`ERR-007-006`, filed Open** |
+| Pressure is **not FoV-only**. It also reaches the Decision Tree as pass urgency. #7 §3.6.3's "exactly one use: FoV narrowing" is wrong. | `MatchEngine.cs:3366–3369`; `OptionGenerator.cs:145` — part of `ERR-007-006` |
 | Perception's `PressureEvaluator` is a second copy of First Touch #4's rule (`internal`, inclusive `distSq ≤ r²`). | `first-touch/PressureEvaluator.cs:26,53` |
-| **#7 §3.3.6 is not implemented as written.** `RecognitionLatencyTracker.ProcessInvisible` keeps recognition confirmed through one invisible heartbeat and returns `bool`. `RunAgentPipeline` ignores the return value and outputs only entities seen this frame, so a player who leaves view disappears from the view immediately. | `RecognitionLatencyTracker.cs:124`; `PerceptionSystem.cs` second pass — **ERR candidate** |
+| **#7 §3.3.6 is not implemented as written.** `RecognitionLatencyTracker.ProcessInvisible` keeps recognition confirmed through one invisible heartbeat and returns `bool`. `RunAgentPipeline` ignores the return value and outputs only entities seen this frame, so a player who leaves view disappears from the view immediately. | `RecognitionLatencyTracker.cs:124`; `PerceptionSystem.cs` second pass — **`ERR-007-007`, filed Open** |
+| **The shoulder-check path skips occlusion.** #7 §3.4.3 item 2 requires blind-side entities to pass "the same FoV, occlusion, and L_rec checks", but the blind-side loop never calls `OcclusionFilter`. A player behind an opponent's body can be confirmed and copied, at true position, into `BlindSidePerceivedAgents`. | `PerceptionSystem.cs:478–517` — **`ERR-007-008`, filed Open** |
+| **Pass execution re-reads the receiver's live state.** For player-targeted passes `PassExecutor.ResolveAimPoint` aims at the receiver's current position. For agent-targeted through balls it uses live position and velocity. An explicit point is honoured only for space-targeted passes with `TargetAgentId = -1`. | `PassExecutor.cs:338`, `557–583` |
 | The W4 goalkeeper all-body line-of-sight query (#7 §3.2.7, `ERR-007-005`) runs in `RunMechanicsAI` **before** the perception heartbeat, and again in the 60 Hz Resolve phase. It targets the ball and skips sent-off bodies. | `MatchEngine.cs:3301` vs `3329`; `3574`; `5121`; `OcclusionFilter.cs:89–115` |
 | Sent-off players are still inserted into the perception grid each heartbeat, so they remain perception targets, occluders and pressure sources. | `MatchEngine.cs:3384–3393` |
 | `HandleForcedRefresh` runs the pipeline between heartbeats. It has no production caller today. | `PerceptionSystem.cs:251–280`; #7 §4.6.2 |
@@ -124,7 +127,7 @@ P1 restructures the computation without changing any result. Its constraints are
 
 Each item below is a separate, separately measured change (§6):
 
-- **Pressure conformance** (`ERR-007-006` if still free at filing): Euclidean `distSq ≤ PRESSURE_RADIUS²`.
+- **Pressure conformance** (resolves `ERR-007-006`): Euclidean `distSq ≤ PRESSURE_RADIUS²`.
   - Do **not** implement it as "a spatial-hash query at 3 m". On this grid that returns a 7 × 7-cell
     box, admitting opponents up to ~5.7 m away.
   - Reuse First Touch #4's evaluator (expose it, or `InternalsVisibleTo`), or keep the copy and pin
@@ -134,6 +137,8 @@ Each item below is a separate, separately measured change (§6):
 - **ID-order iteration** and **symmetric bearings** (bearing j→i = bearing i→j ± 180°).
 - **Sent-off players** stop being targets, occluders and pressure sources. This needs an explicit
   rule, matching how W4 already excludes them.
+- **Occlusion on the shoulder-check path** (resolves `ERR-007-008`): blind-side entities pass the
+  same occlusion test as forward entities, as #7 §3.4.3 already requires.
 
 ### 3.3 Perception history (OD-3, OD-4, OD-7) — P3
 
@@ -165,6 +170,9 @@ with a valid stamp, `age ≤ W(observer)`, and the observer's bit for `target` s
   `FilteredView` for that observer. The test's oracle must be the built `FilteredView`, not internal
   flags: a target in the cone but still within recognition latency, or occluded, must never be
   returned.
+  - **M-1 is only as sound as the view it copies.** Today the shoulder-check path can place an
+    occluded player in `BlindSidePerceivedAgents` (`ERR-007-008`), and copying that view into memory
+    would preserve the leak. Its repair (P2d) is therefore a **prerequisite** for E6 and P3.
 - **M-2 — precision.** Returned values are never more precise than what the observer perceived at
   the sample frame. Today perceived equals true, so storing ground truth is equivalent. Once #7
   §7.1.2 adds position error, the history must store the perceived value (or an equivalent), or
@@ -195,8 +203,10 @@ Which attribute plays which role is **OQ-1**. Proposal:
     8 m/s seen 1.5 s ago lands 3.6 m along instead of 12 m. That is withdrawn.
   - Projection is capped at #7 §7.1.3's `T_PREDICT_MAX` (~1.5 s) unless the #7 amendment
     deliberately reconciles the two.
-- **Memory confidence**: `c = 1 − age_hb / W_hb(C)`, range 0–1, from the same integer quantities.
-  Thresholds belong to the consumer (#7 §7.4.1).
+- **Memory confidence**: `c = 1f − (float)age_hb / W_hb(C)`, range 0–1. The division is
+  **fractional**: both operands are integer heartbeat counts, and a literal integer translation
+  would give `c = 1` for every retained sample, then drop straight to 0 at the boundary. Thresholds
+  belong to the consumer (#7 §7.4.1).
 - **Vision** governs blind-pass willingness and precision in #8 (§3.6).
 
 **Worked example.** A midfielder with C = 15 and A = 12 last saw a teammate 10 heartbeats (1.0 s)
@@ -220,8 +230,13 @@ exclusion proof in `SerializeWorldState` is extended.
   - Pass candidates from **remembered** teammates, carrying projected position, σ and `c`.
   - A utility penalty that grows as `c` falls and σ grows, modulated by `Vision`.
   - Execution against the **projected** receiver point.
-  - Whether Pass Mechanics #5 can aim at a non-agent point for a teammate pass is **unverified**
-    (OQ-12).
+  - **Prerequisite: a Pass Mechanics #5 contract for that.** The ordinary executor cannot do it
+    today. `ResolveAimPoint` overrides the aim with the receiver's live state for player-targeted
+    passes and agent-targeted through balls, and a space-targeted pass (`TargetAgentId = -1`) drops
+    the receiver's identity. P4 needs a defined request shape carrying **both** the projected aim
+    point **and** the intended receiver's identity, with the executor honouring the point. That is a
+    #5 amendment, approved alongside the #8 amendment. Required test: moving the unseen receiver
+    after the decision must not change the aim point.
   - Opponents' remembered paths feed interception risk.
   - A blind pass in flight carries cross-tick state (projected receiver point, blind flag). That
     belongs in serialized Decision Tree / pass-executor state, the same hazard class as
@@ -277,11 +292,12 @@ exclusion proof in `SerializeWorldState` is extended.
 | **P1a** | Order-preserving query fix inside `SpatialHashGrid`, radius-gated | No | None | E1, E2, E5; Unity compile |
 | **P1b** | Allocation-free snapshot digest | No | None (restores `RunTick`'s stated zero-allocation contract) | E3 |
 | **P1c** | Directed pair table; shared bearing; optional symmetric distance and half-angle | No | None | E4 threshold met; E2 |
-| **ERR** | #7 §3.3.6 spec/code mismatch: decide which side is right | Depends on resolution | ERR + back-prop together | Owner call |
-| **P2a** | Pressure conformance (3 m Euclidean), reuse of #4's evaluator, §3.6.3 fix | **Yes** | `ERR-007-006` + #7 §3.6.2/§4.4.1/§4.4.2/§3.6.3 | E7; outside W8 windows |
+| **ERR** | `ERR-007-007`: #7 §3.3.6 spec/code mismatch; decide which side is right | Depends on resolution | Spec + code together | Owner call |
+| **P2a** | Pressure conformance (3 m Euclidean), reuse of #4's evaluator, §3.6.3 fix | **Yes** | Resolves `ERR-007-006`: #7 §3.6.2/§4.4.1/§4.4.2/§3.6.3 | E7; outside W8 windows |
 | **P2b** | OD-6 order with range test; sent-off exclusion | **Yes** | #7 §3.0 edit | measured separately from P2a |
 | **P2c** | ID-order iteration; symmetric bearings | **Yes** | #7 §3.0 note | measured separately |
-| **P3 + P4** | History, memory query, attribute plumbing, blind pass, remembered-opponent risk; **one** schema revision | **Yes** | #7 memory amendment **and** #8 blind-pass amendment, both approved before code; #16 digest-chain decision first | E6, E8, E9; goal rate and pass completion must not move in the wrong direction beyond noise |
+| **P2d** | Occlusion applied on the shoulder-check path | **Yes** | Resolves `ERR-007-008` (code only; the spec is already correct) | Regression test proven red pre-fix; outside W8 windows; **before E6 and P3** |
+| **P3 + P4** | History, memory query, attribute plumbing, blind pass, remembered-opponent risk; **one** schema revision | **Yes** | #7 memory amendment, #8 blind-pass amendment **and** #5 projected-aim contract, all approved before code; #16 digest-chain decision first; P2d landed | E6, E8, E9; goal rate and pass completion must not move in the wrong direction beyond noise |
 
 Blast radius for P2–P4:
 - the A4a corpus and fit (KD-8);
@@ -305,12 +321,12 @@ P4 acceptance asserts outcomes, not that a candidate exists (ERR-030-014 trap):
 | OQ-4 | Should pressure narrow FoV, and raise pass urgency, for players **off** the ball? |
 | OQ-5 | Should team-level AI consume perception and memory instead of ground truth? |
 | OQ-6 | Should the ball join the shared history (absorbing §3.5.2 staleness and §7.1.3)? |
-| OQ-7 | §3.3.6: is the spec (keep a just-lost entity for one tick) or the code (drop immediately) right? |
+| OQ-7 | §3.3.6 (`ERR-007-007`): is the spec (keep a just-lost entity for one tick) or the code (drop immediately) right? |
 | OQ-8 | With #7 §7.1.2 position error, what exactly does the history store to satisfy M-2? |
 | OQ-9 | Teammate occlusion (#7 §7.1.1) changes masks and therefore memory: before or after P3? |
 | OQ-10 | Memory reset rules for substitution, sending-off and kickoff. |
 | OQ-11 | Does #8 use the multi-sample path (curved runs), or only the newest sample? |
-| OQ-12 | Can Pass Mechanics #5 execute a teammate pass to a projected point? |
+| OQ-12 | ~~Can Pass Mechanics #5 execute a teammate pass to a projected point?~~ **Answered in v0.4: no.** The executor overrides the aim with live receiver state, so P4 needs a #5 contract (§3.6). Remaining question: the shape of that contract. |
 | OQ-13 | P2–P4 placement: inside PM-2 (D-08) or after PM-2 (new registered decision)? |
 
 ## 8. Risks
@@ -318,7 +334,7 @@ P4 acceptance asserts outcomes, not that a candidate exists (ERR-030-014 trap):
 - **Ground-truth leakage** through memory (M-1) or precision (M-2). One missed check silently makes
   players omniscient.
 - **Snapshot growth** consumes the P1 gain if the #16 decision is not taken first.
-- **Attribution loss** if behaviour changes are bundled. P2 is split into P2a–P2c for this reason.
+- **Attribution loss** if behaviour changes are bundled. P2 is split into P2a–P2d for this reason.
 - **Unmeasured premise.** If E6 shows teammates are nearly always in view at decision time, P3–P4
   change little and should be re-scoped.
 - **Direction of effect on goal rate is unpredicted** (currently ~12 per match on the profiled seed
@@ -328,6 +344,7 @@ P4 acceptance asserts outcomes, not that a candidate exists (ERR-030-014 trap):
 
 | Version | Date | Change |
 |---|---|---|
+| v0.4 | October 15, 2026 | Review of v0.3 in PR #508 (external review plus automated review). **`ERR-007-006` / `-007` / `-008` filed Open** (`spec-error-log.md` v2.78) rather than left as candidates. New fact: the shoulder-check path skips occlusion (`ERR-007-008`), so M-1, which copies the built view, would preserve that leak; repair scheduled as **P2d**, before E6 and P3. OQ-12 answered: `PassExecutor.ResolveAimPoint` overrides a projected point with live receiver state, so P4 requires a **#5 contract** carrying the projected aim and the receiver's identity, plus a test that unseen receiver movement cannot change the aim. Confidence formula made explicitly fractional (`1f − (float)age_hb / W_hb`). |
 | v0.3 | October 15, 2026 | Revised after review: advisory council (integrity and evidence) on v0.2, and an external review of the council synthesis. **Corrections:** W4 keeper query excluded from the pair table; squared distances stored; candidate order preserved in P1; no range test in P1; forced refresh computes its own row; query fix located in `SpatialHashGrid` (spec-neutral); pressure also feeds DT urgency; §3.3.6 recorded as an unimplemented spec rule (ERR candidate); D-05 does not govern this work (D-08 or a new decision does); "D-16" marked unregistered and its scope corrected (chain redefinition, audit mode kept); one schema revision if P3 + P4 land together; scanning research no longer cited as setting memory range; fixed seconds cutoff replaced by a relative threshold; hashing fix requires measured zero allocation on both runtimes. **Design changes:** P3 and P4 merged, behind approved #7 and #8 amendments; P2 split into P2a–P2c; per-slot stamps; `H` `[FIXED]`; integer heartbeat window; unbiased projection with Anticipation-scaled uncertainty (replacing the `S(A)` shortfall), capped at `T_PREDICT_MAX`; mask defined by the built `FilteredView` including shoulder checks; M-2 precision invariant; measurement plan E1–E9; motivation narrowed (not C1 parity). |
 | v0.2 | October 15, 2026 | Owner decision: history buffer `H` reduced from 50 to 30 frames (5.0 → 3.0 s) to cut per-tick snapshot hashing. History size ≈ 22 KB → 13.2 KB per tick (+~63% → +~37% payload); estimated P3 snapshot cost ≈ 15–17 → ≈ 10 s/match (linear extrapolation, unmeasured). Constraint `H` ≥ `W_MAX` stated. |
 | v0.1 | October 15, 2026 | Created: owner decisions OD-1–OD-6 recorded; shared pass, history/memory, attribute scaling, snapshot impact, landing phases P1–P4 and open questions drafted. Not yet reviewed (`/advisor` pending). |
