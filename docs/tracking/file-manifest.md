@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026 — **PR #508 conflict resolution.** Merge current main (PRs #503, #505 and #506); retain both tracking histories, the T3b2 and W8 prerequisite updates, and the throughput issue. Counts re-derived as 32 active / 69 archived. Documentation only.
+**Last Updated:** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
+
+**Last Updated (prior):** October 15, 2026, after #505 merged — **Match save format v3 approval recorded.** No path added or removed. **Modified:** `docs/tracking/match-save-file-design.md` v0.7 (KD-8 owner approval), `docs/tracking/CHANGELOG.md`, a "since advanced to v0.7" annotation in `CHANGELOG-src.md` and this manifest.
+
+**Last Updated (prior):** October 15, 2026 — **PR #508 conflict resolution.** Merge current main (PRs #503, #505 and #506); retain both tracking histories, the T3b2 and W8 prerequisite updates, and the throughput issue. Counts re-derived as 32 active / 69 archived. Documentation only.
 
 **Last Updated (prior):** October 15, 2026, PR #508 second review — **Perception design v0.5.** No path added or removed. **Modified:** `docs/tracking/perception-shared-pass-design.md` v0.4 → v0.5, `docs/tracking/CHANGELOG.md` and this manifest. (The preceding merge of `main` combined the tracking-document histories; no further path change.)
 

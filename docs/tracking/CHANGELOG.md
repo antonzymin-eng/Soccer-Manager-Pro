@@ -12,7 +12,11 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 15, 2026 — **PR #508 conflict resolution.** Merge current main (PRs #503, #505 and #506); retain both tracking histories, the T3b2 and W8 prerequisite updates, and the throughput issue. Counts re-derived as 32 active / 69 archived. Documentation only.
+> **Last Updated:** October 15, 2026 — **PR #508 refreshed against main (PR #509).** Retain the throughput/perception documentation and tracking histories alongside the match-save format v3 owner-approval record. No path added or removed by this merge; no code change.
+
+> **Last Updated (prior):** October 15, 2026, after #505 merged — **Owner approval of match save format v3 recorded.** PR #505 merged (`257a84f4`) with its "owner approval of match save format v3" checklist item still unticked. The owner approved the off-tick overlay and `MATCH_SAVE_FORMAT_VERSION` 3 on October 15, 2026; `match-save-file-design.md` v0.7 KD-8 now records it. Documentation only.
+
+> **Last Updated (prior):** October 15, 2026 — **PR #508 conflict resolution.** Merge current main (PRs #503, #505 and #506); retain both tracking histories, the T3b2 and W8 prerequisite updates, and the throughput issue. Counts re-derived as 32 active / 69 archived. Documentation only.
 
 > **Last Updated (prior):** October 15, 2026, PR #508 second review — **Perception design v0.5 and merge of `main` (documentation only).** Two corrections from an external review of v0.4. (1) **History boundary.** The current heartbeat is written into the ring before any query, so an `H`-slot ring holds ages `0 … H − 1`, and inclusive retention `age ≤ W_MAX_hb` needs `H ≥ W_MAX_hb + 1`. The guard stated since v0.2 (`H ≥ W_MAX`) would have silently dropped the oldest retained age. The proposed 30 / 20 values satisfy the corrected guard; M-3 and OQ-2 are restated. (2) **E8 pass outcomes.** Deflection becomes non-terminal. Every attempt has exactly one terminal outcome: Completed; Completed to another teammate (including the passer, reported separately); Intercepted; Out of play; or Unresolved (whistle, match end, or a timeout fixed before collection). Deliberate action contacts count as gaining control, and an overlap rule is stated. `main` (PR #507, loopback HTTP graceful close) was merged into the branch. Tracking conflicts were resolved by union, and the open-issue counts re-derived as 32 active / 68 archived. No `src/`, spec, schema or RNG change. Gate: not run — documentation only.
 >
