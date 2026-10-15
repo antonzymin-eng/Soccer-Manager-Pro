@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (Match Flow §6 / PR #505: deferred substitution requests, Law 3 windows, v25 pending queue, v3 off-tick save overlay; SubstitutePlayer internal-only)
 // Modified (prior): 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
@@ -163,7 +164,7 @@ namespace TacticalDirector.MatchEngine
     /// Collision (#3) + the Pass (#5) / Shot (#6) executor lifecycles; the AI phase (Phase D D1)
     /// drives Perception (#7) + the per-agent DecisionTree (#8) on the 10 Hz stride tick.
     /// </summary>
-    public sealed class MatchEngine
+    public sealed partial class MatchEngine
     {
         // W8 Stage A: optional, per-instance observation only. Never consumed by simulation or snapshot.
         internal Action<W8StageAEvent> TestOnly_W8StageAObserver;
@@ -3630,6 +3631,7 @@ namespace TacticalDirector.MatchEngine
             // opt-in flag is set (KD-11). Placed after the mechanics AI so the orchestrators read the same
             // tick's settled positions.
             DriveGkHeadingTactical();
+            TryCommitGoalkeeperDistributions();
 
             _perception.OnHeartbeat(heartbeat, _agents, _ball, _perceptionAttrs, _hasPossession);
 
@@ -3663,7 +3665,7 @@ namespace TacticalDirector.MatchEngine
                 // action (RunPhysicsPhase separately forces them to a stop each tick). Perception/dwell
                 // above still runs unconditionally — harmless, and keeps this the only orchestration-
                 // level skip needed.
-                if (_isSentOff[i])
+                if (_isSentOff[i] || HasGoalkeeperHandControl(i))
                 {
                     continue;
                 }
@@ -5476,7 +5478,7 @@ namespace TacticalDirector.MatchEngine
         /// The executor is selected from <c>request.AgentId</c> itself: #5 validates identity and
         /// possession against that agent, and the Physics kick adapter and Resolve drain both index
         /// the executor by it, so a separate host slot argument could only disagree with them.
-        /// #21 production callers are deliberately absent until W8 B step 7.</summary>
+        /// The live #21 producer uses this path after satisfying both hand clocks.</summary>
         private bool StartGoalkeeperDistributionAtHost(
             in GoalkeeperDistributionRequest request,
             out GoalkeeperDistributionFeedback feedback)
@@ -5512,7 +5514,7 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>Single host sink for immediate rejection and Resolve-terminal outcomes.
-        /// Live W8 B wiring adds the #11 state transition and CONTACT event at this seam.</summary>
+        /// Applies F-05, publishes the successful CONTACT event, and settles #11 state.</summary>
         private void ObserveGoalkeeperDistributionTerminal(
             int agentId, in GoalkeeperDistributionRequest request,
             in GoalkeeperDistributionFeedback feedback)
@@ -5523,6 +5525,7 @@ namespace TacticalDirector.MatchEngine
             if (receiverMissing)
                 _goalkeeper.ReportDistributionReceiverMissing(agentId, request.TargetAgentId);
 
+            CompleteGoalkeeperDistribution(agentId, in request, in feedback);
             TestOnly_W8BTerminalFeedbackObserver?.Invoke(agentId, feedback, receiverMissing);
         }
 
@@ -5609,6 +5612,8 @@ namespace TacticalDirector.MatchEngine
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
             ApplyFoulIfCaptured();
+
+            CancelExpiredGoalkeeperDistributions();
 
             // C3 — advance any in-flight executors. Idle executors no-op; only a pass/shot started via
             // the TestOnly_ seam (or, from Phase D, the AI dispatcher) is mid-lifecycle here.
@@ -8636,6 +8641,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, di.SpinIntent.y);
                 CanonicalSerializer.WriteF32(buf, ref o, di.SpinIntent.z);
                 CanonicalSerializer.WriteBool(buf, ref o, s.DistributeIntentActive[i]);
+                CanonicalSerializer.WriteBool(buf, ref o, s.DistributionPending[i]);
 
                 GoalkeeperPositioningContract pc = s.PositioningContracts[i];
                 CanonicalSerializer.WriteF32(buf, ref o, pc.GkBaselineSlot.x);
@@ -8678,6 +8684,7 @@ namespace TacticalDirector.MatchEngine
             var rushIntentActive = new bool[cap];
             var distributeIntents = new DistributeIntent[cap];
             var distributeIntentActive = new bool[cap];
+            var distributionPending = new bool[cap];
             var positioningContracts = new GoalkeeperPositioningContract[cap];
             var diveLaunchFrames = new int[cap];
             var diveDurationFrames = new int[cap];
@@ -8759,6 +8766,7 @@ namespace TacticalDirector.MatchEngine
                 di.SpinIntent = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 distributeIntents[i] = di;
                 distributeIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                distributionPending[i] = CanonicalSerializer.ReadBool(buf, ref o);
 
                 GoalkeeperPositioningContract pc = default;
                 pc.GkBaselineSlot = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
@@ -8802,7 +8810,8 @@ namespace TacticalDirector.MatchEngine
                 shotEventPending: shotEventPending,
                 claimTick: claimTick,
                 releaseTickEarliest: releaseTickEarliest,
-                recoveryCooldownEndTick: recoveryCooldownEndTick));
+                recoveryCooldownEndTick: recoveryCooldownEndTick,
+                distributionPending: distributionPending));
         }
 
         /// <summary>Serializes the Heading (#10) orchestrator's per-agent cross-tick state
@@ -9082,14 +9091,14 @@ namespace TacticalDirector.MatchEngine
         /// (#11 §3.8.3 possession-change teardown). Once #11 receives a true 10 Hz tick, HandsOnBall has no
         /// exit but the 60-tick timeout, so without this a keeper who had already passed would stay "in
         /// hands" for up to 6 s, unable to rush, claim or dive. An unchanged holder performs no teardown.
-        /// Every loss is an ordinary one in this landing; B adds the typed cause that lets its own
-        /// successful distribution CONTACT complete normally rather than cancel.
+        /// A successful #5 goalkeeper-distribution CONTACT carries a typed completion cause; its
+        /// intent survives until Resolve consumes completion. All other losses cancel the hand episode.
         /// </summary>
-        private void SetPossessingAgent(int agentId)
+        private void SetPossessingAgent(int agentId, PossessionChangeCause cause = PossessionChangeCause.Ordinary)
         {
             int previous = _possessingAgentId;
             _possessingAgentId = agentId;
-            if (previous != agentId)
+            if (previous != agentId && cause != PossessionChangeCause.GoalkeeperDistributionContact)
             {
                 EndGoalkeeperHandEpisode(previous);
             }
@@ -9113,6 +9122,7 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
+            _passExecutors[agentId].CancelGoalkeeperDistribution();
             _goalkeeper.EndHandEpisodeOnPossessionLoss(teamId, (int)_clock.CurrentTick);
         }
 
@@ -9227,12 +9237,12 @@ namespace TacticalDirector.MatchEngine
         /// leaves Controlled at ApplyKick). Authoritative possession transitions are finalized at C4; this
         /// keeps the executor adapters' IsBallPossessedBy honest so a re-entrant CONTACT cannot re-kick.
         /// </summary>
-        private void ReleasePossessionOnKick(int agentId)
+        private void ReleasePossessionOnKick(int agentId, PossessionChangeCause cause = PossessionChangeCause.Ordinary)
         {
             ObserveW8(W8StageAKind.KickRelease, agentId);
             if (_possessingAgentId == agentId)
             {
-                SetPossessingAgent(MatchEngineConstants.NO_POSSESSION);
+                SetPossessingAgent(MatchEngineConstants.NO_POSSESSION, cause);
             }
         }
 
@@ -9348,7 +9358,10 @@ namespace TacticalDirector.MatchEngine
                 _engine.ObserveW8(W8StageAKind.PassKick, agentId,
                     _engine._passExecutors[agentId].InFlightTargetAgentId);
                 BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
-                _engine.ReleasePossessionOnKick(agentId);
+                _engine.ReleasePossessionOnKick(agentId,
+                    _engine._passExecutors[agentId].IsGoalkeeperDistributionInFlight
+                        ? PossessionChangeCause.GoalkeeperDistributionContact
+                        : PossessionChangeCause.Ordinary);
 
                 // ERR-012-011 — the ball is now travelling to the team-mate this pass named, and the
                 // passing team is still in possession of it. Armed HERE and not inside
@@ -9385,11 +9398,7 @@ namespace TacticalDirector.MatchEngine
 
             public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
             {
-                Vector3 canonical = new Vector3(
-                    TacticalInstructionsConstants.GK_DIST_FALLBACK_ADVANCE_M,
-                    MatchEngineConstants.PITCH_WIDTH_M * 0.5f,
-                    0f);
-                return MirrorPitchIfAway(teamId, canonical);
+                return GoalkeeperDistributionFallback(teamId);
             }
 
             // Live since wiring backlog W2 (#14 §3.6.5). Until then this returned a hardcoded false,
@@ -9397,7 +9406,14 @@ namespace TacticalDirector.MatchEngine
             // unreachable code for the entire life of the engine.
             public bool GetAndClearTackleFlag(int agentId) => _engine.GetAndClearTackleFlag(agentId);
 
-            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => 0f;
+            public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId)
+            {
+                int holder = _engine._possessingAgentId;
+                // Activate the approved CONTACT pressure resample only for the dedicated B mode.
+                // Ordinary pass pressure remains its existing Stage-0 stub.
+                return holder >= 0 && _engine._passExecutors[holder].IsGoalkeeperDistributionInFlight
+                    ? _engine.ComputeOpponentPressureScalar(passerPosition, passerTeamId) : 0f;
+            }
         }
 
         /// <remarks>
@@ -11111,4 +11127,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.03    | 2026-10-15 | —      | Match Flow §6 (approved October 13), recorded for PR #505: RequestSubstitution returns a typed SubstitutionRequestResult (rule refusals never throw) and queues a FIFO request (sequence, team, outSlot, bench, reason; capacity 2 × MAX_SUBSTITUTIONS_PER_TEAM). ApplyRestart executes the queue after ball placement and hand-episode teardown and before SelectRestartTaker: dismissal cancellations first, then the per-team Law 3 window gate (MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3; pre-kickoff and the second-half kickoff are free). R1 keeper-role rule with fallback (1); FirstGoalkeeperOnTeam skips sent-off keepers. Full time clears the queue. SNAPSHOT_SCHEMA_VERSION 24 → 25 serializes queue, next sequence and window counts. Off-tick saves: MatchSaveManager writes the committed snapshot plus a separate post-snapshot world-state overlay (MATCH_SAVE_FORMAT_VERSION 2 → 3); CaptureDurableHeader/Payload still refuse an un-ticked accepted request. Public read surface: PendingSubstitutionCount, GetPendingSubstitution, SubstitutionWindowsUsed. |
 // | 2.04    | 2026-10-15 | —      | §6.4: SubstitutePlayer is internal (test-only immediate swap; no production caller can reach it). New internal TestOnly_PendingSubstitutionEventCount seam for §6.5 lock 8. No runtime, schema, RNG or digest change. |
 // | 2.05    | 2026-10-15 | —      | PR #505 review (High): a team already charged a Law 3 window at this stoppage keeps executing there, so two requests on its third window both execute instead of the second waiting (in the second half, until full time). §6.1: requests executed at one stoppage share one window. No schema, RNG or digest-layout change. |
+// | 2.06 | 2026-10-15 | — | W8 B live #21 producer, hand-only DT suppression, typed CONTACT release, Resolve event/completion, cancel teardown and v26 wait latch codec. |
 #endregion

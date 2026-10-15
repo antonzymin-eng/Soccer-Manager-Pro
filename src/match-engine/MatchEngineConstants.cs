@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
 // Modified (prior): 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
@@ -315,7 +316,9 @@ namespace TacticalDirector.MatchEngine
         /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
         /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
         /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 25;
+        /// <para>v26 (live W8 B) adds the per-keeper accepted #5 distribution wait latch. The v24
+        /// request/feedback state is reused; schema mismatch remains a fail-loud load refusal.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 26;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1118,4 +1121,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the bump landed).                                                  |
 // | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
 // | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
+// | 1.43 | 2026-10-15 | — | W8 B accepted-distribution wait latch: snapshot schema 25 → 26. |
 #endregion

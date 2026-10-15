@@ -1,4 +1,5 @@
 // File:     src/pass-mechanics/PassExecutor.GoalkeeperDistribution.cs
+// Modified: 2026-10-15 (W8 B live CONTACT feed)
 // Created:  2026-09-26
 // Modified: 2026-10-13 (W8 B follow-up: expose original retained request read-only for host F-05)
 // Modified: 2026-09-28 (W8 B review — reject non-keeper / wrong-team requests at INITIATING)
@@ -210,6 +211,27 @@ namespace TacticalDirector.PassMechanics
                 GoalkeeperDistributionFeedbackKind.Completed,
                 effectiveTargetAgentId, effectiveTarget, releasePoint, finalVelocity,
                 errorAngleDeg, frameNumber, matchTime);
+
+            // The request remains a dedicated GK mode. The event labels its existing numeric
+            // profile for legacy observers; #11's executed event carries the actual delivery kind.
+            // Set terminal first so an event-publish failure cannot replay CONTACT.
+            EventBusStub.Publish(new PassAttemptEvent
+            {
+                AgentId = request.AgentId,
+                TeamId = request.TeamId,
+                PassType = errorProfile,
+                CrossSubType = CrossSubType.Flat,
+                TargetAgentId = effectiveTargetAgentId,
+                TargetPosition = effectiveTarget,
+                FinalVelocity = finalVelocity,
+                FinalSpin = request.SpinIntent,
+                ErrorAngleDeg = errorAngleDeg,
+                KickSpeed = kickSpeed,
+                LeadDistance = 0f,
+                IsWeakFoot = false,
+                Frame = frameNumber,
+                MatchTime = matchTime
+            });
         }
 
         private void SetGoalkeeperDistributionTerminal(
@@ -309,4 +331,5 @@ namespace TacticalDirector.PassMechanics
 // | Version | Date       | Author | Notes |
 // | 1.1     | 2026-10-13 | —      | Read-only pending-feedback and original-request accessors for exactly-once host handoff. |
 // | 1.0     | 2026-09-26 | —      | W8 B dormant dedicated executor mode: exact windup, CONTACT receiver revalidation/fallback, #5 profile/error reuse, kick application, and retained typed terminal feedback. |
+// | 1.2 | 2026-10-15 | — | Live B CONTACT publishes one canonical PassAttemptEvent for the W5 opposing pass feed. |
 #endregion

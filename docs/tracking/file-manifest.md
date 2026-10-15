@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
+**Last Updated:** October 15, 2026 — **W8 B live distribution.** New `src/match-engine/MatchEngine.GoalkeeperDistribution.cs`, `src/match-engine/tests/W8BDistributionTests.cs`, `src/match-engine/tests/W8BDistributionDiagnosticTests.cs` and their metadata; new `docs/tracking/w8-b-implementation-results.md`. Modified #11 lifecycle/state/intent/event documentation, #5 CONTACT event feed, #21 constants, engine composition/schema/tests, frozen W8 reclaim-split instrument and tracking. No new assembly or removed path.
+
+**Last Updated (prior):** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
 
 **Last Updated (prior):** October 15, 2026, evening — **#40 T3b2 compile issue archived.** No path added or removed. **Modified:** `docs/tracking/open-issues.md`, `open-issues-resolved.md`, `path-to-playable-roadmap.md` v0.64, `docs/agent-guides/project-reference.md` (31 active / 70 archived), `CHANGELOG.md` and this manifest.
 

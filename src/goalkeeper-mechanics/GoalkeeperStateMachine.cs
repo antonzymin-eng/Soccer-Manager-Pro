@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperStateMachine.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-05-28
 // Modified: 2026-05-28
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: parameters renamed from the KEEPER's perspective, new Anticipate → Set exit, Recovering → Resting re-anchored to the far third)
@@ -142,8 +143,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     // but state remains HandsOnBall until distribution is resolved — transition happens in 60 Hz)
                     if (claimTick >= 0 && (currentTick - claimTick) >= GoalkeeperConstants.GK_HOLD_MAX_TICKS)
                     {
-                        // Forced release — return Distributing to signal orchestrator must distribute
-                        return GoalkeeperState.Distributing;
+                            // B legacy signal only. Distributing requires an accepted #5 request.
+                            return GoalkeeperState.HandsOnBall;
                     }
                     return GoalkeeperState.HandsOnBall;
                 }
@@ -375,4 +376,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | keeper who swept a loose ball had NO exit and stood over it in Rushing for   |
 // |     |            |   | the rest of the match. A completion, not an abort: FR-GK-018 / KD-15 remain  |
 // |     |            |   | untouched, since nothing about the ball's trajectory ends the rush.          |
+// | 1.8 | 2026-10-15 | — | W8 B: no-intent expiry preserves HandsOnBall; only accepted execution distributes. |
 #endregion

@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
+> **Last Updated:** October 15, 2026 — **W8 B live distribution implementation.** All six approved #21 policies now reach canonical #5 CONTACT with hand-only DT suppression, live target fallback, typed completion, W5 feed and Resolve event; #11 waits for terminal feedback. Snapshot schema v26. Composed policy locks fail before wiring; 144 targeted Linux checks pass. Frozen comparison and final-head Unity validation pending; [implementation and protocol](w8-b-implementation-results.md).
+
+> **Last Updated (prior):** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
 
 > **Last Updated (prior):** October 15, 2026, evening — **#40 T3b2 compile issue archived.** PR #503 merged (`a76bef70`) after its exact final head `b31eabeb` compiled under Unity 6000.4.9f1 on the pinned host (0 errors) and passed its targeted EditMode run (572 passed / 0 failed / 3 env-gated skips), which is the live entry's closure condition. The entry moves to `open-issues-resolved.md` with a dated resolution note; `project-reference.md` re-derives 31 active / 70 archived; roadmap v0.64 updates step 5 and D4. `DeepRevenueEnabled` stays false: enabling it is still a separate decision. Documentation only.
 
