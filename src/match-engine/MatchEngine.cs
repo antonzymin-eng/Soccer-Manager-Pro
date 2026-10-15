@@ -1,5 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
+// Modified: 2026-10-13 (W8 B #466 prerequisite: Resolve terminal handoff, F-05 original request, host rejection and identity tests; no live policy producer)
 // Modified: 2026-10-12 (PR #500 review: clarify host crossing-position capture; comment only)
 // Modified (prior): 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-10-10 (#441: test-only TestOnly_Heading seam for the reachability observer; no runtime change)
@@ -164,6 +166,8 @@ namespace TacticalDirector.MatchEngine
     {
         // W8 Stage A: optional, per-instance observation only. Never consumed by simulation or snapshot.
         internal Action<W8StageAEvent> TestOnly_W8StageAObserver;
+        // Observation-only W8 B prerequisite. Never consumed by simulation or serialized.
+        internal Action<int, GoalkeeperDistributionFeedback, bool> TestOnly_W8BTerminalFeedbackObserver;
 
         internal int TestOnly_W8TeamId(int agentId) => _teamIds[agentId];
         internal GkDistributionPolicy TestOnly_W8DistributionPolicy(int teamId) =>
@@ -2671,6 +2675,21 @@ namespace TacticalDirector.MatchEngine
             return _shotExecutors[agentId].Execute(in request);
         }
 
+        /// <summary>Test-only: exercise the real PassWorldAdapter identity query.</summary>
+        internal bool TestOnly_PassWorldAdapterIsGoalkeeperOfTeam(int agentId, int teamId) =>
+            new PassWorldAdapter(this).IsGoalkeeperOfTeam(agentId, teamId);
+
+        /// <summary>Test-only: use the production host's initiation/rejection path. The executor is
+        /// the one owned by <c>request.AgentId</c> (no separate slot argument to disagree with it).</summary>
+        internal bool TestOnly_StartGoalkeeperDistribution(
+            in GoalkeeperDistributionRequest request,
+            out GoalkeeperDistributionFeedback feedback) =>
+            StartGoalkeeperDistributionAtHost(in request, out feedback);
+
+        /// <summary>Test-only: cancel an accepted keeper request through the real #5 seam.</summary>
+        internal bool TestOnly_CancelGoalkeeperDistribution(int agentId) =>
+            _passExecutors[agentId].CancelGoalkeeperDistribution();
+
         /// <summary>Test-only: captures one pass executor through its real snapshot seam.</summary>
         internal PassExecutorState TestOnly_PassExecutorState(int agentId) => _passExecutors[agentId].CaptureState();
 
@@ -5166,12 +5185,68 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only composition seam for a single Resolve phase.</summary>
         internal void TestOnly_RunResolvePhase() => RunResolvePhase();
 
+        /// <summary>Single host-owned #5 initiation path for later #21 policy wiring.
+        /// A rejected request never sets pending terminal feedback; route its result immediately.
+        /// The executor is selected from <c>request.AgentId</c> itself: #5 validates identity and
+        /// possession against that agent, and the Physics kick adapter and Resolve drain both index
+        /// the executor by it, so a separate host slot argument could only disagree with them.
+        /// #21 production callers are deliberately absent until W8 B step 7.</summary>
+        private bool StartGoalkeeperDistributionAtHost(
+            in GoalkeeperDistributionRequest request,
+            out GoalkeeperDistributionFeedback feedback)
+        {
+            int agentId = request.AgentId;
+            if (agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(request), agentId, "request.AgentId must be a roster index in [0, SQUAD_SIZE).");
+            }
+
+            bool accepted = _passExecutors[agentId].TryStartGoalkeeperDistribution(in request, out feedback);
+            if (!accepted)
+                ObserveGoalkeeperDistributionTerminal(agentId, in request, in feedback);
+            return accepted;
+        }
+
+        /// <summary>Consumes #5's retained terminal exactly once. The original request must be
+        /// captured BEFORE consumption clears it, so #11 F-05 can distinguish a vanished
+        /// receiver from a deliberately receiverless distribution even after a restore.</summary>
+        private void ConsumeGoalkeeperDistributionFeedbackAtResolve(int agentId)
+        {
+            PassExecutor executor = _passExecutors[agentId];
+            if (!executor.HasPendingGoalkeeperDistributionFeedback)
+                return;
+
+            // Read only the serialized original request; no whole-executor snapshot allocation or
+            // duplicated host latch is needed to preserve F-05 across canonical save/restore.
+            GoalkeeperDistributionRequest request = executor.PendingGoalkeeperDistributionRequest;
+            if (!executor.TryConsumeGoalkeeperDistributionFeedback(out GoalkeeperDistributionFeedback feedback))
+                throw new InvalidOperationException("Pending goalkeeper distribution feedback was lost");
+            ObserveGoalkeeperDistributionTerminal(agentId, in request, in feedback);
+        }
+
+        /// <summary>Single host sink for immediate rejection and Resolve-terminal outcomes.
+        /// Live W8 B wiring adds the #11 state transition and CONTACT event at this seam.</summary>
+        private void ObserveGoalkeeperDistributionTerminal(
+            int agentId, in GoalkeeperDistributionRequest request,
+            in GoalkeeperDistributionFeedback feedback)
+        {
+            bool receiverMissing = feedback.Kind == GoalkeeperDistributionFeedbackKind.Completed
+                && request.TargetAgentId >= 0
+                && feedback.EffectiveTargetAgentId == PassMechanicsConstants.AGENT_ID_NONE;
+            if (receiverMissing)
+                _goalkeeper.ReportDistributionReceiverMissing(agentId, request.TargetAgentId);
+
+            TestOnly_W8BTerminalFeedbackObserver?.Invoke(agentId, feedback, receiverMissing);
+        }
+
         /// <summary>Phase 4 — Resolve. Runs collision (×22), reconciles any Controlled holder/ball
         /// attachment after collision position correction, advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
         /// order is fixed and digest-load-bearing: collision → Controlled reattach → executor Update →
-        /// first touch → possession/MatchContext. Collision writes THIS tick's feedback buffers (consumed by movement
+        /// goalkeeper terminal feedback drain → restart → first touch → possession/MatchContext.
+        /// Collision writes THIS tick's feedback buffers (consumed by movement
         /// next tick — the §3 one-tick-lag contract); the executors advance any pass/shot scripted via the
         /// TestOnly_ seam (production trigger is the Phase D AI dispatcher), kicking the ball at CONTACT
         /// through the executor adapters and releasing possession; first touch (D3) receives a loose
@@ -5254,6 +5329,8 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 _passExecutors[i].Update(matchTime, frameNumber, ref _ball);
+                // Drain terminal feedback exactly once, before #5 can return to ordinary mode.
+                ConsumeGoalkeeperDistributionFeedbackAtResolve(i);
                 _shotExecutors[i].Update(matchTime, frameNumber, ref _ball);
 
                 // ERR-011-004 — tell the defending keeper a shot has been struck.
@@ -10667,4 +10744,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.99    | 2026-10-12 | —      | PR #500 review: _prevTickBallPosition is the Resolve           |
 // |         |            |        | crossing-point input; Ball Physics owns the swept start.       |
 // |         |            |        | Comment only.                                                  |
+// | 2.00    | 2026-10-13 | —      | W8 B prerequisites: host-owned initiator/rejection sink, once-only Resolve terminal drain, original-request F-05 test observer and real adapter identity seam; Restore unchanged, production distribution producer still absent. |
+// | 2.01    | 2026-10-14 | —      | PR #506 review (Codex P2): StartGoalkeeperDistributionAtHost drops its separate slot argument and selects the #5 executor from request.AgentId, so initiation, CONTACT kick lookup and Resolve feedback attribution cannot name different agents; out-of-range AgentId throws. Dormant path; no schema/GT/RNG change. |
 #endregion

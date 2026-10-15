@@ -11,6 +11,7 @@
 // Modified: 2026-09-22 (W3 runtime: mixed cross-claim registration/resolution API + claim hand win/loss terminal routes through existing §3.5 handling)
 // Modified: 2026-09-22 (W3 / ERR-011-012: claim reach side is locked at commit; claim episode is bounded by existing dive duration and hard-cancelled only by composition policy, not by a re-evaluated height/radius trigger)
 // Modified: 2026-09-11 (W4: OnThreatDeflected restarts reaction timing for a changed live flight without setting the shot-event latch; no new state/schema)
+// Modified: 2026-10-13 (W8 B prerequisite: CONTACT host becomes sole F-05 warning owner; legacy physics path remains dormant)
 // Modified: 2026-09-26 (W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss — the §3.8.3 possession-change teardown the corrected 10 Hz clock needs; no new state/schema/RNG)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -816,6 +817,11 @@ namespace TacticalDirector.GoalkeeperMechanics
             _distributeIntentActive[gkIndex] = true;
         }
 
+        /// <summary>Non-mutating #11 F-05 telemetry hook. The host owns CONTACT-time
+        /// receiver validation against the original canonical #5 request, including after restore.</summary>
+        public void ReportDistributionReceiverMissing(int keeperAgentId, int requestedReceiverId) =>
+            _telemetry.WarnDistributionTargetReceiverMissing(keeperAgentId, requestedReceiverId);
+
         // ── Snapshot seam (design note §2.6 / GK-Heading Phase 2) ─────────────────────
 
         /// <summary>
@@ -1406,13 +1412,17 @@ namespace TacticalDirector.GoalkeeperMechanics
                 {
                     ref DistributeIntent distIntent = ref _distributeIntents[gkIndex];
 
+                    // Legacy #11 approximation is dormant in production. The live W8 B
+                    // #5 CONTACT host is the SOLE owner of receiver-missing F-05 reporting,
+                    // comparing the original serialized request with the effective receiver.
+                    // Do not enable this legacy path with a live roster query: the B landing
+                    // retires the entire pre-CONTACT event/release approximation below.
                     GoalkeeperDistribution.ValidateTarget(
                         ref distIntent,
-                        agentRosterContains: true, // Stage 0 stub: always true pending roster query
-                        receiverMissingWarningEmitted: out bool receiverWarning,
+                        agentRosterContains: true, // Legacy-only stub; NOT an authoritative roster check.
+                        receiverMissingWarningEmitted: out bool ignoredLegacyReceiverWarning,
                         targetPointClamped: out bool targetClamped);
 
-                    if (receiverWarning) _telemetry.WarnDistributionTargetReceiverMissing(agentId);
                     if (targetClamped) _telemetry.WarnDistributionTargetPointClamped(agentId);
 
                     float windupMs = GoalkeeperDistribution.ComputeWindupMs(distIntent.DeliveryKind);
@@ -1745,4 +1755,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | the sole bounded episode lifetime. No new GT or RNG draw site.             |
 // | 1.17 | 2026-09-22 | — | W3 runtime: #11 exposes frame-local mixed-participant duel registration and owns the tiebreak draw; Hand winner/loss routes now consume the live ClaimIntent and use the existing §3.5 handling/event/ball-action contract. |
 // | 1.18 | 2026-09-26 | — | W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss (#11 §3.8.3 possession-change teardown). Once the composition root passes a true 10 Hz tick, HandsOnBall has no exit but the 60-tick timeout, so a keeper who had already passed stayed in hands for up to 6 s and could not rush, claim or dive. The teardown enters Recovering with the ordinary cooldown; no-op outside HandsOnBall/Distributing. No new state, schema, GT or RNG. |
+// | 1.19 | 2026-10-13 | — | W8 B prewiring: retain contact-time F-05 telemetry entry point but eliminate legacy physics warning ownership; legacy release-event implementation remains to be retired by B. |
 #endregion
