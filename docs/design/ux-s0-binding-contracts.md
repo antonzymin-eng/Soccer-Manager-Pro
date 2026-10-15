@@ -1,8 +1,8 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 8, 2026\
-**Version:** 0.5\
+**Last Updated:** October 15, 2026\
+**Version:** 0.6\
 **Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
@@ -388,3 +388,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.3 | October 3, 2026 | Records Anton Zymin's explicit approval of the unchanged 36-name fixture list at 96f16ba. Separate long-name/pseudo/200% stress coverage remains required. Final contract/reference review remains due; I IN PROGRESS, #470 blocked, QA planned; no runtime, image or merge approval inferred. |
 | 0.4 | October 4, 2026 | Final technical handoff review PASS recorded in journey §14.11 at e8ffd89; all three contracts/reference deltas reviewed. Main release follows #478 landing; implementation, Gate-J QA and exact-head Unity evidence remain due. No approved source/image or prior history change. |
 | 0.5 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): pitch descriptions are read-only rather than noninteractive, shown on pointer or the single keyboard pitch entry of journey §9.3. Role register, copy and content hash unchanged. |
+| 0.6 | October 15, 2026 | Match Flow §6.2.6 (PR #505): `context.substitution` says a request waits for the next eligible stoppage (half-time when no window is left in the first half), and `feedback.substitution_not_applied` covers a cancelled request as well as full time. No key, argument signature or binding changed. |

@@ -1,6 +1,7 @@
 // File:     src/ui-framework/MatchFrameView.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart —
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue)
+// Modified (prior): 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart —
 //           the last two as Scoreline / RestartBanner carriers after AR-1 M-6)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4),
@@ -242,4 +243,5 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | hence default(RestartBanner), which derives its team and tick   |
 // |         |            |        | from its own cue and so reports NO_RESTART_TEAM / 0 rather     |
 // |         |            |        | than the "home team, tick 0" the v1.1 loose fields gave.        |
+// | 1.3     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): read-only PendingSubstitutions copied from the frame (empty when absent). |
 #endregion

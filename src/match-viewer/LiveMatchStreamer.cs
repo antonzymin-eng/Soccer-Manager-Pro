@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
 //           held in a single RestartBanner after AR-1 M-6)
@@ -655,4 +656,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | would have silently diverged from a streamer constructed with  |
 // |         |            |        | a non-default ticksPerSecond.                                  |
 // | 1.9     | 2026-10-06 | —      | Capture identity with position/cues under the existing tick gate. |
+// | 1.10    | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): copies the engine pending queue into each captured frame under the tick gate; never exposes engine arrays. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/S0ScreenPresentationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6: acceptance is not execution)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 I-Q01–14/16/18, Code Standards #20
 // Purpose:  Exercise real coordinator/session/driver and admitted content through the shipping presenter path.
@@ -434,4 +435,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 // | 1.3     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
 // | 1.4     | 2026-10-08 | —      | Composed read-only pitch inspection reaches all 22 current player descriptions without ticking or dispatching. |
+// | 1.5     | 2026-10-15 | —      | Match Flow §6 (PR #505): the substitution stays Pending after acceptance and settles only after a restart executes it. |
 #endregion

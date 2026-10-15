@@ -1,6 +1,7 @@
 // File:     src/client-app/S0ScreenPresenter.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6: pending reservations)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 journey §§14.3–14.8, binding contracts §§2–4, Code Standards #20
 // Purpose:  Consumed four-screen presentation, staging, enablement, copy, statistics and disclosure state.
@@ -839,4 +840,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed localized screen state, owner availability, requests and analytics. |
 // | 1.1     | 2026-10-08 | —      | Poll changed command outcomes atomically; structural revision excludes ordinary frames. |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): outgoing, bench and cap selectors reserve players named by the frame pending queue and by in-flight commands, each counted once. Last-frame roster evidence settles executed orders before the end barrier marks the rest NotApplied. |
 #endregion

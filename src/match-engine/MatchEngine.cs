@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
+// Modified: 2026-10-15 (Match Flow §6 / PR #505: deferred substitution requests, Law 3 windows, v25 pending queue, v3 off-tick save overlay; SubstitutePlayer internal-only)
+// Modified (prior): 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
 // Modified: 2026-10-13 (W8 B #466 prerequisite: Resolve terminal handoff, F-05 original request, host rejection and identity tests; no live policy producer)
 // Modified: 2026-10-12 (PR #500 review: clarify host crossing-position capture; comment only)
 // Modified (prior): 2026-10-12 (ERR-001-007: goal-frame/state ordering)
@@ -1758,8 +1759,13 @@ namespace TacticalDirector.MatchEngine
         /// reached. The outgoing slot's yellow-card count resets to 0 (AR-7 M-1 — discipline attaches
         /// to the PLAYER, and the slot now holds a different player; without the reset a substitute
         /// replacing a booked player would be sent off on their own first yellow).
+        /// <para><b>Test-only immediate swap (design note §6.4).</b> Production callers use
+        /// <see cref="RequestSubstitution"/>, which defers execution to the next stoppage. This helper is
+        /// <c>internal</c> so no production assembly can reach it; within the engine only the pre-kickoff
+        /// branch of <see cref="RequestSubstitution"/> calls it. A new engine-internal caller (AI manager,
+        /// injury) invalidates the October 10 census and must re-run it.</para>
         /// </summary>
-        public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+        internal void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
         {
             GuardTeamId(teamId);
             if (reason != SubstitutionReason.Tactical && reason != SubstitutionReason.Injury)
@@ -3256,6 +3262,10 @@ namespace TacticalDirector.MatchEngine
         /// seam alone cannot see — is lockable without staging a whole foul.</summary>
         internal void TestOnly_ApplyRestart(Vector2 position, int awardedTeam) =>
             ApplyRestart(position, awardedTeam, RestartCue.FreeKick, publishSubstitutionsNow: false);
+
+        /// <summary>Test-only (Match Flow §6.2.5 / §6.5 lock 8): entries in the transient
+        /// <see cref="SubstitutionEvent"/> publication buffer. It must be zero at every tick boundary.</summary>
+        internal int TestOnly_PendingSubstitutionEventCount => _pendingSubCount;
 
         /// <summary>Test-only W3 seam: current 60 Hz frame used by the staged mixed-contact locks.</summary>
         internal int TestOnly_CurrentPhysicsFrame => (int)_clock.CurrentTick;
@@ -11096,4 +11106,6 @@ namespace TacticalDirector.MatchEngine
 // | 2.00    | 2026-10-13 | —      | W8 B prerequisites: host-owned initiator/rejection sink, once-only Resolve terminal drain, original-request F-05 test observer and real adapter identity seam; Restore unchanged, production distribution producer still absent. |
 // | 2.01    | 2026-10-14 | —      | PR #506 review (Codex P2): StartGoalkeeperDistributionAtHost drops its separate slot argument and selects the #5 executor from request.AgentId, so initiation, CONTACT kick lookup and Resolve feedback attribution cannot name different agents; out-of-range AgentId throws. Dormant path; no schema/GT/RNG change. |
 // | 2.02    | 2026-10-15 | —      | PR #505 Codex: protect queued reservations from legacy swaps and reject undefined request reasons before mutation. |
+// | 2.03    | 2026-10-15 | —      | Match Flow §6 (approved October 13), recorded for PR #505: RequestSubstitution returns a typed SubstitutionRequestResult (rule refusals never throw) and queues a FIFO request (sequence, team, outSlot, bench, reason; capacity 2 × MAX_SUBSTITUTIONS_PER_TEAM). ApplyRestart executes the queue after ball placement and hand-episode teardown and before SelectRestartTaker: dismissal cancellations first, then the per-team Law 3 window gate (MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3; pre-kickoff and the second-half kickoff are free). R1 keeper-role rule with fallback (1); FirstGoalkeeperOnTeam skips sent-off keepers. Full time clears the queue. SNAPSHOT_SCHEMA_VERSION 24 → 25 serializes queue, next sequence and window counts. Off-tick saves: MatchSaveManager writes the committed snapshot plus a separate post-snapshot world-state overlay (MATCH_SAVE_FORMAT_VERSION 2 → 3); CaptureDurableHeader/Payload still refuse an un-ticked accepted request. Public read surface: PendingSubstitutionCount, GetPendingSubstitution, SubstitutionWindowsUsed. |
+// | 2.04    | 2026-10-15 | —      | §6.4: SubstitutePlayer is internal (test-only immediate swap; no production caller can reach it). New internal TestOnly_PendingSubstitutionEventCount seam for §6.5 lock 8. No runtime, schema, RNG or digest change. |
 #endregion

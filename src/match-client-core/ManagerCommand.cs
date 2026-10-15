@@ -1,6 +1,7 @@
 // File:     src/match-client-core/ManagerCommand.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-15 (Match Flow §6.4: Apply reports acceptance)
+// Modified (prior): 2026-07-24
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6),
 //           Code Standards #20
@@ -121,4 +122,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | one factory + Apply path per live mutator.                     |
 // | 1.1     | 2026-07-24 | —      | AR pass-1 Medium: Apply fails loud on the None (default) kind   |
 // |         |            |        | instead of falling through to a malformed mutator payload.     |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6.4: Apply returns bool; a Substitute command reports whether the engine accepted the request (rule refusals are typed results, not exceptions). |
 #endregion

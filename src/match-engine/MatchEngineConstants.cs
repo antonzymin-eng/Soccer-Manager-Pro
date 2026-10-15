@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
-// Modified: 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
+// Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
+// Modified (prior): 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
 // Modified: 2026-09-22 (wiring backlog W3 — SNAPSHOT_SCHEMA_VERSION 22 -> 23 for the per-GK ClaimIntent payload + active latch)
 // Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
 // Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
@@ -1116,4 +1117,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | [GT] value changes. Row added at the #439 close-out (omitted when  |
 // |         |            |        | the bump landed).                                                  |
 // | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
+// | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
 #endregion

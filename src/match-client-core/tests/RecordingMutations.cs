@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/RecordingMutations.cs
 // Created:  2026-07-24
-// Modified: 2026-08-08
+// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
+// Modified (prior): 2026-08-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2), Code Standards #20
 // Purpose:  Head-less ILiveMatchMutations test double — a fake mutation surface with a settable current
@@ -61,4 +62,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | Version | Date       | Author       | Notes                                                     |
 // | 1.0     | 2026-07-24 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6.4: records RequestSubstitution and returns Accepted. |
 #endregion

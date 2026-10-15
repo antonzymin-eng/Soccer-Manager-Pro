@@ -1,7 +1,10 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** July 14, 2026 (**Implementation LANDED and a full code-adversarial-review pass
+> **Last Updated:** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
+> maps all thirteen acceptance locks to their tests; schema v25 is taken; saves between ticks use match save
+> format v3. Prior entry below.)
+> **Last Updated (prior):** July 14, 2026 (**Implementation LANDED and a full code-adversarial-review pass
 > completed clean.** AR-1 through AR-6 (§12) converged the plan before any code was written; the
 > plan was then implemented in full (`RestartResolver.cs`, `OffsideEvaluator.cs`,
 > `SubstitutionReason.cs`, three new Tier A events, `MatchEngine.cs` v1.31,
@@ -282,8 +285,8 @@ The approved deferred-substitution contract (decision record: `match-flow-s6-sub
 v0.3, October 12) supersedes the immediate-effect text previously in this section. The Stage-0 bench
 remains `SUBSTITUTES_PER_TEAM = 7`, with `MAX_SUBSTITUTIONS_PER_TEAM = 5` and the existing
 `BenchRosterConfig` source; manager requests remain opt-in. Approval is recorded in the owner's
-October 13 step-4 instruction. The implementation is tracked independently until its final-head
-verification lands; this text is the target contract, not a claim that currently merged code implements it.
+October 13 step-4 instruction. PR #505 implements this contract (October 15, 2026); its final-head Linux
+and Unity 6000.4.9f1 evidence is recorded on the PR, and §6.5.1 maps each lock to its test.
 
 ### 6.1 Definitions
 
@@ -493,6 +496,30 @@ October 10 census and must re-run it.
 13. Save/restore with windows partly used and with a request held by the window gate continues with
     identical per-tick digests.
 
+#### 6.5.1 Lock evidence (PR #505)
+
+Engine locks are in `src/match-engine/tests/MatchEngineDeferredSubstitutionTests.cs` unless another file is named.
+
+| Lock | Test(s) |
+|---|---|
+| 1 | `OpenPlayRequestChangesNoRosterStateUntilRestart`; `PendingRequestChangesNoOnPitchStateThenIncomingPlayerCanTakeTheRestart` (no on-pitch change against a control run; the incoming player can take the restart); `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests` (held request) |
+| 2 | `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `TwoRequestsAtOneRealRestartPublishInSequenceOrder`; `DuplicateSlotAndBenchRefusalsLeaveQueueUnchanged` |
+| 3 | `LimitCountsPendingRequestsAndOnlyExecutionChangesTheCount`; `LegacySwapCannotInvalidateQueuedSlotBenchOrCapacity` |
+| 4 | `DismissedOutgoingCancelsBeforeTheWindowGate`; `DismissalCancelsARequestHeldByTheWindowGate`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests` |
+| 5 | `FullTimeRemovesPreviouslyAcceptedUnexecutedRequest`; `FullTimeRejectsRequestsWithTypedResult` |
+| 6 | `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
+| 7 | Request tick: `MatchSaveManagerTests.SaveAtAcceptedSubstitutionTick_PreservesPendingAndDigestContinuation`, `MatchSessionTests.PausedOffTickSubstitution_SaveRestore_ContinuesIdenticalDigestChain`. Mid-play: `RestoredPendingRequestMatchesEveryContinuationDigestThroughRestart`. Stoppage tick: `SaveOnTheExecutingStoppageTickContinuesIdenticallyAndAppliesOnce` |
+| 8 | `ExecutionAtEveryRestartKindPublishesInItsOwnTick` (throw-in, goal kickoff, foul free kick, second-half kickoff); `OffsideFreeKickExecutionLeavesNoBufferedEvent`; `ActualThrowInExecutesOnItsResolveTick` |
+| 9 | Every lock-1, -4 and -7 test above that takes a team parameter runs for home and away |
+| 10 | `KeeperMismatchRefusedAndSentOffKeeperEnablesBenchKeeperFallback`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback` |
+| 11 | `FallbackKeeperImmediatelyBecomesGoalkeeperForElevenAndPositioning`; `KeeperReplacementRulesRejectOutfielderForKeeperAndSecondFallback`; `FallbackKeeperHeldByTheGateComesOnFreeAtHalfTime`; `FallbackKeeperIsRefusedWithoutASecondHalfWindowOrASubstitution` |
+| 12 | `ThreeUsedWindowsHoldNextFirstHalfRequest`; `ExhaustedWindowsExecuteAtHalfTimeButRefuseSecondHalfRequests`; `TwoRequestsExecuteInSequenceUsingOneTeamWindow`; `MirroredTeamsExecuteAndCancelOnlyOwnRequests`; `PreKickoffRequestAppliesImmediatelyWithNoWindow` |
+| 13 | `SaveWithWindowsUsedAndARequestHeldContinuesIdentically` |
+
+`SubstitutePlayer` is kept as an `internal` test helper (§6.4). Within the engine only the pre-kickoff
+branch of `RequestSubstitution` calls it, and no production assembly can reach it. Saves between ticks
+use the match save format v3 off-tick overlay (`match-save-file-design.md` KD-8).
+
 ### 6.6 Owner decisions (October 12, 2026)
 
 | ID | Question | Options | Decision |
@@ -683,3 +710,5 @@ project's established pattern for this environment.
 | 1.0 | 2026-07-14 | **Implementation landed; code-adversarial-review cycle closed.** All nine plan items (§3–§7) implemented per the AR-1..AR-6-converged plan above: `RestartResolver.cs` / `OffsideEvaluator.cs` / `SubstitutionReason.cs` (new), three new Tier A events (`OffsideCalledEvent` 0x18 / `RestartAwardedEvent` 0x19 / `MatchPhaseChangedEvent` 0x1A), `MatchEngine.cs` v1.31 (`CheckRestartAndApply`/`ApplyRestart`, `MatchFlowCollisionConsumer`, `ApplyFoulIfCaptured`/`DetermineCardKind`/`ApplyCardAndCheckSentOff`, `EvaluateAndApplyOffside` hooked into `RunFirstTouch`, public `SubstitutePlayer`/`PublishPendingSubstitutions`, `CheckMatchFlowTransitions`), `SNAPSHOT_SCHEMA_VERSION` 14 → 15, and five new test files (`MatchEngineRestartTests`/`MatchEngineOffsideTests`/`MatchEngineFoulCardTests`/`MatchEngineSubstitutionTests`/`MatchEngineMatchFlowTests`) plus `MatchEngineSnapshotSchemaTests` v1.12. Per the driving instruction, the implementation was then itself adversarially reviewed with the same rigor as the plan — multiple rounds reading the ENTIRE touched surface, not just the diff. This surfaced and fixed, beyond the AR-4/AR-5/AR-6 findings already logged above: a stale doc comment on `HALF_TIME_BOUNDARY_TICK` in `MatchEngineConstants.cs` that still described the AR-4-rejected ends-swap; a misleading test comment in `MatchEngineOffsideTests.cs` (`ComputeOffsideLineX_SentOffAndOpponents_Excluded`) that referenced the wrong index as if it were relevant to the excluded set; a latent agent-position/command-drift risk in the foul-card integration test (repositioning an agent via `TestOnly_SetAgent` without also refreshing its held `MovementCommand` would have let the stale boot-time command steer the agent back toward its original position during the same tick's Physics phase, before the foul is applied in Resolve); and a dead `_foulCandidateForce` field carried by the collision consumer but never read (removed, simplifying `TestOnly_InjectFoulCandidate`'s signature). A subsequent full pass — re-reading `RunResolvePhase` end-to-end, all four Mechanics-AI `IsActive` snapshot fill sites, the boot/constructor additions, the v15 serialization block byte-for-byte, all three new event structs against `EventRegistry`'s producer-phase/header-size contract, `RestartResolver`/`OffsideEvaluator` against their own tests, and all five new test files in full — found nothing further. The code-review cycle is closed per the "repeat until no new errors are found" instruction. Tracking docs (root `CLAUDE.md`, `src/CLAUDE.md`, `file-manifest.md`, `match-engine-design.md`) updated in the same pass. Full `dotnet test` gate not runnable in this environment (no SDK access, per this project's own documented precedent for the authoring environment) — verification was by exhaustive manual code review in its place.
 | 1.1 | 2026-10-10 | Pointer only: §6 notes that a deferred substitution contract is drafted for owner approval in `match-flow-s6-substitution-contract-draft.md` v0.1. §6 text and the code are unchanged. |
 | 1.2 | 2026-10-12 | Pointer only: the §6 note now cites draft v0.3 (owner decisions recorded; revised text awaiting sign-off). §6 text and the code are unchanged. |
+| 1.3 | 2026-10-13 | §6 replaced by the approved deferred-substitution contract (`match-flow-s6-substitution-contract-draft.md` v0.3 decisions S-1, R1 with fallback (1), W1, E1, L1), per the owner's October 13 step-4 instruction: request/execution definitions, Law 3 windows, cancellation, events, client outcomes, v25 snapshot obligations and thirteen acceptance locks. Row added October 15 (omitted when the text landed on the PR #505 branch). |
+| 1.4 | 2026-10-15 | PR #505 implements §6. The §6 status sentence records the implementation; new §6.5.1 maps each lock to its test, including the locks completed October 15 (1, 2, 3, 4, 7, 8, 11, 13). `SubstitutePlayer` is internal (§6.4). Saves between ticks use match save format v3 (`match-save-file-design.md` KD-8). |

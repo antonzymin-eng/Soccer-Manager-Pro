@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/CommandDispatchTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
+// Modified (prior): 2026-07-25
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.3 / §5.1 (T-UI-DISPATCH-001..004, FR-UI-003/012/013/014/023,
 //           failure modes F3/F6), Code Standards #20
@@ -242,4 +243,5 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | F3 fail-loud (default + unmapped kind), the intent/command     |
 // |         |            |        | correspondence drift guard, and the FR-UI-023 marshaling lock  |
 // |         |            |        | (enqueue now, apply only on the sim-thread drain).             |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.4: the dispatcher test double records RequestSubstitution. |
 #endregion

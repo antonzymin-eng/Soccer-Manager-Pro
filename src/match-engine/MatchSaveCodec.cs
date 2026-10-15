@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchSaveCodec.cs
 // Created:  2026-07-21
-// Modified: 2026-08-22 (ERR-016-009 / KD-7: the header block carries the §2.3.2 buildHash; v2)
+// Modified: 2026-10-15 (Match save format v3 overlay)
+// Modified (prior): 2026-08-22 (ERR-016-009 / KD-7: the header block carries the §2.3.2 buildHash; v2)
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §3 layout / KD-1..KD-6;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §3.2.4.1
@@ -342,4 +343,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | cannot admit a save whose build identity is unknown. The       |
 // |         |            |        | fingerprint-flag read also gains its own bound check, which    |
 // |         |            |        | the fixed-width header Require had been covering.              |
+// | 1.2     | 2026-10-15 | —      | Format v3 (PR #505): after the payload, u32 overlay length; when non-zero, the SHA-256 of the overlay and then the overlay bytes. Decode bounds-checks length and capacity and verifies the digest before returning the overlay. |
 #endregion

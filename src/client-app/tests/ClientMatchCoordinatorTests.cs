@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/ClientMatchCoordinatorTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-06
+// Modified: 2026-10-15 (Match Flow §6: deferred roster change)
+// Modified (prior): 2026-10-06
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Exercises real session/engine composition, stable registrations and lifecycle cleanup.
@@ -407,4 +408,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-06 | —      | Restore keeps BootRoster before any substitution; after one (either team) restore and playback continue while BootRoster refuses. |
+// | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution leaves the roster unchanged until a restart; the driver log records acceptance, not application. |
 #endregion

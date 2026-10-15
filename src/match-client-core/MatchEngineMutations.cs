@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchEngineMutations.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
+// Modified (prior): 2026-07-24
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §3-2/§4),
 //           Code Standards #20
@@ -54,4 +55,5 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0): pass-through adapter from a live         |
 // |         |            |        | MatchEngine to the ILiveMatchMutations command surface.        |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.4: forwards RequestSubstitution and its typed result. |
 #endregion

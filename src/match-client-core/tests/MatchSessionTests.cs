@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/MatchSessionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-09-11 (wiring backlog W7: live MatchSession boot is digest-locked against the explicit ManagerAdaptation.ApplyKickoff reference path before tick 1)
+// Modified: 2026-10-15 (Match save v3: paused off-tick saves)
+// Modified (prior): 2026-09-11 (wiring backlog W7: live MatchSession boot is digest-locked against the explicit ManagerAdaptation.ApplyKickoff reference path before tick 1)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P6/§6.3),
 //           Code Standards #20
@@ -345,4 +346,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.1     | 2026-08-03 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
 // | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.3     | 2026-09-11 | —            | W7 regression locks: AI boot matches explicit ApplyKickoff; neutral boot remains digest-identical to the prior two-team-tactic baseline despite identity player-tactic staging. |
+// | 1.4     | 2026-10-15 | —      | Match save format v3 (PR #505): a paused off-tick substitution and a paused mentality change survive save/restore with an identical continuation digest chain. |
 #endregion

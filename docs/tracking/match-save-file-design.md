@@ -1,7 +1,11 @@
 # On-Disk Match Save File — Match Engine (Design Supplement)
 
 > **Created:** July 21, 2026
-> **Last Updated:** August 22, 2026 (v0.4 — **`ERR-016-009`: the file now carries the #16 §2.3.2
+> **Last Updated:** October 15, 2026 (v0.5 — **KD-8: off-tick overlay, format v3 (PR #505).** A save requested
+> between ticks now writes the committed header and payload unchanged plus a separately SHA-256-checked
+> world-state overlay of the live engine; restore verifies the committed chain first, then applies the
+> overlay. `MATCH_SAVE_FORMAT_VERSION` 2 → 3; KD-1 stands, a v2 blob is refused. Prior v0.4 below.)
+> **Last Updated (prior):** August 22, 2026 (v0.4 — **`ERR-016-009`: the file now carries the #16 §2.3.2
 > `buildHash`.** New KD-7; §3 layout goes v2 (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one
 > `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. **No presence flag
 > and no absent case** — unlike the fingerprint, this writer always knows its own build, so `Encode`
@@ -190,7 +194,7 @@ version-gate + trailing-byte guard over the payload).
 
 ---
 
-## 3. On-disk layout (v2 — `MATCH_SAVE_FORMAT_VERSION = 2` since August 22, 2026, `ERR-016-009`)
+## 3. On-disk layout (v3 — `MATCH_SAVE_FORMAT_VERSION = 3` since October 15, 2026, KD-8; v2 since August 22, 2026, `ERR-016-009`)
 
 All integers little-endian, via `CanonicalSerializer`. `string` = u32 length + ASCII bytes.
 `digest[32]` = 32 raw bytes (fixed width, not length-prefixed).
@@ -220,13 +224,20 @@ u8    fingerprintPresent                   // KD-3 (1 = the 6 fields follow; 0 =
 // ── SnapshotPayload block ─────────────────────────────────────────────────
 u32   payloadLength                        // = SnapshotPayload.BytesWritten
 byte  payload[payloadLength]               // the SerializeWorldState body (+ event ledger)
+
+// ── Off-tick overlay block (v3, KD-8) ─────────────────────────────────────
+u32   overlayLength                        // 0 = committed-only blob (MatchSaveManager always writes one)
+  // if overlayLength > 0:
+  byte  overlayDigest[32]                  // SHA-256 of overlay[overlayLength]
+  byte  overlay[overlayLength]             // live SerializeWorldState body + an empty event-ledger tail
 ```
 
 **Decode bounds (KD-6, fail-loud):** every `ReadString` length and `payloadLength` is checked against
 the remaining buffer before the copy (a corrupt count throws `ArgumentException`, never
 `OverflowException`/OOM or a silent short read); `payloadLength` is additionally checked against
-`SnapshotPayload.Capacity`; after the payload copy the read offset must equal the blob length exactly
-(trailing-byte guard).
+`SnapshotPayload.Capacity`. In v3 the same holds for `overlayLength`, and the overlay digest is
+verified before the overlay is returned. After the last block the read offset must equal the blob
+length exactly (trailing-byte guard).
 
 ### KD-7 — The file carries the `buildHash`, and refuses to carry an empty one (v2, `ERR-016-009`)
 
@@ -249,6 +260,36 @@ not reach this format.
 is refused, not upgraded. Nothing else in the layout moved, and the change is confined to this
 format: `SNAPSHOT_SCHEMA_VERSION` is untouched, and no digest preimage sees the new field (#16 §2.3.2
 rule 2), so no golden vector moves.
+
+### KD-8 — Off-tick saves carry a separate overlay (v3, October 15, 2026, PR #505)
+
+**Problem.** A save can be requested between ticks. `MatchSession` drains the manager-command queue
+before it calls `MatchSaveManager.Encode`, and a paused match never reaches the next Snapshot phase. A
+command drained there (an accepted substitution request under match-flow §6, or a tactic change) is live
+engine state that the last committed snapshot does not contain. Writing the live state into the
+committed payload would break the digest chain: the payload would no longer hash to
+`CurrentSnapshotDigest`. Refusing the save would make a paused save fail, which the October 13 review of
+PR #505 named a merge blocker. Silently dropping the command is not acceptable either.
+
+**Decision.** Keep the committed header and payload byte-for-byte, and append the live world state as a
+separate overlay with its own SHA-256. `Restore` runs `RestoreFromSnapshot` on the committed pair, so
+the chain, build, fingerprint and schema gates run exactly as in v2. Then `ApplyPostSnapshotWorldState`
+deserializes the overlay on top at the same tick, re-projects squads and keeper identities, and marks the
+engine dirty. The next tick commits a snapshot of the overlay state, chained from the saved digest, so a
+restored run matches an uninterrupted one tick for tick (`MatchSessionTests` paused substitution and
+paused mentality; `MatchSaveManagerTests` request-tick save; `MatchEngineDeferredSubstitutionTests`
+stoppage-tick and held-window saves). `CaptureDurableHeader`/`CaptureDurablePayload` still refuse an
+un-ticked accepted request, so no caller can capture the stale committed pair by mistake.
+
+**Properties and costs.** The overlay digest is an integrity check (corruption, truncation), not
+authentication: anyone can recompute it, which matches the rest of this unsigned file. Every v3 file
+carries a second full world-state body, roughly doubling its size; the overlay is written even when
+nothing changed off-tick, which keeps one code path. `MATCH_SAVE_FORMAT_VERSION` 2 → 3, and KD-1 stands:
+a v2 blob is refused, not migrated. `SNAPSHOT_SCHEMA_VERSION` moves independently (25, match-flow §6.3);
+no digest preimage sees the overlay, so no golden vector moves.
+
+**Status.** Implemented in PR #505. This format bump is not part of the original match-flow §6 v25
+contract, so the PR records the owner's approval of it before merge.
 
 ---
 
@@ -322,3 +363,4 @@ defect a per-method unit test would miss.
 | 0.2 | 2026-07-21 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: persist the boot `matchSeed` (the file was not self-sufficient without it — KD-2). M-2: serialize the `EnvironmentFingerprint` so the KD-6 gate runs through disk (KD-3). M-3: add the trailing-byte / length-bound fail-loud guards (KD-6). L-1: pin `MATCH_SAVE_FORMAT_VERSION` as a third distinct version (KD-1). L-2: pin the `ISquadProvider` as a Load parameter, not persisted (KD-4). |
 | 0.3 | 2026-07-21 | — | **Self-adversarial review AR-2: 0H + 0M + 1L — CONVERGENCE.** Fresh-eyes re-walk; boot-header/state split, gate order, and fingerprint round-trip verified sound with no change. L-1: clarified that `SaveManager` exposes no raw-blob atomic write, so the atomic steps are re-implemented (not delegated) in `MatchSaveManager` (KD-6). Cycle converged — ready to implement. |
 | 0.4 | 2026-08-22 | — | **`ERR-016-009` — the file carries the #16 §2.3.2 `buildHash`.** New **KD-7**; §3 layout goes **v2** (`MATCH_SAVE_FORMAT_VERSION` 1 → 2) with one `string header.BuildHash` between `Cursor.PhaseOrdinal` and `fingerprintPresent`. No presence flag and no absent case — `Encode` refuses a null/empty build hash and `Decode` refuses a blob carrying one, both sides, so the format cannot admit a save whose build identity is unknown. Sits beside the fingerprint rather than inside it: host identity and binary identity fail for unrelated reasons and carry distinct error codes. KD-1 unchanged (a v1 blob is refused, not migrated). `SNAPSHOT_SCHEMA_VERSION` untouched; no digest preimage sees the field, so no golden vector moves. |
+| 0.5 | 2026-10-15 | — | **KD-8 — off-tick overlay, format v3 (PR #505).** §3 layout appends `overlayLength`, then (when non-zero) the overlay SHA-256 and the overlay bytes after the payload. Committed header and payload unchanged; restore applies the overlay after the committed chain is verified. `MATCH_SAVE_FORMAT_VERSION` 2 → 3, KD-1 unchanged (no migration). |

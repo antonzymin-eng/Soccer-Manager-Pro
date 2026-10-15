@@ -1,6 +1,7 @@
 // File:     src/client-app/S0ScreenContent.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6.2.6 copy)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 binding contracts §4, Localization #49, Code Standards #20
 // Purpose:  Compiled S0 role catalogue and typed argument schemas, consumed by the shipping shell.
@@ -187,4 +188,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-10-08 | —      | Localized pitch legend explains single Tab entry and read-only arrow inspection. |
 // | 1.2     | 2026-10-08 | —      | Restore owner-approved pitch legend verbatim; keyboard inspection remains in the focus binding. |
 // | 1.3     | 2026-10-08 | —      | Restore complete approved substitution, baseline pitch and loose-ball context sentences. |
+// | 1.4     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution says the request waits for the next eligible stoppage (for half-time when no window is left in the first half); feedback.substitution_not_applied covers cancellation as well as full time. |
 #endregion

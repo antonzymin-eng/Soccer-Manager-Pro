@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/ClientChangeRequestsTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-15 (Match Flow §6 client locks)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 journey §14.5 / I-Q06–10, Code Standards #20
 // Purpose:  Adversarial suffix/payload/cursor, multi-order and send/refusal/end outcome coverage.
@@ -236,4 +237,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Adversarial new-evidence and persistent outcome cases. |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6 (PR #505): pending until the incoming bench cue; two accepted orders share one stoppage; full time settles both; dismissal cancels without claiming Applied; queue disappearance is cancellation evidence without a new event. |
 #endregion

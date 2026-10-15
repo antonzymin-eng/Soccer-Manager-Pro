@@ -1,6 +1,7 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy lock)
+// Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
@@ -227,4 +228,5 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | boot-time accessor goes stale — run for both teams.             |
 // | 1.3     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
 // | 1.4     | 2026-10-06 | —      | Positional cue test asserts a distinct PlayerId. |
+// | 1.5     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): captured frames copy pending requests and their sequence identities. The keeper-cue lock keeps the immediate swap, now an internal engine helper reached through the match-engine test friend. |
 #endregion

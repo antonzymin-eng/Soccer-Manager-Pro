@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchSaveContents.cs
 // Created:  2026-07-21
-// Modified: 2026-07-21
+// Modified: 2026-10-15 (Match save format v3 overlay)
+// Modified (prior): 2026-07-21
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §4 / KD-2..KD-5;
 //           Match Engine design note §5 Phase G-Phase 3; Code Standards #20
@@ -50,4 +51,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-07-21 | —      | Initial implementation. |
+// | 1.1     | 2026-10-15 | —      | Format v3 (PR #505): optional PostSnapshotPayload (null for a committed-only save). |
 #endregion
