@@ -1,6 +1,6 @@
 // File:     src/match-client-web/tests/MatchClientServerTests.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6), Code Standards #20
 // Purpose:  Drives the transport over real loopback sockets — the part the router tests cannot
@@ -170,14 +170,33 @@ namespace TacticalDirector.MatchClientWeb.Tests
             Assert.AreEqual(before, _host.Session.Commands.Count, "Nothing was queued after Stop().");
         }
 
+        /// <summary>
+        /// Like <see cref="Request(string)"/>, but a connection reset counts as the server dropping
+        /// the connection and returns what arrived before it (nothing, for a dropped request).
+        /// <see cref="Request(string)"/> itself stays strict: a reset on a served request is a failure.
+        /// </summary>
+        private string RequestAllowingDrop(string requestLine)
+        {
+            try
+            {
+                return Request(requestLine);
+            }
+            catch (System.IO.IOException ex) when (ex.InnerException is SocketException se
+                                                   && se.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                return string.Empty;
+            }
+        }
+
         [Test]
         public void AnOversizedRequestLineIsDroppedRatherThanBuffered()
         {
             string huge = "GET /" + new string('a', MatchClientWebConstants.MAX_HTTP_REQUEST_LINE_BYTES + 64);
 
-            // The guard drops the connection; the caller sees an empty (or truncated) response and,
-            // critically, the server is still serving afterwards.
-            Assert.DoesNotThrow(() => Request(huge));
+            // The guard drops the connection with no response, and, critically, the server is still
+            // serving afterwards. End of stream and a reset are both a drop: the graceful-close
+            // drain is bounded, so a peer that overruns it may be reset by design.
+            Assert.AreEqual(string.Empty, RequestAllowingDrop(huge));
             StringAssert.StartsWith("HTTP/1.1 200 OK", Request("GET /frame HTTP/1.1"));
         }
 
@@ -208,4 +227,7 @@ namespace TacticalDirector.MatchClientWeb.Tests
 // |         |            |        | request-line bound, post-Stop refusal and lifecycle idempotence|
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw   |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                   |
+// | 1.2     | 2026-10-14 | —      | The oversized-line test asserts an empty response and accepts  |
+// |         |            |        | EOF or reset as the drop. Request() stays strict, so every     |
+// |         |            |        | request (each leaves a CRLF unread) locks the graceful close.  |
 #endregion

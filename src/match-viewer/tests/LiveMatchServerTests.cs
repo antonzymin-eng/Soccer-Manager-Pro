@@ -1,12 +1,13 @@
 // File:     src/match-viewer/tests/LiveMatchServerTests.cs
 // Created:  2026-07-15
-// Modified: 2026-09-09
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchServer, driven over real loopback TCP sockets (bound to an
 //           OS-chosen ephemeral port, port = 0): routing (/, /frame, /control), pause/speed control
 //           reflected back through /frame, 404/405/400 error paths, the oversized-request-line
-//           abuse guard (one bad connection must not affect the server), and clean shutdown.
+//           abuse guard (one bad connection must not affect the server), delivery of the whole
+//           response when request headers go unread (the Windows RST case), and clean shutdown.
 
 using System;
 using System.IO;
@@ -24,6 +25,13 @@ namespace TacticalDirector.MatchViewer.Tests
     public class LiveMatchServerTests
     {
         private const ulong Seed = 777UL;
+
+        // Long enough never to trip on a loaded host; short enough that a server which stops closing
+        // connections fails the test instead of hanging the run.
+        private const int ClientReceiveTimeoutMs = 10000;
+
+        // The Windows reset was deterministic on the first request; repeats guard against a lucky pass.
+        private const int BrowserShapedRepeats = 10;
 
         private static readonly string[] MalformedRequestLines =
         {
@@ -200,6 +208,33 @@ namespace TacticalDirector.MatchViewer.Tests
             finally { server.Stop(); }
         }
 
+        /// <summary>
+        /// A browser sends headers after the request line and the server never reads them. The
+        /// response must still arrive whole: closing with those bytes unread made Windows reset the
+        /// connection and discard the response (Linux delivered it, so only Unity caught this).
+        /// </summary>
+        [Test]
+        public void RequestWithUnreadHeaders_StillDeliversTheWholeResponse()
+        {
+            LiveMatchServer server = StartServer(out _);
+            try
+            {
+                byte[] request = Encoding.ASCII.GetBytes(
+                    "GET /frame HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: LiveMatchServerTests\r\n" +
+                    "Accept: */*\r\nConnection: keep-alive\r\n\r\n");
+
+                for (int i = 0; i < BrowserShapedRepeats; i++)
+                {
+                    (int status, string body, int contentLength) = SendRequestWithLength(server.Port, request);
+
+                    Assert.AreEqual(200, status, "request {0}", i);
+                    Assert.AreEqual(contentLength, Encoding.UTF8.GetByteCount(body), "request {0}", i);
+                    StringAssert.Contains("\"roster\":[", body);
+                }
+            }
+            finally { server.Stop(); }
+        }
+
         [Test]
         public void OversizedRequestLine_DropsThatConnection_ButServerKeepsServingOtherRequests()
         {
@@ -218,9 +253,10 @@ namespace TacticalDirector.MatchViewer.Tests
                         stream.Write(junk, 0, junk.Length);
                         stream.Flush();
 
-                        // The server closes the connection with no response at all.
-                        string response = new StreamReader(stream, Encoding.ASCII).ReadToEnd();
-                        Assert.AreEqual(string.Empty, response);
+                        // The server drops the connection with no response at all. Either end of
+                        // stream or a reset is a drop: the graceful-close drain is bounded, so a peer
+                        // that overruns it may be reset by design. A hang is not a drop and fails.
+                        Assert.AreEqual(0, CountBytesUntilDropped(client, stream));
                     }
                 }
 
@@ -261,10 +297,19 @@ namespace TacticalDirector.MatchViewer.Tests
             return SendRequest(port, Encoding.ASCII.GetBytes(requestLine + "\r\n"));
         }
 
+        // Strict on purpose: a reset here is a failure. Every routed or rejected request must get
+        // its whole response, so this helper is the graceful-close regression lock.
         private static (int status, string body) SendRequest(int port, byte[] requestBytes)
+        {
+            (int status, string body, _) = SendRequestWithLength(port, requestBytes);
+            return (status, body);
+        }
+
+        private static (int status, string body, int contentLength) SendRequestWithLength(int port, byte[] requestBytes)
         {
             using (var client = new TcpClient())
             {
+                client.ReceiveTimeout = ClientReceiveTimeoutMs;
                 client.Connect(IPAddress.Loopback, port);
                 using (NetworkStream stream = client.GetStream())
                 {
@@ -274,9 +319,47 @@ namespace TacticalDirector.MatchViewer.Tests
                     int lineEnd = all.IndexOf("\r\n", StringComparison.Ordinal);
                     int headerEnd = all.IndexOf("\r\n\r\n", StringComparison.Ordinal);
                     int status = int.Parse(all.Substring(0, lineEnd).Split(' ')[1]);
+                    string headers = headerEnd >= 0 ? all.Substring(0, headerEnd) : all;
                     string body = headerEnd >= 0 ? all.Substring(headerEnd + 4) : string.Empty;
-                    return (status, body);
+                    return (status, body, ParseContentLength(headers));
                 }
+            }
+        }
+
+        private static int ParseContentLength(string headers)
+        {
+            const string name = "\r\nContent-Length: ";
+            int start = headers.IndexOf(name, StringComparison.Ordinal);
+            if (start < 0) { return -1; }
+            start += name.Length;
+            int end = headers.IndexOf("\r\n", start, StringComparison.Ordinal);
+            return int.Parse(end >= 0 ? headers.Substring(start, end - start) : headers.Substring(start));
+        }
+
+        /// <summary>
+        /// Reads until the server drops the connection and returns how many bytes arrived first.
+        /// End of stream and a connection reset both count as dropped. A receive timeout does not:
+        /// it means the server kept the connection open, so it propagates and fails the test.
+        /// </summary>
+        private static int CountBytesUntilDropped(TcpClient client, NetworkStream stream)
+        {
+            client.ReceiveTimeout = ClientReceiveTimeoutMs;
+            var buffer = new byte[1024];
+            int total = 0;
+            while (true)
+            {
+                int read;
+                try
+                {
+                    read = stream.Read(buffer, 0, buffer.Length);
+                }
+                catch (IOException ex) when (ex.InnerException is SocketException se
+                                             && se.SocketErrorCode == SocketError.ConnectionReset)
+                {
+                    return total;
+                }
+                if (read <= 0) { return total; }
+                total += read;
             }
         }
 
@@ -303,4 +386,8 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | idempotent shutdown.                                            |
 // | 1.1     | 2026-09-09 | —      | Locks malformed whitespace, version, token, target, and raw    |
 // |         |            |        | non-ASCII forms to HTTP 400 before routing.                    |
+// | 1.2     | 2026-10-14 | —      | Windows RST fix. New RequestWithUnreadHeaders test: a browser- |
+// |         |            |        | shaped request gets its full Content-Length body. The oversized |
+// |         |            |        | test counts bytes until the drop and accepts EOF or reset; a    |
+// |         |            |        | receive timeout fails it. SendRequest stays strict on resets.   |
 #endregion

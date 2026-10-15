@@ -1,6 +1,6 @@
 // File:     src/match-client-web/MatchClientServer.cs
 // Created:  2026-07-27
-// Modified: 2026-09-09
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     Path-to-playable roadmap §7 (B6, option (b)), Code Standards #20
 // Purpose:  Loopback-only HTTP transport for the browser match client. Owns sockets and threads and
@@ -17,6 +17,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+
+using TacticalDirector.MatchViewer;
 
 namespace TacticalDirector.MatchClientWeb
 {
@@ -147,22 +149,11 @@ namespace TacticalDirector.MatchClientWeb
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
-                    string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
+                    Serve(stream);
 
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
-                    {
-                        Write(stream, MatchClientResponse.Text(400, "Bad Request"));
-                        return;
-                    }
-
-                    if (_shuttingDown)
-                    {
-                        Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
-                        return;
-                    }
-
-                    Write(stream, _router.Route(method, pathAndQuery));
+                    // The rest of the request is still unread. Closing over it would make Windows
+                    // reset the connection and discard the response; see HttpGracefulClose.
+                    HttpGracefulClose.ShutdownAndDrain(client.Client);
                 }
             }
             catch (Exception)
@@ -170,6 +161,26 @@ namespace TacticalDirector.MatchClientWeb
                 // One malformed or aborted request must not take down the accept loop or another
                 // connection. Networking code, not the simulation inner loop FR-CS-069 targets.
             }
+        }
+
+        private void Serve(Stream stream)
+        {
+            string requestLine = ReadRequestLine(stream);
+            if (requestLine == null) { return; }
+
+            if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+            {
+                Write(stream, MatchClientResponse.Text(400, "Bad Request"));
+                return;
+            }
+
+            if (_shuttingDown)
+            {
+                Write(stream, MatchClientResponse.Text(503, "Service Unavailable: server is stopping"));
+                return;
+            }
+
+            Write(stream, _router.Route(method, pathAndQuery));
         }
 
         /// <summary>
@@ -296,4 +307,8 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | lifecycle, request-line bound and post-Stop 503 refusal.       |
 // | 1.1     | 2026-09-09 | —      | Reject malformed HTTP versions, spacing, method tokens, raw    |
 // |         |            |        | non-ASCII octets, and non-origin-form targets before routing.  |
+// | 1.2     | 2026-10-14 | —      | Every connection ends with match-viewer's shared               |
+// |         |            |        | HttpGracefulClose.ShutdownAndDrain before close. Closing over   |
+// |         |            |        | the unread request made Windows send RST: 32 of 60 MatchClient- |
+// |         |            |        | Web EditMode tests failed under Unity, none on Linux.           |
 #endregion
