@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-09
+// Modified: 2026-10-13
 //           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
 //           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
@@ -702,7 +702,7 @@ namespace TacticalDirector.SeasonSave
             int advanced = 0;
             while (_world.CurrentWorldTick < targetDay)
             {
-                RunWorldTickInFixedOrder();
+                RunWorldTickInFixedOrder(ClubFinancesConstants.DeepRevenueEnabled);
                 advanced++;
             }
 
@@ -720,6 +720,13 @@ namespace TacticalDirector.SeasonSave
         /// the day the NEXT season would open once this one is complete. Either would violate the KD-4
         /// invariant (FR-SN-011).</exception>
         public void AdvanceDays(int days)
+            => AdvanceDaysCore(days, ClubFinancesConstants.DeepRevenueEnabled);
+
+        /// <summary>Test-only parameter seam into the same guarded daily command; stores no gate override.</summary>
+        internal void TestOnly_AdvanceDays(int days, bool deepRevenueEnabled)
+            => AdvanceDaysCore(days, deepRevenueEnabled);
+
+        private void AdvanceDaysCore(int days, bool deepRevenueEnabled)
         {
             if (days < 0)
             {
@@ -763,7 +770,7 @@ namespace TacticalDirector.SeasonSave
 
             for (int i = 0; i < days; i++)
             {
-                RunWorldTickInFixedOrder();
+                RunWorldTickInFixedOrder(deepRevenueEnabled);
             }
         }
 
@@ -1405,11 +1412,11 @@ namespace TacticalDirector.SeasonSave
         /// clock already survives restore, so identity wiring adds no finance cursor (ERR-030-052).
         /// </para>
         /// </summary>
-        private void RunWorldTickInFixedOrder()
+        private void RunWorldTickInFixedOrder(bool deepRevenueEnabled)
         {
             RunCareerDaySteps(_world.CurrentWorldTick);
 
-            // 11a. finance (#40 T3b1) — day completion only, outside the pre-round career pass.
+            // 11a. finance (#40 T3b2) — day completion only, outside the pre-round career pass.
             // The world clock owns invocation: each successful advance completes exactly one day,
             // including a played fixture day and the season break. No second serialized cursor.
             // Generic legacy/unwired loops retain their explicit empty state; canonical new games
@@ -1418,7 +1425,9 @@ namespace TacticalDirector.SeasonSave
             {
                 _finances = SeasonFinanceRuntime.PrepareDailyRevenue(
                     _finances,
-                    ClubFinancesConstants.DEEP_REVENUE_ENABLED);
+                    deepRevenueEnabled,
+                    _state,
+                    _world.CurrentWorldTick);
             }
 
             // 12. world day — LIVE, after the day's finance accounting succeeds.
@@ -2241,4 +2250,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.34    | 2026-10-08 | —      | ERR-030-052 / #40 T3b1: slot 11a daily identity accounting before clock advance; no fixture-day replay or save cursor. |
 // | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
 // | 1.36 | 2026-10-09 | — | ERR-030-053: require final fixture day completion before season settlement. |
+// | 1.37 | 2026-10-13 | — | T3b2: forward sole #40 config gate and day facts; parameter-only test seam shares guarded advance. |
 #endregion

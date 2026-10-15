@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 10, 2026 (v1.9 — T3b2 split: formula half specified in §3.7/Appendix A/§5.10; code half pending)
+**Last Updated:** October 13, 2026 (v1.10 — T3b2 code implemented; stochastic/FFP/wage depth remains deferred)
+**Last Updated (prior):** October 10, 2026 (v1.9 — T3b2 split: formula half specified in §3.7/Appendix A/§5.10; code half pending)
 **Last Updated (prior):** October 9, 2026 (v1.8 — ERR-030-053: require final-day completion and non-zero boundary attribution at T3b2)
 **Last Updated (prior):** October 8, 2026 (v1.7 — daily all-club staging and non-zero T3b2 retry/count obligations)
 **Last Updated (prior):** October 8, 2026 (v1.6 — T3b1 consumed; T3b2 amount model remains next)
@@ -14,7 +15,7 @@
 **Last Updated (prior):** September 10, 2026 (v0.9 — T1b landed: #30 season-save composition + frame bump, ERR-030-049)
 **Last Updated (prior):** September 7, 2026 (v0.8 — PR #363 Codex arithmetic correction)
 **Last Updated (prior):** September 7, 2026 (v0.7 — PR #363 follow-up review correction)
-**Version:** 1.8
+**Version:** 1.10
 **Status:** APPROVED
 
 ---
@@ -86,8 +87,8 @@
   through `AdvanceDays(1)` before settlement; DAY-008 locks refusal and saved continuation. T3b2 remains
   the next slice and MUST prove non-zero final-fixture revenue is attributed to the completed season
   before settlement resets its accumulator.
-- **T3b2 — deterministic amount model + gate ownership.** *(Formula half specified October 10, 2026 in
-  §3.7, Appendix A and §5.10; code half pending. The gate defaults off, so the code landing changes no
+- **T3b2 — deterministic amount model + gate ownership.** *(Implemented October 13, 2026 in `FinanceStep.DailyRevenue`, the catalogue and slot-11a composition;
+  exact-final-head Unity compilation pending. The gate defaults off, so the code landing changes no
   behaviour until the balance pass or an owner decision enables it.)* Only after T3b1 is live, define the deterministic
   sponsorship/matchday formulas and their `[GT]` catalogue, then feed those #40-owned results through the
   existing #30 invocation while preserving all-club staging. Add behavioural non-zero daily counts,
@@ -101,11 +102,11 @@
   accept non-identity wage-ledger producers when #31/#34 land. All remain identity-defaulted until their
   producer/config contract is real (KD-4/KD-8).
 
-## 7.2 Deferred after T3b1
+## 7.2 Deferred after T3b2
 
-- **Deterministic revenue production (T3b2).** Sponsorship/matchday formulas and their `[GT]` values are
-  specified in §3.7 (October 10, 2026) but not yet implemented. They land only after identity-zero invocation proves the lifecycle path. Their values and the
-  single `deepRevenueEnabled` producer are #40-owned; #30 is composition/timing only.
+- **Revenue enablement/balance pass.** T3b2 implements §3.7 amounts and the single #40-owned config
+  producer, with the gate still off by default. Enabling or retuning is a separate balance-pass/owner
+  decision; #30 remains composition/timing only.
 - **Periodic wage cash-out.** Stage-2 `ApplyTransaction` records a wage as a change to the liability
   `WageBillAggregate` only (never `Balance`, §3.2/FR-FN-016). The periodic (weekly/monthly) *payment* of that
   wage bill — the step that actually debits `Balance` from `WageBillAggregate` — is a deep-tier accrual on
@@ -238,4 +239,5 @@ otherwise have to re-derive them:
 | 1.7 | 2026-10-08 | — | **PR #491 review.** daily all-club staging and non-zero T3b2 retry/count obligations. |
 | 1.8 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** require final-day completion and non-zero boundary attribution at T3b2. |
 | 1.9 | 2026-10-10 | — | **T3b2 split.** Formula half specified (§3.7, Appendix A v0.8, §5.10); code half (pure `DailyRevenue`, gate producer, #30 forwarding, T-FN-REV locks) remains. No behavior change. |
+| 1.10 | 2026-10-13 | — | **T3b2 implementation.** T3b2 code implemented; stochastic/FFP/wage depth remains deferred. Default remains off; pinned Unity compilation pending. |
 #endregion

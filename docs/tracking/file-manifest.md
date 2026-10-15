@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 14, 2026 — **PR #506 Codex review fix.** No path added or removed. **Modified:** `src/match-engine/MatchEngine.cs` (host keeper-distribution initiation keyed by `request.AgentId`) and `src/match-engine/tests/W8BPrerequisiteTests.cs` (call sites updated; out-of-range fail-loud case).
+**Last Updated:** October 14, 2026 — **PR #503 main synchronization.** No path added or removed. Reconciled `docs/agent-guides/project-reference.md` (32 active / 67 archived), `open-issues.md`, roadmap v0.62, `CHANGELOG.md` and this manifest. Both evidence registrations retained in `tools/dotnet-ci/check_evidence_manifests.py`; `tools/tests/test_evidence_manifests.py` now expects 17 directories. Source and evidence artifacts unchanged; final-head Linux CI and pinned Unity compile remain pending.
+
+**Last Updated (prior):** October 13, 2026 — **#40 T3b2.** New `src/club-finances/tests/DailyRevenueTests.cs` and `src/season-save/tests/SeasonDailyRevenueTests.cs` (both v1.0, with metadata), plus `docs/tracking/evidence/finance-t3b2-20261013/` integrity-covered compiler/test/config evidence. Modified source: `ClubFinancesConstants.cs` v1.5, `FinanceStep.cs` v1.9, `SeasonFinanceRuntime.cs` v1.6, `SeasonLoop.cs` v1.37, `SeasonLoopFinanceTests.cs` v1.7. Modified #40: algorithms v0.16, architecture v0.11, test plan v0.16, cadence v0.4, T-phase plan v1.10, Appendix A v0.10, implementation checklist v0.11. Roadmap v0.62, change logs (source log v2.193), open issues and project-reference counts synchronized (32 active / 67 archived). Evidence registry and its count sentinel updated. Default gate remains off; Unity compilation pending.
+
+**Last Updated (prior):** October 14, 2026 — **PR #506 Codex review fix.** No path added or removed. **Modified:** `src/match-engine/MatchEngine.cs` (host keeper-distribution initiation keyed by `request.AgentId`) and `src/match-engine/tests/W8BPrerequisiteTests.cs` (call sites updated; out-of-range fail-loud case).
 
 **Last Updated (prior):** October 13, 2026 — **PR #506 functional-CI review corrections.** No path added or removed. **Modified tests:** `src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs` (pending-terminal canonical v24 writer/reader guard in lieu of invalid post-Resolve digest comparison) and `W8BPrerequisiteTests.cs` (reference-first replay to respect process-static EventBus, receiver loss after checkpoint, exactly-once F-05). **Modified tracking:** source/project changelogs and this manifest. Earlier CI `38481524691` compiled but failed these two assertions; new head requires fresh validation. No production code, schema, RNG, constant, or policy wiring change.
 
@@ -3530,7 +3534,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `src/season-save/BoardState.cs` | #30 T0: the objective + integer per-mille job security (Appendix B row 11) |
 | `src/season-save/SeasonFinanceCoherence.cs` | #40 T1b/T2b / ERR-030-050 shared club-universe validator: ordinary `Normalize` is validation-only (legacy generic empty remains empty; non-empty ClubIds exactly equal `SeasonState.ClubIds`); `NormalizeLegacyRestore` is the sole compatibility migration for an empty persisted T1b block |
 | `src/season-save/SeasonFinanceCoherence.cs.meta` | Unity metadata sidecar |
-| `src/season-save/SeasonFinanceRuntime.cs` | #40 T2b/T3b1 composition mechanics owned by #30: all-club staged zero-input daily accounting at slot 11a; stable-ClubId lookup; detached finance view; canonical ledger query/transaction routing; pure per-club season-boundary settlement staging from the final table |
+| `src/season-save/SeasonFinanceRuntime.cs` | #40 T2b/T3b2 composition mechanics owned by #30: all-club staged default-off daily accounting, with settled day/fixture/table facts feeding #40 amounts at slot 11a; stable-ClubId lookup; detached finance view; canonical ledger query/transaction routing; pure per-club season-boundary settlement staging from the final table |
 | `src/season-save/SeasonFinanceRuntime.cs.meta` | Unity metadata sidecar |
 | `src/season-save/MatchResult.cs` | #30 T0: one fixture's outcome payload — the table write and the FR-SN-016 producer event |
 | `src/season-save/SeasonState.cs` | #30 T0: the whole serialized season surface (seed / season number / managed club / club set / the CONCRETE schedule per KD-5 / table / calendar / board); copy-then-validate coherence gates; KD-7 internal mutators (SeasonLoop is the only production writer) |
@@ -4135,6 +4139,28 @@ Examples:
 | `src/club-finances/ClubFinanceEntry.cs.meta` | Unity metadata sidecar |
 | `src/club-finances/ClubFinances.cs` | #40 T0/T1a source, assembly, or test surface |
 | `src/club-finances/ClubFinances.cs.meta` | Unity metadata sidecar |
+| `src/club-finances/tests/DailyRevenueTests.cs` | #40 §5.10 formula/default/input/overflow locks |
+| `src/club-finances/tests/DailyRevenueTests.cs.meta` | Unity metadata sidecar |
+| `src/season-save/tests/SeasonDailyRevenueTests.cs` | #40 §5.10 non-zero daily count, save/restore, late-club retry, fixture and completed-season attribution locks |
+| `src/season-save/tests/SeasonDailyRevenueTests.cs.meta` | Unity metadata sidecar |
+| `docs/tracking/evidence/finance-t3b2-20261013/README.md` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/SHA256SUMS` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/binary-hashes.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/club-finances.log.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/club-finances.xml.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/compile.log` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/compile.py.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/config-probe.cs.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/config-probe.log` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/focused.log.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/focused.xml.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/nunit35-compile.log` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/runner.cs.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/season-save.log.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/season-save.xml.xz` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/source-hashes.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/source-tree.txt` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
+| `docs/tracking/evidence/finance-t3b2-20261013/standard-gate-unavailable.log` | #40 T3b2 supplementary source/validation evidence; covered by SHA256SUMS |
 | `src/club-finances/ClubFinancesConstants.cs` | #40 T0/T1a source, assembly, or test surface |
 | `src/club-finances/ClubFinancesConstants.cs.meta` | Unity metadata sidecar |
 | `src/club-finances/ClubFinancesSaveCodec.cs` | #40 T0/T1a source, assembly, or test surface |
