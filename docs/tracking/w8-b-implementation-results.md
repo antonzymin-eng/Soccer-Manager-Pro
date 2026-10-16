@@ -1,7 +1,36 @@
 # W8 B implementation and October 13 anchor comparison
 
-> **October 16 — PR #511 re-handling amendment (1.2):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The post-law comparison/anchor and final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+> **October 16 — PR #511 re-handling amendment (1.2):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
 
+
+## October 16 review closeout: post-law B baseline
+
+The separate owner-approved own-release law (`fff7cf5b`) plus avoidance/foul-order repair
+(`751b1143`, src `0b46dfe1418c3ab682df83f3b530985d494e55d1`) is measured against corrected B.
+The repeated control reproduces every summary field and all six stored fingerprints.
+
+| Six-match outcome | Pre-law B | Post-law B |
+|---|---:|---:|
+| Canonical distributions | 348 | 126 |
+| Receiver control | 89 / 348 (25.6%) | 114 / 126 (90.5%) |
+| Same-keeper hand return | 155 | 0 |
+| Other-agent control / interrupted by kick | 14 / 90 | 12 / 0 |
+| Re-handling attempts / sanctions | Not implemented/instrumented | 0 / 0 |
+| Ordinary fouls / cautions / straight reds | 46 / 6 / 1 | 48 / 8 / 1 |
+
+Every match has zero restricted contacts and sanctions. There are no law restart spots or ten-second
+follow-up shots/goals to observe. Both body/schema and prevention are covered by composed tests;
+a no-sanction corpus cannot validate restart placement by itself. All six post-law digests are
+retained as the new Linux post-B anchor for B→C; cross-schema digest change is not an effect measure.
+The source, runtime, per-match rows, full outcomes, raw NUnit reports and reproducible analyzer are
+[archived together](evidence/w8-b-20261015/rehandling/README.md).
+
+Current local validation: **200 engine checks passed; 107 goalkeeper checks passed / 27 existing
+skips; 346 tooling checks passed with system Git 2.43**. The final default-Git run retains one unchanged LFS-fixture failure; both runs are archived. Ten regression cases fail on the original `fff7cf5b` control
+and pass with the repair. Both test assemblies compile against NUnit 3.5 with its matching shim.
+The normal VSTest driver crashes here; these are direct supplementary NUnit runs, not a fresh full
+PR-policy invocation. **Final-head CI and Unity 6000.4.9f1 compile/host EditMode remain required.**
+No connected Unity host is exposed in this session. The earlier sections below remain pre-law history.
 
 **Created:** October 15, 2026
 **Purpose:** Record roadmap step 7 under the September 26 owner-approved W8 B contract.

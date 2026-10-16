@@ -1,5 +1,11 @@
 # W8 B local Linux evidence
 
+**October 16 post-law update:** [rehandling/](rehandling/README.md) records owner-approved law plus
+feet-only avoidance at `751b1143`, its original-head regression failures, repeated corrected-B control,
+and the new six-seed post-B Linux anchor: **126 distributions / 114 receiver controls / zero own-keeper
+hand returns / zero restricted attempts or sanctions**. The corrected B results below remain pre-law.
+Final-head CI and Unity host validation remain required.
+
 **Created:** October 15, 2026 (America/Los_Angeles)
 **Purpose:** Preserve step-7 implementation proof and the isolated October 13 A→B comparison.
 **Status:** Corrected-arm measurement and test reconciliation complete. Prior-head `353b2138` PR functional CI passed (run 38841462964; Unity skipped). Review-cleanup final-head CI and Unity validation remain pending.
