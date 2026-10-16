@@ -2,7 +2,7 @@
 
 **Created:** October 15, 2026 (America/Los_Angeles)
 **Purpose:** Preserve step-7 implementation proof and the isolated October 13 A→B comparison.
-**Status:** Corrected-arm measurement and test reconciliation complete. A fresh clean full-policy invocation and final-head Unity validation remain pending.
+**Status:** Corrected-arm measurement and test reconciliation complete. Prior-head `353b2138` PR functional CI passed (run 38841462964; Unity skipped). Review-cleanup final-head CI and Unity validation remain pending.
 
 The governing contract is the September 26 owner-approved W8 B amendment. The October 13 anchor is
 `3974b78b0383adca3e9546bb47a7b93a62b3cf92`; the substitutions bridge is
@@ -55,9 +55,10 @@ raw `guardMargin` is 360 minus hand elapsed frames; it does not include prior fe
 time in the engine guard. The live producer uses the actual engine counter; composed tests enforce
 that separate deadline. Corrected B’s minimum observed margin to #11’s boundary is 126 frames.
 
-From this directory, `PYTHONDONTWRITEBYTECODE=1 python3 first-arm/compare_w8.py` and
-`PYTHONDONTWRITEBYTECODE=1 python3 first-arm/summarize_detail.py` reproduce the first-arm exports.
-The same commands under `corrected-arm/` reproduce corrected B. Run
+From this directory, `PYTHONDONTWRITEBYTECODE=1 python3 compare_w8.py first-arm` and
+`PYTHONDONTWRITEBYTECODE=1 python3 summarize_detail.py first-arm` reproduce the first-arm exports.
+Use `corrected-arm` instead of `first-arm` for corrected B (also the no-argument default).
+One copy of each analyzer is covered by SHA256SUMS; there are no per-arm script copies. Run
 `PYTHONDONTWRITEBYTECODE=1 python3 compare_keeper_outcomes.py` for the fully reconciled A/B
 per-keeper tables. The parsers accept either plain or xz raw files. As-run shell scripts preserve the cloud's absolute
 paths and toolchain activation; they are provenance, not portable setup scripts. To repeat the
@@ -81,14 +82,24 @@ retains the original failure and maps its focused pass plus the two new cases, y
 passing current case identities and 225 NotExecuted. This is not a clean single-invocation gate;
 fresh CI and the required Unity host remain pending.
 
-Final source commit is 86a9496e (src 74b215f71809d50f483e4ab2cb254692e3c53c75). Production
+Measurement-closeout source commit is 86a9496e (src 74b215f71809d50f483e4ab2cb254692e3c53c75). Production
 statements, fields and constant values are unchanged from the measured e54335b0. The final
 production-source delta is comment-only (`final-production-comments.diff.xz` and its checked proof);
 the executable change is confined to the test-only observation fix. No new measurement arm or
 numeric adjustment is inferred from that documentation / observer cleanup.
 
-`pr-gate/` preserves all raw TRX and collected coverage XML, with the failed driver log alongside.
+`pr-gate/` preserves all raw TRX, with the failed driver log alongside. Review cleanup on
+October 16 omitted 72 empty coverage XML stubs: each has zero valid/covered lines and branches,
+no packages/classes, and no coverage evidence. `empty-coverage-inventory.csv` preserves their
+original paths, compressed/raw hashes and XML metadata; original bytes remain at commit 353b2138.
+Review source cleanup is described in the implementation report; no measured runtime is replaced.
 Coverage collection is not a claim that the separate FR-TS-057/058 tier/delta audit was performed.
 The complete evidence archive is self-contained for analysis; run `reconcile_tests.py` here to
 reproduce the case reconciliation. Source material and exact raw runtime provenance remain distinct
 from that derived status.
+
+## October 16 review checks
+
+`review-cleanup/` retains the 99-case goalkeeper and 164-case W8 integration retests, source-tree/
+file hashes, analyzer equivalence, metadata/doc checks and prior-head CI job metadata. No gameplay
+measurement is rerun or inferred from the branch/telemetry-name cleanup.

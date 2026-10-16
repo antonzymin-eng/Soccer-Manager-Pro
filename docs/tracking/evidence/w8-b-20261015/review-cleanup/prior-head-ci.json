@@ -1,0 +1,76 @@
+{
+  "head": "353b2138224a39280d55269bcb4cf2248735b670",
+  "runId": 38841462964,
+  "url": "https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/38841462964",
+  "checked": "2026-10-16",
+  "source": "GitHub workflow runs/jobs connector; first page contains 11 jobs",
+  "jobs": [
+    {
+      "id": 116782291567,
+      "name": "PR functional gate (Linux shim, non-certifying)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291715,
+      "name": "Unity .meta integrity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291751,
+      "name": "C# format check",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291765,
+      "name": "Markdown lint",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291779,
+      "name": "YAML lint",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291792,
+      "name": "Unity asset hygiene",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291804,
+      "name": "File manifest sanity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291818,
+      "name": "Unity license configured?",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782291991,
+      "name": "Spec hygiene checks",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782292258,
+      "name": "Markdown link check",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 116782318925,
+      "name": "Unity tests (${{ matrix.testMode }})",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ],
+  "scope": "Prior-head evidence only; review-cleanup final-head CI and pinned Unity remain required."
+}

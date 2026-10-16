@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Modified: 2026-10-15 (W8 B live distribution)
+// Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (Match Flow §6 / PR #505: deferred substitution requests, Law 3 windows, v25 pending queue, v3 off-tick save overlay; SubstitutePlayer internal-only)
 // Modified (prior): 2026-10-14 (PR #506 review: host keeper-distribution initiation selects the executor from request.AgentId; out-of-range id fails loud)
@@ -9415,6 +9416,8 @@ namespace TacticalDirector.MatchEngine
                 int holder = _engine._possessingAgentId;
                 // Activate the approved CONTACT pressure resample only for the dedicated B mode.
                 // Ordinary pass pressure remains its existing Stage-0 stub.
+                // Dedicated CONTACT still owns hand possession here; a future ordinary-pass
+                // implementation must key its gate by passer identity instead of the holder.
                 return holder >= 0 && _engine._passExecutors[holder].IsGoalkeeperDistributionInFlight
                     ? _engine.ComputeOpponentPressureScalar(passerPosition, passerTeamId) : 0f;
             }
@@ -11134,4 +11137,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.06 | 2026-10-15 | — | W8 B live #21 producer, hand-only DT suppression, typed CONTACT release, Resolve event/completion, cancel teardown and v26 wait latch codec. |
 // | 2.07 | 2026-10-15 | — | W8 B exclusive hand-control handover cancels ordinary PASS/SHOOT WINDUP or pending CONTACT before Resolve updates; genuine smother/replay probes. |
 // | 2.08 | 2026-10-15 | — | Comment-only closeout: live distribution ownership and inherited non-law backstop clarified; no runtime change after the measured source. |
+// | 2.09 | 2026-10-16 | — | Comment-only: holder identity is valid for dedicated CONTACT pressure, not a future ordinary-pass gate. |
 #endregion

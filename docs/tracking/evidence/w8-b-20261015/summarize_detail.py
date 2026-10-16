@@ -5,6 +5,7 @@ import json
 import lzma
 import math
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 import compare_w8
@@ -44,7 +45,8 @@ def write_csv(path,rows):
 
 
 def main():
-    work=Path(__file__).resolve().parent
+    work=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parent
+    if (work/'corrected-arm').is_dir():work=work/'corrected-arm'
     rows=detail(work/'b-final-detail-v3-output.txt')
     common=compare_w8.report(work/'b-final-common-output.txt')
     contacts={key(row):row for row in rows['contact']}

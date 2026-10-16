@@ -5,11 +5,40 @@
 **Status:** Implemented and measured locally. The corrected frozen corpus has 348 voluntary
 CONTACTs with no structural falsifier; same-keeper hand interruption rises 24 → 155 and remains
 an explicit confound. All current cases have passing results across the sweep and focused retest;
-a fresh clean full-policy invocation and governing Unity validation remain pending.
+the PR functional gate passed at `353b2138` ([run 38841462964](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/38841462964)); review-cleanup final-head CI and governing Unity validation remain pending.
 
-Final source is `86a9496e` (src `74b215f71809d50f483e4ab2cb254692e3c53c75`). Its executable
-production code is unchanged from measured `e54335b0`: later production edits are comments only,
-and the remaining changes correct the test observer and add mirrored negative controls.
+Measurement-closeout source is `86a9496e` (src `74b215f71809d50f483e4ab2cb254692e3c53c75`). Its executable
+production code at that closeout is unchanged from measured `e54335b0`: those later production
+edits are comments only, and the remaining changes correct the test observer and add mirrored
+negative controls. October 16 review cleanup is recorded separately below.
+
+## October 16 review disposition
+
+The [separate Law 12 re-handling issue](open-issues.md#gk-rehandling-law12) is Medium and open.
+B explicitly defers enforcement; C's comparison baseline must record an owner scope/deferral
+disposition before freezing. This does not expand C or change D-03 recovery eligibility. Corrected
+B is **155/348 (44.5%)** same-keeper hand interruptions and **89** target controls; the review's
+154/342 and 87 refer to the rejected first arm (45.0%). The observer does not adjudicate every
+incidental intervening touch/location, so neither population is an exact Law 12 offence count.
+
+Review cleanup removes a redundant same-result state branch, renames the stubbed timeout signal
+method to `RecordHoldTimeoutSignal` (no counter/schema or release behavior changes), and documents
+why dedicated CONTACT pressure can use the current holder. This is behavior-preserving source
+cleanup after the measurement pins above; no new gameplay measurement is claimed. Canonical
+`PassAttemptEvent` intentionally includes goalkeeper distributions in match/analytics pass attempts;
+it supplies W5 without inventing completed passes.
+
+The archive now has one copy of each analyzer, with an explicit arm-directory argument. All 72
+coverage XML files contained zero valid/covered lines/branches and no packages; they are omitted,
+with original paths/hashes/metadata in `empty-coverage-inventory.csv`. Raw TRX and failed-run evidence
+remain. These empty files never established coverage. Fresh full CI and exact-final-head Unity
+6000.4.9f1 validation remain merge gates. The prior `353b2138` functional CI job passed in run
+38841462964; its Unity job was skipped. Review cleanup passes 99 goalkeeper cases (27 skipped)
+and 164 W8 integration cases (one opt-in diagnostic skipped). All 25 derived arm files remain
+byte-identical after analyzer consolidation; metadata and cross-document checks pass. The normal
+commit hook exceeded its fixed 60-second budget on the socket-enabled retry; it is not counted
+as passing. The local commit uses a per-command hook override after the focused checks; final-head
+CI remains required.
 
 ## Contract and implementation
 

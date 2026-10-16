@@ -1,5 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
 // Modified: 2026-10-15 (W8 B live distribution)
+// Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
@@ -1023,13 +1024,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                     ballThreateningOwnGoal: ballThreateningOwnGoal,
                     ballSafelyUpfield: ballSafelyUpfield);
 
-                // Forced release telemetry
+                // Legacy timeout signal only; this does not release the ball.
                 if (_states[gkIndex] == GoalkeeperState.HandsOnBall &&
                     !_distributionPending[gkIndex] &&
                     _claimTick[gkIndex] >= 0 &&
                     (currentTick - _claimTick[gkIndex]) >= GoalkeeperConstants.GK_HOLD_MAX_TICKS)
                 {
-                    _telemetry.RecordForcedRelease(agentId);
+                    _telemetry.RecordHoldTimeoutSignal(agentId);
                 }
 
                 _states[gkIndex] = newState;
@@ -1754,4 +1755,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.19 | 2026-10-13 | — | W8 B prewiring: retain contact-time F-05 telemetry entry point but eliminate legacy physics warning ownership; legacy release-event implementation remains to be retired by B. |
 // | 1.20 | 2026-10-15 | — | W8 B: accepted-only distribution wait latch, host completion/cancellation, no local kick/event or intent-less release. |
 // | 1.21 | 2026-10-15 | — | Comment-only: name the host as distribution-event publisher after live W8 B wiring. |
+// | 1.22 | 2026-10-16 | — | Call renamed RecordHoldTimeoutSignal; condition and hold timing unchanged. |
 #endregion
