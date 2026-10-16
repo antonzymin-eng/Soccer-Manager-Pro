@@ -4,6 +4,25 @@
 **Purpose:** Preserve the PR #511 review repairs, original-head regression failures, and an isolated
 corrected-B versus post-law six-seed comparison. This is supplementary Linux evidence.
 
+## Published commit identities
+
+Command-line Git has no GitHub write credentials in this session. The GitHub app published the
+approved file trees with new commit IDs. The complete trees are verified byte-for-byte by Git SHA:
+
+| Original validated local commit | Published equivalent | Identical complete tree |
+|---|---|---|
+| `751b11435843b9b0ba2b64c06b7e5042358de58b` | `2698bab12346f4274b519d37b7446e3ab3abaf5c` | `a24a4855b6daddd13fac128b0d9aa049438ac487` |
+| `40998dc5e788e50713d043a1fe6ac14915cb627b` | `3e711f027efea70a0365920efcd6fe5b329acf59` | `4d525330eeead1ccff432d84466ed7e559513de5` |
+
+`transport-mapping.json` and the two `original-*.git-commit.txt` files preserve the exact original
+commit payloads. Their Git commit hashes are independently verified before publication. After
+cloning the published branch, recreate the original objects, in table order, with
+`git hash-object -t commit -w --stdin < path/to/record.git-commit.txt` (replace the input path for each record). The required
+trees/blobs and base parent are already reachable through the published equivalents. References to
+`751b1143` / `40998dc5` elsewhere in this archive name these original as-validated commits.
+The published fix has exactly the same src tree `0b46dfe1418c3ab682df83f3b530985d494e55d1`.
+The transport-record commit adds evidence only; no test, source statement or measurement changes.
+
 ## Source and environment
 
 - Corrected B control: `e54335b051ed51a0c3c394ccdaa016cb8ae28245`.

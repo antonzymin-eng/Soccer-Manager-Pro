@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-16",
+  "purpose": "Preserve validated original commit identities when publishing identical trees through the GitHub app.",
+  "sourceTree": "0b46dfe1418c3ab682df83f3b530985d494e55d1",
+  "commits": [
+    {
+      "original": "751b11435843b9b0ba2b64c06b7e5042358de58b",
+      "published": "2698bab12346f4274b519d37b7446e3ab3abaf5c",
+      "tree": "a24a4855b6daddd13fac128b0d9aa049438ac487",
+      "rawCommitRecord": "original-751b11435843b9b0ba2b64c06b7e5042358de58b.git-commit.txt"
+    },
+    {
+      "original": "40998dc5e788e50713d043a1fe6ac14915cb627b",
+      "published": "3e711f027efea70a0365920efcd6fe5b329acf59",
+      "tree": "4d525330eeead1ccff432d84466ed7e559513de5",
+      "rawCommitRecord": "original-40998dc5e788e50713d043a1fe6ac14915cb627b.git-commit.txt"
+    }
+  ],
+  "treeIdentityVerified": true,
+  "reason": "Command-line Git has no GitHub write credentials; the connected app assigns commit authorship and timestamps."
+}
