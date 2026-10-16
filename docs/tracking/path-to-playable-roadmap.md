@@ -1,5 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
+> **October 16 — PR #511 re-handling amendment (v0.68):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The post-law comparison/anchor and final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+
+
 > **Created:** July 25, 2026
 > **Status:** ROADMAP (meta-planning — the same governance class as
 > `management-layer-spec-roadmap.md`). This document designs no system. It sequences **already-approved
@@ -701,6 +704,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.68 | 2026-10-16 | — | PR #511 adds the separately owner-approved own-release law and avoidance; v27 supersedes B v26; post-law B→C anchor and final-head CI/Unity gates remain explicit. |
 | v0.67 | October 16, 2026 | PR #511 review: separately track the own-release re-handling Law 12 gap; require its scope/deferral disposition before the B→C baseline freeze. No C approval, gameplay or D-03 change. |
 | v0.66 | October 15, 2026 | Step 7 local branch progress: all six policies wired, pending-foot-action interruption included, frozen-anchor evidence linked; final-head Unity validation remains open. |
 | v0.65 | October 15, 2026 | PR #510 review: remove the completed T3b2 final-head host check from D4's outstanding work; retain separate enablement/balance and T3c+ work. |

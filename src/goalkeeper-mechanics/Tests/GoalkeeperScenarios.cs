@@ -80,6 +80,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         // parry/deflect/spill), so the recorded counts are the "no terminal contact" observable.
         private sealed class RecordingBallSystem : IGoalkeeperBallSystem
         {
+            public bool CanUseHands(int teamId) => true;
+
             public bool TryHandContact(int agentId, Vector3 contactPosition) => true;
 
             public int ApplyKickCount;
@@ -332,4 +334,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |     |            |   | holds the dive, starving the dive-launch predicate). Intent preserved.     |
 // | 1.4     | 2026-08-03 | —      | ERR-011-008: RecordingBallSystem gains ParkBall (counted separately, so a scenario can prove the ball was arrested and not merely flagged). |
 // | 1.5 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.6 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

@@ -34,6 +34,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         private sealed class SilentBallSystem : IGoalkeeperBallSystem
         {
+            public bool CanUseHands(int teamId) => true;
+
             public bool TryHandContact(int agentId, Vector3 contactPosition) => true;
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs) { }
@@ -394,4 +396,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.3     | 2026-09-11 | —      | W4: real deflection overwrites the reaction stamp while preserving    |
 // |         |            |        | ShotEventPending=false; locks the dedicated new-threat seam.          |
 // | 1.4 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.5 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

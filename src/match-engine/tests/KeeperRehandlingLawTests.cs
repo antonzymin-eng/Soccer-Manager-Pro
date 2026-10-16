@@ -2,7 +2,7 @@
 // Created:  2026-10-16
 // Modified: 2026-10-16
 // Author:   —
-// Spec:     Owner-approved separate re-handling fix; IFAB Laws 12.2 / 13.
+// Spec:     Goalkeeper Mechanics #11 §3.1.3 (ERR-011-020); match-flow §5.1.
 // Purpose:  Mirror actual distribution, illegal hand contact, restarts and canonical continuation.
 
 using System.Collections.Generic;
@@ -48,7 +48,31 @@ namespace TacticalDirector.MatchEngine
             int toucher = (opponent ? 1 - team : team) * 11 + 1;
             engine.TestOnly_SetPossession(toucher);
             Assert.AreEqual(-1, engine.TestOnly_ReleasedHandKeeper);
+            engine.TestOnly_CommitGoalkeeperClaimIntent(team, new ClaimIntent
+            {
+                AttemptCommittedTick = (int)engine.CurrentTick / 6
+            });
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team], "Another player's touch re-enables hand intents.");
             Assert.IsTrue(engine.TestOnly_TryKeeperHandContact(team * 11, World(team, 12f, 34f)));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void RestrictedKeeperBodyRebound_RemainsLegal_AndDoesNotLiftRestriction(int team)
+        {
+            MatchEngine engine = Released(team);
+            int keeper = team * 11;
+            AgentState agent = engine.TestOnly_AgentSnapshot(keeper);
+            agent.Position = new Vector2(50f, 34f);
+            agent.Velocity = Vector2.zero;
+            engine.TestOnly_SetAgent(keeper, in agent);
+            Vector3 incoming = new Vector3(-20f, 0f, 0f);
+            engine.TestOnly_ForceBallLoose(new Vector3(50.2f, 34f, 1.2f), incoming);
+            engine.TestOnly_RunResolvePhase();
+            Assert.AreNotEqual(incoming, engine.TestOnly_BallSnapshot.Velocity, "Ordinary body collision must remain live.");
+            Assert.AreEqual(-1, engine.PossessingAgentId);
+            Assert.AreEqual(keeper, engine.TestOnly_ReleasedHandKeeper);
+            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick);
         }
 
         [TestCase(0)]
@@ -73,7 +97,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1, false)]
         [TestCase(0, true)]
         [TestCase(1, true)]
-        public void RealSmotherContact_RejectsClaim_ThenAwardsRestart(int team, bool restore)
+        public void RestrictedSmother_IsCancelledBeforeContact_AcrossRestore(int team, bool restore)
         {
             MatchEngine engine = Released(team);
             if (restore) engine = Clone(engine);
@@ -90,9 +114,11 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(-1, engine.PossessingAgentId, "No illegal claim may enter possession.");
             Assert.AreEqual(GoalkeeperState.Recovering, engine.TestOnly_GkState(team));
             engine.TestOnly_RunResolvePhase();
-            Assert.AreEqual(RestartCue.FreeKick, engine.RestartAppliedThisTick);
-            Assert.AreEqual(1 - team, engine.RestartAwardedTeam);
-            Assert.GreaterOrEqual(engine.TestOnly_IndirectKickTaker, 0);
+            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick);
+            Assert.AreEqual(keeper, engine.PossessingAgentId, "Ordinary feet pickup remains legal.");
+            Assert.AreEqual(keeper, engine.TestOnly_ReleasedHandKeeper);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.SaveIntentActive[team]);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team]);
         }
 
         [TestCase(0, 3f, 34f, true, 5.5f)]
@@ -190,6 +216,70 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(RestartCue.KickOff, engine.RestartAppliedThisTick);
         }
 
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void RestrictedLooseBall_FormsNoHandIntent_AndCollectsWithFeet(int team, bool restore)
+        {
+            MatchEngine engine = Released(team);
+            if (restore) engine = Clone(engine);
+            int keeper = team * 11;
+            AgentState agent = engine.TestOnly_AgentSnapshot(keeper);
+            agent.Position = new Vector2(World(team, 12f, 34f).x, 34f);
+            agent.Velocity = Vector2.zero;
+            engine.TestOnly_SetAgent(keeper, in agent);
+            engine.TestOnly_ForceBallLoose(World(team, 12f, 34f), Vector3.zero);
+            GoalkeeperTickState state = engine.TestOnly_GoalkeeperState;
+            state.States[team] = GoalkeeperState.Set;
+            engine.TestOnly_RestoreGoalkeeperState(in state);
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team],
+                "The eligible loose-ball opportunity must be rejected before Physics/pickup.");
+            int contacts = 0;
+            engine.TestOnly_W8StageAObserver = e => { if (e.Kind == W8StageAKind.RestrictedHandContact) contacts++; };
+            for (int i = 0; i < 6; i++) engine.RunTick();
+            Assert.AreEqual(0, contacts, "Avoidance must precede the contact sanction backstop.");
+            Assert.AreEqual(keeper, engine.PossessingAgentId);
+            Assert.AreEqual(keeper, engine.TestOnly_ReleasedHandKeeper);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team]);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.SaveIntentActive[team]);
+            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HandlingWhistle_DiscardsCapturedFoul_IncludingNextFrame(int team)
+        {
+            MatchEngine engine = Released(team);
+            engine.TestOnly_InjectFoulCandidate(team * 11 + 1, (1 - team) * 11 + 1);
+            Assert.Greater(engine.TestOnly_FoulCandidateForceN, 0f);
+            Assert.IsFalse(engine.TestOnly_TryKeeperHandContact(team * 11, World(team, 12f, 34f)));
+            engine.TestOnly_RunResolvePhase();
+            Assert.AreEqual(RestartCue.FreeKick, engine.RestartAppliedThisTick);
+            Assert.AreEqual(0f, engine.TestOnly_FoulCandidateForceN);
+            int holder = engine.PossessingAgentId;
+            engine.TestOnly_RunResolvePhase();
+            Assert.AreEqual(holder, engine.PossessingAgentId, "No second free kick may replace the IFK.");
+            Assert.AreEqual(0f, engine.TestOnly_FoulCandidateForceN);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void SixSecondHandDrop_IsFeetOnly_WithoutRehandlingSanction(int team)
+        {
+            MatchEngine engine = W8BDistributionTests.Fixture(GkDistributionPolicy.SlowDown, team, false);
+            int keeper = team * 11;
+            for (int i = 0; i < MatchEngineConstants.GkMaxHoldTicks; i++) engine.TestOnly_RunGoalkeeperReleaseRule();
+            Assert.AreEqual(-1, engine.PossessingAgentId);
+            Assert.AreEqual(keeper, engine.TestOnly_ReleasedHandKeeper);
+            engine.TestOnly_RunPhysicsPhase();
+            engine.TestOnly_RunResolvePhase();
+            Assert.AreEqual(keeper, engine.PossessingAgentId);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team]);
+            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick);
+        }
+
         private static MatchEngine Released(int team)
         {
             MatchEngine engine = W8BDistributionTests.Fixture(GkDistributionPolicy.Quick, team, false);
@@ -217,4 +307,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-16 | — | Own-release handling, actual body touch, smother rejection, IFK and restore. |
+// | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

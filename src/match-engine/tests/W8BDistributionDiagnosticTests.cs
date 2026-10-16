@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/W8BDistributionDiagnosticTests.cs
 // Created:  2026-10-15
-// Modified: 2026-10-15
+// Modified: 2026-10-16
 // Author:   —
 // Spec:     W8 preregistration, #21 §3.4.1, #11 §3.8, #5 §3.8.13
 // Purpose:  Observe frozen B corpus and composed LongKick landing trajectories without tuning gameplay.
@@ -17,6 +17,7 @@ using TacticalDirector.BallPhysics;
 using TacticalDirector.EventSystem;
 using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.PassMechanics;
+using TacticalDirector.ShotMechanics;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchEngine
@@ -112,6 +113,12 @@ namespace TacticalDirector.MatchEngine
             internal GkDistributionPolicy Policy;
         }
 
+        private sealed class HandlingRestartWindow
+        {
+            internal int Frame, Kind, Team, Shots, Goals;
+            internal Vector3 Location;
+        }
+
         private sealed class Census
         {
             private readonly MatchEngine _engine;
@@ -121,6 +128,11 @@ namespace TacticalDirector.MatchEngine
             private readonly Dictionary<int, GkDistributionPolicy> _policies = new Dictionary<int, GkDistributionPolicy>();
             private readonly Dictionary<int, int> _claims = new Dictionary<int, int>();
             private readonly Dictionary<int, int> _claimContacts = new Dictionary<int, int>();
+            private readonly List<HandlingRestartWindow> _handlingRestarts = new List<HandlingRestartWindow>();
+            private int _handlingAttempts, _handlingSanctions;
+            private static readonly byte RestartOrdinal = EventRegistry.GetOrdinal<RestartAwardedEvent>();
+            private static readonly byte ShotOrdinal = EventRegistry.GetOrdinal<ShotExecutedEvent>();
+            private static readonly byte GoalOrdinal = EventRegistry.GetOrdinal<GoalAwardedEvent>();
             private int _lastContactKeeper = -1, _lastContactFrame = -1;
             private Flight _flight;
             private int _commits, _completed, _cancelled, _rejected, _events, _releases, _w5Receiver, _zones, _missing;
@@ -144,6 +156,11 @@ namespace TacticalDirector.MatchEngine
                 }
                 _engine.TestOnly_W8StageAObserver = e =>
                 {
+                    if (e.Kind == W8StageAKind.RestrictedHandContact)
+                    {
+                        _handlingAttempts++;
+                        Row($"handlingAttempt,{_seed},frame={e.Frame},keeper={e.Agent},x={e.BallPosition.x:R},y={e.BallPosition.y:R},z={e.BallPosition.z:R}");
+                    }
                     if (e.Kind == W8StageAKind.HandClaim)
                     {
                         EndFlight(_flight != null && e.Agent == _flight.Keeper
@@ -237,6 +254,32 @@ namespace TacticalDirector.MatchEngine
                 for (int i = 0; i < _engine.TickLedgerCount; i++)
                 {
                     byte ordinal = _engine.TickLedgerOrdinal(i);
+                    if (ordinal == RestartOrdinal)
+                    {
+                        var restart = _engine.TickLedgerRecord<RestartAwardedEvent>(i);
+                        if (restart.RestartKind == RestartAwardedEvent.INDIRECT_FREE_KICK ||
+                            restart.RestartKind == RestartAwardedEvent.DIRECT_FREE_KICK)
+                        {
+                            _handlingSanctions++;
+                            _handlingRestarts.Add(new HandlingRestartWindow
+                            {
+                                Frame = (int)_engine.CurrentTick, Kind = restart.RestartKind,
+                                Team = restart.AwardedTeam, Location = restart.Location
+                            });
+                        }
+                    }
+                    // Follow-up is temporal association, not causal attribution. Count both teams'
+                    // executed shots/goals in (restartFrame, restartFrame + 600], even if play restarts.
+                    if (ordinal == ShotOrdinal || ordinal == GoalOrdinal)
+                    {
+                        foreach (HandlingRestartWindow window in _handlingRestarts)
+                        {
+                            int elapsed = (int)_engine.CurrentTick - window.Frame;
+                            if (elapsed <= 0 || elapsed > 600) continue;
+                            if (ordinal == ShotOrdinal) window.Shots++;
+                            else window.Goals++;
+                        }
+                    }
                     if (ordinal == DistributionOrdinal) _events++;
                     if (ordinal == FoulOrdinal) _fouls++;
                     if (ordinal == CardOrdinal)
@@ -273,6 +316,12 @@ namespace TacticalDirector.MatchEngine
             }
             internal void Finish()
             {
+                foreach (HandlingRestartWindow window in _handlingRestarts)
+                {
+                    int followed = Math.Min(600, (int)_engine.CurrentTick - window.Frame);
+                    Row($"handlingRestart,{_seed},frame={window.Frame},kind={window.Kind},team={window.Team},x={window.Location.x:R},y={window.Location.y:R},shots10s={window.Shots},goals10s={window.Goals},followedFrames={followed}");
+                }
+                Row($"handlingSummary,{_seed},attempts={_handlingAttempts},sanctions={_handlingSanctions}");
                 EndFlight("censored-at-end");
                 foreach (var entry in _requests)
                     Row($"pending,{_seed},keeper={entry.Key},requestFrame={entry.Value.FrameNumber},endFrame={_engine.CurrentTick},reason=censored-before-terminal");
@@ -294,4 +343,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.1 | 2026-10-15 | — | Conservative landing observation censors control attachment before testing height; assert both inherited boundaries. |
 // | 1.2 | 2026-10-15 | — | Preserve receiver/zone outcomes beyond first landing and observed control identity; seed composed claim frame explicitly. |
 // | 1.3 | 2026-10-15 | — | Raw rejection/cancellation/completion timing and retained-possession status; explicit pending-at-end censor rows; four identity/neutrality locks. |
+// | 1.4 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

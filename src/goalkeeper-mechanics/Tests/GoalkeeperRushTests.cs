@@ -314,6 +314,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         /// smother triggers, and is therefore the whole point of the fixture.</summary>
         private sealed class LooseBallSystem : IGoalkeeperBallSystem
         {
+            public bool CanUseHands(int teamId) => true;
+
             public bool TryHandContact(int agentId, Vector3 contactPosition) => true;
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs) { }
@@ -340,4 +342,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | target ends instead of stranding; ClearRushIntent disarms before   |
 // |         |            |        | launch and is inert mid-rush (FR-GK-018); accessor bounds.         |
 // | 1.1 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.2 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

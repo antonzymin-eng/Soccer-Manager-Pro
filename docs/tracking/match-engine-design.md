@@ -1,5 +1,8 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
+> **October 16 — PR #511 re-handling amendment (2.21):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The post-law comparison/anchor and final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+
+
 > **Created:** June 15, 2026
 > **W8 B status:** **Approved six-policy wiring is implemented locally at `e54335b0`; the frozen comparison is complete and the full-sweep observer correction is validated. Final-head Unity 6000.4.9f1 validation remains pending.** See [implementation / evidence](w8-b-implementation-results.md). The historical #466 substrate compile does not validate this new source.
 > **Last Updated:** October 15, 2026 (v2.20 — live six-policy branch and measured e54335b0 comparison; final 86a9496e test/comment-only closeout; fresh full CI / Unity validation pending.)
@@ -1995,6 +1998,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |
 | 2.18    | 2026-09-27 | —      | **W8 B landing record.** Corrected head `795ca64` passed CI `36337174267`, including the PR functional gate; Unity skipped normally. Codec test v1.22 strengthens sentinel discrimination with AgentId 11, TeamId 1, request target 4 and effective target 6. Test/tracking only; landing-record head requires its own CI. No gameplay/schema/RNG delta. |

@@ -35,6 +35,10 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// a host-owned law restart; the mechanic must end the attempt without touching the ball.</summary>
         bool TryHandContact(int agentId, Vector3 contactPosition);
 
+        /// <summary>Whether this team's current keeper may form a hand attempt. The host owns
+        /// canonical release/touch history; teamId is the #11 keeper slot.</summary>
+        bool CanUseHands(int teamId);
+
         /// <summary>
         /// Arrests the ball in the keeper's hands on a successful claim — the SECOND half of
         /// §3.5.2's catch branch (<c>ball.velocity = gkHandVelocity</c>, "parked at hand position"),
@@ -68,4 +72,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | alone leaves the ball travelling). See the conversion-at-contact |
 // |         |            |        | pass, docs/tracking/gk-conversion-at-contact-design.md.           |
 // | 1.2 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.3 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

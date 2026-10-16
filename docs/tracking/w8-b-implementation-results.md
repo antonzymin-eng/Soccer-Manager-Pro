@@ -1,5 +1,8 @@
 # W8 B implementation and October 13 anchor comparison
 
+> **October 16 — PR #511 re-handling amendment (1.2):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The post-law comparison/anchor and final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+
+
 **Created:** October 15, 2026
 **Purpose:** Record roadmap step 7 under the September 26 owner-approved W8 B contract.
 **Status:** Implemented and measured locally. The corrected frozen corpus has 348 voluntary
@@ -278,5 +281,6 @@ has no connected Unity Editor. The branch is not marked merge-ready or step 7 la
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2 | 2026-10-16 | — | PR #511 review fixes: own-release avoidance/law and simultaneous-foul disposal; supplementary tests and isolated corrected-B comparison. |
 | 1.0 | October 15, 2026 | Implementation and measurement protocol recorded before final result-bearing B runs. |
 | 1.1 | October 15, 2026 | Retain failed first arm, correct the pending-foot-action handover, record the 162-case proof and reconcile the corrected six-seed / per-keeper measurements; governing host validation pending. |

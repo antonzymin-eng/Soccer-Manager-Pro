@@ -3886,7 +3886,7 @@ namespace TacticalDirector.MatchEngine
                         // W4: SAVE emission is perception-aware, but the raw threat episode remains
                         // geometry-owned. TryCommitRushIntents MUST keep vetoing on raw SaveArmed:
                         // being unsighted does not make charging at a goal-bound ball safe.
-                        bool saveVisible = armed && KeeperPerceptionGate.SaveAvailable(
+                        bool saveVisible = _releasedHandKeeper != i && armed && KeeperPerceptionGate.SaveAvailable(
                             t, i, _agents[i].Position,
                             _ball.Position, _ball.Velocity, loose,
                             _agents, _isSentOff);
@@ -5072,7 +5072,7 @@ namespace TacticalDirector.MatchEngine
                 // ERR-011-012: possession and SAVE priority are hard cancellations. Ordinary claim
                 // trigger geometry is NOT: once committed, the target and reach side stay locked for
                 // the existing bounded #11 reach episode so a descending cross can enter hand height.
-                if (!loose || saveArmed)
+                if (!loose || saveArmed || _releasedHandKeeper == agentId)
                 {
                     _goalkeeper.ClearClaimIntent(k);
                     continue;
@@ -9589,6 +9589,9 @@ namespace TacticalDirector.MatchEngine
                 _engine.ClearPassInFlight();
             }
 
+            public bool CanUseHands(int teamId) =>
+                _engine._releasedHandKeeper < 0 || _engine._teamIds[_engine._releasedHandKeeper] != teamId;
+
             public bool TryHandContact(int agentId, Vector3 contactPosition) =>
                 _engine.TryKeeperHandContact(agentId, contactPosition);
 
@@ -10102,7 +10105,8 @@ namespace TacticalDirector.MatchEngine
                 // Defensive: SAVE is only generated for a non-sent-off keeper (SaveAvailable gate), but
                 // the sink must not trust its caller — mirror the participation gates the heuristic had.
                 if (agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE
-                    || !_engine._isGoalkeeper[agentId] || _engine._isSentOff[agentId])
+                    || !_engine._isGoalkeeper[agentId] || _engine._isSentOff[agentId]
+                    || _engine._releasedHandKeeper == agentId)
                 {
                     return;
                 }
@@ -11179,4 +11183,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.08 | 2026-10-15 | — | Comment-only closeout: live distribution ownership and inherited non-law backstop clarified; no runtime change after the measured source. |
 // | 2.09 | 2026-10-16 | — | Comment-only: holder identity is valid for dedicated CONTACT pressure, not a future ordinary-pass gate. |
 // | 2.10 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 2.11 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

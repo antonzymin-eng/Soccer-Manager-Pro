@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 16, 2026 — (v2.198 — **W8 B review cleanup.** `GoalkeeperStateMachine` v1.9 collapses a same-result branch; `GoalkeeperTelemetry` v1.2 / `GoalkeeperMechanics` v1.22 rename the legacy timeout signal without changing its condition; `MatchEngine` v2.09 documents the CONTACT pressure gate. No policy, constant, schema, RNG, claim or recovery change. Separate Law 12 re-handling issue and baseline disposition tracked; final-head CI/Unity still required.)
+> **Last Updated:** October 16, 2026 — (v2.199 — **PR #511 / ERR-011-020.** Keeper law and mirrored tests from `fff7cf5b` registered; #11 ball interface adds canonical `CanUseHands(teamId)` query, producers and mechanics gate hand attempts and stale reach, while ordinary feet/body play stays live. Handling Resolve clears captured foul/decided flags. Extended W8 diagnostic separates restricted attempts from sanctions and logs ten-second restart follow-ups. Snapshot v27 history is documented; no additional saved state, tuning or RNG site is added. Local NUnit evidence and post-law six-seed comparison are supplementary; final-head CI and Unity remain required.)
+
+> **Last Updated (prior):** October 16, 2026 — (v2.198 — **W8 B review cleanup.** `GoalkeeperStateMachine` v1.9 collapses a same-result branch; `GoalkeeperTelemetry` v1.2 / `GoalkeeperMechanics` v1.22 rename the legacy timeout signal without changing its condition; `MatchEngine` v2.09 documents the CONTACT pressure gate. No policy, constant, schema, RNG, claim or recovery change. Separate Law 12 re-handling issue and baseline disposition tracked; final-head CI/Unity still required.)
 
 > **Last Updated (prior):** October 15, 2026 — (v2.197 — **W8 B corrected-arm evidence and claim-observer closeout.** `MatchEngine.cs` v2.08 / `MatchEngineConstants.cs` v1.44 / `GoalkeeperMechanics.cs` v1.21 / `GoalkeeperState.cs` v1.1 clarify the live publisher and inherited non-law backstop in comments only. Test-only restart epochs close a held claim when the same keeper becomes a stationary taker, preserving attachment thresholds and score-before-closure attribution. Two mirrored negative-control cases, the original two-seed scenario and 165 focused checks pass; 164 final-source checks rebuild cleanly. Corrected six-seed corpus: 348 voluntary CONTACTs, no old drops / new DT races; self-interruption 24 → 155 remains separate. Reconciled current cases 4,035 passed / 225 NotExecuted; 346 tooling tests pass. Fresh full CI and pinned Unity remain pending.)
 
@@ -2763,6 +2765,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.199 | October 16, 2026 | — | PR #511 / ERR-011-020: v27 own-release law, feet-only avoidance, same-frame foul disposal and supplementary regression/measurement evidence. |
 | 2.198 | October 16, 2026 | — | W8 B review: redundant timeout branch removed; signal naming and pressure comment clarified; no gameplay change. |
 | 2.197 | October 15, 2026 | — | W8 B corrected measurements and per-keeper attribution; same-keeper restart probe corrected without predicate weakening; 165 focused / 164 final-source / 346 tooling passes and explicit full-policy / Unity limits. Production delta after measured e54335b0 is comments only. |
 | 2.196 | October 15, 2026 | — | W8 B six-policy live producer, canonical CONTACT/event/W5 lifecycle, schema v26 and composed coverage. Standalone #5 CONTACT fixtures now boot/reset EventBus and directly reference EventSystem; five broad-sweep failures repaired (95 passed / 12 skipped). Frozen A→B and governing Unity evidence pending. |

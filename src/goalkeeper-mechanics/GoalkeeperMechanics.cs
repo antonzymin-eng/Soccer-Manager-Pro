@@ -432,6 +432,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
+            if (!_ballSystem.CanUseHands(gkIndex)) return;
+
             _saveIntents[gkIndex] = intent;
             _saveIntentActive[gkIndex] = true;
             _attrs[gkIndex] = attrs;
@@ -451,6 +453,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             {
                 return;
             }
+
+            if (!_ballSystem.CanUseHands(gkIndex)) return;
 
             _claimIntents[gkIndex] = intent;
             _claimIntentActive[gkIndex] = true;
@@ -538,6 +542,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return false;
             }
 
+            if (!_ballSystem.CanUseHands(gkIndex)) return false;
+
             int launchFrame;
             int durationFrames;
             float peakHandZ;
@@ -608,7 +614,23 @@ namespace TacticalDirector.GoalkeeperMechanics
             _crossClaimDuel.ResolveHandContactDuel(_rng);
         }
 
-        private void EndIllegalHandContact(int gkIndex, int currentFrame)
+        // Read the host's canonical restriction at both clock boundaries, including after restore.
+        // Ordinary foot collection and body rebounds remain owned by the existing engine paths.
+        private void AvoidRestrictedHandAttempt(int gkIndex, int currentFrame)
+        {
+            if (_ballSystem.CanUseHands(gkIndex)) return;
+            _claimIntentActive[gkIndex] = false;
+            _saveIntentActive[gkIndex] = false;
+            _shotEventPending[gkIndex] = false;
+            _shotDetectedTickMs[gkIndex] = 0f;
+            _requiredReactionMs[gkIndex] = 0f;
+            GoalkeeperState state = _states[gkIndex];
+            if (state == GoalkeeperState.Diving || state == GoalkeeperState.Airborne ||
+                state == GoalkeeperState.Smothered)
+                EndHandAttempt(gkIndex, currentFrame);
+        }
+
+        private void EndHandAttempt(int gkIndex, int currentFrame)
         {
             _states[gkIndex] = GoalkeeperState.Recovering;
             _recoveryCooldownEndTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick
@@ -652,6 +674,12 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return false;
             }
 
+            if (!_ballSystem.CanUseHands(gkIndex))
+            {
+                ClearClaimIntent(gkIndex);
+                return false;
+            }
+
             float handlingNoiseRaw = _rng.NextGaussian(
                 GoalkeeperConstants.DrawSiteHandlingNoise,
                 GoalkeeperConstants.DomainTagGoalkeeper);
@@ -674,7 +702,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             if (quality >= GoalkeeperConstants.MinHandlingQuality &&
                 !_ballSystem.TryHandContact(agentId, ballState.Position))
             {
-                EndIllegalHandContact(gkIndex, currentFrame);
+                EndHandAttempt(gkIndex, currentFrame);
                 return true;
             }
 
@@ -982,6 +1010,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 AgentState agentState = agentStates[agentId];
                 GoalkeeperPositioningContract positioning = _positioningContracts[gkIndex];
+                AvoidRestrictedHandAttempt(gkIndex, currentTick * GoalkeeperConstants.FramesPerTacticalTick);
 
                 // ERR-011-002 — how close the ball is to the goal THIS keeper defends.
                 //
@@ -1108,6 +1137,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 }
 
                 AgentState agentState = agentStates[agentId];
+                bool canUseHands = _ballSystem.CanUseHands(gkIndex);
+                AvoidRestrictedHandAttempt(gkIndex, currentFrame);
                 GoalkeeperState gkState = _states[gkIndex];
 
                 // ── 60 Hz shot detection (Anticipate early trigger via ShotExecutedEvent) ──
@@ -1267,7 +1298,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                             if (handlingQualityScalar >= GoalkeeperConstants.MinHandlingQuality &&
                                 !_ballSystem.TryHandContact(agentId, ballState.Position))
                             {
-                                EndIllegalHandContact(gkIndex, currentFrame);
+                                EndHandAttempt(gkIndex, currentFrame);
                                 continue;
                             }
 
@@ -1397,7 +1428,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         attackerWithinOneVsOneRadius = CheckAttackerWithinRadius(
                             gkMutablePos, ballState, GoalkeeperConstants.OneVsOneTriggerRadiusM);
 
-                        gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                        gkWithinSmotherRadius = canUseHands && CheckAttackerWithinRadius(
                             gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
 
                         // ERR-011-009: the run is finished. Both radius checks above answer FALSE
@@ -1431,7 +1462,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         rushTargetReached = RushTargetReached(gkMutablePos, _rushIntents[gkIndex].RushTarget);
                     }
 
-                    gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                    gkWithinSmotherRadius = canUseHands && CheckAttackerWithinRadius(
                         gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
                 }
 
@@ -1451,7 +1482,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         if (!_ballSystem.TryHandContact(agentId, ballState.Position))
                         {
-                            EndIllegalHandContact(gkIndex, currentFrame);
+                            EndHandAttempt(gkIndex, currentFrame);
                             continue;
                         }
                         handBallContactOccurred = true;
@@ -1790,4 +1821,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.21 | 2026-10-15 | — | Comment-only: name the host as distribution-event publisher after live W8 B wiring. |
 // | 1.22 | 2026-10-16 | — | Call renamed RecordHoldTimeoutSignal; condition and hold timing unchanged. |
 // | 1.23 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.24 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

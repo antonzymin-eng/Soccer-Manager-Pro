@@ -1,5 +1,8 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
+> **October 16 — PR #511 re-handling amendment (0.32):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The post-law comparison/anchor and final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+
+
 > **Created:** September 25, 2026  
 > **Status:** **B contract approved; all six policies and the three #466 live-host obligations are implemented on the local branch at `e54335b0`. Frozen comparison is complete and the full-sweep observer correction is validated; governing final-head Unity validation remains pending.** The dormant #466 substrate merged as `8fab5e1d` and met its pinned compile condition at `5d112bab` (October 7), re-confirmed at `93de60f6` (October 9); that historical compile does not validate this branch. #5/#11 remain overall DRAFT with only their W8 B amendments approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. A compile is not a passing overall EditMode gate; PR #492 recorded six failures.
 > **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
@@ -430,6 +433,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.32 | 2026-10-16 | — | October 16 owner approval: PR #511 own-release law plus feet-only avoidance; v27 state and isolated post-law comparison. General outside-area handling stays D-07. |
 | 0.31 | 2026-10-15 | local implementation; validation pending | Six-policy branch, host obligations, missed foot-action handover and corrected source recorded; no new contract approval or C-law change. |
 | 0.30 | 2026-10-10 | owner decisions D-03/D-04/D-05 | Landing-coordination baseline bullet records that the three pre-B decisions are taken (Recovering stays ineligible; tackle-foul cooldown bypass retained; #434/#440 after B→C), so none changes behavior before B. No contract change. |
 | 0.29 | 2026-10-09 | PR #493 review corrections | Labels c50726e as historical pre-A production audit, not current comparison anchor; distinguishes active interim host queue from optional CI and retains the explicit #492 merge dependency for October 9 compile evidence. |

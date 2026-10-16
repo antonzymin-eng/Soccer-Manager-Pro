@@ -2,7 +2,7 @@
 // Created:  2026-10-16
 // Modified: 2026-10-16
 // Author:   —
-// Spec:     Owner-approved separate re-handling fix (October 16, 2026); IFAB Laws 12.2 / 13.
+// Spec:     Goalkeeper Mechanics #11 §3.1.3 (ERR-011-020); match-flow §5.1; IFAB Laws 12.2 / 13.
 // Purpose:  Enforce own-release re-handling without changing recovery or distribution policy.
 
 using System;
@@ -48,6 +48,7 @@ namespace TacticalDirector.MatchEngine
             if (_pendingHandlingOffender >= 0) return false;
             if (_releasedHandKeeper == agentId)
             {
+                ObserveW8(W8StageAKind.RestrictedHandContact, agentId);
                 // Once the whole ball has left play, the existing boundary restart takes priority.
                 if (BallCollision.CheckBoundaries(_ball, _prevTickBallPosition, _teamIds[agentId]).isOut)
                     return false;
@@ -78,6 +79,10 @@ namespace TacticalDirector.MatchEngine
                 lateral <= MatchEngineConstants.GOAL_AREA_DEPTH_M + halfGoal)
                 spot.x = ownX + AttackDirectionX(team) * MatchEngineConstants.GOAL_AREA_DEPTH_M;
 
+            // The handling whistle wins this frame. A captured AI-phase tackle candidate must
+            // not survive into a second restart/card after play has already restarted.
+            _foulCandidateFound = false;
+            _foulCandidateIsDecided = false;
             ApplyRestart(spot, 1 - team, RestartCue.FreeKick);
             _gkHoldTicks = 0;
             _gkReleasedAgentId = MatchEngineConstants.NO_POSSESSION;
@@ -140,4 +145,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-16 | — | Separate own-release re-handling law; canonical history and IFK restart. |
+// | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion
