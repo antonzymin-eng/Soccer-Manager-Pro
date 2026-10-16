@@ -1,0 +1,10 @@
+e54335b051ed51a0c3c394ccdaa016cb8ae28245
+4a9061afbf7dd43cef5451294a2857ae902d739b
+520ba31c71e06ed408fd5c282b5fd5611cf74879
+8.0.426
+Microsoft.AspNetCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.NETCore.App]
+start 2026-10-16T00:10:52Z
+control=TD_FOUL_DIAGNOSTIC filter=FullyQualifiedName~FoulRateDiagnostic configuration=Debug
+exit=0
+end 2026-10-16T01:12:20Z

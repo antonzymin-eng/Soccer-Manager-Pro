@@ -1,0 +1,10 @@
+{
+  "basis": "e54335b0",
+  "changedExecutablePrefixesBefore": [
+    "private int _gkReleaseCooldownRemaining;"
+  ],
+  "changedExecutablePrefixesAfter": [
+    "private int _gkReleaseCooldownRemaining;"
+  ],
+  "result": "PASS: changed production lines are comments or identical declarations with trailing-comment edits"
+}

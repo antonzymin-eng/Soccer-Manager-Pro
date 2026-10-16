@@ -1,0 +1,65 @@
+{
+  "independentCommonDigestsAgree": 6,
+  "sourceCompleteFoulReportsAgree": 6,
+  "handEpisodeContactJoins": 348,
+  "handPassContactsWithoutDedicatedDistribution": 0,
+  "frozenTotals": {
+    "commits": 348,
+    "pending": 0,
+    "completed": 348,
+    "cancelled": 0,
+    "rejected": 0,
+    "events": 348,
+    "releases": 348,
+    "w5Receiver": 348,
+    "zones": 0,
+    "missing": 0,
+    "drops": 0,
+    "dtRaces": 0,
+    "fouls": 46,
+    "yellows": 6,
+    "reds": 1,
+    "secondYellows": 0
+  },
+  "outcomes": {
+    "receiver": {
+      "same-keeper-hand-reclaim": 155,
+      "other-agent-controlled": 14,
+      "receiver-controlled": 89,
+      "interrupted-by-kick": 90
+    },
+    "zone": {}
+  },
+  "LongKickLandings": [
+    {
+      "seed": "composed-LongKick-team-0",
+      "keeper": "0",
+      "policy": "LongKick",
+      "contactFrame": "1110",
+      "endFrame": "1183",
+      "targetClass": "zone",
+      "receiver": "-1",
+      "reason": "first-ground-contact",
+      "requestedDistance": "27.80501",
+      "actualDistance": "8.085293",
+      "radialShortfall": "19.719717",
+      "groundX": "15.280058",
+      "groundY": "33.939663"
+    },
+    {
+      "seed": "composed-LongKick-team-1",
+      "keeper": "11",
+      "policy": "LongKick",
+      "contactFrame": "1110",
+      "endFrame": "1183",
+      "targetClass": "zone",
+      "receiver": "-1",
+      "reason": "first-ground-contact",
+      "requestedDistance": "27.805016",
+      "actualDistance": "8.085303",
+      "radialShortfall": "19.719711",
+      "groundX": "89.77375",
+      "groundY": "33.06678"
+    }
+  ]
+}

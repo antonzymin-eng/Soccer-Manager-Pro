@@ -283,6 +283,8 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | 11 / PM-2 | C3/C4 converge: new game, fixtures, play/quick-resolve, report, table/suspensions/board objectives, 38 rounds and save/resume | Client/season criteria in §1; D-08/D-09 and fit valid for selected anchor; final-head host acceptance | Existing playable-season criteria pass; D-10 save-compatibility decision is recorded |
 | 12 / PM-3 and maintenance | Multi-season progression, finances, training, medical, transfers, retirement/regeneration; localization/#488 and #19 A3.4 continue in parallel | Owning career contracts and host slots; release evidence follows acceptance | Multi-season acceptance, then stability/performance/release evidence |
 
+**Step 7 branch progress — October 15, 2026:** all six policies are wired on `feat/w8-b-goalkeeper-distribution`; corrected source `e54335b0` includes the exclusive hand-control interruption of pending foot actions. The [local implementation and comparison record](w8-b-implementation-results.md) preserves the October 13 anchor, the first failed arm and the corrected-arm evidence. Governing final-head Unity 6000.4.9f1 validation remains pending; step 7 is not marked landed and step 8 remains separate.
+
 **Specification gates.** #7/#8 correct the actual `KeeperPerceptionGate` → `SaveAvailable`
 producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1
 omits `OnThreatDeflected` and the visible-threat fallback rule; its reaction correction also gates
@@ -699,6 +701,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.66 | October 15, 2026 | Step 7 local branch progress: all six policies wired, pending-foot-action interruption included, frozen-anchor evidence linked; final-head Unity validation remains open. |
 | v0.65 | October 15, 2026 | PR #510 review: remove the completed T3b2 final-head host check from D4's outstanding work; retain separate enablement/balance and T3c+ work. |
 | v0.64 | October 15, 2026 | #40 T3b2 host compile closed: PR #503 merged after its final-head Unity 6000.4.9f1 compile and EditMode run. Step 5 and D4 updated; enabling `DeepRevenueEnabled` stays a separate decision. |
 | v0.63 | October 15, 2026 | Step 4 (substitutions) landed with PR #505: match-flow §6 implemented with schema v25 and match save format v3; the next free snapshot version is v26. The deferred-substitution contract paragraph now records the landing. |

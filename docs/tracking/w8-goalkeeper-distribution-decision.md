@@ -1,8 +1,10 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
 > **Created:** September 25, 2026  
-> **Status:** **B contract approved; #466 dormant substrate merged as `8fab5e1d` and its pinned Unity compile condition met at `5d112bab` on October 7, re-confirmed at `93de60f6` on October 9. Live B wiring remains outstanding, including exactly-once Resolve feedback consumption, F-05 original-request/effective-target telemetry and engine-level identity tests.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. Compile evidence does not establish a passing overall EditMode gate; PR #492 records six failures.
+> **Status:** **B contract approved; all six policies and the three #466 live-host obligations are implemented on the local branch at `e54335b0`. Frozen comparison is complete and the full-sweep observer correction is validated; governing final-head Unity validation remains pending.** The dormant #466 substrate merged as `8fab5e1d` and met its pinned compile condition at `5d112bab` (October 7), re-confirmed at `93de60f6` (October 9); that historical compile does not validate this branch. #5/#11 remain overall DRAFT with only their W8 B amendments approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. A compile is not a passing overall EditMode gate; PR #492 recorded six failures.
 > **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
+> **Local branch update — October 15, 2026:** six-policy wiring and the three host obligations above are implemented on `feat/w8-b-goalkeeper-distribution`, with canonical CONTACT / W5 / F-05 / restore locks and a measured A→B record. The first arm exposed a missed in-flight foot-action handover; corrected source `e54335b0` interrupts it in Resolve. See [implementation and evidence](w8-b-implementation-results.md). Final-head Unity validation and publication remain pending; the historical substrate compile is not evidence for this new source.
+>
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
 ## Owner decisions at a glance
@@ -428,6 +430,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.31 | 2026-10-15 | local implementation; validation pending | Six-policy branch, host obligations, missed foot-action handover and corrected source recorded; no new contract approval or C-law change. |
 | 0.30 | 2026-10-10 | owner decisions D-03/D-04/D-05 | Landing-coordination baseline bullet records that the three pre-B decisions are taken (Recovering stays ineligible; tackle-foul cooldown bypass retained; #434/#440 after B→C), so none changes behavior before B. No contract change. |
 | 0.29 | 2026-10-09 | PR #493 review corrections | Labels c50726e as historical pre-A production audit, not current comparison anchor; distinguishes active interim host queue from optional CI and retains the explicit #492 merge dependency for October 9 compile evidence. |
 | 0.28 | 2026-10-09 | landing coordination; decisions pending | Records met #466 compile condition and remaining live-wiring obligations; links roadmap owner/host queue; removes unconditional substitution/schema reservations; names W10-only reaction gates and separate C law/history coordination; outside-area handling disposition before C closeout. No contract approval or gameplay change. |

@@ -1,0 +1,1 @@
+Meta integrity OK: no managed-root missing/orphan metas and no duplicate GUIDs across tracked Assets/ + src/.

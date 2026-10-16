@@ -1,0 +1,108 @@
+// File: W8PerKeeperPassDiagnosticTests.cs
+// Created: 2026-10-15
+// Purpose: Supplemental pre-wire per-keeper pass outcomes; frozen W8 instrument remains unchanged.
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using NUnit.Framework;
+
+namespace TacticalDirector.MatchEngine
+{
+    [TestFixture]
+    public sealed class W8PerKeeperPassDiagnosticTests
+    {
+        [Test, Category("Calibration")]
+        public void W8PerKeeperPassDiagnostic_ReportsFrozenCorpus()
+        {
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TD_W8_PER_KEEPER")))
+                Assert.Ignore("Set TD_W8_PER_KEEPER=1 for supplemental per-keeper outcomes.");
+            var output = new StringBuilder("=== W8 supplemental per-keeper pass outcomes ===\n");
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                foreach (ulong seed in new[] { 0x0F1E2D3C4B5A6978UL, 0xD1A6D05EUL, 1UL, 0xABCDEF12UL, 0x99887766UL, 0x5A5A5A5AUL })
+                {
+                    var engine = new MatchEngine(seed); engine.EnableGkHeading();
+                    var census = new Census(engine, seed, output);
+                    engine.TestOnly_W8StageAObserver = census.Observe;
+                    for (int frame = 0; frame < 324000; frame++) engine.RunTick();
+                    census.Finish();
+                    output.AppendLine($"keeperPassEnd,0x{seed:X16},digest={BitConverter.ToString(engine.CurrentSnapshotDigest).Replace("-", "").ToLowerInvariant()}");
+                }
+                TestContext.WriteLine(output.ToString());
+            }
+            finally { UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false; }
+        }
+
+        [Test]
+        public void PerKeeperObserver_PreservesSixHundredTickDigestChain()
+        {
+            const ulong seed = 0xD1A6D05EUL;
+            var observed = new MatchEngine(seed); observed.EnableGkHeading();
+            var census = new Census(observed, seed, new StringBuilder());
+            observed.TestOnly_W8StageAObserver = census.Observe;
+            var chain = new byte[600][];
+            for (int i = 0; i < chain.Length; i++) { observed.RunTick(); chain[i] = observed.CurrentSnapshotDigest; }
+            var plain = new MatchEngine(seed); plain.EnableGkHeading();
+            for (int i = 0; i < chain.Length; i++)
+            { plain.RunTick(); CollectionAssert.AreEqual(chain[i], plain.CurrentSnapshotDigest, "observer tick " + i); }
+        }
+
+        private sealed class Census
+        {
+            private readonly MatchEngine _engine;
+            private readonly ulong _seed;
+            private readonly StringBuilder _output;
+            private readonly Dictionary<int, string> _open = new Dictionary<int, string>();
+            private int _target = -2, _keeper = -1, _contactFrame = -1, _lastFrame;
+            private string _kind;
+            internal Census(MatchEngine engine, ulong seed, StringBuilder output)
+            { _engine = engine; _seed = seed; _output = output; }
+            internal void Observe(W8StageAEvent e)
+            {
+                _lastFrame = e.Frame;
+                switch (e.Kind)
+                {
+                    case W8StageAKind.HandClaim:
+                        End("interrupted-by-claim", e.Agent);
+                        _open[e.Agent] = "hand";
+                        break;
+                    case W8StageAKind.Acquire:
+                        End(e.Agent == _target ? "target-controlled" : "other-controlled", e.Agent);
+                        if (_engine.TestOnly_IsGoalkeeper(e.Agent) && !_open.ContainsKey(e.Agent)) _open[e.Agent] = "feet";
+                        if (e.Other >= 0 && e.Other != e.Agent) _open.Remove(e.Other);
+                        break;
+                    case W8StageAKind.Release: _open.Remove(e.Agent); break;
+                    case W8StageAKind.KickRelease:
+                        if (e.Agent == e.HolderBefore) _open.Remove(e.Agent);
+                        break;
+                    case W8StageAKind.Restart:
+                        End("restart", -1);
+                        if (e.Other >= 0) _open.Remove(e.Other);
+                        break;
+                    case W8StageAKind.PassKick:
+                    case W8StageAKind.ShotKick:
+                    case W8StageAKind.GkHeadingKick:
+                        if (e.Kind == W8StageAKind.PassKick && _open.TryGetValue(e.Agent, out string kind))
+                        {
+                            End("replaced-by-pass", e.Agent);
+                            _target = e.Other; _keeper = e.Agent; _kind = kind; _contactFrame = e.Frame;
+                        }
+                        else End("interrupted-by-kick", e.Agent);
+                        break;
+                }
+            }
+            private void End(string reason, int controller)
+            {
+                if (_target == -2) return;
+                string reclaim = reason == "interrupted-by-claim" ? (controller == _keeper ? "same" : "opponent") : "none";
+                _output.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "keeperPass,0x{0:X16},keeper={1},kind={2},contactFrame={3},endFrame={4},receiver={5},reason={6},controller={7},reclaim={8}",
+                    _seed, _keeper, _kind, _contactFrame, _lastFrame, _target, reason, controller, reclaim));
+                _target = -2; _kind = null; _keeper = -1;
+            }
+            internal void Finish() => End("censored-at-end", -1);
+        }
+    }
+}

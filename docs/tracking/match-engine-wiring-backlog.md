@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
+> **UPDATED October 15, 2026 (v1.37):** W8 B is implemented and measured on the local branch: 348 voluntary CONTACTs, no inherited drops or new DT races; same-keeper hand interruption 24 → 155 stays separate. The claim-observation correction is tested without changing its predicate. Fresh full CI and final-head Unity validation remain pending; [results](w8-b-implementation-results.md).
+
+> **UPDATED (prior) October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
 > `0eb36aa8`, replica check 0). Over the six seeds there were 1,861 commits, 0 executed and 1,841 `PositionedPoorly`.
 > A trajectory-height head finds 0 timing-valid contacts, so Heading #10's static-height search is not the cause.
 > The commit trigger is: 96% of commits fire on a low ball rising past the agent (95% below 1.0 m), and the jump
@@ -426,6 +428,8 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 human baseline tactic and can only ladder away from it mid-match.
 
 ### W8 — Goalkeeper distribution
+**Local branch status — October 15, 2026:** six policies are wired at corrected source `e54335b0`; [implementation / frozen-anchor comparison](w8-b-implementation-results.md). Live hand control suppresses new DT dispatch and cancels an already-pending foot PASS/SHOOT before CONTACT. Linux evidence is supplementary; the final-head Unity compile condition remains open. C law correction and the recorded LongKick trajectory follow-up remain separate.
+
 **Decision packet:** `docs/tracking/w8-goalkeeper-distribution-decision.md` — B amendment bundle
 owner-approved; A and the possession-helper/clock correction are recorded; #466's dormant executor
 substrate is merged and Unity-compiled. Live B wiring remains outstanding under that approved
@@ -750,6 +754,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.37 | 2026-10-15 | — | W8 B local branch wiring and evidence pointer recorded; governing final-head Unity validation, C law correction and LongKick trajectory follow-up remain open. |
 | 1.36 | 2026-10-11 | — | First #441 result recorded (run `38104571610`, PR #497 head `0eb36aa8`): 1,861 commits → 0 executed; timing-valid trajectory-head counterfactual 0/1,841, so not a #10 realization problem; commits fire on low rising balls already passing the agent (opportunity problem at the commit trigger). #441 stays open; no behavior, `[GT]`, schema or RNG change. |
 | 1.35 | 2026-10-10 | — | #441 observation-only counters landed (`HeadingMechanics` v1.10 observer, `HeaderReachabilityDiagnosticTests` v1.0, `header-reachability` instrument, definitions in `header-reachability-441-counters.md` v0.1). No run yet; no behavior, `[GT]`, schema or RNG change. |
 | 1.34 | 2026-10-10 | — | Records owner decisions D-03 (Recovering stays ineligible), D-04 (tackle-foul cooldown bypass retained) and D-05 (#440 and a re-authored, split #434 included after B→C; #434 formation/Duty in PM-2 scope). No pre-B behavior change; no `[GT]` or code change. |
