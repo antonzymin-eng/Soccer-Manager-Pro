@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperScenarios.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-07-03
 // Modified: 2026-08-03
 // Author:   —
@@ -79,6 +80,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         // parry/deflect/spill), so the recorded counts are the "no terminal contact" observable.
         private sealed class RecordingBallSystem : IGoalkeeperBallSystem
         {
+            public bool TryHandContact(int agentId, Vector3 contactPosition) => true;
+
             public int ApplyKickCount;
             public int SetPossessorCount;
             public int ParkBallCount;
@@ -328,4 +331,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |     |            |   | keeper's plane inside the SS3.3.6 commit lead (a parked ball now correctly |
 // |     |            |   | holds the dive, starving the dive-launch predicate). Intent preserved.     |
 // | 1.4     | 2026-08-03 | —      | ERR-011-008: RecordingBallSystem gains ParkBall (counted separately, so a scenario can prove the ball was arrested and not merely flagged). |
+// | 1.5 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

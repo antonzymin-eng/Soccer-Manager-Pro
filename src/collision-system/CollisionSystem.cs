@@ -1,4 +1,5 @@
 // File:     src/collision-system/CollisionSystem.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-05-25
 // Modified: 2026-09-22  [v1.11] (W3 review: canonical min/max ordering for read-only observation events; feed non-authoritative for W3 membership)
 // Modified: 2026-09-22  [v1.10] (W3: read-only same-frame AGENT_BALL candidate publication; physical response stays in UpdateCollisions/Resolve)
@@ -94,6 +95,10 @@ namespace TacticalDirector.CollisionSystem
             _snapshots = new AgentPhysicalProperties[n];
             _snapshotValid = new bool[n];
         }
+
+        /// <summary>Per-call scratch: agents whose confirmed contact applied a ball response.
+        /// Reset before every UpdateCollisions; never inferred from coarse observation contacts.</summary>
+        public uint AppliedBallTouchMask { get; private set; }
 
         /// <summary>
         /// Captures the system's complete cross-tick state — the set of agent pairs in contact as of
@@ -248,6 +253,7 @@ namespace TacticalDirector.CollisionSystem
         {
             using var _ = s_updateMarker.Auto();
             ballDeflected = false;
+            AppliedBallTouchMask = 0u;
 
             int count = agentStates.Length;
 
@@ -564,6 +570,7 @@ namespace TacticalDirector.CollisionSystem
             // actually-applied Ball Physics response becomes the keeper new-threat signal.
             if (BallCollisionHandler.OnAgentCollision(ref ball, in data))
             {
+                AppliedBallTouchMask |= 1u << agentId;
                 ballDeflected = true; // OR-reduce across AGENT_BALL contacts in this call.
             }
 
@@ -662,4 +669,5 @@ namespace TacticalDirector.CollisionSystem
 // | 1.10    | 2026-09-22 | —      | W3: + PublishAgentBallContacts read-only candidate feed for same-frame    |
 // |         |            |        | consumers. No response/contact-state mutation; full collision stays in Resolve. |
 // | 1.11    | 2026-09-22 | —      | W3 review: read-only observation events now use the same canonical min/max entity ordering as Resolve; feed is explicitly non-authoritative for W3 membership. (Renumbered from a duplicate "1.9" at the #439 close-out.) |
+// | 1.12 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

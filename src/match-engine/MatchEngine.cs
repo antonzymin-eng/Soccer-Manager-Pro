@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-06-16
@@ -1833,6 +1834,8 @@ namespace TacticalDirector.MatchEngine
                 throw new System.InvalidOperationException("SubstitutePlayer: teamId has used all permitted substitutions.");
             }
 
+            if (_releasedHandKeeper == outSlotIndex) _releasedHandKeeper = MatchEngineConstants.NO_POSSESSION;
+            if (_indirectKickTaker == outSlotIndex) _indirectKickTaker = MatchEngineConstants.NO_POSSESSION;
             _attrs[outSlotIndex] = _benchAttrs[teamId][benchIndex];
             _perfs[outSlotIndex] = _benchPerfs[teamId][benchIndex];
             _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
@@ -5568,6 +5571,18 @@ namespace TacticalDirector.MatchEngine
                 RefreshGkAgentIds();
             }
 
+            if (ApplyPendingKeeperHandlingOffence())
+            {
+                // The whistle ends this frame before stale collision/strike executors can act.
+                Array.Clear(_isCollisionKnockdown, 0, _isCollisionKnockdown.Length);
+                Array.Clear(_collisionForces, 0, _collisionForces.Length);
+                Array.Clear(_stumbleScratch, 0, _stumbleScratch.Length);
+                UpdateMatchContext();
+                if (_possessingAgentId >= 0) _lastHolderAgentId = _possessingAgentId;
+                PublishPossessionChangeIfChanged();
+                return;
+            }
+
             int frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
             float matchTime = _clock.CurrentMatchTimeSeconds;
 
@@ -5591,6 +5606,9 @@ namespace TacticalDirector.MatchEngine
                 matchTime: matchTime,
                 eventConsumer: _eventConsumer,
                 ballDeflected: out bool ballDeflected);
+            uint touches = _collisionSystem.AppliedBallTouchMask;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+                if ((touches & (1u << i)) != 0u) RecordPlayerBallTouch(i);
             if (ballDeflected)
                 ObserveW8(W8StageAKind.UnattributedDeflection);
 
@@ -5791,6 +5809,13 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
+            // Law 13: no direct goal from the new indirect restart before another player's touch.
+            if (restart == RestartType.KickOff && _indirectKickTaker >= 0)
+            {
+                int goalScoringTeam = _ball.Position.x > MatchEngineConstants.PITCH_LENGTH_M * 0.5f ? 0 : 1;
+                lastTouchTeam = _teamIds[_indirectKickTaker];
+                restart = goalScoringTeam == lastTouchTeam ? RestartType.GoalKick : RestartType.Corner;
+            }
             if (restart != RestartType.KickOff)
             {
                 // Design note §5: throw-in / corner / goal-kick.
@@ -5895,6 +5920,7 @@ namespace TacticalDirector.MatchEngine
         private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue,
             bool freeSubstitutionWindow = false, bool publishSubstitutionsNow = true)
         {
+            ClearHandlingLawAtRestart();
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
@@ -5977,6 +6003,7 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
+            RecordHandRelease(holder);
             ObserveW8(W8StageAKind.SixSecondDrop, holder);
             ReleaseControlledPossession(placeAtGround: true);
             _gkHoldTicks = 0;
@@ -6526,6 +6553,7 @@ namespace TacticalDirector.MatchEngine
 
             // Assemble the per-touch context, evaluate, and apply. ApplyTouchResult writes the displaced
             // ball state via the adapter; the host owns the possession transition from the outcome.
+            RecordPlayerBallTouch(toucher);
             FirstTouchContext context = BuildFirstTouchContext(toucher);
             FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
             _firstTouch.ApplyTouchResult(result, context);
@@ -7269,6 +7297,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteU8(buf, ref o, _subRequestReason[i]);
             }
 
+            WriteHandlingLawState(buf, ref o);
             payload.BytesWritten = o;
         }
 
@@ -7597,6 +7626,8 @@ namespace TacticalDirector.MatchEngine
                 if (_substitutionsUsed[team] + count > MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM)
                     throw new System.InvalidOperationException("Snapshot exceeds substitution limit.");
             }
+
+            ReadHandlingLawState(buf, ref o);
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -9139,6 +9170,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void TakeControlledPossession(int agentId)
         {
+            RecordPlayerBallTouch(agentId);
             ObserveW8(W8StageAKind.Acquire, agentId, _possessingAgentId);
             // ERR-011-014 / #11 §3.6.1: possession is a hard cancellation for every live
             // cross/aerial ClaimIntent. Clear at acquisition, not at the next 10 Hz producer pass.
@@ -9244,6 +9276,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private void ReleasePossessionOnKick(int agentId, PossessionChangeCause cause = PossessionChangeCause.Ordinary)
         {
+            RecordHandRelease(agentId);
             ObserveW8(W8StageAKind.KickRelease, agentId);
             if (_possessingAgentId == agentId)
             {
@@ -9360,6 +9393,7 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                _engine.RecordPlayerBallTouch(agentId);
                 _engine.ObserveW8(W8StageAKind.PassKick, agentId,
                     _engine._passExecutors[agentId].InFlightTargetAgentId);
                 BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
@@ -9455,6 +9489,7 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                _engine.RecordPlayerBallTouch(agentId);
                 _engine.ObserveW8(W8StageAKind.ShotKick, agentId);
                 // Canonical attack-+X frame → world frame. Both are free vectors, so both negate.
                 int team = _engine._teamIds[agentId];
@@ -9541,6 +9576,8 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
+                if (_engine._pendingHandlingOffender >= 0) return;
+                _engine.RecordPlayerBallTouch(agentId);
                 _engine.ObserveW8(W8StageAKind.GkHeadingKick, agentId);
                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
@@ -9551,6 +9588,9 @@ namespace TacticalDirector.MatchEngine
                 // without this the latch would survive a ball that was headed away.
                 _engine.ClearPassInFlight();
             }
+
+            public bool TryHandContact(int agentId, Vector3 contactPosition) =>
+                _engine.TryKeeperHandContact(agentId, contactPosition);
 
             public void SetPossessor(int agentId)
             {
@@ -11138,4 +11178,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.07 | 2026-10-15 | — | W8 B exclusive hand-control handover cancels ordinary PASS/SHOOT WINDUP or pending CONTACT before Resolve updates; genuine smother/replay probes. |
 // | 2.08 | 2026-10-15 | — | Comment-only closeout: live distribution ownership and inherited non-law backstop clarified; no runtime change after the measured source. |
 // | 2.09 | 2026-10-16 | — | Comment-only: holder identity is valid for dedicated CONTACT pressure, not a future ordinary-pass gate. |
+// | 2.10 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

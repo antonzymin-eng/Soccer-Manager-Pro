@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
@@ -607,6 +608,19 @@ namespace TacticalDirector.GoalkeeperMechanics
             _crossClaimDuel.ResolveHandContactDuel(_rng);
         }
 
+        private void EndIllegalHandContact(int gkIndex, int currentFrame)
+        {
+            _states[gkIndex] = GoalkeeperState.Recovering;
+            _recoveryCooldownEndTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick
+                + GoalkeeperConstants.RecoveryCooldownTicks;
+            _claimIntentActive[gkIndex] = false;
+            _saveIntentActive[gkIndex] = false;
+            _rushIntentActive[gkIndex] = false;
+            _shotDetectedTickMs[gkIndex] = 0f;
+            _requiredReactionMs[gkIndex] = 0f;
+            _diveLaunchFrames[gkIndex] = -1;
+        }
+
         public int CrossClaimDuelCount => _crossClaimDuel.DuelCount;
 
         public CrossClaimDuelContext GetCrossClaimDuel(int index) => _crossClaimDuel.GetDuel(index);
@@ -656,6 +670,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                 handlingScaleNoise: handlingNoiseRaw,
                 pointErrorNoise: pointNoise,
                 handlingLabel: out HandlingQualityLabel handlingLabel);
+
+            if (quality >= GoalkeeperConstants.MinHandlingQuality &&
+                !_ballSystem.TryHandContact(agentId, ballState.Position))
+            {
+                EndIllegalHandContact(gkIndex, currentFrame);
+                return true;
+            }
 
             _contactStates[gkIndex].ContactPointError = new Vector2(
                 reachCenter.x - ballState.Position.x,
@@ -1243,6 +1264,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                             _telemetry.RecordSaveHandlingQuality(handlingQualityScalar, handlingLabel);
                             _telemetry.RecordSaveOutcome(handlingLabel);
 
+                            if (handlingQualityScalar >= GoalkeeperConstants.MinHandlingQuality &&
+                                !_ballSystem.TryHandContact(agentId, ballState.Position))
+                            {
+                                EndIllegalHandContact(gkIndex, currentFrame);
+                                continue;
+                            }
+
                             // Publish SaveAttemptedEvent
                             ReactionLabel rLabel = GoalkeeperReactionPipeline.ComputeReactionLabel(
                                 _contactStates[gkIndex].ReactionWindowAchieved);
@@ -1421,6 +1449,11 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                     if (smotherDistSq <= smotherReach * smotherReach)
                     {
+                        if (!_ballSystem.TryHandContact(agentId, ballState.Position))
+                        {
+                            EndIllegalHandContact(gkIndex, currentFrame);
+                            continue;
+                        }
                         handBallContactOccurred = true;
                         handlingQualityScalar = GoalkeeperConstants.CatchThreshold; // claim
                         _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
@@ -1756,4 +1789,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.20 | 2026-10-15 | — | W8 B: accepted-only distribution wait latch, host completion/cancellation, no local kick/event or intent-less release. |
 // | 1.21 | 2026-10-15 | — | Comment-only: name the host as distribution-event publisher after live W8 B wiring. |
 // | 1.22 | 2026-10-16 | — | Call renamed RecordHoldTimeoutSignal; condition and hold timing unchanged. |
+// | 1.23 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

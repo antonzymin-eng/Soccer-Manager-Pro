@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
@@ -318,7 +319,9 @@ namespace TacticalDirector.MatchEngine
         /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
         /// <para>v26 (live W8 B) adds the per-keeper accepted #5 distribution wait latch. The v24
         /// request/feedback state is reused; schema mismatch remains a fail-loud load refusal.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 26;
+        /// <para>v27 adds own-release handling history, a queued offence/contact point and the
+        /// indirect-restart taker. No save-file format change.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 27;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1120,4 +1123,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
 // | 1.43 | 2026-10-15 | — | W8 B accepted-distribution wait latch: snapshot schema 25 → 26. |
 // | 1.44 | 2026-10-15 | — | Comment-only: distinguish retained B stall bookkeeping from current Law 12; values and tags unchanged. |
+// | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

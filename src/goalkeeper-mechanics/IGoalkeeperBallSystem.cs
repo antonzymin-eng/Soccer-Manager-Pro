@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/IGoalkeeperBallSystem.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-05-28
 // Modified: 2026-08-03
 // Author:   —
@@ -29,6 +30,10 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// Ball Physics #1 §3.1 possession surface — OI-006 verification posture per §4.3.
         /// </summary>
         void SetPossessor(int agentId);
+
+        /// <summary>Authorizes an actual hand contact before catch/parry mutation. False queues
+        /// a host-owned law restart; the mechanic must end the attempt without touching the ball.</summary>
+        bool TryHandContact(int agentId, Vector3 contactPosition);
 
         /// <summary>
         /// Arrests the ball in the keeper's hands on a successful claim — the SECOND half of
@@ -62,4 +67,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | which had no seam (ApplyKick is a kick, and the possession flag  |
 // |         |            |        | alone leaves the ball travelling). See the conversion-at-contact |
 // |         |            |        | pass, docs/tracking/gk-conversion-at-contact-design.md.           |
+// | 1.2 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

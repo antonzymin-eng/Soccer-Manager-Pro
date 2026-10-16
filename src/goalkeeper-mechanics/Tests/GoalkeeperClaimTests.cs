@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-08-03
 // Modified: 2026-08-03
 // Author:   —
@@ -113,6 +114,38 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             }
         }
 
+        [TestCase(true, false)]
+        [TestCase(false, false)]
+        [TestCase(true, true)]
+        [TestCase(false, true)]
+        public void DeniedHandContact_EndsCatchOrParryWithoutBallMutation(bool elite, bool aerial)
+        {
+            var ball = new RecordingBallSystem { AllowHandContact = false };
+            var gk = new GoalkeeperMechanics(ball, new ZeroRng());
+            GoalkeeperAgentAttributes attrs = elite ? EliteAttrs() : PoorAttrs();
+            if (aerial)
+            {
+                BallState incoming = BallState.CreateAtPosition(new Vector3(2.4f, 34.2f, 0.3f));
+                incoming.Velocity = new Vector3(-12f, 0f, 0f);
+                gk.CommitClaimIntent(Gk0, new ClaimIntent
+                {
+                    TargetContactPoint = incoming.Position,
+                    ClutchFirmness = attrs.HandlingNorm,
+                    AttemptCommittedTick = 5,
+                }, attrs);
+                Assert.IsTrue(gk.ResolveClaimHandContact(Gk0, Gk0, 30, 500f,
+                    incoming, incoming.Position, -1));
+                Assert.IsFalse(gk.HasActiveClaimIntent(Gk0));
+            }
+            else
+            {
+                DriveContact(gk, attrs);
+            }
+            Assert.AreEqual(1, ball.HandContactChecks, "The actual contact must consult the law port.");
+            Assert.AreEqual(0, ball.SetPossessorCount + ball.ParkBallCount + ball.ApplyKickCount);
+            Assert.AreEqual(GoalkeeperState.Recovering, gk.GetState(Gk0));
+        }
+
         // ── Fixture ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -195,6 +228,14 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         /// <summary>Counts the three ball-side effects §3.5.2 can produce.</summary>
         private sealed class RecordingBallSystem : IGoalkeeperBallSystem
         {
+            public bool AllowHandContact = true;
+            public int HandContactChecks;
+            public bool TryHandContact(int agentId, Vector3 contactPosition)
+            {
+                HandContactChecks++;
+                return AllowHandContact;
+            }
+
             public int ApplyKickCount;
             public int SetPossessorCount;
             public int ParkBallCount;
@@ -224,4 +265,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.0     | 2026-08-03 | —      | Initial. ERR-011-008 locks: a claim parks the ball and does not    |
 // |         |            |        | kick it; a non-claim kicks and does not park; every contact        |
 // |         |            |        | resolves to exactly one ball-side action (park XOR kick).          |
+// | 1.1 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion
