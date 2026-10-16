@@ -32,7 +32,8 @@ namespace TacticalDirector.GoalkeeperMechanics
     /// <summary>
     /// 10 Hz and 60 Hz orchestrator for Goalkeeper Mechanics #11.
     /// Dispatches §3.2–§3.8 sub-systems per GK per frame. Resolves cross-claim duels.
-    /// Publishes SaveAttemptedEvent / BallClaimedEvent / DistributionExecutedEvent / GoalkeeperRushEvent.
+    /// Publishes SaveAttemptedEvent / BallClaimedEvent / GoalkeeperRushEvent.
+    /// The host publishes DistributionExecutedEvent after canonical #5 CONTACT.
     /// Constructor-injected dependencies (FR-CS-051–054). Zero heap allocation on hot path.
     /// Goalkeeper Mechanics #11 §4.6.
     /// </summary>
@@ -1752,4 +1753,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.18 | 2026-09-26 | — | W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss (#11 §3.8.3 possession-change teardown). Once the composition root passes a true 10 Hz tick, HandsOnBall has no exit but the 60-tick timeout, so a keeper who had already passed stayed in hands for up to 6 s and could not rush, claim or dive. The teardown enters Recovering with the ordinary cooldown; no-op outside HandsOnBall/Distributing. No new state, schema, GT or RNG. |
 // | 1.19 | 2026-10-13 | — | W8 B prewiring: retain contact-time F-05 telemetry entry point but eliminate legacy physics warning ownership; legacy release-event implementation remains to be retired by B. |
 // | 1.20 | 2026-10-15 | — | W8 B: accepted-only distribution wait latch, host completion/cancellation, no local kick/event or intent-less release. |
+// | 1.21 | 2026-10-15 | — | Comment-only: name the host as distribution-event publisher after live W8 B wiring. |
 #endregion

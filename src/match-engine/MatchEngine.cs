@@ -463,13 +463,12 @@ namespace TacticalDirector.MatchEngine
         // them immediately after (the sole reset — see the RunResolvePhase comment at the
         // UpdateCollisions call site). Not persisted cross-tick in any meaningful sense (always
         // false entering a tick's collision step), so NOT serialized.
-        // §5.Z.15 six-second rule (Laws of the Game, Law 12). Making the keeper a live, mobile agent let
-        // it WIN possession — and nothing in the engine could make it give the ball up, because #11's
-        // distribution is not engine-driven and the Decision Tree has no keeper-distribution action.
-        // Measured: in one of four full matches a keeper held the ball for 33.5% of the second half,
-        // stalling the match. Cross-tick, so serialized at v19 alongside the collision contact set.
+        // §5.Z.15 inherited six-second possession backstop. It originally bounded a measured
+        // keeper stall before distribution was wired. W8 B now owns voluntary hand distribution,
+        // but retains this counter for both feet and hands until the separate C law landing.
+        // This is not current Law 12. Cross-tick bookkeeping has been serialized since v19.
         private int _gkHoldTicks;                 // ticks the current keeper has held the ball
-        private int _gkReleaseCooldownRemaining;  // ticks the just-released keeper may not re-collect
+        private int _gkReleaseCooldownRemaining;  // legacy serialized release-cooldown counter
         private int _gkReleasedAgentId;           // which keeper that is (NO_POSSESSION when idle)
 
         private bool _foulCandidateFound;
@@ -1022,7 +1021,7 @@ namespace TacticalDirector.MatchEngine
             // (two same-seed runs), and EnableGkHeading() remains for symmetry with DisableGkHeading().
             _gkHeadingEnabled = true;
 
-            // §5.Z.15 six-second rule — idle at boot (no keeper holds the ball at kickoff).
+            // §5.Z.15 inherited possession backstop — idle at boot (no keeper holds the ball at kickoff).
             _gkHoldTicks = 0;
             _gkReleaseCooldownRemaining = 0;
             _gkReleasedAgentId = MatchEngineConstants.NO_POSSESSION;
@@ -2875,15 +2874,13 @@ namespace TacticalDirector.MatchEngine
         /// observing possession alone cannot tell "the rule fired" from "an opponent took it".</summary>
         internal int TestOnly_GkHoldTicks => _gkHoldTicks;
 
-        /// <summary>Test-only (§5.Z.15): remaining ticks the just-released keeper may not re-collect.</summary>
+        /// <summary>Test-only (§5.Z.15): remaining legacy release-cooldown bookkeeping.</summary>
         internal int TestOnly_GkReleaseCooldownRemaining => _gkReleaseCooldownRemaining;
 
         /// <summary>
-        /// Test-only (§5.Z.15): runs the six-second rule once, exactly as the Resolve phase does. The rule
-        /// is a STALL BACKSTOP — measured, healthy play has a keeper distribute after ~54 ticks, well
-        /// inside Law 12's 360 — so a composed run never reaches the release branch and cannot lock it.
-        /// This seam drives that branch directly rather than leaving it untested, which is the
-        /// never-compiled-surface trap this project has hit repeatedly.
+        /// Test-only (§5.Z.15): drives the inherited possession backstop exactly as Resolve does.
+        /// Voluntary W8 B CONTACT normally precedes both old guards; injected boundary cases still
+        /// need direct coverage. This is a stall safeguard, not the later C hand-offence check.
         /// </summary>
         internal void TestOnly_RunGoalkeeperReleaseRule() => EnforceGoalkeeperReleaseRule();
 
@@ -5712,7 +5709,7 @@ namespace TacticalDirector.MatchEngine
             // wins; the two are disjoint by their speed gates in any case.
             RunLooseBallPickup();
 
-            // §5.Z.15 — Law 12's six-second rule. Runs AFTER the two possession-granting paths so a
+            // §5.Z.15 — inherited six-second possession backstop. Runs AFTER acquisition so a
             // keeper that claims the ball this tick starts its count from this tick.
             EnforceGoalkeeperReleaseRule();
 
@@ -5949,18 +5946,11 @@ namespace TacticalDirector.MatchEngine
         /// from each side. Deterministic and allocation-free.</para>
         /// </summary>
         /// <summary>
-        /// Laws of the Game, Law 12: a goalkeeper may not control the ball with the hands for more than
-        /// six seconds. §5.Z.15 made the keeper a live agent that can WIN possession, and nothing in the
-        /// engine could make it give the ball back up — #11's distribution is not engine-driven and the
-        /// Decision Tree has no keeper-distribution action — so a keeper that claimed the ball held it
-        /// for the rest of the match (measured: 33.5% of one second half, in one of four full matches).
-        ///
-        /// The release is deliberately the smallest thing that is both correct and football-shaped: clear
-        /// possession, leaving the ball at rest at the keeper's feet, which is exactly the state
-        /// <see cref="RunLooseBallPickup"/> already handles. A short cooldown bars that same keeper from
-        /// being the collector, so the ball goes to an outfielder instead of looping straight back — the
-        /// shape of a throw-out or a goal kick. No new physics and no invented distribution model: when
-        /// #11's distribution is engine-driven it replaces this method's body, not its trigger.
+        /// Inherited six-second keeper-possession stall safeguard (§5.Z.15), retained unchanged
+        /// by W8 B for both feet and hands. Voluntary hand distribution now releases through #5
+        /// CONTACT before this backstop; an inherited firing drops the ball at the keeper's feet.
+        /// Legacy release counters remain serialized, without adding a new collection exclusion.
+        /// Current-law hand timeout and the separate feet-only safeguard belong to W8 C.
         /// </summary>
         private void EnforceGoalkeeperReleaseRule()
         {
@@ -11143,4 +11133,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.05    | 2026-10-15 | —      | PR #505 review (High): a team already charged a Law 3 window at this stoppage keeps executing there, so two requests on its third window both execute instead of the second waiting (in the second half, until full time). §6.1: requests executed at one stoppage share one window. No schema, RNG or digest-layout change. |
 // | 2.06 | 2026-10-15 | — | W8 B live #21 producer, hand-only DT suppression, typed CONTACT release, Resolve event/completion, cancel teardown and v26 wait latch codec. |
 // | 2.07 | 2026-10-15 | — | W8 B exclusive hand-control handover cancels ordinary PASS/SHOOT WINDUP or pending CONTACT before Resolve updates; genuine smother/replay probes. |
+// | 2.08 | 2026-10-15 | — | Comment-only closeout: live distribution ownership and inherited non-law backstop clarified; no runtime change after the measured source. |
 #endregion

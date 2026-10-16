@@ -121,6 +121,57 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ClaimObservation_EndsOnExplicitSameKeeperRestart_ButStillDetectsDetachment(int team)
+        {
+            MatchEngine engine = Fixture(GkDistributionPolicy.SlowDown, team, true);
+            int keeper = team * 11;
+            var epochs = new MatchEngineKeeperClaimScenarios.ClaimRestartEpoch(engine);
+            engine.TestOnly_W8StageAObserver = epochs.Observe;
+            System.Action claim = () =>
+            {
+                GoalkeeperTickState gk = Clone(engine.TestOnly_GoalkeeperState);
+                gk.States[team] = GoalkeeperState.Smothered;
+                engine.TestOnly_RestoreGoalkeeperState(in gk);
+                var ball = engine.TestOnly_BallSnapshot;
+                var pos = engine.AgentView(keeper).Position;
+                ball.Position = new Vector3(pos.x, pos.y, 0f); ball.Velocity = Vector3.zero;
+                engine.TestOnly_SetBall(in ball);
+                engine.RunTick();
+            };
+            claim();
+            int start = (int)engine.CurrentTick, epoch = epochs.ClaimAt(team);
+            Assert.AreEqual(epochs.Current, epoch);
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.ShouldObserveHeldClaim(engine, keeper, start, start, epoch, epochs.Current));
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.IsControlledAtHolder(engine, keeper));
+            // Negative control: no restart. Corrupting attachment must remain observable.
+            var held = engine.TestOnly_BallSnapshot;
+            var corrupt = held;
+            corrupt.Position += new Vector3(1f, 0f, 0f);
+            engine.TestOnly_SetBall(in corrupt);
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.ShouldObserveHeldClaim(engine, keeper, start, start, epoch, epochs.Current));
+            Assert.IsFalse(MatchEngineKeeperClaimScenarios.IsControlledAtHolder(engine, keeper));
+            corrupt = held;
+            corrupt.State = TacticalDirector.BallPhysics.BallStateType.Stationary;
+            engine.TestOnly_SetBall(in corrupt);
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.ShouldObserveHeldClaim(engine, keeper, start, start, epoch, epochs.Current));
+            Assert.IsFalse(MatchEngineKeeperClaimScenarios.IsControlledAtHolder(engine, keeper), "Stationary without a restart is still a failure");
+            engine.TestOnly_SetBall(in held);
+            var position = engine.AgentView(keeper).Position;
+            engine.TestOnly_ApplyRestart(new Vector3(position.x, position.y, 0f), team);
+            Assert.AreEqual(keeper, engine.PossessingAgentId, "same identity is now a restart taker");
+            Assert.AreEqual(GoalkeeperState.Recovering, engine.TestOnly_GkState(team));
+            Assert.AreEqual(TacticalDirector.BallPhysics.BallStateType.Stationary, engine.BallView.State);
+            Assert.IsFalse(MatchEngineKeeperClaimScenarios.ShouldObserveHeldClaim(engine, keeper, start, start, epoch, epochs.Current));
+            Assert.AreNotEqual(epochs.Current, epochs.ClaimAt(team), "the old claim ended");
+            claim();
+            Assert.AreEqual(epochs.Current, epochs.ClaimAt(team), "a new claim after restart is observed");
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.ShouldObserveHeldClaim(engine, keeper,
+                (int)engine.CurrentTick, (int)engine.CurrentTick, epochs.ClaimAt(team), epochs.Current));
+            Assert.IsTrue(MatchEngineKeeperClaimScenarios.IsControlledAtHolder(engine, keeper));
+        }
+
         private static IEnumerable<TestCaseData> Policies()
         {
             foreach (GkDistributionPolicy policy in Enum.GetValues(typeof(GkDistributionPolicy)))
@@ -553,4 +604,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-10-15 | — | Composed W8 B policy, CONTACT, cancellation, deadline and replay locks. |
 // | 1.1 | 2026-10-15 | — | Genuine smother handover interrupts ordinary PASS/SHOOT in WINDUP or CONTACT at both ends; canonical continuation. |
+// | 1.2 | 2026-10-15 | — | Same-keeper real restart ends the claim observation; live-claim detachment remains a failure and a new post-restart claim is observed. |
 #endregion
