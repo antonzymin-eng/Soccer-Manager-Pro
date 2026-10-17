@@ -1,0 +1,29 @@
+Host: owner Windows 11, Unity 6000.4.9f1 (f7258d6eebbe) editor (Mono). Source: commit e58577de038647a0134e7ceecb151126cf7fa025 (PR #511 head), src tree cae1dd3cc1c6476c59d5344209c2ddefd6884656; 0 untracked or ignored files under src/Packages/ProjectSettings before and after (source-identity.txt). Assets/Scripts junction -> src.
+Compile: AssetDatabase.Refresh(ForceUpdate) + RequestScriptCompilation(CleanBuildCache); Tundra build success (44.78 s, 948 items), 0 error CS, 0 shim build-output references, only the three known warnings (compile.txt).
+Runs (TestRunnerApi via unity-mcp RunCommand; each batch's callback unregisters itself on finish):
+  eventsystem: START 2026-10-17T02:48:21.6982544Z FINISH 2026-10-17T02:48:23.8796073Z pass=47 fail=7 skip=10 inconclusive=1 
+  mechanics: START 2026-10-17T02:48:40.8700574Z FINISH 2026-10-17T02:48:50.5051594Z pass=388 fail=0 skip=60 inconclusive=1 
+  matchengine: START 2026-10-17T02:49:09.1641665Z FINISH 2026-10-17T14:48:22.1648913Z pass=773 fail=1 skip=16 inconclusive=1 
+  keeper-conversion-rerun: START 2026-10-17T14:49:04.1856054Z FINISH 2026-10-17T14:53:58.5040600Z pass=1 fail=0 skip=0 inconclusive=0 
+
+EventSystem: 7 failures + 1 inconclusive; per-test outcomes identical to origin/main 1963cfbe (baseline-main-1963cfbe-eventsystem-results.xml.xz). Pre-existing: TickHeartbeatEvent 0x09 Tier C unregistered under Unity (open-issues.md).
+Mechanics (GoalkeeperMechanics, PassMechanics, ShotMechanics, CollisionSystem, TacticalInstructions): 0 failures; 1 inconclusive BM007_PoorMechanicsHighPower_StumbleTriggered (existing).
+MatchEngine: W8BDistributionTests 99 results, all Passed; KeeperRehandlingLawTests 42 results, all Passed.
+  Inconclusive: ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice (also inconclusive on Linux). Skipped: 16 env-gated diagnostic instruments.
+  Full-match scenarios:
+    Passed 571.7 s TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+    Passed 174.7 s TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+    Passed 194.1 s TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+    Passed 582.7 s TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+    Passed 590.1 s TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+    Passed 296.0 s TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+    Failed 38136.5 s TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+    Passed 174.8 s TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+    Passed 230.3 s TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+    Passed 1133.1 s TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+    Passed 103.2 s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+    Passed 104.0 s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)
+Interruption: the host slept 03:33:14Z-14:03:41Z (Kernel-Power 42/107/1, "Button or Lid") while sim_match_engine_keeper_conversion was running; it recorded 38136.5 s and the 7,200,000 ms [Timeout]. Rerun alone at the same head afterwards: Passed, 293.3 s (keeper-conversion-rerun-results.xml.xz). No other test was running across the sleep.
+Effective result at e58577de: every MatchEngine test passes except the existing inconclusive; 0 failures attributable to the PR.
+
+Prior head 2d6ddf1a (superseded): same compile result; 28 W8BDistributionTests failures (events Expected 1 But was 0) from a test-only static-init-order defect (static readonly external ordinal resolved before engine boot under Mono). Isolated fixture 71/28; one-line lazy-property probe 99/0 (probe reverted). Fixed in e58577de.
