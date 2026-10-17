@@ -1,0 +1,6 @@
+tree 4d525330eeead1ccff432d84466ed7e559513de5
+parent 751b11435843b9b0ba2b64c06b7e5042358de58b
+author Codex <codex@openai.com> 1792190711 +0100
+committer Codex <codex@openai.com> 1792190711 +0100
+
+docs(w8): record isolated post-law six-seed baseline and review evidence

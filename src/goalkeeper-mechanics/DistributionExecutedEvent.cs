@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/DistributionExecutedEvent.cs
+// Modified: 2026-10-15 (W8 B ownership and CONTACT semantics)
 // Created:  2026-05-28
 // Modified: 2026-05-30
 // Author:   —
@@ -15,7 +16,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 {
     /// <summary>
     /// Published when a GK distribution release is executed (windup elapsed, ball released).
-    /// Tier A: included in the per-tick digest (Ball.ApplyKick precedes this event). Ordinal 0x16.
+    /// Published by the Match Engine in Resolve after the canonical #5 CONTACT kick.
+    /// Tier A: included in the per-tick digest. Ordinal 0x16.
     /// Goalkeeper Mechanics #11 §2.2.4 / §3.8 / Event System #17 Appendix A.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -51,7 +53,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>Intended receiver agent ID; -1 when targeting a zone rather than a specific player. §3.8.2.</summary>
         public int TargetReceiverId;
 
-        /// <summary>World-space target point from the DistributeIntent. §3.8.1.</summary>
+        /// <summary>Effective CONTACT-frame target point after live receiver revalidation. §3.8.1.</summary>
         public Vector3 TargetPoint;
 
         /// <summary>Emitted power intent after accuracy-coeff scaling. §3.8.1.</summary>
@@ -70,4 +72,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.2     | 2026-05-30 | —      | AR-2 fix: int? TargetReceiverId → int (sentinel -1 for zone).  |
 // |         |            |        | Nullable<int> has non-deterministic padding bytes in null case  |
 // |         |            |        | when copied via MemoryMarshal.Write (determinism violation).    |
+// | W8 B | 2026-10-15 | — | Document the live engine producer and CONTACT-time event semantics. |
 #endregion

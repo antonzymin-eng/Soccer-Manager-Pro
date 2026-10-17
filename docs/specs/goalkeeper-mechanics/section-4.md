@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.4
-**Last Updated:** September 27, 2026 (v0.4 — ERR-011-018 #12 baseline surface)
+**Version:** 0.5
+**Last Updated:** October 16, 2026 (v0.5 — ERR-011-020: host-owned CanUseHands query and actual-contact authorization port)
 **Status:** DRAFT
 **Purpose:** Establish the architectural file layout, the input /
 output interface contracts, the determinism compliance surface,
@@ -36,6 +36,7 @@ source file per Spec #19 §3 convention.
 
 | Surface | Spec | Section | Used in |
 |---------|------|---------|---------|
+| `IGoalkeeperBallSystem.CanUseHands(teamId) → bool` (current keeper slot; host-owned release/touch history) | Match Engine / #11 | §3.1.3 | save/claim commits, reach and both clock boundaries |
 | `BallPhysics.GetBallState(matchTime) → BallState` | #1 | §3.1 | §3.2 / §3.5 |
 | `BallState.PossessorId` | #1 | §3.1 | §3.7 / F-08 rush abort |
 | `Agent` instance access (XY kinematics + attributes) | #2 | §3.5.1 / §3.5.6 | §3.1 / §3.3 / §3.5 / §3.7 |
@@ -53,6 +54,7 @@ source file per Spec #19 §3 convention.
 
 | Surface | Spec | Section | Used in |
 |---------|------|---------|---------|
+| `IGoalkeeperBallSystem.TryHandContact(agentId, position) → bool` (false queues host law adjudication; no ball mutation permitted) | Match Engine / #11 | §3.1.3 | actual ball-changing hand contacts |
 | `Ball.ApplyKick(velocity, spin, agentId, matchTime)` | #1 | §3.1.11.2 | §3.5 / §3.8 |
 | `Ball.SetPossessor(agentId)` | #1 | §3.1 possession surface (anchor pinned during implementation; presumed published per ERR-008 resolution; if absent at implementation time, a back-prop entry filed as `ERR-011-002` for a pure namespace amendment to APPROVED #1) | §3.5 catch path / §3.7 smother |
 | `EventBus.Publish<SaveAttemptedEvent>(evt)` | #17 | §3.2.1 | §3.5 / §3.9 |
@@ -222,3 +224,4 @@ t   0ms │            │ #3 hand-ball contact event fires
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-H1 (§4.5.2 steady-state budget revised to ≤40 µs) | self-pass-2 self-critique on v0.2 yields no further findings |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.4.1 domain-tag allocation prose updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; final allocation outcome documented. |
 | 0.4 | September 27, 2026 | ERR-011-018 | §4 input table and §4.6.1 replace the phantom `PositioningAI.GetGKBaselineSlot` with the real #12 `GetFormationSlot(keeperEntityId)` surface delivered through `UpdateBaselineSlot` (§3.3.0.1). | spec + code, same commit |
+| 0.5 | October 16, 2026 | — | ERR-011-020: host-owned CanUseHands query and actual-contact authorization port | PR #511 |

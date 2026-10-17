@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperConstants.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-05-28
 // Modified: 2026-06-14
 // Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
@@ -117,8 +118,8 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>
         /// [CROSS] Penalty area depth (m).
         /// Authoritative source: Ball Physics #1 (anchor pinned during drafting per §3.4.9).
-        /// Value: 16.5 m. STAGE 0 STATUS: declared-but-unconsumed — handling-area / pickup-legality
-        /// gating on the penalty box is not yet implemented; consumed at Stage 1.
+        /// Value: 16.5 m. Consumed by the separate own-release re-handling restart classification.
+        /// General outside-area handling / pickup-legality remains separate.
         /// TODO: mirror from BallPhysicsConstants.Pitch.PENALTY_AREA_DEPTH when that constant is added.
         /// </summary>
         public static readonly float PenaltyAreaDepthM = 16.5f; // TODO: replace with BallPhysicsConstants.Pitch.PENALTY_AREA_DEPTH
@@ -553,4 +554,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | Stage0AnticipationScoreActive's summary said "attacking third" (the       |
 // |     |            |   | ERR-011-002 naming trap); it is keyed to ballThreateningOwnGoal. Value,   |
 // |     |            |   | behavior and digests unchanged.                                           |
+// | 1.7 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

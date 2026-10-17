@@ -1,0 +1,10 @@
+db7c866e72bbe98fa02f7a741027bed573e83867
+c4a6834c4247b31171ec27526ed2619791845c3a
+520ba31c71e06ed408fd5c282b5fd5611cf74879
+8.0.426
+Microsoft.AspNetCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.NETCore.App]
+start 2026-10-15T22:45:15Z
+control=TD_W8_B filter=FullyQualifiedName~W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings configuration=Debug
+exit=0
+end 2026-10-15T23:12:50Z

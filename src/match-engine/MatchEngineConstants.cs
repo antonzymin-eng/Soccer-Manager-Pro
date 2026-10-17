@@ -1,4 +1,6 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
 // Modified (prior): 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
@@ -315,7 +317,11 @@ namespace TacticalDirector.MatchEngine
         /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
         /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
         /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 25;
+        /// <para>v26 (live W8 B) adds the per-keeper accepted #5 distribution wait latch. The v24
+        /// request/feedback state is reused; schema mismatch remains a fail-loud load refusal.</para>
+        /// <para>v27 adds own-release handling history, a queued offence/contact point and the
+        /// indirect-restart taker. No save-file format change.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 27;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -345,8 +351,8 @@ namespace TacticalDirector.MatchEngine
         /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
         public const int MATCH_LENGTH_MINUTES = 90;
 
-        /// <summary>[FIXED] Seconds a goalkeeper may control the ball before releasing it (Laws of the
-        /// Game, Law 12). A rule of the sport, not a tunable — see <see cref="GkMaxHoldTicks"/>.</summary>
+        /// <summary>[FIXED] Inherited keeper-possession backstop retained at six seconds by W8 B.
+        /// This is not current Law 12; C owns the hand-offence / feet-safeguard split.</summary>
         public const float GK_MAX_HOLD_SECONDS = 6f;
 
         /// <summary>[FIXED] Six-yard-box depth from the goal line (Laws of the Game §1 — the goal
@@ -655,11 +661,8 @@ namespace TacticalDirector.MatchEngine
                   * TacticalDirector.DeterministicSim.DeterministicSimConstants.PHYSICS_TICK_HZ);
 
         /// <summary>
-        /// [GT] Ticks after a forced goalkeeper release during which THAT keeper may not be selected as the
-        /// loose-ball collector. Without it the keeper re-collects the ball it has just put down on the very
-        /// next tick and the stall re-arms; with it the ball falls to the nearest outfielder, which is the
-        /// shape of a throw-out. Long enough for a covering defender to close, short enough that the ball is
-        /// not abandoned. Config key [match-engine] GkReleaseCooldownTicks.
+        /// [GT] Legacy forced-release cooldown bookkeeping. B preserves this value and existing
+        /// collection eligibility; activating or retiring an exclusion requires a later measured change.
         /// </summary>
         public static readonly int GkReleaseCooldownTicks =
             Config.GetInt("match-engine", "GkReleaseCooldownTicks", 120);
@@ -1118,4 +1121,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the bump landed).                                                  |
 // | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
 // | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
+// | 1.43 | 2026-10-15 | — | W8 B accepted-distribution wait latch: snapshot schema 25 → 26. |
+// | 1.44 | 2026-10-15 | — | Comment-only: distinguish retained B stall bookkeeping from current Law 12; values and tags unchanged. |
+// | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

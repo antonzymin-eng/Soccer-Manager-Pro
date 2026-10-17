@@ -1,4 +1,7 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
+// Modified: 2026-10-15 (W8 B live distribution)
+// Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
@@ -31,7 +34,8 @@ namespace TacticalDirector.GoalkeeperMechanics
     /// <summary>
     /// 10 Hz and 60 Hz orchestrator for Goalkeeper Mechanics #11.
     /// Dispatches §3.2–§3.8 sub-systems per GK per frame. Resolves cross-claim duels.
-    /// Publishes SaveAttemptedEvent / BallClaimedEvent / DistributionExecutedEvent / GoalkeeperRushEvent.
+    /// Publishes SaveAttemptedEvent / BallClaimedEvent / GoalkeeperRushEvent.
+    /// The host publishes DistributionExecutedEvent after canonical #5 CONTACT.
     /// Constructor-injected dependencies (FR-CS-051–054). Zero heap allocation on hot path.
     /// Goalkeeper Mechanics #11 §4.6.
     /// </summary>
@@ -57,6 +61,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         private readonly bool[] _rushIntentActive;
         private readonly DistributeIntent[] _distributeIntents;
         private readonly bool[] _distributeIntentActive;
+        private readonly bool[] _distributionPending;
         private readonly GoalkeeperPositioningContract[] _positioningContracts;
 
         // Dive state
@@ -114,6 +119,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             _rushIntentActive = new bool[maxGks];
             _distributeIntents = new DistributeIntent[maxGks];
             _distributeIntentActive = new bool[maxGks];
+            _distributionPending = new bool[maxGks];
             _positioningContracts = new GoalkeeperPositioningContract[maxGks];
 
             _diveLaunchFrames = new int[maxGks];
@@ -265,6 +271,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             _rushIntentActive[gkIndex] = false;
             _distributeIntents[gkIndex] = default;
             _distributeIntentActive[gkIndex] = false;
+            _distributionPending[gkIndex] = false;
             _positioningContracts[gkIndex] = default;
 
             _diveLaunchFrames[gkIndex] = -1;
@@ -425,6 +432,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
+            if (!_ballSystem.CanUseHands(gkIndex)) return;
+
             _saveIntents[gkIndex] = intent;
             _saveIntentActive[gkIndex] = true;
             _attrs[gkIndex] = attrs;
@@ -444,6 +453,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             {
                 return;
             }
+
+            if (!_ballSystem.CanUseHands(gkIndex)) return;
 
             _claimIntents[gkIndex] = intent;
             _claimIntentActive[gkIndex] = true;
@@ -498,6 +509,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
             _distributeIntents[gkIndex] = default;
             _distributeIntentActive[gkIndex] = false;
+            _distributionPending[gkIndex] = false;
             _states[gkIndex] = GoalkeeperState.Recovering;
             int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
             _recoveryCooldownEndTick[gkIndex] = tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
@@ -529,6 +541,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             {
                 return false;
             }
+
+            if (!_ballSystem.CanUseHands(gkIndex)) return false;
 
             int launchFrame;
             int durationFrames;
@@ -600,6 +614,35 @@ namespace TacticalDirector.GoalkeeperMechanics
             _crossClaimDuel.ResolveHandContactDuel(_rng);
         }
 
+        // Read the host's canonical restriction at both clock boundaries, including after restore.
+        // Ordinary foot collection and body rebounds remain owned by the existing engine paths.
+        private void AvoidRestrictedHandAttempt(int gkIndex, int currentFrame)
+        {
+            if (_ballSystem.CanUseHands(gkIndex)) return;
+            _claimIntentActive[gkIndex] = false;
+            _saveIntentActive[gkIndex] = false;
+            _shotEventPending[gkIndex] = false;
+            _shotDetectedTickMs[gkIndex] = 0f;
+            _requiredReactionMs[gkIndex] = 0f;
+            GoalkeeperState state = _states[gkIndex];
+            if (state == GoalkeeperState.Diving || state == GoalkeeperState.Airborne ||
+                state == GoalkeeperState.Smothered)
+                EndHandAttempt(gkIndex, currentFrame);
+        }
+
+        private void EndHandAttempt(int gkIndex, int currentFrame)
+        {
+            _states[gkIndex] = GoalkeeperState.Recovering;
+            _recoveryCooldownEndTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick
+                + GoalkeeperConstants.RecoveryCooldownTicks;
+            _claimIntentActive[gkIndex] = false;
+            _saveIntentActive[gkIndex] = false;
+            _rushIntentActive[gkIndex] = false;
+            _shotDetectedTickMs[gkIndex] = 0f;
+            _requiredReactionMs[gkIndex] = 0f;
+            _diveLaunchFrames[gkIndex] = -1;
+        }
+
         public int CrossClaimDuelCount => _crossClaimDuel.DuelCount;
 
         public CrossClaimDuelContext GetCrossClaimDuel(int index) => _crossClaimDuel.GetDuel(index);
@@ -631,6 +674,12 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return false;
             }
 
+            if (!_ballSystem.CanUseHands(gkIndex))
+            {
+                ClearClaimIntent(gkIndex);
+                return false;
+            }
+
             float handlingNoiseRaw = _rng.NextGaussian(
                 GoalkeeperConstants.DrawSiteHandlingNoise,
                 GoalkeeperConstants.DomainTagGoalkeeper);
@@ -649,6 +698,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                 handlingScaleNoise: handlingNoiseRaw,
                 pointErrorNoise: pointNoise,
                 handlingLabel: out HandlingQualityLabel handlingLabel);
+
+            if (quality >= GoalkeeperConstants.MinHandlingQuality &&
+                !_ballSystem.TryHandContact(agentId, ballState.Position))
+            {
+                EndHandAttempt(gkIndex, currentFrame);
+                return true;
+            }
 
             _contactStates[gkIndex].ContactPointError = new Vector2(
                 reachCenter.x - ballState.Position.x,
@@ -803,7 +859,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
-        /// Commits a DistributeIntent for the specified GK from the 10 Hz Decision Tree output.
+        /// Commits the engine-produced #21 intent. Acceptance by #5 is signalled separately.
         /// §3.8 / §4.6.1.
         /// </summary>
         public void CommitDistributeIntent(int gkIndex, DistributeIntent intent)
@@ -815,6 +871,48 @@ namespace TacticalDirector.GoalkeeperMechanics
 
             _distributeIntents[gkIndex] = intent;
             _distributeIntentActive[gkIndex] = true;
+        }
+
+        /// <summary>True while this slot owns a hand episode, including accepted #5 windup.</summary>
+        public bool HasHandControl(int gkIndex) =>
+            _states[gkIndex] == GoalkeeperState.HandsOnBall || _states[gkIndex] == GoalkeeperState.Distributing;
+
+        /// <summary>Reads the original tactical hand clocks without allocating a snapshot.</summary>
+        public bool TryGetDistributionGate(int gkIndex, out int claimTick, out int releaseTick)
+        {
+            claimTick = _claimTick[gkIndex];
+            releaseTick = _releaseTickEarliest[gkIndex];
+            return _states[gkIndex] == GoalkeeperState.HandsOnBall
+                && !_distributeIntentActive[gkIndex] && !_distributionPending[gkIndex];
+        }
+
+        /// <summary>Idempotently clears only the distribution intent and executor wait latch.</summary>
+        public void ClearDistributeIntent(int gkIndex)
+        {
+            _distributeIntents[gkIndex] = default;
+            _distributeIntentActive[gkIndex] = false;
+            _distributionPending[gkIndex] = false;
+        }
+
+        /// <summary>Called only after #5 accepts the committed request; possession remains held.</summary>
+        public void AcceptDistribution(int gkIndex)
+        {
+            _distributionPending[gkIndex] = true;
+            _states[gkIndex] = GoalkeeperState.Distributing;
+        }
+
+        /// <summary>Consumes a host terminal while preserving claim clocks for retained-possession retries.</summary>
+        public void FinishDistribution(int gkIndex, bool completed, bool possessionRetained, int currentFrame)
+        {
+            bool hadEpisode = HasHandControl(gkIndex);
+            if (completed && _distributionPending[gkIndex])
+                _telemetry.RecordDistribution(_distributeIntents[gkIndex].DeliveryKind);
+            ClearDistributeIntent(gkIndex);
+            if (!hadEpisode) return;
+            if (!completed && possessionRetained)
+                _states[gkIndex] = GoalkeeperState.HandsOnBall;
+            else
+                EndHandEpisodeOnPossessionLoss(gkIndex, currentFrame);
         }
 
         /// <summary>Non-mutating #11 F-05 telemetry hook. The host owns CONTACT-time
@@ -842,7 +940,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 _diveLaunchFrames, _diveDurationFrames, _divePeakHandZ, _diveDirectionLateral,
                 _rushLaunchMps, _rushInitialAttackerId,
                 _shotDetectedTickMs, _requiredReactionMs, _shotEventPending,
-                _claimTick, _releaseTickEarliest, _recoveryCooldownEndTick);
+                _claimTick, _releaseTickEarliest, _recoveryCooldownEndTick, _distributionPending);
 
         /// <summary>
         /// Restores this orchestrator's cross-tick state from a snapshot produced by
@@ -856,6 +954,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         public void RestoreState(in GoalkeeperTickState state)
         {
             Array.Copy(state.States, _states, _states.Length);
+            Array.Copy(state.DistributionPending, _distributionPending, _distributionPending.Length);
             Array.Copy(state.Attrs, _attrs, _attrs.Length);
             Array.Copy(state.ContactStates, _contactStates, _contactStates.Length);
             Array.Copy(state.SaveIntents, _saveIntents, _saveIntents.Length);
@@ -911,6 +1010,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 AgentState agentState = agentStates[agentId];
                 GoalkeeperPositioningContract positioning = _positioningContracts[gkIndex];
+                AvoidRestrictedHandAttempt(gkIndex, currentTick * GoalkeeperConstants.FramesPerTacticalTick);
 
                 // ERR-011-002 — how close the ball is to the goal THIS keeper defends.
                 //
@@ -962,7 +1062,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                     ballState: ballState,
                     hasSaveIntent: _saveIntentActive[gkIndex],
                     hasRushIntent: _rushIntentActive[gkIndex],
-                    hasDistributeIntent: _distributeIntentActive[gkIndex],
+                    hasDistributeIntent: _distributionPending[gkIndex],
                     anticipationScore: anticipationScore,
                     rushCommitmentLevel: rushCommitmentLevel,
                     currentTick: currentTick,
@@ -974,13 +1074,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                     ballThreateningOwnGoal: ballThreateningOwnGoal,
                     ballSafelyUpfield: ballSafelyUpfield);
 
-                // Forced release telemetry
+                // Legacy timeout signal only; this does not release the ball.
                 if (_states[gkIndex] == GoalkeeperState.HandsOnBall &&
-                    newState == GoalkeeperState.Distributing &&
+                    !_distributionPending[gkIndex] &&
                     _claimTick[gkIndex] >= 0 &&
                     (currentTick - _claimTick[gkIndex]) >= GoalkeeperConstants.GK_HOLD_MAX_TICKS)
                 {
-                    _telemetry.RecordForcedRelease(agentId);
+                    _telemetry.RecordHoldTimeoutSignal(agentId);
                 }
 
                 _states[gkIndex] = newState;
@@ -1037,6 +1137,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 }
 
                 AgentState agentState = agentStates[agentId];
+                bool canUseHands = _ballSystem.CanUseHands(gkIndex);
+                AvoidRestrictedHandAttempt(gkIndex, currentFrame);
                 GoalkeeperState gkState = _states[gkIndex];
 
                 // ── 60 Hz shot detection (Anticipate early trigger via ShotExecutedEvent) ──
@@ -1193,6 +1295,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                             _telemetry.RecordSaveHandlingQuality(handlingQualityScalar, handlingLabel);
                             _telemetry.RecordSaveOutcome(handlingLabel);
 
+                            if (handlingQualityScalar >= GoalkeeperConstants.MinHandlingQuality &&
+                                !_ballSystem.TryHandContact(agentId, ballState.Position))
+                            {
+                                EndHandAttempt(gkIndex, currentFrame);
+                                continue;
+                            }
+
                             // Publish SaveAttemptedEvent
                             ReactionLabel rLabel = GoalkeeperReactionPipeline.ComputeReactionLabel(
                                 _contactStates[gkIndex].ReactionWindowAchieved);
@@ -1319,7 +1428,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         attackerWithinOneVsOneRadius = CheckAttackerWithinRadius(
                             gkMutablePos, ballState, GoalkeeperConstants.OneVsOneTriggerRadiusM);
 
-                        gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                        gkWithinSmotherRadius = canUseHands && CheckAttackerWithinRadius(
                             gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
 
                         // ERR-011-009: the run is finished. Both radius checks above answer FALSE
@@ -1353,7 +1462,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         rushTargetReached = RushTargetReached(gkMutablePos, _rushIntents[gkIndex].RushTarget);
                     }
 
-                    gkWithinSmotherRadius = CheckAttackerWithinRadius(
+                    gkWithinSmotherRadius = canUseHands && CheckAttackerWithinRadius(
                         gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
                 }
 
@@ -1371,6 +1480,11 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                     if (smotherDistSq <= smotherReach * smotherReach)
                     {
+                        if (!_ballSystem.TryHandContact(agentId, ballState.Position))
+                        {
+                            EndHandAttempt(gkIndex, currentFrame);
+                            continue;
+                        }
                         handBallContactOccurred = true;
                         handlingQualityScalar = GoalkeeperConstants.CatchThreshold; // claim
                         _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
@@ -1405,61 +1519,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     }
                 }
 
-                // ── Distribution release ──────────────────────────────────────────────
+                // #5 owns WINDUP and CONTACT. Only host terminal feedback ends distribution.
                 bool distributionReleaseReached = false;
-
-                if (gkState == GoalkeeperState.Distributing && _distributeIntentActive[gkIndex])
-                {
-                    ref DistributeIntent distIntent = ref _distributeIntents[gkIndex];
-
-                    // Legacy #11 approximation is dormant in production. The live W8 B
-                    // #5 CONTACT host is the SOLE owner of receiver-missing F-05 reporting,
-                    // comparing the original serialized request with the effective receiver.
-                    // Do not enable this legacy path with a live roster query: the B landing
-                    // retires the entire pre-CONTACT event/release approximation below.
-                    GoalkeeperDistribution.ValidateTarget(
-                        ref distIntent,
-                        agentRosterContains: true, // Legacy-only stub; NOT an authoritative roster check.
-                        receiverMissingWarningEmitted: out bool ignoredLegacyReceiverWarning,
-                        targetPointClamped: out bool targetClamped);
-
-                    if (targetClamped) _telemetry.WarnDistributionTargetPointClamped(agentId);
-
-                    float windupMs = GoalkeeperDistribution.ComputeWindupMs(distIntent.DeliveryKind);
-                    float accuracyCoeff = GoalkeeperDistribution.ComputeAccuracyCoeff(distIntent.DeliveryKind, _attrs[gkIndex]);
-                    Vector3 releasePoint = GoalkeeperDistribution.ComputeReleasePoint(agentState.Position, distIntent.DeliveryKind);
-
-                    // Stage 0 approximation: release on the frame the state was entered (windup is tracked externally)
-                    distributionReleaseReached = true;
-
-                    float emittedPower = distIntent.PowerIntent * accuracyCoeff;
-
-                    DistributionExecutedEvent distEvt = new DistributionExecutedEvent
-                    {
-                        AgentId = agentId,
-                        MatchTimeMs = currentMatchTimeMs,
-                        DeliveryKind = distIntent.DeliveryKind,
-                        ReleasePoint = releasePoint,
-                        // DistributeIntent.TargetReceiverId is int? (null = zone-targeted);
-                        // the event field is int with sentinel -1 for zone (v1.2 AR-2 row).
-                        TargetReceiverId = distIntent.TargetReceiverId ?? -1,
-                        TargetPoint = distIntent.TargetPoint,
-                        EmittedPowerIntent = emittedPower,
-                        WindupMs = windupMs
-                    };
-
-                    EventBusStub.Publish(in distEvt);
-                    _telemetry.RecordDistribution(distIntent.DeliveryKind);
-                    _distributeIntentActive[gkIndex] = false;
-                }
-                else if (gkState == GoalkeeperState.Distributing)
-                {
-                    // Forced 6-second release (§3.1 / FR-GK-028) reaches Distributing with no
-                    // committed DistributeIntent. Release the state anyway so the GK does not
-                    // stall holding the ball indefinitely; no DistributionExecutedEvent is
-                    // published (the Decision Tree never supplied a delivery).
-                    distributionReleaseReached = true;
-                }
 
                 // ── Physics state transition ──────────────────────────────────────────
                 _states[gkIndex] = GoalkeeperStateMachine.EvaluatePhysicsTransition(
@@ -1756,4 +1817,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.17 | 2026-09-22 | — | W3 runtime: #11 exposes frame-local mixed-participant duel registration and owns the tiebreak draw; Hand winner/loss routes now consume the live ClaimIntent and use the existing §3.5 handling/event/ball-action contract. |
 // | 1.18 | 2026-09-26 | — | W8 / ERR-011-017: + EndHandEpisodeOnPossessionLoss (#11 §3.8.3 possession-change teardown). Once the composition root passes a true 10 Hz tick, HandsOnBall has no exit but the 60-tick timeout, so a keeper who had already passed stayed in hands for up to 6 s and could not rush, claim or dive. The teardown enters Recovering with the ordinary cooldown; no-op outside HandsOnBall/Distributing. No new state, schema, GT or RNG. |
 // | 1.19 | 2026-10-13 | — | W8 B prewiring: retain contact-time F-05 telemetry entry point but eliminate legacy physics warning ownership; legacy release-event implementation remains to be retired by B. |
+// | 1.20 | 2026-10-15 | — | W8 B: accepted-only distribution wait latch, host completion/cancellation, no local kick/event or intent-less release. |
+// | 1.21 | 2026-10-15 | — | Comment-only: name the host as distribution-event publisher after live W8 B wiring. |
+// | 1.22 | 2026-10-16 | — | Call renamed RecordHoldTimeoutSignal; condition and hold timing unchanged. |
+// | 1.23 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.24 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

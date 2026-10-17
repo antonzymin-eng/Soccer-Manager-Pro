@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/GoalkeeperClockCorrectionTests.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-09-26
 // Modified: 2026-09-26 (v1.1 review closure: live distribution-intent teardown cases)
 // Author:   —
@@ -59,8 +60,8 @@ namespace TacticalDirector.MatchEngine
 
             DriveTacticalAt(engine,
                 (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * GoalkeeperConstants.FramesPerTacticalTick);
-            Assert.AreEqual(GoalkeeperState.Distributing, engine.TestOnly_GkState(teamId),
-                "the inherited hold limit still fires, now measured in tactical ticks");
+            Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId),
+                "B no-intent expiry signals defensively without manufacturing accepted distribution");
         }
 
         [TestCase(0, false)]
@@ -282,7 +283,8 @@ namespace TacticalDirector.MatchEngine
                 (bool[])s.ShotEventPending.Clone(),
                 (int[])s.ClaimTick.Clone(),
                 (int[])s.ReleaseTickEarliest.Clone(),
-                (int[])s.RecoveryCooldownEndTick.Clone());
+                (int[])s.RecoveryCooldownEndTick.Clone(),
+                (bool[])s.DistributionPending.Clone());
     }
 }
 
@@ -294,4 +296,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.1     | 2026-09-26 | —      | Review closure: the loss case no longer asserts an intent it staged false;    |
 // |         |            |        | new PossessionLoss_ClearsALiveDistributeIntent stages a live non-default     |
 // |         |            |        | intent in HandsOnBall and in Distributing and proves the teardown clears it. |
+// | W8 B | 2026-10-15 | — | Copy the canonical accepted-distribution wait latch in fixture state. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/CancelReason.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-10-15 (W8 B hand-control takeover)
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.9.3, §4.6.1, Code Standards #20
 // Purpose:  CancelReason enum: reason a pass was cancelled before Ball.ApplyKick().
@@ -34,11 +34,15 @@ namespace TacticalDirector.PassMechanics
         /// </summary>
         InvalidVelocity = 2,
 
+        /// <summary>W8 B: a genuine goalkeeper hand claim superseded an ordinary foot pass before CONTACT.</summary>
+        HandControlTakenOver = 3,
+
         // Additional reasons reserved for Stage 2+ (e.g. StumbleInterrupt — APPEND only).
     }
 }
 
 #region VersionHistory
+// | 1.5     | 2026-10-15 | —      | Append HandControlTakenOver for the approved W8 B exclusive hand-control handover. |
 // | Version | Date       | Author | Notes                                                                      |
 // | 1.0     | 2026-05-26 | —      | Initial implementation (combined with PassAttemptEvent et al.).            |
 // | 1.1     | 2026-05-26 | —      | H4: PassAttemptEvent, PassCancelledEvent, EventBusStub split to own files. |

@@ -1,0 +1,34 @@
+{
+  "finalSource": "86a9496e",
+  "finalSourceTree": "74b215f71809d50f483e4ab2cb254692e3c53c75",
+  "frozenMeasurement": "e54335b0",
+  "finalSourceTargeted": {
+    "passed": 164,
+    "failed": 0
+  },
+  "focusedIncludingOriginalTwoSeedScenario": {
+    "passed": 165,
+    "failed": 0
+  },
+  "tooling": {
+    "passed": 346,
+    "failed": 0
+  },
+  "fullSweep": {
+    "passed": 4032,
+    "failed": 1,
+    "notExecuted": 225,
+    "onlyFailure": "obsolete same-keeper restart observation; fixed and retested"
+  },
+  "reconciledCurrentCases": {
+    "passed": 4035,
+    "notExecuted": 225,
+    "unresolvedFailures": 0
+  },
+  "freshCleanFullInvocation": "not run after test-only correction",
+  "Unity6000.4.9f1": "not run; host unavailable",
+  "metadata": "PASS",
+  "binaries": "PASS",
+  "assemblyTier": "PASS",
+  "documentationConsistency": "PASS"
+}

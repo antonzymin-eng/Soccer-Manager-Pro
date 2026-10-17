@@ -1,0 +1,12 @@
+{
+  "source": "e54335b051ed51a0c3c394ccdaa016cb8ae28245",
+  "assemblies": 37,
+  "outcomes": {
+    "Passed": 4032,
+    "NotExecuted": 225,
+    "Failed": 1
+  },
+  "failures": [
+    "sim_match_engine_keeper_claim"
+  ]
+}
