@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 16, 2026 — (v2.200 — **PR #511 Unity ordinal lookup.** `W8BDistributionTests` v1.3 and `W8BDistributionDiagnosticTests` v1.5 use lazy properties for external registry rows; ledger counting/census attachment fails loudly on zero. Seeded ordinal fields remain safe. Test-only change; production, schema and tuning unchanged. Final-head Unity rerun pending.)
+> **Last Updated:** October 17, 2026 — (v2.201 — **PR #511 host evidence/status only.** Unity validates `e58577de`; no source/package/project-setting/asset change in this closeout. Effective MatchEngine 774 pass / 16 skip / one existing inconclusive includes the one recorded same-head sleep-timeout rerun; W8 B 99/99 and re-handling 42/42 pass. Pre-existing EventSystem 47/7/10/1 matches main. Evidence/tool registration from `e1f7da59` is indexed; final docs-head CI and merge remain, step 7 not landed.)
+
+> **Last Updated (prior):** October 16, 2026 — (v2.200 — **PR #511 Unity ordinal lookup.** `W8BDistributionTests` v1.3 and `W8BDistributionDiagnosticTests` v1.5 use lazy properties for external registry rows; ledger counting/census attachment fails loudly on zero. Seeded ordinal fields remain safe. Test-only change; production, schema and tuning unchanged. Final-head Unity rerun pending.)
 
 > **Last Updated (prior):** October 16, 2026 — (v2.199 — **PR #511 / ERR-011-020.** Keeper law and mirrored tests from `fff7cf5b` registered; #11 ball interface adds canonical `CanUseHands(teamId)` query, producers and mechanics gate hand attempts and stale reach, while ordinary feet/body play stays live. Handling Resolve clears captured foul/decided flags. Extended W8 diagnostic separates restricted attempts from sanctions and logs ten-second restart follow-ups. Snapshot v27 history is documented; no additional saved state, tuning or RNG site is added. Local NUnit: 200 engine passes, 107 goalkeeper passes / 27 existing skips, 346 tooling passes with system Git 2.43 (the final default-Git LFS-fixture failure is retained); ten original-head regression failures. The isolated post-law corpus at `751b1143` records 126 CONTACTs / 114 receiver controls / zero restricted attempts and sanctions. These are supplementary; final-head CI and Unity remain required.)
 
@@ -2767,6 +2769,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.201 | October 17, 2026 | — | PR #511 governing host evidence and tracking closeout only; runtime trees unchanged, final Linux CI/merge pending. |
 | 2.200 | October 16, 2026 | — | PR #511 Unity test-only external ordinal initialization fix and nonzero guards; no production change. |
 | 2.199 | October 16, 2026 | — | PR #511 / ERR-011-020: v27 own-release law, feet-only avoidance, same-frame foul disposal and supplementary regression/measurement evidence. |
 | 2.198 | October 16, 2026 | — | W8 B review: redundant timeout branch removed; signal naming and pressure comment clarified; no gameplay change. |

@@ -1,7 +1,35 @@
 # W8 B implementation and October 13 anchor comparison
 
-> **October 16 — PR #511 re-handling amendment (1.2):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+> **October 17 — PR #511 re-handling / host status (1.3):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; pinned-host validation is met at `e58577de` (same runtime trees on the evidence/docs heads); final docs-head Linux CI and PR #511 merge remain pending. Step 7 is not landed. D-07 general outside-area handling is separate.
 
+
+## October 17 governing Unity closeout
+
+Unity 6000.4.9f1 (f7258d6eebbe), Windows 11 / Mono validated exact source
+`e58577de038647a0134e7ceecb151126cf7fa025`, src tree
+`cae1dd3cc1c6476c59d5344209c2ddefd6884656`. The committed
+[pinned-host evidence](evidence/host-w8b-e58577de-20261017/README.md) includes source identity,
+compile excerpt, raw NUnit XML, the main EventSystem comparison and SHA-256 coverage.
+Evidence commit `e1f7da59` and this documentation closeout preserve the validated `src`, `Packages`,
+`ProjectSettings` and `Assets` trees; no new runtime head is inferred from a documentation commit.
+
+| Governing host check | Recorded result / disposition |
+|---|---|
+| Clean-cache compile | PASS: 0 errors; three known warnings; no shim build-output references |
+| Goalkeeper / Pass / Shot / Collision / TacticalInstructions | 388 passed / 0 failed / 60 skipped / 1 existing BM-007 inconclusive |
+| MatchEngine initial run | 773 passed / 1 sleep-interrupted timeout / 16 skipped / 1 existing inconclusive |
+| Keeper-conversion rerun, same head | PASS in 293.3 s; replaces only that interrupted case. Effective case identities: 774 passed / 16 skipped / 1 existing inconclusive; this is not a single clean invocation |
+| W8 B / re-handling fixtures | 99/99 and 42/42 passed; all ten full-match scenarios and both tackle-latch restore seeds pass after the one rerun |
+| EventSystem attribution | 47 passed / 7 failed / 10 skipped / 1 inconclusive; every per-test outcome matches `origin/main` `1963cfbe`. [Separate open issue](open-issues.md#unity-eventsystem-heartbeat); no PR regression is attributed to these seven failures |
+
+The host slept from 03:33:14Z to 14:03:41Z while keeper conversion was running; that case recorded
+38,136.5 s and exceeded its two-hour timeout. The original failed XML is retained beside its passing
+rerun. The superseded `2d6ddf1a` W8 fixture failures and 99/99 lazy-ordinal probe are also retained;
+`e58577de` fixes the test-only initialization order without changing production code.
+
+**Unity closure is met for PR #511. Final docs-head Linux CI and merge remain pending; step 7 is
+not landed.** The pre-law and post-law measurements below keep their original source identities;
+this host result neither reruns those matches nor removes their stated measurement limitations.
 
 ## October 16 review closeout: post-law B baseline
 
@@ -21,30 +49,31 @@ The repeated control reproduces every summary field and all six stored fingerpri
 Every match has zero restricted contacts and sanctions. There are no law restart spots or ten-second
 follow-up shots/goals to observe. Both body/schema and prevention are covered by composed tests;
 a no-sanction corpus cannot validate restart placement by itself. All six post-law digests are
-retained as the new Linux post-B anchor for B→C; cross-schema digest change is not an effect measure.
+retained as the measured Linux post-B anchor candidate; formal B→C adoption remains gated by
+final docs-head Linux CI and merge. Cross-schema digest change is not an effect measure.
 The source, runtime, per-match rows, full outcomes, raw NUnit reports and reproducible analyzer are
 [archived together](evidence/w8-b-20261015/rehandling/README.md).
 
-Current local validation: **200 engine checks passed; 107 goalkeeper checks passed / 27 existing
+Pre-host supplementary Linux validation: **200 engine checks passed; 107 goalkeeper checks passed / 27 existing
 skips; 346 tooling checks passed with system Git 2.43**. The final default-Git run retains one unchanged LFS-fixture failure; both runs are archived. Ten regression cases fail on the original `fff7cf5b` control
 and pass with the repair. Both test assemblies compile against NUnit 3.5 with its matching shim.
 The normal VSTest driver crashes here; these are direct supplementary NUnit runs, not a fresh full
-PR-policy invocation. **Final-head CI and Unity 6000.4.9f1 compile/host EditMode remain required.**
-No connected Unity host is exposed in this session. The earlier sections below remain pre-law history.
+PR-policy invocation. **Final docs-head Linux CI remains required; the governing Unity closure is met as recorded above.**
+The earlier sections below remain pre-law history.
 
 **Created:** October 15, 2026
 **Purpose:** Record roadmap step 7 under the September 26 owner-approved W8 B contract.
-**Status:** Implemented and measured locally. The corrected frozen corpus has 348 voluntary
+**Historical pre-law status (October 15–16):** Implemented and measured locally. The corrected frozen corpus has 348 voluntary
 CONTACTs with no structural falsifier; same-keeper hand interruption rises 24 → 155 and remains
 an explicit confound. All current cases have passing results across the sweep and focused retest;
-the PR functional gate passed at `353b2138` ([run 38841462964](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/38841462964)); review-cleanup final-head CI and governing Unity validation remain pending.
+the PR functional gate passed at `353b2138` ([run 38841462964](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/38841462964)); review-cleanup final-head CI and governing Unity validation were pending in that record; the October 17 section above records the subsequent host closure.
 
 Measurement-closeout source is `86a9496e` (src `74b215f71809d50f483e4ab2cb254692e3c53c75`). Its executable
 production code at that closeout is unchanged from measured `e54335b0`: those later production
 edits are comments only, and the remaining changes correct the test observer and add mirrored
 negative controls. October 16 review cleanup is recorded separately below.
 
-## October 16 review disposition
+## October 16 review disposition (historical; superseded by the approved amendment above)
 
 The [separate Law 12 re-handling issue](open-issues.md#gk-rehandling-law12) is Medium and open.
 B explicitly defers enforcement; C's comparison baseline must record an owner scope/deferral
@@ -63,8 +92,8 @@ it supplies W5 without inventing completed passes.
 The archive now has one copy of each analyzer, with an explicit arm-directory argument. All 72
 coverage XML files contained zero valid/covered lines/branches and no packages; they are omitted,
 with original paths/hashes/metadata in `empty-coverage-inventory.csv`. Raw TRX and failed-run evidence
-remain. These empty files never established coverage. Fresh full CI and exact-final-head Unity
-6000.4.9f1 validation remain merge gates. The prior `353b2138` functional CI job passed in run
+remain. These empty files never established coverage. At that review, fresh full CI and exact-final-head Unity
+6000.4.9f1 validation remained merge gates; the host item is now met by the October 17 evidence. The prior `353b2138` functional CI job passed in run
 38841462964; its Unity job was skipped. Review cleanup passes 99 goalkeeper cases (27 skipped)
 and 164 W8 integration cases (one opt-in diagnostic skipped). All 25 derived arm files remain
 byte-identical after analyzer consolidation; metadata and cross-document checks pass. The normal
@@ -158,7 +187,7 @@ realistic punt length.
 | Corrected frozen B census and independent foul reconciliation | PASS: 348 CONTACT / event / release / W5 identities; all six independent fingerprints and discipline counts agree |
 | Per-keeper A→B pass-outcome reconciliation | PASS: six digests and all 12 per-seed hand/feet outcome groups agree in each arm; 48 keeper/kind rows retained |
 | Full local PR policy | Sweep: 4,032 pass / one diagnosed observer failure; focused retest resolves it. Reconciled current cases: 4,035 pass / 225 not executed. Fresh clean policy invocation remains pending |
-| Governing final-head Unity 6000.4.9f1 validation | BLOCKED: no connected Editor / pinned host in this environment |
+| Governing Unity 6000.4.9f1 validation | MET at `e58577de`; runtime-tree identity carries the result to docs-only successors. [Host evidence](evidence/host-w8b-e58577de-20261017/README.md); sleep timeout/rerun and pre-existing EventSystem failures are retained above |
 
 - 24 composed all-policy / both-end / receiver-or-zone locks fail on `b60cc532` with the same intended
   reason: the approved request never reaches #5 (execution mode remains ordinary). The scratch copy
@@ -181,7 +210,7 @@ realistic punt length.
   and adds the two new cases: **4,035 passed / 225 NotExecuted**, with no unresolved failure.
   This is not represented as a clean single-invocation PR gate; fresh full CI remains required.
 - **346 tooling tests pass**. Metadata, binary, assembly-tier and documentation-consistency checks
-  pass. Governing Unity 6000.4.9f1 compile / required host validation remains not run.
+  pass. Governing host validation was not run at that historical stage; the October 17 evidence above now closes it.
 
 The broader gate exposes a separate observation assumption in `sim_match_engine_keeper_claim`.
 At configured-squad seed `5EED000000000003`, frame 30457, a legitimate free-kick restart ends the
@@ -303,13 +332,15 @@ The normal pre-commit composition exceeded its fixed 60-second budget; local com
 per-command hook bypass while the separate full policy gate ran. This does not claim a passing hook.
 A fresh clean full-policy invocation has not been rerun after the test-only observer correction;
 all other sweep cases and the focused correction are preserved with their actual outcomes.
-Governing Unity 6000.4.9f1 compile / required host validation remains **not run**: this environment
-has no connected Unity Editor. The branch is not marked merge-ready or step 7 landed.
+Governing Unity compile/host validation is now met at `e58577de` with the recorded sleep-timeout
+rerun and pre-existing EventSystem attribution. Final docs-head Linux CI and PR #511 merge remain
+pending; step 7 is not marked landed.
 
 ## Version history
 
 | Version | Date | Change |
 |---|---|---|
+| 1.3 | October 17, 2026 | Governing Unity host closure at e58577de; source-equivalent documentation heads, interrupted-case rerun and pre-existing EventSystem comparison retained; final Linux CI/merge pending. |
 | 1.2 | 2026-10-16 | — | PR #511 review fixes: own-release avoidance/law and simultaneous-foul disposal; supplementary tests and isolated corrected-B comparison. |
 | 1.0 | October 15, 2026 | Implementation and measurement protocol recorded before final result-bearing B runs. |
 | 1.1 | October 15, 2026 | Retain failed first arm, correct the pending-foot-action handover, record the 162-case proof and reconcile the corrected six-seed / per-keeper measurements; governing host validation pending. |

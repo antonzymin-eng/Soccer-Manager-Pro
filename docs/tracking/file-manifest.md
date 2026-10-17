@@ -1,6 +1,24 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 16, 2026 — **PR #511 Unity test-only ordinal lookup.** No path added or removed. **Modified:** `src/match-engine/tests/W8BDistributionTests.cs` v1.3, `src/match-engine/tests/W8BDistributionDiagnosticTests.cs` v1.5; `open-issues.md` and its `project-reference.md` index/count (33 active / 70 archived); both changelogs and this manifest. Host evidence is supplied separately by the owner; no evidence file or production source changes.
+**Last Updated:** October 17, 2026 — **PR #511 governing Unity evidence inventory.** Record the 13 files added by `e1f7da59` under `docs/tracking/evidence/host-w8b-e58577de-20261017/` (the SHA manifest covers the other 12):
+
+- `README.md`
+- `SHA256SUMS`
+- `baseline-main-1963cfbe-eventsystem-results.xml.xz`
+- `compile.txt`
+- `editmode-summary.txt`
+- `eventsystem-results.xml.xz`
+- `keeper-conversion-rerun-results.xml.xz`
+- `matchengine-results.xml.xz`
+- `mechanics-results.xml.xz`
+- `prior-head-2d6ddf1a-lazy-ordinal-probe.txt`
+- `prior-head-2d6ddf1a-matchengine-results.xml.xz`
+- `prior-head-2d6ddf1a-w8b-isolated-results.xml.xz`
+- `source-identity.txt`
+
+The same evidence commit updates `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` for full-coverage registration (19 directories). This docs-only closeout modifies `w8-b-implementation-results.md`, `open-issues.md`, `path-to-playable-roadmap.md` v0.69, `w8-goalkeeper-distribution-decision.md` v0.33, both changelogs, `docs/agent-guides/project-reference.md` and this manifest. No new path or runtime-tree change in this closeout. Final docs-head Linux CI and merge remain; step 7 is not landed.
+
+**Last Updated (prior):** October 16, 2026 — **PR #511 Unity test-only ordinal lookup.** No path added or removed. **Modified:** `src/match-engine/tests/W8BDistributionTests.cs` v1.3, `src/match-engine/tests/W8BDistributionDiagnosticTests.cs` v1.5; `open-issues.md` and its `project-reference.md` index/count (33 active / 70 archived); both changelogs and this manifest. Host evidence is supplied separately by the owner; no evidence file or production source changes.
 
 **Last Updated (prior):** October 16, 2026 — **PR #511 / ERR-011-020 re-handling closeout.** **Previously unregistered additions from `fff7cf5b`:** `src/match-engine/MatchEngine.KeeperHandlingLaw.cs`, `src/match-engine/tests/KeeperRehandlingLawTests.cs` and their `.meta` files. **Modified source:** #11 ball interface, mechanics and four fixture ports; MatchEngine adapter/producers; keeper law/tests; W8 stage-A carrier and B diagnostic. **Modified docs:** #11 sections 2/3/4, restart design, ERR log v2.79, decision packet, implementation results, engine design, roadmap, open issue and changelog chains. **New evidence:** `evidence/w8-b-20261015/rehandling/` (registered under its parent’s complete SHA256SUMS). Snapshot body v27, save format v3; final-head gates remain open.
 
