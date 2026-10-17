@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
+**Last Updated:** October 17, 2026 — **PR #513 W8 C law amendment proposal v0.2 (not approved).** **New:** `docs/tracking/w8-c-law12-amendment-draft.md`. **Modified:** this manifest and `docs/tracking/CHANGELOG.md`. Doc-only: records Claude review corrections, including outside-area deferred-hand anti-stall, current broad keeper guard and future C split, provisional `[EST]` guard basis, atomic distribution release vs. punt, and 2026/27 law source. No source/spec implementation, [GT], schema, or test change.
+
+**Last Updated (prior):** October 15, 2026 — **PR #510 Codex review addressed.** Roadmap v0.65 removes the completed T3b2 final-head host compile from D4's remainder and records the validated `b31eabeb` head. Separate enablement/balance and T3c+ work remain open. Documentation only; no path added or removed. Modified: `path-to-playable-roadmap.md`, `CHANGELOG.md` and `file-manifest.md`.
 
 **Last Updated (prior):** October 15, 2026, evening — **#40 T3b2 compile issue archived.** No path added or removed. **Modified:** `docs/tracking/open-issues.md`, `open-issues-resolved.md`, `path-to-playable-roadmap.md` v0.64, `docs/agent-guides/project-reference.md` (31 active / 70 archived), `CHANGELOG.md` and this manifest.
 
@@ -3733,6 +3735,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
 | `docs/tracking/w8-goalkeeper-distribution-decision.md` | W8 architecture/sequence decision packet: Stage A baseline → possession seam → owner-approved B contract/wiring → separate C law correction; design supplement only where owning specs differ. |
+| `docs/tracking/w8-c-law12-amendment-draft.md` | W8 C owner-approval proposal v0.2: 2026/27 eight-second hand law, 60 Hz claim-frame control, opponent corner and D-07 outside-area anti-stall decision; not normative until approved. |
 | `docs/tracking/pre-b-decision-packets.md` | D-03/D-04/D-05 owner-decision option packets (Recovering eligibility, W2 foul-cooldown bypass, #434/#440 inclusion and placement) for the roadmap step 6 pre-B freeze; decided by the owner October 10, 2026 |
 | `docs/tracking/w8-stage-a-preregistration.md` | Frozen pre-result Stage A six-seed measurement contract: exposure, episode/end/last-touch/reclaim definitions, dry selector, falsifiers and no-tuning boundary. |
 | `docs/tracking/w8-stage-a-baseline-results.md` | Durable Stage A result record for run `36212512965` plus supplemental reclaim-identity run `36251412673`; records the self-reclaim confound, SlowDown-only coverage gap and frozen terminal digests. |
