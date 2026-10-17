@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/W8BDistributionTests.cs
+// Modified: 2026-10-16 (Unity host: resolve external ordinal after engine boot)
 // Created:  2026-10-15
 // Modified: 2026-10-15
 // Author:   —
@@ -27,7 +28,8 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong Seed = 0xD1A6D05EUL;
         private const int ClaimFrame = 1001;
-        private static readonly byte DistributionOrdinal = EventRegistry.GetOrdinal<DistributionExecutedEvent>();
+        // External rows register at engine boot; never cache a pre-boot zero under Mono.
+        private static byte DistributionOrdinal => EventRegistry.GetOrdinal<DistributionExecutedEvent>();
 
         [TestCase(0, false, false)]
         [TestCase(1, false, false)]
@@ -549,9 +551,12 @@ namespace TacticalDirector.MatchEngine
         }
         private static int CountEvents(MatchEngine engine)
         {
+            byte distributionOrdinal = DistributionOrdinal;
+            Assert.AreNotEqual(0, distributionOrdinal,
+                "DistributionExecutedEvent must be registered after engine boot.");
             int count = 0;
             for (int i = 0; i < engine.TickLedgerCount; i++)
-                if (engine.TickLedgerOrdinal(i) == DistributionOrdinal) count++;
+                if (engine.TickLedgerOrdinal(i) == distributionOrdinal) count++;
             return count;
         }
         private static int Delay(GkDistributionPolicy p) => p == GkDistributionPolicy.SlowDown ? 35 : p == GkDistributionPolicy.Quick ? 5 : 10;
@@ -605,4 +610,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0 | 2026-10-15 | — | Composed W8 B policy, CONTACT, cancellation, deadline and replay locks. |
 // | 1.1 | 2026-10-15 | — | Genuine smother handover interrupts ordinary PASS/SHOOT in WINDUP or CONTACT at both ends; canonical continuation. |
 // | 1.2 | 2026-10-15 | — | Same-keeper real restart ends the claim observation; live-claim detachment remains a failure and a new post-restart claim is observed. |
+// | 1.3 | 2026-10-16 | — | Resolve the external distribution ordinal lazily; fail loudly on unregistered ledger lookup. |
 #endregion

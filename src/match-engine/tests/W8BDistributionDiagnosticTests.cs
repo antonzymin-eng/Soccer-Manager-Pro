@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/W8BDistributionDiagnosticTests.cs
+// Modified: 2026-10-16 (Unity host: lazy external shot/distribution ordinals)
 // Created:  2026-10-15
 // Modified: 2026-10-16
 // Author:   —
@@ -131,7 +132,8 @@ namespace TacticalDirector.MatchEngine
             private readonly List<HandlingRestartWindow> _handlingRestarts = new List<HandlingRestartWindow>();
             private int _handlingAttempts, _handlingSanctions;
             private static readonly byte RestartOrdinal = EventRegistry.GetOrdinal<RestartAwardedEvent>();
-            private static readonly byte ShotOrdinal = EventRegistry.GetOrdinal<ShotExecutedEvent>();
+            // External rows register at engine boot; Mono can initialize this type earlier.
+            private static byte ShotOrdinal => EventRegistry.GetOrdinal<ShotExecutedEvent>();
             private static readonly byte GoalOrdinal = EventRegistry.GetOrdinal<GoalAwardedEvent>();
             private int _lastContactKeeper = -1, _lastContactFrame = -1;
             private Flight _flight;
@@ -139,7 +141,7 @@ namespace TacticalDirector.MatchEngine
             private int _drops, _dtRaces, _outOfPlayRun, _maxOutOfPlayRun, _stationaryRun, _maxStationaryRun;
             private Vector3 _previousPosition;
             private int _fouls, _yellows, _reds, _secondYellows;
-            private static readonly byte DistributionOrdinal = EventRegistry.GetOrdinal<DistributionExecutedEvent>();
+            private static byte DistributionOrdinal => EventRegistry.GetOrdinal<DistributionExecutedEvent>();
             private static readonly byte FoulOrdinal = EventRegistry.GetOrdinal<FoulCommittedEvent>();
             private static readonly byte CardOrdinal = EventRegistry.GetOrdinal<CardIssuedEvent>();
 
@@ -147,6 +149,8 @@ namespace TacticalDirector.MatchEngine
             private void Row(FormattableString row) => _report.AppendLine(FormattableString.Invariant(row));
             internal void Attach()
             {
+                Assert.AreNotEqual(0, ShotOrdinal, "ShotExecutedEvent must be registered after engine boot.");
+                Assert.AreNotEqual(0, DistributionOrdinal, "DistributionExecutedEvent must be registered after engine boot.");
                 int holder = _engine.PossessingAgentId;
                 if (holder >= 0 && _engine.TestOnly_IsGoalkeeper(holder)
                     && _engine.TestOnly_GkState(_engine.TestOnly_W8TeamId(holder)) == GoalkeeperState.HandsOnBall)
@@ -344,4 +348,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.2 | 2026-10-15 | — | Preserve receiver/zone outcomes beyond first landing and observed control identity; seed composed claim frame explicitly. |
 // | 1.3 | 2026-10-15 | — | Raw rejection/cancellation/completion timing and retained-possession status; explicit pending-at-end censor rows; four identity/neutrality locks. |
 // | 1.4 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 1.5 | 2026-10-16 | — | Resolve external shot/distribution ordinals lazily and check registration when attaching the census. |
 #endregion
