@@ -3,7 +3,7 @@
 **Status:** PROPOSED — owner approval required; not an approved specification or implementation authority  
 **Date:** October 17, 2026 (v0.2 review correction; original v0.1 October 16)  
 **Scope:** Documentation proposal only. No source, runtime, test-code, tuning, or schema changes in this draft.  
-**Prerequisite:** Land and measure the W8 B voluntary-distribution behavior (currently in draft PR #511) before implementing C. Reconcile this proposal against the final merged B head.
+**Prerequisite:** Land and measure the W8 B voluntary-distribution behavior (PR #511 is ready for review but not merged; its measured final head remains the B prerequisite) before implementing C. Reconcile this proposal against the final merged B head.
 
 ## 1. Governing rule and boundaries
 
@@ -110,7 +110,7 @@ Also update #11 §3.1.1, §3.4, §3.8.3–3.8.4, §§2/5 version histories and a
 
 1. Owner explicitly approves the C wording, including the exact 480/481 boundary, Resolve-before-C3 ordering, corner placement/tie rule, claim-frame lifecycle, legacy retirement, and cross-spec test scope.
 2. Owner records D-07: **separate general outside-area handball implementation before C activation** (recommended) or **explicitly approved bounded fallback plus governed deferral**. A deferral without a verified outside-hand anti-stall bound is prohibited.
-3. Final B production PR and A→B evidence land; use the actual post-B-law baseline (including the separate re-handling fix) as the B→C comparator, not the earlier pre-law B snapshot. Reconcile with PR #511 before C code.
+3. Final B production PR and its same-lane A→B/post-law evidence **land and pass review**; use only the validated merged B head and its post-re-handling baseline as the B→C comparator, not an older pre-law B snapshot. PR #511 is currently open; do not claim its evidence or measured six-seed reduction has been accepted by merge. **PR #513 was created from main rather than #511's head:** keep this proposal unmergeable by process until #511 lands, then reconcile the C proposal against merged §3.8 and both tracking-history chains before any approval or code.
 4. Apply the approved normative #11/Match Engine/restart/test spec edits and ERR entries; then and only then implement C in an isolated code landing with the next available save schema version.
 5. Run exact-boundary and mirrored restart fixtures, save/restore/replay, final-PR-head Linux checks and a **pinned Unity 6000.4.9f1 compile** before merge. Record six-seed B→C comparisons: for ordinary no-offence episodes, gameplay event and ball-trajectory streams must be exactly equal; report first divergence and cause otherwise. Record snapshot digests separately. Forced timeout fixtures, not six ordinary matches, establish rare sanction behavior.
 6. Keep [GT] values frozen per KD-W1; relabel the **non-law 6 s legacy stall estimate** as `[EST]` and keep derived tick arithmetic `[DERIVED]` until the separate measurement/retirement decision. Verify the actual B Kick/Throw/Roll hand-release representation before code and refuse any unapproved two-stage punt model. No code changes, tests executed, Unity claims, or implementation approval are part of this document-only proposal.
