@@ -1,6 +1,6 @@
 # Path to Playable — Implementation Roadmap
 
-> **October 17 — PR #511 host-closeout status (v0.69):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; Unity closure is met at `e58577de` ([host evidence](evidence/host-w8b-e58577de-20261017/README.md)); final docs-head Linux CI and merge remain pending. Step 7 is not landed; D-07 general outside-area handling is separate.
+> **October 17 — PR #511 host-closeout status (v0.70):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; Unity closure is met at `e58577de` ([host evidence](evidence/host-w8b-e58577de-20261017/README.md)); final docs-head Linux CI and merge remain pending. Step 7 is not landed; D-07 general outside-area handling is separate.
 
 
 > **Created:** July 25, 2026
@@ -288,12 +288,16 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 
 **Step 7 branch progress — October 17, 2026:** all six policies and the approved re-handling/avoidance amendment are implemented and measured in PR #511. [Governing Unity evidence](evidence/host-w8b-e58577de-20261017/README.md) at `e58577de` records 0 compile errors, W8 B 99/99 and re-handling 42/42; effective MatchEngine 774 passed / 16 skipped / 1 existing inconclusive after its sole sleep-interrupted case passes a same-head rerun. The seven EventSystem failures match main and remain a separate issue. Runtime trees are identical on the evidence/docs successors. Final docs-head Linux CI and merge remain pending: **step 7 is not landed**; step 8 remains separate. [Implementation / comparison record](w8-b-implementation-results.md).
 
+**Step 7 measurement review:** [same-lane frozen-observer closeout](evidence/w8-b-20261015/measurement-closeout/README.md) reproduces all twelve fingerprints; hand claims/distributions are 348/348 → 126/126. All 126 restrictions clear on player touch; twelve opponent-touch windows contain eight shots and six goals. Both measurement questions are answered without a gameplay change. Final docs-head CI and merge still gate landing.
+
 **Specification gates.** #7/#8 correct the actual `KeeperPerceptionGate` → `SaveAvailable`
-producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1
-omits `OnThreatDeflected` and the visible-threat fallback rule; its reaction correction also gates
-**W10**, not W8 B. Land that bounded #11 documentation correction before the C law-amendment PR,
-or rebase C onto it and reconcile all shared version/history citations before C review. The
-reaction correction alone is not a behavioral prerequisite for C. #3 FR-03 omits production
+producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1's
+reaction-text correction **landed October 10, 2026**, section 3 **v0.18**, `ERR-011-019`:
+`OnThreatDeflected`, visibility-owned fallback and screened-clear behavior are documented.
+The condition to land that correction before C is **done**. Draft C from PR #511's head or after
+its merge, and reconcile #511's shared #11 version/history rows before C review. D-07 is required
+at C closeout, not for drafting. The reaction correction is a W10 gate already met; it is not a
+behavioral prerequisite for C. #3 FR-03 omits production
 `AgentBallCollisionData.AgentPosition` (the agent center, separate from contact point); shot-outcome
 deflection already consumes it, so that documentation correction has **no blocking consumer**.
 Land it any time. Do not reopen already-completed #13 work.
@@ -704,6 +708,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.70 | October 17, 2026 | Resolve both W8 B measurement questions on Linux .NET with the exact frozen instrument; mark the October 10 #11 v0.18 / ERR-011-019 prerequisite done; C drafts follow #511, D-07 at C closeout. Final-head CI and merge remain. |
 | v0.69 | October 17, 2026 | — | PR #511 governing Unity closure at e58577de; identical runtime trees on evidence/docs successors. Final Linux CI/merge remain; step 7 not landed. |
 | v0.68 | 2026-10-16 | — | PR #511 adds the separately owner-approved own-release law and avoidance; v27 supersedes B v26; post-law B→C anchor and final-head CI/Unity gates remain explicit. |
 | v0.67 | October 16, 2026 | PR #511 review: separately track the own-release re-handling Law 12 gap; require its scope/deferral disposition before the B→C baseline freeze. No C approval, gameplay or D-03 change. |

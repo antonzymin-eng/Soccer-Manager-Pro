@@ -19,6 +19,13 @@ that report. All simulations are Linux x64 Debug, 324,000 ticks per frozen seed,
 `EnableGkHeading()`, no squad override. The exact common-instrument blob is
 `520ba31c71e06ed408fd5c282b5fd5611cf74879`.
 
+## October 17 measurement closeout
+
+[Measurement merge gates](measurement-closeout/README.md): exact frozen observer on Linux .NET,
+twelve matching arm fingerprints, 348/348 → 126/126 claims/distributions and all 126 post-release
+restricted spells. Twelve opponent-touch windows contain eight shots and six goals; no causal
+balance claim. Governing Unity evidence and final-head CI remain distinct.
+
 ## Arms and provenance
 
 - `first-arm/`: completed but rejected implementation. Common/foul pin `ed0570cf`; detailed pin

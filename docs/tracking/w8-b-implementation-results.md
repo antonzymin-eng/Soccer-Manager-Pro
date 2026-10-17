@@ -1,7 +1,48 @@
 # W8 B implementation and October 13 anchor comparison
 
-> **October 17 — PR #511 re-handling / host status (1.3):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; pinned-host validation is met at `e58577de` (same runtime trees on the evidence/docs heads); final docs-head Linux CI and PR #511 merge remain pending. Step 7 is not landed. D-07 general outside-area handling is separate.
+> **October 17 — PR #511 re-handling / host status (1.4):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; pinned-host validation is met at `e58577de` (same runtime trees on the evidence/docs heads); final docs-head Linux CI and PR #511 merge remain pending. Step 7 is not landed. D-07 general outside-area handling is separate.
 
+
+## October 17 measurement merge-gate closeout
+
+The [Linux .NET Debug rerun](evidence/w8-b-20261015/measurement-closeout/README.md) uses the exact
+step-6 frozen observer blob `520ba31c71e06ed408fd5c282b5fd5611cf74879`, plus a separate read-only
+restricted-spell trace. All twelve seeded invocations pass and reproduce their stored terminal
+digests and distribution totals. The pre-law frozen report reproduces all 9,140 rows. Direct
+NUnitLite/CLR 8.0.28 is recorded explicitly; this does not replace canonical final-head GitHub CI.
+
+| Seed | Pre-law hand claims / distributions | Post-law hand claims / distributions | Pre-law same-keeper terminal hand returns | Other-claim net change |
+|---|---:|---:|---:|---:|
+| `0F1E2D3C4B5A6978` | 83 / 83 | 7 / 7 | 42 | -34 |
+| `00000000D1A6D05E` | 70 / 70 | 20 / 20 | 29 | -21 |
+| `0000000000000001` | 66 / 66 | 15 / 15 | 32 | -19 |
+| `00000000ABCDEF12` | 50 / 50 | 22 / 22 | 23 | -5 |
+| `0000000099887766` | 42 / 42 | 23 / 23 | 16 | -3 |
+| `000000005A5A5A5A` | 37 / 37 | 39 / 39 | 13 | +15 |
+| **Total** | **348 / 348** | **126 / 126** | **155** | **−67** |
+
+All claims distribute: the 222-count drop is not a lost-execution gap. Descriptive reconciliation
+is a 155-return bucket disappearing and a 67 net reduction in remaining claims (193 → 126);
+193 is the exact pre-law remainder, not a predicted post-law baseline. This is not an exact causal
+split or a count of adjudicated illegal claims: changed trajectories and conditional RNG draws
+prevent such a conclusion. For `0F1E2D3C4B5A6978`, 83 = 42 returns + 41 other claims becomes
+7 = 0 + 7, a 34-claim net non-return reduction. The first hand claim/release at 28,302/28,536
+agrees. The pre-law keeper reclaims at 28,542; post-law, teammate 3 touches at 28,736 instead,
+and the match diverges thereafter. All seven post-law claims distribute; no unexecuted
+hand claims account for the difference.
+
+Every restricted spell is retained in [spells.csv](evidence/w8-b-20261015/measurement-closeout/spells.csv):
+114 end on teammate touch, twelve on opponent touch; none is stuck, restarted or censored.
+Min/median/max duration is 0/127/507 frames (0/2.117/8.45 s). These are post-release restrictions,
+not hand holds. All twelve opponent-touch windows have a full 600-frame follow-up; they contain
+**eight shots and six goals** across both teams, with no duplicated ledger event across windows.
+Same-frame events are included. This is temporal association after the restriction clears, not a
+causal balance verdict. The archive lists each window and every spell, including two same-frame
+clearing touches. Zero sanctions did not establish an empty opponent-touch follow-up population.
+
+**Both measurement questions are answered for this corpus:** no missing distribution, stuck
+restriction or baseline mismatch was found. No calibration or gameplay code changed. Host validation
+remains met at `e58577de`; final docs-head Linux CI and merge remain, and step 7 is not landed.
 
 ## October 17 governing Unity closeout
 
@@ -46,8 +87,8 @@ The repeated control reproduces every summary field and all six stored fingerpri
 | Re-handling attempts / sanctions | Not implemented/instrumented | 0 / 0 |
 | Ordinary fouls / cautions / straight reds | 46 / 6 / 1 | 48 / 8 / 1 |
 
-Every match has zero restricted contacts and sanctions. There are no law restart spots or ten-second
-follow-up shots/goals to observe. Both body/schema and prevention are covered by composed tests;
+Every match has zero restricted contacts and sanctions. There are no law restart spots or sanction-restart follow-up windows. The separate
+restricted-spell opponent-touch follow-up is measured in the October 17 closeout above. Both body/schema and prevention are covered by composed tests;
 a no-sanction corpus cannot validate restart placement by itself. All six post-law digests are
 retained as the measured Linux post-B anchor candidate; formal B→C adoption remains gated by
 final docs-head Linux CI and merge. Cross-schema digest change is not an effect measure.
@@ -340,6 +381,7 @@ pending; step 7 is not marked landed.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4 | October 17, 2026 | Same Linux .NET lane and exact frozen observer; twelve matching fingerprints, all hand claims/distributions reconciled, 126 restricted spells and twelve opponent-touch windows; no gameplay change. |
 | 1.3 | October 17, 2026 | Governing Unity host closure at e58577de; source-equivalent documentation heads, interrupted-case rerun and pre-existing EventSystem comparison retained; final Linux CI/merge pending. |
 | 1.2 | 2026-10-16 | — | PR #511 review fixes: own-release avoidance/law and simultaneous-foul disposal; supplementary tests and isolated corrected-B comparison. |
 | 1.0 | October 15, 2026 | Implementation and measurement protocol recorded before final result-bearing B runs. |

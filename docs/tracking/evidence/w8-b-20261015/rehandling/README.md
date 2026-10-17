@@ -4,6 +4,13 @@
 **Purpose:** Preserve the PR #511 review repairs, original-head regression failures, and an isolated
 corrected-B versus post-law six-seed comparison. This is supplementary Linux evidence.
 
+## October 17 measurement follow-up
+
+The [same-lane frozen-observer closeout](../measurement-closeout/README.md) reproduces both arms
+and answers the distribution-count and restricted-spell merge questions. It retains all 126
+spells and finds eight shots / six goals within ten seconds of twelve opponent-touch clearings.
+The zero-sanction restart windows below are a separate population, not an absence of aftermath.
+
 ## Published commit identities
 
 Command-line Git has no GitHub write credentials in this session. The GitHub app published the

@@ -1,6 +1,52 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 17, 2026 — **PR #511 governing Unity evidence inventory.** Record the 13 files added by `e1f7da59` under `docs/tracking/evidence/host-w8b-e58577de-20261017/` (the SHA manifest covers the other 12):
+**Last Updated:** October 17, 2026 — **PR #511 measurement gate evidence.** New directory `docs/tracking/evidence/w8-b-20261015/measurement-closeout/` under the existing parent SHA-256 contract. Its 41 files:
+
+- `measurement-closeout/MeasurementTests.cs.txt`
+- `measurement-closeout/README.md`
+- `measurement-closeout/after-0000000000000001.log.xz`
+- `measurement-closeout/after-0000000000000001.xml.xz`
+- `measurement-closeout/after-000000005A5A5A5A.log.xz`
+- `measurement-closeout/after-000000005A5A5A5A.xml.xz`
+- `measurement-closeout/after-0000000099887766.log.xz`
+- `measurement-closeout/after-0000000099887766.xml.xz`
+- `measurement-closeout/after-00000000ABCDEF12.log.xz`
+- `measurement-closeout/after-00000000ABCDEF12.xml.xz`
+- `measurement-closeout/after-00000000D1A6D05E.log.xz`
+- `measurement-closeout/after-00000000D1A6D05E.xml.xz`
+- `measurement-closeout/after-0F1E2D3C4B5A6978.log.xz`
+- `measurement-closeout/after-0F1E2D3C4B5A6978.xml.xz`
+- `measurement-closeout/after-TacticalDirector.MatchEngine.Tests.rsp.xz`
+- `measurement-closeout/after-TacticalDirector.MatchEngine.rsp.xz`
+- `measurement-closeout/analysis.json`
+- `measurement-closeout/analyze.py`
+- `measurement-closeout/before-0000000000000001.log.xz`
+- `measurement-closeout/before-0000000000000001.xml.xz`
+- `measurement-closeout/before-000000005A5A5A5A.log.xz`
+- `measurement-closeout/before-000000005A5A5A5A.xml.xz`
+- `measurement-closeout/before-0000000099887766.log.xz`
+- `measurement-closeout/before-0000000099887766.xml.xz`
+- `measurement-closeout/before-00000000ABCDEF12.log.xz`
+- `measurement-closeout/before-00000000ABCDEF12.xml.xz`
+- `measurement-closeout/before-00000000D1A6D05E.log.xz`
+- `measurement-closeout/before-00000000D1A6D05E.xml.xz`
+- `measurement-closeout/before-0F1E2D3C4B5A6978.log.xz`
+- `measurement-closeout/before-0F1E2D3C4B5A6978.xml.xz`
+- `measurement-closeout/before-TacticalDirector.MatchEngine.Tests.rsp.xz`
+- `measurement-closeout/before-TacticalDirector.MatchEngine.rsp.xz`
+- `measurement-closeout/build.log.xz`
+- `measurement-closeout/claims.csv`
+- `measurement-closeout/control-agreement.json`
+- `measurement-closeout/observer-only.patch.xz`
+- `measurement-closeout/prepare.py`
+- `measurement-closeout/provenance.json`
+- `measurement-closeout/run.py`
+- `measurement-closeout/runs.json`
+- `measurement-closeout/spells.csv`
+
+Modified: parent W8 evidence README/SHA256SUMS and rehandling README; results v1.4; roadmap v0.70; B packet v0.34; open issues (counts unchanged); both changelog chains; project-reference evidence index; this manifest. Shipping `src`, `Packages`, `ProjectSettings` and `Assets` are unchanged. Final documentation-head CI and merge remain; step 7 is not landed.
+
+**Last Updated (prior):** October 17, 2026 — **PR #511 governing Unity evidence inventory.** Record the 13 files added by `e1f7da59` under `docs/tracking/evidence/host-w8b-e58577de-20261017/` (the SHA manifest covers the other 12):
 
 - `README.md`
 - `SHA256SUMS`

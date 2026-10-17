@@ -273,6 +273,8 @@ pass-mechanics/
 
 - **[W8 B / PR #511, October 17, 2026](../tracking/evidence/host-w8b-e58577de-20261017/README.md):** 13 files added by `e1f7da59`, validated source `e58577de` (src `cae1dd3cc1c6476c59d5344209c2ddefd6884656`). Compile 0 errors; effective MatchEngine 774 passed / 16 skipped / 1 existing inconclusive after a targeted sleep-timeout rerun; W8 B 99/99, re-handling 42/42. The separate EventSystem issue retains its seven failures and exact main comparison. Full SHA-256 coverage is enforced among 19 registered evidence directories. The runtime trees match on docs-only successors; current docs-head Linux CI and merge remain, so step 7 is not landed.
 
+- **[W8 B measurement closeout, October 17](../tracking/evidence/w8-b-20261015/measurement-closeout/README.md):** Linux .NET Debug with the exact frozen observer, twelve matching fingerprints and all restricted-spell follow-ups. Both measurement questions answered; final documentation-head CI and merge remain. No Unity result or gameplay change is inferred from these new observations.
+
 ### Roadmaps (meta-planning — design no system, open no spec)
 
 | Document | Answers |

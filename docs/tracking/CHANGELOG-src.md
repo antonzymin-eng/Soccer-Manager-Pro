@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 17, 2026 — (v2.201 — **PR #511 host evidence/status only.** Unity validates `e58577de`; no source/package/project-setting/asset change in this closeout. Effective MatchEngine 774 pass / 16 skip / one existing inconclusive includes the one recorded same-head sleep-timeout rerun; W8 B 99/99 and re-handling 42/42 pass. Pre-existing EventSystem 47/7/10/1 matches main. Evidence/tool registration from `e1f7da59` is indexed; final docs-head CI and merge remain, step 7 not landed.)
+> **Last Updated:** October 17, 2026 — (v2.202 — **PR #511 measurement merge gates resolved.** Same Linux .NET Debug lane, exact frozen observer 520ba31c, twelve reproduced fingerprints and 9,140 matching pre-law report rows. Every claim distributes (348/348 → 126/126); 155-return bucket difference and 67 net other-claim reduction are descriptive, not an exact causal split. All 126 restrictions clear on player touch; twelve opponent-touch windows contain eight shots / six goals. Evidence and limits retained; no gameplay/runtime tree change. Roadmap v0.70 marks #11 section 3 v0.18 / ERR-011-019 done before C; packet v0.34 and results v1.4 agree. Final docs-head CI and merge remain; counts 33 active / 70 archived.)
+
+> **Last Updated (prior):** October 17, 2026 — (v2.201 — **PR #511 host evidence/status only.** Unity validates `e58577de`; no source/package/project-setting/asset change in this closeout. Effective MatchEngine 774 pass / 16 skip / one existing inconclusive includes the one recorded same-head sleep-timeout rerun; W8 B 99/99 and re-handling 42/42 pass. Pre-existing EventSystem 47/7/10/1 matches main. Evidence/tool registration from `e1f7da59` is indexed; final docs-head CI and merge remain, step 7 not landed.)
 
 > **Last Updated (prior):** October 16, 2026 — (v2.200 — **PR #511 Unity ordinal lookup.** `W8BDistributionTests` v1.3 and `W8BDistributionDiagnosticTests` v1.5 use lazy properties for external registry rows; ledger counting/census attachment fails loudly on zero. Seeded ordinal fields remain safe. Test-only change; production, schema and tuning unchanged. Final-head Unity rerun pending.)
 
@@ -2769,6 +2771,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.202 | 2026-10-17 | — | W8 B measurement merge-gate evidence only: exact frozen observer and all twelve digests reproduced; all claim/distribution identities and restricted spells reconcile; opponent-touch aftermath retained. No shipping source change. |
 | 2.201 | October 17, 2026 | — | PR #511 governing host evidence and tracking closeout only; runtime trees unchanged, final Linux CI/merge pending. |
 | 2.200 | October 16, 2026 | — | PR #511 Unity test-only external ordinal initialization fix and nonzero guards; no production change. |
 | 2.199 | October 16, 2026 | — | PR #511 / ERR-011-020: v27 own-release law, feet-only avoidance, same-frame foul disposal and supplementary regression/measurement evidence. |
