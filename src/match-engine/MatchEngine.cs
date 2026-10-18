@@ -1,5 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
-// Modified: 2026-10-16 (owner-approved re-handling fix)
+// Modified: 2026-10-18 (D-07 outside-area hand contacts and carries)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-06-16
@@ -5541,7 +5541,8 @@ namespace TacticalDirector.MatchEngine
         /// attachment after collision position correction, advances the in-flight pass/shot executor
         /// lifecycles (C2/C3), runs first touch on a loose arriving ball (D3), then authors the
         /// authoritative <see cref="MatchContext"/> from the settled world state (C4). Intra-Resolve
-        /// order is fixed and digest-load-bearing: collision → Controlled reattach → executor Update →
+        /// order is fixed and digest-load-bearing: pending handling whistle → collision → Controlled
+        /// reattach / carry whistle → executor Update →
         /// goalkeeper terminal feedback drain → restart → first touch → possession/MatchContext.
         /// Collision writes THIS tick's feedback buffers (consumed by movement
         /// next tick — the §3 one-tick-lag contract); the executors advance any pass/shot scripted via the
@@ -5574,12 +5575,6 @@ namespace TacticalDirector.MatchEngine
             if (ApplyPendingKeeperHandlingOffence())
             {
                 // The whistle ends this frame before stale collision/strike executors can act.
-                Array.Clear(_isCollisionKnockdown, 0, _isCollisionKnockdown.Length);
-                Array.Clear(_collisionForces, 0, _collisionForces.Length);
-                Array.Clear(_stumbleScratch, 0, _stumbleScratch.Length);
-                UpdateMatchContext();
-                if (_possessingAgentId >= 0) _lastHolderAgentId = _possessingAgentId;
-                PublishPossessionChangeIfChanged();
                 return;
             }
 
@@ -5624,6 +5619,9 @@ namespace TacticalDirector.MatchEngine
             // immediately after collision writeback, before any later Resolve path can legitimately
             // kick, release, or restart the ball.
             DriveControlledBallToPossessor();
+
+            // Collision correction can carry a held ball across the area boundary after Physics.
+            if (ApplyPendingKeeperHandlingOffence()) return;
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
             // deflection latch survives the tick; existing GK reaction fields remain the only state.
@@ -9267,6 +9265,7 @@ namespace TacticalDirector.MatchEngine
             BallPhysicsCore.ValidatePhysicsState(ref _ball);
             _ball.LastValidPosition = _ball.Position;
             _ball.LastValidVelocity = Vector3.zero;
+            CheckKeeperHandCarry();
         }
 
         /// <summary>
@@ -11184,4 +11183,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.09 | 2026-10-16 | — | Comment-only: holder identity is valid for dedicated CONTACT pressure, not a future ordinary-pass gate. |
 // | 2.10 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 2.11 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 2.12 | 2026-10-18 | — | D-07: penalise outside-area hand carries after attachment and collision correction, before executor CONTACT. |
 #endregion

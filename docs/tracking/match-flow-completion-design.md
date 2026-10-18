@@ -1,7 +1,7 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 16, 2026 (v1.6 — PR #511 / ERR-011-020 own-release re-handling restart contract; snapshot body v27, save format v3.)
+> **Last Updated:** October 18, 2026 (v1.7 — D-07 option A: general outside-area handling and carries; existing v27 state and DFK event reused.)
 
 > **Last Updated (prior):** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
 > **Last Updated (prior):** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
@@ -292,7 +292,7 @@ appended **event codes**, distinct from Ball Physics `RestartType`:
 | RestartKind | Award and placement |
 |---|---|
 | 5, `INDIRECT_FREE_KICK` | Opponents, at contact inside the keeper's own penalty area; inside the goal area, move X to its parallel goal-area line, preserving Y. |
-| 6, `DIRECT_FREE_KICK` | Opponents, at contact outside that area; covers only own-release re-handling. General outside-area handling remains D-07. |
+| 6, `DIRECT_FREE_KICK` | Opponents, at contact outside that area; covers own-release re-handling and general outside-area handling (§5.2). |
 
 Area depth is measured from the defending goal line, with inclusive penalty-area boundary:
 16.5 m `[FIXED: IFAB Law 1]` depth and half-width `16.5 m + goalWidth/2` `[DERIVED]`.
@@ -313,9 +313,38 @@ goal adjudication. Every restart clears the old handling/indirect history before
 Snapshot body **v27** appends releasing keeper (I32), queued offender (I32), contact XYZ (three F32),
 and IFK taker (I32), in that order: 24 bytes. No new avoidance latch is serialized. The existing strict
 body version gate refuses older bodies; outer match-save format remains **v3**. Round-trip validation
-rejects invalid IDs/non-finite coordinates, a pending offender different from the releasing keeper, or
+rejects invalid IDs/non-finite coordinates, a pending non-keeper, a pending inside-area offender different from the releasing keeper, or
 a nonzero pending position without an offender. Replacing a restricted keeper or indirect taker clears
 that player's history rather than transferring it to the incoming substitute.
+
+### 5.2 General outside-area goalkeeper handling — D-07 option A
+
+The owner's October 18 decision implements the offence before W8 C ships. Any actual hand contact
+outside the keeper's own penalty area, including continuous hand control carried out of it, awards
+an opponents' DFK at that ball/contact position. No previous release or intervening touch is required.
+The inclusive ball-position geometry is shared with §5.1; the keeper's body position does not decide
+whether the ball is inside. The other team's penalty area does not permit handling.
+
+The actual-contact gate prevents ball mutation/acquisition for illegal catches, parries, deflections,
+spills and smothers. The attachment funnel additionally queues continuous carries after movement and
+after collision writeback. Resolve adjudicates at entry and again after collision reattachment, before
+fouls or executor CONTACT can supersede the whistle. Use §5.1's restart teardown/taker selection and
+one `DIRECT_FREE_KICK` event; no goal-area relocation or indirect-goal restriction applies. A completed
+boundary crossing retains priority. The existing v27 pending fields suffice, including an offender
+different from the releasing keeper when the contact is outside; snapshot layout and save format
+are unchanged. See [#11 §3.1.4](../specs/goalkeeper-mechanics/section-3.md#314-outside-area-handling-d-07-option-a).
+
+`KeeperOutsideAreaHandlingTests` locks both ends, contact versus keeper location, inclusive front/side
+lines, ordinary feet possession, smother rejection, carried exits, collision correction, same-frame
+distribution cancellation, direct goals, boundary precedence and deterministic pending-offence restore.
+W8 C's hand timeout/corner and feet-only stall-guard amendment remain a separate change.
+
+**Local validation (October 18, 2026):** the Linux .NET gate compiles the changed engine; 252 selected
+engine cases pass, including 46 new D-07 cases. Adjacent rebuilt suites pass 107 keeper cases
+(27 existing skips) and 95 pass-mechanics cases (12 existing skips). Architecture, documentation
+consistency and tracked metadata checks pass; the new test/meta pair has a unique GUID. The normal
+pre-commit policy run reaches its 60-second wall-clock limit, so it is incomplete. Unity 6000.4.9f1
+host compilation/validation and landing remain pending; these local results do not close that gate.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
@@ -752,3 +781,4 @@ project's established pattern for this environment.
 | 1.4 | 2026-10-15 | PR #505 implements §6. The §6 status sentence records the implementation; new §6.5.1 maps each lock to its test, including the locks completed October 15 (1, 2, 3, 4, 7, 8, 11, 13). `SubstitutePlayer` is internal (§6.4). Saves between ticks use match save format v3 (`match-save-file-design.md` KD-8). |
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
+| 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |

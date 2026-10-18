@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 16, 2026 (v0.21 — ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example)
-**Version:** 0.21
+**Last Updated:** October 18, 2026 (v0.22 — owner-selected D-07 option A: outside-area handling contacts and carries)
+**Version:** 0.22
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -179,8 +179,8 @@ same-frame tackle/collision foul candidate, including its decided flag, so it ca
 restart or delayed card on the next frame. This is the Stage-0 single-offence precedence rule.
 
 The [restart contract](../../tracking/match-flow-completion-design.md#51-keeper-own-release-re-handling)
-owns event codes, placement, taker selection and direct-goal prevention. The outside-area DFK covers
-**only own-release re-handling**; general outside-area handling remains roadmap decision D-07.
+owns event codes, placement, taker selection and direct-goal prevention. General outside-area handling
+is enforced separately under §3.1.4, including contacts with no own-release history.
 Snapshot body v27 stores the restriction, pending offender/contact point and IFK taker. Save-file
 format stays v3; incompatible snapshot bodies use the existing strict version refusal.
 
@@ -190,6 +190,40 @@ the restriction remains. Team 1's mirrored example uses `(95, 34)` then `(93, 34
 or opponent actually touches the ball, hand intent formation resumes. If the backstop instead receives
 an illegal hand contact at `(3, 34)` / `(102, 34)` m, Law 13 places the IFK at `(5.5, 34)` /
 `(99.5, 34)` m on the goal-area line. No direct goal from that IFK is accepted.
+
+### 3.1.4 Outside-area handling (D-07 option A)
+
+**Owner decision — October 18, 2026:** implement general outside-area handling before W8 C ships.
+An actual hand/arm contact outside the keeper's own penalty area awards the opponents a **direct
+free kick at the contact point**, regardless of release/touch history. The existing actual-contact
+gate applies to catches, parries, deflections, spills and smothers; an attempted contact that misses
+does not constitute handling. This decision adds no hand-intent avoidance policy.
+
+Continuous hand control is also handling. After attaching a `Controlled` ball to its keeper, the
+composition root checks its XY position whenever #11 reports `HandsOnBall` or still-held
+`Distributing` and that keeper remains the possessor. The contact position is the ball's position,
+not the keeper's body or a locked intent target. Penalty-area lines are inclusive: depth ≤16.5 m
+`[FIXED: IFAB Law 1]`, measured from the own goal line, and lateral distance from the pitch centre
+≤`16.5 m + goalWidth/2` `[DERIVED]`. A position behind either goal line is outside the area. Geometry
+is mirrored for both defending ends. The opponents' penalty area grants no handling entitlement.
+
+Physics queues an offence after movement/attachment. Resolve adjudicates it before collision or
+executor CONTACT; a collision correction can itself carry the ball out, so Resolve checks again
+immediately after reattachment and before executors. The shared restart tears down hand control,
+cancels pending distributions, clears the captured foul candidate and publishes one DFK event.
+A ball already wholly out takes its boundary restart. Feet possession outside the area remains legal.
+Neither this offence nor own-release re-handling is the W8 C eight-second/corner offence.
+
+**Worked example:** team 0 carries a held ball from `(16.50, 34)` to `(16.51, 34)` m: the first point
+is legal, the second awards team 1 a DFK at `(16.51, 34)` m. Team 1's mirrored path is `(88.50, 34)`
+to `(88.49, 34)` m and awards team 0 the DFK. No goal-area relocation or indirect-goal restriction
+applies. Picking the ball up at either outside point receives the same sanction.
+
+The existing v27 pending offender/contact fields represent both offences; no bytes or fields are
+added and outer save format remains v3. A pending offence without matching own-release history is
+valid only outside the keeper's own area. Tests cover mirrored contacts, both lateral boundaries,
+carries, collision correction, distribution CONTACT cancellation, direct scoring, restart precedence,
+and deterministic restore with no release history.
 
 ## 3.2 Shot Reaction Pipeline (KD-2, KD-18)
 
@@ -1578,3 +1612,4 @@ standard rebound physics.
 | 0.19 | October 10, 2026 | Owner decision D-03 | §3.1.1 records that the missing `Recovering` → `Anticipate`/`Diving`/`Rushing`/claim rows are intentional: a `Recovering` keeper commits no claim or rush and starts no dive until it exits to `Set` or `Resting` (both exits named), while remaining an ordinary agent for Match Engine first touch and pickup. Save commitment is documented as ungated: a `SaveIntent` may be held during `Recovering` and dives only after exit, matching the engine. A cause-split and gating save commitment are D-08 candidates after W8 B. Clarification of existing behavior; no code, constant or schema change. Packet: `docs/tracking/pre-b-decision-packets.md`. | — |
 | 0.20 | October 10, 2026 | ERR-011-002 / ERR-011-003 back-prop completion (owner-directed) | The July 27 code fixes' spec text, pending owner sign-off since then, lands now. **ERR-011-002:** new §3.1.0 defines `ballThreateningOwnGoal` / `ballSafelyUpfield` from one distance to the keeper's own goal, with a worked example; `Resting → Set`, `Recovering → Resting` and the `Resting` hold row read those predicates and no possession condition; new `Set → Resting` and `Anticipate → Set` rows. **ERR-011-003:** §3.3.1 dive direction comes from an explicit `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the ball's current Y, with a worked example; §3.3.6's predictor states its closing/horizon conditions; new `[GT] DIVE_PREDICTION_HORIZON_S` = 2.0 s in §3.4.4. Matches production; no code, constant value or schema change. ERR-011-004's text already landed through §3.2.1 (ERR-011-006/019). **Also (owner-directed):** §3.1.0 documents the Stage-0 anticipation stub (0.6 while `ballThreateningOwnGoal`, else 0), with its consequences: `ANTICIPATE_THRESHOLD` is inert below 0.6 and makes the row unreachable at or above it, rushes start from `Anticipate` in the near third, and the `ShotExecutedEvent` row is unwired so the stub is the only route into `Anticipate`. Includes a worked example. New `[GT] STAGE0_ANTICIPATION_SCORE_ACTIVE` row in §3.4.2. **Review fix:** §3.3.6's predictor and hold text state the at-plane exception (abs(dx) ≤ ε is an immediate crossing at t = 0 and the current Y, any velocity), which `Predict_BallAtPlane_IsImmediateCrossingAtCurrentY` locks; §3.4.4 catalogues `DEGENERACY_EPSILON_SQ` / `DEGENERACY_EPSILON`, the guard the predictor uses. | — |
 | 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |
+| 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |

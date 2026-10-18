@@ -1,9 +1,9 @@
 // File:     src/match-engine/MatchEngine.KeeperHandlingLaw.cs
 // Created:  2026-10-16
-// Modified: 2026-10-16
+// Modified: 2026-10-18
 // Author:   —
-// Spec:     Goalkeeper Mechanics #11 §3.1.3 (ERR-011-020); match-flow §5.1; IFAB Laws 12.2 / 13.
-// Purpose:  Enforce own-release re-handling without changing recovery or distribution policy.
+// Spec:     Goalkeeper Mechanics #11 §§3.1.3–3.1.4; match-flow §§5.1–5.2; IFAB Laws 12 / 13.
+// Purpose:  Enforce own-release re-handling and outside-area hand contacts or continuous carries.
 
 using System;
 
@@ -41,14 +41,15 @@ namespace TacticalDirector.MatchEngine
                 _releasedHandKeeper = agentId;
         }
 
-        // Called only after #11 has established an actual catch/parry/deflection/spill contact.
-        // Queue the offence in Physics; ball mutation and its Tier A restart occur in Resolve.
+        // Actual #11 catch/parry/deflection/spill contacts and continuous carries share this gate.
+        // Queue the offence; ball mutation and its Tier A restart occur only in Resolve.
         private bool TryKeeperHandContact(int agentId, Vector3 position)
         {
             if (_pendingHandlingOffender >= 0) return false;
-            if (_releasedHandKeeper == agentId)
+            bool restricted = _releasedHandKeeper == agentId;
+            if (restricted || !IsInsideOwnPenaltyArea(_teamIds[agentId], position))
             {
-                ObserveW8(W8StageAKind.RestrictedHandContact, agentId);
+                if (restricted) ObserveW8(W8StageAKind.RestrictedHandContact, agentId);
                 // Once the whole ball has left play, the existing boundary restart takes priority.
                 if (BallCollision.CheckBoundaries(_ball, _prevTickBallPosition, _teamIds[agentId]).isOut)
                     return false;
@@ -58,6 +59,25 @@ namespace TacticalDirector.MatchEngine
             }
             RecordPlayerBallTouch(agentId);
             return true;
+        }
+
+        private static bool IsInsideOwnPenaltyArea(int team, Vector3 position)
+        {
+            float depth = Mathf.Abs(position.x - OwnGoalX(team));
+            float lateral = Mathf.Abs(position.y - MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
+            return position.x >= 0f && position.x <= MatchEngineConstants.PITCH_LENGTH_M &&
+                depth <= GoalkeeperConstants.PenaltyAreaDepthM &&
+                lateral <= GoalkeeperConstants.PenaltyAreaDepthM + BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
+        }
+
+        // The contact gate handles catches/parries; a held ball remains a hand contact as it moves.
+        // Use the settled ball position, including Resolve's collision correction of its carrier.
+        private void CheckKeeperHandCarry()
+        {
+            int holder = _possessingAgentId;
+            if (holder >= 0 && _ball.State == BallStateType.Controlled && HasGoalkeeperHandControl(holder) &&
+                !IsInsideOwnPenaltyArea(_teamIds[holder], _ball.Position))
+                TryKeeperHandContact(holder, _ball.Position);
         }
 
         private bool ApplyPendingKeeperHandlingOffence()
@@ -70,9 +90,7 @@ namespace TacticalDirector.MatchEngine
             float depth = Mathf.Abs(contact.x - ownX);
             float lateral = Mathf.Abs(contact.y - MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
             float halfGoal = BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
-            bool onPitch = contact.x >= 0f && contact.x <= MatchEngineConstants.PITCH_LENGTH_M;
-            bool inside = onPitch && depth <= GoalkeeperConstants.PenaltyAreaDepthM &&
-                lateral <= GoalkeeperConstants.PenaltyAreaDepthM + halfGoal;
+            bool inside = IsInsideOwnPenaltyArea(team, contact);
             Vector2 spot = new Vector2(contact.x, contact.y);
             // Law 13: an attacking IFK inside the goal area is taken on its parallel boundary.
             if (inside && depth < MatchEngineConstants.GOAL_AREA_DEPTH_M &&
@@ -92,6 +110,14 @@ namespace TacticalDirector.MatchEngine
                 inside ? RestartAwardedEvent.INDIRECT_FREE_KICK : RestartAwardedEvent.DIRECT_FREE_KICK,
                 (byte)(1 - team), new Vector3(spot.x, spot.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             EventBus.Publish(in evt);
+            // Both Physics carries and Resolve collision corrections must end the frame before
+            // any stale executor can release the ball or another captured foul can act.
+            Array.Clear(_isCollisionKnockdown, 0, _isCollisionKnockdown.Length);
+            Array.Clear(_collisionForces, 0, _collisionForces.Length);
+            Array.Clear(_stumbleScratch, 0, _stumbleScratch.Length);
+            UpdateMatchContext();
+            if (_possessingAgentId >= 0) _lastHolderAgentId = _possessingAgentId;
+            PublishPossessionChangeIfChanged();
             return true;
         }
 
@@ -122,7 +148,10 @@ namespace TacticalDirector.MatchEngine
             _indirectKickTaker = CanonicalSerializer.ReadI32(buffer, ref offset);
             if (!IsLawAgentId(_releasedHandKeeper) || !IsLawAgentId(_pendingHandlingOffender) ||
                 !IsLawAgentId(_indirectKickTaker) || !IsFiniteLawPosition(_pendingHandlingPosition) ||
-                (_pendingHandlingOffender >= 0 && _pendingHandlingOffender != _releasedHandKeeper) ||
+                (_pendingHandlingOffender >= 0 &&
+                    (!_isGoalkeeper[_pendingHandlingOffender] ||
+                        (_pendingHandlingOffender != _releasedHandKeeper &&
+                            IsInsideOwnPenaltyArea(_teamIds[_pendingHandlingOffender], _pendingHandlingPosition)))) ||
                 (_pendingHandlingOffender < 0 && (_pendingHandlingPosition.x != 0f ||
                     _pendingHandlingPosition.y != 0f || _pendingHandlingPosition.z != 0f)))
                 throw new InvalidOperationException("Corrupt goalkeeper handling-law state.");
@@ -146,4 +175,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-16 | — | Separate own-release re-handling law; canonical history and IFK restart. |
 // | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 1.2 | 2026-10-18 | — | D-07 option A: general outside-area contacts/carries, shared geometry and pending-state validation. |
 #endregion
