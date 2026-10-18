@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED October 18, 2026 (UTC), v1.38:** W8 B and the owner-approved own-release law/avoidance landed in PR #511 (`c0ffd0d2`); final-head CI `a43bbc1c` and governing Unity `e58577de` met. C remains separate. Post-law B digests are adopted; exact physical-touch/team keeper-release follow-up is a required B→C measurement, not a closed balance question.
+
 > **UPDATED October 15, 2026 (v1.37):** W8 B is implemented and measured on the local branch: 348 voluntary CONTACTs, no inherited drops or new DT races; same-keeper hand interruption 24 → 155 stays separate. The claim-observation correction is tested without changing its predicate. Fresh full CI and final-head Unity validation remain pending; [results](w8-b-implementation-results.md).
 
 > **UPDATED (prior) October 11, 2026 (v1.36):** First #441 result (measurement lane run `38104571610` at PR #497 head
@@ -428,20 +430,22 @@ separately tracked by #401. Regression locks: `CollisionDeflectionFeedbackTests`
 human baseline tactic and can only ladder away from it mid-match.
 
 ### W8 — Goalkeeper distribution
-**Local branch status — October 15, 2026:** six policies are wired at corrected source `e54335b0`; [implementation / frozen-anchor comparison](w8-b-implementation-results.md). Live hand control suppresses new DT dispatch and cancels an already-pending foot PASS/SHOOT before CONTACT. Linux evidence is supplementary; the final-head Unity compile condition remains open. C law correction and the recorded LongKick trajectory follow-up remain separate.
 
-**Decision packet:** `docs/tracking/w8-goalkeeper-distribution-decision.md` — B amendment bundle
-owner-approved; A and the possession-helper/clock correction are recorded; #466's dormant executor
-substrate is merged and Unity-compiled. Live B wiring remains outstanding under that approved
-contract, including its three recorded feedback/telemetry/identity obligations. C remains a
-separate law-amendment and measured landing. Current sequencing is owned by roadmap §5.1.
-**Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:774` `CommitDistributeIntent`, no caller.
-The engine substitutes its own six-second-rule release (`_gkHoldTicks` /
-`_gkReleaseCooldownRemaining`), so #11's `GoalkeeperDistribution` model — delivery kind, target
-selection — is unused.
+**B LANDED October 18, 2026 (UTC), PR #511, merge `c0ffd0d2`.** All six policy producers,
+canonical #5 CONTACT/W5/Resolve feedback, hand-only DT suppression, pending foot-action interruption,
+F-05 restore behavior and all #466 identity/feedback obligations are wired and validated. Final-head
+Linux CI passed at `a43bbc1c`; governing Unity compile/host checks passed at source-equivalent
+`e58577de`. The legacy event-only distribution approximation is retired. The owner-approved
+own-release law and feet-only avoidance landed in the same PR.
 
-Lower priority than W1–W7: unlike the others there **is** a working substitute, so this is a
-fidelity gap rather than a missing behaviour.
+[Results v1.5](w8-b-implementation-results.md) adopt the six post-law fingerprints as B→C baseline.
+The 14-window pre-law control-only proxy and 12 post-law restricted-spell windows have incomplete
+team/touch attribution; the owner accepts landing B and requires exact physical touches and shot/goal
+teams in both B→C arms. No new balance conclusion, calibration or match rerun is claimed.
+
+**Still open:** C's separate eight-second/corner law contract, D-07 general outside-area disposition,
+and the already recorded LongKick trajectory/recovery follow-ups. C remains approval-gated in the
+[decision packet](w8-goalkeeper-distribution-decision.md); current ordering belongs to roadmap §5.1.
 
 ### W9 — DT-emitted HEADER
 Already recorded in OPEN ISSUES. Headers are triggered by an engine-side proximity heuristic, not
@@ -660,7 +664,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
 | 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9. |
-| 8 | **W8 B → C**, then **W9**, **W10** | B's contract/substrate exist; live wiring remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
+| 8 | **W8 B → C**, then **W9**, **W10** | B landed in PR #511; C law/measurement remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
 > **W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated
 > finding — recorded August 17, 2026 with the owner's decision pass, corrected same-day (L11).** This
@@ -754,6 +758,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |
 | 1.37 | 2026-10-15 | — | W8 B local branch wiring and evidence pointer recorded; governing final-head Unity validation, C law correction and LongKick trajectory follow-up remain open. |
 | 1.36 | 2026-10-11 | — | First #441 result recorded (run `38104571610`, PR #497 head `0eb36aa8`): 1,861 commits → 0 executed; timing-valid trajectory-head counterfactual 0/1,841, so not a #10 realization problem; commits fire on low rising balls already passing the agent (opportunity problem at the commit trigger). #441 stays open; no behavior, `[GT]`, schema or RNG change. |
 | 1.35 | 2026-10-10 | — | #441 observation-only counters landed (`HeadingMechanics` v1.10 observer, `HeaderReachabilityDiagnosticTests` v1.0, `header-reachability` instrument, definitions in `header-reachability-441-counters.md` v0.1). No run yet; no behavior, `[GT]`, schema or RNG change. |

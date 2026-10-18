@@ -1,9 +1,86 @@
 # W8 B implementation and October 13 anchor comparison
 
-> **October 17 — PR #511 re-handling / host status (1.4):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; pinned-host validation is met at `e58577de` (same runtime trees on the evidence/docs heads); final docs-head Linux CI and PR #511 merge remain pending. Step 7 is not landed. D-07 general outside-area handling is separate.
+> **October 18, 2026 (UTC) — landing status (1.5):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** The post-law six-seed digests below are adopted as the B→C Linux baseline. C and D-07 remain separate; no new measurement or code change.
 
 
-## October 17 measurement merge-gate closeout
+## October 18, 2026 (UTC) — landing and keeper-release follow-up
+
+PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.**
+
+| Existing-log measure | Pre-law B | Post-law B |
+|---|---:|---:|
+| Corpus goals | 50 | 47 |
+| Goals per 600 frames | 0.01543 | 0.01451 |
+| Follow-up population | 14 opponent-control proxy windows | 12 opponent-touch restricted-spell windows |
+| Follow-up shots / goals, both teams pooled | 9 / 6 | 8 / 6 |
+
+The corpus-rate denominator is `6 × 324,000 / 600 = 3,240` nominal ten-second periods per arm,
+including all simulated frames. Goal counts come from DANGER goal rows in the committed compressed
+NUnit test-case outputs; the archived fixture emits these rows directly from GoalAwardedEvent ledger
+ordinals. No new matches were run. Use XML output where a console log is incomplete.
+
+The pre-law **proxy** filters `corrected-arm/passOutcome.csv` to terminal controller IDs on the
+opposing team with `0 ≤ endFrame − contactFrame ≤ 507`, then counts DANGER shot/goal rows in
+`[endFrame, endFrame + 600]`. This selects fourteen windows, nine shots and six goals. It is **not**
+an exact first-physical-touch census: prior uncontrolled/body touches and interrupted flights may be
+missed. Post-law uses the twelve opponent-touch clearings already in `measurement-closeout/spells.csv`.
+The reported nine/six and eight/six also equal the respective unique event totals despite possible
+window overlap. Windows are selected around keeper releases, not sampled at random from all match time.
+
+**The shooter/scoring-team split cannot be recovered from these logs.** DANGER retains only frame
+and event kind; the full event payload is not archived. Do not infer scoring team from the most recent
+toucher or treat these differently selected small populations as a causal/statistical equivalence test.
+The pre-law proxy already contains concentrated goals; the 50 → 47 corpus total does not by itself
+rule out a local keeper-passivity effect. The owner explicitly accepts merging B with these limits
+and moves exact touch timing/team attribution to B→C measurement rather than reopening this PR.
+
+The existing [post-law measurement](evidence/w8-b-20261015/rehandling/README.md) at original
+validated source `751b1143` (published equivalent `2698bab1`) is now the **adopted B→C baseline**,
+not the pre-law 348-contact arm. The existing source/tree equivalence records and the twelve-arm
+fingerprint reproduction carry its identity to the merged B behavior; no merge-head rerun is claimed.
+
+| Seed | Adopted post-law B terminal digest (schema v27) |
+|---|---|
+| `0F1E2D3C4B5A6978` | `6ef1e77f9dcf86c4bce5e1f66a989a64b42f26c268ead53340b9c57d282b4072` |
+| `00000000D1A6D05E` | `06e3daf03f1c45a112f958c4bfac980c30956971e175b35b7d815d685b4caf93` |
+| `0000000000000001` | `25ceac27f7d4e87fb1166227f683eaff87336efd301fa5500b6d212a28deba59` |
+| `00000000ABCDEF12` | `77b4e0cc08a4ac903fbb364f2bb28612eaa39b380955111c58fe040ebf474a80` |
+| `0000000099887766` | `ccc99ba78dce889ed07d18609c568486920ffd97c45cb283f15d7f5c203f6e4f` |
+| `000000005A5A5A5A` | `6961b03ff4cb1512967c01c46158274b3516bb4c632d921f75e5f6baad936eb3` |
+
+### B→C keeper-release follow-up requirements
+
+Before the result-bearing B→C comparison, freeze a read-only supplementary instrument and its
+window-selection rules. Run it in **both arms** on the same Linux .NET lane, six seeds, constructor,
+policy and 324,000-frame population; reproduce the adopted B fingerprints before interpreting C.
+Retain the existing frozen W8 observer alongside it and prove the new observer does not alter the
+B gameplay/digest chain. A new host/runtime requires reproduced B control or a fresh paired capture.
+
+- Record every canonical keeper hand release by seed, frame, keeper identity/team and ball position.
+- Record **every actual player-ball touch**, including applied body deflections, uncontrolled first
+  touches, own touches and controlled acquisitions, with exact 60 Hz frame, within-frame ordering,
+  agent/team and position. A geometric candidate or terminal acquisition is not a substitute.
+- In each arm, select keeper releases whose **first subsequent other-player touch** is an opponent
+  within **507 frames**, including an actual later-in-order touch in the release frame. Retain
+  intervening own touches and teammate clearings; do not let a proxy select the two arms differently.
+- For the resulting 600-frame follow-up, log every ShotExecutedEvent with shooter identity and team,
+  and every GoalAwardedEvent with **ScoringTeam** and credited scorer identity/team separately
+  (own goals/credit can differ). Preserve frame/order, scoring location, window membership and raw
+  event identity. Split shots/goals into the releasing keeper's team versus its opponent.
+- Report complete/censored windows, overlap and unique event counts, shots/goals per window and
+  corpus-wide goals per 600 frames with explicit played-frame denominator in each arm. For a same-frame
+  event, use recorded order to decide whether it follows the clearing touch. Preserve exact touch
+  timestamps and restriction start/end states; do not infer them from control-only pass outcomes.
+- Repeat the keeper-release danger comparison on these identically selected exact-touch populations.
+  Report first divergence, its cause and any excess opponent goals as a possible keeper-passivity
+  defect for investigation before C closeout. No tuning, new policy or causal conclusion is authorized
+  by the historical 14-proxy-versus-12-spell comparison.
+
+This is a **measurement requirement**, not a new result or permission to implement C. Team attribution
+and exact pre-law touch timing remain unavailable in the committed B logs. Owner approval of the C
+rule and D-07 closeout remain separate gates.
+
+## October 17 measurement merge-gate closeout (historical pre-merge record)
 
 The [Linux .NET Debug rerun](evidence/w8-b-20261015/measurement-closeout/README.md) uses the exact
 step-6 frozen observer blob `520ba31c71e06ed408fd5c282b5fd5611cf74879`, plus a separate read-only
@@ -44,7 +121,7 @@ clearing touches. Zero sanctions did not establish an empty opponent-touch follo
 restriction or baseline mismatch was found. No calibration or gameplay code changed. Host validation
 remains met at `e58577de`; final docs-head Linux CI and merge remain, and step 7 is not landed.
 
-## October 17 governing Unity closeout
+## October 17 governing Unity closeout (historical pre-merge record)
 
 Unity 6000.4.9f1 (f7258d6eebbe), Windows 11 / Mono validated exact source
 `e58577de038647a0134e7ceecb151126cf7fa025`, src tree
@@ -116,7 +193,7 @@ negative controls. October 16 review cleanup is recorded separately below.
 
 ## October 16 review disposition (historical; superseded by the approved amendment above)
 
-The [separate Law 12 re-handling issue](open-issues.md#gk-rehandling-law12) is Medium and open.
+The [separate Law 12 re-handling issue](open-issues-resolved.md#gk-rehandling-law12) is Medium and open.
 B explicitly defers enforcement; C's comparison baseline must record an owner scope/deferral
 disposition before freezing. This does not expand C or change D-03 recovery eligibility. Corrected
 B is **155/348 (44.5%)** same-keeper hand interruptions and **89** target controls; the review's
@@ -381,6 +458,7 @@ pending; step 7 is not marked landed.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.5 | October 18, 2026 | PR #511 merged c0ffd0d2; adopt post-law B digests, record 50/47 corpus and 14-proxy/12-spell follow-up with missing attribution limits; require exact touch/team logging in both B→C arms. No rerun or code change. |
 | 1.4 | October 17, 2026 | Same Linux .NET lane and exact frozen observer; twelve matching fingerprints, all hand claims/distributions reconciled, 126 restricted spells and twelve opponent-touch windows; no gameplay change. |
 | 1.3 | October 17, 2026 | Governing Unity host closure at e58577de; source-equivalent documentation heads, interrupted-case rerun and pre-existing EventSystem comparison retained; final Linux CI/merge pending. |
 | 1.2 | 2026-10-16 | — | PR #511 review fixes: own-release avoidance/law and simultaneous-foul disposal; supplementary tests and isolated corrected-B comparison. |

@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** October 17, 2026 — (v2.202 — **PR #511 measurement merge gates resolved.** Same Linux .NET Debug lane, exact frozen observer 520ba31c, twelve reproduced fingerprints and 9,140 matching pre-law report rows. Every claim distributes (348/348 → 126/126); 155-return bucket difference and 67 net other-claim reduction are descriptive, not an exact causal split. All 126 restrictions clear on player touch; twelve opponent-touch windows contain eight shots / six goals. Evidence and limits retained; no gameplay/runtime tree change. Roadmap v0.70 marks #11 section 3 v0.18 / ERR-011-019 done before C; packet v0.34 and results v1.4 agree. Final docs-head CI and merge remain; counts 33 active / 70 archived.)
+> **Last Updated:** October 18, 2026 (UTC) — (v2.203 — **W8 B step 7 landed:** PR #511 merged `c0ffd0d2`, final-head CI `39063246052` green on `a43bbc1c`, pinned Unity `e58577de` met. Adopt post-law six-seed B digests. Results v1.5 retain 50/47 corpus goals, 0.01543/0.01451 per 600 frames and 9/6 in fourteen control-only proxy windows versus 8/6 in twelve restricted-spell windows; team attribution/exact pre-law touches unavailable. Owner accepts proceeding; exact physical-touch timing and shooter/scoring teams are required in both B→C arms. Roadmap v0.71 / packet v0.35 synchronized; two closed entries archived verbatim, counts 31 active / 72 archived. No code or reruns; C/D-07 unapproved.)
+
+> **Last Updated (prior):** October 17, 2026 — (v2.202 — **PR #511 measurement merge gates resolved.** Same Linux .NET Debug lane, exact frozen observer 520ba31c, twelve reproduced fingerprints and 9,140 matching pre-law report rows. Every claim distributes (348/348 → 126/126); 155-return bucket difference and 67 net other-claim reduction are descriptive, not an exact causal split. All 126 restrictions clear on player touch; twelve opponent-touch windows contain eight shots / six goals. Evidence and limits retained; no gameplay/runtime tree change. Roadmap v0.70 marks #11 section 3 v0.18 / ERR-011-019 done before C; packet v0.34 and results v1.4 agree. Final docs-head CI and merge remain; counts 33 active / 70 archived.)
 
 > **Last Updated (prior):** October 17, 2026 — (v2.201 — **PR #511 host evidence/status only.** Unity validates `e58577de`; no source/package/project-setting/asset change in this closeout. Effective MatchEngine 774 pass / 16 skip / one existing inconclusive includes the one recorded same-head sleep-timeout rerun; W8 B 99/99 and re-handling 42/42 pass. Pre-existing EventSystem 47/7/10/1 matches main. Evidence/tool registration from `e1f7da59` is indexed; final docs-head CI and merge remain, step 7 not landed.)
 
@@ -2771,6 +2773,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.203 | 2026-10-18 | — | W8 B post-merge documentation only: adopt post-law baseline, archive met #466/re-handling entries, require exact touch/team follow-up in both B→C arms. |
 | 2.202 | 2026-10-17 | — | W8 B measurement merge-gate evidence only: exact frozen observer and all twelve digests reproduced; all claim/distribution identities and restricted spells reconcile; opponent-touch aftermath retained. No shipping source change. |
 | 2.201 | October 17, 2026 | — | PR #511 governing host evidence and tracking closeout only; runtime trees unchanged, final Linux CI/merge pending. |
 | 2.200 | October 16, 2026 | — | PR #511 Unity test-only external ordinal initialization fix and nonzero guards; no production change. |
