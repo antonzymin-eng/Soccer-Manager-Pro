@@ -1,6 +1,10 @@
 # Path to Playable — Implementation Roadmap
 
-> **October 18, 2026 (UTC) — W8 B landed (v0.71):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** The six post-law digests at `751b1143`, with reproduction recorded in `a43bbc1c`, are the adopted B→C Linux baseline; see [landing and follow-up](w8-b-implementation-results.md). Exact touch/team follow-up is required in both B→C arms. C wording and D-07 remain unapproved.
+> **October 18 — D-07 governing host met (v0.73):** PR #515 head `a7800579` compiles in Unity 6000.4.9f1 and passes on the pinned host: whole MatchEngine assembly 826 passed / 0 failed (16 env-gated skips, 1 existing inconclusive), including all 52 D-07 cases; GoalkeeperMechanics 107 passed / 27 existing skips ([host record](evidence/host-d07-a7800579-20261018/README.md)). PR CI is green at that head. Landing remains.
+
+> **October 18 — D-07 option A selected (v0.72):** general outside-area goalkeeper handling is implemented on this branch before W8 C, including hand contacts and carried exits. Opponents receive a DFK at the ball/contact position; [#11 §3.1.4](../specs/goalkeeper-mechanics/section-3.md#314-outside-area-handling-d-07-option-a) and [restart contract §5.2](match-flow-completion-design.md#52-general-outside-area-goalkeeper-handling--d-07-option-a). Existing v27 pending state is reused. Linux regression evidence is supplementary; pinned Unity-host validation and landing remain required. Historical B anchors below are unchanged; freeze the chosen post-D-07 comparison anchor before C measurement.
+
+> **October 18, 2026 (UTC) — W8 B landed (v0.71):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** The six post-law digests at `751b1143`, with reproduction recorded in `a43bbc1c`, are the adopted B→C Linux baseline; see [landing and follow-up](w8-b-implementation-results.md). Exact touch/team follow-up is required in both B→C arms. C wording remains unapproved; D-07's option A decision is recorded above.
 
 
 > **Created:** July 25, 2026
@@ -370,7 +374,7 @@ the owning document and link it here before the blocked landing/capture/closeout
 | D-04 | Anton: retain or correct W2 foul-cooldown policy | **DECIDED October 10, 2026:** tackle-foul bypass retained (a whistled foul stops play); no invalidator | `foul-discipline-balance-design.md` v1.5 KD-F3 and #435 preregistration §2.1 |
 | D-05 | Anton: include/defer #434/#440 and place included landings before B or after B→C | **DECIDED October 10, 2026:** both included, after B→C; #434 re-authored and split; its formation/Duty part is in PM-2 scope | Engine backlog v1.34; included work before its selected final anchor |
 | D-06 | Anton: W9 ActionType/encoding representation | Before step 9 W9 implementation/landing | #8/#10 and engine serialization contract |
-| D-07 | Anton: outside-area handling implementation or explicit governed deferral | Before step 8 W8 C closeout | W8 OD-W8-1 and separate offence work item; C never classifies it as eight-second corner |
+| D-07 | Anton: outside-area handling implementation or explicit governed deferral | **DECIDED October 18, 2026: option A**, implement general outside-area handling before C ships | #11 §3.1.4 / match-flow §5.2; contacts and carried exits give an opponents' DFK; PR #515 CI green and governing host met at `a7800579` ([record](evidence/host-d07-a7800579-20261018/README.md)); landing pending |
 | D-08 | Anton: PM-2 engine anchor, included gameplay/calibration and realism closure scope | Before step 10 capture; blocks step 11 | This roadmap and owning engine/calibration decisions; KD-W1 amended before any newly authorized tuning |
 | D-09 | Anton: quick-sim shape/model treatment under KD-7a/KD-8 | Before step 10 model adoption/acceptance; blocks step 11 | League-bootstrap supplement and ERR-030-034; no silent PASS or assumed successor adoption |
 | D-10 | Anton: breakable saves through PM-3 or pull #50 migration forward | At step 11 PM-2 exit, before compatibility is promised | #50/save contract and client disclosure |
@@ -708,6 +712,8 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.73 | October 18, 2026 | PR #515 review fixes at `a7800579`; PR CI green and pinned-host Unity validation met (MatchEngine 826/0/16 skip/1 inconclusive; GoalkeeperMechanics 107/0/27 skip). Landing remains. |
+| v0.72 | October 18, 2026 | Owner selects D-07 option A; implement general outside-area contacts and carries before C, reuse v27 pending state and DFK restart, and retain governing-host/landing and comparison-anchor follow-up. |
 | v0.71 | October 18, 2026 | PR #511 merged c0ffd0d2 with final-head CI green and governing host met; step 7 landed; post-law B digests adopted; exact touch/team keeper-release follow-up required in both B→C arms. |
 | v0.70 | October 17, 2026 | Resolve both W8 B measurement questions on Linux .NET with the exact frozen instrument; mark the October 10 #11 v0.18 / ERR-011-019 prerequisite done; C drafts follow #511, D-07 at C closeout. Final-head CI and merge remain. |
 | v0.69 | October 17, 2026 | — | PR #511 governing Unity closure at e58577de; identical runtime trees on evidence/docs successors. Final Linux CI/merge remain; step 7 not landed. |

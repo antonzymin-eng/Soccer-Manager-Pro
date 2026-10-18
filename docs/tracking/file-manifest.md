@@ -1,6 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 18, 2026 (UTC) — **PR #511 post-merge closeout, one docs commit on main.** Modified `w8-b-implementation-results.md` v1.5, `path-to-playable-roadmap.md` v0.71, `w8-goalkeeper-distribution-decision.md` v0.35, `match-engine-wiring-backlog.md` v1.38, `open-issues.md`, `open-issues-resolved.md`, both changelog chains, this manifest and `docs/agent-guides/project-reference.md`. No path, evidence blob or runtime tree added/removed/changed. Step 7 landed at merge `c0ffd0d2`; post-law B baseline adopted. Two entries archived verbatim; counts 31 active / 72 archived. Team/touch attribution is a B→C measurement requirement; no rerun or C approval.
+**Last Updated:** October 18, 2026 — **PR #515 governing Unity evidence inventory.** Added 7 files under `docs/tracking/evidence/host-d07-a7800579-20261018/` (the SHA manifest covers the other 6):
+
+- `README.md`
+- `SHA256SUMS`
+- `compile.txt`
+- `editmode-summary.txt`
+- `matchengine-results.xml.xz`
+- `source-identity.txt`
+- `targeted-run-status.txt.xz`
+
+The same commit registers the directory in `tools/dotnet-ci/check_evidence_manifests.py` and updates `tools/tests/test_evidence_manifests.py` (20 registered directories). Modified `path-to-playable-roadmap.md` v0.73, `match-flow-completion-design.md` v1.9 and this manifest. No source or runtime-tree change; landing remains.
+
+**Last Updated (prior):** October 18, 2026 — **D-07 option A: outside-area goalkeeper handling.** Added `src/match-engine/tests/KeeperOutsideAreaHandlingTests.cs` and its `.meta`, with 52 mirrored regression cases. Modified the keeper handling law, its attachment/Resolve integration and restart-event documentation; updated Goalkeeper Mechanics section 3 to v0.23, the match-flow restart contract to v1.8 and `path-to-playable-roadmap.md` to v0.72. Review fixes: a legal catch's snap to the keeper's body is not a carry, and a ball overhanging its own goal line counts as on the line. Existing v27 snapshot layout is retained. Local Linux tests pass; governing Unity host validation and landing remain pending (host met later the same day; see the entry above).
+
+**Last Updated (prior):** October 18, 2026 (UTC) — **PR #511 post-merge closeout, one docs commit on main.** Modified `w8-b-implementation-results.md` v1.5, `path-to-playable-roadmap.md` v0.71, `w8-goalkeeper-distribution-decision.md` v0.35, `match-engine-wiring-backlog.md` v1.38, `open-issues.md`, `open-issues-resolved.md`, both changelog chains, this manifest and `docs/agent-guides/project-reference.md`. No path, evidence blob or runtime tree added/removed/changed. Step 7 landed at merge `c0ffd0d2`; post-law B baseline adopted. Two entries archived verbatim; counts 31 active / 72 archived. Team/touch attribution is a B→C measurement requirement; no rerun or C approval.
 
 **Last Updated (prior):** October 17, 2026 — **PR #511 measurement gate evidence.** New directory `docs/tracking/evidence/w8-b-20261015/measurement-closeout/` under the existing parent SHA-256 contract. Its 41 files:
 
