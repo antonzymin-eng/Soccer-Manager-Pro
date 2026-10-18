@@ -1,4 +1,5 @@
 // File:     src/pass-mechanics/Tests/PassMechanicsTests.cs
+// Modified: 2026-10-15 (W8 B live CONTACT event fixture boot)
 // Created:  2026-05-31
 // Modified: 2026-09-28 (PX-001 expectation follows the PassExecutor v1.18 unavailable-executor diagnostic)
 // Modified: 2026-09-28 (W8 B review — goalkeeper/team request-identity rejection coverage)
@@ -18,6 +19,8 @@ using UnityEngine;
 using UnityEngine.TestTools;
 
 using TacticalDirector.BallPhysics;
+using TacticalDirector.EventSystem;
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.PassMechanics.Tests
@@ -1785,6 +1788,15 @@ namespace TacticalDirector.PassMechanics.Tests
         private const int KeeperId = 7;
         private const int ReceiverId = 9;
 
+        [SetUp]
+        public void SetUpContactEvents()
+        {
+            EventBus.ResetForNewMatch();
+            TacticalDirector.PassMechanics.EventBusRegistrar.Initialize();
+            EventBus.BeginTick(101);
+            EventBus.BeginPhase(PhaseId.Resolve);
+        }
+
         private sealed class StubBallSystem : IPassBallSystem
         {
             public bool Possessed = true;
@@ -2085,4 +2097,5 @@ namespace TacticalDirector.PassMechanics.Tests
 // | 1.5     | 2026-09-27 | —      | W8 B direct executor coverage: Roll/Kick worked examples; Rejected/Cancelled/Completed terminal semantics; exactly-once kick; CONTACT receiver invalidation; mirrored 35 m own-goal fallback; IsIdle held false until terminal feedback consumption. |
 // | 1.6     | 2026-09-28 | —      | W8 B review: dedicated requests reject wrong-team and non-goalkeeper identities, locked for both home and away; test stubs implement IsGoalkeeperOfTeam. |
 // | 1.7     | 2026-09-28 | —      | PX-001 expects the PassExecutor v1.18 rejection diagnostic ("executor is unavailable (state=Windup, goalkeeperFeedbackPending=False)") instead of the retired "in progress" wording; CI 36461159668 failed only this test. Assertions otherwise unchanged. |
+// | 1.8 | 2026-10-15 | — | Boot/reset the real Resolve EventBus for dedicated GK CONTACT fixtures; live B now publishes the canonical pass event. |
 #endregion

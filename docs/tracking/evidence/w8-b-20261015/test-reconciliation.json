@@ -1,0 +1,38 @@
+{
+  "fullSweepSource": "e54335b0",
+  "fullSweepExit": 1,
+  "fullSweepOutcomes": {
+    "Passed": 4032,
+    "NotExecuted": 225,
+    "Failed": 1
+  },
+  "correctedSource": "86a9496e",
+  "focusedOutcomes": {
+    "Passed": 165
+  },
+  "resolvedFailures": [
+    [
+      "TacticalDirector.MatchEngine.Tests.dll",
+      "TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests",
+      "sim_match_engine_keeper_claim"
+    ]
+  ],
+  "addedCases": [
+    [
+      "TacticalDirector.MatchEngine.Tests.dll",
+      "TacticalDirector.MatchEngine.W8BDistributionTests",
+      "ClaimObservation_EndsOnExplicitSameKeeperRestart_ButStillDetectsDetachment(0)"
+    ],
+    [
+      "TacticalDirector.MatchEngine.Tests.dll",
+      "TacticalDirector.MatchEngine.W8BDistributionTests",
+      "ClaimObservation_EndsOnExplicitSameKeeperRestart_ButStillDetectsDetachment(1)"
+    ]
+  ],
+  "reconciledOutcomes": {
+    "Passed": 4035,
+    "NotExecuted": 225
+  },
+  "cleanSingleInvocation": false,
+  "limitation": "The raw full policy command failed on the diagnosed observer. Focused retest resolves it; this is not a claim of a fresh clean full-policy invocation or Unity validation."
+}

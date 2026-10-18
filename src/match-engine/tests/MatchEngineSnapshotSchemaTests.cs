@@ -1,4 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
+// Modified: 2026-10-15 (W8 B schema v26)
 // Created:  2026-06-16
 // Modified: 2026-10-15 (schema v25 pin)
 // Modified (prior): 2026-10-13 (W8 B #506 review: distinguish off-tick pending-terminal serialization from post-Resolve digests)
@@ -71,8 +73,10 @@ namespace TacticalDirector.MatchEngine
             // W5) the optional latest opposing PassAttemptEvent retained by each pressing ring, v23
             // (wiring backlog W3) the per-GK ClaimIntent payload + active latch, v24 (W8 B) the
             // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state,
-            // v25 pending substitution queue, next sequence, and Law 3 window counters.
-            Assert.AreEqual(25u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v25 pending substitution queue, next sequence, and Law 3 window counters;
+            // v26 accepted #5 goalkeeper-distribution wait latch;
+            // v27 own-release handling restriction, queued offence/contact and indirect taker.
+            Assert.AreEqual(27u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -933,4 +937,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.22     | 2026-09-27 | —      | Landing hardening after green CI 36337174267: the codec round-trip now uses distinct non-default sentinels (request AgentId 11, TeamId 1, TargetAgentId 4, effective target 6) so dropped/defaulted or request/effective-target swaps cannot pass accidentally. Test-only data change; serializer/runtime/schema/RNG unchanged. |
 // | 1.22    | 2026-10-13 | —      | W8 B prewiring: pending feedback is consumed before end-of-tick Snapshot; lock exact canonical v24 bytes and decoder rather than wrongly expecting distinct settled tick digests. |
 // | 1.23    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION pin 24 → 25. |
+// | 1.24 | 2026-10-15 | — | W8 B snapshot-schema pin 25 → 26. |
+// | 1.25 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

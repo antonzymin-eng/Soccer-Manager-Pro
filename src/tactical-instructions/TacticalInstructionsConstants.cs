@@ -1,4 +1,5 @@
 // File:     src/tactical-instructions/TacticalInstructionsConstants.cs
+// Modified: 2026-10-15 (W8 B six-policy inputs)
 // Created:  2026-06-21
 // Modified: 2026-06-21
 // Modified: 2026-09-26 (W8 B — approved goalkeeper distribution fallback advance constant)
@@ -88,6 +89,53 @@ namespace TacticalDirector.TacticalInstructions
         #endregion
 
         #region GT
+
+        /// <summary>[GT] Local eligible-receiver radius in metres; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_LOCAL_RECEIVER_RADIUS_M =
+            Config.GetFloat("tactical-instructions", "GK_DIST_LOCAL_RECEIVER_RADIUS_M", 25.0f);
+
+        /// <summary>[GT] Quick delay in tactical ticks; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly int GK_DIST_QUICK_DELAY_TICKS =
+            Config.GetInt("tactical-instructions", "GK_DIST_QUICK_DELAY_TICKS", 5);
+
+        /// <summary>[GT] Standard delay in tactical ticks; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly int GK_DIST_STANDARD_DELAY_TICKS =
+            Config.GetInt("tactical-instructions", "GK_DIST_STANDARD_DELAY_TICKS", 10);
+
+        /// <summary>[GT] SlowDown delay in tactical ticks; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly int GK_DIST_SLOW_DELAY_TICKS =
+            Config.GetInt("tactical-instructions", "GK_DIST_SLOW_DELAY_TICKS", 35);
+
+        /// <summary>[GT] SlowDown power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_SLOW_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_SLOW_POWER", 0.50f);
+
+        /// <summary>[GT] Quick power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_QUICK_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_QUICK_POWER", 0.75f);
+
+        /// <summary>[GT] ShortKick power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_SHORT_KICK_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_SHORT_KICK_POWER", 0.55f);
+
+        /// <summary>[GT] LongKick power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_LONG_KICK_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_LONG_KICK_POWER", 0.90f);
+
+        /// <summary>[GT] RollOut power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_ROLL_OUT_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_ROLL_OUT_POWER", 0.55f);
+
+        /// <summary>[GT] ThrowOut power; uncalibrated #21 §3.4.1 default.</summary>
+        public static readonly float GK_DIST_THROW_OUT_POWER =
+            Config.GetFloat("tactical-instructions", "GK_DIST_THROW_OUT_POWER", 0.70f);
+
+        /// <summary>[FIXED] B distribution spin in rad/s, #21 §3.4.1.</summary>
+        public static readonly UnityEngine.Vector3 GK_DIST_SPIN = UnityEngine.Vector3.zero;
+
+        /// <summary>[DERIVED] Maximum live policy delay in tactical ticks, #21 §3.4.1.</summary>
+        public static int GK_DIST_MAX_POLICY_DELAY_TICKS => System.Math.Max(GK_DIST_SLOW_DELAY_TICKS,
+            System.Math.Max(GK_DIST_QUICK_DELAY_TICKS, GK_DIST_STANDARD_DELAY_TICKS));
 
         /// <summary>[GT] W8 B receiverless goalkeeper-distribution fallback advance from the keeper's own goal line. #21 §3.4.1.</summary>
         public const float GK_DIST_FALLBACK_ADVANCE_M = 35.0f;
@@ -179,4 +227,5 @@ namespace TacticalDirector.TacticalInstructions
 // | 1.2     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientationScalar[3] (§3.4, #14 MAN_ |
 // |         |            |        |   MARK candidate radius); Balanced row = identity ×1.00.           |
 // | 1.3     | 2026-09-26 | —      | W8 B: + owner-approved uncalibrated [GT] GK_DIST_FALLBACK_ADVANCE_M = 35 m used by the receiverless goalkeeper-distribution fallback. |
+// | 1.4 | 2026-10-15 | — | W8 B: all approved policy delays/powers, receiver radius and zero spin; GT values use config loader. |
 #endregion

@@ -1,0 +1,7 @@
+arm,outcome,count
+before,interrupted-by-kick,90
+before,other-agent-controlled,14
+before,receiver-controlled,89
+before,same-keeper-hand-reclaim,155
+after,other-agent-controlled,12
+after,receiver-controlled,114

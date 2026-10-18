@@ -1,0 +1,257 @@
+{
+  "hostAnchorExact": true,
+  "prewireObservedReportExactExcludingDigests": true,
+  "arms": {
+    "anchor": {
+      "claims": 135,
+      "counts": {
+        "claim-after-teammate-deliberate-kick-candidate": 7,
+        "claim-after-teammate-touch": 7,
+        "claim-contact-area-boundary": 5,
+        "claim-contact-area-inside": 129,
+        "claim-contact-area-outside": 1,
+        "claim-keeper-0": 53,
+        "claim-keeper-11": 82,
+        "claim-keeper-area-boundary": 1,
+        "claim-keeper-area-inside": 124,
+        "claim-keeper-area-outside": 10,
+        "dry-receiver": 253,
+        "dry-zone-fallback": 9,
+        "end-feet-PassKick": 73,
+        "end-feet-replacement-claim": 54,
+        "end-hand-PassKick": 135,
+        "episode-feet-team-0": 61,
+        "episode-feet-team-1": 66,
+        "episode-hand-team-0": 53,
+        "episode-hand-team-1": 82,
+        "keeper-decision-DRIBBLE": 4,
+        "keeper-decision-HOLD": 507,
+        "keeper-decision-PASS": 208,
+        "pass-contact-feet-receiver": 73,
+        "pass-contact-hand-receiver": 135,
+        "pass-outcome-feet-interrupted-by-claim": 29,
+        "pass-outcome-feet-interrupted-by-kick": 18,
+        "pass-outcome-feet-other-controlled": 21,
+        "pass-outcome-feet-target-controlled": 5,
+        "pass-outcome-hand-interrupted-by-claim": 24,
+        "pass-outcome-hand-interrupted-by-claim-same-keeper": 24,
+        "pass-outcome-hand-interrupted-by-kick": 15,
+        "pass-outcome-hand-other-controlled": 74,
+        "pass-outcome-hand-target-controlled": 22,
+        "restart-Corner": 1,
+        "restart-FreeKick": 88,
+        "restart-GoalKick": 20,
+        "restart-KickOff": 64,
+        "restart-ThrowIn": 70,
+        "transition-Anticipate-to-Diving": 28,
+        "transition-Anticipate-to-Rushing": 204,
+        "transition-Anticipate-to-Set": 1784,
+        "transition-Recovering-to-Set": 344,
+        "transition-Resting-to-Set": 1869,
+        "transition-Set-to-Anticipate": 2064,
+        "transition-Set-to-Resting": 1868
+      },
+      "discipline": {
+        "fouls": 49,
+        "yellows": 7,
+        "straightReds": 2,
+        "secondYellowDismissals": 0
+      },
+      "handHoldFrames": {
+        "count": 135,
+        "min": 6,
+        "max": 246,
+        "mean": 37.044444444444444,
+        "median": 25
+      },
+      "handEndReasons": {
+        "PassKick": 135
+      },
+      "handLastDecisionLabels": {
+        "PASS": 126,
+        "none": 9
+      },
+      "feetLastDecisionLabels": {
+        "PASS": 82,
+        "none": 28,
+        "HOLD": 17
+      },
+      "directOwnPassPrecededHandClaims": 53,
+      "terminalDigests": {
+        "0x0F1E2D3C4B5A6978": "0d019bbf34ca29ad05385b3289ff15140c3de386140785d1a1d81c65697917b5",
+        "0x00000000D1A6D05E": "4c19d44c7761152ddfdbbeb80753f8019f1df2d8b43b4aa29d781d16ec2ab643",
+        "0x0000000000000001": "2517376ed7ee21dbaa304786b2d5cbf80812a6e54e46e51978fef1ebcd2f9387",
+        "0x00000000ABCDEF12": "e2537ed15f7590446e7f50b3dbd564e870b3a25a6a06f935b2b62d85de999bc3",
+        "0x0000000099887766": "dd92348f001dac5ac8c7b620f733b5ea667fdfbdc0e289a7f0189aba5f814b11",
+        "0x000000005A5A5A5A": "21226b56c4e9b005c43791781a4e57db2b7682b7976bbe0e0b1117c50d0e4954"
+      }
+    },
+    "bridge": {
+      "claims": 135,
+      "counts": {
+        "claim-after-teammate-deliberate-kick-candidate": 7,
+        "claim-after-teammate-touch": 7,
+        "claim-contact-area-boundary": 5,
+        "claim-contact-area-inside": 129,
+        "claim-contact-area-outside": 1,
+        "claim-keeper-0": 53,
+        "claim-keeper-11": 82,
+        "claim-keeper-area-boundary": 1,
+        "claim-keeper-area-inside": 124,
+        "claim-keeper-area-outside": 10,
+        "dry-receiver": 253,
+        "dry-zone-fallback": 9,
+        "end-feet-PassKick": 73,
+        "end-feet-replacement-claim": 54,
+        "end-hand-PassKick": 135,
+        "episode-feet-team-0": 61,
+        "episode-feet-team-1": 66,
+        "episode-hand-team-0": 53,
+        "episode-hand-team-1": 82,
+        "keeper-decision-DRIBBLE": 4,
+        "keeper-decision-HOLD": 507,
+        "keeper-decision-PASS": 208,
+        "pass-contact-feet-receiver": 73,
+        "pass-contact-hand-receiver": 135,
+        "pass-outcome-feet-interrupted-by-claim": 29,
+        "pass-outcome-feet-interrupted-by-kick": 18,
+        "pass-outcome-feet-other-controlled": 21,
+        "pass-outcome-feet-target-controlled": 5,
+        "pass-outcome-hand-interrupted-by-claim": 24,
+        "pass-outcome-hand-interrupted-by-claim-same-keeper": 24,
+        "pass-outcome-hand-interrupted-by-kick": 15,
+        "pass-outcome-hand-other-controlled": 74,
+        "pass-outcome-hand-target-controlled": 22,
+        "restart-Corner": 1,
+        "restart-FreeKick": 88,
+        "restart-GoalKick": 20,
+        "restart-KickOff": 64,
+        "restart-ThrowIn": 70,
+        "transition-Anticipate-to-Diving": 28,
+        "transition-Anticipate-to-Rushing": 204,
+        "transition-Anticipate-to-Set": 1784,
+        "transition-Recovering-to-Set": 344,
+        "transition-Resting-to-Set": 1869,
+        "transition-Set-to-Anticipate": 2064,
+        "transition-Set-to-Resting": 1868
+      },
+      "discipline": {
+        "fouls": 49,
+        "yellows": 7,
+        "straightReds": 2,
+        "secondYellowDismissals": 0
+      },
+      "handHoldFrames": {
+        "count": 135,
+        "min": 6,
+        "max": 246,
+        "mean": 37.044444444444444,
+        "median": 25
+      },
+      "handEndReasons": {
+        "PassKick": 135
+      },
+      "handLastDecisionLabels": {
+        "PASS": 126,
+        "none": 9
+      },
+      "feetLastDecisionLabels": {
+        "PASS": 82,
+        "none": 28,
+        "HOLD": 17
+      },
+      "directOwnPassPrecededHandClaims": 53,
+      "terminalDigests": {
+        "0x0F1E2D3C4B5A6978": "9ce6c19ae811107a624526dcd49f40d86a77d6cbfa3a1ad3ff406618eb793d71",
+        "0x00000000D1A6D05E": "a6e99a844edd4a6e53b3fee18e9ac5dc85daa66dbf94ce7a6154aa60b5c7dee4",
+        "0x0000000000000001": "2f7919508770dfd6200917d1a3955af97474c4009bf3935fa4c2b5db1620bc65",
+        "0x00000000ABCDEF12": "549bcc5c1a398764b119fd08ae2a7e1474a7223347c7b45c4e98cbef7b1bf413",
+        "0x0000000099887766": "e2289aba20c351cd8d8b01ffc586e7504b05218cac711b82e664baebc08e560b",
+        "0x000000005A5A5A5A": "665c90619be09e3318f3eb05c834c7ece9e8789dec1d23568cd98476c87ea2b7"
+      }
+    },
+    "B": {
+      "claims": 360,
+      "counts": {
+        "claim-after-teammate-deliberate-kick-candidate": 6,
+        "claim-after-teammate-touch": 6,
+        "claim-contact-area-boundary": 2,
+        "claim-contact-area-inside": 356,
+        "claim-contact-area-outside": 2,
+        "claim-keeper-0": 212,
+        "claim-keeper-11": 148,
+        "claim-keeper-area-inside": 355,
+        "claim-keeper-area-outside": 5,
+        "dry-receiver": 564,
+        "dry-zone-fallback": 12,
+        "end-feet-PassKick": 119,
+        "end-feet-replacement-claim": 97,
+        "end-hand-PassKick": 360,
+        "episode-feet-team-0": 123,
+        "episode-feet-team-1": 93,
+        "episode-hand-team-0": 212,
+        "episode-hand-team-1": 148,
+        "keeper-decision-DRIBBLE": 3,
+        "keeper-decision-HOLD": 180,
+        "keeper-decision-PASS": 137,
+        "pass-contact-feet-receiver": 119,
+        "pass-contact-hand-receiver": 360,
+        "pass-outcome-feet-interrupted-by-claim": 49,
+        "pass-outcome-feet-interrupted-by-kick": 37,
+        "pass-outcome-feet-other-controlled": 23,
+        "pass-outcome-feet-restart": 1,
+        "pass-outcome-feet-target-controlled": 9,
+        "pass-outcome-hand-interrupted-by-claim": 156,
+        "pass-outcome-hand-interrupted-by-claim-same-keeper": 156,
+        "pass-outcome-hand-interrupted-by-kick": 89,
+        "pass-outcome-hand-other-controlled": 26,
+        "pass-outcome-hand-target-controlled": 89,
+        "restart-Corner": 5,
+        "restart-FreeKick": 91,
+        "restart-GoalKick": 27,
+        "restart-KickOff": 50,
+        "restart-ThrowIn": 66,
+        "transition-Anticipate-to-Diving": 31,
+        "transition-Anticipate-to-Rushing": 252,
+        "transition-Anticipate-to-Set": 1705,
+        "transition-Recovering-to-Set": 686,
+        "transition-Resting-to-Set": 1774,
+        "transition-Set-to-Anticipate": 2070,
+        "transition-Set-to-Resting": 1773
+      },
+      "discipline": {
+        "fouls": 50,
+        "yellows": 6,
+        "straightReds": 1,
+        "secondYellowDismissals": 0
+      },
+      "handHoldFrames": {
+        "count": 360,
+        "min": 7,
+        "max": 234,
+        "mean": 222.15277777777777,
+        "median": 234.0
+      },
+      "handEndReasons": {
+        "PassKick": 360
+      },
+      "handLastDecisionLabels": {
+        "none": 360
+      },
+      "feetLastDecisionLabels": {
+        "PASS": 137,
+        "HOLD": 28,
+        "none": 51
+      },
+      "directOwnPassPrecededHandClaims": 205,
+      "terminalDigests": {
+        "0x0F1E2D3C4B5A6978": "5722d2846d1e45628c2ca9db9f17cf02b56534046c5a18b30d2e0ebb904753cb",
+        "0x00000000D1A6D05E": "0897d51bbf83d786aa9e47170349606afb82896b123344ce2f143743ed55d3e6",
+        "0x0000000000000001": "426c1d3ed3837cd008911716b8eb7469a21a9e34478849a0fbc74d5584a744dc",
+        "0x00000000ABCDEF12": "654e377dea6390b1d9a572cbec45a0af5ba0496f5ab5e55b3f6eb94f9a6fc51c",
+        "0x0000000099887766": "7ae48602cda5c779f5592b57b89cb23148e4e204f9ba9f795175a503fb09eec8",
+        "0x000000005A5A5A5A": "ed3ba8ccf8ca8f3cb6b2965cf90a9d1bd02424ef2f67d2a25184e2d7e7becf3e"
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/GoalkeeperBaselineSlotTests.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-09-27
 // Modified: 2026-09-27
 // Author:   —
@@ -201,7 +202,8 @@ namespace TacticalDirector.MatchEngine
                 (bool[])s.ShotEventPending.Clone(),
                 (int[])s.ClaimTick.Clone(),
                 (int[])s.ReleaseTickEarliest.Clone(),
-                (int[])s.RecoveryCooldownEndTick.Clone());
+                (int[])s.RecoveryCooldownEndTick.Clone(),
+                (bool[])s.DistributionPending.Clone());
     }
 }
 
@@ -210,4 +212,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-09-27 | —      | Initial: #11 baseline slot is the keeper's #12 world-space slot; a displaced |
 // |         |            |        | keeper stays Recovering until RecoveryCooldownTicks; an on-slot keeper exits |
 // |         |            |        | on the next pass. Mirrored for both teams.                                   |
+// | W8 B | 2026-10-15 | — | Copy the canonical accepted-distribution wait latch in fixture state. |
 #endregion

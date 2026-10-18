@@ -1,9 +1,12 @@
 # W8 C — Proposed Law 12 amendment to Goalkeeper Mechanics #11
 
-**Status:** PROPOSED — owner approval required; not an approved specification or implementation authority  
-**Date:** October 17, 2026 (v0.2 review correction; original v0.1 October 16)  
-**Scope:** Documentation proposal only. No source, runtime, test-code, tuning, or schema changes in this draft.  
-**Prerequisite:** Land and measure the W8 B voluntary-distribution behavior (PR #511 is ready for review but not merged; its measured final head remains the B prerequisite) before implementing C. Reconcile this proposal against the final merged B head.
+**Status:** PROPOSED — owner approval required; not an approved specification or implementation authority
+
+**Date:** October 18, 2026 UTC (v0.3 main synchronization; v0.2 review correction October 17; original v0.1 October 16)
+
+**Scope:** Documentation proposal only. No source, runtime, test-code, tuning, or schema changes in this draft.
+
+**B prerequisite MET:** PR #511 merged as `c0ffd0d2` after final-head CI and governing host validation; its one-commit docs closeout #514 landed as `533564ef`. This branch now incorporates that main and reconciles this proposal with merged #11 §3.8 and §3.1.3. The [post-law B digests](w8-b-implementation-results.md) are the adopted Linux comparator. This closes only the B landing prerequisite; C wording and D-07 still require owner approval. No new normative version-history row is allocated by this proposal.
 
 ## 1. Governing rule and boundaries
 
@@ -110,10 +113,32 @@ Also update #11 §3.1.1, §3.4, §3.8.3–3.8.4, §§2/5 version histories and a
 
 1. Owner explicitly approves the C wording, including the exact 480/481 boundary, Resolve-before-C3 ordering, corner placement/tie rule, claim-frame lifecycle, legacy retirement, and cross-spec test scope.
 2. Owner records D-07: **separate general outside-area handball implementation before C activation** (recommended) or **explicitly approved bounded fallback plus governed deferral**. A deferral without a verified outside-hand anti-stall bound is prohibited.
-3. Final B production PR and its same-lane A→B/post-law evidence **land and pass review**; use only the validated merged B head and its post-re-handling baseline as the B→C comparator, not an older pre-law B snapshot. PR #511 is currently open; do not claim its evidence or measured six-seed reduction has been accepted by merge. **PR #513 was created from main rather than #511's head:** keep this proposal unmergeable by process until #511 lands, then reconcile the C proposal against merged §3.8 and both tracking-history chains before any approval or code.
+3. **B landing prerequisite MET:** #511 merged `c0ffd0d2`; closeout #514 merged `533564ef`. This proposal now incorporates post-closeout main, including merged #11 §3.8 and own-release §3.1.3 plus both changelog/manifest histories. B retains controlled hand possession through accepted WINDUP, atomic CONTACT release and exactly-once terminal feedback; retained-control retries preserve the old hand clock. C proposes only its separately approved clock/offence replacement and must preserve these B seams. Use the adopted six post-law fingerprints, not the older 348-contact pre-law arm. Neither the B merge nor this synchronization approves C/D-07.
 4. Apply the approved normative #11/Match Engine/restart/test spec edits and ERR entries; then and only then implement C in an isolated code landing with the next available save schema version.
 5. Run exact-boundary and mirrored restart fixtures, save/restore/replay, final-PR-head Linux checks and a **pinned Unity 6000.4.9f1 compile** before merge. Record six-seed B→C comparisons: for ordinary no-offence episodes, gameplay event and ball-trajectory streams must be exactly equal; report first divergence and cause otherwise. Record snapshot digests separately. Forced timeout fixtures, not six ordinary matches, establish rare sanction behavior.
 6. Keep [GT] values frozen per KD-W1; relabel the **non-law 6 s legacy stall estimate** as `[EST]` and keep derived tick arithmetic `[DERIVED]` until the separate measurement/retirement decision. Verify the actual B Kick/Throw/Roll hand-release representation before code and refuse any unapproved two-stage punt model. No code changes, tests executed, Unity claims, or implementation approval are part of this document-only proposal.
+
+### 5.1 Required B→C keeper-release follow-up
+
+Apply the [landed measurement contract](w8-goalkeeper-distribution-decision.md#bc-keeper-release-follow-up-requirements)
+in **both** B and C arms. Freeze a read-only observer before result-bearing runs; reproduce all six
+adopted B fingerprints on the same Linux .NET lane before interpreting C. Retain the frozen W8
+observer and prove the supplementary observer does not alter the B gameplay/digest chain.
+
+Record release frame/keeper/team/position and every actual player-ball touch with exact 60 Hz frame,
+within-frame order, toucher/team/position and touch kind, including applied body and uncontrolled
+contacts. Select releases whose first other-player touch is an opponent within 507 frames; use the
+same rule in both arms. Record each following 600-frame window, including clear same-frame order,
+truncation and overlap. Log shooter identity/team and GoalAwardedEvent ScoringTeam separately from
+the credited scorer's identity/team. Split shots/goals into the releasing keeper's team and opponent;
+retain unique event identity and report each arm's corpus goals per 600 frames with its denominator.
+
+Historical B figures remain 50/47 corpus goals and 9/6 shots/goals in fourteen pre-law **control-only
+proxy** windows versus 8/6 in twelve post-law restricted-spell windows. The team split and exact
+pre-law touch timing are unavailable; this is not a causal equivalence or passivity verdict. Repeat
+the comparison with exact timing in both arms and investigate any excess opponent goals as a possible
+keeper-passivity defect before C closeout. A separately approved production invalidator must be
+isolated and rebaselined explicitly; never silently relabel the adopted B fingerprints.
 
 **Requested owner decisions:** approve/amend the C specification text including the Stage-0 **atomic hand release at CONTACT**; choose D-07 implementation (recommended) versus expressly approved bounded interim outside-hand drop plus governed deferral. Until then, C implementation remains blocked.
 
@@ -121,3 +146,5 @@ Also update #11 §3.1.1, §3.4, §3.8.3–3.8.4, §§2/5 version histories and a
 
 - **v0.1 — October 16:** standalone contract proposal for approval, without normative edits.
 - **v0.2 — October 17:** Claude review corrections: close indefinite outside-area hand-hold if D-07 is deferred; identify current broad 360-frame keeper guard and C's `!HasGoalkeeperHandControl` conversion; retag non-law legacy duration `[EST]`; distinguish atomic B Kick from a genuine two-stage punt; cite IFAB's current 2026/27 pages; clarify inclusive claim-frame numbering and X-only mirroring. No code or owner approval.
+
+- **v0.3 — October 18 UTC:** incorporate post-closeout main (B merge c0ffd0d2, closeout 533564ef), reconcile §3.8/own-release and both tracking histories, adopt the post-law B comparator and require exact touch/team keeper-release follow-up in both B→C arms. B prerequisite met; C and D-07 remain unapproved. No code or match reruns.

@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 2: Functional Requirements, Data Structures & Failure Modes
 
 **Created:** May 16, 2026
-**Last Updated:** September 27, 2026 (v0.5 — ERR-011-018 FR-GK-005 names the real #12 baseline surface)
-**Version:** 0.5
+**Last Updated:** October 16, 2026 (v0.6 — ERR-011-020: own-release restriction, feet-only avoidance and law backstop)
+**Version:** 0.6
 **Status:** DRAFT
 **Purpose:** Enumerate the functional requirements (FRs), publish the
 data structures, catalogue the failure modes, and declare the
@@ -63,6 +63,7 @@ Source KDs are declared in §1.3.
 | FR-GK-042 | MUST | Every constant in §3.4 has a row in §3.4's Master Physical Profile Table with source tag, unit, valid-range, and citation columns populated. | KD-9 | §3.4 / §9.1 |
 | FR-GK-043 | MUST | After `GK_HOLD_MAX_TICKS` (6-second rule; 60 ticks at 10 Hz) elapsed without a `DistributeIntent`, the GK forces a default ROLL distribution to the nearest own-team agent within the penalty area. | KD-9 / Laws of the Game | §3.1 / §3.8 |
 | FR-GK-044 | MUST | Distribution `powerIntent` is multiplied by `THROW_ACCURACY_COEFF · Throwing_norm` for Throw delivery and by `KICK_ACCURACY_COEFF · Kicking_norm` for Kick delivery; Roll delivery does NOT consume `Throwing` or `Kicking` (low-skill action). | KD-9 / §3.8.1 | §3.8 |
+| FR-GK-045 | MUST | After releasing hand control, the keeper MUST form no hand save, aerial claim or smother until another player physically touches the ball. Ordinary feet collection and body rebounds remain available. The host owns canonical restriction history and adjudicates any actual prohibited hand contact in Resolve under §3.1.3. | ERR-011-020 / IFAB Law 12.2 | §3.1.3 / §4.2 |
 
 ---
 
@@ -297,3 +298,4 @@ Stage 0+1 deliverable schedule.
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-GK-026 updated — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; value confirmed `0x1D`; ERR-011-001 resolved. |
 | 0.4 | September 22, 2026 | W3 / ERR-011-012 | `ClaimIntent` gains locked `reachDirectionLateral`; its real Stage-0 composition producer and v23 authoritative snapshot ownership are stated. Target is tactical aim, never hand geometry; §3.6.1 owns the bounded live episode. No new `[GT]` or RNG surface. | implementation/spec back-prop |
 | 0.5 | September 27, 2026 | ERR-011-018 | FR-GK-005 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real #12 surface and its world-frame mapping (§3.3.0.1); rules out the keeper's own position as a stand-in. | spec + code, same commit |
+| 0.6 | October 16, 2026 | — | ERR-011-020: own-release restriction, feet-only avoidance and law backstop | PR #511 |

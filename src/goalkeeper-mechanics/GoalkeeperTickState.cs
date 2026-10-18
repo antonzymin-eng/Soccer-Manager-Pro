@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperTickState.cs
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-07-23
 // Modified: 2026-07-23
 // Author:   —
@@ -58,6 +59,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         /// <summary>Per-GK distribute-intent-active latch.</summary>
         public readonly bool[] DistributeIntentActive;
+
+        /// <summary>Accepted #5 request awaiting terminal host feedback (schema v26).</summary>
+        public readonly bool[] DistributionPending;
 
         /// <summary>Per-GK positioning contract (the KD-13 gkBaselineSlot carrier).</summary>
         public readonly GoalkeeperPositioningContract[] PositioningContracts;
@@ -124,8 +128,10 @@ namespace TacticalDirector.GoalkeeperMechanics
             bool[] shotEventPending,
             int[] claimTick,
             int[] releaseTickEarliest,
-            int[] recoveryCooldownEndTick)
+            int[] recoveryCooldownEndTick,
+            bool[] distributionPending)
         {
+            DistributionPending = distributionPending;
             States                  = states;
             Attrs                   = attrs;
             ContactStates           = contactStates;
@@ -161,4 +167,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | (parallel to PressingTickState / DefensiveTickState seams).         |
 // | 1.1     | 2026-09-22 | —      | W3: ClaimIntent + active latch added to authoritative snapshot view. |
 // |         |            |        | Match-engine world-state schema 22 → 23.                            |
+// | 1.2 | 2026-10-15 | — | W8 B: canonical accepted-distribution wait latch, schema v26. |
 #endregion

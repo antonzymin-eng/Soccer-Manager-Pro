@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/DistributeIntent.cs
+// Modified: 2026-10-15 (W8 B ownership and CONTACT semantics)
 // Created:  2026-05-28
 // Modified: 2026-05-28
 // Author:   —
@@ -11,7 +12,7 @@ using UnityEngine;
 namespace TacticalDirector.GoalkeeperMechanics
 {
     /// <summary>
-    /// Locked distribution intent from the Decision Tree. Committed at the 10 Hz tactical tick.
+    /// Locked distribution intent from the engine-owned #21 producer. Committed at the 10 Hz tactical tick.
     /// The F-05 / F-09 validation pass (GoalkeeperDistribution.ValidateTarget) may nullify
     /// TargetReceiverId or clamp TargetPoint when the roster check fails at release time.
     /// Goalkeeper Mechanics #11 §2.2.6 / §3.8 / KD-16 / KD-17.
@@ -44,4 +45,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | W8 B | 2026-10-15 | — | Document the live engine producer and CONTACT-time event semantics. |
 #endregion

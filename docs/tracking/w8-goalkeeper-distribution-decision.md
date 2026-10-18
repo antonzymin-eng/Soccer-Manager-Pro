@@ -1,8 +1,15 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
+> **October 18, 2026 (UTC) — B landing status (0.35):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** Post-law six-seed digests at `751b1143` are adopted for B→C; C wording and D-07 are not approved.
+
+
+> **Measurement closeout — October 17:** [Linux .NET / frozen-observer evidence](evidence/w8-b-20261015/measurement-closeout/README.md) answers the count and restricted-spell questions: 348/348 → 126/126 hand claims/distributions; every spell clears on player touch; twelve opponent-touch windows include eight shots and six goals. No execution gap or stuck restriction observed; no causal balance claim. Historical pre-merge record; final-head CI passed and #511 subsequently merged as recorded above.
+
 > **Created:** September 25, 2026  
-> **Status:** **B contract approved; #466 dormant substrate merged as `8fab5e1d` and its pinned Unity compile condition met at `5d112bab` on October 7, re-confirmed at `93de60f6` on October 9. Live B wiring remains outstanding, including exactly-once Resolve feedback consumption, F-05 original-request/effective-target telemetry and engine-level identity tests.** #5 and #11 remain overall DRAFT; only their W8 B amendments are approved. #21 remains APPROVED with its W8 amendment explicitly owner-approved. Compile evidence does not establish a passing overall EditMode gate; PR #492 records six failures.
+> **Status:** **B contract and implementation landed in PR #511, merge `c0ffd0d2`.** Final-head CI passed at `a43bbc1c`; governing Unity `e58577de` and all #466 live-wiring obligations are met. The adopted post-law Linux B baseline and remaining attribution limitations are in [results v1.5](w8-b-implementation-results.md). #5/#11 remain overall DRAFT beyond their approved W8 B amendments; C/D-07 require their own owner decisions.
 > **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
+> **Local branch update — October 15, 2026:** six-policy wiring and the three host obligations above are implemented on `feat/w8-b-goalkeeper-distribution`, with canonical CONTACT / W5 / F-05 / restore locks and a measured A→B record. The first arm exposed a missed in-flight foot-action handover; corrected source `e54335b0` interrupts it in Resolve. See [implementation and evidence](w8-b-implementation-results.md). This October 15 status is historical: publication is PR #511 and the October 17 host record now validates the live runtime tree; the final docs-head CI and merge later completed as recorded above.
+>
 > **Scope:** Record W8 ownership and the ordered A baseline, isolated possession-helper refactor, B spec, and B wiring boundaries.
 
 ## Owner decisions at a glance
@@ -24,8 +31,9 @@ spec approval.
 **Unity compile gate for the dormant B substrate (PR #466): MET.** The October 7 compile of
 `5d112bab` includes merged #466; evidence is in `evidence/p5b-host-20261007/compile-5d112bab.txt`.
 PR #492 also records the October 9 compile of `93de60f6`. The live-wiring entry in `open-issues.md`
-still requires exactly-once Resolve terminal feedback, F-05 telemetry comparing the serialized
-original target with the terminal effective target, and the real engine identity test.
+records that exactly-once Resolve terminal feedback, F-05 telemetry comparing the serialized
+original target with the terminal effective target, and the real engine identity test pass at
+`e58577de` under the pinned host. Final docs-head Linux CI and PR #511 merge still gate archival.
 `EffectiveTargetAgentId == -1` alone cannot distinguish an intentional receiverless request.
 Every later Unity-affecting B/C landing needs its own final-head compile; the old substrate
 evidence is not certification of future wiring.
@@ -370,6 +378,38 @@ The total selector must operate identically in B and C; a no-receiver policy sta
 
 ---
 
+### B→C keeper-release follow-up requirements
+
+Before the result-bearing B→C comparison, freeze a read-only supplementary instrument and its
+window-selection rules. Run it in **both arms** on the same Linux .NET lane, six seeds, constructor,
+policy and 324,000-frame population; reproduce the adopted B fingerprints before interpreting C.
+Retain the existing frozen W8 observer alongside it and prove the new observer does not alter the
+B gameplay/digest chain. A new host/runtime requires reproduced B control or a fresh paired capture.
+
+- Record every canonical keeper hand release by seed, frame, keeper identity/team and ball position.
+- Record **every actual player-ball touch**, including applied body deflections, uncontrolled first
+  touches, own touches and controlled acquisitions, with exact 60 Hz frame, within-frame ordering,
+  agent/team and position. A geometric candidate or terminal acquisition is not a substitute.
+- In each arm, select keeper releases whose **first subsequent other-player touch** is an opponent
+  within **507 frames**, including an actual later-in-order touch in the release frame. Retain
+  intervening own touches and teammate clearings; do not let a proxy select the two arms differently.
+- For the resulting 600-frame follow-up, log every ShotExecutedEvent with shooter identity and team,
+  and every GoalAwardedEvent with **ScoringTeam** and credited scorer identity/team separately
+  (own goals/credit can differ). Preserve frame/order, scoring location, window membership and raw
+  event identity. Split shots/goals into the releasing keeper's team versus its opponent.
+- Report complete/censored windows, overlap and unique event counts, shots/goals per window and
+  corpus-wide goals per 600 frames with explicit played-frame denominator in each arm. For a same-frame
+  event, use recorded order to decide whether it follows the clearing touch. Preserve exact touch
+  timestamps and restriction start/end states; do not infer them from control-only pass outcomes.
+- Repeat the keeper-release danger comparison on these identically selected exact-touch populations.
+  Report first divergence, its cause and any excess opponent goals as a possible keeper-passivity
+  defect for investigation before C closeout. No tuning, new policy or causal conclusion is authorized
+  by the historical 14-proxy-versus-12-spell comparison.
+
+This is a **measurement requirement**, not a new result or permission to implement C. Team attribution
+and exact pre-law touch timing remain unavailable in the committed B logs. Owner approval of the C
+rule and D-07 closeout remain separate gates.
+
 ## 6. Owner-directed landing sequence
 
 1. Merge this packet and the current `main` into PR #456, run `check_drift.sh`, take it out of draft and merge. This records the architecture and ordered work, including B's Decision Tree suppression, hand-episode teardown and serialized latch, with numeric B details unresolved. The inherited guard is not described as IFAB compliance.
@@ -428,6 +468,11 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.35 | 2026-10-18 | landed B | PR #511 merge c0ffd0d2, final-head CI/host met; post-law baseline adopted; both B→C arms must log exact physical touches and shot/scoring teams, with release-window danger comparison. C and D-07 remain separate. |
+| 0.34 | 2026-10-17 | measurement closeout | Exact frozen observer on Linux .NET reproduces twelve fingerprints; reconcile claims/count divergence and all 126 restricted spells, including opponent-touch follow-up; no code change or step-7 landing claim. |
+| 0.33 | October 17, 2026 | — | PR #511 governing Unity closure at e58577de; identical runtime trees on evidence/docs successors. Final Linux CI/merge remain; step 7 not landed. |
+| 0.32 | 2026-10-16 | — | October 16 owner approval: PR #511 own-release law plus feet-only avoidance; v27 state and isolated post-law comparison. General outside-area handling stays D-07. |
+| 0.31 | 2026-10-15 | local implementation; validation pending | Six-policy branch, host obligations, missed foot-action handover and corrected source recorded; no new contract approval or C-law change. |
 | 0.30 | 2026-10-10 | owner decisions D-03/D-04/D-05 | Landing-coordination baseline bullet records that the three pre-B decisions are taken (Recovering stays ineligible; tackle-foul cooldown bypass retained; #434/#440 after B→C), so none changes behavior before B. No contract change. |
 | 0.29 | 2026-10-09 | PR #493 review corrections | Labels c50726e as historical pre-A production audit, not current comparison anchor; distinguishes active interim host queue from optional CI and retains the explicit #492 merge dependency for October 9 compile evidence. |
 | 0.28 | 2026-10-09 | landing coordination; decisions pending | Records met #466 compile condition and remaining live-wiring obligations; links roadmap owner/host queue; removes unconditional substitution/schema reservations; names W10-only reaction gates and separate C law/history coordination; outside-area handling disposition before C closeout. No contract approval or gameplay change. |
