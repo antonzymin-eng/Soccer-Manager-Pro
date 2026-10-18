@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/KeeperOutsideAreaHandlingTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-18 (review fixes)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1.4; match-flow §5.2; D-07 option A.
 // Purpose:  Verify outside-area hand contacts and carries, restart precedence and canonical restore.
@@ -115,18 +115,83 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
-        public void KeeperBodyOutside_BallContactInside_RemainsLegal(int team)
+        public void KeeperBodyOutside_CatchInside_IsLegalUntilCarriedFartherOut(int team)
         {
             MatchEngine engine = Fixture(team);
-            GoalkeeperTickState state = engine.TestOnly_GoalkeeperState;
-            state.States[team] = GoalkeeperState.Set;
-            engine.TestOnly_RestoreGoalkeeperState(in state);
-            Place(engine, team * 11, World(team, 17f, 34f));
-            Vector3 contact = World(team, 16.5f, 34f);
+            int keeper = team * 11;
+            CatchInsideWithBodyOutside(engine, team);
+            // The #11 catch composition: legal contact, then SetPossessor snaps the ball to the body.
+            engine.RunTick();
+            Assert.AreEqual(0, HandlingRestartCount(engine), "A legal catch is not a carry.");
+            Assert.AreEqual(keeper, engine.PossessingAgentId);
+            Assert.AreEqual(17.2f, Mathf.Abs(engine.TestOnly_BallSnapshot.Position.x - OwnGoal(team)), 0.0001f);
+
+            Vector3 target = World(team, 25f, 34f);
+            MovementCommand move = MovementCommand.MoveTo(new Vector2(target.x, target.y));
+            engine.TestOnly_SetCommand(keeper, in move);
+            engine.RunTick();
+            Vector2 settled = engine.AgentView(keeper).Position;
+            Assert.Greater(Mathf.Abs(settled.x - OwnGoal(team)), 17.2f, "Fixture must carry the ball farther out.");
+            AssertDirectFreeKick(engine, team, new Vector3(settled.x, settled.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void KeeperBodyOutside_CatchInside_CarriedBackTowardGoal_RemainsLegal(int team)
+        {
+            MatchEngine engine = Fixture(team);
+            int keeper = team * 11;
+            CatchInsideWithBodyOutside(engine, team);
+            engine.RunTick();
+            Vector3 target = World(team, 10f, 34f);
+            MovementCommand move = MovementCommand.MoveTo(new Vector2(target.x, target.y));
+            engine.TestOnly_SetCommand(keeper, in move);
+            engine.RunTick();
+            Assert.Less(Mathf.Abs(engine.AgentView(keeper).Position.x - OwnGoal(team)), 17.2f);
+            Assert.AreEqual(0, HandlingRestartCount(engine));
+            Assert.AreEqual(keeper, engine.PossessingAgentId);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void GoalLineSave_BallOverhangingOwnGoalLine_IsInsideArea(int team)
+        {
+            MatchEngine engine = Fixture(team);
+            // Centre 5 cm behind the line: not wholly over, so in play and on the area's goal line.
+            Vector3 contact = World(team, -0.05f, 34f);
             engine.TestOnly_ForceBallLoose(contact, Vector3.zero);
             Assert.IsTrue(engine.TestOnly_TryKeeperHandContact(team * 11, contact));
             engine.RunTick();
             Assert.AreEqual(0, HandlingRestartCount(engine));
+            Assert.AreEqual(0, engine.HomeScore + engine.AwayScore);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void GoalLineOverhangOutsideArea_DirectFreeKickIsPlacedOnTheLine(int team)
+        {
+            MatchEngine engine = Fixture(team);
+            Vector3 contact = World(team, -0.05f, 10f);
+            engine.TestOnly_ForceBallLoose(contact, Vector3.zero);
+            Assert.IsFalse(engine.TestOnly_TryKeeperHandContact(team * 11, contact));
+            engine.RunTick();
+            AssertDirectFreeKick(engine, team, new Vector3(OwnGoal(team), 10f, MatchEngineConstants.BALL_REST_HEIGHT_M));
+        }
+
+        private static void CatchInsideWithBodyOutside(MatchEngine engine, int team)
+        {
+            int keeper = team * 11;
+            GoalkeeperTickState state = engine.TestOnly_GoalkeeperState;
+            state.States[team] = GoalkeeperState.Set;
+            engine.TestOnly_RestoreGoalkeeperState(in state);
+            Place(engine, keeper, World(team, 17.2f, 34f));
+            Vector3 contact = World(team, 16f, 34f);
+            engine.TestOnly_ForceBallLoose(contact, Vector3.zero);
+            Assert.IsTrue(engine.TestOnly_TryKeeperHandContact(keeper, contact), "Ball-location contact is legal.");
+            state = engine.TestOnly_GoalkeeperState;
+            state.States[team] = GoalkeeperState.HandsOnBall;
+            engine.TestOnly_RestoreGoalkeeperState(in state);
+            engine.TestOnly_SetPossession(keeper);
         }
 
         [TestCase(0)]
@@ -357,6 +422,8 @@ namespace TacticalDirector.MatchEngine
             return restored;
         }
 
+        private static float OwnGoal(int team) => team == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
+
         private static Vector3 World(int team, float depth, float y) =>
             new Vector3(team == 0 ? depth : MatchEngineConstants.PITCH_LENGTH_M - depth,
                 y, MatchEngineConstants.BALL_REST_HEIGHT_M);
@@ -366,4 +433,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-18 | — | D-07 outside-area handling, carries, inclusive boundaries and restore. |
+// | 1.1 | 2026-10-18 | — | Review: real catch composition with body outside, carry back/out, goal-line overhang and on-line DFK placement. |
 #endregion

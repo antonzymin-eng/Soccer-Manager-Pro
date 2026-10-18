@@ -1,5 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
-// Modified: 2026-10-18 (D-07 outside-area hand contacts and carries)
+// Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-06-16
@@ -9175,7 +9175,9 @@ namespace TacticalDirector.MatchEngine
             CancelGoalkeeperClaimsForPossession();
             SetPossessingAgent(agentId);
             BallCollision.SetBallControlled(ref _ball);
-            DriveControlledBallToPossessor();
+            // D-07: the contact gate already adjudicated this acquisition at the ball; snapping a
+            // legal catch onto the keeper's body is not a carry.
+            DriveControlledBallToPossessor(adjudicateHandCarry: false);
         }
 
         private void CancelGoalkeeperClaimsForPossession()
@@ -9210,7 +9212,7 @@ namespace TacticalDirector.MatchEngine
         /// height. A goalkeeper carry preserves claim/contact height rather than inventing a new hand-height
         /// tuning constant; x/y follow the live keeper. Existing BallState + holder state is sufficient.
         /// </summary>
-        private void DriveControlledBallToPossessor()
+        private void DriveControlledBallToPossessor(bool adjudicateHandCarry = true)
         {
             int holder = _possessingAgentId;
             if (_ball.State != BallStateType.Controlled
@@ -9218,6 +9220,8 @@ namespace TacticalDirector.MatchEngine
             {
                 return;
             }
+
+            Vector3 previousBallPosition = _ball.Position;
 
             AgentState carrier = _agents[holder];
 
@@ -9265,7 +9269,7 @@ namespace TacticalDirector.MatchEngine
             BallPhysicsCore.ValidatePhysicsState(ref _ball);
             _ball.LastValidPosition = _ball.Position;
             _ball.LastValidVelocity = Vector3.zero;
-            CheckKeeperHandCarry();
+            if (adjudicateHandCarry) CheckKeeperHandCarry(previousBallPosition);
         }
 
         /// <summary>
@@ -11184,4 +11188,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.10 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 2.11 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 // | 2.12 | 2026-10-18 | — | D-07: penalise outside-area hand carries after attachment and collision correction, before executor CONTACT. |
+// | 2.13 | 2026-10-18 | — | D-07 review: hand acquisition snap is not a carry; carries whistle only when the held ball moves out or farther out. |
 #endregion

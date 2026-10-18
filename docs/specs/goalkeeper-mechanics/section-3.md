@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 18, 2026 (v0.22 — owner-selected D-07 option A: outside-area handling contacts and carries)
-**Version:** 0.22
+**Last Updated:** October 18, 2026 (v0.23 — D-07 review: acquisition snap is not a carry; goal-line overhang is on the line)
+**Version:** 0.23
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -199,13 +199,34 @@ free kick at the contact point**, regardless of release/touch history. The exist
 gate applies to catches, parries, deflections, spills and smothers; an attempted contact that misses
 does not constitute handling. This decision adds no hand-intent avoidance policy.
 
-Continuous hand control is also handling. After attaching a `Controlled` ball to its keeper, the
-composition root checks its XY position whenever #11 reports `HandsOnBall` or still-held
-`Distributing` and that keeper remains the possessor. The contact position is the ball's position,
-not the keeper's body or a locked intent target. Penalty-area lines are inclusive: depth ≤16.5 m
-`[FIXED: IFAB Law 1]`, measured from the own goal line, and lateral distance from the pitch centre
-≤`16.5 m + goalWidth/2` `[DERIVED]`. A position behind either goal line is outside the area. Geometry
-is mirrored for both defending ends. The opponents' penalty area grants no handling entitlement.
+The contact position is the ball's position, not the keeper's body or a locked intent target.
+Penalty-area lines are inclusive and measured on the ball centre. For a keeper of team `t`, with
+`s = (x − ownGoalX(t)) · attackDirX(t)` (m, signed depth from the own goal line) and
+`l = |y − 34|` (m, lateral distance from the pitch centre):
+
+```text
+dx = max(0, s − 16.5, −r − s)          // m; 16.5 [FIXED: IFAB Law 1]
+dy = max(0, l − (16.5 + goalWidth/2))  // m; half-width 20.16 [DERIVED]
+distanceOutside = sqrt(dx² + dy²)      // m, ≥ 0; inside ⇔ distanceOutside = 0
+```
+
+`r = 0.11 m` is the ball radius `[CROSS: Ball Physics #1 Ball.RADIUS]`. A ball still in play
+can overhang its own goal line by up to `r` (Ball Physics treats it as out only when wholly over),
+and the goal line belongs to the area, so that overhang counts as on the line. Valid inputs are
+on-pitch or overhanging positions; a ball wholly out takes its boundary restart first. Geometry is
+mirrored for both defending ends. The opponents' penalty area grants no handling entitlement.
+A handling restart is placed at the contact point clamped onto the pitch (`0 ≤ x ≤ 105`,
+`0 ≤ y ≤ 68` m), so an overhanging contact restarts on the line it overhangs.
+
+Continuous hand control is also handling. A held `Controlled` ball is modelled at the keeper's XY.
+The acquisition itself was adjudicated at the ball by the contact gate, so snapping a legal catch
+onto the keeper's body is **not** a carry. After every later attachment (locomotion or collision
+correction) while #11 reports `HandsOnBall` or still-held `Distributing` and that keeper remains
+the possessor, the composition root compares the newly attached ball with its previous attached
+position and queues the offence only when `distanceOutside(new) > distanceOutside(previous)`: the
+carry takes the ball out of the area, or farther from it. Stage 0 does not model a hand offset from
+the body, so a keeper who catches inside with the body outside may hold still or move back toward
+the area without sanction.
 
 Physics queues an offence after movement/attachment. Resolve adjudicates it before collision or
 executor CONTACT; a collision correction can itself carry the ball out, so Resolve checks again
@@ -214,16 +235,28 @@ cancels pending distributions, clears the captured foul candidate and publishes 
 A ball already wholly out takes its boundary restart. Feet possession outside the area remains legal.
 Neither this offence nor own-release re-handling is the W8 C eight-second/corner offence.
 
-**Worked example:** team 0 carries a held ball from `(16.50, 34)` to `(16.51, 34)` m: the first point
-is legal, the second awards team 1 a DFK at `(16.51, 34)` m. Team 1's mirrored path is `(88.50, 34)`
-to `(88.49, 34)` m and awards team 0 the DFK. No goal-area relocation or indirect-goal restriction
-applies. Picking the ball up at either outside point receives the same sanction.
+**Worked example:** team 0 carries a held ball from `(16.50, 34)` to `(16.51, 34)` m:
+`distanceOutside` goes 0 → 0.01 m, so team 1 gets a DFK at `(16.51, 34)` m. Team 1's mirrored path is
+`(88.50, 34)` to `(88.49, 34)` m and awards team 0 the DFK. No goal-area relocation or indirect-goal
+restriction applies. Picking the ball up at either outside point receives the same sanction.
+
+**Worked example (body outside):** team 0's keeper stands at `(17.2, 34)` and catches a ball at
+`(16.0, 34)` m. The contact is inside, so it is legal; attachment moves the ball to `(17.2, 34)`
+(0.7 m outside), which is not a carry. Holding there (0.7 → 0.7) or walking to `(16.9, 34)`
+(0.7 → 0.4) stays legal. Walking to `(17.5, 34)` (0.7 → 1.0) gives team 1 a DFK at `(17.5, 34)`.
+Team 1 mirrors at `x = 87.8, 89.0, 88.1, 87.5` m.
+
+**Worked example (goal line):** team 0 catches a ball at `(−0.05, 34)` m: `s = −0.05 ≥ −0.11`, so it
+is inside and legal. A contact at `(−0.05, 10)` m has `dy = 24 − 20.16 = 3.84` m, so it is outside;
+team 1's DFK is placed at `(0, 10)` m. Team 1's mirrors are `(105.05, 34)` (legal) and
+`(105.05, 10)` → DFK at `(105, 10)` m.
 
 The existing v27 pending offender/contact fields represent both offences; no bytes or fields are
 added and outer save format remains v3. A pending offence without matching own-release history is
 valid only outside the keeper's own area. Tests cover mirrored contacts, both lateral boundaries,
 carries, collision correction, distribution CONTACT cancellation, direct scoring, restart precedence,
-and deterministic restore with no release history.
+deterministic restore with no release history, the real catch composition with the keeper's body
+outside (legal hold, back toward goal legal, farther out sanctioned) and goal-line overhang.
 
 ## 3.2 Shot Reaction Pipeline (KD-2, KD-18)
 
@@ -1613,3 +1646,4 @@ standard rebound physics.
 | 0.20 | October 10, 2026 | ERR-011-002 / ERR-011-003 back-prop completion (owner-directed) | The July 27 code fixes' spec text, pending owner sign-off since then, lands now. **ERR-011-002:** new §3.1.0 defines `ballThreateningOwnGoal` / `ballSafelyUpfield` from one distance to the keeper's own goal, with a worked example; `Resting → Set`, `Recovering → Resting` and the `Resting` hold row read those predicates and no possession condition; new `Set → Resting` and `Anticipate → Set` rows. **ERR-011-003:** §3.3.1 dive direction comes from an explicit `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the ball's current Y, with a worked example; §3.3.6's predictor states its closing/horizon conditions; new `[GT] DIVE_PREDICTION_HORIZON_S` = 2.0 s in §3.4.4. Matches production; no code, constant value or schema change. ERR-011-004's text already landed through §3.2.1 (ERR-011-006/019). **Also (owner-directed):** §3.1.0 documents the Stage-0 anticipation stub (0.6 while `ballThreateningOwnGoal`, else 0), with its consequences: `ANTICIPATE_THRESHOLD` is inert below 0.6 and makes the row unreachable at or above it, rushes start from `Anticipate` in the near third, and the `ShotExecutedEvent` row is unwired so the stub is the only route into `Anticipate`. Includes a worked example. New `[GT] STAGE0_ANTICIPATION_SCORE_ACTIVE` row in §3.4.2. **Review fix:** §3.3.6's predictor and hold text state the at-plane exception (abs(dx) ≤ ε is an immediate crossing at t = 0 and the current Y, any velocity), which `Predict_BallAtPlane_IsImmediateCrossingAtCurrentY` locks; §3.4.4 catalogues `DEGENERACY_EPSILON_SQ` / `DEGENERACY_EPSILON`, the guard the predictor uses. | — |
 | 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |
 | 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |
+| 0.23 | October 18, 2026 | — | D-07 review fixes: §3.1.4 `distanceOutside` formula; acquisition snap of a legal catch is not a carry, carries sanction only an outward move; a ball overhanging its own goal line (≤ r) is on the line; restart spot clamped onto the pitch; worked examples | PR #515 review |

@@ -61,22 +61,35 @@ namespace TacticalDirector.MatchEngine
             return true;
         }
 
-        private static bool IsInsideOwnPenaltyArea(int team, Vector3 position)
+        private static bool IsInsideOwnPenaltyArea(int team, Vector3 position) =>
+            DistanceOutsideOwnPenaltyArea(team, position) == 0f;
+
+        // Metres from the ball centre to the keeper's own (inclusive) penalty area; 0 inside.
+        // A ball still in play can overhang its own goal line by up to one radius; that line
+        // belongs to the area, so the overhang is on the line rather than behind the area.
+        private static float DistanceOutsideOwnPenaltyArea(int team, Vector3 position)
         {
-            float depth = Mathf.Abs(position.x - OwnGoalX(team));
+            float signedDepth = (position.x - OwnGoalX(team)) * AttackDirectionX(team);
             float lateral = Mathf.Abs(position.y - MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
-            return position.x >= 0f && position.x <= MatchEngineConstants.PITCH_LENGTH_M &&
-                depth <= GoalkeeperConstants.PenaltyAreaDepthM &&
-                lateral <= GoalkeeperConstants.PenaltyAreaDepthM + BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
+            float dx = Mathf.Max(0f, Mathf.Max(signedDepth - GoalkeeperConstants.PenaltyAreaDepthM,
+                -BallPhysicsConstants.Ball.RADIUS - signedDepth));
+            float dy = Mathf.Max(0f, lateral -
+                (GoalkeeperConstants.PenaltyAreaDepthM + BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f));
+            return Mathf.Sqrt(dx * dx + dy * dy);
         }
 
-        // The contact gate handles catches/parries; a held ball remains a hand contact as it moves.
-        // Use the settled ball position, including Resolve's collision correction of its carrier.
-        private void CheckKeeperHandCarry()
+        // The contact gate adjudicates catches/parries at the ball. A held ball is then modelled at
+        // the keeper's XY, so the acquisition snap is not a carry: whistle only when a later move
+        // (locomotion or Resolve collision correction) takes the held ball out of, or farther from,
+        // the area than its previous attached position.
+        private void CheckKeeperHandCarry(Vector3 previousBallPosition)
         {
             int holder = _possessingAgentId;
-            if (holder >= 0 && _ball.State == BallStateType.Controlled && HasGoalkeeperHandControl(holder) &&
-                !IsInsideOwnPenaltyArea(_teamIds[holder], _ball.Position))
+            if (holder < 0 || _ball.State != BallStateType.Controlled || !HasGoalkeeperHandControl(holder))
+                return;
+            int team = _teamIds[holder];
+            if (DistanceOutsideOwnPenaltyArea(team, _ball.Position) >
+                DistanceOutsideOwnPenaltyArea(team, previousBallPosition))
                 TryKeeperHandContact(holder, _ball.Position);
         }
 
@@ -91,7 +104,10 @@ namespace TacticalDirector.MatchEngine
             float lateral = Mathf.Abs(contact.y - MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
             float halfGoal = BallPhysicsConstants.Pitch.GOAL_WIDTH * 0.5f;
             bool inside = IsInsideOwnPenaltyArea(team, contact);
-            Vector2 spot = new Vector2(contact.x, contact.y);
+            // A ball overhanging a boundary line is still in play on that line: restart on the pitch.
+            Vector2 spot = new Vector2(
+                Mathf.Clamp(contact.x, 0f, MatchEngineConstants.PITCH_LENGTH_M),
+                Mathf.Clamp(contact.y, 0f, MatchEngineConstants.PITCH_WIDTH_M));
             // Law 13: an attacking IFK inside the goal area is taken on its parallel boundary.
             if (inside && depth < MatchEngineConstants.GOAL_AREA_DEPTH_M &&
                 lateral <= MatchEngineConstants.GOAL_AREA_DEPTH_M + halfGoal)
@@ -176,4 +192,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0 | 2026-10-16 | — | Separate own-release re-handling law; canonical history and IFK restart. |
 // | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 // | 1.2 | 2026-10-18 | — | D-07 option A: general outside-area contacts/carries, shared geometry and pending-state validation. |
+// | 1.3 | 2026-10-18 | — | D-07 review: goal-line overhang is on the line; restart spot clamped to the pitch; carries compare against the previous attached position. |
 #endregion

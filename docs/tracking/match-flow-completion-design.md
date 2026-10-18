@@ -1,7 +1,9 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 18, 2026 (v1.7 — D-07 option A: general outside-area handling and carries; existing v27 state and DFK event reused.)
+> **Last Updated:** October 18, 2026 (v1.8 — D-07 review: acquisition snap is not a carry; goal-line overhang is on the line; restart spot clamped onto the pitch.)
+
+> **Last Updated (prior):** October 18, 2026 (v1.7 — D-07 option A: general outside-area handling and carries; existing v27 state and DFK event reused.)
 
 > **Last Updated (prior):** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
 > **Last Updated (prior):** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
@@ -296,6 +298,10 @@ appended **event codes**, distinct from Ball Physics `RestartType`:
 
 Area depth is measured from the defending goal line, with inclusive penalty-area boundary:
 16.5 m `[FIXED: IFAB Law 1]` depth and half-width `16.5 m + goalWidth/2` `[DERIVED]`.
+A ball still in play that overhangs its own goal line by up to the 0.11 m radius
+`[CROSS: Ball Physics #1 Ball.RADIUS]` is on that line, and therefore inside. The restart spot is the
+contact clamped onto the pitch (`0–105` × `0–68` m) before any goal-area move; #11 §3.1.4 gives the
+`distanceOutside` formula and worked examples.
 The goal area uses 5.5 m `[FIXED: IFAB Law 1]` and half-width `5.5 m + goalWidth/2` `[DERIVED]`.
 Example: inside contact `(3, 34)` / `(102, 34)` m moves to `(5.5, 34)` / `(99.5, 34)` m.
 
@@ -326,8 +332,10 @@ The inclusive ball-position geometry is shared with §5.1; the keeper's body pos
 whether the ball is inside. The other team's penalty area does not permit handling.
 
 The actual-contact gate prevents ball mutation/acquisition for illegal catches, parries, deflections,
-spills and smothers. The attachment funnel additionally queues continuous carries after movement and
-after collision writeback. Resolve adjudicates at entry and again after collision reattachment, before
+spills and smothers. A legal catch is then snapped to the keeper's body; that acquisition snap is not a
+carry. The attachment funnel additionally queues continuous carries after movement and after collision
+writeback, only when the newly attached ball is outside and farther from the area than its previous
+attached position. Resolve adjudicates at entry and again after collision reattachment, before
 fouls or executor CONTACT can supersede the whistle. Use §5.1's restart teardown/taker selection and
 one `DIRECT_FREE_KICK` event; no goal-area relocation or indirect-goal restriction applies. A completed
 boundary crossing retains priority. The existing v27 pending fields suffice, including an offender
@@ -337,6 +345,8 @@ are unchanged. See [#11 §3.1.4](../specs/goalkeeper-mechanics/section-3.md#314-
 `KeeperOutsideAreaHandlingTests` locks both ends, contact versus keeper location, inclusive front/side
 lines, ordinary feet possession, smother rejection, carried exits, collision correction, same-frame
 distribution cancellation, direct goals, boundary precedence and deterministic pending-offence restore.
+The review fixes add the real catch composition with the keeper's body outside (hold and move back
+legal, farther out sanctioned) and goal-line overhang (on the line inside; outside DFK placed on the line).
 W8 C's hand timeout/corner and feet-only stall-guard amendment remain a separate change.
 
 **Local validation (October 18, 2026):** the Linux .NET gate compiles the changed engine; 252 selected
@@ -345,6 +355,11 @@ engine cases pass, including 46 new D-07 cases. Adjacent rebuilt suites pass 107
 consistency and tracked metadata checks pass; the new test/meta pair has a unique GUID. The normal
 pre-commit policy run reaches its 60-second wall-clock limit, so it is incomplete. Unity 6000.4.9f1
 host compilation/validation and landing remain pending; these local results do not close that gate.
+
+**Review-fix validation (October 18, 2026, Windows .NET shim):** before the fix, probes of the two
+review defects failed on both ends. After it, the keeper/handling selection passes: 254 MatchEngine
+cases (1 existing skip, all 52 D-07 cases included) and 107 GoalkeeperMechanics cases (27 existing
+skips). The whole-tree gate is left to PR CI; Unity host validation is still pending.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
@@ -782,3 +797,4 @@ project's established pattern for this environment.
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
 | 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |
+| 1.8 | 2026-10-18 | PR #515 review: acquisition snap of a legal catch is not a carry; carries sanction only an outward move; goal-line overhang is on the line; handling restart spot clamped onto the pitch. |
