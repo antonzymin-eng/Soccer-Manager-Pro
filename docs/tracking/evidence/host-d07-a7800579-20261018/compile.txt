@@ -1,0 +1,47 @@
+# Editor.log excerpts for PR #515 host validation at a7800579 (line numbers relative to each segment).
+
+## Segment 1 - first forced reimport (discarded; not used by any test run)
+Cause: dotnet-ci build outputs (bin/, obj/) left under src/ by a local Linux-shim gate run, seen through the Assets/Scripts junction.
+same-filename plugin errors: 74
+error CS lines: 657  (CS0433 UnityShim vs UnityEngine type clashes: 393)
+5449:*** Tundra build failed (3.48 seconds), 3 items updated, 1205 evaluated
+Remedy: removed every ignored/untracked generated file under src/ (git clean -fdX src plus bin.meta/obj.meta); porcelain for src then 0 entries.
+
+## Segment 2 - forced reimport after cleanup (the build every test run below used)
+1:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+320:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+453:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+455:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+458:*** Tundra build success (13.16 seconds), 385 items updated, 1203 evaluated
+459:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+460:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+461:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+462:Reloading assemblies after finishing script compilation.
+463:Reloading assemblies after forced synchronous recompile.
+684:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+685:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+1224:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+1268:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1270:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1272:*** Tundra build success (11.78 seconds), 75 items updated, 1203 evaluated
+1273:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+1274:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1275:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1276:Reloading assemblies after finishing script compilation.
+1277:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+shim build-output references: 0
+
+## Segment 3 - RequestScriptCompilation(CleanBuildCache) after all runs
+2:[ScriptCompilation] Requested script compilation because: Requested through public api
+933:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+935:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+979:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+1032:*** Tundra build success (66.83 seconds - 0:01:06), 948 items updated, 1203 evaluated
+1033:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1034:Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+1035:Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+1036:Reloading assemblies after finishing script compilation.
+1037:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+shim build-output references: 0

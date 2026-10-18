@@ -41,6 +41,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "pre-b-anchor-3974b78-20261013": ("manifest", FULL_MANIFEST),
     "w8-b-20261015": ("manifest", FULL_MANIFEST),
     "host-w8b-e58577de-20261017": ("manifest", FULL_MANIFEST),
+    "host-d07-a7800579-20261018": ("manifest", FULL_MANIFEST),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be
