@@ -1,8 +1,12 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
+> **October 16 — PR #511 re-handling amendment (2.21):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
+
+
 > **Created:** June 15, 2026
-> **W8 B status:** **B contract approved; dormant #5 executor/snapshot substrate corrected and green on CI 36337174267; landing-record head requires its own CI; #21/#11 live wiring remains next.**
-> **Last Updated:** September 28, 2026 (v2.19 — §5.Z.7 item 3 closed: FM-08 is Warning since W2 (Aug 12), so the 12 CI scenarios that declared it via blanket `ignoreFailingMessages` no longer suppress Error logs. Measured: only #6 FM-03 surfaced, downgraded by PR #467; 12/12 pass with it.)
+> **W8 B status:** **Approved six-policy wiring is implemented locally at `e54335b0`; the frozen comparison is complete and the full-sweep observer correction is validated. Final-head Unity 6000.4.9f1 validation remains pending.** See [implementation / evidence](w8-b-implementation-results.md). The historical #466 substrate compile does not validate this new source.
+> **Last Updated:** October 15, 2026 (v2.20 — live six-policy branch and measured e54335b0 comparison; final 86a9496e test/comment-only closeout; fresh full CI / Unity validation pending.)
+> **Prior update:** September 28, 2026 (v2.19 — §5.Z.7 item 3 closed: FM-08 is Warning since W2 (Aug 12), so the 12 CI scenarios that declared it via blanket `ignoreFailingMessages` no longer suppress Error logs. Measured: only #6 FM-03 surfaced, downgraded by PR #467; 12/12 pass with it.)
 > **Prior W8 landing record:** September 27, 2026 (v2.18 — W8 B landing record: corrected head 795ca64 passed CI 36337174267 including the functional gate; Unity skipped normally. Codec proof test v1.22 now uses distinct non-default AgentId/TeamId/request-target/effective-target sentinels. Test/tracking only; no runtime/schema/RNG change. Landing-record head requires its own CI.)
 > **Prior W8 snapshot-proof update:** September 27, 2026 (v2.17 — W8 B snapshot-proof correction after CI 36328692042: three pre-Snapshot CaptureDurablePayload probes were empty/vacuous and are replaced by a >0-byte guarded direct PassExecutor writer/reader round-trip covering all v24 GK-distribution fields. MatchEngine v1.94 exposes only that codec internally for tests. No runtime/schema/RNG change; fresh CI required.)
 > **Prior W8 review update:** September 27, 2026 (v2.16 — W8 B dormant #5 review hardening after #465 merge: direct executor behavior locks, direct v24 payload probes and a save/restore continuation through CONTACT. Pre-merge CI 36295057956 passed; fresh merged-head CI pending. No #21 producer, #11 host wiring, DT suppression, Resolve event or gameplay activation yet.)
@@ -333,7 +337,13 @@ requires adding read/restore seams — parallel to
    merely a sixfold acceleration: after frame 72, the first tactical pass following an ordinary claim
    already satisfies `currentFrame - floor(claimFrame/6) >= 60`.
 2. While a keeper has live hand control, suppress only that keeper's Decision Tree on-ball
-   PASS/SHOOT/DRIBBLE/HOLD dispatch. Keeper feet-possession remains ordinary.
+   PASS/SHOOT/DRIBBLE/HOLD dispatch and safely interrupt any unstruck foot action, as required by
+   the approved decision's exclusive hand-control rule. Keeper feet-possession remains ordinary.
+   Implementation: before Resolve executor updates, cancel an ordinary #5 WINDUP/CONTACT through
+   `CancelOrdinaryPassForHandControl` (`CancelReason.HandControlTakenOver`, appended ordinal 3),
+   and an unstruck #6 shot through `CancelForHandControl`. Both settle as Cancelled/Idle. The shot
+   path emits no tackle-only `ShotCancelledEvent`; dedicated #5 distribution is preserved. No new
+   deferred latch is needed: the existing canonical hand/executor state determines the handover.
 3. Read #21 `GkDistributionPolicy`, run its deterministic total selector, and commit #11
    `DistributeIntent` when its tactical delay and #11 release gate are both satisfied
    (**ERR-011-016**). Zero RNG draws.
@@ -1988,6 +1998,8 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
+| 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |
 | 2.18    | 2026-09-27 | —      | **W8 B landing record.** Corrected head `795ca64` passed CI `36337174267`, including the PR functional gate; Unity skipped normally. Codec test v1.22 strengthens sentinel discrimination with AgentId 11, TeamId 1, request target 4 and effective target 6. Test/tracking only; landing-record head requires its own CI. No gameplay/schema/RNG delta. |
 | 2.17    | 2026-09-27 | —      | **W8 B snapshot-proof correction.** CI `36328692042` showed v1.20's three “direct pre-tick payload” probes never reached serialization because `CaptureDurablePayload` is populated only by Snapshot phase. Replace them with a direct canonical PassExecutor write/read round-trip: nonzero-byte guard, byte divergence, exact reader/writer length, every v24 GK field. Codec visibility private→internal only for tests. No gameplay/schema/RNG delta. |

@@ -1,7 +1,9 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
+> **Last Updated:** October 16, 2026 (v1.6 — PR #511 / ERR-011-020 own-release re-handling restart contract; snapshot body v27, save format v3.)
+
+> **Last Updated (prior):** October 15, 2026, later (v1.5 — **PR #505 review fix.** Requests that share a stoppage share its window, including a team's third; lock 12 gains two mirrored tests. Prior entry below.)
 > **Last Updated (prior):** October 15, 2026 (v1.4 — **§6 deferred substitutions implemented by PR #505.** New §6.5.1
 > maps all thirteen acceptance locks to their tests; schema v25 is taken; saves between ticks use match save
 > format v3. Prior entry below.)
@@ -279,6 +281,41 @@ three non-`None` results now route through `RestartResolver` + `ApplyRestart`
 + `RestartAwardedEvent` instead of being silently ignored.
 
 ---
+
+### 5.1 Keeper own-release re-handling
+
+This October 16 owner-approved amendment extends `RestartAwardedEvent` beyond the boundary-only
+scope above. Physics queues an actual prohibited hand contact; Resolve applies `RestartCue.FreeKick`
+and publishes Tier A `RestartAwardedEvent` (ordinal 0x19, unchanged payload layout/version) with these
+appended **event codes**, distinct from Ball Physics `RestartType`:
+
+| RestartKind | Award and placement |
+|---|---|
+| 5, `INDIRECT_FREE_KICK` | Opponents, at contact inside the keeper's own penalty area; inside the goal area, move X to its parallel goal-area line, preserving Y. |
+| 6, `DIRECT_FREE_KICK` | Opponents, at contact outside that area; covers only own-release re-handling. General outside-area handling remains D-07. |
+
+Area depth is measured from the defending goal line, with inclusive penalty-area boundary:
+16.5 m `[FIXED: IFAB Law 1]` depth and half-width `16.5 m + goalWidth/2` `[DERIVED]`.
+The goal area uses 5.5 m `[FIXED: IFAB Law 1]` and half-width `5.5 m + goalWidth/2` `[DERIVED]`.
+Example: inside contact `(3, 34)` / `(102, 34)` m moves to `(5.5, 34)` / `(99.5, 34)` m.
+
+`ApplyRestart` tears down possession and hand episodes, executes eligible queued substitutions, then
+selects the nearest eligible, non-sent-off player of the awarded team; squared XY distance is primary,
+ascending slot index breaks ties. No special taker or wall is added. The handling whistle clears both
+the captured foul flag and its already-decided flag before returning; that losing candidate cannot
+produce a second whistle/card next frame. A ball already wholly out takes the boundary restart instead.
+
+For an IFK, remember the selected taker until another player physically touches the ball. The taker's
+own touches do not lift the indirect restriction. A direct attacking goal becomes the defenders' goal
+kick; a direct own goal becomes an opponents' corner. A subsequent other-player touch permits ordinary
+goal adjudication. Every restart clears the old handling/indirect history before setting any new taker.
+
+Snapshot body **v27** appends releasing keeper (I32), queued offender (I32), contact XYZ (three F32),
+and IFK taker (I32), in that order: 24 bytes. No new avoidance latch is serialized. The existing strict
+body version gate refuses older bodies; outer match-save format remains **v3**. Round-trip validation
+rejects invalid IDs/non-finite coordinates, a pending offender different from the releasing keeper, or
+a nonzero pending position without an offender. Replacing a restricted keeper or indirect taker clears
+that player's history rather than transferring it to the incoming substitute.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
@@ -714,3 +751,4 @@ project's established pattern for this environment.
 | 1.3 | 2026-10-13 | §6 replaced by the approved deferred-substitution contract (`match-flow-s6-substitution-contract-draft.md` v0.3 decisions S-1, R1 with fallback (1), W1, E1, L1), per the owner's October 13 step-4 instruction: request/execution definitions, Law 3 windows, cancellation, events, client outcomes, v25 snapshot obligations and thirteen acceptance locks. Row added October 15 (omitted when the text landed on the PR #505 branch). |
 | 1.4 | 2026-10-15 | PR #505 implements §6. The §6 status sentence records the implementation; new §6.5.1 maps each lock to its test, including the locks completed October 15 (1, 2, 3, 4, 7, 8, 11, 13). `SubstitutePlayer` is internal (§6.4). Saves between ticks use match save format v3 (`match-save-file-design.md` KD-8). |
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
+| 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |

@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.PassMechanics.Tests",
     "references": [
         "TacticalDirector.PassMechanics",
+        "TacticalDirector.EventSystem",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.DeterministicSim",

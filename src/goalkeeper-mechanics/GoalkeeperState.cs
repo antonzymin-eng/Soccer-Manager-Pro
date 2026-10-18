@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperState.cs
+// Modified: 2026-10-15 (accepted #5 distribution windup documentation)
 // Created:  2026-05-28
 // Modified: 2026-05-28
 // Author:   —
@@ -36,7 +37,7 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>Contact resolved below CATCH_THRESHOLD, or ground re-entry after failed save. §3.1.</summary>
         Recovering,
 
-        /// <summary>DecisionTree DistributeIntent committed; GK is releasing ball. §3.1 / §3.8.</summary>
+        /// <summary>Accepted #5 distribution request; hand control remains held through WINDUP until CONTACT. §3.1 / §3.8.</summary>
         Distributing,
 
         /// <summary>RushIntent committed; GK moving toward ball/attacker. §3.1 / §3.7.</summary>
@@ -53,4 +54,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1 | 2026-10-15 | — | Comment-only: Distributing is an accepted #5 windup with retained hand control. |
 #endregion

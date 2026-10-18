@@ -1,0 +1,29 @@
+{
+  "anchor": {
+    "claims": 135,
+    "discipline": {
+      "fouls": 49,
+      "yellows": 7,
+      "straightReds": 2,
+      "secondYellowDismissals": 0
+    }
+  },
+  "bridge": {
+    "claims": 135,
+    "discipline": {
+      "fouls": 49,
+      "yellows": 7,
+      "straightReds": 2,
+      "secondYellowDismissals": 0
+    }
+  },
+  "B": {
+    "claims": 348,
+    "discipline": {
+      "fouls": 46,
+      "yellows": 6,
+      "straightReds": 1,
+      "secondYellowDismissals": 0
+    }
+  }
+}

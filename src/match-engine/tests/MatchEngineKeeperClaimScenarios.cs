@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs
+// Modified: 2026-10-15 (explicit restart closes claim observation even with same keeper taker)
 // Created:  2026-08-03
 // Modified: 2026-09-15 (W6 review closure — retain Controlled attachment lock and restore held-claim own-goal consequence guard)
 // Modified: 2026-09-15 (W6 compatibility — held claims now assert Controlled attachment rather than treating keeper carry across the goal line as stale-shot travel)
@@ -180,6 +181,10 @@ namespace TacticalDirector.MatchEngine
                 claimingAgent[t] = -1;
             }
 
+            var epochs = new ClaimRestartEpoch(engine);
+            engine.TestOnly_W8StageAObserver = epochs.Observe;
+            var windowEpoch = new int[gkCount];
+
             int prevHome = 0;
             int prevAway = 0;
 
@@ -225,10 +230,11 @@ namespace TacticalDirector.MatchEngine
                         continue;
                     }
 
-                    // The held-state window closes as soon as possession ends. While it remains
+                    // The held-state window closes on loss or explicit restart, including a retained taker ID. While it remains
                     // open, W6's Controlled contract says the ball must stay physically attached
                     // to that keeper; independent travel would be the old ERR-011-008 shape again.
-                    if (holder != claimingAgent[t] || tick - claimTick[t] > ClaimWindowTicks)
+                    if (!ShouldObserveHeldClaim(engine, claimingAgent[t], tick, claimTick[t],
+                        windowEpoch[t], epochs.Current))
                     {
                         claimingAgent[t] = -1;
                         claimTick[t] = int.MinValue;
@@ -268,10 +274,10 @@ namespace TacticalDirector.MatchEngine
                         }
 
                         // The claim may already have ended later in this same RunTick (for example,
-                        // a restart clears possession before the scenario can observe the tick). Such
+                        // a restart ends the physical claim before observation while retaining the taker ID). Such
                         // a claim has no held-state observation to test. Open the W6 attachment/outcome
                         // window only when the keeper is still the holder at this observation boundary.
-                        if (agentId >= 0 && holder == agentId)
+                        if (agentId >= 0 && holder == agentId && epochs.ClaimAt(t) == epochs.Current)
                         {
                             heldClaimsObserved++;
                             if (!IsControlledAtHolder(engine, agentId))
@@ -284,6 +290,7 @@ namespace TacticalDirector.MatchEngine
                             {
                                 claimingAgent[t] = agentId;
                                 claimTick[t] = tick;
+                                windowEpoch[t] = epochs.Current;
                             }
                         }
                         else
@@ -296,7 +303,34 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private static bool IsControlledAtHolder(MatchEngine engine, int agentId)
+        // A restart ends the physical claim even if the same roster slot becomes its taker.
+        // Do not gate on BallState here: an unexpected loss of Controlled while the claim is live
+        // must still fail the unchanged attachment predicate. Score attribution remains above closure.
+        internal static bool ShouldObserveHeldClaim(MatchEngine engine, int agentId, int tick,
+            int startTick, int epochAtClaim, int restartEpoch) =>
+            agentId >= 0 && engine.PossessingAgentId == agentId
+            && tick - startTick <= ClaimWindowTicks && epochAtClaim == restartEpoch;
+
+        internal sealed class ClaimRestartEpoch
+        {
+            private readonly MatchEngine _engine;
+            private readonly int[] _claimEpoch = new int[GoalkeeperMechanics.GoalkeeperConstants.MaxGkAgents];
+            internal int Current { get; private set; }
+            internal ClaimRestartEpoch(MatchEngine engine)
+            {
+                _engine = engine;
+                for (int i = 0; i < _claimEpoch.Length; i++) _claimEpoch[i] = -1;
+            }
+            internal int ClaimAt(int team) => _claimEpoch[team];
+            internal void Observe(W8StageAEvent e)
+            {
+                if (e.Kind == W8StageAKind.Restart) Current++;
+                else if (e.Kind == W8StageAKind.HandClaim)
+                    _claimEpoch[_engine.TestOnly_W8TeamId(e.Agent)] = Current;
+            }
+        }
+
+        internal static bool IsControlledAtHolder(MatchEngine engine, int agentId)
         {
             if (engine.BallView.State != BallStateType.Controlled)
             {
@@ -345,6 +379,7 @@ namespace TacticalDirector.MatchEngine
 }
 
 #region VersionHistory
+// | 1.4 | 2026-10-15 | — | Explicit restart epochs close the claim observation before same-keeper taker designation; attachment predicate and pre-closure own-goal attribution unchanged. |
 // | Version | Date       | Author | Notes                                                              |
 // | 1.3     | 2026-09-15 | —      | W6 review closure: retained Controlled attachment structure and     |
 // |         |            |        | restored the held-claim own-goal consequence guard; score changes   |

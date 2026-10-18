@@ -1,4 +1,5 @@
 // File:     src/event-system/RestartAwardedEvent.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-07-13
 // Modified: 2026-07-13
 // Author:   —
@@ -14,13 +15,19 @@ using UnityEngine;
 namespace TacticalDirector.EventSystem
 {
     /// <summary>
-    /// Published when the ball leaves the field of play for a throw-in, corner, or goal kick and the
+    /// Published when a boundary restart or goalkeeper re-handling free kick is awarded and the
     /// restart is applied. Tier A: included in the per-tick digest and SnapshotPayload (FR-EVT-011/012).
     /// Ordinal <c>0x19</c>. Produced from the <c>Resolve</c> phase.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct RestartAwardedEvent : IEventA
     {
+        /// <summary>[FIXED] Law 12/13 indirect free kick. Event-only appended code;
+        /// boundary RestartType ordinals 0..4 remain unchanged.</summary>
+        public const byte INDIRECT_FREE_KICK = 5;
+        /// <summary>[FIXED] Outside-area re-handling: ordinary handball direct free kick.</summary>
+        public const byte DIRECT_FREE_KICK = 6;
+
         // ── 12-byte header (§2.4.1) — set by EventBus.Publish at enqueue time ────────
         /// <summary>Event type ordinal from Appendix A. Set by EventBus.</summary>
         public readonly byte   eventTypeOrdinal;
@@ -37,7 +44,8 @@ namespace TacticalDirector.EventSystem
 
         // ── Payload fields ────────────────────────────────────────────────────────
         /// <summary>Restart kind ordinal — mirrors <c>TacticalDirector.BallPhysics.RestartType</c>
-        /// (ThrowIn=1, GoalKick=2, Corner=3; KickOff/goals use GoalAwardedEvent instead).</summary>
+        /// (ThrowIn=1, GoalKick=2, Corner=3; KickOff/goals use GoalAwardedEvent instead).
+        /// Codes 5/6 identify indirect/direct free kicks from the separate re-handling law path.</summary>
         public readonly byte RestartKind;
         /// <summary>Team byte awarded the restart: 0=Home, 1=Away.</summary>
         public readonly byte AwardedTeam;
@@ -66,4 +74,5 @@ namespace TacticalDirector.EventSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-07-13 | —      | Initial implementation. |
+// | 1.1 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

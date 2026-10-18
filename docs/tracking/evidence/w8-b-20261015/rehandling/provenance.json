@@ -1,0 +1,84 @@
+{
+  "sourceCommit": "751b11435843b9b0ba2b64c06b7e5042358de58b",
+  "srcTree": "0b46dfe1418c3ab682df83f3b530985d494e55d1",
+  "beforeCommit": "e54335b051ed51a0c3c394ccdaa016cb8ae28245",
+  "beforeSrcTree": "4a9061afbf7dd43cef5451294a2857ae902d739b",
+  "regressionControl": "fff7cf5bac854f52d6e1124df75ea10c5e0947ed",
+  "sdk": "8.0.422",
+  "runtime": "8.0.28",
+  "nunit": "3.14.0",
+  "platform": "Linux x64",
+  "optimization": false,
+  "defines": [
+    "DEVELOPMENT_BUILD"
+  ],
+  "productionTarget": "netstandard2.1",
+  "testTarget": "net8.0",
+  "compiler": "Roslyn csc from generated asmdef project compile sets and reference closure",
+  "productionAssemblySha256": {
+    "TacticalDirector.DeterministicSim.dll": "06b17e70cb0f02f4c231480ef148bd03249331796c6ccaa6ecf5ae5ea48b0336",
+    "TacticalDirector.TacticalInstructions.dll": "83275f37708bf14442e65a5bc1aef45459c37ac7caae2921f6e7255592ad3f95",
+    "TacticalDirector.AgentMovement.dll": "d2f92b732042c28bf978df466b642b0543b9d1b9abca791ef6d915001d6564b2",
+    "TacticalDirector.DefensiveAI.dll": "b3a6a910709172e83a1d4b852bc8978d7ab38f4917b8110a6d055f8d84fd6aa2",
+    "TacticalDirector.EventSystem.dll": "e71f0074002716f5ef91bea90aa5cf8bf5b6631a235376245a67b15907888f7e",
+    "TacticalDirector.MatchEngine.dll": "29e8662ee6414bc74ea68c2bb3c10d4984146874c2775900a1e2246c12dcfb05",
+    "TacticalDirector.CollisionSystem.dll": "efc7368459283bfdb08680f4505336cf1c2fc5a5f20825860ee3baa3d937715f",
+    "TacticalDirector.HeadingMechanics.dll": "9731e41a57a2c4881e9c3cefea4e906abba99df2f49d006bf0583b85922074b9",
+    "TacticalDirector.PressingAI.dll": "1155fad0ca0d48b3ce602b30d98f3903b3dab212df985af53d368d381382193a",
+    "TacticalDirector.TestingStrategy.dll": "f8b8bea257cc4357f3a3718cc285407b5f5022f211da898ad48c093554ef4ee7",
+    "TacticalDirector.PassMechanics.dll": "4590cb8fb65c13dae704d02cd0b9ecfcf178a3339a26aeeae2647c7adc644cac",
+    "TacticalDirector.BallPhysics.dll": "129a4d38fdc1e6b308030c8772c06a7a7437e24487a1c92bdc407087dcf5676e",
+    "TacticalDirector.FirstTouch.dll": "1647ef19614cb3860607a481726878639a3fb77e22863bfd2ae55ae5d6dbbeb9",
+    "TacticalDirector.DecisionTree.dll": "7b53a25d4183a3a6a985bd401afeb6d99c9295703ddfa312fd591fe811a36a60",
+    "TacticalDirector.PlayerDatabase.dll": "8a3dd0fe055792ec9eb48bbe3b937c7cce15825a08050241ad229c3152a933ca",
+    "TacticalDirector.AttackingAI.dll": "aae94e711864ea2eb1efff2db3a751cfd9baa2cd65a454ed6023e45676421e7b",
+    "TacticalDirector.PositioningAI.dll": "3585b419e5704bc99a6218a3999ee2c551772721143c82d5b98133b4bdbb6cec",
+    "TacticalDirector.GoalkeeperMechanics.dll": "67eb5283502da6ada8e7ca28fde8483ebccb89e29fe30e94c9aa7f6e9e33b083",
+    "TacticalDirector.ShotMechanics.dll": "af35c7c13ce25198d4857a0365d248ba85274d8d5a5697b981b2b3d48b3c0bcb",
+    "TacticalDirector.PerformanceOptimization.dll": "76bc2b283bb5e484e581556f46ae9ee3b5880aca1c671e58a51f2328b31928d5",
+    "TacticalDirector.ProjectConstants.dll": "7ed40219e791fb33ce5ecd85b015eafa8e832a3e55e20abf19171bffd7dd73ac",
+    "TacticalDirector.PerceptionSystem.dll": "750d89226c0aa72d765691132270dc6d519f8cf4f0566a4fc96d9daf57f91559"
+  },
+  "engineFocusedPassed": 200,
+  "goalkeeperPassed": 107,
+  "goalkeeperExistingSkips": 27,
+  "regressionControlTotal": 12,
+  "regressionControlFailed": 10,
+  "regressionControlPassed": 2,
+  "unityStatus": "Not run: no connected Unity editor/host tool in this session.",
+  "measurements": {
+    "before": {
+      "status": "Passed",
+      "durationSeconds": 779.055075,
+      "matches": 6,
+      "ticksPerMatch": 324000,
+      "source": "e54335b051ed51a0c3c394ccdaa016cb8ae28245"
+    },
+    "after": {
+      "status": "Passed",
+      "durationSeconds": 783.095842,
+      "matches": 6,
+      "ticksPerMatch": 324000,
+      "source": "751b11435843b9b0ba2b64c06b7e5042358de58b"
+    },
+    "controlMatchesArchivedCorrectedB": true
+  },
+  "tooling": {
+    "initial": {
+      "passed": 346,
+      "failed": 0
+    },
+    "finalDefaultGit": {
+      "version": "2.51.1",
+      "passed": 345,
+      "failed": 1,
+      "failure": "test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required"
+    },
+    "finalSystemGit": {
+      "version": "2.43.0",
+      "passed": 346,
+      "failed": 0
+    },
+    "hookAndToolingSourceChanged": false
+  }
+}

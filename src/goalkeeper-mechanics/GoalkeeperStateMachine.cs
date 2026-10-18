@@ -1,4 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperStateMachine.cs
+// Modified: 2026-10-15 (W8 B live distribution)
+// Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
 // Modified: 2026-05-28
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: parameters renamed from the KEEPER's perspective, new Anticipate → Set exit, Recovering → Resting re-anchored to the far third)
@@ -138,13 +140,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         return GoalkeeperState.Distributing;
                     }
-                    // HandsOnBall → HandsOnBall: forced release after 6-second rule (handled by orchestrator,
-                    // but state remains HandsOnBall until distribution is resolved — transition happens in 60 Hz)
-                    if (claimTick >= 0 && (currentTick - claimTick) >= GoalkeeperConstants.GK_HOLD_MAX_TICKS)
-                    {
-                        // Forced release — return Distributing to signal orchestrator must distribute
-                        return GoalkeeperState.Distributing;
-                    }
+                    // The legacy timeout is signalled by #11; the engine owns the physical
+                    // backstop. Only an accepted #5 request can enter Distributing.
                     return GoalkeeperState.HandsOnBall;
                 }
 
@@ -375,4 +372,6 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | keeper who swept a loose ball had NO exit and stood over it in Rushing for   |
 // |     |            |   | the rest of the match. A completion, not an abort: FR-GK-018 / KD-15 remain  |
 // |     |            |   | untouched, since nothing about the ball's trajectory ends the rush.          |
+// | 1.8 | 2026-10-15 | — | W8 B: no-intent expiry preserves HandsOnBall; only accepted execution distributes. |
+// | 1.9 | 2026-10-16 | — | Review cleanup: collapse redundant HandsOnBall timeout branch; accepted-request semantics unchanged. |
 #endregion

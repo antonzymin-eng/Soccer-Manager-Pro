@@ -1,0 +1,4 @@
+using System;
+using System.Reflection;
+using NUnitLite;
+class Runner { static int Main(string[] args) { var assembly=Assembly.LoadFrom(args[0]); var options=new string[args.Length-1]; Array.Copy(args,1,options,0,options.Length); return new AutoRun(assembly).Execute(options); } }

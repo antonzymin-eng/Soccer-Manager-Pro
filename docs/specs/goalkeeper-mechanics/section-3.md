@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 10, 2026 (v0.20 — completes the July 27 ERR-011-002/003 spec back-props: new §3.1.0 ball-region inputs, `Set → Resting` and `Anticipate → Set` rows, possession-free `Resting`/`Recovering` rows, §3.3.1 dive direction and `DIVE_PREDICTION_HORIZON_S`; also documents the Stage-0 anticipation stub; prior: v0.19 owner decision D-03, §3.1.1 states that `Recovering` is not claim-, rush- or save-eligible; prior: v0.18 ERR-011-019 §3.2.1 adds the `OnThreatDeflected` stamp producer)
-**Version:** 0.20
+**Last Updated:** October 16, 2026 (v0.21 — ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example)
+**Version:** 0.21
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -148,6 +148,48 @@ on PhysicsFrame(currentFrame):                  // 60 Hz
 ```
 
 ---
+
+### 3.1.3 Own-release hand restriction (ERR-011-020)
+
+**Owner approval:** Anton approved the separate own-release re-handling fix inside PR #511 on
+October 16, 2026, as recorded in the [review](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/511#issuecomment-6225792272).
+This amendment does not change D-03's recovery eligibility or C's eight-second/corner scope.
+
+The composition root records the identity of a keeper releasing `HandsOnBall` or a still-held
+`Distributing` episode. A release through the inherited six-second hand drop also arms the restriction;
+a feet-possession drop does not newly arm it. The keeper's own feet/body touches do not discharge it.
+A physical touch by any other player does: kick/header, first touch, acquisition, or applied collision
+response. A nearby agent or unexecuted intent is not a touch. Restarts and replacement of the restricted
+player clear the history. This does not model the separate deliberate teammate back-pass restriction.
+
+`IGoalkeeperBallSystem.CanUseHands(teamId)` reads that canonical history without a second latch.
+A restricted keeper forms no `SaveIntent` or `ClaimIntent`, supplies no Hand reach participant, and
+cannot enter a smother. Both clock boundaries cancel stale hand intents; a stale dive/airborne/smother
+enters ordinary recovery. Existing rush movement may finish at its locked target using the ordinary
+feet/first-touch/pickup paths. While restricted, any save is through ordinary legal body/feet collision
+physics; #11 does not manufacture a hand-shaped deflection, catch, parry or spill. No extra RNG site is
+introduced; prevented hand attempts consume none of the handling/dive draws they would have used.
+
+The actual-contact `TryHandContact(agentId, position)` gate remains a backstop before every
+ball-changing catch/parry/deflection/spill/smother. A handling quality below `MinHandlingQuality`
+is a miss: it performs no ball mutation and records no touch. If a prohibited contact is reached,
+Physics queues it and Resolve awards an opponents' IFK inside the keeper's own penalty area, or a DFK
+outside. A completed boundary crossing takes precedence. The handling whistle discards a captured
+same-frame tackle/collision foul candidate, including its decided flag, so it cannot award another
+restart or delayed card on the next frame. This is the Stage-0 single-offence precedence rule.
+
+The [restart contract](../../tracking/match-flow-completion-design.md#51-keeper-own-release-re-handling)
+owns event codes, placement, taker selection and direct-goal prevention. The outside-area DFK covers
+**only own-release re-handling**; general outside-area handling remains roadmap decision D-07.
+Snapshot body v27 stores the restriction, pending offender/contact point and IFK taker. Save-file
+format stays v3; incompatible snapshot bodies use the existing strict version refusal.
+
+**Worked example (both ends):** team 0's keeper releases at `(10, 34)` m. With no intervening player
+touch, the ball returns to `(12, 34)` m. The keeper forms no hand intent and collects with the feet;
+the restriction remains. Team 1's mirrored example uses `(95, 34)` then `(93, 34)` m. Once a teammate
+or opponent actually touches the ball, hand intent formation resumes. If the backstop instead receives
+an illegal hand contact at `(3, 34)` / `(102, 34)` m, Law 13 places the IFK at `(5.5, 34)` /
+`(99.5, 34)` m on the goal-area line. No direct goal from that IFK is accepted.
 
 ## 3.2 Shot Reaction Pipeline (KD-2, KD-18)
 
@@ -1535,3 +1577,4 @@ standard rebound physics.
 | 0.18 | October 10, 2026 | ERR-011-019 spec-text drift | §3.2.1 listed two stamp producers. W4 (PR #403) had added a third, `GoalkeeperMechanics.OnThreatDeflected`, which always overwrites and does not set the pending-shot flag. W4 also made the threat-onset fallback visibility-owned and made a screened armed tick clear the stamp unless a dive is in flight. §3.2.1 now describes all three producers and the screened-clear rule, with a worked example. Spec text only; code unchanged. Determinism impact: none. | — |
 | 0.19 | October 10, 2026 | Owner decision D-03 | §3.1.1 records that the missing `Recovering` → `Anticipate`/`Diving`/`Rushing`/claim rows are intentional: a `Recovering` keeper commits no claim or rush and starts no dive until it exits to `Set` or `Resting` (both exits named), while remaining an ordinary agent for Match Engine first touch and pickup. Save commitment is documented as ungated: a `SaveIntent` may be held during `Recovering` and dives only after exit, matching the engine. A cause-split and gating save commitment are D-08 candidates after W8 B. Clarification of existing behavior; no code, constant or schema change. Packet: `docs/tracking/pre-b-decision-packets.md`. | — |
 | 0.20 | October 10, 2026 | ERR-011-002 / ERR-011-003 back-prop completion (owner-directed) | The July 27 code fixes' spec text, pending owner sign-off since then, lands now. **ERR-011-002:** new §3.1.0 defines `ballThreateningOwnGoal` / `ballSafelyUpfield` from one distance to the keeper's own goal, with a worked example; `Resting → Set`, `Recovering → Resting` and the `Resting` hold row read those predicates and no possession condition; new `Set → Resting` and `Anticipate → Set` rows. **ERR-011-003:** §3.3.1 dive direction comes from an explicit `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the ball's current Y, with a worked example; §3.3.6's predictor states its closing/horizon conditions; new `[GT] DIVE_PREDICTION_HORIZON_S` = 2.0 s in §3.4.4. Matches production; no code, constant value or schema change. ERR-011-004's text already landed through §3.2.1 (ERR-011-006/019). **Also (owner-directed):** §3.1.0 documents the Stage-0 anticipation stub (0.6 while `ballThreateningOwnGoal`, else 0), with its consequences: `ANTICIPATE_THRESHOLD` is inert below 0.6 and makes the row unreachable at or above it, rushes start from `Anticipate` in the near third, and the `ShotExecutedEvent` row is unwired so the stub is the only route into `Anticipate`. Includes a worked example. New `[GT] STAGE0_ANTICIPATION_SCORE_ACTIVE` row in §3.4.2. **Review fix:** §3.3.6's predictor and hold text state the at-plane exception (abs(dx) ≤ ε is an immediate crossing at t = 0 and the current Y, any velocity), which `Predict_BallAtPlane_IsImmediateCrossingAtCurrentY` locks; §3.4.4 catalogues `DEGENERACY_EPSILON_SQ` / `DEGENERACY_EPSILON`, the guard the predictor uses. | — |
+| 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |

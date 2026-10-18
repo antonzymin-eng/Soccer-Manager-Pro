@@ -1,5 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
+> **October 17 — PR #511 host-closeout status (v0.70):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; Unity closure is met at `e58577de` ([host evidence](evidence/host-w8b-e58577de-20261017/README.md)); final docs-head Linux CI and merge remain pending. Step 7 is not landed; D-07 general outside-area handling is separate.
+
+
 > **Created:** July 25, 2026
 > **Status:** ROADMAP (meta-planning — the same governance class as
 > `management-layer-spec-roadmap.md`). This document designs no system. It sequences **already-approved
@@ -276,19 +279,25 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | 4 / substitutions | ✅ **Landed with PR #505 (October 15, 2026).** [Match-flow §6](match-flow-completion-design.md) approved October 13; serialized requests (schema v25), stoppage execution with Law 3 windows, client outcomes and the save format v3 off-tick overlay implemented, with all thirteen §6.5 locks | Approved execution contract and final-head host slot; **not** a pre-B prerequisite: the census found no affected requests (October 10, 2026) | No mid-play roster replacement; exactly-once execution/cancellation and restore tests; host compile passes |
 | 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; finance T3b2's final-head host compile is closed (PR #503 merged October 15; amounts default off, enablement a separate decision), progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
 | 6 / engine baseline | ✅ **Frozen October 13, 2026 at `3974b78`** ([w8-stage-a-baseline-results.md](w8-stage-a-baseline-results.md), last section; `evidence/pre-b-anchor-3974b78-20261013/`): Linux .NET lane, frozen `520ba31c` W8 instrument, per-tick stall check clean. Step 2a is closed; settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | ~~D-03/D-04/D-05~~ decided October 10, 2026 with no pre-B behavior change; any relevant invalidator (substitution census done October 10: no affected requests) | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
-| 7 / W8 B | Wire six policies under the approved [W8 B contract](w8-goalkeeper-distribution-decision.md), including receiver validation, suppression, canonical CONTACT, terminal feedback, clocks and restore; measure A→B and LongKick landing | Step 6, B contract/remaining #466 obligations and final-head host slot; **no #7/#8 reaction gate** | Governing tests, compile and isolated A→B evidence complete |
-| 8 / W8 C | Separate #11 Law-12 amendment and hand-control implementation; measure B→C | Step 7 evidence, approved C law contract, D-07 closeout disposition and final-head host slot | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
+| 7 / W8 B | Wire six policies under the approved [W8 B contract](w8-goalkeeper-distribution-decision.md), including receiver validation, suppression, canonical CONTACT, terminal feedback, clocks and restore; measure A→B and LongKick landing | Step 6/B contract and #466 technical obligations met; host validation at `e58577de`; final docs-head Linux CI and PR #511 merge remain; **no #7/#8 reaction gate** | Governing tests, compile and isolated A→B evidence complete |
+| 8 / W8 C | Separate #11 Law-12 amendment and hand-control implementation; measure B→C | Step 7 evidence, approved C law contract, D-07 closeout disposition, [re-handling scope/deferral disposition before comparison freeze](open-issues.md#gk-rehandling-law12) and final-head host slot | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
 | 9 / engine fidelity | #441 reachability before W9; implement W9 and W10; land owner-included #434/#440 fixes separately | W9: #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. Each landing has its own host slot | Included behavior is reachable, tested and separately attributable |
 | 10 / engine and quick-sim | Freeze the **D-08 selected PM-2 engine anchor**, complete its included calibration, then recapture A4a/refit under [KD-7/KD-7a/KD-8](league-bootstrap-design.md) | Selected scope complete; D-09 shape disposition; declared compute slot | Current corpus, mean/shape verdicts, governed model and deterministic locks match that anchor |
 | 11 / PM-2 | C3/C4 converge: new game, fixtures, play/quick-resolve, report, table/suspensions/board objectives, 38 rounds and save/resume | Client/season criteria in §1; D-08/D-09 and fit valid for selected anchor; final-head host acceptance | Existing playable-season criteria pass; D-10 save-compatibility decision is recorded |
 | 12 / PM-3 and maintenance | Multi-season progression, finances, training, medical, transfers, retirement/regeneration; localization/#488 and #19 A3.4 continue in parallel | Owning career contracts and host slots; release evidence follows acceptance | Multi-season acceptance, then stability/performance/release evidence |
 
+**Step 7 branch progress — October 17, 2026:** all six policies and the approved re-handling/avoidance amendment are implemented and measured in PR #511. [Governing Unity evidence](evidence/host-w8b-e58577de-20261017/README.md) at `e58577de` records 0 compile errors, W8 B 99/99 and re-handling 42/42; effective MatchEngine 774 passed / 16 skipped / 1 existing inconclusive after its sole sleep-interrupted case passes a same-head rerun. The seven EventSystem failures match main and remain a separate issue. Runtime trees are identical on the evidence/docs successors. Final docs-head Linux CI and merge remain pending: **step 7 is not landed**; step 8 remains separate. [Implementation / comparison record](w8-b-implementation-results.md).
+
+**Step 7 measurement review:** [same-lane frozen-observer closeout](evidence/w8-b-20261015/measurement-closeout/README.md) reproduces all twelve fingerprints; hand claims/distributions are 348/348 → 126/126. All 126 restrictions clear on player touch; twelve opponent-touch windows contain eight shots and six goals. Both measurement questions are answered without a gameplay change. Final docs-head CI and merge still gate landing.
+
 **Specification gates.** #7/#8 correct the actual `KeeperPerceptionGate` → `SaveAvailable`
-producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1
-omits `OnThreatDeflected` and the visible-threat fallback rule; its reaction correction also gates
-**W10**, not W8 B. Land that bounded #11 documentation correction before the C law-amendment PR,
-or rebase C onto it and reconcile all shared version/history citations before C review. The
-reaction correction alone is not a behavioral prerequisite for C. #3 FR-03 omits production
+producer path and preserve raw save geometry for the rush veto; they gate **W10**. #11 §3.2.1's
+reaction-text correction **landed October 10, 2026**, section 3 **v0.18**, `ERR-011-019`:
+`OnThreatDeflected`, visibility-owned fallback and screened-clear behavior are documented.
+The condition to land that correction before C is **done**. Draft C from PR #511's head or after
+its merge, and reconcile #511's shared #11 version/history rows before C review. D-07 is required
+at C closeout, not for drafting. The reaction correction is a W10 gate already met; it is not a
+behavioral prerequisite for C. #3 FR-03 omits production
 `AgentBallCollisionData.AgentPosition` (the agent center, separate from contact point); shot-outcome
 deflection already consumes it, so that documentation correction has **no blocking consumer**.
 Land it any time. Do not reopen already-completed #13 work.
@@ -699,6 +708,11 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.70 | October 17, 2026 | Resolve both W8 B measurement questions on Linux .NET with the exact frozen instrument; mark the October 10 #11 v0.18 / ERR-011-019 prerequisite done; C drafts follow #511, D-07 at C closeout. Final-head CI and merge remain. |
+| v0.69 | October 17, 2026 | — | PR #511 governing Unity closure at e58577de; identical runtime trees on evidence/docs successors. Final Linux CI/merge remain; step 7 not landed. |
+| v0.68 | 2026-10-16 | — | PR #511 adds the separately owner-approved own-release law and avoidance; v27 supersedes B v26; post-law B→C anchor and final-head CI/Unity gates remain explicit. |
+| v0.67 | October 16, 2026 | PR #511 review: separately track the own-release re-handling Law 12 gap; require its scope/deferral disposition before the B→C baseline freeze. No C approval, gameplay or D-03 change. |
+| v0.66 | October 15, 2026 | Step 7 local branch progress: all six policies wired, pending-foot-action interruption included, frozen-anchor evidence linked; final-head Unity validation remains open. |
 | v0.65 | October 15, 2026 | PR #510 review: remove the completed T3b2 final-head host check from D4's outstanding work; retain separate enablement/balance and T3c+ work. |
 | v0.64 | October 15, 2026 | #40 T3b2 host compile closed: PR #503 merged after its final-head Unity 6000.4.9f1 compile and EditMode run. Step 5 and D4 updated; enabling `DeepRevenueEnabled` stays a separate decision. |
 | v0.63 | October 15, 2026 | Step 4 (substitutions) landed with PR #505: match-flow §6 implemented with schema v25 and match save format v3; the next free snapshot version is v26. The deferred-substitution contract paragraph now records the landing. |

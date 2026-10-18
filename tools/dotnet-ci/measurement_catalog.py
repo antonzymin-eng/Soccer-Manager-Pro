@@ -21,6 +21,14 @@ class Instrument:
 
 
 INSTRUMENTS = {
+    "w8-b": Instrument(
+        "w8-b",
+        "TD_W8_B",
+        "src/match-engine/tests/W8BDistributionDiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings",
+        "=== W8 B frozen corpus and landing evidence ===",
+    ),
     "w8-stage-a": Instrument(
         "w8-stage-a",
         "TD_W8_STAGE_A",
