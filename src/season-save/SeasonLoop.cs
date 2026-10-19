@@ -1,6 +1,8 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-13
+// Modified: 2026-10-18 (#31 T1 — v1.38: the loop carries a cloned #31 TransfersState through the
+//           constructor and Restore, checked by SeasonTransfersCoherence, for the save root.)
+//           Prior: 2026-10-13
 //           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
 //           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
@@ -89,6 +91,7 @@ using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -134,6 +137,11 @@ namespace TacticalDirector.SeasonSave
         // persisted T1b block. The generic constructor may still carry the explicit legacy/unwired empty
         // state, but finance reads/commands and the season-boundary settlement fail loud on that state.
         private ClubFinanceEntry[] _finances;
+
+        // #31 T1: the managed club's transfers state, carried so a resumed career round-trips it. A clone
+        // taken at composition (copied, not borrowed). Null = #31 not wired. Nothing drives it yet — the
+        // command seam, genesis seeding and boundary aging are #31 T2.
+        private readonly TransfersState _transfers;
 
         // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
         // has no day step, no cursor and no provider of its own, so nothing here can fall out of step
@@ -254,6 +262,10 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="League.CreateLoop"/> bootstraps new games, while <see cref="Restore"/> alone may
         /// migrate an empty persisted T1b block. A non-empty set must exactly match the season's club set
         /// and is snapshot-copied/canonicalized at composition (ERR-030-050 / ERR-030-051).</param>
+        /// <param name="transfersOrNull">The #31 transfers state this loop carries (#31 T1), or <c>null</c>
+        /// when no #31 subsystem is wired. Cloned at composition. It must belong to the season's managed
+        /// club and, when a roster provider is resolvable, every contract must name a player that club's
+        /// roster carries (<see cref="SeasonTransfersCoherence"/>).</param>
         /// <exception cref="System.ArgumentNullException">A required reference is null.</exception>
         /// <exception cref="System.ArgumentException">
         /// The KD-4 cursor invariant is already violated: the world clock has passed the season's pending
@@ -269,10 +281,12 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
             DisciplineState disciplineOrNull = null,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
             : this(
                 world, season, mode, careerOrNull, careerSquadsOrNull, progressionOrNull,
-                disciplineOrNull, disciplineDriverOrNull: null, financesOrNull: financesOrNull)
+                disciplineOrNull, disciplineDriverOrNull: null, financesOrNull: financesOrNull,
+                transfersOrNull: transfersOrNull)
         {
         }
 
@@ -299,7 +313,8 @@ namespace TacticalDirector.SeasonSave
             ProgressionEngine progressionOrNull,
             DisciplineState disciplineOrNull,
             IFixtureDisciplineDriver disciplineDriverOrNull,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
         {
             if (world == null)
             {
@@ -472,6 +487,10 @@ namespace TacticalDirector.SeasonSave
             ClubFinanceEntry[] resolvedFinances = SeasonFinanceCoherence.Normalize(
                 season, financesOrNull, nameof(financesOrNull));
 
+            // #31 T1: the save root's cross-blob rule, at the composition boundary too — a loop can be
+            // composed from a transfers state and a roster that never met a save file.
+            SeasonTransfersCoherence.Require(season, transfersOrNull, resolvedSquads, nameof(transfersOrNull));
+
             _world = world;
             _state = season;
             Mode = mode;
@@ -485,6 +504,7 @@ namespace TacticalDirector.SeasonSave
             // block it was built from.
             _progression = progressionIsRoster ? progressionOrNull : null;
             _finances = resolvedFinances;
+            _transfers = transfersOrNull?.Clone();
 
             // #44 T2. Optional and UNPAIRED, unlike the career/provider pair above: #44 needs no squad
             // provider of its own (it reads the squads the seam already resolved) and no world clock
@@ -680,6 +700,13 @@ namespace TacticalDirector.SeasonSave
         /// consumer from becoming a second mutation owner.
         /// </summary>
         internal ClubFinanceEntry[] FinanceEntriesForSave() => (ClubFinanceEntry[])_finances.Clone();
+
+        /// <summary>
+        /// The carried #31 state for the save root, or null when #31 is not wired. Internal: the codec only
+        /// reads it, and a public accessor would hand every caller a second writer of #31 state (the UI must
+        /// go through #31's command seam, FR-TX-025).
+        /// </summary>
+        internal TransfersState TransfersForSave() => _transfers;
 
         /// <summary>
         /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
@@ -1346,6 +1373,10 @@ namespace TacticalDirector.SeasonSave
         /// pre-producer representation and is upgraded by this Restore entry point to one initial entry
         /// per restored SeasonState ClubId before normal composition validation. No ordinary constructor
         /// path performs that migration (ERR-030-050 / T2b review).</param>
+        /// <param name="transfersOrNull">The restored #31 state from <see cref="SeasonSaveContents.Transfers"/>,
+        /// or null when the save carried none. Threaded here so the documented resume path can carry it at
+        /// all — the ERR-030-036 lesson (a Restore with no parameter for a block makes the correct resume
+        /// inexpressible).</param>
         /// <exception cref="System.ArgumentException">The blob is malformed (F3), the restored pair
         /// violates the cursor invariant (F4), or a non-empty finance set disagrees with the season club
         /// universe.</exception>
@@ -1357,7 +1388,8 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
             DisciplineState disciplineOrNull = null,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
         {
             SeasonState restoredSeason = SeasonStateCodec.Decode(seasonBlob);
             ClubFinanceEntry[] restoredFinances = SeasonFinanceCoherence.NormalizeLegacyRestore(
@@ -1365,7 +1397,7 @@ namespace TacticalDirector.SeasonSave
 
             return new SeasonLoop(
                 world, restoredSeason, mode, careerOrNull, careerSquadsOrNull,
-                progressionOrNull, disciplineOrNull, restoredFinances);
+                progressionOrNull, disciplineOrNull, restoredFinances, transfersOrNull);
         }
 
         /// <summary>
@@ -2251,4 +2283,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
 // | 1.36 | 2026-10-09 | — | ERR-030-053: require final fixture day completion before season settlement. |
 // | 1.37 | 2026-10-13 | — | T3b2: forward sole #40 config gate and day facts; parameter-only test seam shares guarded advance. |
+// | 1.38 | 2026-10-18 | — | #31 T1: carry a cloned TransfersState (ctor/Restore transfersOrNull, SeasonTransfersCoherence, internal TransfersForSave); nothing drives it until T2. |
 #endregion

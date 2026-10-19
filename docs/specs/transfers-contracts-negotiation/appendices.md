@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.6 — require a non-empty young-age band)
+**Last Updated:** October 18, 2026 (v0.7 — ERR-031-003: Appendix B gains the leading `XFER` magic and pins `clubCount ∈ {0,1}` as a wiring fact; Appendix A gains `TRANSFERS_SAVE_MAGIC`; T1 live)
+**Last Updated (prior):** September 14, 2026 (v0.6 — require a non-empty young-age band)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -12,7 +13,8 @@
 
 | Constant | Tag | Value | Notes |
 |---|---|---|---|
-| `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | transfers sub-blob version gate; lands at T1. |
+| `TRANSFERS_SAVE_MAGIC` | `[FIXED]` | `"XFER"` (`0x58464552`) | transfers sub-blob self-identifying tag, written BEFORE the version (ERR-031-003). Live at T1. |
+| `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | transfers sub-blob version gate; live at T1. |
 | `PERMILLE_DENOM` | `[FIXED]` | 1000 | integer per-mille denominator. |
 | `VALUE_PER_RATING_POINT` | `[GT]` | illustrative | integer currency per one full canonical mean-attribute point; base computation keeps `sum/ATTRIBUTE_COUNT` exact until final division. |
 | `PEAK_AGE_MIN` / `PEAK_AGE_MAX` | `[GT]` | illustrative | inclusive neutral-age band; `PEAK_AGE_MIN > 0` and `PEAK_AGE_MAX >= PEAK_AGE_MIN`, preserving a non-empty young-discount region. |
@@ -37,19 +39,34 @@ Composed into #30's `SeasonSaveCodec` frame as an opaque, independently version-
 
 | Field | Type | Notes |
 |---|---|---|
-| version | u32 | `TRANSFERS_SAVE_FORMAT_VERSION`; gate first (F3) |
-| clubCount | u32 | `Require`-bounded count |
+| magic | u32 | `TRANSFERS_SAVE_MAGIC` (`"XFER"`); gate FIRST (F3, ERR-031-003) |
+| version | u32 | `TRANSFERS_SAVE_FORMAT_VERSION`; gate second (F3) |
+| clubCount | u32 | `0` (no #31 subsystem wired) or `1` (the managed club); `> 1` fails loud — `TransfersState` is managed-club scoped (§2.2) |
 | per club: ClubId | i32 | |
 | per club: CommittedSpendThisWindow | i64 | season-scoped |
 | per club: ActiveWindow.OpenWorldDay / CloseWorldDay | u32 / u32 | season-scoped |
-| contractCount | u32 | managed-club contracts only |
-| per contract: PlayerId | i32 | |
+| contractCount | u32 | managed-club contracts only; MUST be `0` when `clubCount = 0`; `≤ CLUB_SQUAD_SIZE` |
+| per contract: PlayerId | i32 | strictly ascending; a managed-club player (F6) |
 | per contract: WagePerPeriod | i64 | `≥ 0` |
 | per contract: LengthSeasons | i32 | `> 0` (F7) |
 | trailing-byte guard | — | `if (o != len) throw` |
 
 No RNG cursor/action ordinal is serialized. Deep clause/loan/wage-structure fields append after the minimal
 contract fields behind the appropriate version bump.
+
+**Corrected at T1 (ERR-031-003).** This table originally began with `version` and carried no magic — the
+exact defect ERR-029-005 / ERR-041-009 / ERR-028-004 / ERR-044-001 filed against every sibling block. Every
+sub-blob in the season frame sits at version 1, so a version gate separates generations of ONE format and
+cannot tell this block from another: an empty `FNCE` finance block (magic, version 1, count 0) is
+byte-shape-compatible with a transfers header, and a transposed frame slot would have decoded cleanly. The
+shipped block leads with the magic, checked before the version.
+
+**`clubCount` is a wiring fact.** A wired career always writes its one club record, including after every
+contract has expired or been sold; `0` therefore means only "no #31 subsystem behind this save" and decodes
+to an absent state, never to a request to seed (FR-TX-028: a load never seeds). This is what lets #30's
+destination guard key on the count without repeating ERR-030-038 (#30 Appendix B.1). Every decoded value
+passes the same validation a live state applies (window `Close ≥ Open`, spend `≥ 0`, F6/F7 contracts);
+any refusal is a corrupt-file `InvalidOperationException`.
 
 ## Appendix C — Worked valuation / negotiation example
 
@@ -81,4 +98,5 @@ For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `A
 | 0.4 | 2026-09-14 | — | T0 football-judgment close-out: always-on positional need + deterministic counter band. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: precise rational-mean valuation example, prospective exclude-player stock, derived club-need safety bound, sub-1000 age/counter bounds, and typed submission outcomes. |
 | 0.6 | 2026-09-14 | — | Require `PEAK_AGE_MIN > 0` so the young-discount region and strict boundary regression are well-defined. |
+| 0.7 | 2026-10-18 | — | **ERR-031-003** (#31 T1): Appendix B gains the leading `TRANSFERS_SAVE_MAGIC` (`"XFER"`) before the version — the table had specified the ERR-029-005-class version-first, magic-less layout — and pins `clubCount ∈ {0,1}` as a wiring fact, `contractCount = 0` without a club, ascending contract ids and `≤ CLUB_SQUAD_SIZE`; Appendix A gains the magic row and marks both rows live. |
 #endregion

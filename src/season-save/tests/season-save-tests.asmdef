@@ -15,6 +15,7 @@
         "TacticalDirector.InjuriesMedical",
         "TacticalDirector.Discipline",
         "TacticalDirector.ClubFinances",
+        "TacticalDirector.Transfers",
         "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

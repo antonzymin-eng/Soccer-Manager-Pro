@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.6 — T0 review correction: typed submission outcomes, precise valuation, symmetric need)
+**Last Updated:** October 18, 2026 (v0.7 — ERR-031-003: F3 gains the leading magic gate)
+**Last Updated (prior):** September 14, 2026 (v0.6 — T0 review correction: typed submission outcomes, precise valuation, symmetric need)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -75,7 +76,7 @@ public sealed class TransfersState { /* managed-club contracts keyed by PlayerId
 |---|---|---|
 | **F1** | An otherwise accepted buy exceeds `AvailableTransferBudget − committedSpendThisWindow` | **Normal command outcome** — return `InsufficientBudget`, no mutation. Corrupt/negative finance invariants still fail loud. |
 | **F2** | A commit gate/port contract would create partial local state | **Fail loud + no prior local mutation** — validate/preflight first; verify the roster commit matches its preview before applying staged finances/spend/contracts. |
-| **F3** | Transfers sub-blob: bad `TRANSFERS_SAVE_FORMAT_VERSION` / out-of-bounds length prefix / trailing bytes | **Fail loud** — the `SeasonSaveCodec` posture; no cross-version migration at Stage 0 (KD-4). |
+| **F3** | Transfers sub-blob: bad `TRANSFERS_SAVE_MAGIC` (checked first, ERR-031-003) / bad `TRANSFERS_SAVE_FORMAT_VERSION` / out-of-bounds length prefix / trailing bytes | **Fail loud** — the `SeasonSaveCodec` posture; no cross-version migration at Stage 0 (KD-4), nor through PM-3 (owner decision D-10 / #50, October 18, 2026: saves are breakable). |
 | **F4** | A transfer action outside an open window | **Fail loud** (FR-TX-020, `IsWindowOpen`). |
 | **F5** | Destination `Squad` full (no free `localIndex`) during preflight | **Normal command outcome** — return `SquadFull`, no mutation. |
 | **F6** | Bid on a `PlayerId` outside #27's club universe, or malformed `Contract`/`Offer` (negative fee/wage, `LengthSeasons ≤ 0`) | **Fail loud** — magnitude/identity validity is a caller-contract bug. |
@@ -95,4 +96,5 @@ explicit direction, so the default is never routed unchecked.
 | 0.4 | 2026-07-23 | — | AR-6: genesis seeding never runs on load. |
 | 0.5 | 2026-09-14 | — | T0 football-judgment close-out: positional-stock multiplier, deterministic counter band, explicit no-mutation negotiation results, evaluator term validation. |
 | 0.6 | 2026-09-14 | — | PR #407 review correction: retain fractional attribute-mean precision; define positional stock excluding the negotiated player; separate `TransferSubmissionOutcome` from `NegotiationOutcome`; make insufficient budget/full squad normal results; move local mutation after successful matching roster commit. |
+| 0.7 | 2026-10-18 | — | ERR-031-003: F3 names the leading `TRANSFERS_SAVE_MAGIC` gate, checked before the version; D-10 recorded (no migration through PM-3). |
 #endregion

@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 21, 2026 (v0.7 — PR #407 current-main reconciliation: T0 status finalized; T2 finance-composition staging obligation recorded)
+**Last Updated:** October 18, 2026 (v0.8 — T1 landed: codec + frame-v8 composition; ERR-031-003 / ERR-030-054)
+**Last Updated (prior):** September 21, 2026 (v0.7 — PR #407 current-main reconciliation: T0 status finalized; T2 finance-composition staging obligation recorded)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -20,8 +21,11 @@
   consumer-owned read/preflight/commit seam for the already-specified #30 T2 producer. T0 tests cover both buy
   and sell producer preview/commit mismatch residuals while keeping local #31/#40 state untouched. No autonomous
   producer, RNG stream, save codec, season-loop invocation, or production roster adapter lands in T0.
-- **T1** — `TransfersSaveCodec` (`TRANSFERS_SAVE_FORMAT_VERSION = 1`) + composition into #30's season save;
-  coordinate the outer `SEASON_SAVE_FORMAT_VERSION` bump and F3 gates.
+- **T1 — LANDED October 18, 2026.** `TransfersSaveCodec` (magic `"XFER"` + `TRANSFERS_SAVE_FORMAT_VERSION = 1`,
+  ERR-031-003) composed into #30's season save as a mandatory block (`SEASON_SAVE_FORMAT_VERSION` 7 → 8,
+  ERR-030-054). `SeasonLoop` carries a cloned `TransfersState` through its constructor and `Restore`; the save root
+  checks managed-club and contract-roster coherence at Save and Load and refuses an unwired save over a file that
+  carries #31 state. Nothing drives the state yet: genesis seeding, the command seam and boundary aging are T2.
 - **T2** — wire #30's transfers world-tick slot (ERR-030-004); build the production #30 adapter behind
   `ITransferRosterPort` + `DispatchRosterMoveHook` (ERR-030-005); add genesis contract seeding,
   season-boundary aging/reset, calendar-derived summer window, and production composition. The production
@@ -81,4 +85,5 @@
 | 0.5 | 2026-09-14 | — | PR #407 review correction: currency API names, exact-rational attribute mean, exclude-player positional stock, separate submission outcomes, and preview/commit-before-local-mutation contract. |
 | 0.6 | 2026-09-14 | — | Residual review cleanup: T0 covers both preview/commit breach directions; T2 explicitly owes successful-preview infallibility plus real hook-dispatch and observable managed↔external #31 no-op integration coverage. |
 | 0.7 | 2026-09-21 | — | PR #407 current-main reconciliation: finalizes T0 landing status after preserving the original branch lineage and records the newly-visible T2 finance-composition obligation created by #40 T2a/T2b: stage/preflight against exact SeasonLoop-held finance state without exposing/reconstructing raw `ClubFinances`, then publish only through the canonical transaction path after an infallible roster commit. T1/T2/T3 phase boundaries are unchanged. |
+| 0.8 | 2026-10-18 | — | T1 landed: magic-led `TransfersSaveCodec` (ERR-031-003) composed into the v8 season frame (ERR-030-054); loop carries a cloned state; coherence + fifth destination guard. T2/T3 boundaries unchanged. |
 #endregion

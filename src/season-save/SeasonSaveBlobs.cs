@@ -1,30 +1,32 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — gains FinanceBlob)
+// Modified: 2026-10-18 (#31 T1 — gains TransfersBlob)
+//           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — gains FinanceBlob)
 //           Prior: 2026-08-13 (#44 T1, roadmap C1 — gains DisciplineBlob)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-2 / KD-7 / §4;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Training System #29 FR-TR-018;
 //           Injuries & Medical #41 FR-MD-017; Discipline & Suspensions #44 Appendix B;
-//           Club Finances & Economy #40 FR-FN-020/021, §7.1 T1b; Code Standards #20
-// Purpose:  The deframe result of a season save blob: the nine opaque sub-blobs (the living-world
+//           Club Finances & Economy #40 FR-FN-020/021, §7.1 T1b; Transfers #31 FR-TX-012, §7.1 T1;
+//           Code Standards #20
+// Purpose:  The deframe result of a season save blob: the ten opaque sub-blobs (the living-world
 //           composite, the season state, the #29 training block, the #41 medical block, the #30
 //           appearance block, the #28 career-state block, the #44 discipline block, the #40 finance
-//           block, and — when present
+//           block, the #31 transfers block, and — when present
 //           — the match save). Pure bytes; the codec never reconstructs objects (that is
 //           SeasonSaveManager), so it stays free of match-engine / living-world / season-state types.
 
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// The nine byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
+    /// The ten byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
     /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017 + #44 Appendix B + #40 FR-FN-020): the living-world composite
     /// (<see cref="WorldBlob"/>), the season state (<see cref="SeasonBlob"/>), the #29 training block
     /// (<see cref="TrainingBlob"/>), the #41 medical block (<see cref="MedicalBlob"/>), the #30
     /// appearance block (<see cref="AppearanceBlob"/>), the #28 career-state block
     /// (<see cref="ProgressionBlob"/>), the #44 discipline block (<see cref="DisciplineBlob"/>) and the
-    /// #40 finance block (<see cref="FinanceBlob"/>) — all
-    /// eight always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
+    /// #40 finance block (<see cref="FinanceBlob"/>) and the #31 transfers block (<see cref="TransfersBlob"/>)
+    /// — all nine always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
     /// in-progress match — KD-3). Produced by <see cref="SeasonSaveCodec.Decode"/>;
     /// <see cref="SeasonSaveManager"/> reconstructs the actual <c>WorldStore</c> /
     /// <see cref="SeasonState"/> / training + medical state / <c>MatchEngine</c> from them. Kept opaque
@@ -71,6 +73,11 @@ namespace TacticalDirector.SeasonSave
         /// club.</summary>
         public readonly byte[] FinanceBlob;
 
+        /// <summary>The #31 transfers block
+        /// (<see cref="TacticalDirector.Transfers.TransfersSaveCodec.Encode"/>). Never null; a game with no
+        /// #31 subsystem wired carries a well-formed zero-club block (#31 FR-TX-012).</summary>
+        public readonly byte[] TransfersBlob;
+
         /// <summary>The match save blob (<c>MatchSaveManager.Encode</c>), or <c>null</c> if the season
         /// had no in-progress match (KD-3).</summary>
         public readonly byte[] MatchBlob;
@@ -85,6 +92,7 @@ namespace TacticalDirector.SeasonSave
             byte[] progressionBlob,
             byte[] disciplineBlob,
             byte[] financeBlob,
+            byte[] transfersBlob,
             byte[] matchBlob)
         {
             WorldBlob = worldBlob;
@@ -95,6 +103,7 @@ namespace TacticalDirector.SeasonSave
             ProgressionBlob = progressionBlob;
             DisciplineBlob = disciplineBlob;
             FinanceBlob = financeBlob;
+            TransfersBlob = transfersBlob;
             MatchBlob = matchBlob;
         }
     }
@@ -114,4 +123,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the eighth sub-blob.                                              |
 // | 1.6     | 2026-09-10 | —      | #40 T1b (ERR-030-049): gains FinanceBlob (always present) —      |
 // |         |            |        | the ninth sub-blob.                                               |
+// | 1.7     | 2026-10-18 | —      | #31 T1: gains TransfersBlob (always present) — the tenth sub-blob. |
 #endregion

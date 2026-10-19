@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.6 — PR #407 review correction: submission-result seam + prospective-stock semantics)
+**Last Updated:** October 18, 2026 (v0.7 — #31 T1 landed: §4.2 codec row live, §4.4 rewritten for the shipped composition; ERR-031-003)
+**Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 review correction: submission-result seam + prospective-stock semantics)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 T0 landing, v0.3 AR-6, v0.2 AR-3, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -43,7 +44,7 @@ Acyclic; no sim assembly references #31's consumers.
 | `TransfersState.cs` | managed contract store + club state + `OnPlayerRekeyed` semantics (T0, live) |
 | `ITransferRosterPort.cs` | consumer-owned player/position reads plus exact preflight/commit seam for the specified #30 T2 producer |
 | `TransferCommands.cs` | atomic `SubmitBid → TransferSubmissionOutcome` command surface (T0, live) |
-| `TransfersSaveCodec.cs` | `TRANSFERS_SAVE_FORMAT_VERSION` sub-blob encode/decode (T1, deferred) |
+| `TransfersSaveCodec.cs` | magic-led `TRANSFERS_SAVE_FORMAT_VERSION` sub-blob encode/decode (T1, live; ERR-031-003) |
 | `TransfersConstants.cs` | Appendix A catalogue using `GameplayConfig` for `[GT]` values (T0, live) |
 
 ## 4.3 The reusable negotiation seam (KD-3)
@@ -58,9 +59,12 @@ separate prevents UI/T2 concerns from contaminating the reusable negotiation API
 
 ## 4.4 Save composition (KD-4)
 
-`TransfersSaveCodec.Encode(in TransfersState) → byte[]` remains T1. The composition root will append the opaque,
-independently version-gated transfers sub-blob to #30's `SeasonSaveCodec` frame; #30 never parses its contents.
-T0 intentionally ships no codec and no save-format change.
+**T1 (live).** `TransfersSaveCodec.Encode(TransfersState stateOrNull) → byte[]` and `Decode(byte[]) → TransfersState`
+(null for the zero-club, unwired block). #30's season root composes the opaque, independently version-gated block
+into its frame between the #40 finance block and the optional match block (`SEASON_SAVE_FORMAT_VERSION` 7 → 8,
+ERR-030-054) and never parses it; #30 owns the cross-blob rule that the state belongs to the season's managed
+club and that every contract names a rostered player. T1 adds `TacticalDirector.DeterministicSim` to #31's
+references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still no RNG stream (KD-5).
 
 ## 4.5 Interface contracts recorded for composition & #30
 
@@ -86,4 +90,5 @@ T0 intentionally ships no codec and no save-format change.
 | 0.4 | 2026-09-12 | — | T0 implementation back-prop: live phase-real edges and consumer-owned roster port. |
 | 0.5 | 2026-09-14 | — | T0 football-judgment close-out: positional-stock read and live synchronous counter-offer semantics. |
 | 0.6 | 2026-09-14 | — | PR #407 review correction: separate submission-result enum, currency API names, prospective stock excluding negotiated player, and verify roster preview/commit before local mutation. |
+| 0.7 | 2026-10-18 | — | #31 T1 landing: `TransfersSaveCodec.cs` live (magic-led, ERR-031-003); §4.4 records the shipped frame-v8 composition (ERR-030-054), the null-for-unwired decode, #30-owned coherence, and the new `DeterministicSim` reference (serialization only). |
 #endregion

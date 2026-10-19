@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
+**Last Updated:** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
+**Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -61,7 +62,9 @@
 
 ## 5.5 Save round-trip & determinism (KD-4/KD-8)
 
-- **T-TX-DET-001** — deferred T1: `Contract` + `ClubTransferState` restore field-identical across mid-window save.
+- **T-TX-DET-001** — live at T1: `Contract` + `ClubTransferState` restore field-identical across a mid-window save,
+  through both the codec (`TransfersT1Tests`) and the season file + `SeasonLoop.Restore` resume path
+  (`SeasonSaveTransfersTests`), with non-default spend so a reseed-on-load could not pass.
 - **T-TX-DET-002** — deferred T2: contracts age/decrement/remove at season boundary and window/spend resets.
 - **T-TX-INIT-001** — deferred T2: career genesis seeds one valid managed-club contract per #27 player.
 - **T-TX-DET-003** — two runs over identical transfer activity produce identical transfer state.
@@ -70,7 +73,9 @@
 
 ## 5.6 Fail-loud vs normal outcomes
 
-- **T-TX-FAIL-001 (F3)** — deferred T1 bad transfer save version/length/trailing bytes throw at decode.
+- **T-TX-FAIL-001 (F3)** — live at T1: wrong magic (a sibling `FNCE` block), wrong version, every truncation,
+  trailing bytes, `clubCount > 1`, contracts without a club, out-of-order ids, F6/F7 contract values, an inverted
+  window and negative spend all throw at decode; a pinned golden byte vector locks the layout (ERR-031-003).
 - **T-TX-FAIL-002 (F6)** — invalid player id or malformed fee/wage/length throws at consuming seams.
 - **T-TX-FAIL-003 (F7)** — `default(Contract)` fails insertion validation.
 - **T-TX-NORMAL-001 (F1/F5)** — insufficient budget and full destination are explicitly **not** fail-loud paths;
@@ -92,4 +97,5 @@ T-TX-REKEY-005.
 | 0.4 | 2026-09-14 | — | T0 close-out: positional scarcity, counter band, reusable evaluator validation and no-mutation negotiation coverage. |
 | 0.5 | 2026-09-14 | — | PR #407 review correction: literal golden/fractional valuation vectors, strict age boundaries, symmetric exclude-player need, typed budget/full outcomes, and preview-mismatch-before-local-mutation regression. |
 | 0.6 | 2026-09-14 | — | Residual review cleanup: add sell-direction preview/commit breach coverage and pin the T2 production hook-dispatch plus observable managed↔external #31 no-op regression. |
+| 0.7 | 2026-10-18 | — | T1 landing: T-TX-DET-001 and T-TX-FAIL-001 move from deferred to live, with the golden vector and sibling-magic refusal (ERR-031-003). |
 #endregion

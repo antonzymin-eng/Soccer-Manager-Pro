@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersState.cs
 // Created:  2026-09-12
-// Modified: 2026-09-12
+// Modified: 2026-10-18
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.3-§3.4 (managed contracts + season-scoped transfer state)
@@ -104,7 +104,7 @@ namespace TacticalDirector.Transfers
             _contracts.Add(newPlayerId, contract);
         }
 
-        /// <summary>Returns contracts in canonical PlayerId order for tests and the later T1 codec.</summary>
+        /// <summary>Returns contracts in canonical PlayerId order (the T1 codec's write order).</summary>
         public Contract[] ContractsSnapshot()
         {
             Contract[] snapshot = new Contract[_contracts.Count];
@@ -115,6 +115,39 @@ namespace TacticalDirector.Transfers
             }
 
             return snapshot;
+        }
+
+        /// <summary>
+        /// Rebuilds persisted state (Spec #31 §4.4 / FR-TX-027): the T1 decode path and
+        /// <see cref="Clone"/>. Every contract passes the same <see cref="InsertContract"/> validation a live
+        /// insert does, so a decoded block can never hold a contract a running career could not.
+        /// </summary>
+        internal static TransfersState Restore(
+            int managedClubId, long committedSpendThisWindow, in TransferWindow activeWindow, Contract[] contracts)
+        {
+            if (contracts == null)
+            {
+                throw new ArgumentNullException(nameof(contracts));
+            }
+
+            var state = new TransfersState(managedClubId, in activeWindow);
+            state._clubState = new ClubTransferState(committedSpendThisWindow, in activeWindow);
+            for (int i = 0; i < contracts.Length; i++)
+            {
+                state.InsertContract(in contracts[i]);
+            }
+
+            return state;
+        }
+
+        /// <summary>
+        /// A deep copy, so a composition root can hold state no outside caller also holds a write
+        /// reference to (the <c>ProgressionEngine.FromBlocks</c> "copied, not borrowed" rule).
+        /// </summary>
+        public TransfersState Clone()
+        {
+            TransferWindow window = _clubState.ActiveWindow;
+            return Restore(ManagedClubId, _clubState.CommittedSpendThisWindow, in window, ContractsSnapshot());
         }
 
         internal void AddCommittedSpend(long amount)
@@ -150,4 +183,5 @@ namespace TacticalDirector.Transfers
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 managed contract/window/spend state. |
+// | 1.1     | 2026-10-18 | —      | #31 T1: internal Restore (decode path) and public Clone (copy-on-compose). |
 #endregion

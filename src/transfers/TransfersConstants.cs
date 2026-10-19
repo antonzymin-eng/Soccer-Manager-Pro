@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersConstants.cs
 // Created:  2026-09-12
-// Modified: 2026-09-14
+// Modified: 2026-10-18
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #31 Appendix A, §3.1-§3.2, §3.5 (transfer constants)
@@ -26,6 +26,33 @@ namespace TacticalDirector.Transfers
 
         /// <summary>[FIXED] Identity multiplier for deferred personality/staff modulation. Spec #31 Appendix A.</summary>
         public const int IDENTITY_MULTIPLIER_PERMILLE = 1000;
+
+        /// <summary>
+        /// [FIXED] The transfers sub-blob's leading self-identifying tag — ASCII <c>"XFER"</c>, written BEFORE
+        /// <see cref="TRANSFERS_SAVE_FORMAT_VERSION"/>. Spec #31 Appendix B as corrected by ERR-031-003: a
+        /// format version separates generations of ONE format, never one format from another, and every
+        /// sub-blob in the season frame sits at version 1 (the ERR-029-005 / ERR-041-009 / ERR-028-004 /
+        /// ERR-044-001 rule).
+        /// </summary>
+        public const uint TRANSFERS_SAVE_MAGIC = 0x58464552;   // 'X''F''E''R'
+
+        /// <summary>[FIXED] The transfers sub-blob generation, gated after <see cref="TRANSFERS_SAVE_MAGIC"/> (F3). Spec #31 Appendix A/B, KD-4.</summary>
+        public const uint TRANSFERS_SAVE_FORMAT_VERSION = 1;
+
+        /// <summary>[DERIVED] Fixed header width: magic + version + clubCount (three u32). Spec #31 Appendix B.</summary>
+        public const int TRANSFERS_SAVE_HEADER_BYTES = 12;
+
+        /// <summary>[DERIVED] One club record: ClubId i32 + CommittedSpendThisWindow i64 + Open u32 + Close u32. Spec #31 Appendix B.</summary>
+        public const int TRANSFERS_SAVE_CLUB_RECORD_BYTES = 20;
+
+        /// <summary>[DERIVED] One contract record: PlayerId i32 + WagePerPeriod i64 + LengthSeasons i32. Spec #31 Appendix B.</summary>
+        public const int TRANSFERS_SAVE_CONTRACT_RECORD_BYTES = 16;
+
+        /// <summary>
+        /// [FIXED] Most club records the minimal block may carry: <see cref="TransfersState"/> is scoped to the
+        /// ONE managed club (Spec #31 §2.2), so a block carries 0 (transfers not wired) or 1. Spec #31 Appendix B.
+        /// </summary>
+        public const int TRANSFERS_SAVE_MAX_CLUBS = 1;
 
         #endregion
 
@@ -175,4 +202,5 @@ namespace TacticalDirector.Transfers
 // | 1.2     | 2026-09-14 | —      | Derive club-need safety cap from #27 cardinalities; require real age discounts and sub-1000 negotiation band. |
 // | 1.3     | 2026-09-14 | —      | Require positive PeakAgeMin so the young-discount region is non-empty and its boundary test is valid. |
 // | 1.4     | 2026-09-14 | —      | Derive club-need cap inline at its consumer so static-field declaration order cannot affect initialization. |
+// | 1.5     | 2026-10-18 | —      | #31 T1 (ERR-031-003): TRANSFERS_SAVE_MAGIC "XFER" + TRANSFERS_SAVE_FORMAT_VERSION 1 + derived block widths + the one-club bound. |
 #endregion

@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** September 10, 2026 (v1.7 — ERR-030-050 supersedes ERR-030-049's producer-wired narrowing; every persisted family is expressible on Restore as soon as its frame can be populated, and non-empty finance state must exactly match SeasonState.ClubIds. Prior update follows)
+**Last Updated:** October 18, 2026 (v1.8 — ERR-030-054 (#31 T1): Appendix A's frame-version row 7 → 8 and Appendix B's frame gains the mandatory #31 `XFER` transfers sub-blob between the finance block and the optional match block; new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; B.1's third cross-blob rule gains #31 as its fifth family, keyed on wiring because a wired #31 state always encodes its club record; a fourth cross-blob rule (transfers coherence) is stated; `SeasonLoop.Restore` gains `transfersOrNull`. Prior update follows)
+**Last Updated (prior):** September 10, 2026 (v1.7 — ERR-030-050 supersedes ERR-030-049's producer-wired narrowing; every persisted family is expressible on Restore as soon as its frame can be populated, and non-empty finance state must exactly match SeasonState.ClubIds. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v1.6 — ERR-030-049: Appendix A's frame-version row 6 → 7 and Appendix B's frame gains the mandatory #40 `FNCE` finance sub-blob between the discipline block and the optional match block, for #40 T1b; new `FINANCE_SAVE_MAGIC` / `FINANCE_SAVE_FORMAT_VERSION` rows; "five mandatory career sub-blobs" → six. Appendix B.1's third cross-blob rule gains #40 as its fourth family, keyed on emptiness rather than on a wiring flag because FR-FN-025 leaves #40 no legitimate drained state — the property v1.4's re-key turned on)
 **Last Updated (prior):** August 13, 2026, later still (v1.5 — ERR-030-039 back-prop: v1.4's own MUST — the wiring fact is "passed to the write, not re-derived from the block" — was satisfied at only ONE of `SeasonSaveManager`'s two write entry points; the public long form forwarded a hardcoded "wired", so the guard was bypassed on the form every external caller reaches. B.1 now requires the fact on EVERY public write entry point, as a required never-defaulted parameter, and records why non-nullness cannot stand in for it: the empty value each parameter documents as its own "tracks none" spelling is exactly what an unwired caller passes)
 **Last Updated (prior):** August 13, 2026, later still (v1.4 — ERR-030-038 back-prop: v1.3's THIRD cross-blob rule was stated as "refuse to overwrite a populated block with an EMPTY one", which is a sound proxy only for families with no legitimate empty state; #44 is the counter-example (FR-DC-017 makes the empty tally the canonical clean state) and keying its guard on emptiness refused a correct save and made a career's own file permanently unsaveable. The rule now keys on the writing composition — is the family wired at all — passed to the write rather than re-derived from the block)
@@ -16,7 +17,7 @@
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 1.7
+**Version:** 1.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -29,7 +30,7 @@ precedent — the spec's contract is the shapes/directions, the `[GT]` numbers a
 
 | Constant | Tag | Value | Meaning |
 |---|---|---|---|
-| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 7 | outer season-frame version (owned by `SeasonSaveConstants`) — 1 → 2 at #30 T1 (the season block), 2 → 3 at #29/#41 T1 (the training + medical blocks), 3 → 4 at the balance pass D2 (the appearance block; Appendix B), 4 → 5 at #28 T1 (ERR-030-030): the mandatory `PROG` career-state sub-blob, 5 → 6 at #44 T1 (ERR-030-035): the mandatory `DISC` discipline sub-blob, 6 → 7 at #40 T1b (ERR-030-049): the mandatory `FNCE` finance sub-blob. *(Row corrected at AR pass 13 M4 — it read 2 while Appendix B in this same file described the v4 frame; corrected again August 8, 2026 — it read 4 while #28 T1 shipped the v5 frame the same day.)* |
+| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 8 | outer season-frame version (owned by `SeasonSaveConstants`) — 1 → 2 at #30 T1 (the season block), 2 → 3 at #29/#41 T1 (the training + medical blocks), 3 → 4 at the balance pass D2 (the appearance block; Appendix B), 4 → 5 at #28 T1 (ERR-030-030): the mandatory `PROG` career-state sub-blob, 5 → 6 at #44 T1 (ERR-030-035): the mandatory `DISC` discipline sub-blob, 6 → 7 at #40 T1b (ERR-030-049): the mandatory `FNCE` finance sub-blob, 7 → 8 at #31 T1 (ERR-030-054): the mandatory `XFER` transfers sub-blob. No migration path is owed for any of these: the owner declared saves breakable through PM-3 (D-10 / #50, October 18, 2026). *(Row corrected at AR pass 13 M4 — it read 2 while Appendix B in this same file described the v4 frame; corrected again August 8, 2026 — it read 4 while #28 T1 shipped the v5 frame the same day.)* |
 | `SEASON_STATE_FORMAT_VERSION` | `[FIXED]` | 1 | the season sub-blob's own version (new) |
 | `APPEARANCE_SAVE_MAGIC` | `[FIXED]` | `"APPR"` | the appearance sub-blob's self-identifying leading tag (Appendix B.1; the ERR-029-005/ERR-041-009 rule — a format version is not a format identifier) |
 | `APPEARANCE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the appearance sub-blob's own version (Appendix B.1) |
@@ -37,6 +38,8 @@ precedent — the spec's contract is the shapes/directions, the `[GT]` numbers a
 | `DISCIPLINE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the #44 discipline sub-blob's own version (owned by `DisciplineConstants`; see #44 Appendix B for its byte layout) |
 | `FINANCE_SAVE_MAGIC` | `[FIXED]` | `"FNCE"` | the #40 finance sub-blob's self-identifying leading tag (owned by `ClubFinancesConstants`; the ERR-029-005/ERR-041-009/ERR-044-001 rule — a format version is not a format identifier) |
 | `FINANCE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the #40 finance sub-blob's own version (owned by `ClubFinancesConstants`; see #40 §4.4 for its byte layout) |
+| `TRANSFERS_SAVE_MAGIC` | `[FIXED]` | `"XFER"` | the #31 transfers sub-blob's self-identifying leading tag (owned by `TransfersConstants`; ERR-031-003 — #31 Appendix B had specified the block version-first with no magic, the ERR-029-005 class) |
+| `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the #31 transfers sub-blob's own version (owned by `TransfersConstants`; see #31 Appendix B for its byte layout) |
 | `APPEARANCE_BITMASK_MAX_WINDOW_DAYS` | `[FIXED]` | 31 | the structural ceiling of the u32 appearance day-bitmask — `AppearanceWindow` fail-louds a configured window outside `[1, 31]` at the reading site, and #41's `APPEARANCE_WINDOW_DAYS` `[GT]` is bounded by it (its catalogue lock hard-codes the 31 because #41 sits below `season-save` and cannot read this constant). *(Catalogued at AR pass 13 M4 — load-bearing since D2, previously in no spec: ERR-030-028's class on a constant.)* |
 | `WIN_POINTS` | `[GT]` | 3 | points for a win |
 | `DRAW_POINTS` | `[GT]` | 1 | points for a draw |
@@ -79,27 +82,28 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 
 The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave,
 the #29/#41 landings (T1 frame v3; the balance pass frame v4), #28 T1 (ERR-030-030, frame v5), #44
-T1 (ERR-030-035, frame v6), and #40 T1b (ERR-030-049, frame v7)**:
+T1 (ERR-030-035, frame v6), #40 T1b (ERR-030-049, frame v7), and #31 T1 (ERR-030-054, frame v8)**:
 
 `SEASON_SAVE_FORMAT_VERSION (u32) → SaveOriginStamp{ WorldGenerationVersion i32, BuildId i32 } →
 matchPresent flag (u8) → hasAuthoredDb flag (u8) → [len u32]world → [len u32]season →
 [len u32]training → [len u32]medical → [len u32]appearance → [len u32]progression →
-[len u32]discipline → [len u32]finance →
+[len u32]discipline → [len u32]finance → [len u32]transfers →
 ([len u32]match iff matchPresent) → ([len u32]authoredDb iff hasAuthoredDb)`
 
 Trailing bytes after the declared content ⇒ throw (F3).
 
-**The six mandatory career sub-blobs.** The #29 training block (`TRAINING_SAVE_FORMAT_VERSION`,
+**The seven mandatory career sub-blobs.** The #29 training block (`TRAINING_SAVE_FORMAT_VERSION`,
 FR-TR-018, frame v2→3), the #41 medical block (`MEDICAL_SAVE_FORMAT_VERSION`, FR-MD-017, same bump),
 the #30 appearance block (`APPEARANCE_SAVE_FORMAT_VERSION`, ERR-041-010(b), frame v3→4), the #28
 progression block (`PROGRESSION_SAVE_FORMAT_VERSION`, FR-PG-016/017, frame v4→5, ERR-030-030), the
 #44 discipline block (`DISCIPLINE_SAVE_FORMAT_VERSION`, roadmap C1, frame v5→6, ERR-030-035) and the
-#40 finance block (`FINANCE_SAVE_FORMAT_VERSION`, FR-FN-020, frame v6→7, ERR-030-049) sit
-between the season block and the optional match block, in that order, all six **mandatory** — career
+#40 finance block (`FINANCE_SAVE_FORMAT_VERSION`, FR-FN-020, frame v6→7, ERR-030-049) and the #31
+transfers block (`TRANSFERS_SAVE_FORMAT_VERSION`, FR-TX-012, frame v7→8, ERR-030-054) sit
+between the season block and the optional match block, in that order, all seven **mandatory** — career
 state has no absent case, only an empty one (a zero-club/zero-entry block), so no presence flags are
 added and a later wiring change needs no further frame bump. Each is typed at the `Encode` seam
 (`TrainingBlock` / `MedicalBlock` / `AppearanceBlock` / `ProgressionBlock` / `DisciplineBlock` /
-`FinanceBlock`) and
+`FinanceBlock` / `TransfersBlock`) and
 self-identified by a
 leading magic (ERR-029-005 / ERR-041-009 / ERR-028-004 / ERR-044-001: a format version distinguishes
 generations of
@@ -113,7 +117,12 @@ record; see #40 §4.4 for its own byte layout (magic-led `FNCE`, same discipline
 duplicated here. It is the one mandatory block whose set is keyed by **club** with no player
 dimension at all, and — unlike its five siblings — its entries never churn: FR-FN-025 makes a club's
 entry permanent from the moment `ClubFinances.CreateInitial` creates it, which is why #40 needs no
-wiring flag at the write (see B.1).
+wiring flag at the write (see B.1). The transfers block is #31's own domain — the managed club's
+contracts, window and committed spend; see #31 Appendix B for its own byte layout (magic-led `XFER`,
+ERR-031-003), not duplicated here. Its club count is a WIRING fact rather than a content count: the
+block carries 0 club records when no #31 subsystem is wired and exactly 1 when one is, even after every
+contract has expired or been sold, because a #31 state cannot exist without its managed club — which is
+why its B.1 guard keys on that count without repeating ERR-030-038.
 
 **The progression block is different in kind from its three siblings: it carries the ROSTER itself,
 not an overlay on one.** Training/medical/appearance each hold state keyed against a roster that
@@ -131,7 +140,7 @@ duplicated here, the same split as the training/medical blocks, each pinned in i
 the `SaveOriginStamp` / `hasAuthoredDb` elements above remain future amendments landing at #50/#47 T1;
 the frame in code today is
 `version → matchPresent → world → season → training → medical → appearance → progression →
-discipline → finance → [match]`.)*
+discipline → finance → transfers → [match]`.)*
 
 **B.1 The appearance sub-blob's byte layout (ERR-030-028, balance-pass AR pass 5).** Pinned here
 because **F3 refuses every cross-version migration, so the first written layout IS the format
@@ -220,7 +229,8 @@ populated block with one the writing composition cannot account for**, per block
 destination back before it writes. Four guards implement it today —
 `RequireDestinationCarriesNoRoster` (#28's store, ERR-028-008), `RequireDestinationCarriesNoCareer`
 (the #29/#41/#30 career triple), `RequireDestinationCarriesNoDiscipline` (#44's tally,
-ERR-030-036), and `RequireDestinationCarriesNoFinances` (#40's per-club entries, ERR-030-049). All four
+ERR-030-036), `RequireDestinationCarriesNoFinances` (#40's per-club entries, ERR-030-049), and
+`RequireDestinationCarriesNoTransfers` (#31's managed-club state, ERR-030-054). All five
 pass an unreadable, foreign or older-frame destination through unchanged: an
 empty block *creating* a file, or overwriting an already-empty one, is the honest composition and stays
 legal.
@@ -253,6 +263,15 @@ That is exactly what the emptiness key requires, and it is why `RequireDestinati
 takes no companion wiring flag. The distinction the two keys turn on is not "can this save be empty"
 (every family's can) but "can this **destination** have emptied legitimately"; #44's can, #28's and
 #40's cannot.
+
+**#31 keys on wiring, and needs no companion flag to do it (ERR-030-054).** #31's state HAS a legitimate
+drained case — every contract expired at the boundary or sold — so emptiness would be the ERR-030-038
+mistake. But the block encodes wiring directly: a `TransfersState` cannot exist without its
+`ManagedClubId`, so a wired career writes its one club record with zero contracts, and only an unwired
+composition writes zero club records. The write entry point's required `transfersOrNull` parameter
+carries the fact (null = unwired; never defaulted by any overload, per ERR-030-039), the block preserves
+it, and `RequireDestinationCarriesNoTransfers` refuses a zero-club write over a destination carrying a
+club record.
 
 **And it MUST be passed by every write entry point — no entry point may answer for its caller
 (ERR-030-039).** v1.4's rule above was satisfied at one of `SeasonSaveManager`'s two write entry points
@@ -289,11 +308,18 @@ The `SeasonLoop` composition boundary carries the other half: **every persisted 
 expressible on the resume path as soon as its frame can contain populated state**, or the correct resume
 cannot be written and the guard above becomes the only thing standing between a resumed career and the
 loss. `SeasonLoop.Restore`'s parameter list is that surface (`careerOrNull`, `careerSquadsOrNull`,
-`progressionOrNull`, `disciplineOrNull`, `financesOrNull`). Whether the runtime producer is wired is
+`progressionOrNull`, `disciplineOrNull`, `financesOrNull`, `transfersOrNull` — the last added at #31 T1,
+ERR-030-054). Whether the runtime producer is wired is
 irrelevant: a populated block can arrive from `Load`, and a subsequent `Save(SeasonLoop, ...)` MUST
 preserve it. `ERR-030-050` expressly supersedes `ERR-030-049`'s producer-wired narrowing without rewriting
 that historical row. #40 T1b therefore owns the finance carrier and resume seam; T2 owns only production
 and mutation (`CreateInitial` and the step-(b′) `SettleFinances` call).
+
+**Transfers coherence (ERR-030-054).** A non-null #31 state MUST belong to `SeasonState.ManagedClubId`,
+and when the file carries a #28 roster every contract MUST name a player the managed club's roster
+carries. One owner (`SeasonTransfersCoherence`) enforces it at loop composition (against the resolved
+roster provider), at `Save`, and at `Load` (against the file's own `PROG` projection), so none of the
+three can write or admit what another refuses.
 
 **Current-season finance coherence (ERR-030-050).** Before T2, an empty finance set is legal. Once the set
 is non-empty, its `ClubId`s MUST equal `SeasonState.ClubIds` exactly: no missing season club, no foreign
@@ -384,4 +410,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 1.5 | 2026-08-13 | — | **ERR-030-039 back-prop** (the #44 C1/C2 adversarial review's H4, spec + code same commit — a defect in the reach of v1.4's own fix): B.1 v1.4 required the wiring fact to be **passed to the write, not re-derived from the block**, and `SeasonSaveManager` satisfied it at one of its two write entry points. The flag landed on an *internal* `Save` overload; the public long form forwarded `disciplineWired: true` unconditionally, on the reasoning that a caller handing over a `DisciplineState` drives #44 by construction. That excludes only `null` — and `new DisciplineState()` is precisely what an unwired caller passes, since the `discipline` parameter's own documentation sanctions it as the way to say "no cards recorded yet". So the guard was live on the internal form and bypassed on the one every external caller reaches, and two identical public saves (the second with a fresh tally) took a populated destination from one row to zero with no refusal — demonstrated by execution against the built assemblies. B.1 now states the rule structurally: the wiring fact MUST be a **required, never-defaulted parameter of every public write entry point**, on the same terms as the block parameters that reject `null`, because a wiring predicate is only as strong as the weakest signature that reaches the write and an overload supplying it on the caller's behalf deletes the contract rather than simplifying it. Code: the forwarding overload is deleted and `disciplineWired` promoted onto the public long form (`SeasonSaveManager.cs` v1.25); no frame, layout or version change. |
 | 1.6 | 2026-09-10 | — | **ERR-030-049** (#40 T1b): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 6 → 7 for the mandatory #40 `FNCE` finance sub-blob, plus new `FINANCE_SAVE_MAGIC` / `FINANCE_SAVE_FORMAT_VERSION` rows (both owned by `ClubFinancesConstants`). Appendix B's outer-frame nesting string gains `[len u32]finance` between `discipline` and the optional `match`; "five mandatory career sub-blobs" → six; the frame-in-code note updated. Byte layout not duplicated here; see #40 §4.4. B.1's third cross-blob rule gains #40 as its **fourth** family (`RequireDestinationCarriesNoFinances`) and records why it keys on **emptiness** rather than on a wiring flag: FR-FN-025 makes a club's entry permanent once `CreateInitial` creates it, so unlike #44 a #40 destination cannot have emptied legitimately — the key turns on what the DESTINATION can do, not on whether this save's set may be empty (every family's may). Also narrows v1.3's `SeasonLoop.Restore` expressibility MUST to the phase that wires a family's **producer**: a frame-only landing with no producer has no resume to get wrong, so #40 T1b is complete without a `financesOrNull` and T2 owes it alongside `CreateInitial` and the step-(b′) `SettleFinances` call. |
 | 1.7 | 2026-09-10 | — | **ERR-030-050 review correction.** Restores Appendix B.1's original, unconditional persisted-family rule: every family must be expressible on `SeasonLoop.Restore` once its frame can be populated; `financesOrNull` is T1b, not T2. Adds the current-season finance coherence invariant (empty legal pre-T2; non-empty ClubIds exactly equal `SeasonState.ClubIds` on Save/Load/composition), explains why destination ClubIds are the wrong key for Save As, and preserves the N→0 destination guard as a separate protection. `ERR-030-049` remains historical and is expressly superseded only on its producer-wired narrowing. |
+| 1.8 | 2026-10-18 | — | **ERR-030-054** (#31 T1): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 7 → 8 for the mandatory #31 `XFER` transfers sub-blob, plus new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; Appendix B's frame gains the block between finance and the optional match block ("six mandatory career sub-blobs" → seven); B.1's third cross-blob rule gains the fifth guard, keyed on the block's club count (a wiring fact); new transfers-coherence rule (one owner, three boundaries); `SeasonLoop.Restore` gains `transfersOrNull`. No migration (D-10 / #50). |
 #endregion

@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 18, 2026 — **Docs-only: `ERR-003-010`.** No files added or removed. **Modified:** `docs/specs/collision-system/section-4-1-to-4-4.md` v1.2, `section-8-part-1.md` v1.3, `section-4-5-to-4-7.md` (no version header; inline ERR note); `docs/tracking/spec-error-log.md` v2.80; `docs/tracking/path-to-playable-roadmap.md` v0.75; `docs/tracking/CHANGELOG.md`; this manifest's three maintained `spec-error-log.md` pointers are advanced from v2.79 to v2.80. No `src/` change and no assembly added or removed.
+**Last Updated:** October 18, 2026 — **#31 Transfers T1.** Added `src/transfers/TransfersSaveCodec.cs`, `src/transfers/AssemblyInfo.cs`, `src/transfers/tests/TransfersT1Tests.cs`, `src/season-save/TransfersBlock.cs`, `src/season-save/SeasonTransfersCoherence.cs`, `src/season-save/tests/SeasonSaveTransfersTests.cs` (each + `.meta`). Modified: `TransfersConstants.cs` v1.5, `TransfersState.cs` v1.1, both transfers asmdefs (+ `DeterministicSim`), `SeasonSaveCodec.cs` v1.9, `SeasonSaveBlobs.cs` v1.7, `SeasonSaveConstants.cs` v1.13 (frame 7 → 8), `SeasonSaveContents.cs` v1.8, `SeasonSaveManager.cs` v1.32, `SeasonLoop.cs` v1.38, both season-save asmdefs (+ `Transfers`), five season-save test files (call sites); specs #31 `appendices.md` v0.7, `section-2.md` v0.7, `section-4.md` v0.7, `section-5.md` v0.7, `section-7.md` v0.8, #30 `appendices.md` v1.8, `section-4.md` v1.5; `spec-error-log.md` v2.81 (ERR-031-003, ERR-030-054).
+
+**Last Updated (prior):** October 18, 2026 — **Docs-only: `ERR-003-010`.** No files added or removed. **Modified:** `docs/specs/collision-system/section-4-1-to-4-4.md` v1.2, `section-8-part-1.md` v1.3, `section-4-5-to-4-7.md` (no version header; inline ERR note); `docs/tracking/spec-error-log.md` v2.80; `docs/tracking/path-to-playable-roadmap.md` v0.75; `docs/tracking/CHANGELOG.md`; this manifest's three maintained `spec-error-log.md` pointers are advanced from v2.79 to v2.80. No `src/` change and no assembly added or removed.
 
 **Last Updated (prior):** October 18, 2026 — **PR #515 post-merge close-out (merge `1a3b4271`) and six-seed D-07 census.** Added 4 files under `docs/tracking/evidence/d07-six-seed-census-20261018/` (the SHA manifest covers the other 3): `README.md`, `SHA256SUMS`, `census-rows.txt.xz`, `w8b-diagnostic-results.trx.xz`; registered in `tools/dotnet-ci/check_evidence_manifests.py`, with `tools/tests/test_evidence_manifests.py` at 21 registered directories. Modified both changelogs (`CHANGELOG-src.md` v2.204), `open-issues.md` (new D-07 keeper-avoidance entry), `docs/agent-guides/project-reference.md` (index bullet; 32 active / 72 archived), `match-engine-wiring-backlog.md` v1.39, `w8-goalkeeper-distribution-decision.md` v0.36, `path-to-playable-roadmap.md` v0.74, `match-flow-completion-design.md` v1.10 and this manifest.
 
@@ -3650,6 +3652,9 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, seasonBlob, in TrainingBlock, in MedicalBlock, in AppearanceBlock, in ProgressionBlock, in DisciplineBlock, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame (v6) + matchPresent flag + eight length-prefixed opaque sub-blobs, seven mandatory and the match optional (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
 | `src/season-save/SeasonStateCodec.cs` | #30 T1: pure static season-state sub-blob codec — `Encode(SeasonState)` / `Decode(byte[]) → SeasonState` over the #30 Appendix B layout (version gate; seed/seasonNumber/managedClubId; club set; the serialized schedule per KD-5; calendar cursor per KD-4; table in ClubId order; board), SEASON_STATE_FORMAT_VERSION-gated; overflow-safe element-wise length bounds, trailing-byte guard, serialized-vs-derived goal-difference coherence check, and decode-through-the-validating-constructors (FR-SN-019/022/023) |
 | `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` + `SeasonState` (both never null) + the three decoded career block sets (`TrainingClubs`/`MedicalClubs`/`AppearanceClubs`, never null) + nullable `MatchEngine` |
+| `src/season-save/TransfersBlock.cs` | **v1.0** — typed frame handle for the #31 transfers sub-blob (ERR-029-005 discipline). |
+| `src/season-save/SeasonTransfersCoherence.cs` | **v1.0** — one owner of the #31 cross-blob rule (managed club; contracts name rostered players) at composition/Save/Load. |
+| `src/season-save/tests/SeasonSaveTransfersTests.cs` | **v1.0** — frame-v8 transfers composition locks: round-trip/resume, slot, clone, fifth guard, coherence, v7 refusal. |
 | `src/season-save/SeasonSaveManager.cs` | Static: the seven-argument `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs)` (all three career sets REQUIRED-never-null; the career-triple coherence gate incl. the ERR-041-019 cross-club-id walk; the cursor-vs-clock gate — AR passes 3–5) + the `Save(SeasonLoop, matchOrNull, path)` overload (blocks stay internal); `Load(path, ISquadProvider = null, ArcCanonSource = null) → SeasonSaveContents` (Decode → restore all blobs; KD-4 cursor invariant + the cursor-vs-clock rule — the two cross-blob checks only this root can own; the availability-filter decorator for mid-match restore) — KD-1/KD-5/KD-6/KD-8, FR-SN-021 |
 | `src/season-save/SeasonLoopConstants.cs` | #30 Appendix A: `[FIXED] SEASON_STATE_FORMAT_VERSION` + `IDENTITY_PERMUTATION_SEED`; `[GT]` points scheme (Win/Draw/Loss) + `JobSecurityScale`, off `GameplayConfig` |
 | `src/season-save/Fixture.cs` | #30 T0: one scheduled fixture (round index, home/away ClubId, played flag); `MarkPlayed` returns a new value |
@@ -4233,11 +4238,13 @@ Examples:
 
 ### Transfers / Contracts / Negotiation (`src/transfers/`)
 
-#31 T0 is hosted here. All listed Unity-managed source/assembly files have companion `.meta` files; T1/T2/T3 remain deferred by #31 §7.
+#31 T0 and T1 are hosted here (T1's season-frame composition lives in `src/season-save/`). All listed Unity-managed source/assembly files have companion `.meta` files; T2/T3 remain deferred by #31 §7.
 
 | Path | Role |
 |---|---|
-| `src/transfers/transfers.asmdef` | Production `TacticalDirector.Transfers` assembly; Tier 7 Management; references #27 PlayerDatabase, #40 ClubFinances and ProjectConstants only. |
+| `src/transfers/transfers.asmdef` | Production `TacticalDirector.Transfers` assembly; Tier 7 Management; references #27 PlayerDatabase, #40 ClubFinances, ProjectConstants and (T1, serialization only) DeterministicSim. |
+| `src/transfers/AssemblyInfo.cs` | **v1.0** — `InternalsVisibleTo` for the transfers test assembly (T1 restore path). |
+| `src/transfers/TransfersSaveCodec.cs` | **v1.0** — T1 magic-led `XFER` sub-blob codec; zero-club block = unwired; ERR-031-003. |
 | `src/transfers/Contract.cs` | Durable managed-club contract value; fail-loud wage/length validation. |
 | `src/transfers/Offer.cs` | Immutable transfer terms + shared fail-loud validation for every consuming seam. |
 | `src/transfers/NegotiationOutcome.cs` | Accepted / CounterOffered / Rejected closed outcome set. |
@@ -4245,12 +4252,13 @@ Examples:
 | `src/transfers/ClubTransferState.cs` | Season-scoped active window + committed-spend accumulator. |
 | `src/transfers/PlayerValuation.cs` | Integer attributes+age identity plus always-on coarse positional-scarcity multiplier. |
 | `src/transfers/NegotiationEngine.cs` | Draw-free synchronous negotiation with configured counter-offer band. |
-| `src/transfers/TransfersState.cs` | Managed-contract store, spend/window state and #31-owned re-key handling. |
+| `src/transfers/TransfersState.cs` | **v1.1** — Managed-contract store, spend/window state, #31-owned re-key handling; T1 internal `Restore` + public `Clone`. |
 | `src/transfers/ITransferRosterPort.cs` | Consumer-owned read/position-stock/preflight/commit seam for the #30 T2 producer. |
 | `src/transfers/TransferCommands.cs` | **v1.3** — Atomic manager `SubmitBid`; ERR-031-002 orders affordability before checked #40 staging; #30 roster-port coordination unchanged. |
 | `src/transfers/TransfersConstants.cs` | `[FIXED]` identities + `GameplayConfig`-loaded `[GT]` catalogue. |
 | `src/transfers/tests/transfers-tests.asmdef` | NUnit test assembly for #31 T0. |
 | `src/transfers/tests/TransfersT0Tests.cs` | **v1.4** — Valuation, positional need, negotiation band, malformed-term, atomicity, budget (including extreme-debt ERR-031-002 ordering), re-key, window and integer-state locks. |
+| `src/transfers/tests/TransfersT1Tests.cs` | **v1.0** — T1 golden vector, round-trip and F3/F6/F7 decode-refusal locks (T-TX-DET-001 / T-TX-FAIL-001). |
 
 ---
 
