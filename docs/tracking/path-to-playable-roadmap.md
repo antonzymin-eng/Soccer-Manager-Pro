@@ -303,10 +303,10 @@ reaction-text correction **landed October 10, 2026**, section 3 **v0.18**, `ERR-
 The condition to land that correction before C is **done**. Draft C from PR #511's head or after
 its merge, and reconcile #511's shared #11 version/history rows before C review. D-07 is required
 at C closeout, not for drafting. The reaction correction is a W10 gate already met; it is not a
-behavioral prerequisite for C. #3 FR-03 omits production
-`AgentBallCollisionData.AgentPosition` (the agent center, separate from contact point); shot-outcome
-deflection already consumes it, so that documentation correction has **no blocking consumer**.
-Land it any time. Do not reopen already-completed #13 work.
+behavioral prerequisite for C. The #3 `AgentBallCollisionData.AgentPosition` documentation gap
+(the agent center, separate from the contact point) is **closed**: FR-03 landed October 10, 2026
+(`ERR-003-009`) and §4.2.4/§4.5.1/§8.3 landed October 18, 2026 (`ERR-003-010`). It had no blocking
+consumer. Do not reopen already-completed #13 work.
 
 **#19/#20 split.** The drift PR covers FR-CS-008's stale inactive language-version claim,
 related §§3/5/7 text and ERR-020-008; the certified-platform record needs cross-references only.
@@ -714,6 +714,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.75 | October 18, 2026 | §5.1 specification gates: the #3 FR-03 `AgentPosition` line was stale, because `ERR-003-009` landed it October 10. It is now recorded as closed, with `ERR-003-010` completing §4.2.4/§4.5.1/§8.3. Sequencing only. |
 | v0.74 | October 18, 2026 | PR #515 merged 1a3b4271; D-07 landed. Six-seed census: 0 D-07 free kicks, all six B digests unchanged. Avoidance residual filed in open-issues. |
 | v0.73 | October 18, 2026 | PR #515 review fixes at `a7800579`; PR CI green and pinned-host Unity validation met (MatchEngine 826/0/16 skip/1 inconclusive; GoalkeeperMechanics 107/0/27 skip). Landing remains. |
 | v0.72 | October 18, 2026 | Owner selects D-07 option A; implement general outside-area contacts and carries before C, reuse v27 pending state and DFK restart, and retain governing-host/landing and comparison-anchor follow-up. |
