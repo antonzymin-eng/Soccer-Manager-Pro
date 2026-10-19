@@ -1,12 +1,14 @@
 # W8 Goalkeeper Distribution — Owner Decision Packet
 
+> **October 18, 2026 (UTC) — D-07 landed (0.36):** PR #515 merged `1a3b4271` with final-head CI green and pinned Unity met at `a7800579` ([host record](evidence/host-d07-a7800579-20261018/README.md)). Option A enforces general outside-area handling, contacts and outward carries, as an opponents' DFK; OD-W8-1's separate-offence requirement is met and never classified as the eight-second corner. The C rule still needs its own owner approval. On the six standard seeds the [census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and all six final digests equal the adopted post-law B digests, so the B→C comparison digests stand. Keeper hand avoidance remains an [open residual](open-issues.md#d07-keeper-avoidance).
+
 > **October 18, 2026 (UTC) — B landing status (0.35):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** Post-law six-seed digests at `751b1143` are adopted for B→C; C wording and D-07 are not approved.
 
 
 > **Measurement closeout — October 17:** [Linux .NET / frozen-observer evidence](evidence/w8-b-20261015/measurement-closeout/README.md) answers the count and restricted-spell questions: 348/348 → 126/126 hand claims/distributions; every spell clears on player touch; twelve opponent-touch windows include eight shots and six goals. No execution gap or stuck restriction observed; no causal balance claim. Historical pre-merge record; final-head CI passed and #511 subsequently merged as recorded above.
 
 > **Created:** September 25, 2026  
-> **Status:** **B contract and implementation landed in PR #511, merge `c0ffd0d2`.** Final-head CI passed at `a43bbc1c`; governing Unity `e58577de` and all #466 live-wiring obligations are met. The adopted post-law Linux B baseline and remaining attribution limitations are in [results v1.5](w8-b-implementation-results.md). #5/#11 remain overall DRAFT beyond their approved W8 B amendments; C/D-07 require their own owner decisions.
+> **Status:** **B contract and implementation landed in PR #511, merge `c0ffd0d2`.** Final-head CI passed at `a43bbc1c`; governing Unity `e58577de` and all #466 live-wiring obligations are met. The adopted post-law Linux B baseline and remaining attribution limitations are in [results v1.5](w8-b-implementation-results.md). #5/#11 remain overall DRAFT beyond their approved W8 B amendments; C requires its own owner decision; D-07 landed in PR #515.
 > **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
 > **Local branch update — October 15, 2026:** six-policy wiring and the three host obligations above are implemented on `feat/w8-b-goalkeeper-distribution`, with canonical CONTACT / W5 / F-05 / restore locks and a measured A→B record. The first arm exposed a missed in-flight foot-action handover; corrected source `e54335b0` interrupts it in Resolve. See [implementation and evidence](w8-b-implementation-results.md). This October 15 status is historical: publication is PR #511 and the October 17 host record now validates the live runtime tree; the final docs-head CI and merge later completed as recorded above.
 >
@@ -56,7 +58,8 @@ evidence is not certification of future wiring.
 - **Outside-area handling:** OD-W8-1 already records this separate offence. An implementation or
   explicit owner-approved deferral is required before C closeout; retain its own work item and
   never classify outside-area handling as an eight-second corner. Do not silently enlarge C's
-  code scope or erase the requirement.
+  code scope or erase the requirement. **Met October 18, 2026:** implemented as D-07 option A in
+  PR #515 (merge `1a3b4271`), outside C's code scope.
 - **Exact C boundary:** the owning #11 law amendment must define elapsed frame 0 as the recorded
   60 Hz claim frame, legal release at elapsed 480 and sanction at 481 before CONTACT processing,
   with a `[FIXED]` constant and worked example. This note schedules that amendment, not its approval.
@@ -408,7 +411,7 @@ B gameplay/digest chain. A new host/runtime requires reproduced B control or a f
 
 This is a **measurement requirement**, not a new result or permission to implement C. Team attribution
 and exact pre-law touch timing remain unavailable in the committed B logs. Owner approval of the C
-rule and D-07 closeout remain separate gates.
+rule remains a separate gate; D-07 landed in PR #515.
 
 ## 6. Owner-directed landing sequence
 
@@ -468,6 +471,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.36 | 2026-10-18 | D-07 landed | PR #515 merge 1a3b4271, CI green, pinned Unity met at a7800579; OD-W8-1 outside-area requirement met outside C; six-seed census 0 D-07 free kicks, B digests unchanged; avoidance residual tracked in open-issues. C still unapproved. |
 | 0.35 | 2026-10-18 | landed B | PR #511 merge c0ffd0d2, final-head CI/host met; post-law baseline adopted; both B→C arms must log exact physical touches and shot/scoring teams, with release-window danger comparison. C and D-07 remain separate. |
 | 0.34 | 2026-10-17 | measurement closeout | Exact frozen observer on Linux .NET reproduces twelve fingerprints; reconcile claims/count divergence and all 126 restricted spells, including opponent-touch follow-up; no code change or step-7 landing claim. |
 | 0.33 | October 17, 2026 | — | PR #511 governing Unity closure at e58577de; identical runtime trees on evidence/docs successors. Final Linux CI/merge remain; step 7 not landed. |
