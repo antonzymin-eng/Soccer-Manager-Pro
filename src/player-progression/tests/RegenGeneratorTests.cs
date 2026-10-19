@@ -43,8 +43,8 @@ namespace TacticalDirector.PlayerProgression.Tests
             var rngA = NewRng(4242UL, clubId: 7, out int idxA);
             var rngB = NewRng(4242UL, clubId: 7, out int idxB);
 
-            (PlayerRecord recA, PlayerLifecycle lifeA) = RegenGenerator.GenerateRegen(rngA, idxA, clubId: 7, newPlayerId: 631, WorldDay);
-            (PlayerRecord recB, PlayerLifecycle lifeB) = RegenGenerator.GenerateRegen(rngB, idxB, clubId: 7, newPlayerId: 631, WorldDay);
+            (PlayerRecord recA, PlayerLifecycle lifeA) = RegenGenerator.GenerateRegen(rngA, idxA, clubId: 7, newPlayerId: 631, PlayerPosition.Midfielder, WorldDay);
+            (PlayerRecord recB, PlayerLifecycle lifeB) = RegenGenerator.GenerateRegen(rngB, idxB, clubId: 7, newPlayerId: 631, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(recA.FirstName, recB.FirstName);
             Assert.AreEqual(recA.LastName, recB.LastName);
@@ -61,7 +61,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_AdvancesCursorByExactlyTheReservationBudget()
         {
             var rng = NewRng(1UL, clubId: 0, out int idx);
-            RegenGenerator.GenerateRegen(rng, idx, clubId: 0, newPlayerId: 100, WorldDay);
+            RegenGenerator.GenerateRegen(rng, idx, clubId: 0, newPlayerId: 100, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(
                 (ulong)PlayerProgressionConstants.PROGRESSION_REGEN_FIELDS,
@@ -73,7 +73,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_UsesTheSuppliedFreshPlayerId()
         {
             var rng = NewRng(9UL, clubId: 3, out int idx);
-            (PlayerRecord rec, _) = RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 999, WorldDay);
+            (PlayerRecord rec, _) = RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 999, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(999, rec.PlayerId, "the regen must take the caller-supplied fresh id (FR-PG-011).");
         }
@@ -82,7 +82,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_CurrentAbilityIsBelowPotential_WithRoomToGrow()
         {
             var rng = NewRng(55UL, clubId: 2, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 2, newPlayerId: 55, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 2, newPlayerId: 55, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(
                 AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
@@ -116,7 +116,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_GeneratedValues_AreWithinDeclaredBounds()
         {
             var rng = NewRng(7UL, clubId: 4, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 4, newPlayerId: 4, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 4, newPlayerId: 4, PlayerPosition.Midfielder, WorldDay);
 
             Assert.GreaterOrEqual(rec.Age, PlayerProgressionConstants.REGEN_AGE_MIN);
             Assert.LessOrEqual(rec.Age, PlayerProgressionConstants.REGEN_AGE_MAX);
@@ -145,7 +145,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // name. A regen describes the roster as of worldDay, so that is its anchor, exactly like a
             // seeded player.
             var rng = NewRng(21UL, clubId: 5, out int idx);
-            (_, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 5, newPlayerId: 21, WorldDay);
+            (_, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 5, newPlayerId: 21, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(WorldDay, life.LastAdvancedWorldDay,
                 "a generated regen's cursor must anchor at the world day it was generated on.");
@@ -160,7 +160,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // straight from GenerateRegen's output must pass that gate without a caller having to patch
             // LastAdvancedWorldDay first.
             var rng = NewRng(87UL, clubId: 9, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 9, newPlayerId: 500, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 9, newPlayerId: 500, PlayerPosition.Midfielder, WorldDay);
 
             var block = new ClubCareerStates(9, new[] { rec }, new[] { life });
 
@@ -169,11 +169,55 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "a block built straight from a generated regen must be a legal store state (ERR-028-014).");
         }
 
+        [TestCase(PlayerPosition.Goalkeeper)]
+        [TestCase(PlayerPosition.Defender)]
+        [TestCase(PlayerPosition.Midfielder)]
+        [TestCase(PlayerPosition.Forward)]
+        public void GenerateRegen_TakesTheRetireesPosition_AndBiasesTheAttributesForIt(PlayerPosition position)
+        {
+            // ERR-028-024: a 1:1 replacement keeps the squad's shape. Under the retired uniform draw every
+            // line drifted to Binomial(25, 0.25) after one full turnover.
+            var rng = NewRng(3131UL, clubId: 6, out int idx);
+            (PlayerRecord rec, PlayerLifecycle life) =
+                RegenGenerator.GenerateRegen(rng, idx, clubId: 6, newPlayerId: 900, position, WorldDay);
+
+            Assert.AreEqual(position, rec.Position);
+            Assert.AreEqual(AbilityModel.ComputeCA(in rec.Attributes, position), life.CurrentAbility,
+                "CA is computed for the inherited position");
+        }
+
+        [Test]
+        public void GenerateRegen_TheInheritedPosition_MovesNoOtherDrawValue()
+        {
+            // The retired position draw's index stays reserved and undrawn, so the identity draws around
+            // it (name, age, weak foot) are the same whichever position the regen inherits.
+            var gkRng = NewRng(77UL, clubId: 1, out int gk);
+            var fwRng = NewRng(77UL, clubId: 1, out int fw);
+            (PlayerRecord keeper, _) = RegenGenerator.GenerateRegen(gkRng, gk, 1, 800, PlayerPosition.Goalkeeper, WorldDay);
+            (PlayerRecord forward, _) = RegenGenerator.GenerateRegen(fwRng, fw, 1, 800, PlayerPosition.Forward, WorldDay);
+
+            Assert.AreEqual(keeper.FirstName, forward.FirstName);
+            Assert.AreEqual(keeper.LastName, forward.LastName);
+            Assert.AreEqual(keeper.Age, forward.Age);
+            Assert.AreEqual(keeper.Attributes.WeakFootRating, forward.Attributes.WeakFootRating);
+            Assert.Greater(keeper.Attributes.Reflexes, forward.Attributes.Reflexes,
+                "the position bias follows the inherited position (GK reflexes bias)");
+            Assert.AreEqual(gkRng.GetStreamState(gk).RngCursor, fwRng.GetStreamState(fw).RngCursor);
+        }
+
+        [Test]
+        public void GenerateRegen_UndefinedPosition_Throws()
+        {
+            var rng = NewRng(5UL, clubId: 0, out int idx);
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => RegenGenerator.GenerateRegen(rng, idx, 0, 1, (PlayerPosition)99, WorldDay));
+        }
+
         [Test]
         public void GenerateRegen_NullRng_Throws()
         {
             Assert.Throws<System.ArgumentNullException>(
-                () => RegenGenerator.GenerateRegen(null, 0, 0, 1, WorldDay));
+                () => RegenGenerator.GenerateRegen(null, 0, 0, 1, PlayerPosition.Midfielder, WorldDay));
         }
 
         [Test]
@@ -192,7 +236,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // attributes are identical by construction and the only thing that can differ is the rule.
             var rng = NewRng(2024UL, clubId: 3, out int idx);
             (PlayerRecord rec, PlayerLifecycle regenLife) =
-                RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 701, WorldDay);
+                RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 701, PlayerPosition.Midfielder, WorldDay);
 
             ProgressionEngine seeded = ProgressionEngine.SeedFrom(
                 new[] { new Squad(3, new[] { rec }) }, WorldDay);
@@ -248,4 +292,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | the pre-ERR-028-018 regen credit (GrowthCursor = 0) fails      |
 // |         |            |        | this case, which is the exact defect that shipped once and     |
 // |         |            |        | went a day undetected because nothing compared the two sites.  |
+// | 1.5     | 2026-10-19 | —      | ERR-028-024: every call passes the inherited position; new locks — the regen takes the retiree's position (all four), the position moves no other identity draw, an undefined position throws. |
 #endregion

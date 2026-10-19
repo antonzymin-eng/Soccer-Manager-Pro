@@ -1,6 +1,7 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-24 (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
+// Modified: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
+//           (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
 //           (BandStepFor made internal + directly locked — v1.7)
 //           (ERR-028-020 — the construction-day credit takes the continuous step —
 //           football-judgment proxy review batch 1 — v1.6)
@@ -32,13 +33,15 @@ namespace TacticalDirector.PlayerProgression
         private const int DrawFirstName = 0;
         private const int DrawLastName = 1;
         private const int DrawAge = 2;
-        private const int DrawPosition = 3;
+        // Index 3 was the uniform position draw. ERR-028-024 retired it — a regen takes the RETIREE's
+        // position — but the slot stays reserved and undrawn so every later index (weak foot, the 31
+        // attributes, PA) keeps its draw value: the reservation is a fixed budget, so an undrawn index
+        // costs nothing and moves nothing.
+        private const int DrawPositionRetired = 3;
         private const int DrawWeakFoot = 4;
         private const int AttributeDrawBase = PlayerDatabaseConstants.IDENTITY_DRAWS_PER_PLAYER;
         private const int DrawPotentialAbility = AttributeDrawBase + AttrIdx.Count; // = 36
 
-        // PlayerPosition has exactly 4 members (Goalkeeper..Forward) — a property of the enum.
-        private const int PlayerPositionCount = 4;
 
         /// <summary>
         /// Generates one regen for <paramref name="clubId"/> with the fresh, caller-supplied
@@ -55,6 +58,11 @@ namespace TacticalDirector.PlayerProgression
         /// already scoped by <paramref name="streamIndex"/> and the id is the explicit <paramref name="newPlayerId"/>.
         /// </param>
         /// <param name="newPlayerId">The fresh, monotonically-allocated PlayerId (FR-PG-011).</param>
+        /// <param name="position">The position of the retiree this regen replaces 1:1 (ERR-028-024). A
+        /// uniform draw drifted squads off the KD-6 template — after one full turnover each line is
+        /// Binomial(25, 0.25), so a back four or a three-forward line goes missing for a material share of
+        /// clubs — and #28 FR-PG-019's 1:1 replacement is a replacement of the PLAYER, so it keeps his
+        /// place in the squad's shape.</param>
         /// <param name="worldDay">The current world-day (anchors <see cref="PlayerLifecycle.BirthWorldDay"/>).</param>
         /// <exception cref="ArgumentNullException"><paramref name="rng"/> is null.</exception>
         /// <exception cref="InvalidOperationException">The RNG reservation/draw failed (draw-site misuse or corrupt reservation state).</exception>
@@ -63,11 +71,17 @@ namespace TacticalDirector.PlayerProgression
             int streamIndex,
             int clubId,
             int newPlayerId,
+            PlayerPosition position,
             uint worldDay)
         {
             if (rng == null)
             {
                 throw new ArgumentNullException(nameof(rng));
+            }
+
+            if (!Enum.IsDefined(typeof(PlayerPosition), position))
+            {
+                throw new ArgumentOutOfRangeException(nameof(position), position, "Undefined PlayerPosition.");
             }
 
             ushort reserveErr = rng.Reserve(streamIndex, PlayerProgressionConstants.PROGRESSION_REGEN_FIELDS);
@@ -83,7 +97,6 @@ namespace TacticalDirector.PlayerProgression
             // attrs/PA only (the §3.3 "club/nation from the reference roster" is a forward reference).
             int ageSpan = PlayerProgressionConstants.REGEN_AGE_MAX - PlayerProgressionConstants.REGEN_AGE_MIN + 1;
             int age = PlayerProgressionConstants.REGEN_AGE_MIN + PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawAge, ageSpan);
-            var position = (PlayerPosition)PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawPosition, PlayerPositionCount);
 
             int weakFootSpan = 2 * PlayerDatabaseConstants.WeakFootSpread + 1;
             int weakFootJitter = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawWeakFoot, weakFootSpan) - PlayerDatabaseConstants.WeakFootSpread;
@@ -266,4 +279,7 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | identical — verified by probe over ages 0..200 and the int     |
 // |         |            |        | domain's edges before the collapse. No draw, no budget, no     |
 // |         |            |        | ordinal change; the RNG path is untouched.                     |
+// | 1.9     | 2026-10-19 | —      | ERR-028-024: GenerateRegen takes the retiree's position instead of  |
+// |         |            |        | drawing one uniformly (KD-6 template drift); draw index 3 stays     |
+// |         |            |        | reserved and undrawn so every later draw value is unchanged.        |
 #endregion

@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
+**Last Updated:** October 19, 2026 (v0.14 — ERR-028-024 / ERR-028-025: §3.3 inherited position; §3.4 staged boundary + the regen stream save story)
+**Last Updated (prior):** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short): §3.2's "Recorded limitation, not fixed
 here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated
 against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-ABILITY_MAX figure is
@@ -23,7 +24,7 @@ numeric value, no draw, no format version. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -406,7 +407,8 @@ why this number needed no re-derivation.)*
 ```
 GenerateRegen(rng, streamIndex, clubId, ref nextPlayerId, referenceRosterWorld):
     reserveErr = rng.Reserve(streamIndex, PROGRESSION_REGEN_FIELDS)     # fixed budget (#27 pattern)
-    ...draw name/nation/position/attributes/PA from the reservation, mirroring RosterGenerator...
+    ...draw name/nation/attributes/PA from the reservation, mirroring RosterGenerator...
+    # position = the RETIREE's (ERR-028-024); its draw index stays reserved, undrawn
     rng.CloseReservation(streamIndex)
     playerId = nextPlayerId; nextPlayerId += 1                          # FRESH id, monotonic (FR-PG-011)
     return new PlayerRecord { PlayerId = playerId, ... } + PlayerLifecycle { PotentialAbility = drawnPA, ... }
@@ -598,23 +600,43 @@ selectability gate reads only the boolean flag). **See §5's T-PG-DET-002**, whi
 tests: a reader running that test against a player who crosses `RETIREMENT_AGE` mid-gap will observe
 this limitation directly, so the cross-reference is here rather than left implicit.
 
-**At the season boundary (`RunSeasonBoundary`, invoked by #30 KD-6):**
+**At the season boundary (`RunSeasonBoundary`, invoked by #30 KD-6) — as amended by ERR-028-024 / ERR-028-025:**
 ```
-RunSeasonBoundary(...):
-    if boundaryAlreadyApplied(seasonNumber): return          # idempotent (F6 / FR-PG-024)
-    retirees = [ pid for pid in roster if lifecycle[pid].RetirementFlag ]
-    emit RetirementResult(retirees)
-    for pid in retirees:                                      # deterministic order: ascending PlayerId
-        clubId = ClubOf(pid)
-        regen  = GenerateRegen(rng, streamIndex, clubId, ref nextPlayerId, referenceRosterWorld)
-        remove lifecycle[pid]; remove record[pid]            # 1:1 replacement (FR-PG-019)
-        add regen; emit into RegenResult
-    markBoundaryApplied(seasonNumber)
+PrepareSeasonBoundary(worldSeed, completedSeasonNumber, worldDay) -> plan:      # writes NOTHING
+    seed = Mix(Mix(DOMAIN_TAG_PLAYER_PROGRESSION ^ worldSeed) ^ completedSeasonNumber)
+    rng  = new DeterministicRngService(seed)              # boundary-scoped; discarded with the plan
+    next = nextPlayerId
+    for club in clubs ascending:
+        for pid in club's roster ascending where lifecycle[pid].RetirementFlag:   # draw + id order
+            stream = rng.Register("player-progression.regen", ordinal 82, entityId = club)  # once per club
+            regen  = GenerateRegen(rng, stream, club, next++, position = record[pid].Position, worldDay)
+            plan.replace(pid -> regen)                     # 1:1 (FR-PG-019)
+    plan.nextPlayerId = next
+    return plan
+
+CommitSeasonBoundary(plan):                                 # infallible on a fresh plan from this store
+    require plan prepared from this store at its current mutation generation   # else refuse (F6)
+    install plan's per-club arrays in place; nextPlayerId = plan.nextPlayerId
 ```
-It **does not re-bank growth** (banked daily, KD-1) — its job is applying the deferred roster
-mutations. `#30`/`#27` apply the `Squad` removal+insert from `RetirementResult`/`RegenResult`
-(FR-PG-012/015). Restartable: a save taken mid-boundary carries the boundary marker + `nextPlayerId`
-+ the partially-mutated block, so a restore→re-run resumes deterministically without double-applying.
+It **does not re-bank growth** (banked daily, KD-1) — its job is applying the deferred roster mutations.
+#30 stages `PrepareSeasonBoundary` at its roll step (d), reconciles its #29/#41/#30 rows against
+`plan.PlannedSquadFor` at (d′), and commits both after `BeginNextSeason` (#30 §3.5); the plan's
+`RetiredPlayerIds` / `RegenPlayerIds` / `RegenClubIds` are the `RetirementResult` / `RegenResult` FR-PG-012/015
+name, and #30 drops each retiree's #44 tally (FR-DC-013).
+
+**The regen stream's save story (ERR-028-025 — the question §3.5 had left unpinned, which kept this step
+unbuilt).** The stream is **boundary-scoped**: constructed fresh at each boundary from a seed derived from the
+world seed and the completed season number, used, and discarded. Every input — world seed, season number,
+retirement flags, `nextPlayerId` — is already persisted, so **no RNG cursor is serialized** and a save taken
+before the boundary reproduces the identical regens; folding in the season number makes successive boundaries
+draw different regens. Stream keys depend only on `(ordinal, entityId, version)`, so registration order cannot
+move a draw. The position draw index of the regen reservation is retired but stays reserved and undrawn
+(ERR-028-024), so no other draw value moved.
+
+**Restartability without a marker (ERR-028-025).** The `boundaryAlreadyApplied` / `markBoundaryApplied` marker
+this section originally pseudocoded was never in the codec layout (§3.5) and is not needed: preparation writes
+nothing and the commit happens only after #30's roll can no longer fail, so no partially applied boundary is ever
+observable, and a re-run is refused (a committed plan is stale; a rolled season is not complete).
 
 ## 3.5 The save codec (KD-4)
 
@@ -897,4 +919,5 @@ about not erasing a roster the codec can actually see.
 | 0.11 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings, four doc-only corrections, spec + code together where a test id is allocated. **guards-unexercised:** §3.4's `RetirementAgeDays` pseudocode showed only `if days <= 0: FAIL LOUD`, omitting the leading non-negativity check on `RETIREMENT_GAME_READING_SPAN_YEARS`/`RETIREMENT_GOALKEEPER_BONUS_YEARS` that Appendix A already mandates and `AbilityModel.RetirementAgeDays` has always enforced — added. **config-unbound-premise-false-28:** §3.1.3's disjointness-guard paragraph justified its computing-site placement with "the `[GT]` is a config key and the catalogue lock runs config-unbound" — copied from ERR-041-003's rationale, where it is true, without checking it against this catalogue: `PlayerProgressionConstants.cs` has zero `Config.GetX` calls, so the rationale was false here. Corrected to state the placement is forward-looking for the Stage-1 loader, and that a catalogue-level lock exists today in `PlayerProgressionConstantsTests`. **spec-32-stale-flat-band-step:** §3.2 still described `DailyPoints` as "the flat §4.3 band step" in the minimal tier, present tense, after ERR-028-020 made `DailyBandPoints`'s ramp the accrual authority; corrected. **classifyageband-growth-claim-stale:** §3.5's `birthWorldDay` lower-bound value-gate rationale said `ClassifyAgeBand` reads `int.MinValue` as `Growth` — true when written, false since ERR-028-020 (`ClassifyAgeBand` now returns `Stable` there); annotated as history, the int-narrowing concern itself unchanged. |
 | 0.12 | 2026-08-24 | — | Round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit. The construction-day credit — the rule that a site anchoring `LastAdvancedWorldDay` at its own construction day owes that day's band step to `GrowthCursor` — was IMPLEMENTED TWICE: inlined in `ProgressionEngine.SeedLifecycle` and again as `RegenGenerator.BandStepFor`, whose own documentation described itself as the shared owner of a rule it did not own. That duplication is not hypothetical debt here: it is why ERR-028-018 credited the seed site and left the regen site at `0` (found a day later, AR pass 7) and why ERR-028-020 then had to visit both sites again to move each off the retired three-way step. §3.3 now states the single-owner requirement normatively (`AbilityModel.ConstructionDayCredit`, alongside the §3.1.3 curve it reads) and §3.1's seed-credit MUST points at the same owner; §3.3's `BandStepFor(age)` reference retires with the method, which is deleted. **No behaviour change** — the two implementations were character-for-character identical, verified by probe over ages 0..200 and the `int` domain's edges (including `int.MinValue`/`MaxValue`) before the collapse, and the suite is unchanged at 147 pre-existing passes. What the landing adds is the divergence detection neither form had: a cross-SITE lock seeding a `ProgressionEngine` from a regen's own returned record and requiring both credits to agree, plus a seed-site case at a ramp age (every prior seed-credit case drove 18/27/34, all outside both ramps, where the retired step and the continuous curve agree day for day). No new constant, no `[GT]`, no draw, no stream, no domain tag, no format version. |
 | 0.13 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings, doc-only. **M2 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):** §3.2's "Recorded limitation, not fixed here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-`ABILITY_MAX` figure is unchanged (the P5 pivot makes it exact at every half-width). **L1 (four-guards-enumerated-as-five-and-mis-named):** §3.4's `RetirementAgeDays` pseudocode note corrected — it said "these TWO dial guards" for the single combined non-negativity `if`, which made the paragraph claim "four" and then list five items; now "this ONE combined dial guard". **M5 (retirement-day-derived-from-attributes-the-same-step-mutates):** new §3.4 paragraph states the retirement-day feedback-loop invariant — the day is re-evaluated against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and `RetirementFlag`'s stickiness — and cites the new **T-PG-RET-009** lock (`section-5.md` v0.9). No numeric value, no draw, no format version. |
+| 0.14 | 2026-10-19 | — | **ERR-028-024**: §3.3 — the regen takes the retiree's position; the position draw index stays reserved and undrawn. **ERR-028-025**: §3.4 — `PrepareSeasonBoundary` (pure) / `CommitSeasonBoundary` (infallible) replace the marker pseudocode; the boundary-scoped regen stream (seed from world seed + completed season, no serialized cursor) is the save story; normative draw and id orders pinned. |
 #endregion

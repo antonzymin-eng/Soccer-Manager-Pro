@@ -1,6 +1,7 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-24 (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
+// Modified: 2026-10-19 (ERR-028-025 — regen stream identity + the 0x20/82 mirrors — v1.6)
+//           (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
 //           DECLINE_DAILY_POINTS doc — v1.5)
 //           (round-2 finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short —
 //           POINT_COST / NEW_GAME_PA_HEADROOM docs — v1.4)
@@ -12,6 +13,7 @@
 //           scale, the age-band step, and the regen [GT] balance values. No magic literals in
 //           GrowthProjection / AbilityModel / RegenGenerator.
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.PlayerProgression
@@ -21,8 +23,8 @@ namespace TacticalDirector.PlayerProgression
     /// Fixed → Derived → Cross → GT. The <c>[GT]</c> magnitudes are illustrative pending the §5.6 balance
     /// pass — the shapes/tags are the contract (the #21/#26 precedent). The two RNG-identity mirrors
     /// (<c>DOMAIN_TAG_PLAYER_PROGRESSION</c> / <c>SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION</c>, Appendix A)
-    /// land at T2 with the production <c>player-progression.regen</c> stream registration (KD-B), never
-    /// earlier — registering a zero-draw stream is the phantom-surface class FR-LW-031 forbids.
+    /// landed with the production <c>player-progression.regen</c> stream at the season-boundary regen
+    /// (ERR-028-025, KD-B), its first draw site.
     /// </summary>
     public static class PlayerProgressionConstants
     {
@@ -93,6 +95,12 @@ namespace TacticalDirector.PlayerProgression
         /// </summary>
         public const uint PROGRESSION_NOT_ADVANCED_SENTINEL = uint.MaxValue;
 
+        /// <summary>[FIXED] Draw-site id of the per-club regen stream (FR-PG-020; #16 §3.4 row 0x20).</summary>
+        public const string REGEN_STREAM_SITE_ID = "player-progression.regen";
+
+        /// <summary>[FIXED] Stream version for <see cref="REGEN_STREAM_SITE_ID"/>; bump on a draw-order change (#16 §3.2.5.1).</summary>
+        public const ushort REGEN_STREAM_VERSION = 1;
+
 #endregion
 
         #region Derived
@@ -121,6 +129,19 @@ namespace TacticalDirector.PlayerProgression
         /// Authoritative source: PlayerDatabaseConstants.ATTRIBUTE_MAX. Squad/Player Data Layer #27.
         /// </summary>
         public const int ATTRIBUTE_MAX = PlayerDatabaseConstants.ATTRIBUTE_MAX;
+
+        /// <summary>
+        /// [CROSS] The #16 hash-domain tag folded into the boundary-scoped regen stream's seed
+        /// (ERR-028-025). Authoritative source: DeterministicSimConstants.DOMAIN_TAG_PLAYER_PROGRESSION
+        /// (#16 §3.4, 0x20).
+        /// </summary>
+        public const byte DOMAIN_TAG_PLAYER_PROGRESSION = DeterministicSimConstants.DOMAIN_TAG_PLAYER_PROGRESSION;
+
+        /// <summary>
+        /// [CROSS] The subsystem ordinal keying each club's regen stream registration (FR-PG-020).
+        /// Authoritative source: SubsystemOrdinals.PlayerProgression (#16 §3.1.1, 82).
+        /// </summary>
+        public const int SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION = SubsystemOrdinals.PlayerProgression;
 
         #endregion
 
@@ -357,4 +378,5 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | (ABILITY_MAX, POINT_COST, GROWTH/DECLINE/RETIREMENT_AGE,       |
 // |         |            |        | GROWTH/DECLINE_DAILY_POINTS + the regen balance values). The   |
 // |         |            |        | 0x20/82 RNG-identity mirrors land at T2 with the stream (KD-B).|
+// | 1.6     | 2026-10-19 | —      | ERR-028-025: REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION [FIXED]; DOMAIN_TAG_PLAYER_PROGRESSION (0x20) and SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION (82) [CROSS] mirrors land with the first regen draw site. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
+// Modified: 2026-10-19 (DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 — #28 regen, ERR-028-025)
+//           Prior: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
 //           prior same day ERR-016-010 SNAPSHOT_FILE_MAGIC / _FORMAT_VERSION v1.9;
 //           ERR-016-009 DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
 //           ERR_DS_REPLAY_BUILD_MISMATCH 0x160E for the §2.3.2 buildHash v1.8)
@@ -150,6 +151,17 @@ namespace TacticalDirector.DeterministicSim
         /// docs/tracking/squad-player-data-design.md KD-5 (design-supplement stage; no numbered
         /// spec yet — candidate #27).</summary>
         public const byte DOMAIN_TAG_PLAYER_DATABASE = 0x1F;
+
+        /// <summary>
+        /// [FIXED] Domain tag for Player Progression &amp; Lifecycle #28 (FR-PG-020 — the per-club
+        /// <c>player-progression.regen</c> stream). §3.4; back-prop ERR-028-001, which promoted the number
+        /// spec-text-first at #28's approval and pinned the code const to land at #28's first draw site.
+        /// This is that site: the season-boundary regen (ERR-028-025). The tag is folded into the
+        /// boundary-scoped stream's seed; <see cref="SubsystemOrdinals.PlayerProgression"/> keys the
+        /// per-club registration. No <c>DETERMINISM_DIGEST_VERSION</c> bump — a namespace allocation,
+        /// like every off-pitch tag before it.
+        /// </summary>
+        public const byte DOMAIN_TAG_PLAYER_PROGRESSION = 0x20;
 
         /// <summary>
         /// [FIXED] Domain tag allocated for the Season &amp; Competition Loop #30 (FR-SN-027 — the season
@@ -411,4 +423,5 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | Distinct from ERR_DS_DIGEST_CHAIN_BREAK (0x1608), which is the    |
 // |         |            |        | chain LINK: 4a asks whether this record follows the last one, 4b  |
 // |         |            |        | asks whether these bytes are the record they claim to be.         |
+// | 1.11    | 2026-10-19 | —      | ERR-028-001 code half / ERR-028-025: DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 lands at #28's first draw site (the season-boundary regen). |
 #endregion

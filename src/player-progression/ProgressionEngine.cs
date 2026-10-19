@@ -1,6 +1,8 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-24 (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
+// Modified: 2026-10-19 (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
+//           CommitSeasonBoundary, the boundary-scoped regen stream, the mutation generation — v1.10)
+//           (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
 //           the retirement-day feedback-loop invariant documented at the daily evaluation (M5) — v1.9)
 //           (construction-day-credit-implemented-twice — SeedLifecycle delegates — v1.8)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.7)
@@ -17,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.PlayerProgression
@@ -38,12 +41,13 @@ namespace TacticalDirector.PlayerProgression
     /// moment anything would think to compare them — the silent-divergence shape #29/#41 T2's H2 filed.
     /// </para>
     /// <para>
-    /// <b>What this landing deliberately does NOT do.</b> <c>RunSeasonBoundary</c> (retiree removal +
-    /// 1:1 regen, §3.4) is not here. Retirement FLAGGING is — it is part of the draw-free daily step —
-    /// but applying the roster mutation needs the <c>player-progression.regen</c> stream, whose
-    /// survival across a save §3.5 does not pin, and ERR-029-006 closes without it. So this landing has
-    /// <b>no draw site at all</b>: no stream registration, no <c>0x20</c> promotion, no digest-version
-    /// question.
+    /// <b>The season boundary (§3.4, ERR-028-025).</b> Retirement FLAGGING is part of the draw-free daily
+    /// step; the roster mutation — retiree removal + 1:1 regen — is <see cref="PrepareSeasonBoundary"/>
+    /// (pure) then <see cref="CommitSeasonBoundary"/> (infallible), so #30 stages it before its one
+    /// fallible write and installs it after. The regen stream is BOUNDARY-SCOPED: a fresh
+    /// <c>DeterministicRngService</c> seeded from <c>(worldSeed, completed season)</c> under
+    /// <c>DOMAIN_TAG_PLAYER_PROGRESSION</c>, so it carries no cursor across a save — every input is
+    /// already persisted — which is the save story §3.5 had left unpinned.
     /// </para>
     /// </summary>
     public sealed class ProgressionEngine
@@ -55,6 +59,12 @@ namespace TacticalDirector.PlayerProgression
         private readonly List<PlayerLifecycle[]> _lifecycles = new List<PlayerLifecycle[]>();
 
         private int _nextPlayerId;
+
+        // Bumped by every mutation of the per-club arrays (the daily step, a committed boundary), so a
+        // SeasonBoundaryPlan prepared before one cannot be installed after it — it would resurrect the
+        // records it was computed from (the PlayerCareerStates.RosterGeneration precedent). Not
+        // serialized: it guards an in-memory plan's lifetime, which never crosses a save.
+        private int _generation;
 
         private ProgressionEngine()
         {
@@ -385,6 +395,7 @@ namespace TacticalDirector.PlayerProgression
             }
 
             ValidateBatch(in trainingInputs);
+            _generation++;
 
             for (int c = 0; c < _clubIds.Count; c++)
             {
@@ -476,6 +487,181 @@ namespace TacticalDirector.PlayerProgression
             {
                 life.RetirementFlag = true;
                 life.RetirementDay = worldDay;
+            }
+        }
+
+        // ── The season boundary (§3.4 as amended by ERR-028-025) ─────────────────────────
+
+        /// <summary>
+        /// Stages #28's season boundary (§3.4 <c>RunSeasonBoundary</c>): every player whose
+        /// <see cref="PlayerLifecycle.RetirementFlag"/> is set is removed, and each is replaced 1:1
+        /// (FR-PG-019) by a regen at the same club, in the retiree's position (ERR-028-024), with a fresh id
+        /// from <see cref="NextPlayerId"/> (FR-PG-011). <b>Writes nothing</b> — the store is unchanged until
+        /// <see cref="CommitSeasonBoundary"/>.
+        /// <para>
+        /// <b>Draw order (normative, ERR-028-025).</b> One stream per club that has a retiree, registered
+        /// under <see cref="PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION"/> with
+        /// <c>entityId = clubId</c>; a club's k-th retiree by ascending PlayerId consumes that stream's k-th
+        /// reservation. <b>Id order (normative):</b> clubs ascending, then each club's retirees by ascending
+        /// PlayerId, one <c>NextPlayerId</c> each. Stream keys depend only on (ordinal, entityId, version), so
+        /// registration order cannot move a draw.
+        /// </para>
+        /// <para>
+        /// <b>Seed and save story.</b> The service is seeded from
+        /// <see cref="DeriveRegenSeed"/>(<paramref name="worldSeed"/>, <paramref name="completedSeasonNumber"/>)
+        /// and discarded with the plan: every input — the world seed, the season number, the retirement flags,
+        /// the cursor — is already persisted, so the stream needs no serialized cursor and a save taken
+        /// before the boundary reproduces it exactly. Folding the season number in is what makes successive
+        /// boundaries draw different regens.
+        /// </para>
+        /// </summary>
+        /// <param name="worldSeed">The career's world seed (<c>WorldStore.WorldSeed</c>).</param>
+        /// <param name="completedSeasonNumber">The season this boundary closes.</param>
+        /// <param name="worldDay">The day the regens are constructed on — #30 passes the last LIVED day
+        /// (the clock minus one), which is where every carried player's cursor sits, so a regen's cursor and
+        /// its peers' agree and the next day step advances all of them together.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="worldDay"/> is the never-advanced
+        /// sentinel (F8).</exception>
+        /// <exception cref="InvalidOperationException">The id cursor would overflow, or regen generation
+        /// failed (a draw-site misuse).</exception>
+        public SeasonBoundaryPlan PrepareSeasonBoundary(ulong worldSeed, int completedSeasonNumber, uint worldDay)
+        {
+            if (worldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(worldDay), worldDay,
+                    "The never-advanced sentinel is not a legal day to construct a regen on (F8).");
+            }
+
+            DeterministicRngService rng = null;
+            int next = _nextPlayerId;
+            var clubIds = _clubIds.ToArray();
+            var records = new PlayerRecord[clubIds.Length][];
+            var lifecycles = new PlayerLifecycle[clubIds.Length][];
+            var retired = new List<int>();
+            var regens = new List<int>();
+            var regenClubs = new List<int>();
+
+            for (int c = 0; c < clubIds.Length; c++)
+            {
+                PlayerRecord[] heldRecords = _records[c];
+                PlayerLifecycle[] heldLives = _lifecycles[c];
+                var nextRecords = new PlayerRecord[heldRecords.Length];
+                var nextLives = new PlayerLifecycle[heldLives.Length];
+                int streamIndex = -1;
+
+                // Records ascend by PlayerId, so this walk visits a club's retirees in the normative order.
+                for (int p = 0; p < heldRecords.Length; p++)
+                {
+                    if (!heldLives[p].RetirementFlag)
+                    {
+                        nextRecords[p] = heldRecords[p];
+                        nextLives[p] = heldLives[p];
+                        continue;
+                    }
+
+                    if (rng == null)
+                    {
+                        rng = new DeterministicRngService(DeriveRegenSeed(worldSeed, completedSeasonNumber));
+                    }
+
+                    if (streamIndex < 0)
+                    {
+                        streamIndex = rng.RegisterStream(
+                            PlayerProgressionConstants.REGEN_STREAM_SITE_ID,
+                            PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION,
+                            entityId: clubIds[c],
+                            streamVersion: PlayerProgressionConstants.REGEN_STREAM_VERSION);
+                    }
+
+                    if (next == int.MaxValue)
+                    {
+                        throw new InvalidOperationException(
+                            "The PlayerId cursor is exhausted (FR-PG-011): no fresh id remains for a regen.");
+                    }
+
+                    int regenId = next++;
+                    (PlayerRecord regen, PlayerLifecycle life) = RegenGenerator.GenerateRegen(
+                        rng, streamIndex, clubIds[c], regenId, heldRecords[p].Position, worldDay);
+
+                    string outOfRange = ProgressionSaveCodec.DescribeOutOfRangeValues(in regen, in life, clubIds[c]);
+                    if (outOfRange != null)
+                    {
+                        throw new InvalidOperationException(
+                            "A generated regen carries state the save path would refuse: " + outOfRange);
+                    }
+
+                    retired.Add(heldRecords[p].PlayerId);
+                    regens.Add(regenId);
+                    regenClubs.Add(clubIds[c]);
+                    nextRecords[p] = regen;
+                    nextLives[p] = life;
+                }
+
+                SortByPlayerId(nextRecords, nextLives);
+                records[c] = nextRecords;
+                lifecycles[c] = nextLives;
+            }
+
+            return new SeasonBoundaryPlan(
+                this, _generation, clubIds, records, lifecycles, next,
+                retired.ToArray(), regens.ToArray(), regenClubs.ToArray());
+        }
+
+        /// <summary>
+        /// Installs a plan <see cref="PrepareSeasonBoundary"/> built from this store. <b>Cannot fail</b> on a
+        /// plan this store prepared with no mutation since, which is what lets #30 call it after its roll's
+        /// last fallible write. The store instance is kept (arrays are replaced in place), so every
+        /// <c>ProgressionSquads</c> projection and every holder of this reference sees the new roster.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="plan"/> is null.</exception>
+        /// <exception cref="ArgumentException">The plan belongs to another store, or this store has mutated
+        /// since it was prepared (installing it would resurrect stale records).</exception>
+        public void CommitSeasonBoundary(SeasonBoundaryPlan plan)
+        {
+            if (plan == null)
+            {
+                throw new ArgumentNullException(nameof(plan));
+            }
+
+            if (!ReferenceEquals(plan.Owner, this) || plan.Generation != _generation)
+            {
+                throw new ArgumentException(
+                    "This season-boundary plan was not prepared from this store's current state "
+                    + $"(plan generation {plan.Generation}, store generation {_generation}).",
+                    nameof(plan));
+            }
+
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                _records[c] = plan.Records[c];
+                _lifecycles[c] = plan.Lifecycles[c];
+            }
+
+            _nextPlayerId = plan.NextPlayerId;
+            _generation++;
+        }
+
+        /// <summary>
+        /// The boundary-scoped regen stream's seed (ERR-028-025): the #16 tag folded in first, then the
+        /// world seed, then the completed season number — the <c>RoundResolutionModel.FixtureKey</c> fold.
+        /// </summary>
+        internal static ulong DeriveRegenSeed(ulong worldSeed, int completedSeasonNumber)
+        {
+            ulong h = Mix(PlayerProgressionConstants.DOMAIN_TAG_PLAYER_PROGRESSION ^ worldSeed);
+            return Mix(h ^ (ulong)(uint)completedSeasonNumber);
+        }
+
+        // SplitMix64's finalizer. A per-assembly copy is this project's accepted norm (RoundResolutionModel,
+        // MedicalStep, LeagueBootstrap each carry one); no shared helper exists on deterministic-sim.
+        private static ulong Mix(ulong value)
+        {
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+            {
+                ulong z = value + 0x9E3779B97F4A7C15UL;
+                z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
+                z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
+                return z ^ (z >> 31);
             }
         }
 
@@ -896,4 +1082,13 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | RetirementFlag's stickiness, locked by a new AbilityModelTests.cs
 // |         |            |        | case rather than left as an unstated accident. No behaviour change,
 // |         |            |        | no format version, no draw.
+// | 1.10    | 2026-10-19 | —      | ERR-028-025: the season boundary lands. PrepareSeasonBoundary   |
+// |         |            |        | (pure) stages retiree removal + 1:1 regen in the retiree's      |
+// |         |            |        | position (ERR-028-024) with fresh NextPlayerId ids;             |
+// |         |            |        | CommitSeasonBoundary (infallible, generation-checked) installs  |
+// |         |            |        | it in place. The regen stream is boundary-scoped: seeded from   |
+// |         |            |        | (worldSeed, completed season) under DOMAIN_TAG 0x20, one        |
+// |         |            |        | registration per club (ordinal 82), no serialized cursor. A     |
+// |         |            |        | mutation generation (bumped by AdvanceDay too) refuses stale    |
+// |         |            |        | plans. #28's first draw site.                                   |
 #endregion

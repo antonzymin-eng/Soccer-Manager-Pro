@@ -1,6 +1,9 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-18 (#31 T1 — v1.38: the loop carries a cloned #31 TransfersState through the
+// Modified: 2026-10-19 (ERR-028-025 — v1.39: #28's season boundary is live at step (d) — staged before
+//           BeginNextSeason, installed after; (d′) reconciles against the planned rosters; retirees' #44
+//           rows dropped.)
+//           Prior: 2026-10-18 (#31 T1 — v1.38: the loop carries a cloned #31 TransfersState through the
 //           constructor and Restore, checked by SeasonTransfersCoherence, for the save root.)
 //           Prior: 2026-10-13
 //           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
@@ -1109,11 +1112,17 @@ namespace TacticalDirector.SeasonSave
         /// <b>Insertion points (FR-SN-031).</b> (a') #43's promotion/relegation transform remains a
         /// declared empty position. (b') #40's finance settlement is LIVE: it follows (a') and precedes
         /// (c) regeneration so budgets are derived from the completed season/post-promotion division.
-        /// (d) #28's season-boundary churn remains its separately documented reserved position.
+        /// (d) #28's season boundary is LIVE (ERR-028-025): retiree removal + 1:1 regen, STAGED at (d)
+        /// and installed after (e) like (b').
+        /// </para>
+        /// <para>
+        /// <b>Determinism across a save.</b> The regen stream is boundary-scoped — seeded from the world
+        /// seed and the completed season number, both persisted — so the KD-6 property above extends to
+        /// the roster: a save taken before this call reproduces the same regens.
         /// </para>
         /// <para>
         /// <b>(d′) the FR-TR-025 / FR-MD-025 roster reconciliation is LIVE, and split in two.</b> It
-        /// reads the provider at (d′) — after #28's churn would have happened — but installs only after
+        /// reads the PLANNED rosters at (d′) — after #28's churn — but installs only after
         /// (e)'s commits, because <c>BeginNextSeason</c> is the one write here that can fail and a
         /// career reconciled against a season that never began is the same half-rolled state the
         /// ordering above exists to prevent. Staging throws where the sync throws; installing cannot.
@@ -1186,22 +1195,34 @@ namespace TacticalDirector.SeasonSave
                     + "invariant (FR-SN-011). Roll at the end of the season, then advance the world.");
             }
 
-            // ── (d) #28 season boundary — RESERVED, still empty. ────────────────────────────────
-            // The DAILY step is live at slot 1 since T2a, and age is derived there rather than
-            // advanced here, so there is no "age advance" left for this position. What the slot
-            // still holds open is RunSeasonBoundary: retiree removal + 1:1 regen, which needs the
-            // player-progression.regen stream (#28 §3.5 does not pin how that survives a save).
-            // #30 §3.5 carries the same wording.
+            // ── (d) #28 season boundary — LIVE (ERR-028-025): STAGED here, installed after (e). ──
+            // Retiree removal + 1:1 regen in the retiree's position (ERR-028-024) with fresh ids from
+            // NextPlayerId. PrepareSeasonBoundary writes nothing; the regen stream is boundary-scoped,
+            // seeded from (world seed, the season being completed), so it needs no persisted cursor and
+            // a save taken before this roll reproduces it. Regens are constructed on the last LIVED day
+            // (clock − 1), where every carried player's cursor sits; ERR-030-053 guarantees the clock is
+            // past the final fixture day, so the subtraction cannot wrap.
+            SeasonBoundaryPlan boundary = null;
+            if (_progression != null)
+            {
+                boundary = _progression.PrepareSeasonBoundary(
+                    _world.WorldSeed, _state.SeasonNumber, _world.CurrentWorldTick - 1u);
+            }
+
             // (d′) the FR-TR-025 / FR-MD-025 roster-membership handoff, STAGED here and installed
             // below. #28's regens and retirements are the roster change, so the reconciliation reads
-            // the provider at this point — after (d) — but it must not WRITE here: BeginNextSeason is
-            // the one commit in this method that can fail, and a career reconciled against a season
-            // that never began is exactly the half-rolled state this method's ordering exists to
-            // prevent. Staging is pure and throws where the sync throws; installing cannot fail.
+            // the PLANNED rosters — the store itself is not mutated until (d) is committed, so reading
+            // the live provider here would reconcile against the pre-boundary roster and then install
+            // a career that disagrees with the committed one. It must not WRITE here either:
+            // BeginNextSeason is the one commit in this method that can fail, and a career reconciled
+            // against a season that never began is exactly the half-rolled state this method's
+            // ordering exists to prevent. Staging is pure and throws where the sync throws; installing
+            // cannot fail.
             PlayerCareerStates.RosterSyncPlan rosterSync = default;
             if (_career != null)
             {
-                rosterSync = _career.PrepareRosterSync(_careerSquads);
+                rosterSync = _career.PrepareRosterSync(
+                    boundary == null ? _careerSquads : new PlannedSquads(boundary));
             }
 
             // ── (e) commit: schedule + table + season number + seed, then the board verdict ─────
@@ -1216,30 +1237,41 @@ namespace TacticalDirector.SeasonSave
             // so this copy cannot create/remove a club and cannot throw after composition validation.
             System.Array.Copy(settledFinances, _finances, settledFinances.Length);
 
-            // The staged reconciliation installs last, after the final write that could have refused
-            // the roll. The returned churn count is deliberately dropped: what a caller wants to know
-            // about a boundary is which players the career now carries, which is readable off
-            // Career itself — a count would be a second, weaker answer to the same question.
+            // (d) installs here, after the final write that could have refused the roll. Cannot fail:
+            // nothing has mutated the store since PrepareSeasonBoundary (its generation check is the
+            // proof), and the store instance is kept, so ProgressionSquads sees the new roster.
+            if (boundary != null)
+            {
+                _progression.CommitSeasonBoundary(boundary);
+            }
+
+            // The staged reconciliation installs next, against the roster (d) just installed. The
+            // returned churn count is deliberately dropped: what a caller wants to know about a
+            // boundary is which players the career now carries, which is readable off Career itself —
+            // a count would be a second, weaker answer to the same question.
             if (_career != null)
             {
                 _career.CommitRosterSync(in rosterSync);
             }
 
-            // M11: FR-DC-013 names the T-phase roster-event delivery point as WHERE #44's re-key
-            // (DisciplineRules.MigratePlayerId) and retirement drop (DisciplineRules.DropPlayer) are
-            // meant to be called — and the roster sync immediately above IS that T-phase for #29/#41.
-            // Neither #44 method is called anywhere in this assembly (or any other) today; both have
-            // zero references outside src/discipline/ and its own unit tests. That is inert while
-            // #28's boundary regen stays deferred (RunSeasonBoundary above is a documented, still-empty
-            // position — see the (d) note two screens up), but the consequence when it lands is NOT an
-            // orphan discipline row: player ids are `clubId * CLUB_SQUAD_SIZE + localIndex`
-            // (PlayerDatabase), so a regen filling a retiree's vacated slot INHERITS the identical id —
-            // and with it, silently, the retiree's outstanding ban and yellow tally, on a player who
-            // never earned either. Recorded here rather than wired: the roster-move hook FR-DC-013
-            // needs (something that tells this call site "id X left, id Y arrived, are they the same
-            // player") does not exist yet, and #29/#41's own CommitRosterSync above solves a narrower
-            // problem (per-club membership, not identity/re-key). #28's boundary landing must not miss
-            // this — see also #44 §7.2's deferred list.
+            // FR-DC-013's retirement drop, delivered here at last (the M11 gap). A retiree's tally and
+            // any unserved ban leave with him; nothing can inherit them, because a regen takes a FRESH
+            // id from NextPlayerId (FR-PG-011) rather than the retiree's slot. Transfers need no
+            // counterpart: PlayerIds are stable across a re-home (ERR-031-005), so a tally follows its
+            // player by construction and MigratePlayerId has no caller by design. DropPlayer is
+            // infallible.
+            if (boundary != null && _disciplineRules != null)
+            {
+                for (int i = 0; i < boundary.RetiredPlayerIds.Count; i++)
+                {
+                    _disciplineRules.DropPlayer(boundary.RetiredPlayerIds[i]);
+                }
+            }
+
+            // M11 (resolved October 19, 2026 — ERR-028-025 / ERR-031-005): FR-DC-013's roster-event
+            // delivery point is the block above. The hazard recorded here — a regen filling a vacated
+            // packed slot would inherit the retiree's ban — cannot occur: regens take fresh monotonic ids
+            // and transfers keep ids.
             //
             // ── (f) #44's season-boundary sweep (FR-DC-017) ────────────────────────────────────
             // Yellows reset; UNSERVED BANS CARRY. A red card in the final round is still a ban in
@@ -1262,6 +1294,23 @@ namespace TacticalDirector.SeasonSave
                 _state.SeasonNumber,
                 nextSeed,
                 nextCalendar.NextFixtureDay());
+        }
+
+        /// <summary>
+        /// The planned post-boundary rosters as an <see cref="ISquadProvider"/>, for (d′)'s staged career
+        /// reconciliation — read-only, never retained past the roll.
+        /// </summary>
+        private sealed class PlannedSquads : ISquadProvider
+        {
+            private readonly SeasonBoundaryPlan _plan;
+
+            internal PlannedSquads(SeasonBoundaryPlan plan)
+            {
+                _plan = plan;
+            }
+
+            /// <inheritdoc />
+            public Squad ResolveByClubId(int clubId) => _plan.PlannedSquadFor(clubId);
         }
 
         /// <summary>
@@ -2283,5 +2332,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
 // | 1.36 | 2026-10-09 | — | ERR-030-053: require final fixture day completion before season settlement. |
 // | 1.37 | 2026-10-13 | — | T3b2: forward sole #40 config gate and day facts; parameter-only test seam shares guarded advance. |
+// | 1.39 | 2026-10-19 | — | ERR-028-025: step (d) LIVE — PrepareSeasonBoundary staged before (e), CommitSeasonBoundary after; (d′) PrepareRosterSync reads the planned rosters (PlannedSquads); FR-DC-013 retirement drop delivered; M11 resolved. |
 // | 1.38 | 2026-10-18 | — | #31 T1: carry a cloned TransfersState (ctor/Restore transfersOrNull, SeasonTransfersCoherence, internal TransfersForSave); nothing drives it until T2. |
 #endregion

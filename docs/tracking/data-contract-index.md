@@ -79,6 +79,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Managed transfer state | #31 §2.2, §3 | `transfers` | `Contract`, `TransferWindow`, `ClubTransferState`, `TransfersState` |
 | Transfer negotiation / manager command seam | #31 §2.2, §3.2–§3.3 | `transfers` | `Offer`, `NegotiationOutcome`, `TransferCommands` |
 | Transfer roster consumer port | #31 §4.5 | `transfers` | `ITransferRosterPort` |
+| Season-boundary roster mutation (retire + 1:1 regen) | #28 §3.4 (ERR-028-025), #30 §3.5 (d) | `player-progression` (`ProgressionEngine.PrepareSeasonBoundary` / `CommitSeasonBoundary`), `season-save` (`SeasonLoop.RollToNextSeason`) | `SeasonBoundaryPlan` |
 | Transfers save sub-blob (`XFER`) | #31 §4.4 / Appendix B (ERR-031-003) | `transfers` (codec), `season-save` (frame v8 slot, `TransfersBlock`, `SeasonTransfersCoherence`) | `TransfersSaveCodec`, `SeasonSaveContents.Transfers` |
 | Match outcome payload | #30 §2.2 | `season-save` | `MatchResult` |
 | Season state (serialized surface) | #30 §2.2, Appendix B | `season-save` | `SeasonState` |
