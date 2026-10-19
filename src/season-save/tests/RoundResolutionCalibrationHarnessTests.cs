@@ -47,7 +47,10 @@ namespace TacticalDirector.SeasonSave.Tests
             var seenRatings = new List<float>();
             for (int i = 0; i < rosters.Length; i++)
             {
-                Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, rosters[i].Count);
+                // The harness builds from the production template (23 since ERR-031-004). The recorded
+                // A4a corpus was captured on 25-player squads; the model keys on the starting-XI rating
+                // differential only, and the step-10 recapture re-captures on the current template.
+                Assert.AreEqual(LeagueBootstrapConstants.BuildSquadPositionTemplate().Length, rosters[i].Count);
 
                 // Fieldable by the KD-6 template — if this threw, every corpus row would fail at
                 // ConfigureSquads hours into a run.
@@ -436,4 +439,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | real-match drivers. UNEXERCISED on this head: normal CI skips both;    |
 // |         |            |        | the next explicit pilot/corpus run is the evidence that no other       |
 // |         |            |        | unexpected Error channel aborts these long runs at teardown.           |
+// | 1.4     | 2026-10-19 | —      | ERR-031-004: base-roster size lock reads the production template (23), not the cap. |
 #endregion

@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
+**Last Updated:** October 19, 2026 (v0.10 — ERR-031-005: §3.3/§3.4 re-home under a stable id)
+**Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -83,6 +84,7 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     require offer well-formed                                                       else throw  # F6
     require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                else throw  # F4
     require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId)==fromClub else throw
+        # ClubOf is the roster port's answer, never offer.PlayerId / CLUB_SQUAD_SIZE (ERR-031-005)
 
     cv := counterpartyView(offer.PlayerId, offer.CounterpartyClubId, offer.IsBuy)
     negotiation := EvaluateOffer(offer, cv)
@@ -103,20 +105,19 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     stagedFinances := finances
     ApplyTransaction(ref stagedFinances, txn)               # canonical #40 mutation on staged copy
 
-    if !TryPreviewRosterCommit(fromClub, toClub, offer.PlayerId, out previewId):
+    if !TryPreviewRosterCommit(fromClub, toClub, offer.PlayerId):
         return SquadFull                                     # F5; no mutation
 
-    require previewId belongs to toClub                      else throw
-    require no duplicate managed contract at previewId       else throw
+    require no managed contract already at offer.PlayerId   else throw  # on a buy
 
-    # ---- COMMIT ----
-    committedId := RequestRosterCommit(fromClub, toClub, offer.PlayerId)
-    require committedId == previewId                         else throw  # producer contract breach
+    # ---- COMMIT ---- (ERR-031-005: a stable-id re-home)
+    RequestRosterCommit(fromClub, toClub, offer.PlayerId)
+    require ClubOf(offer.PlayerId) == toClub (via the port) else throw  # producer contract breach
 
     finances := stagedFinances
     if offer.IsBuy:
         txState.AddCommittedSpend(managerClubId, offer.Fee)
-        txState.InsertContract(ContractFrom(offer, previewId))
+        txState.InsertContract(ContractFrom(offer, offer.PlayerId))
     else:
         txState.RemoveContract(offer.PlayerId)
 
@@ -126,12 +127,12 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
 The buy affordability result is resolved **before** staged #40 mutation validation. This ordering is normative:
 a coherent signed `Balance` may be near `long.MinValue`, and checked debit staging must not throw before the
 player-reachable `InsufficientBudget` result (`ERR-031-002`). All local #31/#40 writes occur only **after**
-the preflighted roster commit returns its promised preview id.
-That removes the previous defensive check-after-mutation ordering. Because `OnPlayerRekeyed` is a specified
-no-op for every minimal managed↔external move, a sell may retain its old managed contract during the roster
-commit and remove it immediately afterward without double-handling.
+the preflighted roster commit is confirmed to have landed the player on the destination roster.
+That removes the previous defensive check-after-mutation ordering. Because the commit keeps the player's id and
+nothing re-keys (ERR-031-005), a sell may retain its old managed contract during the roster commit and remove it
+immediately afterward without double-handling.
 
-A preview/commit id mismatch is an integration defect after the external port has already mutated. T0 therefore
+A commit that does not land (originally: a preview/commit id mismatch) is an integration defect after the external port has already mutated. T0 therefore
 can guarantee only that local #31/#40 state is untouched; it cannot roll the producer back. The regression suite
 locks both directions: on a buy no contract/spend/finance is applied, and on a sell the old managed contract and
 finance remain. T2's production adapter MUST make the successful-preview→commit contract genuinely infallible.
@@ -140,34 +141,34 @@ finance remain. T2's production adapter MUST make the successful-preview→commi
 `committedSpendThisWindow` and does **not** raise `AvailableTransferBudget`; sell proceeds therefore do not
 increase in-window buy headroom at minimal.
 
-## 3.4 The #30 boundary — roster preflight/commit re-key (KD-7)
+## 3.4 The #30 boundary — roster preflight/commit, a stable-id re-home (KD-7, ERR-031-005)
 
-`ITransferRosterPort` is #31-owned and T2 composition adapts it to #30's roster owner. T0 uses three read/
-preflight facts before the commit: `TryGetPlayer`, `CountPlayersAtPosition`, and `TryPreviewRosterCommit`.
-A successful preview fixes the exact destination id. The subsequent `RequestRosterCommit` is contractually
-infallible and MUST return that id; a mismatch is an integration defect, not a normal transfer outcome.
+`ITransferRosterPort` is #31-owned and T2 composition adapts it to #30's roster owner. #31 uses three read/
+preflight facts before the commit: `TryGetPlayer` (the record **and the club whose roster carries him**),
+`CountPlayersAtPosition`, and `TryPreviewRosterCommit`. A successful preview guarantees the commit lands;
+`RequestRosterCommit` is contractually infallible after it, and #31 confirms the landing through `TryGetPlayer`
+before applying any local state.
 
 ```
-TryPreviewRosterCommit(fromClubId, toClubId, playerId, out newId):
-    validate source ownership
-    find free destination local index
-    if none: return false
-    newId := toClubId * CLUB_SQUAD_SIZE + freeLocal
-    return true
+TryPreviewRosterCommit(fromClubId, toClubId, playerId):
+    validate playerId is on fromClubId's roster
+    return Count(toClubId's roster) < CLUB_SQUAD_SIZE        # false = destination full (F5)
 
 RequestRosterCommit(fromClubId, toClubId, playerId):
     # precondition: successful preview with no intervening roster mutation
-    MovePlayerRecord(fromClubId, playerId, toClubId, previewedId)
-    DispatchRosterMoveHook(playerId, previewedId)
-    return previewedId
+    MovePlayerRecord(playerId, fromClubId -> toClubId)        # SAME PlayerId; the record and its career rows move
 ```
 
-`DispatchRosterMoveHook` calls each subscriber. #31 moves only its own contract state and does nothing for the
-minimal managed↔external hook because `SubmitBid` owns the explicit insert/remove. At T2 this becomes a required
-production integration regression: a real managed→external commit MUST dispatch the hook, and observing #31's
-subscriber during that dispatch MUST prove it is a no-op (the old managed contract remains present until
-`SubmitBid` removes it after the commit returns). The mirror external→managed hook is likewise a #31 no-op until
-`SubmitBid` inserts the destination contract.
+**Why a re-home and not a re-key (ERR-031-005, owner decision October 19, 2026).** This section originally
+re-keyed the player into the destination's free `localIndex` (`newId := toClubId * CLUB_SQUAD_SIZE + freeLocal`).
+That made the id encode the club, and it contradicted #28 FR-PG-011 — regens take FRESH, monotonic ids from
+`ProgressionEngine.NextPlayerId`, outside every club's packed range — and #27 FR-SQ-010 as amended by ERR-027-004
+(global uniqueness for any future allocator). It also reused a departed player's slot id, so any PlayerId-keyed
+state left behind (a ban, an injury, an appearance record) would have been inherited by a different player. With a
+stable id there is nothing to migrate: every subsystem's PlayerId-keyed state follows the player by construction,
+and #30 moves only its own per-club `(ClubId, PlayerId)` rows with the record. The old `OnPlayerRekeyed` /
+`DispatchRosterMoveHook` re-key hook is deleted; T2 instead locks that a real re-home carries the player's #28/#29/#41/#30
+career state and #44 tally with him and leaves nothing behind (§5.3 T-TX-REHOME-005).
 
 ## 3.5 The transfer window — `IsWindowOpen` (FR-TX-019/020)
 
@@ -238,4 +239,5 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.7 | 2026-09-14 | — | PR #407 review correction: currency APIs renamed; attribute mean no longer truncates to 20 buckets; positional stock excludes the negotiated player symmetrically; `SubmitBid` gains typed budget/full outcomes and applies local state only after matching roster commit. |
 | 0.8 | 2026-09-14 | — | Residual review cleanup: budget subtraction now explicitly requires `0 <= committed <= budget`; preview/commit mismatch limits are stated for both directions; T2 must lock real hook dispatch plus observable managed↔external #31 no-op behavior. |
 | 0.9 | 2026-09-21 | — | ERR-031-002: move the ordinary buy-affordability decision ahead of checked staged `ApplyTransaction`, preventing coherent extreme debt from throwing before `InsufficientBudget`; runtime regression lands with the spec. |
+| 0.10 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): §3.3 pseudocode confirms the commit through the port instead of comparing a previewed id; ownership from the port; §3.4 rewritten as a stable-id re-home with a capacity-only preview. ERR-031-004: F5 reachable because bootstrap squads sit below the cap. |
 #endregion

@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** September 21, 2026 (v0.6 — ERR-031-001/002 T0 approval-evidence reconciliation)
+**Last Updated:** October 19, 2026 (v0.7 — ERR-031-005: G10 restated)
+**Last Updated (prior):** September 21, 2026 (v0.6 — ERR-031-001/002 T0 approval-evidence reconciliation)
 **Last Updated (prior):** July 23, 2026 (v0.5 — AR-8 (3L doc, non-gating); prior v0.4 AR-6 + AR-7 convergence, v0.3 AR-3/AR-4, v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -21,11 +22,11 @@
 | G7 | KD-3: the offer/response seam is counterparty-generic; #31 builds no #32/#34 interface; #34 influence is a `×1000‰` identity seam | ✅ | §4.3, FR-TX-010/011 |
 | G8 | KD-4: one `TRANSFERS_SAVE_FORMAT_VERSION` season-save sub-blob (durable contracts + season-scoped state); **no** `WORLD_STORE_FORMAT_VERSION` bump; codec fail-loud posture mirrored | ✅ | §4.4, Appendix B, FR-TX-012..014 |
 | G9 | KD-6: the transfer-window model is #31-owned, derived read-only from #30's `SeasonCalendar`; #30 has none | ✅ | §3.5, FR-TX-019/020 |
-| G10 | KD-7: a transfer re-keys the club-scoped `PlayerId` through a NEW #30 mid-season entry point + roster-move hook; #31 migrates only its own `Contract`; #28/#33 migrate their own | ✅ | §3.4, FR-TX-021..023 |
+| G10 | KD-7: a transfer re-homes the player under his stable `PlayerId` through a NEW #30 mid-season entry point; no PlayerId-keyed state migrates (ERR-031-005 — originally a packed-id re-key) | ✅ | §3.4, FR-TX-021..023 |
 | G11 | KD-8 behaviour-neutral: zero manager action ⇒ zero transfers ⇒ byte-identical season; a bid is an explicit command; no stream registered | ✅ | §3.6, FR-TX-024/025, T-TX-NEU-001 |
 | G12 | Integer posture: no float in #31 (only integer `long` exchanged with #40); serialized block has no `RngCursor` (draw-free) | ✅ | §1.5, FR-TX-018, T-TX-INT-001/SHAPE-001 |
 | G13 | Zero-value-trap hygiene: `default(Contract)` (`LengthSeasons = 0`) fails loud at insertion validation (F7); boundary aging **removes** a contract that would decrement to 0 (never stores 0), so F7 never collides with a legitimately-aged contract | ✅ | §2.3, §3.7, F7, T-TX-FAIL-003, T-TX-DET-002 |
-| G14 | Roster lifecycle in lockstep with #28/#30 (genesis-only seeding of the managed squad — a load decodes from the sub-blob, never re-seeds; regen-insert / retire-remove; transfer re-key; boundary decrement-and-remove aging) — every managed player has a contract the sell/aging flows operate on | ✅ | FR-TX-028, §3.7, §3.8, §4.5, T-TX-DET-001/002, T-TX-INIT-001 |
+| G14 | Roster lifecycle in lockstep with #28/#30 (genesis-only seeding of the managed squad — a load decodes from the sub-blob, never re-seeds; regen-insert / retire-remove; transfer re-home (stable id, ERR-031-005); boundary decrement-and-remove aging) — every managed player has a contract the sell/aging flows operate on | ✅ | FR-TX-028, §3.7, §3.8, §4.5, T-TX-DET-001/002, T-TX-INIT-001 |
 | G15 | FR-TX-001..028 each traceable to a T-TX-* test **or** a recorded §7 deferral | ✅ | §5.7 |
 | G16 | FR prefix FR-TX unclaimed across `docs/specs/**`; XC-031-* allocated; the #40 §7.3 / #33 §7.3 consumer sides named | ✅ | grep-verified; §8.1 |
 | G17 | Wage deferral: minimal is **fee-only** (no `PlayerWage` post), so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2) is preserved with **no #40 back-prop at approval**; the wage producer + `WageBudget` gate are deep (ERR-040, T3) | ✅ | FR-TX-005, §7.3, §8.3, T-TX-BID-006 |
@@ -78,4 +79,5 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 | 0.4 | 2026-07-23 | — | AR-6 (2M+1L) fix pass: T-TX-REKEY-001 corrected to the insert/remove-via-`SubmitBid` model (was still asserting the AR-3-removed hook-move); §3.8/§4.5/FR-TX-028 scope seeding to new-career genesis only (a load decodes from the sub-blob, never re-seeds) + T-TX-DET-001 lock; T-TX-REKEY-003 wording (L) → AR-7 convergence. |
 | 0.5 | 2026-07-23 | — | AR-8 (0H+0M+3L, non-gating doc): §9.5 chain corrected to record AR-5 as a premature false-clean (was skipped AR-4→AR-6); §3.3 note that sell income does not raise in-window buy headroom (static ceiling, `committedSpendThisWindow` is buy-side only); §3.7 `ResetWindow()` re-derives from the calendar. Loop remains converged (Lows do not gate). |
 | 0.6 | 2026-09-21 | — | ERR-031-001/002: G4 now matches shipped always-on positional scarcity, and G6 locks affordability before checked finance staging. |
+| 0.7 | 2026-10-19 | — | ERR-031-005: G10 restated for the stable-id re-home (post-approval correction, owner decision Oct 19, 2026). |
 #endregion

@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** October 18, 2026 (v0.7 — ERR-031-003: F3 gains the leading magic gate)
+**Last Updated:** October 19, 2026 (v0.8 — ERR-031-004 / ERR-031-005: capacity-based F5; stable-id FR-TX-021..023)
+**Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: F3 gains the leading magic gate)
 **Last Updated (prior):** September 14, 2026 (v0.6 — T0 review correction: typed submission outcomes, precise valuation, symmetric need)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -33,9 +34,9 @@
 | FR-TX-018 | The serialized transfers block MUST contain no `RngCursor`/`actionOrdinal` field at minimal (draw-free). | MUST | KD-5 |
 | FR-TX-019 | The transfer window MUST be a #31-owned `TransferWindow [OpenWorldDay, CloseWorldDay]` derived deterministically from #30's `SeasonCalendar` (read-only); minimal = one summer window. #31 MUST NOT mutate the calendar. | MUST | KD-6 |
 | FR-TX-020 | A transfer action outside an open window MUST fail loud (F4, `IsWindowOpen`). | MUST | KD-6/F4 |
-| FR-TX-021 | A committed transfer MUST re-key the moved player's club-scoped `PlayerId` via a #30-owned mid-season roster-commit entry point; #31 MUST NOT mutate #27 `Squad`/`PlayerRecord` directly. | MUST | KD-7 |
-| FR-TX-022 | The #31 preflight over the #30 roster adapter MUST detect whether a free destination `localIndex` exists. If none exists, `SubmitBid` MUST return `TransferSubmissionOutcome.SquadFull` before any local mutation. A successful preview fixes the exact destination id that the subsequent #30 commit MUST return. | MUST | KD-7/F5 |
-| FR-TX-023 | #31 MUST migrate **only** its own `Contract` state on a re-key; #28 CA/PA and #33 morale MUST migrate their own keyed state; #31 MUST NOT migrate another system's state. For a managed↔external transfer (every minimal case), `OnPlayerRekeyed` is a **no-op**. On a buy, `SubmitBid` inserts the new managed contract only after the successful matching roster commit; on a sell, it removes the old managed contract only after that successful matching commit. This ordering prevents a port-contract breach from first mutating local finance/contract state while remaining safe because the managed↔external hook is a no-op. | MUST | KD-7 |
+| FR-TX-021 | A committed transfer MUST re-home the moved player to the destination club **under his unchanged `PlayerId`** via a #30-owned mid-season roster-commit entry point; #31 MUST NOT mutate #27 `Squad`/`PlayerRecord` directly, and MUST NOT derive a player's club from his id — ownership is the roster port's answer. *(ERR-031-005: originally a packed-id re-key.)* | MUST | KD-7 |
+| FR-TX-022 | The #31 preflight over the #30 roster adapter MUST detect whether the destination roster holds fewer than `CLUB_SQUAD_SIZE` players. If it is full, `SubmitBid` MUST return `TransferSubmissionOutcome.SquadFull` before any local mutation. A successful preview guarantees the subsequent #30 commit lands the player on the destination roster; #31 MUST confirm that through the port before any local mutation. *(ERR-031-005: originally "a free destination `localIndex`" and a previewed new id.)* Bootstrapped squads sit below the cap (ERR-031-004), so the outcome is reachable both ways. | MUST | KD-7/F5 |
+| FR-TX-023 | Because a transfer keeps the player's id (ERR-031-005), **no** PlayerId-keyed state migrates — #31's `Contract`, #28's lifecycle, #44's tally and #33's morale all follow the player by construction, and #31 MUST NOT migrate another system's state. On a buy, `SubmitBid` inserts the new managed contract (keyed by the unchanged id) only after the roster commit is confirmed; on a sell, it removes the managed contract only after that confirmation, so a port-contract breach cannot first mutate local finance/contract state. *(The originally specified `OnPlayerRekeyed` hook is deleted: nothing is ever re-keyed.)* | MUST | KD-7 |
 | FR-TX-024 | A season with **no** manager transfer action MUST advance byte-identical to pre-#31 (no autonomous transfer producer at minimal). | MUST | KD-8 |
 | FR-TX-025 | A manager transfer command (`SubmitBid`) MUST be the only initiator of a minimal transfer; it MUST be window- and budget-gated (FR-TX-008/020), return `TransferSubmissionOutcome`, and expose ordinary player-reachable negotiation/budget/capacity results without exceptions. The UI MUST drive it through this command seam, never mutate #31 state directly. | MUST | KD-8 |
 | FR-TX-026 | A bid on a `PlayerId` outside #27's club universe, or a malformed `Contract`/`Offer` (negative fee/wage, non-positive length), MUST fail loud (F6) at **every consuming seam**, including the reusable `EvaluateOffer`. | MUST | F6 |
@@ -78,7 +79,7 @@ public sealed class TransfersState { /* managed-club contracts keyed by PlayerId
 | **F2** | A commit gate/port contract would create partial local state | **Fail loud + no prior local mutation** — validate/preflight first; verify the roster commit matches its preview before applying staged finances/spend/contracts. |
 | **F3** | Transfers sub-blob: bad `TRANSFERS_SAVE_MAGIC` (checked first, ERR-031-003) / bad `TRANSFERS_SAVE_FORMAT_VERSION` / out-of-bounds length prefix / trailing bytes | **Fail loud** — the `SeasonSaveCodec` posture; no cross-version migration at Stage 0 (KD-4), nor through PM-3 (owner decision D-10 / #50, October 18, 2026: saves are breakable). |
 | **F4** | A transfer action outside an open window | **Fail loud** (FR-TX-020, `IsWindowOpen`). |
-| **F5** | Destination `Squad` full (no free `localIndex`) during preflight | **Normal command outcome** — return `SquadFull`, no mutation. |
+| **F5** | Destination roster full (`CLUB_SQUAD_SIZE` players) during preflight | **Normal command outcome** — return `SquadFull`, no mutation. Reachable but not universal: bootstrapped squads hold 23 (ERR-031-004), so a club starts with two places of headroom. |
 | **F6** | Bid on a `PlayerId` outside #27's club universe, or malformed `Contract`/`Offer` (negative fee/wage, `LengthSeasons ≤ 0`) | **Fail loud** — magnitude/identity validity is a caller-contract bug. |
 | **F7** | `default(Contract)` (`LengthSeasons = 0`) reaching a consuming seam | **Fail loud** — `LengthSeasons = 0 ∉ (0,∞)` catches the zero-value-trap record. |
 | **F8** | *(deep-tier)* `ApplyTransaction` wage reversal larger than the current aggregate | Delegated to #40's F1 (fail loud). Only reachable once deep-tier wage posting is on. |
@@ -97,4 +98,5 @@ explicit direction, so the default is never routed unchecked.
 | 0.5 | 2026-09-14 | — | T0 football-judgment close-out: positional-stock multiplier, deterministic counter band, explicit no-mutation negotiation results, evaluator term validation. |
 | 0.6 | 2026-09-14 | — | PR #407 review correction: retain fractional attribute-mean precision; define positional stock excluding the negotiated player; separate `TransferSubmissionOutcome` from `NegotiationOutcome`; make insufficient budget/full squad normal results; move local mutation after successful matching roster commit. |
 | 0.7 | 2026-10-18 | — | ERR-031-003: F3 names the leading `TRANSFERS_SAVE_MAGIC` gate, checked before the version; D-10 recorded (no migration through PM-3). |
+| 0.8 | 2026-10-19 | — | ERR-031-005: FR-TX-021 re-home under the unchanged id, club never derived from the id; FR-TX-022 capacity is a roster count with commit confirmation; FR-TX-023 nothing migrates, `OnPlayerRekeyed` deleted. ERR-031-004: F5 reachable but not universal (23-player bootstrap). |
 #endregion

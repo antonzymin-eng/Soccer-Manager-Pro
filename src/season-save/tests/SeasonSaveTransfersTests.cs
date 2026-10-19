@@ -250,7 +250,7 @@ namespace TacticalDirector.SeasonSave
             var state = new TransfersState(ManagedClubId, new TransferWindow(5, 50));
             state.InsertContract(new Contract(FirstManagedPlayerId, 1_500, 1));
             state.InsertContract(new Contract(FirstManagedPlayerId + 7, 0, 4));
-            state.InsertContract(new Contract(FirstManagedPlayerId + 24, 99_999, 2));
+            state.InsertContract(new Contract(FirstManagedPlayerId + 22, 99_999, 2));
             byte[] blob = TransfersSaveCodec.Encode(state);
             int spend = TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES + 4;
             long committed = 123_456_789L;

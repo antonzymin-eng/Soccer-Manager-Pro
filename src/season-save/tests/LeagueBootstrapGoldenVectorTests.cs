@@ -61,10 +61,14 @@ namespace TacticalDirector.SeasonSave.Tests
         private const ulong ExpectedSeasonSeed = 0xCAA212CD2A2591EBUL;
 
         // FNV-1a-64 over every canonical field of every club and player — see Digest().
-        private const ulong ExpectedLeagueDigest = 0x6E0256C1CF1413C8UL;
+        // Re-pinned 2026-10-19 (ERR-031-004): the template dropped its last two forwards (25 -> 23), so
+        // every club's two trailing players are gone; players 0-20 are untouched (the Player0 spot values
+        // below did not move). Previous value 0x6E0256C1CF1413C8.
+        private const ulong ExpectedLeagueDigest = 0x60F2B25D78FA7160UL;
 
         // The same digest over a default-size (20-club) league — the shape a real career has.
-        private const ulong ExpectedDefaultLeagueDigest = 0x1E96ECA8D7B20854UL;
+        // Re-pinned 2026-10-19 (ERR-031-004), same cause. Previous value 0x1E96ECA8D7B20854.
+        private const ulong ExpectedDefaultLeagueDigest = 0xB7C7E95010EC2D9FUL;
 
         private static readonly int[] ExpectedStrengthDeltas = { 1, -1, 3, -3 };
 
@@ -291,4 +295,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.0     | 2026-07-25 | —      | Initial golden vector (AR-5 H-1): absolute-value locks on league   |
 // |         |            |        | generation, which is persistence-equivalent because rosters are    |
 // |         |            |        | regenerated from the world seed rather than saved.                 |
+// | 1.1     | 2026-10-19 | —      | ERR-031-004: both league digests re-pinned for the 23-player template (25 -> 23, two trailing forwards dropped); spot values unchanged. |
 #endregion

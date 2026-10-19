@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersState.cs
 // Created:  2026-09-12
-// Modified: 2026-10-18
+// Modified: 2026-10-19
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.3-§3.4 (managed contracts + season-scoped transfer state)
@@ -10,8 +10,6 @@
 
 using System;
 using System.Collections.Generic;
-
-using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.Transfers
 {
@@ -52,11 +50,19 @@ namespace TacticalDirector.Transfers
             return _contracts.TryGetValue(playerId, out contract);
         }
 
-        /// <summary>Inserts one validated managed-player contract and fails on duplicate/default records.</summary>
+        /// <summary>
+        /// Inserts one validated managed-player contract and fails on duplicate/default records.
+        /// <para>
+        /// Membership in the managed club is NOT checked here: since ERR-031-005 PlayerIds are stable
+        /// across transfers and post-genesis ids come from #28's monotonic cursor, so an id no longer
+        /// encodes its club. The roster is the only membership authority — #31's command checks it
+        /// through <see cref="ITransferRosterPort"/>, and the season root checks a restored set
+        /// against the roster it rides with.
+        /// </para>
+        /// </summary>
         public void InsertContract(in Contract contract)
         {
             Contract.Validate(in contract);
-            RequireManagedPlayerId(contract.PlayerId, nameof(contract));
             if (_contracts.ContainsKey(contract.PlayerId))
             {
                 throw new InvalidOperationException("A contract already exists for PlayerId " + contract.PlayerId + ".");
@@ -68,40 +74,10 @@ namespace TacticalDirector.Transfers
         /// <summary>Removes a managed-player contract and fails if no such contract exists.</summary>
         public void RemoveContract(int playerId)
         {
-            RequireManagedPlayerId(playerId, nameof(playerId));
             if (!_contracts.Remove(playerId))
             {
                 throw new InvalidOperationException("No contract exists for PlayerId " + playerId + ".");
             }
-        }
-
-        /// <summary>
-        /// Migrates a contract only for an intra-managed re-key; managed↔external transfer re-keys are a no-op
-        /// because <see cref="TransferCommands.SubmitBid"/> owns the explicit insert/remove.
-        /// </summary>
-        public void OnPlayerRekeyed(int oldPlayerId, int newPlayerId)
-        {
-            bool oldManaged = IsManagedPlayerId(oldPlayerId);
-            bool newManaged = IsManagedPlayerId(newPlayerId);
-            if (!oldManaged || !newManaged || oldPlayerId == newPlayerId)
-            {
-                return;
-            }
-
-            if (!_contracts.TryGetValue(oldPlayerId, out Contract contract))
-            {
-                return;
-            }
-
-            if (_contracts.ContainsKey(newPlayerId))
-            {
-                throw new InvalidOperationException("Cannot re-key onto an existing contract PlayerId.");
-            }
-
-            _contracts.Remove(oldPlayerId);
-            contract.PlayerId = newPlayerId;
-            Contract.Validate(in contract);
-            _contracts.Add(newPlayerId, contract);
         }
 
         /// <summary>Returns contracts in canonical PlayerId order (the T1 codec's write order).</summary>
@@ -162,20 +138,6 @@ namespace TacticalDirector.Transfers
                 _clubState.CommittedSpendThisWindow += amount;
             }
         }
-
-        private bool IsManagedPlayerId(int playerId)
-        {
-            return playerId >= 0
-                && playerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE == ManagedClubId;
-        }
-
-        private void RequireManagedPlayerId(int playerId, string parameterName)
-        {
-            if (!IsManagedPlayerId(playerId))
-            {
-                throw new ArgumentOutOfRangeException(parameterName, playerId, "Contract PlayerId must belong to the managed club.");
-            }
-        }
     }
 }
 
@@ -184,4 +146,5 @@ namespace TacticalDirector.Transfers
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 managed contract/window/spend state. |
 // | 1.1     | 2026-10-18 | —      | #31 T1: internal Restore (decode path) and public Clone (copy-on-compose). |
+// | 1.2     | 2026-10-19 | —      | ERR-031-005: stable PlayerIds — the packed-id managed-membership check and the OnPlayerRekeyed handler are deleted (an id no longer encodes its club, and nothing is ever re-keyed). |
 #endregion

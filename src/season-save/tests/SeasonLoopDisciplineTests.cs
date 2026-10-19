@@ -988,23 +988,42 @@ namespace TacticalDirector.SeasonSave.Tests
                 all[i] = full.GetPlayer(i).PlayerId;
             }
 
+            // ERR-031-004 (October 19, 2026): the bans fall on the squad's last three DEFENDERS, a line
+            // with surplus (8, of which any formation needs at most 4). They used to fall on the last
+            // three roster slots, which in the 25-player template were three of six forwards; in the
+            // 23-player template those slots are three of four forwards, leaving one injured forward
+            // against formations that need two or three — so the back-fill would CORRECTLY reach the
+            // suspended tier, and the premise "the injured pool alone can complete the formation" is
+            // what this lock needs, not which slots are banned.
             const int SuspendedCount = 3;
             var banned = new int[SuspendedCount];
-            for (int i = 0; i < SuspendedCount; i++)
+            int found = 0;
+            for (int i = all.Length - 1; i >= 0 && found < SuspendedCount; i--)
             {
-                banned[i] = all[all.Length - SuspendedCount + i];
+                if (full.GetPlayer(i).Position == PlayerPosition.Defender)
+                {
+                    banned[found++] = all[i];
+                }
             }
+
+            Assert.That(found, Is.EqualTo(SuspendedCount), "precondition: three defenders to ban");
 
             DisciplineState state = BansOf(1, banned);
             SeasonLoop loop = LoopOver(
                 league, RoundResolutionMode.FullEngine, out PlayerCareerStates career, state);
 
             int injuredCount = all.Length - SuspendedCount;
-            for (int i = 0; i < injuredCount; i++)
+            int rank = 0;
+            for (int i = 0; i < all.Length; i++)
             {
+                if (System.Array.IndexOf(banned, all[i]) >= 0)
+                {
+                    continue;
+                }
+
                 var knock = InjuryState.Create();
                 knock.Severity = InjurySeverity.Moderate;
-                knock.RecoveryRemaining = i + 1;   // distinct, ascending — a real tie-break order
+                knock.RecoveryRemaining = ++rank;   // distinct, ascending — a real tie-break order
                 career.SetMedicalState(clubId, all[i], in knock);
             }
 
@@ -1693,4 +1712,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | so unrelated unexpected Error logs are visible to teardown policing again. |
 // | 1.19 | 2026-10-09 | — | ERR-030-053: complete the final day before boundary discipline assertions. |
 // | 1.20 | 2026-10-09 | — | [Timeout(7200000)] on ARealEngineFixtureFoldsItsCards…: 1,106 s in Unity on the pinned host, over Unity's 180 s default timeout. |
+// | 1.21 | 2026-10-19 | — | ERR-031-004: the back-fill tier-order lock bans the last three DEFENDERS (a surplus line) instead of the last three roster slots, which became three of the 23-player template's four forwards and made the suspended tier legitimately reachable. |
 #endregion

@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-09-21
+// Modified: 2026-10-19
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, re-key, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -121,7 +121,7 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_AcceptedBuy_PostsFeeOnly_CommitsSpend_AndInsertsRekeyedContract()
+        public void SubmitBid_AcceptedBuy_PostsFeeOnly_CommitsSpend_AndInsertsContractUnderTheStableId()
         {
             FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
             TransferCommands commands = new TransferCommands(roster);
@@ -138,10 +138,52 @@ namespace TacticalDirector.Transfers.Tests
             Assert.AreEqual(77_000L, finances.WageBillAggregate);
             Assert.AreEqual(valuation, state.CommittedSpendThisWindow);
             Assert.AreEqual(1, roster.CommitCount);
-            Assert.IsTrue(state.TryGetContract(MANAGED_PLAYER_ID, out Contract contract));
-            Assert.AreEqual(MANAGED_PLAYER_ID, contract.PlayerId);
+
+            // ERR-031-005: the player keeps his id and the contract is keyed by it.
+            Assert.IsTrue(state.TryGetContract(COUNTERPARTY_PLAYER_ID, out Contract contract));
+            Assert.AreEqual(COUNTERPARTY_PLAYER_ID, contract.PlayerId);
             Assert.AreEqual(12_345L, contract.WagePerPeriod);
             Assert.AreEqual(3, contract.LengthSeasons);
+            Assert.IsTrue(roster.TryGetPlayer(COUNTERPARTY_PLAYER_ID, out PlayerRecord _, out int club));
+            Assert.AreEqual(MANAGED_CLUB_ID, club, "the re-home moved the record, id unchanged");
+        }
+
+        [Test]
+        public void SubmitBid_PlayerWhoseIdIsOutsideHisClubsPackedRange_IsOwnedByTheRoster()
+        {
+            // A regen's id comes from #28's monotonic cursor, far past every club's packed range: id 9000
+            // would read as "club 360" under id/CLUB_SQUAD_SIZE. Ownership must come from the roster.
+            const int RegenId = 9000;
+            FakeRosterPort roster = new FakeRosterPort();
+            roster.Add(PlayerRecord.CreateDefault(RegenId), COUNTERPARTY_CLUB_ID);
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, RegenId);
+            Offer offer = new Offer(RegenId, COUNTERPARTY_CLUB_ID, valuation, 500L, 2, true);
+
+            TransferSubmissionOutcome outcome = commands.SubmitBid(in offer, 110U, ref finances, state);
+
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, outcome);
+            Assert.IsTrue(state.TryGetContract(RegenId, out Contract contract));
+            Assert.AreEqual(2, contract.LengthSeasons);
+        }
+
+        [Test]
+        public void SubmitBid_DirectionThatDisagreesWithRosterOwnership_FailsLoud()
+        {
+            // The id 260 is club 10's packed range, but the roster says club 11 holds him: a "sell" of him
+            // by the managed club 10 is a caller-contract bug, judged by the roster, not the arithmetic.
+            FakeRosterPort roster = new FakeRosterPort();
+            roster.Add(PlayerRecord.CreateDefault(MANAGED_PLAYER_ID), COUNTERPARTY_CLUB_ID);
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            state.InsertContract(new Contract(MANAGED_PLAYER_ID, 1_000L, 2));
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer sell = new Offer(MANAGED_PLAYER_ID, COUNTERPARTY_CLUB_ID, 1L, 0L, 1, false);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in sell, 110U, ref finances, state));
+            Assert.AreEqual(0, roster.CommitCount);
         }
 
         [Test]
@@ -190,14 +232,21 @@ namespace TacticalDirector.Transfers.Tests
             TransferCommands commands = new TransferCommands(roster);
             TransfersState state = CreateOpenState();
             long firstValuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
-            long secondValuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID + 1);
-            Assert.AreEqual(firstValuation, secondValuation);
-            ClubFinancesState finances = CreateFinances(firstValuation * 2L - 1L, 5_000_000L, 0L);
+
+            // The first buy really leaves the seller (stable ids: the record re-homes), so the seller's
+            // positional stock drops and the second player is valued AFTER it — scarcer, so dearer.
+            long secondValuationAfterFirstSale = PlayerValuation.CounterpartyValue(
+                PlayerAttributes.CreateDefault(), 25, 0);
+            Assert.Greater(secondValuationAfterFirstSale, firstValuation);
+            ClubFinancesState finances = CreateFinances(
+                firstValuation + secondValuationAfterFirstSale - 1L, 5_000_000L, 0L);
             Offer first = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, firstValuation, 1_000L, 2, true);
-            Offer second = new Offer(COUNTERPARTY_PLAYER_ID + 1, COUNTERPARTY_CLUB_ID, secondValuation, 1_000L, 2, true);
 
             Assert.AreEqual(TransferSubmissionOutcome.Accepted, commands.SubmitBid(in first, 110U, ref finances, state));
             long balanceAfterFirst = finances.Balance;
+            long secondValuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID + 1);
+            Assert.AreEqual(secondValuationAfterFirstSale, secondValuation);
+            Offer second = new Offer(COUNTERPARTY_PLAYER_ID + 1, COUNTERPARTY_CLUB_ID, secondValuation, 1_000L, 2, true);
 
             TransferSubmissionOutcome secondOutcome = commands.SubmitBid(in second, 110U, ref finances, state);
 
@@ -322,10 +371,10 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_RosterCommitPreviewMismatch_FailsBeforeLocalStateMutation()
+        public void SubmitBid_RosterCommitThatDoesNotLand_FailsBeforeLocalStateMutation()
         {
             FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
-            roster.CommittedPlayerIdOffset = 1;
+            roster.CommitDoesNotLand = true;
             TransferCommands commands = new TransferCommands(roster);
             TransfersState state = CreateOpenState();
             ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
@@ -340,10 +389,10 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void SubmitBid_SellRosterCommitPreviewMismatch_RetainsLocalContractAndFinance()
+        public void SubmitBid_SellRosterCommitThatDoesNotLand_RetainsLocalContractAndFinance()
         {
             FakeRosterPort roster = CreateRosterWithManagedPlayer();
-            roster.CommittedPlayerIdOffset = 1;
+            roster.CommitDoesNotLand = true;
             TransferCommands commands = new TransferCommands(roster);
             TransfersState state = CreateOpenState();
             Contract seeded = new Contract(MANAGED_PLAYER_ID, 2_000L, 2);
@@ -404,24 +453,6 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void OnPlayerRekeyed_ManagedExternalIsNoOp_IntraManagedMovesContract()
-        {
-            TransfersState state = CreateOpenState();
-            Contract seeded = new Contract(MANAGED_PLAYER_ID, 1_000L, 2);
-            state.InsertContract(in seeded);
-
-            state.OnPlayerRekeyed(MANAGED_PLAYER_ID, COUNTERPARTY_PLAYER_ID);
-            Assert.IsTrue(state.TryGetContract(MANAGED_PLAYER_ID, out Contract unchanged));
-            Assert.AreEqual(MANAGED_PLAYER_ID, unchanged.PlayerId);
-
-            int intraManagedNewId = MANAGED_PLAYER_ID + 1;
-            state.OnPlayerRekeyed(MANAGED_PLAYER_ID, intraManagedNewId);
-            Assert.IsFalse(state.TryGetContract(MANAGED_PLAYER_ID, out Contract oldContract));
-            Assert.IsTrue(state.TryGetContract(intraManagedNewId, out Contract moved));
-            Assert.AreEqual(intraManagedNewId, moved.PlayerId);
-        }
-
-        [Test]
         public void T0StateAndCommands_ContainNoFloatOrDoubleFields()
         {
             Type[] types =
@@ -467,7 +498,7 @@ namespace TacticalDirector.Transfers.Tests
         private static FakeRosterPort CreateRosterWithCounterpartyPlayer()
         {
             FakeRosterPort roster = new FakeRosterPort();
-            roster.Add(PlayerRecord.CreateDefault(COUNTERPARTY_PLAYER_ID));
+            roster.Add(PlayerRecord.CreateDefault(COUNTERPARTY_PLAYER_ID), COUNTERPARTY_CLUB_ID);
             return roster;
         }
 
@@ -475,22 +506,21 @@ namespace TacticalDirector.Transfers.Tests
         {
             FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
             PlayerRecord second = PlayerRecord.CreateDefault(COUNTERPARTY_PLAYER_ID + 1);
-            roster.Add(second);
+            roster.Add(second, COUNTERPARTY_CLUB_ID);
             return roster;
         }
 
         private static FakeRosterPort CreateRosterWithManagedPlayer()
         {
             FakeRosterPort roster = new FakeRosterPort();
-            roster.Add(PlayerRecord.CreateDefault(MANAGED_PLAYER_ID));
+            roster.Add(PlayerRecord.CreateDefault(MANAGED_PLAYER_ID), MANAGED_CLUB_ID);
             return roster;
         }
 
         private static long CounterpartyValue(FakeRosterPort roster, int playerId)
         {
-            Assert.IsTrue(roster.TryGetPlayer(playerId, out PlayerRecord player));
+            Assert.IsTrue(roster.TryGetPlayer(playerId, out PlayerRecord player, out int ownerClubId));
             int stock = roster.CountPlayersAtPosition(COUNTERPARTY_CLUB_ID, player.Position);
-            int ownerClubId = playerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
             if (ownerClubId == COUNTERPARTY_CLUB_ID)
             {
                 stock--;
@@ -502,25 +532,27 @@ namespace TacticalDirector.Transfers.Tests
         private sealed class FakeRosterPort : ITransferRosterPort
         {
             private readonly Dictionary<int, PlayerRecord> _players = new Dictionary<int, PlayerRecord>();
-            private readonly Dictionary<int, int> _nextLocalIndexByClub = new Dictionary<int, int>();
-            private int _previewPlayerId;
+            private readonly Dictionary<int, int> _clubOf = new Dictionary<int, int>();
 
             public bool HasDestinationCapacity { get; set; } = true;
 
-            public int CommittedPlayerIdOffset { get; set; }
+            // F2 breach injection: the commit counts but the player never reaches the destination.
+            public bool CommitDoesNotLand { get; set; }
 
             public int CommitCount { get; private set; }
 
             public Action BeforeCommit { get; set; }
 
-            public void Add(PlayerRecord player)
+            public void Add(PlayerRecord player, int clubId)
             {
                 _players.Add(player.PlayerId, player);
+                _clubOf.Add(player.PlayerId, clubId);
             }
 
-            public bool TryGetPlayer(int playerId, out PlayerRecord player)
+            public bool TryGetPlayer(int playerId, out PlayerRecord player, out int clubId)
             {
-                return _players.TryGetValue(playerId, out player);
+                clubId = -1;
+                return _players.TryGetValue(playerId, out player) && _clubOf.TryGetValue(playerId, out clubId);
             }
 
             public int CountPlayersAtPosition(int clubId, PlayerPosition position)
@@ -528,8 +560,7 @@ namespace TacticalDirector.Transfers.Tests
                 int count = 0;
                 foreach (KeyValuePair<int, PlayerRecord> entry in _players)
                 {
-                    if (entry.Key / PlayerDatabaseConstants.CLUB_SQUAD_SIZE == clubId
-                        && entry.Value.Position == position)
+                    if (_clubOf[entry.Key] == clubId && entry.Value.Position == position)
                     {
                         count++;
                     }
@@ -538,39 +569,21 @@ namespace TacticalDirector.Transfers.Tests
                 return count;
             }
 
-            public bool TryPreviewRosterCommit(int fromClubId, int toClubId, int playerId, out int newPlayerId)
+            public bool TryPreviewRosterCommit(int fromClubId, int toClubId, int playerId)
             {
-                if (!HasDestinationCapacity
-                    || !_players.TryGetValue(playerId, out PlayerRecord player)
-                    || player.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != fromClubId)
-                {
-                    newPlayerId = 0;
-                    return false;
-                }
-
-                if (!_nextLocalIndexByClub.TryGetValue(toClubId, out int localIndex))
-                {
-                    localIndex = 0;
-                }
-
-                if (localIndex >= PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
-                {
-                    newPlayerId = 0;
-                    return false;
-                }
-
-                _previewPlayerId = toClubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE + localIndex;
-                newPlayerId = _previewPlayerId;
-                return true;
+                return HasDestinationCapacity
+                    && _clubOf.TryGetValue(playerId, out int owner)
+                    && owner == fromClubId;
             }
 
-            public int RequestRosterCommit(int fromClubId, int toClubId, int playerId)
+            public void RequestRosterCommit(int fromClubId, int toClubId, int playerId)
             {
                 BeforeCommit?.Invoke();
                 CommitCount++;
-                int localIndex = _previewPlayerId - toClubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
-                _nextLocalIndexByClub[toClubId] = localIndex + 1;
-                return _previewPlayerId + CommittedPlayerIdOffset;
+                if (!CommitDoesNotLand)
+                {
+                    _clubOf[playerId] = toClubId;
+                }
             }
         }
     }
@@ -584,4 +597,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.2     | 2026-09-14 | —      | Review corrections: golden/fractional valuation, strict age boundaries, typed budget/full outcomes, symmetric need, pre-commit port-breach lock. |
 // | 1.3     | 2026-09-14 | —      | Add sell-direction preview/commit mismatch regression locking retained local contract/finance on a port breach. |
 // | 1.4     | 2026-09-21 | —      | ERR-031-002: lock extreme coherent debt + over-budget buy returning InsufficientBudget before checked finance staging, with no mutation/roster commit. |
+// | 1.5     | 2026-10-19 | —      | ERR-031-005: stable-id fake port (explicit club membership); off-range-id ownership and roster-judged direction locks; commit breach is 'did not land'; the re-key test is deleted with the handler. |
 #endregion

@@ -205,8 +205,17 @@ The bootstrap therefore supplies a fixed position template:
 | Goalkeeper | 3 |
 | Defender | 8 |
 | Midfielder | 8 |
-| Forward | 6 |
-| **Total** | **25** |
+| Forward | ~~6~~ **4** |
+| **Total** | ~~25~~ **23** |
+
+**Amended October 19, 2026 (ERR-031-004, owner decision): the bootstrap no longer fills to the cap.** At 25 the
+template equalled `CLUB_SQUAD_SIZE`, the roster's hard maximum, so every club began full and #31's transfer
+preview could only answer `SquadFull` — no transfer could ever complete. The template now sums to **23**, strictly
+below the cap and at least a matchday 18, and `BuildSquadPositionTemplate` enforces both bounds (F3 below). The two
+dropped players are the template's last two forwards: each generated player's draws depend only on his index, so
+players 0–20 of every club are byte-identical to the 25-player league's; only the golden league digests moved.
+Four forwards still cover F433's three. The recorded A4a corpus was captured on 25-player squads; the quick-sim keys
+on the starting-XI rating differential only, and step 10's recapture runs on the current template.
 
 Sized against the maximum any shipped formation family requires for a starting XI (F442 1/4/4/2,
 F433 1/4/3/3, F4231 1/4/5/1 → max GK 1, DF 4, MF 5, FW 3), leaving margin for the seven
@@ -635,7 +644,7 @@ domain-tag/ordinal registry.
 |---|---|---|
 | F1 | `clubCount` outside `[2, MaxClubCount]` | `ArgumentOutOfRangeException` |
 | F2 | `clubCount` exceeds the club-name catalogue | `InvalidOperationException` (a catalogue/cap coherence bug, not caller input) |
-| F3 | Position template does not sum to `CLUB_SQUAD_SIZE`; or `clubCount` exceeds `MaxRngStreams`; or a negative world-day `[GT]` | `InvalidOperationException` (catalogue/config coherence, not caller input; test-locked) |
+| F3 | Position template sums below a matchday squad (18) or reaches `CLUB_SQUAD_SIZE` (ERR-031-004; previously: does not sum to it); or `clubCount` exceeds `MaxRngStreams`; or a negative world-day `[GT]` | `InvalidOperationException` (catalogue/config coherence, not caller input; test-locked) |
 | F4 | `ResolveByClubId` given an unknown club | returns `null` — the `ISquadProvider` contract, so the engine's own gate fails loud rather than substituting a default roster |
 | F5 | `CreateSeason` given a `managedClubId` outside the league | `ArgumentException` (delegated to `SeasonState`'s own gate, which already checks it) |
 | F6 | A generated squad cannot field the Stage-0 formation | impossible by KD-6, and **test-locked**: every bootstrapped squad's position counts are checked against the worst case across all shipped families, plus an end-to-end `ConfigureSquads` run through the real engine |
@@ -863,3 +872,4 @@ Windows certification host.
 | 1.7 | 2026-08-18 | — | **Adversarial-review round-6 corrections (H1, H2), documentation only — no decision changed.** **H1:** the KD-8 callout was still headlined "BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN" — the retracted flat verdict, contradicted by the callout's own first bullet (mean bar RESOLVED → PASS), by the verdict paragraph directly above it, and by `round-resolution-corpus.md`; re-titled to the two-part verdict (mean agreement PASS, distribution shape FAIL). **H2:** the same callout quoted the pooled home/away correlation as "+0.004 ± 0.052, n=378", contradicting S6's "+0.044 ± 0.073 (n = 198), ~3σ" in this same file — the n=378 figure is reproducible only by pooling the 180 W/D/L depth rows into the fit corpus, an unsanctioned invocation that also flips the α verdict to DETERMINED and so contradicts the α figures S7 condition 2 and S9 rely on; corrected to the sanctioned invocation's printed value, **+0.044 ± 0.073 (n=198), ~3σ**. Verified by re-running `tools/round-resolution-fit.py` on the four sanctioned slices with `--wdl-csv`: `-> MEAN: PASS`, `-> SHAPE (W/D/L): FAIL`, `pooled within-bucket home/away corr = +0.044 +/- 0.073 (n=198)`. |
 | 1.8 | 2026-10-09 | — | Coordinates selected PM-2 engine anchor and milestone corpus recapture/refit with roadmap §5.1; distinguishes worker-hours from elapsed time and capture from cheap fitting; retains KD-7a HOLD and separate mean/shape verdicts. No model, acceptance or parameter change. |
 | 1.9 | 2026-10-09 | — | PR #493 review corrections: capture budget starts from measured ~90 s/match (~5 worker-hours for 198), with current throughput/added wiring cost remeasured. Marks the old 154 s universal lower-bound estimate as disproved; retains selected-anchor, shape and adoption gates. |
+| 1.10 | 2026-10-19 | — | **ERR-031-004** (owner decision Oct 19, 2026): KD-6 template 3/8/8/6 = 25 → 3/8/8/4 = 23, strictly below the `CLUB_SQUAD_SIZE` cap so #31 transfers can complete; F3 restated (sum ≥ matchday 18 and < cap). Players 0–20 byte-identical; golden digests re-pinned. |

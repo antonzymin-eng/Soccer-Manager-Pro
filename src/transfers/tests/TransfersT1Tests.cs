@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT1Tests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-19
 // Author:   —
 // Specs:    Spec #31 §5.5 T-TX-DET-001, §5.6 T-TX-FAIL-001, Appendix B (as corrected by ERR-031-003)
 // Purpose:  Locks the T1 transfers sub-blob: a pinned golden byte vector, field-identical round-trip of
@@ -228,18 +228,6 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void Decode_AContractForAPlayerOutsideTheManagedClub_IsRefused()
-        {
-            byte[] blob = TransfersSaveCodec.Encode(TransfersState.Restore(
-                MANAGED_CLUB_ID, 0, new TransferWindow(1, 2), new[] { new Contract(FIRST_MANAGED_PLAYER_ID, 5, 5) }));
-            int contract = TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES + TransfersConstants.TRANSFERS_SAVE_CLUB_RECORD_BYTES + 4;
-            WriteI32(blob, contract, FIRST_MANAGED_PLAYER_ID - 1);   // the previous club's last player
-
-            var e = Assert.Throws<InvalidOperationException>(() => TransfersSaveCodec.Decode(blob));
-            StringAssert.Contains("managed club", e.Message);
-        }
-
-        [Test]
         public void Decode_AWindowThatClosesBeforeItOpens_IsRefused()
         {
             byte[] blob = TransfersSaveCodec.Encode(new TransfersState(MANAGED_CLUB_ID, new TransferWindow(10, 20)));
@@ -298,4 +286,5 @@ namespace TacticalDirector.Transfers.Tests
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-10-18 | —      | #31 T1: golden vector, round-trip, and F3/F6/F7 decode-refusal locks. |
+// | 1.1     | 2026-10-19 | —      | ERR-031-005: the codec-level managed-membership refusal is deleted — an id no longer encodes its club; membership is the season root's roster check (SeasonSaveTransfersTests). |
 #endregion

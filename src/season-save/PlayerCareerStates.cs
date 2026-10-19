@@ -1,5 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-10-19 (ERR-031-005 doc: the global-uniqueness rationale — v1.28)
 // Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.27)
 // Modified: 2026-08-16, later (adversarial-review Medium — SelectAvailable was production-dead (its
 //           stated reason for existing named a call site that does not exist) and five tests used it
@@ -254,10 +255,10 @@ namespace TacticalDirector.SeasonSave
         /// club — this very class is keyed <c>(ClubId, PlayerId)</c> on that premise. Two clubs
         /// carrying the same id would draw bit-identical injury luck on every world day forever,
         /// with matching severities whenever their risks are close: silent, total, and
-        /// indistinguishable from chance. Safe today only because <c>RosterGenerator</c> happens to
-        /// allocate <c>clubId × CLUB_SQUAD_SIZE + local</c>; the moment another allocator exists
-        /// (#42 youth intake, #31 transfers) that accident ends, so the precondition fails loud here
-        /// rather than surfacing as two players who are always injured together.
+        /// indistinguishable from chance. Genesis allocates <c>clubId × CLUB_SQUAD_SIZE + local</c>
+        /// and every later id comes from #28's single monotonic cursor (ERR-031-005; transfers keep a
+        /// player's id), so uniqueness holds by construction — and the precondition still fails loud
+        /// here rather than surfacing as two players who are always injured together.
         /// </summary>
         internal static void RequireGloballyUniquePlayerIds(
             IReadOnlyList<int> clubIds, IReadOnlyList<int[]> playerIds, string paramName)
@@ -1799,4 +1800,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.27    | 2026-08-22 | —      | ERR-041-020. AdvanceMedicalDay passes record.Age — the one production call
 // |         |            |        | site of #41's step. #28 refreshes the derived-age cache at #30's KD-2 slot
 // |         |            |        | 1, before this slot-4 step, so the age reaching the term is the day's own.
+// | 1.28    | 2026-10-19 | —      | ERR-031-005 (doc only): RequireGloballyUniquePlayerIds' rationale names the genesis formula + #28's single monotonic allocator instead of 'an accident of today's formula'. |
 #endregion

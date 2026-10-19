@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 18, 2026 (v0.7 — #31 T1 landed: §4.2 codec row live, §4.4 rewritten for the shipped composition; ERR-031-003)
+**Last Updated:** October 19, 2026 (v0.8 — ERR-031-005: §4.5 stable-id port contract)
+**Last Updated (prior):** October 18, 2026 (v0.7 — #31 T1 landed: §4.2 codec row live, §4.4 rewritten for the shipped composition; ERR-031-003)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 review correction: submission-result seam + prospective-stock semantics)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 T0 landing, v0.3 AR-6, v0.2 AR-3, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -41,7 +42,7 @@ Acyclic; no sim assembly references #31's consumers.
 | `ClubTransferState.cs` | season-scoped window + `CommittedSpendThisWindow` state (T0, live) |
 | `PlayerValuation.cs` | currency-returning `ValuePlayer` / `CounterpartyValue`, age curve, and always-on prospective positional-stock multiplier (T0, live) |
 | `NegotiationEngine.cs` | deterministic accepted/counter/rejected evaluation only; budget/capacity are not negotiation outcomes |
-| `TransfersState.cs` | managed contract store + club state + `OnPlayerRekeyed` semantics (T0, live) |
+| `TransfersState.cs` | managed contract store + club state (T0, live; `OnPlayerRekeyed` deleted at ERR-031-005 — nothing re-keys) |
 | `ITransferRosterPort.cs` | consumer-owned player/position reads plus exact preflight/commit seam for the specified #30 T2 producer |
 | `TransferCommands.cs` | atomic `SubmitBid → TransferSubmissionOutcome` command surface (T0, live) |
 | `TransfersSaveCodec.cs` | magic-led `TRANSFERS_SAVE_FORMAT_VERSION` sub-blob encode/decode (T1, live; ERR-031-003) |
@@ -68,12 +69,14 @@ references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still n
 
 ## 4.5 Interface contracts recorded for composition & #30
 
-- **T0 roster consumer port (live):** `TryGetPlayer` and `CountPlayersAtPosition` are read-only. For valuation,
+- **Roster consumer port (live; stable ids since ERR-031-005):** `TryGetPlayer` (record + owning club) and
+  `CountPlayersAtPosition` are read-only; ownership is never derived from the id. For valuation,
   `TransferCommands` converts the raw current stock into **stock excluding the negotiated player**: subtract one
   on a manager buy because the seller currently owns him; subtract zero on a manager sell because the buyer does
-  not. `TryPreviewRosterCommit` returns `false` for ordinary destination-capacity exhaustion and otherwise fixes
-  the exact destination `PlayerId`. `RequestRosterCommit` is contractually infallible after that preview and MUST
-  return the same id. #31 verifies that equality **before** applying staged finance/spend/contract state.
+  not. `TryPreviewRosterCommit` returns `false` for ordinary destination-capacity exhaustion (`CLUB_SQUAD_SIZE`
+  players). `RequestRosterCommit` re-homes the player under his unchanged id and is contractually infallible after
+  that preview; #31 confirms through `TryGetPlayer` that he is on the destination roster **before** applying staged
+  finance/spend/contract state.
 - **The composition root** MUST invoke #31 at the recorded T2 season slot, route UI commands through `SubmitBid`,
   adapt the #30 roster owner to `ITransferRosterPort`, and never let the UI mutate #31 state directly.
 - **#30** owns the future tick slot, production roster move/hook and season-save composition.
@@ -91,4 +94,5 @@ references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still n
 | 0.5 | 2026-09-14 | — | T0 football-judgment close-out: positional-stock read and live synchronous counter-offer semantics. |
 | 0.6 | 2026-09-14 | — | PR #407 review correction: separate submission-result enum, currency API names, prospective stock excluding negotiated player, and verify roster preview/commit before local mutation. |
 | 0.7 | 2026-10-18 | — | #31 T1 landing: `TransfersSaveCodec.cs` live (magic-led, ERR-031-003); §4.4 records the shipped frame-v8 composition (ERR-030-054), the null-for-unwired decode, #30-owned coherence, and the new `DeterministicSim` reference (serialization only). |
+| 0.8 | 2026-10-19 | — | ERR-031-005: §4.5 port contract — owning club reported by `TryGetPlayer`, capacity-only preview, id-preserving commit confirmed through the port. |
 #endregion

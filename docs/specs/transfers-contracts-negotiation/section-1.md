@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
+**Last Updated:** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
+**Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -39,7 +40,8 @@ preserving #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2). **Deep (Stage 3
 - **The on-disk season codec + roster ownership + tick order (#30).** #30 owns `SeasonSaveCodec` /
   `SEASON_SAVE_FORMAT_VERSION`, `RunWorldTickInFixedOrder`, and the roster lifecycle
   (`SeasonLoop`/`SeasonState`, `RollToNextSeason`). #30 **invokes** #31 at a new pre-declared tick-order slot
-  and owns the roster-commit + PlayerId **re-key** a transfer triggers. #31 never references #30 (KD-6/KD-7).
+  and owns the roster commit (a stable-id **re-home**, ERR-031-005) a transfer triggers. #31 never references #30
+  (KD-6/KD-7).
 - **CA/PA (#28).** The current/potential-ability career-state keyed by `PlayerId` is #28-owned; the minimal
   valuation does **not** read it (a recorded deep-tier refinement, KD-1).
 
@@ -85,10 +87,15 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
   (promotes `DOMAIN_TAG_TRANSFERS = 0x23` at T3, keyed on `(clubId, playerId, worldDay, purpose)`).
 - **KD-6 (the transfer-window model — #31-owned).** #30 has no window concept; #31 owns a `TransferWindow`
   derived deterministically from #30's `SeasonCalendar` (read-only). Minimal = one summer window.
-- **KD-7 (roster commit + PlayerId re-key — a NEW #30 mid-season entry point).** A transfer re-keys the
-  club-scoped `PlayerId` (`clubId*CLUB_SQUAD_SIZE+localIndex`). #31 **requests** a commit through a new
-  #30-owned mid-season roster-mutation entry point that re-keys the player and dispatches a roster-move hook;
-  #31 migrates only its own `Contract` (#28/#33 migrate their own keyed state).
+- **KD-7 (roster commit — a STABLE-id re-home through a NEW #30 mid-season entry point; ERR-031-005).** A transfer
+  **re-homes** the player: #31 **requests** a commit through a #30-owned mid-season roster-mutation entry point that
+  moves the player's record to the destination club **under his unchanged `PlayerId`**. The id is career-unique and
+  stable (owner decision October 19, 2026): `clubId*CLUB_SQUAD_SIZE+localIndex` is #27's GENESIS allocation only,
+  every post-genesis id comes from #28's monotonic `NextPlayerId` (the career's single allocator), and nothing derives
+  a player's club from his id — club membership is a roster fact. Because nothing re-keys, no PlayerId-keyed state
+  anywhere (#28/#29/#41/#44/#33/#31) needs migrating; #30 carries its own per-club `(ClubId, PlayerId)` rows with the
+  move. *(Originally specified as a packed-id RE-KEY into the destination's free `localIndex`; that contradicted #28
+  FR-PG-011 and #27 FR-SQ-010 as amended by ERR-027-004 the moment a regen existed — see ERR-031-005.)*
 - **KD-8 (behaviour-neutral identity).** Zero manager action ⇒ zero transfers (no autonomous producer at
   minimal) ⇒ a season byte-identical to pre-#31; registering no stream keeps every cursor byte-identical. A
   manager bid is an explicit command (the `SetTeamTactic` discipline), not a neutrality violation.
@@ -105,4 +112,5 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 | 0.1 | 2026-07-23 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3 (H): wage posting deferred to the deep tier (minimal fee-only, preserves #40 FR-FN-015) — §1.1/KD-2; KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
 | 0.3 | 2026-09-21 | — | ERR-031-001/002: KD-1 now matches FR-TX-002's always-on minimal positional scarcity, and KD-2 explicitly orders affordability before staged #40 mutation validation. |
+| 0.4 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): KD-7 rewritten from a packed-id re-key to a stable-id re-home; the packed formula is genesis allocation only, #28 `NextPlayerId` is the single post-genesis allocator, and club membership is a roster fact. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/player-database/PlayerRecord.cs
 // Created:  2026-07-15
-// Modified: 2026-08-08 (AR pass 12 L3: the draw-key spelling — v1.3)
+// Modified: 2026-10-19 (ERR-031-005: stable ids; the formula is genesis-only — v1.4)
+//           Prior: 2026-08-08 (AR pass 12 L3: the draw-key spelling — v1.3)
 // Author:   —
 // Spec:     Squad / Player Data Layer #27 §2.2.3 / FR-SQ-008/010 (as amended by ERR-027-004);
 //           its pre-promotion design supplement §3 is history only (the spec folder wins)
@@ -16,13 +17,18 @@ namespace TacticalDirector.PlayerDatabase
     public struct PlayerRecord
     {
         /// <summary>
-        /// Club-scoped unique identifier (design doc KD-3: <c>clubId * CLUB_SQUAD_SIZE + localIndex</c>).
+        /// Career-unique, STABLE identifier. Genesis allocates <c>clubId * CLUB_SQUAD_SIZE + localIndex</c>
+        /// (design doc KD-3), but that formula is a genesis allocation only, never an identity rule
+        /// (ERR-031-005, owner decision October 19, 2026): a transfer re-homes the player under the
+        /// same id, and every post-genesis id (a #28 regen) comes from <c>ProgressionEngine.NextPlayerId</c>,
+        /// the career's single allocator. Nothing may derive a player's club from his id.
         /// <para>
         /// <b>A career needs more than KD-3 promises (ERR-041-019):</b> #41's armed occurrence draw is
         /// keyed on <c>(worldSeed, playerId, actionOrdinal = worldDay × RADIX + purpose)</c> with no club term, so ids must be GLOBALLY
         /// unique across every club a career carries — two players sharing an id would draw identical
-        /// injury luck forever. Today's KD-3 formula happens to satisfy that; any future allocator
-        /// (#42 youth intake, #31 transfers) MUST preserve it, and <c>PlayerCareerStates</c> enforces
+        /// injury luck forever. The genesis formula plus the single monotonic post-genesis allocator
+        /// satisfy that by construction (ERR-031-005); a future allocator (#42 youth intake) MUST draw
+        /// from the same cursor, and <c>PlayerCareerStates</c> enforces
         /// it fail-loud at construction and roster sync.
         /// </para>
         /// </summary>
@@ -73,4 +79,5 @@ namespace TacticalDirector.PlayerDatabase
 // | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 12 (L3, doc): the ERR-041-019 key spelled     |
 // |         |            |        | per #41 SS3.1.1 — this doc had named three components in an order  |
 // |         |            |        | matching neither the code nor the spec.                            |
+// | 1.4     | 2026-10-19 | —      | ERR-031-005: PlayerId doc — stable across transfers; the KD-3 formula is genesis allocation only; ProgressionEngine.NextPlayerId is the single post-genesis allocator; club is never derived from the id. |
 #endregion

@@ -30,6 +30,7 @@ history by the original convention; they were not merged.
   - **Ids.** #31 §3.4 / T-TX-REKEY-001 re-key to `toClub*25+freeLocal`, and the T0 code derives club ownership from `id/25`. #28 FR-PG-011 allocates regen ids from the monotonic `NextPlayerId`. The advisor council recommends stable `PlayerId`s across a transfer (a re-home, with `ProgressionEngine.NextPlayerId` as the single allocator), which amends approved #31 KD-7.
   - **Also found:** every genesis contract has the same 3-season length, so all managed contracts expire at the third boundary, and selling then throws.
   - **Owner decisions needed:** separate bootstrap squad size from capacity (bootstrap below 25, or raise the cap); and choose stable ids or keep the re-key.
+  - **✅ OWNER DECISION, October 19, 2026:** *"Generate squads below the 25 cap (e.g. 23) and keep PlayerIds stable across transfers, with ProgressionEngine.NextPlayerId as the single allocator."* Landed as **ERR-031-004** (bootstrap template 3/8/8/4 = 23, strictly below the cap) and **ERR-031-005** (stable ids; the #31 port re-homes under the same id; nothing derives a club from an id). **What remains open here:** the T2 wiring itself and the genesis contract-expiry defect (every genesis contract shares one length), both in the T2 landing. This entry closes when T2 lands.
 
 <a id="d07-keeper-avoidance"></a>
 

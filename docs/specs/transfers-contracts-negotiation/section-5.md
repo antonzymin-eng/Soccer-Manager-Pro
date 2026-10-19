@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
+**Last Updated:** October 19, 2026 (v0.8 — ERR-031-005: §5.3 re-home locks)
+**Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -28,9 +29,10 @@
 ## 5.2 Integration — the bid pipeline (KD-2/KD-7, atomic)
 
 - **T-TX-BID-001** — accepted fair-value buy posts exactly one staged `{Debit,TransferFee,fee}` effect, commits
-  spend, moves the roster, and inserts a re-keyed contract; `TransferBudget`/`WageBillAggregate` remain unchanged.
+  spend, re-homes the player under his unchanged id, and inserts the contract keyed by it; `TransferBudget`/
+  `WageBillAggregate` remain unchanged.
 - **T-TX-BID-002** — accepted sell commits the roster, then removes the managed contract and applies the staged
-  `{Credit,TransferFee,fee}` finance copy. The managed↔external #31 re-key hook is a no-op during the move.
+  `{Credit,TransferFee,fee}` finance copy.
 - **T-TX-BID-003 (F1)** — cumulative over-budget buy returns `TransferSubmissionOutcome.InsufficientBudget`,
   not an exception, and leaves finance/spend/roster/contracts unchanged for that attempt.
 - **T-TX-BID-004 (F5)** — full destination returns `TransferSubmissionOutcome.SquadFull`, not an exception, with
@@ -43,17 +45,19 @@
 - **T-TX-BID-007** — counteroffer/reject are ordinary no-mutation `TransferSubmissionOutcome` values.
 - **T-TX-BID-008** — #31 writes no `ClubFinances` field directly and keeps no parallel cash ledger.
 
-## 5.3 Roster re-key (KD-7)
+## 5.3 Roster re-home (KD-7; stable ids since ERR-031-005)
 
-- **T-TX-REKEY-001** — a committed transfer uses `toClub*CLUB_SQUAD_SIZE+freeLocalIndex`; managed contract state
-  is inserted after a successful buy commit or removed after a successful sell commit.
-- **T-TX-REKEY-002** — the preview/commit id equality is checked before local mutation.
+- **T-TX-REKEY-001** — *(restated at ERR-031-005)* a committed transfer keeps the player's id and moves his record
+  to the destination roster; ownership is the roster's answer — a player whose id lies outside every packed range
+  (a regen) is bought from the club whose roster carries him, and a direction that disagrees with roster ownership
+  fails loud. Managed contract state is inserted after a confirmed buy commit or removed after a confirmed sell.
+- **T-TX-REKEY-002** — *(restated)* the commit is confirmed through the port before local mutation; a commit that
+  does not land fails loud with local state untouched (both directions).
 - **T-TX-REKEY-003** — #31 migrates only its own contract state; #28/#33 state is not referenced.
 - **T-TX-REKEY-004** — positional-stock read is read-only and bounded; an invalid producer count fails loud.
-- **T-TX-REKEY-005 (deferred T2)** — the real #30 `DispatchRosterMoveHook` MUST be observed firing on a
-  managed→external transfer while #31's subscriber is also observed to no-op: the old managed contract remains
-  present during hook dispatch and is removed only by `SubmitBid` after the roster commit returns. The mirror
-  external→managed hook likewise no-ops before `SubmitBid` inserts the destination contract.
+- **T-TX-REKEY-005 (deferred T2; restated at ERR-031-005)** — a real #30 re-home MUST carry the player's whole
+  career with him under the same id — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — and leave nothing at the
+  source club; the moved player is then selectable by, and records appearances for, his new club.
 
 ## 5.4 Window (KD-6)
 
@@ -98,4 +102,5 @@ T-TX-REKEY-005.
 | 0.5 | 2026-09-14 | — | PR #407 review correction: literal golden/fractional valuation vectors, strict age boundaries, symmetric exclude-player need, typed budget/full outcomes, and preview-mismatch-before-local-mutation regression. |
 | 0.6 | 2026-09-14 | — | Residual review cleanup: add sell-direction preview/commit breach coverage and pin the T2 production hook-dispatch plus observable managed↔external #31 no-op regression. |
 | 0.7 | 2026-10-18 | — | T1 landing: T-TX-DET-001 and T-TX-FAIL-001 move from deferred to live, with the golden vector and sibling-magic refusal (ERR-031-003). |
+| 0.8 | 2026-10-19 | — | ERR-031-005: §5.2/§5.3 restated for a stable-id re-home — T-TX-REKEY-001 locks roster-judged ownership including an off-range (regen) id; T-TX-REKEY-002 confirms the landing; T-TX-REKEY-005 becomes the T2 carry-everything integration lock. |
 #endregion

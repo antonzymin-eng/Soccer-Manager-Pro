@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueBootstrapConstants.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-19 (ERR-031-004 — bootstrap template 25 -> 23, strictly below the cap — v1.2)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-2/KD-4/
 //           KD-5/KD-6/KD-9; path-to-playable roadmap A3; Code Standards #20
@@ -15,6 +15,7 @@
 using System.Collections.ObjectModel;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
@@ -65,7 +66,7 @@ namespace TacticalDirector.SeasonSave
         // Backing store for SquadPositionCounts. Declared BEFORE the read-only wrapper below: within a
         // class, static field initializers run in textual order, so wrapping an as-yet-uninitialised
         // array would capture null (the PerceptionConstants.BASE_FOV_HALF_ANGLE static-init defect).
-        private static readonly int[] s_squadPositionCounts = { 3, 8, 8, 6 };
+        private static readonly int[] s_squadPositionCounts = { 3, 8, 8, 4 };
 
         /// <summary>[GT] Default number of clubs in a bootstrapped league — one 38-round double
         /// round-robin (380 fixtures). Config key <c>[league-bootstrap] DefaultClubCount</c>.</summary>
@@ -145,8 +146,21 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// [GT] Per-position player counts in a bootstrapped squad, indexed by
-        /// <see cref="PlayerPosition"/> ordinal (GK, DF, MF, FW). Must sum to
-        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>.
+        /// <see cref="PlayerPosition"/> ordinal (GK, DF, MF, FW). The sum is the BOOTSTRAP squad size,
+        /// which must cover a matchday squad (<see cref="MatchEngineConstants.PLAYERS_PER_TEAM"/> +
+        /// <see cref="MatchEngineConstants.SUBSTITUTES_PER_TEAM"/>) and sit STRICTLY BELOW the
+        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> capacity cap.
+        /// <para>
+        /// <b>Bootstrap size is not capacity (owner decision, October 19, 2026 — ERR-031-004).</b> Until
+        /// then the template summed to the cap itself, 25, so every club began full and #31's roster
+        /// preview could only answer <c>SquadFull</c>: no buy (the managed club full) and no sell (the
+        /// buyer full) could ever complete, and nothing opened a slot (regen is 1:1, an expired
+        /// contract keeps the player). The owner chose to generate squads below the cap. 3/8/8/4 = 23
+        /// drops the template's last two forwards rather than one player from each line, because each
+        /// generated player's draws depend only on his index: players 0–20 of every club are therefore
+        /// byte-identical to the 25-player template's, and only the two trailing forwards are gone.
+        /// Four forwards still cover F433's three with one spare.
+        /// </para>
         /// <para>
         /// Sized against the maximum any shipped formation family needs for a starting XI — F442
         /// 1/4/4/2, F433 1/4/3/3, F4231 1/4/5/1, so GK 1 / DF 4 / MF 5 / FW 3 — with margin for the
@@ -176,8 +190,8 @@ namespace TacticalDirector.SeasonSave
         #endregion
 
         /// <summary>
-        /// Expands <see cref="SquadPositionCounts"/> into a fresh per-player position array of length
-        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>, in <see cref="PlayerPosition"/> ordinal
+        /// Expands <see cref="SquadPositionCounts"/> into a fresh per-player position array whose length
+        /// is the bootstrap squad size (the template's sum), in <see cref="PlayerPosition"/> ordinal
         /// order (all goalkeepers, then defenders, then midfielders, then forwards).
         /// <para>
         /// A method rather than a <c>static readonly</c> field for two reasons: it never hands out a
@@ -188,8 +202,9 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         /// <exception cref="System.InvalidOperationException">
         /// F3 — the catalogue is incoherent: a negative count, a length that does not cover the
-        /// <see cref="PlayerPosition"/> roster, or a sum that is not
-        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>.
+        /// <see cref="PlayerPosition"/> roster, a sum below a matchday squad, or a sum that reaches
+        /// the <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> cap (ERR-031-004: a full squad
+        /// can never receive a transfer).
         /// </exception>
         public static PlayerPosition[] BuildSquadPositionTemplate()
         {
@@ -213,11 +228,22 @@ namespace TacticalDirector.SeasonSave
                 total += counts[p];
             }
 
-            if (total != PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            int matchdaySquad = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
+            if (total < matchdaySquad)
             {
                 throw new System.InvalidOperationException(
-                    $"SquadPositionCounts sums to {total} but a squad holds " +
-                    $"{PlayerDatabaseConstants.CLUB_SQUAD_SIZE} players.");
+                    $"SquadPositionCounts sums to {total}, fewer than the {matchdaySquad} players a " +
+                    "matchday squad needs.");
+            }
+
+            // ERR-031-004: strictly below the cap, never at it. A bootstrapped club at capacity can
+            // never receive a transfer, so #31's minimal market would be structurally empty.
+            if (total >= PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new System.InvalidOperationException(
+                    $"SquadPositionCounts sums to {total}, which reaches the " +
+                    $"{PlayerDatabaseConstants.CLUB_SQUAD_SIZE}-player cap; a bootstrapped squad must leave " +
+                    "room for a transfer (ERR-031-004).");
             }
 
             var template = new PlayerPosition[total];
@@ -254,4 +280,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | declared before it (static-init order). Config-reader <exception>  |
 // |         |            |        | docs now state what a consumer actually observes                   |
 // |         |            |        | (TypeInitializationException from the static initializer).         |
+// | 1.2     | 2026-10-19 | —      | ERR-031-004 (owner decision Oct 19): bootstrap squad size is no  |
+// |         |            |        | longer the cap. Template 3/8/8/6 = 25 -> 3/8/8/4 = 23 (the last  |
+// |         |            |        | two forwards dropped, so players 0-20 are byte-identical); the  |
+// |         |            |        | sum must cover a matchday 18 and stay strictly below 25.         |
 #endregion

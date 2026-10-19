@@ -48,7 +48,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 
 | Entity | Owning spec § | Assembly | Type(s) |
 |---|---|---|---|
-| Canonical player record | #27 §2.2.3 | `player-database` | `PlayerRecord` |
+| Canonical player record | #27 §2.2.3 | `player-database` | `PlayerRecord` — `PlayerId` stable and career-unique; genesis allocation `clubId*CLUB_SQUAD_SIZE+local`, later ids from `ProgressionEngine.NextPlayerId` only (ERR-031-005) |
 | Canonical player attributes | #27 §2.2.1 | `player-database` | `PlayerAttributes` (`TacticalDirector.PlayerDatabase`) — **see §9 hazard 1** |
 | Player position | #27 §2.2.2 | `player-database` | `PlayerPosition` |
 | Squad (roster container) | #27 §2.2.4 | `player-database` | `Squad` (sealed, immutable) |

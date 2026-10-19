@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-09-21
+// Modified: 2026-10-19
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -50,7 +50,7 @@ namespace TacticalDirector.Transfers
                 throw new InvalidOperationException("Transfer command is outside the active transfer window (F4).");
             }
 
-            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player)
+            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player, out int ownerClubId)
                 || player.PlayerId != offer.PlayerId)
             {
                 throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId, "PlayerId is outside the current #27 club universe (F6).");
@@ -58,7 +58,10 @@ namespace TacticalDirector.Transfers
 
             int fromClubId = offer.IsBuy ? offer.CounterpartyClubId : state.ManagedClubId;
             int toClubId = offer.IsBuy ? state.ManagedClubId : offer.CounterpartyClubId;
-            int ownerClubId = offer.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+
+            // ERR-031-005: ownership is the roster's answer, never the id's arithmetic. Ids are stable
+            // across transfers and post-genesis ids come from #28's monotonic cursor, so the packed
+            // clubId*CLUB_SQUAD_SIZE+local formula describes only a player's genesis club.
             if (ownerClubId != fromClubId)
             {
                 throw new InvalidOperationException("Offer direction does not match the player's current club ownership (F6).");
@@ -126,78 +129,36 @@ namespace TacticalDirector.Transfers
             ClubFinancesState stagedFinances = finances;
             FinanceLedger.ApplyTransaction(ref stagedFinances, in transaction);
 
-            if (!_roster.TryPreviewRosterCommit(fromClubId, toClubId, offer.PlayerId, out int newPlayerId))
+            if (!_roster.TryPreviewRosterCommit(fromClubId, toClubId, offer.PlayerId))
             {
                 return TransferSubmissionOutcome.SquadFull;
             }
 
-            ValidatePreviewId(newPlayerId, toClubId);
-            if (offer.IsBuy && state.TryGetContract(newPlayerId, out Contract duplicateContract))
+            if (offer.IsBuy && state.TryGetContract(offer.PlayerId, out Contract duplicateContract))
             {
                 Contract.Validate(in duplicateContract);
-                throw new InvalidOperationException("Destination PlayerId already has a managed contract.");
+                throw new InvalidOperationException(
+                    "An external player already holds a managed contract — the contract set and the roster disagree.");
             }
 
+            // ---- COMMIT ---- the re-home keeps the id (ERR-031-005), then local state applies only once
+            // the port confirms the player really is on the destination roster.
+            _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
+            RequireCommitLanded(offer.PlayerId, toClubId);
+
+            finances = stagedFinances;
             if (offer.IsBuy)
             {
-                CommitBuy(
-                    in offer,
-                    fromClubId,
-                    toClubId,
-                    newPlayerId,
-                    ref finances,
-                    state,
-                    in stagedFinances);
+                state.AddCommittedSpend(offer.Fee);
+                Contract contract = new Contract(offer.PlayerId, offer.WagePerPeriod, offer.LengthSeasons);
+                state.InsertContract(in contract);
             }
             else
             {
-                CommitSell(
-                    in offer,
-                    fromClubId,
-                    toClubId,
-                    newPlayerId,
-                    ref finances,
-                    state,
-                    in stagedFinances);
+                state.RemoveContract(offer.PlayerId);
             }
 
             return TransferSubmissionOutcome.Accepted;
-        }
-
-        private void CommitBuy(
-            in Offer offer,
-            int fromClubId,
-            int toClubId,
-            int previewPlayerId,
-            ref ClubFinancesState finances,
-            TransfersState state,
-            in ClubFinancesState stagedFinances)
-        {
-            int committedPlayerId = _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
-            RequirePreviewMatch(previewPlayerId, committedPlayerId);
-
-            finances = stagedFinances;
-            state.AddCommittedSpend(offer.Fee);
-            Contract contract = new Contract(previewPlayerId, offer.WagePerPeriod, offer.LengthSeasons);
-            state.InsertContract(in contract);
-        }
-
-        private void CommitSell(
-            in Offer offer,
-            int fromClubId,
-            int toClubId,
-            int previewPlayerId,
-            ref ClubFinancesState finances,
-            TransfersState state,
-            in ClubFinancesState stagedFinances)
-        {
-            // Commit the preflighted roster move first. #31's managed↔external re-key hook is a specified no-op,
-            // so retaining the old contract until this infallible port call succeeds cannot double-handle it.
-            int committedPlayerId = _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
-            RequirePreviewMatch(previewPlayerId, committedPlayerId);
-
-            state.RemoveContract(offer.PlayerId);
-            finances = stagedFinances;
         }
 
         private static TransferSubmissionOutcome ToSubmissionOutcome(NegotiationOutcome negotiation)
@@ -227,18 +188,12 @@ namespace TacticalDirector.Transfers
             }
         }
 
-        private static void ValidatePreviewId(int newPlayerId, int toClubId)
+        // F2: the producer's successful-preview contract is that the commit lands. A breach is an
+        // integration defect after the external port has already mutated; #31 can only guarantee its own
+        // state is untouched, which is why the check precedes every local write.
+        private void RequireCommitLanded(int playerId, int toClubId)
         {
-            if (newPlayerId < 0
-                || newPlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != toClubId)
-            {
-                throw new InvalidOperationException("Roster preview returned a PlayerId outside the destination club's deterministic id range.");
-            }
-        }
-
-        private static void RequirePreviewMatch(int previewPlayerId, int committedPlayerId)
-        {
-            if (committedPlayerId != previewPlayerId)
+            if (!_roster.TryGetPlayer(playerId, out PlayerRecord _, out int clubId) || clubId != toClubId)
             {
                 throw new InvalidOperationException("Roster commit violated its successful preview contract.");
             }
@@ -253,4 +208,5 @@ namespace TacticalDirector.Transfers
 // | 1.1     | 2026-09-14 | —      | Fix finance type alias; share offer validation; apply always-on counterparty positional need. |
 // | 1.2     | 2026-09-14 | —      | Type normal budget/full-squad outcomes; exclude negotiated player from need; commit staged finance and move port check ahead of local mutation. |
 // | 1.3     | 2026-09-21 | —      | ERR-031-002: resolve buy affordability before checked staged finance validation so extreme coherent debt returns InsufficientBudget instead of overflowing. |
+// | 1.4     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds — ownership from the port's roster answer, never id/CLUB_SQUAD_SIZE; the re-home keeps the id; local state applies only after the port confirms the player is on the destination roster. |
 #endregion

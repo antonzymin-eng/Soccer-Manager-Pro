@@ -163,7 +163,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 }
             }
 
-            Assert.AreEqual(20 * PlayerDatabaseConstants.CLUB_SQUAD_SIZE, playerIds.Count);
+            Assert.AreEqual(20 * LeagueBootstrapConstants.BuildSquadPositionTemplate().Length, playerIds.Count);
         }
 
         [Test]
@@ -359,7 +359,13 @@ namespace TacticalDirector.SeasonSave.Tests
         public void BuildSquadPositionTemplate_MatchesTheCataloguedCountsAndFillsASquad()
         {
             PlayerPosition[] template = LeagueBootstrapConstants.BuildSquadPositionTemplate();
-            Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, template.Length);
+            // ERR-031-004: the bootstrap fills BELOW the cap, leaving transfer headroom, and above a
+            // matchday squad.
+            Assert.Less(template.Length, PlayerDatabaseConstants.CLUB_SQUAD_SIZE);
+            Assert.GreaterOrEqual(template.Length,
+                TacticalDirector.MatchEngine.MatchEngineConstants.PLAYERS_PER_TEAM
+                + TacticalDirector.MatchEngine.MatchEngineConstants.SUBSTITUTES_PER_TEAM);
+            Assert.AreEqual(23, template.Length, "the owner-chosen bootstrap size (October 19, 2026)");
 
             var counts = new int[LeagueBootstrapConstants.PositionCount];
             foreach (PlayerPosition p in template)
@@ -646,4 +652,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | rule it asserted (squads are not persisted; the provider is    |
 // |         |            |        | rebuilt from the seed) — generation stays seed-pure, but an    |
 // |         |            |        | existing career's rosters now come from the save file.         |
+// | 1.2     | 2026-10-19 | —      | ERR-031-004: the template lock asserts a bootstrap size strictly below the cap (23) and at least a matchday 18; the id-count lock reads the template length. |
 #endregion
