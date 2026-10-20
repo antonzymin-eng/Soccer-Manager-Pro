@@ -1,17 +1,20 @@
 // File:     src/season-save/tests/SeasonTransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-20
+// Modified: 2026-10-20 (AR round 3 — v1.3)
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §7.1 T2, FR-TX-005/007/009/021..025/028, §5 T-TX-BID-001..004,
-//           T-TX-REKEY-005, T-TX-DET-001/002, T-TX-INIT-001, T-TX-NEU-001; ERR-031-005/007/008/009/010/011/012;
+//           T-TX-REKEY-005, T-TX-DET-001/002/003, T-TX-INIT-001, T-TX-NEU-001; ERR-031-005/007/008/009/010/011/012;
 //           ERR-044-014; Season & Competition Loop #30 §3.5 (d″), ERR-030-056; Code Standards #20
 // Purpose:  #31 T2 end to end through SeasonLoop: genesis seeding, the bid seam against the club's real #40
 //           entry, the production re-home carrying the player's whole career under his id, every
 //           non-accepted outcome leaving #40 byte-identical, the staged season-boundary step, and the
-//           save/load path never re-seeding. AR round 3 adds the production SeasonTransferRoster adapter's
+//           save/load path never re-seeding. AR round 2 adds the production SeasonTransferRoster adapter's
 //           throw paths, the whole-career REKEY lock (lifecycle + #29 + #30 rows), the ERR-044-014 ban
 //           property, the League.CreateLoop production composition, and a snapshot wide enough to back
-//           "career untouched".
+//           "career untouched". AR round 3 adds the full-snapshot neutrality lock (T-TX-NEU-001: a played
+//           season, the roll and a season-2 round, wired vs unwired, with a one-sale non-vacuity leg),
+//           T-TX-DET-003, the odd-club (bye) ban property, the full-InjuryState and yellow-count REKEY
+//           legs, and the League.CreateLoop KD-4 refusal.
 
 using System;
 using System.IO;
@@ -44,6 +47,9 @@ namespace TacticalDirector.SeasonSave.Tests
         /// <summary>The seller-club squad index NewCareer bans by default, and the length of that ban.</summary>
         private const int BannedIndex = 12;
         private const int BanMatches = 50;
+
+        /// <summary>The yellow-card count NewCareer can seed beside the ban (REKEY-005's #44 tally leg).</summary>
+        private const int Yellows = 2;
 
         /// <summary>Close − openingFixtureDay under ERR-031-011 (world days).</summary>
         private static readonly uint InSeasonTail = (uint)TransfersConstants.SummerWindowInSeasonDays - 1u;
@@ -87,6 +93,31 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void CreateLoop_WithTheClockPastTheOpeningFixtureDay_ThrowsTheKd4Refusal_NotTheWindowsRangeError()
+        {
+            // AR round 3 S-L5: the cursor invariant is checked BEFORE the #31 window is derived. Unchecked, a
+            // wired composition surfaced SummerWindowFor's ArgumentOutOfRangeException (opening < begin) —
+            // Assert.Throws<ArgumentException> is exact-type, so that regression fails this test.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(1, WorldSeed);
+            ProgressionEngine progression = SeedFor(league, world);
+            uint opening = league.CreateSeason(Managed).Calendar.DayOfRound(0);
+            for (uint d = 0; d <= opening; d++)
+            {
+                world.AdvanceDay();
+            }
+
+            ArgumentException wired = Assert.Throws<ArgumentException>(
+                () => league.CreateLoop(world, Managed, RoundResolutionMode.QuickSimAll, progressionOrNull: progression));
+            StringAssert.Contains("KD-4", wired.Message);
+            Assert.That(wired.ParamName, Is.EqualTo("world"));
+
+            ArgumentException unwired = Assert.Throws<ArgumentException>(
+                () => league.CreateLoop(world, Managed, RoundResolutionMode.QuickSimAll));
+            StringAssert.Contains("KD-4", unwired.Message);
+        }
+
+        [Test]
         public void CreateLoop_WithoutAProgressionStore_LeavesTransfersUnwired()
         {
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
@@ -102,7 +133,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             // T-TX-REKEY-005: ONE player carries every kind of per-player state — a banned, injured,
             // retirement-flagged, trained, appeared-in Seller player — and all of it must follow him.
-            Rig c = NewCareer(sellerRetireeIndex: BannedIndex);
+            Rig c = NewCareer(sellerRetireeIndex: BannedIndex, bannedYellows: Yellows);
             int target = BannedAt(c);
             Assert.That(target, Is.EqualTo(c.SellerRetiree), "the banned player is also the aged one");
             c.Loop.AdvanceDays(6);   // lived days: growth accrues, the age-45 flag is raised, training advances
@@ -115,6 +146,11 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayerLifecycle lifeBefore = LifecycleOf(c.Progression, Seller, target);
             TrainingState trainingBefore = TrainingOf(c.Career, Seller, target);
             AppearanceState appearanceBefore = AppearanceOf(c.Career, Seller, target);
+            InjuryState injuryBefore = InjuryOf(c.Career, Seller, target);
+            DisciplineEntry tallyBefore = c.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey);
+            Assert.That(tallyBefore.Yellows, Is.EqualTo(Yellows), "non-vacuity: the #44 tally carries a yellow count…");
+            Assert.That(tallyBefore.BanMatchesRemaining, Is.EqualTo(BanMatches), "…and an unserved ban");
+            Assert.That(injuryBefore.Severity, Is.EqualTo(InjurySeverity.Moderate), "non-vacuity: the #41 state is non-default");
             Assert.That(lifeBefore.RetirementFlag, Is.True, "non-vacuity: the #28 retirement state is non-default");
             Assert.That(lifeBefore.RetirementDay, Is.GreaterThan(0u));
             Assert.That(lifeBefore.BirthWorldDay, Is.LessThan(0L));
@@ -130,7 +166,9 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(IndexOf(c.Progression.SquadFor(Managed), target), Is.GreaterThanOrEqualTo(0), "re-homed to the buyer…");
             Assert.That(IndexOf(c.Progression.SquadFor(Seller), target), Is.LessThan(0), "…and gone from the seller");
             Assert.That(c.Career.IsAvailable(Managed, target), Is.False, "his injury travelled with him");
-            Assert.That(InjuryOf(c.Career, Managed, target).RecoveryRemaining, Is.EqualTo(9));
+            AssertSameInjury(injuryBefore, InjuryOf(c.Career, Managed, target));
+            Assert.That(c.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey), Is.EqualTo(tallyBefore),
+                "the #44 tally (yellows and ban) is keyed by the unchanged id");
             Assert.Throws<ArgumentException>(() => c.Career.IsAvailable(Seller, target), "no row left behind");
 
             // #28 lifecycle, #29 training row and #30 appearance row: moved verbatim…
@@ -176,12 +214,16 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void ABannedPlayer_ServesHisBanAtTheBuyer_AndSitsOutThatClubsNextRound()
         {
-            // ERR-044-014: whose ban a fixture serves is decided by the roster, never by the id. The
-            // control (same sale, no ban) shows this player WOULD have been fielded, so the ban is what
-            // kept him out, and the buyer's one played round served exactly one match of it.
-            int index = SelectableManagedIndex();
-            Rig banned = NewCareer(bannedIndex: index, bannedClub: Managed);
-            Rig control = NewCareer(bannedIndex: -1);
+            // ERR-044-014: whose ban a fixture serves is decided by the roster, never by the id. Three clubs
+            // (odd N: one club has a bye each round) make that observable. The banned player's id is the
+            // MANAGED club's and he is sold to the Seller club; over the three rounds of the first leg each
+            // of those clubs sits out one round, so 'the club his id names' and 'the club that holds him'
+            // are told apart. His ban must tick exactly in the rounds the Seller plays and not otherwise.
+            // The control (same sale, no ban) shows he WOULD have been fielded, so the ban is what kept him out.
+            const int clubs = 3;
+            int index = SelectableManagedIndex(clubs);
+            Rig banned = NewCareer(bannedIndex: index, bannedClub: Managed, clubCount: clubs);
+            Rig control = NewCareer(bannedIndex: -1, clubCount: clubs);
             int target = BannedAt(banned);
             Assert.That(control.Progression.SquadFor(Managed).GetPlayer(index).PlayerId, Is.EqualTo(target));
             foreach (Rig rig in new[] { banned, control })
@@ -190,18 +232,38 @@ namespace TacticalDirector.SeasonSave.Tests
                     Is.EqualTo(TransferSubmissionOutcome.Accepted));
             }
 
-            int before = banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining;
-            Assert.That(before, Is.EqualTo(BanMatches), "the ban travelled under the unchanged id");
-            banned.Loop.AdvanceToNextFixtureDay();
-            control.Loop.AdvanceToNextFixtureDay();
-            uint day = banned.Loop.CurrentWorldDay;
-            banned.Loop.AdvanceAndPlayNextRound();
-            control.Loop.AdvanceAndPlayNextRound();
+            int remaining = banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining;
+            Assert.That(remaining, Is.EqualTo(BanMatches), "the ban travelled under the unchanged id");
+            bool sawSellerPlayWhileIdClubSits = false;
+            bool sawIdClubPlayWhileSellerSits = false;
+            bool controlFielded = false;
+            for (int round = 0; round < clubs; round++)
+            {
+                banned.Loop.AdvanceToNextFixtureDay();
+                control.Loop.AdvanceToNextFixtureDay();
+                uint day = banned.Loop.CurrentWorldDay;
+                int roundIndex = banned.Loop.State.Calendar.NextRoundIndex;
+                bool sellerPlays = ClubPlaysIn(banned.Loop.State, roundIndex, Seller);
+                bool idClubPlays = ClubPlaysIn(banned.Loop.State, roundIndex, Managed);
+                banned.Loop.AdvanceAndPlayNextRound();
+                control.Loop.AdvanceAndPlayNextRound();
 
-            Assert.That(banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining,
-                Is.EqualTo(before - 1), "the new club's one played round served exactly one match");
-            Assert.That(FieldedOn(banned.Career, Seller, target, day), Is.False, "he sat out the buyer's round");
-            Assert.That(FieldedOn(control.Career, Seller, target, day), Is.True, "non-vacuity: unbanned, the same sale fields him");
+                remaining -= sellerPlays ? 1 : 0;
+                Assert.That(banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining,
+                    Is.EqualTo(remaining), "round " + roundIndex + ": served by the club that holds him, and only when it plays");
+                if (sellerPlays)
+                {
+                    Assert.That(FieldedOn(banned.Career, Seller, target, day), Is.False, "he sat out the buyer's round");
+                    controlFielded |= FieldedOn(control.Career, Seller, target, day);
+                }
+
+                sawSellerPlayWhileIdClubSits |= sellerPlays && !idClubPlays;
+                sawIdClubPlayWhileSellerSits |= idClubPlays && !sellerPlays;
+            }
+
+            Assert.That(sawSellerPlayWhileIdClubSits && sawIdClubPlayWhileSellerSits, Is.True,
+                "non-vacuity: the rounds separate 'the club that holds him' from 'the club his id names'");
+            Assert.That(controlFielded, Is.True, "non-vacuity: unbanned, the same sale fields him");
         }
 
         [Test]
@@ -220,6 +282,29 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(c.Loop.TransfersSnapshot().TryGetContract(target, out Contract _), Is.False);
             Assert.That(c.Loop.FinanceView(Managed).Balance, Is.EqualTo(balanceBefore + fee));
             Assert.That(c.Loop.TransfersSnapshot().CommittedSpendThisWindow, Is.EqualTo(0L), "a sale adds no spend (KD-2)");
+        }
+
+        [Test]
+        public void AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign()
+        {
+            // KD-2 / FR-TX-005 (AR round 3, M16): the minimal tier posts the fee to the MANAGED club's #40 entry
+            // only. The counterparty AI club's entry never sees the money — so AI clubs' FinanceView and
+            // SettleFinances never see transfer cash, and money enters or leaves the league on every transfer.
+            // This pins the DECISION (spec §7.2 records the owner choice of mirror posting); a mirror-posting
+            // change must update this test deliberately.
+            Rig c = NewCareer();
+            int bought = PlayerAt(c, Seller, PlayerPosition.Midfielder);
+            int sold = PlayerAt(c, Managed, PlayerPosition.Defender);
+            byte[] sellerBefore = LedgerOf(c, Seller);
+            long managedBefore = c.Loop.FinanceView(Managed).Balance;
+
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(bought, Seller, ValueFor(c, bought, buy: true), 0L, 1, true)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(sold, Seller, ValueFor(c, sold, buy: false), 0L, 1, false)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+
+            Assert.That(c.Loop.FinanceView(Managed).Balance, Is.Not.EqualTo(managedBefore), "non-vacuity: the managed ledger moved");
+            Assert.That(LedgerOf(c, Seller), Is.EqualTo(sellerBefore), "the counterparty club's #40 entry is byte-identical");
         }
 
         [Test]
@@ -295,7 +380,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<InvalidOperationException>(() => c.Loop.ApplyTransaction(Managed, in fee));
         }
 
-        // ── the production roster adapter, driven directly (AR round 3 M7a / L3) ─────────────────────────
+        // ── the production roster adapter, driven directly (AR round 2 M7a / L3) ─────────────────────────
         // SubmitBid checks ownership before it ever asks the port, so none of these throw paths is reachable
         // through the loop; each is an integration-defect guard and is locked here against the real adapter.
 
@@ -578,21 +663,74 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void NoTransferAction_IsBehaviourNeutral()
         {
-            // T-TX-NEU-001: a wired career that never bids plays the season byte-identically to an unwired one.
+            // T-TX-NEU-001: a wired career that never bids is byte-identical to an unwired one in EVERYTHING
+            // but the #31 block. The path under test is the only #31 code a no-action career runs: genesis
+            // seeding (NewCareer) and the roll's staged step (d″). So the comparison covers a played season,
+            // the roll, and one played round of season 2 — across #40, #28, #44, #29, #41, #30's appearance
+            // rows and the season state (Snapshot minus the transfers block).
             Rig wired = NewCareer();
             Rig unwired = NewCareer(transfersUnwired: true);
-            PlayWholeSeason(wired.Loop);
-            PlayWholeSeason(unwired.Loop);
+            Assert.That(Snapshot(wired, includeTransfers: false), Is.EqualTo(Snapshot(unwired, includeTransfers: false)),
+                "precondition: genesis seeding alone perturbs nothing outside #31");
 
-            Assert.That(SeasonStateCodec.Encode(wired.Loop.State), Is.EqualTo(SeasonStateCodec.Encode(unwired.Loop.State)));
+            foreach (Rig rig in new[] { wired, unwired })
+            {
+                PlayWholeSeason(rig.Loop);
+                rig.Loop.RollToNextSeason();
+                rig.Loop.AdvanceToNextFixtureDay();
+                rig.Loop.AdvanceAndPlayNextRound();
+            }
+
+            Assert.That(wired.Loop.State.SeasonNumber, Is.EqualTo(1), "the roll really ran on the wired rig");
+            Assert.That(wired.Loop.TransfersSnapshot().ActiveWindow.OpenWorldDay, Is.GreaterThan(0u),
+                "and its (d″) step really ran (the window was redrawn)");
+            Assert.That(Snapshot(wired, includeTransfers: false), Is.EqualTo(Snapshot(unwired, includeTransfers: false)));
             Assert.That(wired.Progression.Snapshot(), Is.EqualTo(unwired.Progression.Snapshot()));
+        }
 
-            // Non-vacuity of the comparison: the encoding really moves as a season is played, so the equality
-            // above is not two constant blobs. (A "one transfer changes the played season" leg was dropped: the
-            // quick-sim's coarse rating model ignores any single sale, a probe over all 23 managed players found
-            // none that changes a quick-simmed season, and an engine-resolved witness costs minutes per match.
-            // Transfer sensitivity of play is witnessed instead by the selected-player and ban-served tests.)
-            Assert.That(SeasonStateCodec.Encode(wired.Loop.State), Is.Not.EqualTo(SeasonStateCodec.Encode(NewCareer().Loop.State)));
+        [Test]
+        public void OneAcceptedSale_MovesTheProgressionSnapshot_SoTheNeutralityComparisonIsNotVacuous()
+        {
+            // T-TX-NEU-001 non-vacuity: the comparison above has teeth — one accepted transfer through the
+            // same wired rig makes it fail, because a sale always re-homes a #28 record. (A "transfer changes
+            // the played season" leg is not used: the quick-sim's coarse rating model ignores any single sale;
+            // transfer sensitivity of play is witnessed by the selected-player and ban-served tests.)
+            Rig sale = NewCareer();
+            Rig unwired = NewCareer(transfersUnwired: true);
+            Assert.That(sale.Progression.Snapshot(), Is.EqualTo(unwired.Progression.Snapshot()), "precondition");
+            int target = PlayerAt(sale, Managed, PlayerPosition.Defender);
+
+            Assert.That(sale.Loop.SubmitTransferBid(new Offer(target, Seller, ValueFor(sale, target, buy: false), 0L, 1, false)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+
+            Assert.That(sale.Progression.Snapshot(), Is.Not.EqualTo(unwired.Progression.Snapshot()));
+            Assert.That(Snapshot(sale, includeTransfers: false), Is.Not.EqualTo(Snapshot(unwired, includeTransfers: false)));
+        }
+
+        [Test]
+        public void TwoRunsOverIdenticalTransferActivity_ProduceByteIdenticalState()
+        {
+            // T-TX-DET-003 (FR-TX-027 MUST): the same bids on the same career, then a played season and a
+            // roll, leave identical #31 bytes, identical #40 entries and an identical #28 store — and the
+            // whole career with them.
+            Rig a = NewCareer(forceManagedRetiree: true);
+            Rig b = NewCareer(forceManagedRetiree: true);
+            RunTransferScript(a);
+            RunTransferScript(b);
+            Rig idle = NewCareer(forceManagedRetiree: true);
+            PlayWholeSeason(idle.Loop);
+            idle.Loop.RollToNextSeason();
+
+            Assert.That(TransfersSaveCodec.Encode(a.Loop.TransfersSnapshot()), Is.EqualTo(TransfersSaveCodec.Encode(b.Loop.TransfersSnapshot())));
+            Assert.That(ClubFinancesSaveCodec.Encode(a.Loop.FinanceEntriesForSave()), Is.EqualTo(ClubFinancesSaveCodec.Encode(b.Loop.FinanceEntriesForSave())));
+            Assert.That(a.Progression.Snapshot(), Is.EqualTo(b.Progression.Snapshot()));
+            Assert.That(Snapshot(a), Is.EqualTo(Snapshot(b)));
+
+            // Non-vacuity: the script really moved state — the same career without it ends elsewhere in #31,
+            // #40 and #28.
+            Assert.That(TransfersSaveCodec.Encode(a.Loop.TransfersSnapshot()), Is.Not.EqualTo(TransfersSaveCodec.Encode(idle.Loop.TransfersSnapshot())));
+            Assert.That(ClubFinancesSaveCodec.Encode(a.Loop.FinanceEntriesForSave()), Is.Not.EqualTo(ClubFinancesSaveCodec.Encode(idle.Loop.FinanceEntriesForSave())));
+            Assert.That(a.Progression.Snapshot(), Is.Not.EqualTo(idle.Progression.Snapshot()));
         }
 
         // ── the production composition: League.CreateLoop → sale → roll → Save → Load → Restore → play ──────
@@ -674,13 +812,14 @@ namespace TacticalDirector.SeasonSave.Tests
         // sellerRetireeIndex: a seller-club squad index to age to 45, flagged on the first lived day (-1 = none).
         private static Rig NewCareer(
             long budget = Budget, TransfersState transfers = null, bool transfersUnwired = false, bool forceManagedRetiree = false,
-            int bannedIndex = BannedIndex, int sellerRetireeIndex = -1, int bannedClub = Seller)
+            int bannedIndex = BannedIndex, int sellerRetireeIndex = -1, int bannedClub = Seller,
+            int clubCount = ClubCount, int bannedYellows = 0)
         {
-            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            League league = LeagueBootstrap.Generate(WorldSeed, clubCount);
             var world = new WorldStore(1, WorldSeed);
             SeasonState season = league.CreateSeason(managedClubId: Managed);
-            var squads = new Squad[ClubCount];
-            for (int club = 0; club < ClubCount; club++)
+            var squads = new Squad[clubCount];
+            for (int club = 0; club < clubCount; club++)
             {
                 squads[club] = league.ResolveByClubId(club);
             }
@@ -714,15 +853,16 @@ namespace TacticalDirector.SeasonSave.Tests
             }
 
             ProgressionEngine progression = ProgressionEngine.SeedFrom(squads, world.CurrentWorldTick);
-            var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), ClubIds(), injuryOccurrenceEnabled: false);
+            var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), ClubIds(clubCount), injuryOccurrenceEnabled: false);
 
-            // One unserved ban on a seller-club player, to prove a #44 tally follows a transfer.
+            // One unserved ban (and, optionally, a yellow-card count) on a seller-club player, to prove a #44
+            // tally follows a transfer.
             DisciplineState discipline = bannedIndex < 0
                 ? DisciplineState.FromEntries(new DisciplineEntry[0])
                 : DisciplineState.FromEntries(new[]
                 {
                     new DisciplineEntry(
-                        squads[bannedClub].GetPlayer(bannedIndex).PlayerId, DisciplineConstants.LeagueCompetitionKey, 0, BanMatches)
+                        squads[bannedClub].GetPlayer(bannedIndex).PlayerId, DisciplineConstants.LeagueCompetitionKey, bannedYellows, BanMatches)
                 });
 
             ClubFinanceEntry[] finances = ClubFinanceEntry.CreateInitialForSquads(squads);
@@ -773,6 +913,21 @@ namespace TacticalDirector.SeasonSave.Tests
 
         private static int BannedAt(Rig c) => c.Discipline.EntryAt(0).PlayerId;
 
+        // Whether the club has a fixture in the round (an odd-N league gives one club a bye each round).
+        private static bool ClubPlaysIn(SeasonState state, int roundIndex, int clubId)
+        {
+            for (int i = 0; i < state.FixtureCount; i++)
+            {
+                Fixture f = state.FixtureAt(i);
+                if (f.RoundIndex == roundIndex && f.Involves(clubId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // #31's own counterparty valuation, re-derived from the roster the same way SubmitBid does.
         private static long ValueFor(Rig c, int playerId, bool buy, int buyer = Seller) =>
             ValueFor(c.Progression, playerId, buy, buyer);
@@ -810,6 +965,23 @@ namespace TacticalDirector.SeasonSave.Tests
             return ProgressionEngine.SeedFrom(squads, world.CurrentWorldTick);
         }
 
+        // One fixed stretch of transfer activity: an accepted buy, a refused counter-offer, an accepted sale, a
+        // played season and the roll. Every pick is a function of the rig, so two fresh rigs replay it exactly.
+        private static void RunTransferScript(Rig c)
+        {
+            int bought = PlayerAt(c, Seller, PlayerPosition.Midfielder);
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(bought, Seller, ValueFor(c, bought, buy: true), 1_500L, 2, true)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            int forward = PlayerAt(c, 1, PlayerPosition.Forward);
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(forward, 1, ValueFor(c, forward, buy: true) - 1L, 0L, 1, true)),
+                Is.EqualTo(TransferSubmissionOutcome.CounterOffered));
+            int sold = PlayerAt(c, Managed, PlayerPosition.Defender);
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(sold, Seller, ValueFor(c, sold, buy: false), 0L, 1, false)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            PlayWholeSeason(c.Loop);
+            c.Loop.RollToNextSeason();
+        }
+
         private static void AssertNoMutation(Rig c, Offer offer, TransferSubmissionOutcome expected)
         {
             byte[] before = Snapshot(c);
@@ -819,14 +991,20 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         // Everything a refused or non-accepted action must leave untouched: #40, #28, #31, #44, #29, #41, #30's
-        // appearance rows and the #30 season state itself.
-        private static byte[] Snapshot(Rig c)
+        // appearance rows and the #30 season state itself. includeTransfers: false drops ONLY the #31 block —
+        // the comparison a wired career must win against an unwired one (T-TX-NEU-001), whose #31 block is
+        // legitimately absent.
+        private static byte[] Snapshot(Rig c, bool includeTransfers = true)
         {
             using (var ms = new MemoryStream())
             {
                 Append(ms, ClubFinancesSaveCodec.Encode(c.Loop.FinanceEntriesForSave()));
                 Append(ms, c.Progression.Snapshot());
-                Append(ms, TransfersSaveCodec.Encode(c.Loop.TransfersSnapshot()));
+                if (includeTransfers)
+                {
+                    Append(ms, TransfersSaveCodec.Encode(c.Loop.TransfersSnapshot()));
+                }
+
                 Append(ms, DisciplineSaveCodec.Encode(c.Discipline));
                 Append(ms, TrainingSaveCodec.Encode(c.Career.TrainingBlocks()));
                 Append(ms, MedicalSaveCodec.Encode(c.Career.MedicalBlocks()));
@@ -851,6 +1029,20 @@ namespace TacticalDirector.SeasonSave.Tests
 
         private static void Append(MemoryStream ms, byte[] bytes) => ms.Write(bytes, 0, bytes.Length);
 
+        // One club's live #40 entry, encoded through the #40 codec.
+        private static byte[] LedgerOf(Rig c, int clubId)
+        {
+            foreach (ClubFinanceEntry entry in c.Loop.FinanceEntriesForSave())
+            {
+                if (entry.ClubId == clubId)
+                {
+                    return ClubFinancesSaveCodec.Encode(new[] { entry });
+                }
+            }
+
+            throw new ArgumentException("no #40 entry for club " + clubId);
+        }
+
         private static SeasonTransferRoster AdapterOf(Rig c) => new SeasonTransferRoster(c.Progression, c.Career);
 
         // A career whose rows already have the player at `to`: a lockstep violation against any store that
@@ -864,13 +1056,13 @@ namespace TacticalDirector.SeasonSave.Tests
 
         // The index (in the league's managed squad) of a managed starter who, once re-homed to the seller club,
         // is in THAT club's own starting eleven: found by asking the engine's selector, never assumed.
-        private static int SelectableManagedIndex()
+        private static int SelectableManagedIndex(int clubCount = ClubCount)
         {
-            Squad managedSquad = LeagueBootstrap.Generate(WorldSeed, ClubCount).ResolveByClubId(Managed);
-            int[] starters = SquadRating.StartingElevenPlayerIds(NewCareer().Progression.SquadFor(Managed));
+            Squad managedSquad = LeagueBootstrap.Generate(WorldSeed, clubCount).ResolveByClubId(Managed);
+            int[] starters = SquadRating.StartingElevenPlayerIds(NewCareer(clubCount: clubCount).Progression.SquadFor(Managed));
             for (int i = 0; i < starters.Length; i++)
             {
-                Rig probe = NewCareer();
+                Rig probe = NewCareer(clubCount: clubCount);
                 probe.Progression.MovePlayer(starters[i], Managed, Seller);
                 if (Array.IndexOf(SquadRating.StartingElevenPlayerIds(probe.Progression.SquadFor(Seller)), starters[i]) >= 0)
                 {
@@ -981,6 +1173,14 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(actual.LastAdvancedWorldDay, Is.EqualTo(expected.LastAdvancedWorldDay), "LastAdvancedWorldDay");
         }
 
+        private static void AssertSameInjury(InjuryState expected, InjuryState actual)
+        {
+            Assert.That(actual.Severity, Is.EqualTo(expected.Severity), "Severity");
+            Assert.That(actual.RecoveryRemaining, Is.EqualTo(expected.RecoveryRemaining), "RecoveryRemaining");
+            Assert.That(actual.InjuryCount, Is.EqualTo(expected.InjuryCount), "InjuryCount");
+            Assert.That(actual.LastAdvancedWorldDay, Is.EqualTo(expected.LastAdvancedWorldDay), "LastAdvancedWorldDay");
+        }
+
         private static void AssertSameAppearance(AppearanceState expected, AppearanceState actual)
         {
             Assert.That(actual.RecentBits, Is.EqualTo(expected.RecentBits), "RecentBits");
@@ -1019,10 +1219,10 @@ namespace TacticalDirector.SeasonSave.Tests
             loop.AdvanceDays(1);
         }
 
-        private static int[] ClubIds()
+        private static int[] ClubIds(int clubCount = ClubCount)
         {
-            var ids = new int[ClubCount];
-            for (int c = 0; c < ClubCount; c++)
+            var ids = new int[clubCount];
+            for (int c = 0; c < clubCount; c++)
             {
                 ids[c] = c;
             }
@@ -1049,5 +1249,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-10-20 | —      | Initial implementation (#31 T2): end-to-end transfer locks.       |
 // | 1.1     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): roll-timing-independent window close — prompt vs late roll, genesis vs boundary gap, prompt roll covers the opening fixture; rig/genesis/roll locks use SummerWindowFor. |
-// | 1.2     | 2026-10-20 | —      | AR round 3: M7 (direct SeasonTransferRoster throw-path tests; REKEY-005 lifecycle/#29/#30 rows + buyer selection; depletion through AssertNoMutation; wider Snapshot), the ERR-044-014 ban property replacing the vacuous HasEntry, a non-vacuous encoded-season leg, the League.CreateLoop sale/roll/save/load/play composition, L3 CanRelease throws (ERR-031-012). |
+// | 1.2     | 2026-10-20 | —      | AR round 2: M7 (direct SeasonTransferRoster throw-path tests; REKEY-005 lifecycle/#29/#30 rows + buyer selection; depletion through AssertNoMutation; wider Snapshot), the ERR-044-014 ban property replacing the vacuous HasEntry, a non-vacuous encoded-season leg, the League.CreateLoop sale/roll/save/load/play composition, L3 CanRelease throws (ERR-031-012). |
+// | 1.3     | 2026-10-20 | —      | AR round 3: M16 AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign (pins the KD-2 decision); M14 NoTransferAction_IsBehaviourNeutral rewritten (played season → RollToNextSeason → one season-2 round; the full Snapshot minus the #31 block, wired vs unwired) + OneAcceptedSale_… non-vacuity; M15 TwoRunsOverIdenticalTransferActivity_… (T-TX-DET-003); S-L3 the ban test runs a 3-club (bye) league and asserts the decrement lands only in rounds the holding club plays; T-L9 REKEY-005 compares the full InjuryState and a yellow-count tally; S-L5 CreateLoop KD-4 refusal test. |
 #endregion

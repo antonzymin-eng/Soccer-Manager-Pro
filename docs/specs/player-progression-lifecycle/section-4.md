@@ -1,13 +1,14 @@
 # Player Progression & Lifecycle #28 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.7 — AR round 1 L1: §4.3's _RESERVED_0x20_ language annotated as landed)
+**Last Updated:** October 20, 2026 (v0.8 — AR round 3: ERR-028-027 back-prop widened to §4.1 (#30 calls Prepare/Commit), §4.2 (`SeasonBoundaryPlan.cs` in the file map, `RetirementResult`/`RegenResult` superseded, "RunSeasonBoundary NOT YET BUILT" removed), §4.5 (the public-surface list brought to the code); ERR-028-028: `CanMovePlayer`/`MovePlayer` are INTERNAL)
+**Last Updated (prior):** October 20, 2026 (v0.7 — AR round 1 L1: §4.3's _RESERVED_0x20_ language annotated as landed)
 **Last Updated (prior):** August 24, 2026 (v0.6 — round-2 finding assemblyinfo-missing-from-a-file-map-annotated-as-verified (L3): §4.2's file-map tree gains `AssemblyInfo.cs`, added at the round-1 Medium/Low pass (2026-08-23) but missing from this list despite its own "verified against src/player-progression/*.cs" claim, with a one-line note on what its `InternalsVisibleTo` grant does and why. No file moved, no reference direction changed. Prior entry below.)
 **Last Updated (prior):** August 24, 2026 (v0.5 — round-2 adversarial finding `construction-day-credit-implemented-twice` (High): §4's file map for `AbilityModel.cs` gains `ConstructionDayCredit`, the single implementation of the §3.1/§3.3 construction-day credit both `PlayerLifecycle` construction sites now call — it was previously written out twice, inlined in `ProgressionEngine.SeedLifecycle` and again as the now-deleted `RegenGenerator.BandStepFor`. No file added or removed, no reference direction changed. Prior entry below.)
 **Last Updated (prior):** August 22, 2026 (v0.4 — **ERR-028-020 / ERR-028-021**: §4's file map for `AbilityModel.cs` brought current — it now carries §3.1.3's age curve (`DailyBandPoints` / `AccruedBandPoints`, with `ClassifyAgeBand` demoted to a read of it) and §3.4's `RetirementAgeDays`, neither of which existed when the map was written. No file added, no reference direction changed. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -22,8 +23,10 @@ New off-pitch assembly **`TacticalDirector.PlayerProgression`** (`src/player-pro
   draw pattern) and **`TacticalDirector.DeterministicSim`** (#16 — `DeterministicRngService` +
   `CanonicalSerializer`). Nothing else.
 - **#28 MUST NOT reference the season assembly** (#30 / `TacticalDirector.SeasonSave`). #30 depends
-  on #28 (its day-advance loop + season-boundary roll invoke `ProgressionEngine.AdvanceDay` /
-  `RunSeasonBoundary`, and its season-save root composes #28's blob) — never the reverse. This is the
+  on #28 (its day-advance loop invokes `ProgressionEngine.AdvanceDay`; its season-boundary roll invokes
+  `PrepareSeasonBoundary` — staged before the roll's last fallible write — and then `CommitSeasonBoundary`,
+  `RunSeasonBoundary` being the name of that step and not a method (ERR-028-027); and its season-save root
+  composes #28's blob) — never the reverse. This is the
   #26-manager-gate-invoked-by-the-engine + FR-LW-003 hygiene (the composing root is the only assembly
   above both, so it wires #28 and #30 without either referencing the other).
 - **#28 MUST NOT reference the match engine.** Lifecycle runs on the world tick only (FR-PG-001).
@@ -31,11 +34,14 @@ New off-pitch assembly **`TacticalDirector.PlayerProgression`** (`src/player-pro
 ## 4.2 File layout (proposed)
 
 **File list below verified against `src/player-progression/*.cs` at ERR-028-017 — `ClubCareerStates.cs`
-and `TrainingInputBatch.cs` (both public, both load-bearing since T1/T2a) were missing, and
-`RetirementResult.cs`/`RegenResult.cs` do not exist: the season-boundary signals are declared as inline
-`readonly struct` sketches in §2.2's code block, not implemented files — `RunSeasonBoundary` itself is
-deferred (§9.2), so nothing constructs or consumes them yet. Kept in the list as a NOT-YET-BUILT row so
-the deferred boundary is visible rather than silently dropped. *(Corrected — round-2 finding
+and `TrainingInputBatch.cs` (both public, both load-bearing since T1/T2a) were missing (and
+`SeasonBoundaryPlan.cs`, public and load-bearing since ERR-028-025, was missing until the AR round 3 pass). *(Revised, AR round 3
+widening of ERR-028-027: this paragraph said `RetirementResult.cs`/`RegenResult.cs` "do not exist … declared as
+inline `readonly struct` sketches in §2.2 … `RunSeasonBoundary` itself is deferred (§9.2), so nothing constructs or
+consumes them yet", kept in the list as NOT-YET-BUILT rows. The boundary has landed (ERR-028-025) as
+`PrepareSeasonBoundary` / `CommitSeasonBoundary` over `SeasonBoundaryPlan`, which carries the retired ids, the regen
+ids and clubs and the planned squads: the two signal types were never built and are SUPERSEDED by the plan, so
+their row is replaced by the plan's.)* *(Corrected — round-2 finding
 assemblyinfo-missing-from-a-file-map-annotated-as-verified: `AssemblyInfo.cs`, added at the round-1
 Medium/Low pass (2026-08-23), was missing from this list despite the list's own "verified" claim above
 — a file map that claims verification and omits a file is worse than one claiming nothing. Added
@@ -44,8 +50,9 @@ below.)***
 ```
 src/player-progression/                 // references PlayerDatabase + DeterministicSim only
 ├── player-progression.asmdef
-├── AssemblyInfo.cs                     // [assembly: InternalsVisibleTo("...Tests")] — grants the test assembly access to the internal TestOnly_* dial overloads and ClassifyAgeBand, none of which has a cross-assembly production caller (FR-CS-015)
-├── ProgressionEngine.cs                // sealed: AdvanceDay / SquadFor / Snapshot / Restore; sole writer (KD-7); RunSeasonBoundary NOT YET BUILT (§9.2)
+├── AssemblyInfo.cs                     // [assembly: InternalsVisibleTo(...)] — grants the PlayerProgression test assembly access to the internal TestOnly_* dial overloads and ClassifyAgeBand (FR-CS-015), and TacticalDirector.SeasonSave (+ its .Tests) access to the internal CanMovePlayer/MovePlayer re-home (AR round 3 M13 / ERR-028-028: #30's transfer adapter only)
+├── ProgressionEngine.cs                // sealed: AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary / SquadFor / Snapshot / Restore; sole writer (KD-7); the staged season boundary landed at ERR-028-025 (§9.2)
+├── SeasonBoundaryPlan.cs               // the staged boundary: Retired/Regen/RegenClub id lists, NextPlayerId, PlannedSquadFor; installed only by CommitSeasonBoundary (ERR-028-025)
 ├── PlayerLifecycle.cs                  // the per-player overlay value type (§2.2)
 ├── ClubCareerStates.cs                 // the per-club (records, lifecycles) pair Encode/Decode and ToBlocks/FromBlocks carry (§3.5)
 ├── GrowthProjection.cs                 // static pure: the §3.1 daily projection (sole attribute-mutation path)
@@ -57,7 +64,6 @@ src/player-progression/                 // references PlayerDatabase + Determini
 ├── RegenGenerator.cs                   // static pure: §3.3 single-player generation (reuses #27's draw pattern)
 ├── TrainingInput.cs                    // the per-player #29 seam element (Neutral identity, §2.2)
 ├── TrainingInputBatch.cs               // the FR-PG-021 batch parameter: ClubTrainingInputs[] + Neutral (§2.2)
-├── RetirementResult.cs / RegenResult.cs // NOT YET BUILT — the season-boundary signals `RunSeasonBoundary` would emit; only sketched inline in §2.2 today
 ├── LifecycleViewModel.cs               // read-only observer surface for #31/#38 (KD-7)
 ├── ProgressionSaveCodec.cs             // pure: the PROGRESSION_SAVE_FORMAT_VERSION block (§3.5); fail-loud gates
 ├── PlayerProgressionConstants.cs       // Fixed / Derived / GT catalogue (Appendix A)
@@ -114,24 +120,40 @@ Per the CLAUDE.md "Interface Design Principle" (write interfaces only when both 
 method parameter** (KD-2 / FR-PG-009/021; corrected from "a `TrainingInput` method parameter" at
 ERR-028-017 — the seam's actual shape is the batch §2.2 declares, `TrainingInput` being only the
 per-player element inside it), not an `IProgressionInput` against an unbuilt consumer. The
-`RetirementResult`/`RegenResult` outputs are plain value types the roster owner reads.
+season-boundary output is `SeasonBoundaryPlan`, a read-only value the caller stages and hands back to
+`CommitSeasonBoundary` — the `RetirementResult`/`RegenResult` types §2.2 sketched were never built and are
+superseded by it (ERR-028-025; AR round 3 widening of ERR-028-027).
 
 **The "sole seam" claim below understated the real public surface (ERR-028-017) — corrected against
-`src/player-progression/ProgressionEngine.cs` rather than restated from memory.** `ProgressionEngine`'s
-full public surface, split by who it is for:
+`src/player-progression/ProgressionEngine.cs` rather than restated from memory, and re-verified at the AR round 3
+widening of ERR-028-027 (grep of `public`/`internal` members at that revision).** `ProgressionEngine`'s full
+surface, split by who it is for:
 - **The #30 contract** (§4.3, KD-7) — what `SeasonLoop`/`SeasonSaveManager` actually call: `SeedFrom`
-  (the new-game entry point, §3.1), `AdvanceDay` (the FR-PG-021 batch daily step), `SquadFor` (the
-  KD-4 roster projection every consumer must read through — the mechanism that retires the
-  from-the-world-seed reopening property, ERR-030-030/ERR-028-017 M4), and `Snapshot`/`Restore` (§3.5).
+  (the new-game entry point, §3.1), `AdvanceDay` (the FR-PG-021 batch daily step), **`PrepareSeasonBoundary` /
+  `CommitSeasonBoundary`** (the staged season boundary, §3.4 / ERR-028-025: Prepare is pure and returns a
+  `SeasonBoundaryPlan`, Commit is infallible on a plan this store prepared with no mutation since and keeps the
+  store instance, so every `SquadFor` projection sees the new roster), `SquadFor` (the KD-4 roster projection
+  every consumer must read through — the mechanism that retires the from-the-world-seed reopening property,
+  ERR-030-030/ERR-028-017 M4), and `Snapshot`/`Restore` (§3.5).
 - **Codec-internal** — `ToBlocks`/`FromBlocks`, the per-club array shape `Snapshot`/`Restore`
   round-trip through `ProgressionSaveCodec`; not a seam another assembly composes against.
-- **Observation** (FR-PG-023, KD-7) — `LifecycleView` (the read-only per-player view for #31/#38) and
+- **Observation** (FR-PG-023, KD-7) — `LifecycleView` (the read-only per-player view for #31/#38),
+  `TryFindPlayer` (roster-answered ownership: the record and the club carrying a `PlayerId`, #31 ERR-031-005), and
   the three cheap read-only properties `ClubCount`, `NextPlayerId`, `CarriesClub(clubId)`.
 - **Construction convenience** — the static `Empty` (a zero-club store — the honest pre-#28
   composition `SeasonSaveManager`'s own guard reasons about, ERR-028-008/ERR-028-013).
+- **INTERNAL, not public (AR round 3 M13 / ERR-028-028)** — `CanMovePlayer` / `MovePlayer`, the id-preserving
+  re-home #31's transfers use (ERR-031-005). They are a seam for **#30's transfer adapter only**
+  (`SeasonTransferRoster` in `TacticalDirector.SeasonSave`, which moves the #29/#41/#44/#31 rows in the same step),
+  reached through `InternalsVisibleTo`; they were public at ERR-028-017's verification and for #31 T2, and a public
+  re-home let any client holding `SeasonLoop.Progression` forge a free transfer — leaving those rows behind, so the
+  next day step threw and an orphan contract made every save refuse. Clients move players through
+  `SeasonLoop.SubmitTransferBid` (#31). `DeriveRegenSeed` is likewise internal.
 
-`RunSeasonBoundary` does not yet exist (§9.2 — deliberately deferred pending the `player-progression.regen`
-stream); this section's prior text listed it as already part of the seam.
+`RunSeasonBoundary` exists as the Prepare/Commit pair above (ERR-028-025). *(This section's earlier text said
+"`RunSeasonBoundary` does not yet exist (§9.2 — deliberately deferred pending the `player-progression.regen`
+stream)"; the stream and the boundary have landed, and ERR-028-017's list had named a method that is only the name
+of a step.)*
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -143,4 +165,5 @@ stream); this section's prior text listed it as already part of the seam.
 | 0.5 | 2026-08-24 | — | Round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit. §4's file map for `AbilityModel.cs` now names `ConstructionDayCredit` — the one implementation of the construction-day credit rule §3.1 and §3.3 both state, which `ProgressionEngine.SeedLifecycle` and `RegenGenerator.GenerateRegen` both call. The rule previously had two implementations (inlined at the seed site, and `RegenGenerator.BandStepFor` at the regen site), which is why ERR-028-018 landed at one site only and ERR-028-020 had to revisit both; `BandStepFor` is deleted, so `RegenGenerator.cs`'s own map line is unchanged (it never named the method). No new file, no new assembly reference, no change to the reference direction. |
 | 0.6 | 2026-08-24 | — | Round-2 finding `assemblyinfo-missing-from-a-file-map-annotated-as-verified` (L3), doc-only. §4.2's tree gains `AssemblyInfo.cs` — round 1 (2026-08-23) added the file (the `InternalsVisibleTo` grant for `TacticalDirector.PlayerProgression.Tests`) but never added it to this list, despite the list's own header claiming verification against `src/player-progression/*.cs`. No new file (it already existed), no reference direction change. |
 | 0.7 | 2026-10-20 | — | **AR round 1 L1 (ERR-028-025)**, doc-only. §4.3 described the `_RESERVED_0x20_` row and the `0x20`/82 promotion in the present tense ("already holds", "files the back-prop that promotes") although both landed on October 19, 2026; reworded to the past tense with a "Landed" annotation naming the live consts. |
+| 0.8 | 2026-10-20 | — | **AR round 3** (ERR-028-027 widening + **ERR-028-028** M13), doc-only. §4.1 said #30 calls `RunSeasonBoundary` — restated as `PrepareSeasonBoundary` then `CommitSeasonBoundary`. §4.2's paragraph and tree kept "`RunSeasonBoundary` NOT YET BUILT" and `RetirementResult.cs`/`RegenResult.cs` NOT-YET-BUILT rows after ERR-028-025 landed the boundary; the tree gains `SeasonBoundaryPlan.cs` and drops the superseded pair, and `AssemblyInfo.cs`'s line names the new IVT grants. §4.5's "verified full public surface" list gains `PrepareSeasonBoundary`, `CommitSeasonBoundary` and `TryFindPlayer`, drops "`RunSeasonBoundary` does not yet exist", and records `CanMovePlayer`/`MovePlayer` as internal (a seam for #30's transfer adapter only; a public re-home forged free transfers). Re-verified by grep against `ProgressionEngine.cs`. |
 #endregion

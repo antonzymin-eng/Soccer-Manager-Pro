@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueBootstrapConstants.cs
 // Created:  2026-07-25
-// Modified: 2026-10-20 (AR round 3 L5 — ordinal-84 note restated; comment-only — v1.4)
+// Modified: 2026-10-20 (AR round 2 L5 — ordinal-84 note restated; comment-only — v1.4)
 //           (P-M6 — bootstrap template 3/8/8/4 -> 3/8/7/5, forward depth — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-2/KD-4/
@@ -295,5 +295,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | over F433's 3, so two unavailable forwards forced the press-back-|
 // |         |            |        | in; spare per line over the worst formation need is now 2/4/2/2. |
 // |         |            |        | Players 0-17 keep position and draws; index 18 becomes a FW.     |
-// | 1.4     | 2026-10-20 | —      | AR round 3 L5 (comment-only): the ROSTER_STREAM_SITE_ID note "ordinal 84 stays pinned to #30 T2's first draw site" restated — #30 T2 has landed; the tag landed with its FixtureKey, ordinal 84 is unallocated in code (ERR-030-012). |
+// | 1.4     | 2026-10-20 | —      | AR round 2 L5 (comment-only): the ROSTER_STREAM_SITE_ID note "ordinal 84 stays pinned to #30 T2's first draw site" restated — #30 T2 has landed; the tag landed with its FixtureKey, ordinal 84 is unallocated in code (ERR-030-012). |
 #endregion

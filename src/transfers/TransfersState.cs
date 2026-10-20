@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersState.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20
+// Modified: 2026-10-20 (AR round 3 — v1.6)
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.3-§3.4 (managed contracts + season-scoped transfer state)
@@ -175,8 +175,10 @@ namespace TacticalDirector.Transfers
         /// <param name="nextWindow">The next season's summer window (#30 derives it).</param>
         /// <exception cref="ArgumentNullException">A list is null.</exception>
         /// <exception cref="ArgumentException">An arrival already holds a contract (even one expiring this
-        /// boundary) or is among <paramref name="retiredPlayerIds"/> — a regen is a new id (#28), so either is
-        /// an integration defect, never silently re-seeded.</exception>
+        /// boundary), is among <paramref name="retiredPlayerIds"/>, or is listed twice; or the surviving aged
+        /// contracts plus the arrivals would exceed <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> — a
+        /// regen is a new id (#28) and the squad is capped, so each is an integration defect, never silently
+        /// re-seeded or surfaced later as an <see cref="InvalidOperationException"/> from the insert (AR round 3).</exception>
         public TransfersState PrepareSeasonBoundary(
             IReadOnlyList<int> retiredPlayerIds, IReadOnlyList<int> arrivingManagedPlayerIds, in TransferWindow nextWindow)
         {
@@ -202,6 +204,32 @@ namespace TacticalDirector.Transfers
                         "Arriving player " + arriving + " already holds a managed contract or retires this boundary.",
                         nameof(arrivingManagedPlayerIds));
                 }
+
+                for (int j = 0; j < i; j++)
+                {
+                    if (arrivingManagedPlayerIds[j] == arriving)
+                    {
+                        throw new ArgumentException(
+                            "Arriving player " + arriving + " is listed more than once.", nameof(arrivingManagedPlayerIds));
+                    }
+                }
+            }
+
+            int surviving = 0;
+            foreach (KeyValuePair<int, Contract> pair in _contracts)
+            {
+                if (!Contains(retiredPlayerIds, pair.Key) && pair.Value.LengthSeasons > 1)
+                {
+                    surviving++;
+                }
+            }
+
+            if (surviving + arrivingManagedPlayerIds.Count > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new ArgumentException(
+                    "The aged contracts (" + surviving + ") plus the arrivals (" + arrivingManagedPlayerIds.Count
+                    + ") would exceed the squad cap of " + PlayerDatabaseConstants.CLUB_SQUAD_SIZE + ".",
+                    nameof(arrivingManagedPlayerIds));
             }
 
             var next = new TransfersState(ManagedClubId, in nextWindow);
@@ -260,5 +288,6 @@ namespace TacticalDirector.Transfers
 // | 1.2     | 2026-10-19 | —      | ERR-031-005: stable PlayerIds — the packed-id managed-membership check and the OnPlayerRekeyed handler are deleted (an id no longer encodes its club, and nothing is ever re-keyed). |
 // | 1.3     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1: InsertContract refuses a CLUB_SQUAD_SIZE+1-th contract, so the live state can never encode a block Decode refuses. |
 // | 1.4     | 2026-10-20 | —      | #31 T2: CreateAtGenesis (FR-TX-028 / §3.8 genesis seeding at the [GT] terms) and PrepareSeasonBoundary (§3.7 aging + G14 retiree/regen lockstep + spend reset + next window, as a NEW state for #30's staged roll). |
-// | 1.5     | 2026-10-20 | —      | AR round 3 (L4/L2): PrepareSeasonBoundary refuses an arrival that holds a contract (incl. one expiring now) or is retired, checked against the source before building; InsertContract/RemoveContract are internal (the only production writers are #31's). |
+// | 1.5     | 2026-10-20 | —      | AR round 2 (L4/L2): PrepareSeasonBoundary refuses an arrival that holds a contract (incl. one expiring now) or is retired, checked against the source before building; InsertContract/RemoveContract are internal (the only production writers are #31's). |
+// | 1.6     | 2026-10-20 | —      | AR round 3 T-L8 (ERR-031-013): PrepareSeasonBoundary also refuses a duplicated arrival and aged contracts plus arrivals above CLUB_SQUAD_SIZE with ArgumentException in the pre-build guard (previously InvalidOperationException from InsertContract). |
 #endregion

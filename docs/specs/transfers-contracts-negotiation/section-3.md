@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.14 — ERR-031-012: §3.4 CanRelease throws on impossible input; §3.7 arrival-collision guard)
+**Last Updated:** October 20, 2026 (v0.15 — AR round 3, ERR-031-013: §3.8 is the shipped CreateAtGenesis with the flat [GT] wage; §3.7 duplicate/cap guards; §3.3 counterparty ledger)
+**Last Updated (prior):** October 20, 2026 (v0.14 — ERR-031-012: §3.4 CanRelease throws on impossible input; §3.7 arrival-collision guard)
 **Last Updated (prior):** October 20, 2026 (v0.13 — ERR-031-011: §3.5 window re-anchored to the opening fixture day; §3.3 SquadDepleted intro and gate order; §3.7 next-window sentence)
 **Last Updated (prior):** October 20, 2026 (v0.12 — T2: §3.3 ERR-031-007/009/010, §3.5 ERR-031-008, §3.7 the staged boundary)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-006: §3.4 test-id reference corrected to T-TX-REKEY-005)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.14
+**Version:** 0.15
 **Status:** APPROVED
 
 ---
@@ -151,6 +152,12 @@ finance remain. T2's production adapter MUST make the successful-preview→commi
 `committedSpendThisWindow` and does **not** raise `AvailableTransferBudget`; sell proceeds therefore do not
 increase in-window buy headroom at minimal.
 
+**Counterparty ledger (KD-2, ERR-031-013).** `finances` is the MANAGED club's #40 value only. #31 does not post
+the mirror leg to the AI counterparty club: that club's `ClubFinances` is never read, staged or written, so its
+`FinanceView` and the season-end `SettleFinances` never see transfer cash and money enters or leaves the league on
+every transfer. This is the minimal tier's decision, not an omission; the mirror post (inside the same staged,
+publish-on-`Accepted` seam) is the owner decision recorded in §7.2.
+
 ## 3.4 The #30 boundary — roster preflight/commit, a stable-id re-home (KD-7, ERR-031-005)
 
 `ITransferRosterPort` is #31-owned and T2 composition adapts it to #30's roster owner. #31 uses three read/
@@ -249,6 +256,9 @@ transfer headroom, `SubmitBid` instead returns `InsufficientBudget`; if the dest
 PrepareSeasonBoundary(retiredIds, arrivingManagedIds, nextWindow) -> TransfersState:   # PURE (T2)
     require no id in arrivingManagedIds is held in txState (even by a contract expiring now) or is in retiredIds
                                                                   else throw ArgumentException   # ERR-031-012
+    require arrivingManagedIds holds no duplicate                 else throw ArgumentException   # ERR-031-013
+    require count(carried contracts that are neither retired nor expiring) + count(arrivingManagedIds)
+            <= CLUB_SQUAD_SIZE                                    else throw ArgumentException   # ERR-031-013
     next := new TransfersState(managedClub, nextWindow)          # committedSpend = 0
     for each contract in txState (ascending PlayerId):
         if contract.PlayerId in retiredIds:  continue            # G14: the retiree's contract leaves with him
@@ -260,7 +270,9 @@ PrepareSeasonBoundary(retiredIds, arrivingManagedIds, nextWindow) -> TransfersSt
 ```
 #30 stages this at its roll step (d″) — after #28's boundary plan, whose `RetiredPlayerIds` and managed-club
 `RegenPlayerIds` it passes — and installs the returned state by reference only after `BeginNextSeason`, so a refused
-roll leaves #31 untouched (#30 §3.5, ERR-030-056).
+roll leaves #31 untouched (#30 §3.5, ERR-030-056). The two ERR-031-013 guards are pre-build `ArgumentException`s (the
+input is the defect, as for ERR-031-012) so `RollToNextSeason` refuses before anything is written; #28's boundary plan
+never produces a duplicate or an over-cap arrival, so neither is reachable in production.
 
 An expired contract is removed; the player becomes un-contracted. Free-agency, auto-renewal and warnings remain
 deep-tier. There is no `ResetWindow()`: the roll's step (d″) computes the next window with §3.5's
@@ -273,15 +285,20 @@ At **new-career genesis only** (never on load) the managed club's #27 squad is s
 rostered player:
 
 ```
-SeedInitialContracts(managerClubId, in Squad squad, ref TransfersState txState):
-    for each playerId in squad.PlayerIds:
-        txState.InsertContract(Contract{ PlayerId = playerId,
-                                         WagePerPeriod = DefaultWageFor(squad, playerId),
-                                         LengthSeasons = DEFAULT_CONTRACT_SEASONS })
+CreateAtGenesis(managerClubId, in TransferWindow window, IReadOnlyList<int> managedPlayerIds) -> TransfersState:
+    state := new TransfersState(managerClubId, window)            # committedSpend = 0
+    for each playerId in managedPlayerIds:
+        state.InsertContract(Contract{ PlayerId = playerId,
+                                       WagePerPeriod = DEFAULT_WAGE_PER_PERIOD,        # flat [GT]
+                                       LengthSeasons = DEFAULT_CONTRACT_SEASONS })
+    return state
 ```
 
-`DefaultWageFor` / `DEFAULT_CONTRACT_SEASONS` are `[GT]`; every seeded contract is F6/F7-valid. AI clubs are
-not seeded at minimal. A load reconstructs contracts from the transfers sub-blob and MUST NOT re-seed.
+`DEFAULT_WAGE_PER_PERIOD` (a flat `[GT]` — there is no per-player wage model at minimal, so no `DefaultWageFor`)
+and `DEFAULT_CONTRACT_SEASONS` are `[GT]`; every seeded contract is F6/F7-valid. #30's `League.CreateLoop` calls
+`TransfersState.CreateAtGenesis` with the managed squad's ids read from the #28 store and the first window of §3.5;
+the §3.7 boundary seeds a regen joining the managed club with the same terms. AI clubs are not seeded at minimal.
+A load reconstructs contracts from the transfers sub-blob and MUST NOT re-seed.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -299,5 +316,6 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.11 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §3.4 cites the T2 carry-everything lock by its real id, T-TX-REKEY-005 (was the non-existent "T-TX-REHOME-005"). The v0.8 row's "hook dispatch" obligation is superseded by that lock (the hook is deleted). |
 | 0.12 | 2026-10-20 | — | #31 T2: §3.3 pseudocode — unknown counterparty fails loud (ERR-031-010), a sale needs no contract (ERR-031-009), `SquadDepleted` before staging (ERR-031-007); §3.5 window from the season-begin day, inclusive length corrected (ERR-031-008); §3.7 rewritten as the pure, staged `PrepareSeasonBoundary` with the G14 retiree/regen lockstep. |
 | 0.13 | 2026-10-20 | — | ERR-031-011 (AR round 2, completing the ERR-031-007/008 back-prop): §3.5 rewritten — `SummerWindowFor(seasonBeginWorldDay, openingFixtureWorldDay)` = `[begin, opening + SUMMER_WINDOW_IN_SEASON_DAYS − 1]`, so the close no longer depends on roll timing; units, range and a genesis / prompt-roll / late-roll worked example; `SUMMER_WINDOW_LENGTH_DAYS` withdrawn. §3.3 intro lists `SquadDepleted`; the pseudocode checks the unknown counterparty (F6) before the window (F4), the shipped order. §3.7 no longer cites a non-existent `ResetWindow()` — step (d″) computes the next window. |
-| 0.14 | 2026-10-20 | — | ERR-031-012 (AR round 3): §3.4 `CanRelease` throws for an unknown club or a player not on the roster (false is F9 depletion only, like the preview's F5-only false); §3.7 `PrepareSeasonBoundary` refuses an arrival that already holds a contract (including one expiring this boundary) or is retired, checked against the source before building, so it is never silently re-seeded. |
+| 0.14 | 2026-10-20 | — | ERR-031-012 (AR round 2): §3.4 `CanRelease` throws for an unknown club or a player not on the roster (false is F9 depletion only, like the preview's F5-only false); §3.7 `PrepareSeasonBoundary` refuses an arrival that already holds a contract (including one expiring this boundary) or is retired, checked against the source before building, so it is never silently re-seeded. |
+| 0.15 | 2026-10-20 | — | ERR-031-013 (AR round 3): §3.8 specified `SeedInitialContracts(…, DefaultWageFor(…))`, which never existed — the code is `TransfersState.CreateAtGenesis` with the flat `[GT]` `DEFAULT_WAGE_PER_PERIOD`; restated. §3.7 `PrepareSeasonBoundary` also refuses a duplicated arrival and aged contracts plus arrivals above `CLUB_SQUAD_SIZE` with `ArgumentException` (previously an `InvalidOperationException` from the insert, T-L8). §3.3 records that the counterparty AI club's #40 entry is deliberately not posted (KD-2, M16). |
 #endregion

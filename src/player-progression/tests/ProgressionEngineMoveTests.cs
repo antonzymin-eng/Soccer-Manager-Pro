@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionEngineMoveTests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-20 (AR round 3 M9 - v1.0)
+// Modified: 2026-10-20 (AR round 2 M9 - v1.0)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 FR-PG-011 / FR-PG-022 / §3.4 (as amended by ERR-031-005 and
 //           ERR-028-027); Transfers #31 §3.4 (the roster port's re-home); Code Standards #20
@@ -256,5 +256,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
-// | 1.0     | 2026-10-20 | —      | AR round 3 M9 (ERR-028-027): the first direct locks on ProgressionEngine.MovePlayer / CanMovePlayer. (a) a move stales a plan prepared before it (deleting BeginMutation() in MovePlayer fails it); (b) record + lifecycle byte-identical after the move, destination ascending (the mover sorts first), source compacted, NextPlayerId unchanged, other clubs untouched; (c) every CanMovePlayer false case (same club, unknown source/destination, player not on the source, source of size 1, destination at CLUB_SQUAD_SIZE) throws InvalidOperationException with the snapshot and the mutation generation untouched; (d) a retirement-flagged player moved club 3 -> 7 is retired and replaced at club 7 in his position, club 3 gets no regen. |
+// | 1.0     | 2026-10-20 | —      | AR round 2 M9 (ERR-028-027): the first direct locks on ProgressionEngine.MovePlayer / CanMovePlayer. (a) a move stales a plan prepared before it (deleting BeginMutation() in MovePlayer fails it); (b) record + lifecycle byte-identical after the move, destination ascending (the mover sorts first), source compacted, NextPlayerId unchanged, other clubs untouched; (c) every CanMovePlayer false case (same club, unknown source/destination, player not on the source, source of size 1, destination at CLUB_SQUAD_SIZE) throws InvalidOperationException with the snapshot and the mutation generation untouched; (d) a retirement-flagged player moved club 3 -> 7 is retired and replaced at club 7 in his position, club 3 gets no regen. |
 #endregion

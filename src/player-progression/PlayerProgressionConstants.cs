@@ -1,6 +1,7 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-10-19 (ERR-028-025 — regen stream identity + the 0x20/82 mirrors — v1.6)
+// Modified: 2026-10-20 (AR round 3 L9 — DECLINE_DAILY_POINTS doc: retirement removal has landed; version rows reordered — v1.7)
+//           (ERR-028-025 — regen stream identity + the 0x20/82 mirrors — v1.6)
 //           (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
 //           DECLINE_DAILY_POINTS doc — v1.5)
 //           (round-2 finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short —
@@ -252,20 +253,24 @@ namespace TacticalDirector.PlayerProgression
         /// <c>InjuriesMedicalConstants.AgeRiskSpan</c>'s <c>agerisk-span-plateau-reachable</c> note,
         /// carries it; this owning side did not). §3.1.3's decline phase has no ceiling — every
         /// Decline day drains one more point via <c>GrowthProjection</c>'s drain loop, unconditionally
-        /// — and #28's retirement is FLAG-ONLY today: <c>ProgressionEngine.SquadFor</c> returns every
-        /// carried record regardless of <c>RetirementFlag</c>, and roster removal (the actual
-        /// departure) is the explicitly deferred half of roadmap D1. With ages advancing daily and no
-        /// removal, a never-removed veteran drains one point per year until every attribute sits at
-        /// <c>ATTRIBUTE_MIN</c>, <c>ComputeCA</c> reports 0, and every downstream consumer of that
+        /// — and the daily retirement evaluation only FLAGS: <c>ProgressionEngine.SquadFor</c> returns every
+        /// carried record regardless of <c>RetirementFlag</c>, and the flagged player leaves the roster at
+        /// the next season boundary, where <c>CommitSeasonBoundary</c> retires him and installs a 1:1
+        /// regen (ERR-028-025; AR round 3 L9 — the earlier text called removal "the explicitly deferred
+        /// half of roadmap D1"; it has landed). The decline therefore still never saturates within
+        /// <c>GrowthProjection</c> itself: a player who is kept past his flag (any caller that
+        /// advances days without rolling the boundary) drains one point per year until every attribute
+        /// sits at <c>ATTRIBUTE_MIN</c>, <c>ComputeCA</c> reports 0, and every downstream consumer of that
         /// player's rating (<c>SquadRating</c>, <c>LineupSelector</c>, the round-resolution
-        /// <c>dSquad</c> term) sees an identical, minimal, fully-degenerated player. Any long-career
-        /// measurement taken before roster removal lands is measuring a degenerating population.
+        /// <c>dSquad</c> term) sees an identical, minimal, fully-degenerated player. In a career that
+        /// rolls seasons the boundary bounds the window to at most one season past the flag; a
+        /// measurement that advances many seasons WITHOUT rolling the boundary samples the degenerate
+        /// population.
         /// <b>Not fixed by filtering <c>SquadFor</c> on <c>RetirementFlag</c></b> — that would silently
         /// shrink a squad below the formation, the same trap #41's KD-6 back-fill rule exists to avoid.
-        /// The honest interim is the pinned degenerate end state locked by
+        /// The pinned degenerate end state, kept as a visible diff, is locked by
         /// <c>GrowthProjection_DeclineIsUnbounded_ANeverRemovedVeteranReachesEveryAttributeAtMinimum</c>
-        /// (<c>GrowthProjectionTests.cs</c>), so the roster-removal landing (roadmap D1) has a visible
-        /// diff against this state rather than an unmeasured one.
+        /// (<c>GrowthProjectionTests.cs</c>).
         /// </para>
         /// TODO: replace with config loader (Stage 1).
         /// </summary>
@@ -322,6 +327,46 @@ namespace TacticalDirector.PlayerProgression
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-24 | —      | Initial #28 T0 constant catalogue: Fixed (DAYS_PER_YEAR,       |
+// |         |            |        | PROGRESSION_SAVE_FORMAT_VERSION), Derived (PROGRESSION_REGEN_  |
+// |         |            |        | FIELDS = 5+31+1), Cross (ATTRIBUTE_MIN/MAX mirror of #27), GT  |
+// |         |            |        | (ABILITY_MAX, POINT_COST, GROWTH/DECLINE/RETIREMENT_AGE,       |
+// |         |            |        | GROWTH/DECLINE_DAILY_POINTS + the regen balance values). The   |
+// |         |            |        | 0x20/82 RNG-identity mirrors land at T2 with the stream (KD-B).|
+// | 1.1     | 2026-08-08 | —      | #28 T1: + PROGRESSION_SAVE_MAGIC ("PROG"), written before the  |
+// |         |            |        | version — ERR-028-004, since §3.5 specified the RNG domain tag |
+// |         |            |        | as the block's identifier and a version is not one             |
+// |         |            |        | (ERR-029-005/ERR-041-009). + NEW_GAME_PA_HEADROOM, the         |
+// |         |            |        | deterministic placeholder for #47's authored PA (ERR-028-003). |
+// | 1.2     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021 (football-judgment proxy review, batch 1):
+// |         |            |        | + AgeBandRampHalfWidthYears (the centred accrual ramp of #28 §3.1.3 —
+// |         |            |        | zero is the exact §4.3 identity, and 2 x half-width must not exceed
+// |         |            |        | (DECLINE_AGE + 1) - GROWTH_AGE or the two ramps overlap); +
+// |         |            |        | RetirementGoalkeeperBonusYears and RetirementGameReadingSpanYears
+// |         |            |        | (§3.4's per-player retirement day). RETIREMENT_AGE's doc corrected —
+// |         |            |        | it is the BASELINE now, not the whole rule. No format version, no draw.
+// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
+// |         |            |        | AgeBandRampHalfWidthYears' doc corrected (config-unbound-premise-
+// |         |            |        | false-28): this catalogue has zero Config.GetX calls, so the
+// |         |            |        | prior "catalogue lock runs config-unbound" rationale (copied
+// |         |            |        | from ERR-041-003's, where it IS true) did not apply here — a
+// |         |            |        | catalogue lock is available today and now exists in
+// |         |            |        | PlayerProgressionConstantsTests. MAX_DERIVABLE_AGE_YEARS' doc
+// |         |            |        | corrected (classifyageband-growth-claim-stale): its
+// |         |            |        | ClassifyAgeBand(int.MinValue)-reads-Growth rationale was true when
+// |         |            |        | written but is false today (ERR-028-020 rewrote ClassifyAgeBand to
+// |         |            |        | read the continuous curve, which returns Stable at a hugely
+// |         |            |        | negative age); annotated as history, the int-narrowing concern
+// |         |            |        | itself unchanged. No value changed.
+// | 1.4     | 2026-08-24 | —      | Round-2 finding spec-32-flat-band-step-sweep-stopped-two-
+// |         |            |        | paragraphs-short. POINT_COST's doc and NEW_GAME_PA_HEADROOM's
+// |         |            |        | "Recorded, not fixed" paragraph both still said "the §4.3 [flat]
+// |         |            |        | band step", present tense, after ERR-028-020 made that step the
+// |         |            |        | retired predicate — restated against §3.1.3's accrual curve.
+// |         |            |        | The ~421-of-ABILITY_MAX figure and the KD-8 one-step-per-year
+// |         |            |        | identity are UNCHANGED (the P5 pivot means the whole-life
+// |         |            |        | integral is exact at every ramp half-width, so neither number
+// |         |            |        | needed re-derivation). No value changed.
 // | 1.5     | 2026-08-24 | —      | Round-2 finding decline-tail-degeneracy-undocumented-on-the-
 // |         |            |        | owning-side. DECLINE_DAILY_POINTS' doc states what round 1's
 // |         |            |        | InjuriesMedicalConstants.AgeRiskSpan note stated on the
@@ -338,45 +383,6 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | VeteranReachesEveryAttributeAtMinimum (GrowthProjectionTests.cs
 // |         |            |        | v1.6) pins the end state so D1's roster-removal landing has a
 // |         |            |        | visible diff. No value changed.
-// | 1.4     | 2026-08-24 | —      | Round-2 finding spec-32-flat-band-step-sweep-stopped-two-
-// |         |            |        | paragraphs-short. POINT_COST's doc and NEW_GAME_PA_HEADROOM's
-// |         |            |        | "Recorded, not fixed" paragraph both still said "the §4.3 [flat]
-// |         |            |        | band step", present tense, after ERR-028-020 made that step the
-// |         |            |        | retired predicate — restated against §3.1.3's accrual curve.
-// |         |            |        | The ~421-of-ABILITY_MAX figure and the KD-8 one-step-per-year
-// |         |            |        | identity are UNCHANGED (the P5 pivot means the whole-life
-// |         |            |        | integral is exact at every ramp half-width, so neither number
-// |         |            |        | needed re-derivation). No value changed.
-// | 1.3     | 2026-08-23 | —      | Football-judgment proxy review, batch-1 adversarial findings.
-// |         |            |        | AgeBandRampHalfWidthYears' doc corrected (config-unbound-premise-
-// |         |            |        | false-28): this catalogue has zero Config.GetX calls, so the
-// |         |            |        | prior "catalogue lock runs config-unbound" rationale (copied
-// |         |            |        | from ERR-041-003's, where it IS true) did not apply here — a
-// |         |            |        | catalogue lock is available today and now exists in
-// |         |            |        | PlayerProgressionConstantsTests. MAX_DERIVABLE_AGE_YEARS' doc
-// |         |            |        | corrected (classifyageband-growth-claim-stale): its
-// |         |            |        | ClassifyAgeBand(int.MinValue)-reads-Growth rationale was true when
-// |         |            |        | written but is false today (ERR-028-020 rewrote ClassifyAgeBand to
-// |         |            |        | read the continuous curve, which returns Stable at a hugely
-// |         |            |        | negative age); annotated as history, the int-narrowing concern
-// |         |            |        | itself unchanged. No value changed.
-// | 1.2     | 2026-08-22 | —      | ERR-028-020 / ERR-028-021 (football-judgment proxy review, batch 1):
-// |         |            |        | + AgeBandRampHalfWidthYears (the centred accrual ramp of #28 §3.1.3 —
-// |         |            |        | zero is the exact §4.3 identity, and 2 x half-width must not exceed
-// |         |            |        | (DECLINE_AGE + 1) - GROWTH_AGE or the two ramps overlap); +
-// |         |            |        | RetirementGoalkeeperBonusYears and RetirementGameReadingSpanYears
-// |         |            |        | (§3.4's per-player retirement day). RETIREMENT_AGE's doc corrected —
-// |         |            |        | it is the BASELINE now, not the whole rule. No format version, no draw.
-// | 1.1     | 2026-08-08 | —      | #28 T1: + PROGRESSION_SAVE_MAGIC ("PROG"), written before the  |
-// |         |            |        | version — ERR-028-004, since §3.5 specified the RNG domain tag |
-// |         |            |        | as the block's identifier and a version is not one             |
-// |         |            |        | (ERR-029-005/ERR-041-009). + NEW_GAME_PA_HEADROOM, the         |
-// |         |            |        | deterministic placeholder for #47's authored PA (ERR-028-003). |
-// | 1.0     | 2026-07-24 | —      | Initial #28 T0 constant catalogue: Fixed (DAYS_PER_YEAR,       |
-// |         |            |        | PROGRESSION_SAVE_FORMAT_VERSION), Derived (PROGRESSION_REGEN_  |
-// |         |            |        | FIELDS = 5+31+1), Cross (ATTRIBUTE_MIN/MAX mirror of #27), GT  |
-// |         |            |        | (ABILITY_MAX, POINT_COST, GROWTH/DECLINE/RETIREMENT_AGE,       |
-// |         |            |        | GROWTH/DECLINE_DAILY_POINTS + the regen balance values). The   |
-// |         |            |        | 0x20/82 RNG-identity mirrors land at T2 with the stream (KD-B).|
 // | 1.6     | 2026-10-19 | —      | ERR-028-025: REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION [FIXED]; DOMAIN_TAG_PLAYER_PROGRESSION (0x20) and SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION (82) [CROSS] mirrors land with the first regen draw site. |
+// | 1.7     | 2026-10-20 | —      | AR round 3 L9 (ERR-028-028): DECLINE_DAILY_POINTS doc no longer says retirement is FLAG-ONLY / removal deferred (ERR-028-025 landed it); version rows reordered chronologically (1.0..1.6, content unchanged). No value changed. |
 #endregion

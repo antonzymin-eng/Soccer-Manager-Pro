@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.16 — **ERR-028-027** (AR round 3): §3.4's `completedSeasonNumber` domain widened to `>= 0` (a career's first season is 0) with a season-0 golden vector; §3.3's `GenerateRegen` pseudocode restated to the shipped signature; §3.4 states that a retiree is replaced at the club carrying him at the boundary)
+**Last Updated:** October 20, 2026 (v0.17 — AR round 3: ERR-028-028 restates the regen-anchor MUST (the `worldDay` the caller passes, which MUST be the day every carried player's cursor sits on — #30 passes clock − 1) and marks "not implemented by this landing" superseded; L8: the §3.3 pseudocode's draw list matches `RegenGenerator` — name/age/weak-foot/attributes/PA, no nation)
+**Last Updated (prior):** October 20, 2026 (v0.16 — **ERR-028-027** (AR round 2): §3.4's `completedSeasonNumber` domain widened to `>= 0` (a career's first season is 0) with a season-0 golden vector; §3.3's `GenerateRegen` pseudocode restated to the shipped signature; §3.4 states that a retiree is replaced at the club carrying him at the boundary)
 **Last Updated (prior):** October 20, 2026 (v0.15 — AR round 1 P-M3: §3.4's regen-seed line stated as a formula (domain, SplitMix64 finalizer, worked hex vector))
 **Last Updated (prior):** October 19, 2026 (v0.14 — ERR-028-024 / ERR-028-025: §3.3 inherited position; §3.4 staged boundary + the regen stream save story)
 **Last Updated (prior):** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
@@ -26,7 +27,7 @@ numeric value, no draw, no format version. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.16
+**Version:** 0.17
 **Status:** APPROVED
 
 ---
@@ -411,7 +412,11 @@ GenerateRegen(rng, streamIndex, clubId, newPlayerId, position, worldDay) -> (Pla
     # ERR-028-027: the shipped signature. The CALLER allocates the id (FR-PG-011) and passes the retiree's
     # position and the construction day; GenerateRegen allocates nothing and reads no roster world.
     reserveErr = rng.Reserve(streamIndex, PROGRESSION_REGEN_FIELDS)     # fixed budget (#27 pattern)
-    ...draw name/nation/attributes/PA from the reservation, mirroring RosterGenerator...
+    # AR round 3 L8: the draw order RegenGenerator ships, by reservation index (append-only, FR-PG-020):
+    #   0 first name, 1 last name, 2 age, 3 RESERVED + UNDRAWN (the retired position draw), 4 weak foot,
+    #   5.. the 31 [1,20] attributes, then PA (floored above the generated CA). No nation is drawn.
+    ...draw name/age/weak-foot/attributes/PA from the reservation (no nation - it is not a PlayerRecord
+       field), mirroring RosterGenerator...
     # position = the RETIREE's (ERR-028-024), passed in; its draw index stays reserved, undrawn
     rng.CloseReservation(streamIndex)
     return new PlayerRecord { PlayerId = newPlayerId, Position = position, ... }
@@ -939,14 +944,23 @@ format's own `uint.MaxValue` ceiling — so the check lives at the **composition
 paragraph's sibling) and #30 §2.3's new **F10** row — cited here rather than restated, since the
 mechanism lives in an assembly #28 MUST NOT reference (§4.1).
 
-**Obligation for the deferred season boundary (regen insertion).** `RunSeasonBoundary` (§3.4) is not
-implemented by this landing, but when it is, a regen inserted mid-career **MUST** have its
-`LastAdvancedWorldDay` anchored at its insertion day — the world day `RunSeasonBoundary` runs on — for
-exactly the reason ERR-028-014 fixes at new-game: a regen is a freshly generated player whose records
-describe the roster as of the day he is inserted, not before, so seeding anything else (including the
-sentinel) reopens the identical unrepresentable-start defect one call site later. This is written down
-here so the next author implementing `RunSeasonBoundary` does not rediscover the sentinel trap from
-scratch.
+**Obligation for the season boundary (regen insertion) — restated by ERR-028-028 (AR round 3).** A regen inserted
+mid-career **MUST** have its `LastAdvancedWorldDay` anchored at the `worldDay` the caller passes to
+`PrepareSeasonBoundary` — and that `worldDay` **MUST** be the day every carried player's cursor already sits on, so a
+regen's cursor and his peers' agree and the next day step advances all of them together. #30 passes the last LIVED
+day, the clock minus one (`CurrentWorldTick - 1`; #30 §3.5 (d) — ERR-030-053 guarantees the clock is past the final
+fixture day, so the subtraction cannot wrap), not the roll day itself: a regen anchored at the clock would be one day
+AHEAD of every peer, so the day step that advances them across that day would find his cursor already there and skip
+it (the same-day idempotence of ERR-030-027), leaving him a day behind for the rest of his career. The reason is
+ERR-028-014's, applied at the second construction site: a regen is a freshly generated player whose records describe
+the roster as of the day he is inserted, not before, so seeding anything else (including the sentinel) reopens the
+identical unrepresentable-start defect one call site later.
+*(Restated and annotated, AR round 3 — ERR-028-028. The earlier text defined the anchor as "its insertion day — the
+world day `RunSeasonBoundary` runs on", which, read literally against #30's clock, is the roll day and REQUIRES the
+mutant the tests kill: production passes the clock minus one and #30 §3.5 pins that. Its opening clause, "`RunSeasonBoundary`
+(§3.4) is not implemented by this landing", is **superseded by ERR-028-025**: the boundary has landed as
+`PrepareSeasonBoundary` / `CommitSeasonBoundary`, and the obligation is now honoured by `SeasonLoop` (and its
+`worldDay` parameter documented at `ProgressionEngine.PrepareSeasonBoundary`).)*
 
 **The roster must never be silently erased (ERR-028-008).** #28's block, per KD-4, is the **canonical
 serialized roster** — not a cache rebuildable from the world seed once any player's `[1,20]` attributes
@@ -975,5 +989,6 @@ about not erasing a roster the codec can actually see.
 | 0.13 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings, doc-only. **M2 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):** §3.2's "Recorded limitation, not fixed here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-`ABILITY_MAX` figure is unchanged (the P5 pivot makes it exact at every half-width). **L1 (four-guards-enumerated-as-five-and-mis-named):** §3.4's `RetirementAgeDays` pseudocode note corrected — it said "these TWO dial guards" for the single combined non-negativity `if`, which made the paragraph claim "four" and then list five items; now "this ONE combined dial guard". **M5 (retirement-day-derived-from-attributes-the-same-step-mutates):** new §3.4 paragraph states the retirement-day feedback-loop invariant — the day is re-evaluated against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and `RetirementFlag`'s stickiness — and cites the new **T-PG-RET-009** lock (`section-5.md` v0.9). No numeric value, no draw, no format version. |
 | 0.14 | 2026-10-19 | — | **ERR-028-024**: §3.3 — the regen takes the retiree's position; the position draw index stays reserved and undrawn. **ERR-028-025**: §3.4 — `PrepareSeasonBoundary` (pure) / `CommitSeasonBoundary` (infallible) replace the marker pseudocode; the boundary-scoped regen stream (seed from world seed + completed season, no serialized cursor) is the save story; normative draw and id orders pinned. |
 | 0.15 | 2026-10-20 | — | **AR round 1 P-M3 (ERR-028-025)**: §3.4's seed line `Mix(Mix(TAG ^ worldSeed) ^ completedSeasonNumber)` broke the every-formula-has-units-ranges-and-a-worked-example rule. The pseudocode now calls `DeriveRegenSeed`, and a new formula block states the domain (`completedSeasonNumber >= 1`, widened `(u64)(u32)`), names `Mix` as the SplitMix64 finalizer with its constants, and gives one worked hex vector (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`), computed with an independent Python mirror and pinned by `SeasonBoundaryTests`. |
-| 0.16 | 2026-10-20 | — | **ERR-028-027** (AR round 3, approved-text corrections, spec + test, no behaviour change): §3.4's `DeriveRegenSeed` valid range corrected `completedSeasonNumber >= 1` / "#30 numbers seasons from 1" → `>= 0` (a new career's first season is 0 — `SeasonState.CreateNew`'s default; the first boundary seeds from `DeriveRegenSeed(worldSeed, 0)`), plus a season-0 golden `DeriveRegenSeed(0xB0DA2028, 0) = 0xD3E409D7732EBE4F`; §3.3's `GenerateRegen` pseudocode restated to the shipped `(rng, streamIndex, clubId, newPlayerId, position, worldDay)` signature (the caller allocates the id; nation is not a record field, so none is drawn); §3.4 names `RunSeasonBoundary` as the step's name for the shipped Prepare/Commit pair and states that a retiree is replaced at the club carrying him at the boundary (`MovePlayer`-re-homed players), locked by `ProgressionEngineMoveTests`. |
+| 0.16 | 2026-10-20 | — | **ERR-028-027** (AR round 2, approved-text corrections, spec + test, no behaviour change): §3.4's `DeriveRegenSeed` valid range corrected `completedSeasonNumber >= 1` / "#30 numbers seasons from 1" → `>= 0` (a new career's first season is 0 — `SeasonState.CreateNew`'s default; the first boundary seeds from `DeriveRegenSeed(worldSeed, 0)`), plus a season-0 golden `DeriveRegenSeed(0xB0DA2028, 0) = 0xD3E409D7732EBE4F`; §3.3's `GenerateRegen` pseudocode restated to the shipped `(rng, streamIndex, clubId, newPlayerId, position, worldDay)` signature (the caller allocates the id; nation is not a record field, so none is drawn); §3.4 names `RunSeasonBoundary` as the step's name for the shipped Prepare/Commit pair and states that a retiree is replaced at the club carrying him at the boundary (`MovePlayer`-re-homed players), locked by `ProgressionEngineMoveTests`. |
+| 0.17 | 2026-10-20 | — | **AR round 3.** **ERR-028-028 (M12):** the "Obligation for the deferred season boundary" paragraph defined a regen's `LastAdvancedWorldDay` anchor as "its insertion day — the world day `RunSeasonBoundary` runs on", which read literally is the roll day (the clock) and so required the very mutant the tests kill: `SeasonLoop` passes `CurrentWorldTick - 1u` and #30 §3.5 pins clock − 1. Restated: the regen is anchored at the `worldDay` the caller passes, which MUST be the day every carried player's cursor sits on (#30: the last lived day); its "not implemented by this landing" clause is annotated superseded by ERR-028-025. **L8:** §3.3's pseudocode said "draw name/nation/attributes/PA" while its own annotation says no nation is drawn, and it omitted the age and weak-foot draws; now "name/age/weak-foot/attributes/PA" with the shipped index order. |
 #endregion

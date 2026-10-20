@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/ITransferRosterPort.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20
+// Modified: 2026-10-20 (AR round 3 — v1.5)
 // Author:   —
 // Specs:    Spec #20 §3.5.1-§3.5.3 (specified consumer-owned interface)
 //           Spec #31 §3.1, §3.3-§3.4, KD-1/KD-7 / FR-TX-001..003/021..023 (as amended by ERR-031-005)
@@ -50,7 +50,8 @@ namespace TacticalDirector.Transfers
         /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>. <b><c>false</c> means ONLY "destination
         /// full"</b> (F5, the ordinary <see cref="TransferSubmissionOutcome.SquadFull"/>). Everything else
         /// that would make the commit impossible — the player not on <paramref name="fromClubId"/>, either
-        /// club outside the league — is an integration defect and MUST throw
+        /// club outside the league, or <paramref name="fromClubId"/> equal to <paramref name="toClubId"/> (a
+        /// same-club "move" is not a transfer) — is an integration defect and MUST throw
         /// <see cref="System.InvalidOperationException"/>, never answer <c>false</c> (ERR-031-010: a
         /// <c>false</c> there would be reported to the manager as a full squad).
         /// </summary>
@@ -73,5 +74,6 @@ namespace TacticalDirector.Transfers
 // | 1.1     | 2026-09-14 | —      | Add read-only positional-stock query for always-on T0 club-need valuation. |
 // | 1.2     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds. TryGetPlayer reports the owning club; the preview no longer allocates an id; the commit re-homes under the same id and returns nothing. |
 // | 1.3     | 2026-10-20 | —      | #31 T2: CarriesClub (F6 counterparty universe, ERR-031-010) and CanRelease (source keeps a matchday squad, ERR-031-007); the preview's false means only 'destination full' — other failures throw (ERR-031-010). |
-// | 1.4     | 2026-10-20 | —      | AR round 3 L3 (ERR-031-012): CanRelease's false means ONLY 'cannot field a matchday squad'; an unknown club or a player not on the roster throws. |
+// | 1.4     | 2026-10-20 | —      | AR round 2 L3 (ERR-031-012): CanRelease's false means ONLY 'cannot field a matchday squad'; an unknown club or a player not on the roster throws. |
+// | 1.5     | 2026-10-20 | —      | AR round 3 T-L7: TryPreviewRosterCommit's doc names the same-club call as a MUST-throw integration defect (the production adapter already throws). |
 #endregion

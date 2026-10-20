@@ -4,6 +4,7 @@
 //           progression and discipline state instead of bootstrapping finances by dropping them.)
 // Modified: 2026-09-11 (#40 T2b — League.CreateLoop is the #30-owned new-game composition seam that
 //           bootstraps exactly one finance entry per canonical squad and passes it into SeasonLoop.)
+// Modified: 2026-10-20 (AR round 3 S-L5 — v1.5: CreateLoop checks the KD-4 cursor invariant before deriving the #31 window.)
 // Modified: 2026-10-20 (ERR-031-011 — v1.4: genesis window anchored to season 1's opening fixture day.)
 // Modified: 2026-10-20 (#31 T2 genesis contract seeding in CreateLoop — v1.3)
 // Author:   —
@@ -224,8 +225,10 @@ namespace TacticalDirector.SeasonSave
         /// and — when a populated progression store is supplied — the managed club's #31 contracts seeded
         /// at the genesis terms (FR-TX-028).</returns>
         /// <exception cref="System.ArgumentNullException"><paramref name="world"/> is null.</exception>
-        /// <exception cref="System.ArgumentException">The world and league seeds disagree, or a supplied
-        /// subsystem violates <see cref="SeasonLoop"/>'s existing composition invariants.</exception>
+        /// <exception cref="System.ArgumentException">The world and league seeds disagree, the world clock
+        /// is already past season 1's opening fixture day (the KD-4 cursor invariant — thrown before any
+        /// #31 window is derived), or a supplied subsystem violates <see cref="SeasonLoop"/>'s existing
+        /// composition invariants.</exception>
         public SeasonLoop CreateLoop(
             WorldStore world,
             int managedClubId,
@@ -258,6 +261,20 @@ namespace TacticalDirector.SeasonSave
             // summer window opens on the new-game day and closes SummerWindowInSeasonDays into season 1,
             // counted from its opening fixture day (ERR-031-011) — the same anchor the roll's (d″) uses.
             SeasonState season = CreateSeason(managedClubId, objective);
+
+            // The KD-4 cursor invariant is checked BEFORE the window is derived (AR round 3 S-L5): with the
+            // clock already past season 1's opening fixture day, SummerWindowFor would throw its own
+            // ArgumentOutOfRangeException (opening < begin) and mask the real cause — and SeasonLoop's
+            // constructor would throw this same ArgumentException anyway when #31 is not wired.
+            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
+            {
+                throw new System.ArgumentException(
+                    $"KD-4 cursor invariant violated: the world is on day {world.CurrentWorldTick} but the "
+                    + $"season's next fixture is day {season.Calendar.NextFixtureDay()} (round "
+                    + $"{season.Calendar.NextRoundIndex}).",
+                    nameof(world));
+            }
+
             TransfersState transfers = null;
             if (progressionIsRoster)
             {
@@ -307,4 +324,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | so enabling #40 cannot disable already-live subsystems.            |
 // | 1.3     | 2026-10-20 | —      | #31 T2 genesis (FR-TX-028 / §3.8): CreateLoop seeds the managed club's contracts at the genesis terms whenever a populated #28 store is supplied; first window opens on the new-game day (ERR-031-008). |
 // | 1.4     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): genesis window = SummerWindowFor(new-game day, season 1 opening fixture day), so its close is anchored like the roll's; class summary says 23-player squads (ERR-031-004). |
+// | 1.5     | 2026-10-20 | —      | AR round 3 S-L5: CreateLoop throws the KD-4 cursor-invariant ArgumentException (ParamName "world") before deriving the #31 window when the clock is past season 1's opening fixture day (previously the window's ArgumentOutOfRangeException, or KD-4's with a different ParamName when unwired). |
 #endregion

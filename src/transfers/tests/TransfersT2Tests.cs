@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-20
+// Modified: 2026-10-20 (AR round 3 — v1.3)
 // Author:   —
 // Specs:    Spec #31 §3.5 (as corrected by ERR-031-008 and ERR-031-011), §3.7, §3.8, FR-TX-007/019/028, G14;
 //           §5.5 T-TX-DET-002, T-TX-INIT-001
@@ -13,6 +13,8 @@
 using System;
 
 using NUnit.Framework;
+
+using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.Transfers.Tests
 {
@@ -46,16 +48,16 @@ namespace TacticalDirector.Transfers.Tests
         [Test]
         public void SummerWindowFor_GenesisDefaults_AreDays0Through44()
         {
-            // Pinned against the defaults: with FirstRoundDay 7 and 38 in-season days the genesis window is
-            // the same [0, 44] the roll-day-length derivation produced, so genesis bytes are unchanged.
+            // Pinned against the shipped defaults: 38 in-season days from season 1's opening fixture day 7
+            // (LeagueBootstrapConstants.FirstRoundDay, which this assembly cannot reference) give the genesis
+            // window [0, 44] the roll-day-length derivation also produced, so genesis bytes are unchanged. A
+            // tuned [GT] is not a failure of this lock, so the test is skipped (inconclusive) under one rather
+            // than asserting a formula it would only be restating.
+            Assume.That(TransfersConstants.SummerWindowInSeasonDays, Is.EqualTo(38), "the [GT] default this pin is written against");
             TransferWindow w = TransferWindow.SummerWindowFor(0, 7);
 
             Assert.AreEqual(0u, w.OpenWorldDay);
-            Assert.AreEqual(7u + (uint)TransfersConstants.SummerWindowInSeasonDays - 1u, w.CloseWorldDay);
-            if (TransfersConstants.SummerWindowInSeasonDays == 38)
-            {
-                Assert.AreEqual(44u, w.CloseWorldDay);
-            }
+            Assert.AreEqual(44u, w.CloseWorldDay);
         }
 
         [Test]
@@ -160,6 +162,45 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void PrepareSeasonBoundary_ADuplicatedArrival_FailsLoudAsAnArgumentException()
+        {
+            // AR round 3 T-L8: a repeated id among the arrivals is an input defect, refused in the pre-build
+            // guard — never an InvalidOperationException leaking from the new state's InsertContract.
+            TransferWindow next = TransferWindow.SummerWindowFor(300, 355);
+            TransfersState s = TransfersState.Restore(
+                Managed, 0, TransferWindow.SummerWindowFor(0, 7), new[] { new Contract(76, 600, 3) });
+
+            Assert.Throws<ArgumentException>(() => s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 900, 901, 900 }, in next));
+            Assert.AreEqual(1, s.ContractCount, "pure: a refused boundary leaves the source untouched");
+        }
+
+        [Test]
+        public void PrepareSeasonBoundary_AgedContractsPlusArrivalsAboveTheSquadCap_FailsLoudAsAnArgumentException()
+        {
+            // AR round 3 T-L8: the surviving aged contracts plus the arrivals are checked against
+            // CLUB_SQUAD_SIZE before anything is built; the cap itself is legal.
+            int cap = PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+            var held = new Contract[cap - 2];
+            for (int i = 0; i < held.Length; i++)
+            {
+                held[i] = new Contract(100 + i, 600, 3);   // every one survives the boundary
+            }
+
+            TransfersState s = TransfersState.Restore(Managed, 0, TransferWindow.SummerWindowFor(0, 7), held);
+            TransferWindow next = TransferWindow.SummerWindowFor(300, 355);
+
+            Assert.Throws<ArgumentException>(
+                () => s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 900, 901, 902 }, in next), "cap + 1");
+            Assert.AreEqual(cap - 2, s.ContractCount, "pure: a refused boundary leaves the source untouched");
+            TransfersState atTheCap = s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 900, 901 }, in next);
+            Assert.AreEqual(cap, atTheCap.ContractCount, "exactly the cap is legal");
+
+            // Retirees and expiring contracts free room before the comparison, so they are not counted.
+            TransfersState withRetiree = s.PrepareSeasonBoundary(new[] { 100 }, new[] { 900, 901, 902 }, in next);
+            Assert.AreEqual(cap, withRetiree.ContractCount);
+        }
+
+        [Test]
         public void ThreeBoundaries_ExpireEveryGenesisContract_WithoutAThrow()
         {
             TransfersState s = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFor(0, 7), new[] { 75, 76 });
@@ -178,5 +219,6 @@ namespace TacticalDirector.Transfers.Tests
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-10-20 | —      | #31 T2: genesis seeding, boundary aging + retiree/regen lockstep + resets, window derivation locks. |
 // | 1.1     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): window locks rewritten for SummerWindowFor(begin, openingFixture) — inclusive close, genesis [0,44] pin, opening<begin and uint-overflow edges. |
-// | 1.2     | 2026-10-20 | —      | AR round 3 L4: PrepareSeasonBoundary refuses an arrival that holds a contract (live or expiring this boundary) or is retired — ArgumentException, source untouched. |
+// | 1.2     | 2026-10-20 | —      | AR round 2 L4: PrepareSeasonBoundary refuses an arrival that holds a contract (live or expiring this boundary) or is retired — ArgumentException, source untouched. |
+// | 1.3     | 2026-10-20 | —      | AR round 3: T-L8 locks (a duplicated arrival and aged contracts plus arrivals above CLUB_SQUAD_SIZE are ArgumentExceptions, the cap itself is legal); T-L9: the genesis [0,44] pin is an unconditional assertion under Assume.That(SummerWindowInSeasonDays == 38) and no longer restates the formula. |
 #endregion

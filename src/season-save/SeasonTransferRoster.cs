@@ -177,5 +177,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the #28 store + #29/#41/#30 career rows; stable-id re-home       |
 // |         |            |        | (ERR-031-005); source-depletion guard (ERR-031-007); preview     |
 // |         |            |        | false only when full, impossible moves throw (ERR-031-010).      |
-// | 1.1     | 2026-10-20 | —      | AR round 3 L3: CanRelease throws for an unknown club or a player not on the roster (false is depletion only, ITransferRosterPort contract). |
+// | 1.1     | 2026-10-20 | —      | AR round 2 L3: CanRelease throws for an unknown club or a player not on the roster (false is depletion only, ITransferRosterPort contract). |
 #endregion

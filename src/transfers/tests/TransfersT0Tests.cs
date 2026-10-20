@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20 (#31 T2; AR round 3 L3)
+// Modified: 2026-10-20 (#31 T2; AR round 2 L3; AR round 3 M14/M15 — v1.9)
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -583,6 +583,104 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState()
+        {
+            // T-TX-BID-008 (AR round 3, M15): #31 writes no ClubFinances field directly and keeps no parallel
+            // cash ledger. Three legs: a staged-finance equivalence, a structural scan of the assembly's
+            // types, and an IL scan for field stores — with a probe proving the scan can see one.
+
+            // (1) The finance an accepted buy leaves is EXACTLY what FinanceLedger.ApplyTransaction produces
+            // from the same transaction — nothing else touched it.
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 77_000L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            ClubFinancesState viaLedger = finances;
+            FinanceLedger.ApplyTransaction(
+                ref viaLedger, new FinanceTransaction(FinanceTransactionKind.Debit, FinanceLineItem.TransferFee, valuation));
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 12_345L, 3, true);
+
+            Assert.AreEqual(
+                TransferSubmissionOutcome.Accepted, new TransferCommands(roster).SubmitBid(in offer, 110U, ref finances, CreateOpenState()));
+
+            Assert.AreEqual(
+                ClubFinancesSaveCodec.Encode(new[] { new ClubFinanceEntry(MANAGED_CLUB_ID, in viaLedger) }),
+                ClubFinancesSaveCodec.Encode(new[] { new ClubFinanceEntry(MANAGED_CLUB_ID, in finances) }));
+
+            // (2) No type in the assembly declares a finance-typed member or a cash-shaped name.
+            System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
+                | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.DeclaredOnly;
+            Type finance = typeof(ClubFinancesState);
+            foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
+            {
+                foreach (System.Reflection.FieldInfo f in type.GetFields(all))
+                {
+                    AssertNotFinanceShaped(type, f.Name, f.FieldType, finance);
+                }
+
+                foreach (System.Reflection.PropertyInfo p in type.GetProperties(all))
+                {
+                    AssertNotFinanceShaped(type, p.Name, p.PropertyType, finance);
+                }
+            }
+
+            // (3) No method body in the assembly stores to a ClubFinances field (the only way to bypass the
+            // ledger on a public-field struct), and the scan is proven able to see one.
+            Assert.IsTrue(StoresToAFinanceField(typeof(BID008Probe).GetMethod(nameof(BID008Probe.WriteBalance)), finance),
+                "non-vacuity: the IL scan detects a direct field store");
+            foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
+            {
+                foreach (System.Reflection.MethodBase method in Methods(type, all))
+                {
+                    Assert.IsFalse(StoresToAFinanceField(method, finance), type.Name + "." + method.Name + " writes a ClubFinances field directly");
+                }
+            }
+        }
+
+        [Test]
+        public void TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState()
+        {
+            // T-TX-REKEY-003 (AR round 3, M15): #31 migrates only its own contract state, and #28/#29/#41/#44/#33
+            // state is not referenced. A transfer keeps the player's id (ERR-031-005), so there is nothing to
+            // migrate; the structural half of that claim is that the compiled assembly names none of the
+            // assemblies that own PlayerId-keyed state. (Its roster access is the ITransferRosterPort seam.)
+            string[] owners =
+            {
+                "TacticalDirector.PlayerProgression", "TacticalDirector.TrainingSystem", "TacticalDirector.InjuriesMedical",
+                "TacticalDirector.Discipline", "TacticalDirector.LivingWorld", "TacticalDirector.SeasonSave"
+            };
+            foreach (System.Reflection.AssemblyName reference in typeof(TransfersState).Assembly.GetReferencedAssemblies())
+            {
+                CollectionAssert.DoesNotContain(owners, reference.Name, "#31 must not reference " + reference.Name);
+            }
+        }
+
+        [Test]
+        public void TheTransfersAssembly_IsDrawFree_NoMethodCallsOrConstructsAnRngType()
+        {
+            // T-TX-NEU-001 (AR round 3, M14): the "no RNG stream exists" half. #31 is draw-free (G3/G11). The
+            // assembly legitimately uses DeterministicSim's save-framing helpers, so the assertion is about
+            // the RNG TYPES, not the assembly: no method may call into, or construct, System.Random,
+            // DeterministicRngService or RngStreamState. The probe proves the scan can see a construction.
+            System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
+                | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.DeclaredOnly;
+            Func<System.Reflection.MemberInfo, bool> isRng = m => m.DeclaringType == typeof(Random)
+                || m.DeclaringType == typeof(TacticalDirector.DeterministicSim.DeterministicRngService)
+                || m.DeclaringType == typeof(TacticalDirector.DeterministicSim.RngStreamState);
+
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Draw)), isRng),
+                "non-vacuity: the IL scan detects a constructed Random");
+            foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
+            {
+                foreach (System.Reflection.MethodBase method in Methods(type, all))
+                {
+                    Assert.IsFalse(CallsOrConstructs(method, isRng), type.Name + "." + method.Name + " reaches an RNG type");
+                }
+            }
+        }
+
+        [Test]
         public void T0StateAndCommands_ContainNoFloatOrDoubleFields()
         {
             Type[] types =
@@ -607,6 +705,96 @@ namespace TacticalDirector.Transfers.Tests
                     Assert.AreNotEqual(typeof(float), fields[j].FieldType);
                     Assert.AreNotEqual(typeof(double), fields[j].FieldType);
                 }
+            }
+        }
+
+        private static void AssertNotFinanceShaped(Type owner, string name, Type memberType, Type finance)
+        {
+            Type element = memberType.IsArray ? memberType.GetElementType() : memberType;
+            Assert.AreNotEqual(finance, element, owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
+            Assert.AreNotEqual(typeof(ClubFinanceEntry), element, owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
+            foreach (string cash in new[] { "Balance", "Cash", "Ledger", "Wallet" })
+            {
+                Assert.IsFalse(name.IndexOf(cash, StringComparison.OrdinalIgnoreCase) >= 0, owner.Name + "." + name + " is cash-shaped");
+            }
+        }
+
+        private static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> Methods(
+            Type type, System.Reflection.BindingFlags flags)
+        {
+            foreach (System.Reflection.MethodBase m in type.GetMethods(flags))
+            {
+                yield return m;
+            }
+
+            foreach (System.Reflection.MethodBase c in type.GetConstructors(flags))
+            {
+                yield return c;
+            }
+        }
+
+        // call (0x28), callvirt (0x6F) or newobj (0x73) of a member `match` accepts.
+        private static bool CallsOrConstructs(System.Reflection.MethodBase method, Func<System.Reflection.MemberInfo, bool> match) =>
+            IlReferences(method, 0x28, match) || IlReferences(method, 0x6F, match) || IlReferences(method, 0x73, match);
+
+        private static bool StoresToAFinanceField(System.Reflection.MethodBase method, Type finance) =>
+            IlReferences(method, 0x7D, m => m is System.Reflection.FieldInfo && m.DeclaringType == finance);
+
+        // True when the method's IL holds `opcode` followed by a metadata token that resolves to a member
+        // `match` accepts (0x7D = stfld, 0x73 = newobj). Every byte offset is tried, so an instruction
+        // boundary cannot be missed; a stray byte equal to `opcode` inside another operand resolves to nothing
+        // relevant and is ignored.
+        private static bool IlReferences(System.Reflection.MethodBase method, byte opcode, Func<System.Reflection.MemberInfo, bool> match)
+        {
+            System.Reflection.MethodBody body = method.GetMethodBody();
+            if (body == null)
+            {
+                return false;
+            }
+
+            byte[] il = body.GetILAsByteArray();
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] != opcode)
+                {
+                    continue;
+                }
+
+                int token = il[i + 1] | (il[i + 2] << 8) | (il[i + 3] << 16) | (il[i + 4] << 24);
+                try
+                {
+                    System.Reflection.MemberInfo member = method.Module.ResolveMember(
+                        token, method.DeclaringType.IsGenericType ? method.DeclaringType.GetGenericArguments() : null, null);
+                    if (member != null && match(member))
+                    {
+                        return true;
+                    }
+                }
+                catch (ArgumentException)
+                {
+                }
+                catch (System.Reflection.TargetException)
+                {
+                }
+                catch (NotSupportedException)
+                {
+                }
+            }
+
+            return false;
+        }
+
+        // The deliberately-violating shape T-TX-BID-008's scan must be able to see.
+        private static class BID008Probe
+        {
+            public static void WriteBalance(ref ClubFinancesState finances)
+            {
+                finances.Balance = 1L;
+            }
+
+            public static int Draw()
+            {
+                return new Random(1).Next();
             }
         }
 
@@ -686,7 +874,7 @@ namespace TacticalDirector.Transfers.Tests
 
             public bool CanRelease(int clubId, int playerId)
             {
-                // AR round 3 L3: false means ONLY "cannot field a matchday squad"; an unknown club or a player
+                // AR round 2 L3: false means ONLY "cannot field a matchday squad"; an unknown club or a player
                 // not on that club's roster is an integration defect and throws, like the preview.
                 if (!Clubs.Contains(clubId) || !_clubOf.TryGetValue(playerId, out int owner) || owner != clubId)
                 {
@@ -763,5 +951,6 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.5     | 2026-10-19 | —      | ERR-031-005: stable-id fake port (explicit club membership); off-range-id ownership and roster-judged direction locks; commit breach is 'did not land'; the re-key test is deleted with the handler. |
 // | 1.6     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1/M5/L1: 26th-contract refusal, buy duplicate-contract pre-check, invalid positional-count and buy zero-stock throws (FakeRosterPort.PositionalStockOverride); header reworded to stable-id semantics. |
 // | 1.7     | 2026-10-20 | —      | #31 T2: fake port gains CarriesClub/CanRelease and throws on an impossible preview (ERR-031-010); locks SquadDepleted (ERR-031-007), unknown-counterparty fail-loud (ERR-031-010) and the un-contracted sale (ERR-031-009). |
-// | 1.8     | 2026-10-20 | —      | AR round 3 L3: the fake's CanRelease throws for an unknown club or a player not on the club (false is depletion only). |
+// | 1.8     | 2026-10-20 | —      | AR round 2 L3: the fake's CanRelease throws for an unknown club or a player not on the club (false is depletion only). |
+// | 1.9     | 2026-10-20 | —      | AR round 3 M15 (T-TX-BID-008): SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState — ledger-equivalence of an accepted buy's finance, a reflection scan for finance-typed or cash-named members across the assembly, and an IL stfld scan (with a violating probe proving it can see a store); M14 TheTransfersAssembly_IsDrawFree_… (no call/newobj of System.Random, DeterministicRngService or RngStreamState; probe-proven scan) backing T-TX-NEU-001's 'no RNG stream' half; M15 TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState (T-TX-REKEY-003: no reference to the assemblies owning PlayerId-keyed state). |
 #endregion

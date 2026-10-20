@@ -1,6 +1,7 @@
 // File:     src/season-save/LeagueBootstrap.cs
 // Created:  2026-07-25
-// Modified: 2026-10-20 (AR round 3 L5 — squad size 23 and the ordinal-84 note restated; comment-only — v1.2)
+// Modified: 2026-10-20 (AR round 3 L9 — the persistence-equivalence note scoped to careerless saves and new games; comment-only — v1.3)
+//           (AR round 2 L5 — squad size 23 and the ordinal-84 note restated; comment-only — v1.2)
 //           (P-L2 — stale squad-size comment — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md)
@@ -31,12 +32,18 @@ namespace TacticalDirector.SeasonSave
     /// attributes. Different seeds change both the rosters and the strength ordering.
     /// </para>
     /// <para>
-    /// <b>This generation path is persistence-equivalent — treat it like a save format version.</b>
-    /// Rosters are NOT serialized: a save carries club IDs, and <see cref="League"/> re-derives every
-    /// squad here when it is handed to <c>SeasonSaveManager.Load</c> as the
+    /// <b>This generation path is persistence-equivalent for new games and careerless saves — treat it
+    /// like a save format version.</b> A CAREER save (one whose progression block carries clubs, #28 T2a)
+    /// does NOT depend on it: <c>SeasonSaveManager.Load</c> takes the roster from the file's progression
+    /// block whenever <c>ClubCount &gt; 0</c> (the ERR-028 roster-from-save rule), so a generation change
+    /// leaves an existing career's players untouched (AR round 3 L9 — the earlier text claimed every save).
+    /// The dependence that remains: <see cref="League"/> re-derives every squad here for a NEW game (it is
+    /// the day-0 roster <c>ProgressionEngine.SeedFrom</c> seeds the career from) and for a careerless
+    /// save, where it is handed to <c>SeasonSaveManager.Load</c> as the
     /// <see cref="TacticalDirector.MatchEngine.ISquadProvider"/>. That interface's contract requires the
     /// resolved squad to be the SAME roster the saved match loaded, so ANY change that moves this
-    /// function's output silently rewrites every club in every existing save — a draw-order change in
+    /// function's output silently rewrites every club of every new game (same seed, different players) and
+    /// of every careerless save — a draw-order change in
     /// <see cref="RosterGenerator"/>, a reorder of <c>NameCatalogue</c> or
     /// <see cref="ClubNameCatalogue"/>, an edit to
     /// <see cref="LeagueBootstrapConstants.SquadPositionCounts"/>, or a one-line tweak to a
@@ -47,7 +54,8 @@ namespace TacticalDirector.SeasonSave
     /// Every same-seed determinism test is self-referential and would stay green through all of these,
     /// so the guard is the pinned golden vector in <c>LeagueBootstrapGoldenVectorTests</c> — the same
     /// mechanism #16 uses for HKDF / SipHash / canonical serialization. If you change generation
-    /// deliberately, re-pin that vector in the same commit and treat it as a save-breaking change.
+    /// deliberately, re-pin that vector in the same commit and treat it as a save-breaking change for
+    /// new games and careerless saves.
     /// </para>
     /// </summary>
     public static class LeagueBootstrap
@@ -313,5 +321,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | generation, per-club strength application, F1..F3 gates.           |
 // | 1.1     | 2026-10-20 | —      | P-L2: F3 comment restated — the template sum is 23 (strictly below |
 // |         |            |        | CLUB_SQUAD_SIZE, ERR-031-004), not the cap. Comment-only change.   |
-// | 1.2     | 2026-10-20 | —      | AR round 3 L5 (comment-only): the header's "25-player" squad is 23 (3/8/7/5, ERR-031-004); the KD-4 note "tag/ordinal 84 stay pinned to #30 T2's first draw site" restated — the tag landed with T2's FixtureKey, ordinal 84 is deliberately unallocated in code (ERR-030-012). |
+// | 1.2     | 2026-10-20 | —      | AR round 2 L5 (comment-only): the header's "25-player" squad is 23 (3/8/7/5, ERR-031-004); the KD-4 note "tag/ordinal 84 stay pinned to #30 T2's first draw site" restated — the tag landed with T2's FixtureKey, ordinal 84 is deliberately unallocated in code (ERR-030-012). |
+// | 1.3     | 2026-10-20 | —      | AR round 3 L9 (comment-only): "Rosters are NOT serialized ... rewrites every club in every existing save" scoped to new games and careerless saves — a career save takes its roster from the progression block (SeasonSaveManager.Load, #28 T2a). |
 #endregion

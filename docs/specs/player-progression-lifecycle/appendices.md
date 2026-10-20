@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.12 — AR round 1 L1: the Squad-swap owner named (CommitSeasonBoundary))
+**Last Updated:** October 20, 2026 (v0.13 — AR round 3 widening of ERR-028-027: Appendix C's boundary call is the shipped `GenerateRegen(rng, stream, 7, next++, position, worldDay)`)
+**Last Updated (prior):** October 20, 2026 (v0.12 — AR round 1 L1: the Squad-swap owner named (CommitSeasonBoundary))
 **Last Updated (prior):** October 19, 2026 (v0.11 — ERR-028-024 / ERR-028-025: Appendix A mirrors live; worked example restated)
 **Last Updated (prior):** August 24, 2026 (v0.10 — round-2 finding spec-32-flat-band-step-sweep-stopped-two-
 paragraphs-short: Appendix A's `POINT_COST` row corrected — it still described the KD-8 identity
@@ -16,7 +17,7 @@ since the ramp's whole-life integral equals the step's exactly at every half-wid
 **Last Updated (prior):** August 10, 2026 (v0.4 — ERR-028-017: Appendix A's `DOMAIN_TAG_PLAYER_PROGRESSION`/`SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION` rows marked "not yet in the catalogue" — the v0.3 "copied verbatim from code" claim was false for these two, which exist only in doc-comment prose, not as declared constants; Appendix B's worked example scoped to the raw per-player projection, since the public `SeedFrom`+`AdvanceDay` entry point spends its first point one day later (world-day 365, not 364) since ERR-028-014 anchored the cursor at the seed day)
 **Last Updated (prior):** August 9, 2026 (v0.3 — Appendix A brought current with `PlayerProgressionConstants.cs`: 7 constants added that landed at #28 T0/T1 with no catalogue row — `PROGRESSION_SAVE_MAGIC`, `PROGRESSION_NOT_ADVANCED_SENTINEL` (both `[FIXED]`) and `PA_MIN`, `REGEN_PA_HEADROOM`, `REGEN_AGE_MIN`, `REGEN_AGE_MAX`, `NEW_GAME_PA_HEADROOM` (all `[GT]`); values copied verbatim from code, none changed)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -153,10 +154,11 @@ the baseline exactly for this or any player. Read `RetirementAgeDays` as the aut
 one worked instance of it.)*
 - **Day 4020 (`AdvanceDay`):** `RetirementFlag = true`, `RetirementDay = 4020`. The player stays in
   the roster, stays selectable — the season's remaining fixtures are undisturbed (FR-PG-014).
-- **Season boundary (`RunSeasonBoundary`):** `retirees = [175]` → `RetirementResult([175])`.
-  `GenerateRegen(rng, streamIndex, clubId=7, ref nextPlayerId, position = player 175's, ...)` draws a new
-  record **in the retiree's position** (ERR-028-024) with a **fresh** `PlayerId = nextPlayerId` (say 631, beyond
-  the initial `7 * 25 + k` range), a drawn PA,
+- **Season boundary (`RunSeasonBoundary` — the name of the step; `PrepareSeasonBoundary` stages it):** `retirees =
+  [175]` → the plan's `RetiredPlayerIds = [175]`. `GenerateRegen(rng, stream, 7, next++, position, worldDay)` (the
+  shipped signature, ERR-028-027: the caller allocates the id; `position` is player 175's, `worldDay` the last lived
+  day) draws a new record **in the retiree's position** (ERR-028-024) with a **fresh** `PlayerId = next++` (say 631,
+  beyond the initial `7 * 25 + k` range), a drawn PA,
   and `[1,20]` attributes below it. The lifecycle entry for 175 is removed; the entry for 631 is
   inserted → block entry count unchanged (FR-PG-019). `ProgressionEngine.CommitSeasonBoundary` installs the new
   rosters (the store instance is kept, so every `Squad` projection sees them); #30 stages the plan and commits it,
@@ -181,4 +183,5 @@ one worked instance of it.)*
 | 0.10 | 2026-08-24 | — | Round-2 finding spec-32-flat-band-step-sweep-stopped-two-paragraphs-short. Appendix A's `POINT_COST` row still read "with the §4.3 band step this makes exactly one `[1,20]` step per year" — the same stale framing the v0.9-adjacent `section-3.md` v0.11 sweep corrected elsewhere but did not reach here. Restated against §3.1.3's accrual curve; the KD-8 identity itself is unchanged (the ramp's whole-life integral equals the retired step's exactly, at every half-width — the P5 pivot), so no value or number moved. |
 | 0.11 | 2026-10-19 | — | **ERR-028-025**: Appendix A `DOMAIN_TAG_PLAYER_PROGRESSION` / `SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION` live, `REGEN_STREAM_SITE_ID` / `_VERSION` added; the boundary worked example's F6 bullet restated (staged, marker-free). **ERR-028-024**: the regen takes the retiree's position. |
 | 0.12 | 2026-10-20 | — | **AR round 1 L1 (ERR-028-025)**, doc-only. The worked example said "`#30`/`#27` apply the `Squad` swap"; it is `ProgressionEngine.CommitSeasonBoundary` that installs the new rosters (#30 only stages and commits the plan; #27 applies nothing). |
+| 0.13 | 2026-10-20 | — | **AR round 3 (ERR-028-027 widening)**, doc-only. The boundary worked example still called `GenerateRegen(rng, streamIndex, clubId=7, ref nextPlayerId, position = ..., ...)` and a `RetirementResult([175])` — the pre-ERR-028-027 signature and a type that was never built. Now `GenerateRegen(rng, stream, 7, next++, position, worldDay)` and the plan's `RetiredPlayerIds = [175]`. Values unchanged. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 3 L5 — the position param doc's Binomial(25, 0.25) restated for the
+// Modified: 2026-10-20 (AR round 2 L5 — the position param doc's Binomial(25, 0.25) restated for the
 //           23-player squad; comment-only — v1.10)
 //           Prior: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
 //           (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
@@ -285,5 +285,5 @@ namespace TacticalDirector.PlayerProgression
 // | 1.9     | 2026-10-19 | —      | ERR-028-024: GenerateRegen takes the retiree's position instead of  |
 // |         |            |        | drawing one uniformly (KD-6 template drift); draw index 3 stays     |
 // |         |            |        | reserved and undrawn so every later draw value is unchanged.        |
-// | 1.10    | 2026-10-20 | — | AR round 3 L5 (comment-only): the `position` parameter doc's `Binomial(25, 0.25)` restated as `Binomial(squad size, 0.25)` (23 in today's bootstrap, ERR-031-004). No behaviour change. |
+// | 1.10    | 2026-10-20 | — | AR round 2 L5 (comment-only): the `position` parameter doc's `Binomial(25, 0.25)` restated as `Binomial(squad size, 0.25)` (23 in today's bootstrap, ERR-031-004). No behaviour change. |
 #endregion

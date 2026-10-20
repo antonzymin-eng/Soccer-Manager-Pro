@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** October 20, 2026 (v1.9 — ERR-030-055: Appendix B.1's transfers-coherence paragraph claimed "none of the three can write or admit what another refuses" — false, because the roster authority differs by site; narrowed to what the code guarantees. Prior update follows)
+**Last Updated:** October 20, 2026 (v1.10 — ERR-030-058 (AR round 3, wording): the third cross-blob rule said "Four guards implement it today" while listing five (the #31 `RequireDestinationCarriesNoTransfers` guard was appended by ERR-030-054 without the count); now "Five", re-verified against `SeasonSaveManager`'s five `RequireDestinationCarriesNo*` methods. Prior update follows)
+**Last Updated (prior):** October 20, 2026 (v1.9 — ERR-030-055: Appendix B.1's transfers-coherence paragraph claimed "none of the three can write or admit what another refuses" — false, because the roster authority differs by site; narrowed to what the code guarantees. Prior update follows)
 **Last Updated (prior):** October 18, 2026 (v1.8 — ERR-030-054 (#31 T1): Appendix A's frame-version row 7 → 8 and Appendix B's frame gains the mandatory #31 `XFER` transfers sub-blob between the finance block and the optional match block; new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; B.1's third cross-blob rule gains #31 as its fifth family, keyed on wiring because a wired #31 state always encodes its club record; a fourth cross-blob rule (transfers coherence) is stated; `SeasonLoop.Restore` gains `transfersOrNull`. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v1.7 — ERR-030-050 supersedes ERR-030-049's producer-wired narrowing; every persisted family is expressible on Restore as soon as its frame can be populated, and non-empty finance state must exactly match SeasonState.ClubIds. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v1.6 — ERR-030-049: Appendix A's frame-version row 6 → 7 and Appendix B's frame gains the mandatory #40 `FNCE` finance sub-blob between the discipline block and the optional match block, for #40 T1b; new `FINANCE_SAVE_MAGIC` / `FINANCE_SAVE_FORMAT_VERSION` rows; "five mandatory career sub-blobs" → six. Appendix B.1's third cross-blob rule gains #40 as its fourth family, keyed on emptiness rather than on a wiring flag because FR-FN-025 leaves #40 no legitimate drained state — the property v1.4's re-key turned on)
@@ -18,7 +19,7 @@
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 1.8
+**Version:** 1.10
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -227,7 +228,7 @@ in both, so the two rules cannot drift from each other by one boundary gaining a
 blobs. This one governs the *destination*, and it is stated here because — like them — it can only be
 enforced by the layer that holds the whole file: `SeasonSaveManager.Save` **MUST refuse to overwrite a
 populated block with one the writing composition cannot account for**, per block family, reading the
-destination back before it writes. Four guards implement it today —
+destination back before it writes. Five guards implement it today —
 `RequireDestinationCarriesNoRoster` (#28's store, ERR-028-008), `RequireDestinationCarriesNoCareer`
 (the #29/#41/#30 career triple), `RequireDestinationCarriesNoDiscipline` (#44's tally,
 ERR-030-036), `RequireDestinationCarriesNoFinances` (#40's per-club entries, ERR-030-049), and
@@ -421,4 +422,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 1.7 | 2026-09-10 | — | **ERR-030-050 review correction.** Restores Appendix B.1's original, unconditional persisted-family rule: every family must be expressible on `SeasonLoop.Restore` once its frame can be populated; `financesOrNull` is T1b, not T2. Adds the current-season finance coherence invariant (empty legal pre-T2; non-empty ClubIds exactly equal `SeasonState.ClubIds` on Save/Load/composition), explains why destination ClubIds are the wrong key for Save As, and preserves the N→0 destination guard as a separate protection. `ERR-030-049` remains historical and is expressly superseded only on its producer-wired narrowing. |
 | 1.8 | 2026-10-18 | — | **ERR-030-054** (#31 T1): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 7 → 8 for the mandatory #31 `XFER` transfers sub-blob, plus new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; Appendix B's frame gains the block between finance and the optional match block ("six mandatory career sub-blobs" → seven); B.1's third cross-blob rule gains the fifth guard, keyed on the block's club count (a wiring fact); new transfers-coherence rule (one owner, three boundaries); `SeasonLoop.Restore` gains `transfersOrNull`. No migration (D-10 / #50). |
 | 1.9 | 2026-10-20 | — | **ERR-030-055** (wording correction, spec + test same pass): B.1's transfers-coherence paragraph ended "so none of the three can write or admit what another refuses" — false: composition checks roster membership against the loop's resolved roster provider, `Save`/`Load` against the file's `PROG` projection only (none for a careerless save), so a state composed over a provider that is not the progression store can be admitted at one site and refused at another. Narrowed to what the code guarantees: managed-club rule always, roster membership against the `PROG` projection when the file carries one and against the composition's provider at composition. Orphan-contract negatives added at `Load` and at composition (`SeasonSaveTransfersTests`). |
+| 1.10 | 2026-10-20 | — | **ERR-030-058** (AR round 3, wording correction, spec-text only — the code was already right): the third cross-blob rule's "Four guards implement it today" corrected to "Five"; the sentence lists `RequireDestinationCarriesNoRoster`, `…NoCareer`, `…NoDiscipline`, `…NoFinances` and `…NoTransfers` (five `private static` methods in `SeasonSaveManager.cs`). The header `**Version:**` line, stale at 1.8 since the v1.9 row, is brought to 1.10. |
 #endregion

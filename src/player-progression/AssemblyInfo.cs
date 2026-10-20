@@ -1,6 +1,7 @@
 // File:     src/player-progression/AssemblyInfo.cs
 // Created:  2026-08-23
-// Modified: 2026-08-24 (round-2 finding fr-cs-015-rationale-false-and-applied-unevenly — v1.1)
+// Modified: 2026-10-20 (AR round 3 M13 — IVT for the SeasonSave transfer adapter and its tests — v1.2)
+//           2026-08-24 (round-2 finding fr-cs-015-rationale-false-and-applied-unevenly — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28, Code Standards #20 FR-CS-015
 // Purpose:  Assembly-level attributes for TacticalDirector.PlayerProgression. Grants the test assembly
@@ -22,6 +23,13 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("TacticalDirector.PlayerProgression.Tests")]
 
+// AR round 3 M13 (ERR-028-028): ProgressionEngine.CanMovePlayer / MovePlayer are INTERNAL. The roster
+// authority's id-preserving re-home is a seam for #30's transfer adapter (SeasonTransferRoster) only — a
+// public one forged a free transfer through SeasonLoop.Progression and orphaned the #29/#41/#30 rows. The
+// season-save assembly is the adapter's home; its test assembly drives the same members directly.
+[assembly: InternalsVisibleTo("TacticalDirector.SeasonSave")]
+[assembly: InternalsVisibleTo("TacticalDirector.SeasonSave.Tests")]
+
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                                |
 // | 1.0     | 2026-08-23 | —      | Initial creation. Without it, demoting AbilityModel's parameterised |
@@ -42,4 +50,8 @@ using System.Runtime.CompilerServices;
 // |         |            |        | access-modifier or IVT-target change here — the grant already      |
 // |         |            |        | covers every internal member; only the doc text and the names it   |
 // |         |            |        | cites change.                                                      |
+// | 1.2     | 2026-10-20 | —      | AR round 3 M13 (ERR-028-028): IVT to TacticalDirector.SeasonSave   |
+// |         |            |        | and TacticalDirector.SeasonSave.Tests so ProgressionEngine.        |
+// |         |            |        | CanMovePlayer / MovePlayer can be internal (transfer-adapter seam  |
+// |         |            |        | only) without breaking SeasonTransferRoster or its tests.          |
 #endregion

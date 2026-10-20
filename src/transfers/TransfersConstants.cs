@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersConstants.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20
+// Modified: 2026-10-20 (AR round 3 — v1.7)
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #31 Appendix A, §3.1-§3.2, §3.5 (transfer constants)
@@ -100,10 +100,10 @@ namespace TacticalDirector.Transfers
         /// </summary>
         public static readonly int SummerWindowInSeasonDays = Positive("SummerWindowInSeasonDays", 38);
 
-        /// <summary>[GT] Genesis contract length used by the later T2 seeding step. Config key [transfers] DefaultContractSeasons. Spec #31 Appendix A.</summary>
+        /// <summary>[GT] Genesis contract length: seeded by <see cref="TransfersState.CreateAtGenesis"/> and, at each season boundary, by <see cref="TransfersState.PrepareSeasonBoundary"/> for a regen joining the managed club. Config key [transfers] DefaultContractSeasons. Spec #31 Appendix A.</summary>
         public static readonly int DefaultContractSeasons = Positive("DefaultContractSeasons", 3);
 
-        /// <summary>[GT] Genesis wage used by the later T2 seeding step. Config key [transfers] DefaultWagePerPeriod. Spec #31 Appendix A.</summary>
+        /// <summary>[GT] Flat genesis wage (every seeded contract, no per-player wage model): <see cref="TransfersState.CreateAtGenesis"/> and the boundary regen seeding. Config key [transfers] DefaultWagePerPeriod. Spec #31 Appendix A.</summary>
         public static readonly int DefaultWagePerPeriod = NonNegative("DefaultWagePerPeriod", 1_000);
 
         #endregion
@@ -209,4 +209,5 @@ namespace TacticalDirector.Transfers
 // | 1.4     | 2026-09-14 | —      | Derive club-need cap inline at its consumer so static-field declaration order cannot affect initialization. |
 // | 1.5     | 2026-10-18 | —      | #31 T1 (ERR-031-003): TRANSFERS_SAVE_MAGIC "XFER" + TRANSFERS_SAVE_FORMAT_VERSION 1 + derived block widths + the one-club bound. |
 // | 1.6     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): [GT] SummerWindowLengthDays (45) replaced by SummerWindowInSeasonDays (38), the in-season tail of the window from the opening fixture day. |
+// | 1.7     | 2026-10-20 | —      | AR round 3 T-L7: DefaultContractSeasons/DefaultWagePerPeriod docs no longer say 'later T2 seeding step' (T2 has landed: CreateAtGenesis and the boundary regen seeding). |
 #endregion

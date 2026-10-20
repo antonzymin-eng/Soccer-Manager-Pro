@@ -1,5 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-10-20 (AR round 3 S-L4 — RosterGeneration doc: also bumped by every MovePlayerRows — v1.30)
 // Modified: 2026-10-20 (#31 T2: CanMovePlayerRows / MovePlayerRows carry a re-homed player's rows
 //           verbatim; AR round 1 L1 stale comments — v1.29)
 // Modified: 2026-10-19 (ERR-031-005 doc: the global-uniqueness rationale — v1.28)
@@ -112,13 +113,14 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Increments every time <see cref="CommitRosterSync"/> replaces the per-club arrays — i.e. once
-        /// per season boundary, whether or not the roster actually moved.
+        /// Increments every time the per-club arrays are replaced: <see cref="CommitRosterSync"/> (once per
+        /// season boundary, whether or not the roster actually moved) and <see cref="MovePlayerRows"/> (once
+        /// per transfer, AR round 3 S-L4).
         /// <para>
         /// <b>It is load-bearing for <see cref="CommitRosterSync"/></b>, which refuses a plan prepared at
-        /// a different generation: installing one would overwrite the current roster with a stale one.
-        /// That is the reason it must exist, and the reason it moves on a no-churn sync too — the arrays
-        /// are replaced either way.
+        /// a different generation: installing one would overwrite the current roster with a stale one —
+        /// including one a transfer has since re-homed. That is the reason it must exist, and the reason it
+        /// moves on a no-churn sync too — the arrays are replaced either way.
         /// </para>
         /// <para>
         /// It is <b>not</b> a staleness check any caller is asked to perform. The handle that could go
@@ -1891,4 +1893,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | 1, before this slot-4 step, so the age reaching the term is the day's own.
 // | 1.28    | 2026-10-19 | —      | ERR-031-005 (doc only): RequireGloballyUniquePlayerIds' rationale names the genesis formula + #28's single monotonic allocator instead of 'an accident of today's formula'. |
 // | 1.29    | 2026-10-20 | —      | #31 T2 (ERR-031-005): CanMovePlayerRows / MovePlayerRows — a transfer carries the player's training/medical/appearance rows verbatim between clubs, bumping RosterGeneration. AR round 1 L1: the SyncToRoster doc names SeasonBoundaryPlan; the per-club-walk note says transfers bypass it. |
+// | 1.30    | 2026-10-20 | —      | AR round 3 S-L4 (doc only): RosterGeneration's summary no longer says it moves 'once per season boundary' — MovePlayerRows bumps it on every transfer too. |
 #endregion

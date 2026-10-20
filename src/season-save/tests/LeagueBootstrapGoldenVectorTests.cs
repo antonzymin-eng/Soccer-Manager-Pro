@@ -1,13 +1,15 @@
 // File:     src/season-save/tests/LeagueBootstrapGoldenVectorTests.cs
 // Created:  2026-07-25
-// Modified: 2026-10-20 (P-M6 — digests re-pinned for the 3/8/7/5 template — v1.2)
+// Modified: 2026-10-20 (AR round 3 L9 — the persistence claim scoped to new games / careerless saves; comment-only — v1.3)
+//           (P-M6 — digests re-pinned for the 3/8/7/5 template — v1.2)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) §3 + KD-10;
 //           Deterministic Simulation #16 §9.5 #4 (the golden-vector precedent)
 // Purpose:  The pinned golden vector for league generation. Every other determinism test on this path
 //           is SELF-REFERENTIAL ("generate twice, compare"), which cannot detect a change to the
-//           generation function itself — and rosters are not persisted, so such a change silently
-//           rewrites every club in every existing save. This file is the only thing that fails when
+//           generation function itself — and a new game's / careerless save's rosters are not
+//           persisted, so such a change silently rewrites every club of them (a career save carries
+//           its roster in the progression block and is unaffected — AR round 3 L9). This file is the only thing that fails when
 //           generation moves.
 
 using System;
@@ -22,21 +24,23 @@ namespace TacticalDirector.SeasonSave.Tests
     /// <summary>
     /// Absolute-value locks on <see cref="LeagueBootstrap.Generate(ulong, int)"/>.
     /// <para>
-    /// <b>Why this exists.</b> A save file carries club IDs, not squads; <see cref="League"/> re-derives
-    /// every roster as the <c>ISquadProvider</c> that <c>SeasonSaveManager.Load</c> consumes, and that
+    /// <b>Why this exists.</b> A NEW game and a careerless save carry club IDs, not squads (a career save
+    /// carries its roster in the progression block and does not depend on this path — AR round 3 L9);
+    /// <see cref="League"/> re-derives every such roster as the <c>ISquadProvider</c> that
+    /// <c>SeasonSaveManager.Load</c> consumes (and as the day-0 roster a career is seeded from), and that
     /// interface requires the resolved squad to be the SAME roster the saved match loaded. So the
-    /// generation path is persistence-equivalent: a draw-order change in <see cref="RosterGenerator"/>,
+    /// generation path is persistence-equivalent for them: a draw-order change in <see cref="RosterGenerator"/>,
     /// a reorder of <c>NameCatalogue</c> / <see cref="ClubNameCatalogue"/>, an edit to
     /// <see cref="LeagueBootstrapConstants.SquadPositionCounts"/>, or a one-line tweak to a
     /// <c>[GT]</c> generation constant such as <c>PlayerDatabaseConstants.AttributeBaseMean</c> — which
-    /// reads as an innocuous balance change — invalidates every save. Same-seed determinism tests stay
+    /// reads as an innocuous balance change — invalidates every new-game seed and careerless save. Same-seed determinism tests stay
     /// green through all of those. These do not: verified by perturbing <c>AttributeBaseMean</c>
     /// 10 → 11, which fails the digest and spot-value locks here while the rest of the suite passes.
     /// </para>
     /// <para>
     /// <b>If this fails.</b> Do not re-pin to make it pass. Either the change was unintended — revert
     /// it — or it is deliberate, in which case re-pin in the SAME commit and treat it as a
-    /// save-breaking change (the #16 golden-vector convention: <c>hkdf-sha256-kat.md</c>,
+    /// save-breaking change for those (the #16 golden-vector convention: <c>hkdf-sha256-kat.md</c>,
     /// <c>siphash-2-4-kat.md</c>, <c>serialize-canonical-corpus.md</c>).
     /// </para>
     /// </summary>
@@ -98,8 +102,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.AreEqual(
                 ExpectedLeagueDigest, Digest(league),
-                "League generation has changed. Rosters are regenerated from the world seed rather than " +
-                "persisted, so this rewrites every club in every existing save. Revert the change, or " +
+                "League generation has changed. A new game's / careerless save's rosters are regenerated from the world seed rather than " +
+                "persisted, so this rewrites every club of them (career saves carry their roster). Revert the change, or " +
                 "re-pin here in the same commit and treat it as save-breaking.");
         }
 
@@ -117,7 +121,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.AreEqual(
                 ExpectedDefaultLeagueDigest, Digest(league),
                 "League generation has changed at the DEFAULT club count. Same consequence as the " +
-                "small-league vector: every existing save's rosters are rewritten.");
+                "small-league vector: every new game's and careerless save's rosters are rewritten.");
 
             for (int c = 0; c < GoldenDefaultClubCount; c++)
             {
@@ -300,4 +304,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | regenerated from the world seed rather than saved.                 |
 // | 1.1     | 2026-10-19 | —      | ERR-031-004: both league digests re-pinned for the 23-player template (25 -> 23, two trailing forwards dropped); spot values unchanged. |
 // | 1.2     | 2026-10-20 | —      | P-M6: both league digests re-pinned for the 3/8/7/5 template (was 3/8/8/4; index 18 becomes a forward, indices 0-17 unchanged); spot values unchanged. |
+// | 1.3     | 2026-10-20 | —      | AR round 3 L9 (comment-only): the "rewrites every existing save" claim scoped to new games and careerless saves; career saves take their roster from the progression block. |
 #endregion

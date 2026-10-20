@@ -1,11 +1,12 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.5 — ERR-031-011: KD-6 states the window derivation)
+**Last Updated:** October 20, 2026 (v0.6 — AR round 3, ERR-031-013: KD-2 records that the counterparty club's #40 entry is deliberately not posted)
+**Last Updated (prior):** October 20, 2026 (v0.5 — ERR-031-011: KD-6 states the window derivation)
 **Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
 **Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -75,7 +76,12 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
   arithmetic on a coherent signed debt balance cannot preempt `InsufficientBudget` (`ERR-031-002`). Wage posting to #40's `WageBillAggregate` is **deferred to the deep tier** — minimal posts only the
   `TransferFee`, so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2, "no #31/#34 producer exists yet") is
   preserved verbatim; the deep-tier wage producer lands with a #40 back-prop relaxing FR-FN-015 + a `WageBudget`
-  affordability gate (§7).
+  affordability gate (§7). **The counterparty is not posted (AR round 3, ERR-031-013):** at minimal #31
+  posts the fee only to the MANAGED club's #40 entry; the AI counterparty club's entry is deliberately left
+  untouched. Consequence: AI clubs' `FinanceView` and the season-end `SettleFinances` never see transfer cash, so money
+  enters or leaves the league on every transfer (a buy debits the manager's club for a fee no club receives; a sale
+  credits it from no club). Mirror posting inside the same staged, publish-on-`Accepted` seam is an owner decision
+  deferred in §7.2 (open-issues `transfer-counterparty-ledger`).
 - **KD-3 (the reusable negotiation seam).** The offer/response surface (`Offer`, `NegotiationOutcome`,
   `EvaluateOffer`) is authored once, **counterparty-generic**, so #32 (scouting bids) and #34 (staff hiring)
   consume it without duplication.
@@ -116,4 +122,5 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 | 0.3 | 2026-09-21 | — | ERR-031-001/002: KD-1 now matches FR-TX-002's always-on minimal positional scarcity, and KD-2 explicitly orders affordability before staged #40 mutation validation. |
 | 0.4 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): KD-7 rewritten from a packed-id re-key to a stable-id re-home; the packed formula is genesis allocation only, #28 `NextPlayerId` is the single post-genesis allocator, and club membership is a roster fact. |
 | 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): KD-6 restated with the window derivation — open on the day #30 begins the season, close at the opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 — superseding ERR-031-008's roll-day-length window. |
+| 0.6 | 2026-10-20 | — | ERR-031-013 (AR round 3, M16): KD-2 states that the minimal tier posts the fee to the MANAGED club's #40 entry only; the AI counterparty's entry is deliberately untouched, so AI clubs' `FinanceView` / `SettleFinances` never see transfer cash and money enters or leaves the league on every transfer. The mirror post is an owner decision (§7.2). |
 #endregion

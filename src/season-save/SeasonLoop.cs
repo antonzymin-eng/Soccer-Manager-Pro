@@ -1,6 +1,10 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-20 (ERR-031-011 — v1.41: (d″) window close anchored to the next calendar's opening
+// Modified: 2026-10-20 (AR round 3 S-L1/S-L4/T-L8 — v1.43: the SubmitTransferBid _activeMatch guard is deleted (sim-thread contract documented instead);
+//           stale (d″)/contracts comment corrected; RollToNextSeason documents (d″)'s ArgumentException.)
+//           Prior: 2026-10-20 (AR round 3 M13 — v1.42: doc-comment only on Progression — reads only; roster moves
+//           go through SubmitTransferBid.)
+//           Prior: 2026-10-20 (ERR-031-011 — v1.41: (d″) window close anchored to the next calendar's opening
 //           fixture day; SubmitTransferBid refuses mid-fixture; roll/bid docs corrected.)
 //           Prior: 2026-10-20 (#31 T2 — v1.40: SubmitTransferBid, TransfersSnapshot, the TransferFee refusal,
 //           and the staged #31 boundary step (d″).)
@@ -687,6 +691,10 @@ namespace TacticalDirector.SeasonSave
         /// progression block from, and the surface #31/#38 read
         /// <c>LifecycleView</c> through (FR-PG-023).
         /// </para>
+        /// <para>
+        /// For READS only (AR round 3 M13): a roster move goes through <see cref="SubmitTransferBid"/>, never
+        /// the store directly — the re-home members are internal to the season-save assembly.
+        /// </para>
         /// </summary>
         public ProgressionEngine Progression => _progression;
 
@@ -738,27 +746,20 @@ namespace TacticalDirector.SeasonSave
         /// the #28 store and moves his #29/#41/#30 rows, all under his unchanged id (ERR-031-005).
         /// </para>
         /// <para>
-        /// <b>Never mid-fixture.</b> A transfer re-homes a player in the very rosters the managed fixture's
-        /// engine was booted from, so a bid while <see cref="ActiveMatch"/> is non-null fails loud. Within
-        /// the synchronous <see cref="AdvanceAndPlayNextRound"/> that window is reachable only from another
-        /// thread (the #38 observer seam); the guard is there for the later interactive match flow.
+        /// <b>Sim thread, between rounds.</b> Like every command on this class, a bid must be called on the
+        /// sim thread between rounds (see the class's THREAD SAFETY note: none). A transfer re-homes a
+        /// player in the very rosters a round's engines are booted from; nothing here can detect a caller
+        /// that breaks that contract from another thread, so the contract is the only protection (AR round 3).
         /// </para>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">A managed fixture is in progress; #31 or #28
-        /// is not wired; or a #31 fail-loud condition — F4 (the command is outside the active window) or the
-        /// F6 offer-direction mismatch (the player is not at the club the offer moves him from).</exception>
+        /// <exception cref="System.InvalidOperationException">#31 or #28 is not wired; or a #31 fail-loud
+        /// condition — F4 (the command is outside the active window) or the F6 offer-direction mismatch (the
+        /// player is not at the club the offer moves him from).</exception>
         /// <exception cref="System.ArgumentOutOfRangeException">A #31 F6 caller-contract violation:
         /// malformed terms (negative fee/wage/id, non-positive length), the managed club or an unknown club
         /// named as counterparty (ERR-031-010), or a player outside the current #27 club universe.</exception>
         public TransferSubmissionOutcome SubmitTransferBid(in Offer offer)
         {
-            if (_activeMatch != null)
-            {
-                throw new System.InvalidOperationException(
-                    "A transfer cannot commit while a managed fixture is in progress; it would re-home a "
-                    + "player out of the rosters the running match engine was booted from.");
-            }
-
             if (_transfers == null)
             {
                 throw new System.InvalidOperationException(
@@ -1228,6 +1229,12 @@ namespace TacticalDirector.SeasonSave
         /// would install a state violating the KD-4 cursor invariant (FR-SN-011); or the final fixture
         /// day has not been completed through day advancement (ERR-030-053).
         /// </exception>
+        /// <exception cref="System.ArgumentException">
+        /// (d″) can refuse the roll while staging, before anything is written (AR round 3): the managed
+        /// club's arriving regens repeat an id, or its aged contracts plus the arrivals would exceed
+        /// <c>CLUB_SQUAD_SIZE</c>. Both are integration defects — #28's boundary plan never produces
+        /// either — and a refused roll leaves season, board, finances, rosters and contracts untouched.
+        /// </exception>
         public SeasonRollOutcome RollToNextSeason()
         {
             if (!_state.Calendar.IsSeasonComplete)
@@ -1376,8 +1383,9 @@ namespace TacticalDirector.SeasonSave
             // id from NextPlayerId (FR-PG-011) rather than the retiree's slot. A TRANSFER needs no #44
             // counterpart: PlayerIds are stable across a re-home (ERR-031-005), so a tally follows its
             // player by construction and MigratePlayerId has no caller by design. (The #29/#41/#30 rows do
-            // move on a transfer — PlayerCareerStates.MovePlayerRows — and #31's own contracts move with
-            // the (d″) step above.) DropPlayer is infallible.
+            // move on a transfer — PlayerCareerStates.MovePlayerRows — and #31's own contracts are inserted or
+            // removed by TransferCommands.SubmitBid at the bid; the (d″) step above only ages them, drops
+            // the retirees' and seeds the managed regens'.) DropPlayer is infallible.
             if (boundary != null && _disciplineRules != null)
             {
                 for (int i = 0; i < boundary.RetiredPlayerIds.Count; i++)
@@ -2476,4 +2484,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.39 | 2026-10-19 | — | ERR-028-025: step (d) LIVE — PrepareSeasonBoundary staged before (e), CommitSeasonBoundary after; (d′) PrepareRosterSync reads the planned rosters (PlannedSquads); FR-DC-013 retirement drop delivered; M11 resolved. |
 // | 1.40 | 2026-10-20 | — | #31 T2: SubmitTransferBid (exact-value #40 staging, publish only on Accepted, the SeasonTransferRoster port); TransfersSnapshot; ApplyTransaction refuses TransferFee once #31 is wired; roll step (d″) stages #31's season boundary (aging, retiree/regen contract lockstep, spend reset, next window) and installs after BeginNextSeason. AR round 1 L2: version rows reordered. |
 // | 1.41 | 2026-10-20 | — | ERR-031-011 (AR round 2): (d″) passes SummerWindowFor(roll day, nextCalendar.DayOfRound(0)) so the window close no longer depends on roll timing; SubmitTransferBid fails loud while ActiveMatch is non-null; its exception docs name ArgumentOutOfRangeException for F6 caller-contract violations; the RollToNextSeason summary lists (d″) and states KD-6 over persisted career state. |
+// | 1.42 | 2026-10-20 | — | AR round 3 M13 (ERR-028-028): doc comment on Progression only — a read surface; roster moves go through SubmitTransferBid. No behaviour change. |
+// | 1.43 | 2026-10-20 | — | AR round 3 S-L1/S-L4/T-L8: SubmitTransferBid's _activeMatch guard deleted (it could not fire on one thread and was a racy check-then-act across threads; the sim-thread-between-rounds contract is documented from the class's THREAD SAFETY note); the roll-time comment no longer says (d″) moves #31's contracts on a transfer; RollToNextSeason documents (d″)'s ArgumentException. |
 #endregion

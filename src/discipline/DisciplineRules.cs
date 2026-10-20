@@ -1,6 +1,6 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-10-20 (AR round 3 L5 — the ClubPlayerIds-membership remark said DropPlayer has no production
+// Modified: 2026-10-20 (AR round 2 L5 — the ClubPlayerIds-membership remark said DropPlayer has no production
 //           caller; RollToNextSeason has called it since ERR-028-025. Comment-only — v1.12)
 //           Prior: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
 //           M2 remark still described the completeness lock as covering "every public static readonly
@@ -729,5 +729,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | .cs v1.2 (M-A) had since widened the scan to BindingFlags.NonPublic too.  |
 // |         |            |        | Corrected to "static readonly, any type and any access level, not only    |
 // |         |            |        | public int". No behaviour change.                                          |
-// | 1.12    | 2026-10-20 | — | AR round 3 L5 (comment-only): the membership remark's "MigratePlayerId and DropPlayer have no production caller at all" corrected — DropPlayer is called from SeasonLoop.RollToNextSeason for each retiree since ERR-028-025 (FR-DC-013's retirement drop); MigratePlayerId still has none. No behaviour change. |
+// | 1.12    | 2026-10-20 | — | AR round 2 L5 (comment-only): the membership remark's "MigratePlayerId and DropPlayer have no production caller at all" corrected — DropPlayer is called from SeasonLoop.RollToNextSeason for each retiree since ERR-028-025 (FR-DC-013's retirement drop); MigratePlayerId still has none. No behaviour change. |
 #endregion

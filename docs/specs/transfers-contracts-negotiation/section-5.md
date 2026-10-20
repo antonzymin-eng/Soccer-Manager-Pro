@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.12 — T-TX-REKEY-005 live)
+**Last Updated:** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: T-TX-NEU-001 restated and re-locked; T-TX-DET-003, T-TX-BID-008, T-TX-REKEY-003 live; T-TX-REKEY-005 claims match what is asserted)
+**Last Updated (prior):** October 20, 2026 (v0.12 — T-TX-REKEY-005 live)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: window locks; T-TX-NORMAL-001 and §5.7 cover FR-TX-029 / F9)
 **Last Updated (prior):** October 20, 2026 (v0.10 — T2 locks live)
 **Last Updated (prior):** October 20, 2026 (v0.9 — ERR-031-006: T-TX-BID-005 and §5.7 restated for the stable-id re-home)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -49,7 +50,15 @@
   the old managed contract locally; the external roster may already have moved, which is why T2 must make the
   production preview→commit contract infallible rather than relying on rollback.
 - **T-TX-BID-007** — counteroffer/reject are ordinary no-mutation `TransferSubmissionOutcome` values.
-- **T-TX-BID-008** — #31 writes no `ClubFinances` field directly and keeps no parallel cash ledger.
+- **T-TX-BID-008** — #31 writes no `ClubFinances` field directly and keeps no parallel cash ledger. Live (AR round 3,
+  ERR-031-013) as `TransfersT0Tests.SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState`:
+  (a) an accepted buy's finance equals exactly `FinanceLedger.ApplyTransaction` of the same fee transaction (byte-compared
+  through the #40 codec); (b) a reflection scan of every type in the assembly finds no `ClubFinances`- or
+  `ClubFinanceEntry`-typed member and no `Balance`/`Cash`/`Ledger`/`Wallet`-named member; (c) an IL scan of every method
+  body finds no `stfld` to a `ClubFinances` field — a violating probe in the test proves the scan can see one.
+  Mutation-verified (a direct `finances.Balance = …` in `SubmitBid`, and a `ClubFinances` field on `TransfersState`, each fail
+  it). The **counterparty** club's #40 entry is deliberately never posted at minimal (KD-2, §7.2):
+  `SeasonTransfersT2Tests.AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign` pins that decision.
 
 ## 5.3 Roster re-home (KD-7; stable ids since ERR-031-005)
 
@@ -59,17 +68,22 @@
   fails loud. Managed contract state is inserted after a confirmed buy commit or removed after a confirmed sell.
 - **T-TX-REKEY-002** — *(restated)* the commit is confirmed through the port before local mutation; a commit that
   does not land fails loud with local state untouched (both directions).
-- **T-TX-REKEY-003** — #31 migrates only its own contract state; #28/#33 state is not referenced.
+- **T-TX-REKEY-003** — #31 migrates only its own contract state; #28/#33 state is not referenced. Live (AR round 3):
+  `TransfersT0Tests.TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState` — the compiled assembly references none
+  of the assemblies that own PlayerId-keyed state (#28/#29/#41/#44/#33/#30); the contract insert/remove itself is locked by
+  T-TX-REKEY-001.
 - **T-TX-REKEY-004** — positional-stock read is read-only and bounded; an invalid producer count fails loud.
-- **T-TX-REKEY-005 (live since AR round 3; restated at ERR-031-005)** — a real #30 re-home MUST carry the player's
+- **T-TX-REKEY-005 (live since AR round 2; restated at ERR-031-005)** — a real #30 re-home MUST carry the player's
   whole career with him under the same id — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — and leave nothing
   at the source club; the moved player is then selectable by, and records appearances for, his new club. Locked by
   `SeasonTransfersT2Tests.ABuy_ReHomesTheWholeCareer_UnderTheSameId_AndDebitsExactlyTheFee` (PA, `GrowthCursor`,
-  `BirthWorldDay`, `RetirementFlag`/`RetirementDay`, the #29 training row, the #30 appearance row and the #41 injury
-  all equal at the buyer and absent at the source), `ASoldPlayer_IsSelectedByTheBuyersNextPlayedRound_AndIsGoneFromTheSellers`
-  (the buyer's next played round fields him) and `ABannedPlayer_ServesHisBanAtTheBuyer_AndSitsOutThatClubsNextRound`
-  (the #44 ban follows him: the new club's one played round serves exactly one match and he sits it out — ERR-044-014;
-  the unbanned control is fielded).
+  `BirthWorldDay`, `RetirementFlag`/`RetirementDay`, the #29 training row, the #30 appearance row, the full #41
+  `InjuryState` — severity, recovery, injury count and last-advanced day — and the #44 tally — yellow count and unserved
+  ban — all equal at the buyer and absent at the source), `ASoldPlayer_IsSelectedByTheBuyersNextPlayedRound_AndIsGoneFromTheSellers`
+  (the buyer's next played round fields him) and `ABannedPlayer_ServesHisBanAtTheBuyer_AndSitsOutThatClubsNextRound` (the
+  #44 ban follows him — ERR-044-014: in a THREE-club league, where each round one club has a bye, his ban ticks exactly in
+  the rounds the buyer plays and not in the rounds the club his id names plays, so whose ban a fixture serves is decided by
+  the roster, never by the id; he sits out each of the buyer's rounds and the unbanned control is fielded).
 
 ## 5.4 Window (KD-6)
 
@@ -100,11 +114,26 @@
   `SquadDepleted` with #40, #28, #31 and the career byte-identical.
 - **T-TX-FIN-001 (§7.1 T2)** — through `SeasonLoop.SubmitTransferBid`, every non-accepted outcome (Rejected,
   CounterOffered, InsufficientBudget, SquadFull, SquadDepleted) leaves the live #40 entry byte-identical; an
-  accepted buy debits exactly one fee; a raw `TransferFee` posting is refused once #31 is wired.
-- **T-TX-DET-003** — two runs over identical transfer activity produce identical transfer state.
-- **T-TX-NEU-001** — no manager transfer action leaves pre-#31 season behavior unchanged; no RNG stream exists.
-  Live at T2: a wired career that never bids plays a season byte-identically (season state + roster) to an unwired
-  one, and one transfer moves it (non-vacuity).
+  accepted buy debits exactly one fee; a raw `TransferFee` posting is refused once #31 is wired. The counterparty AI
+  club's entry is not posted in either direction by design (KD-2) and stays byte-identical.
+- **T-TX-DET-003** — two runs over identical transfer activity produce identical transfer state (FR-TX-027 MUST). Live
+  (AR round 3, ERR-031-013): `SeasonTransfersT2Tests.TwoRunsOverIdenticalTransferActivity_ProduceByteIdenticalState` — two
+  fresh careers replay one fixed script (an accepted buy, a counter-offered bid, an accepted sale, a played season, the roll)
+  and end with byte-identical `TransfersSaveCodec` bytes, #40 entries and #28 snapshot, and an identical whole-career
+  snapshot; the same career without the script ends elsewhere in all three (non-vacuity). Mutation-verified (a hidden
+  call counter in the boundary's wage fails it).
+- **T-TX-NEU-001** — no manager transfer action leaves pre-#31 season behavior unchanged; no RNG stream exists. Live,
+  restated at AR round 3 (the T2 lock compared only the season state and #28 after a season with no roll, so it never ran
+  step (d″) — the only #31 code a no-action career executes): `SeasonTransfersT2Tests.NoTransferAction_IsBehaviourNeutral`
+  plays a season, `RollToNextSeason` and one season-2 round on a wired and an unwired career and compares everything but the
+  #31 block — #40 entries, the #28 snapshot, #44, the #29/#41 rows, #30's appearance rows and the season state.
+  Non-vacuity: `OneAcceptedSale_MovesTheProgressionSnapshot_SoTheNeutralityComparisonIsNotVacuous` — one accepted sale
+  makes the wired career's `Progression.Snapshot()` differ from the unwired one's. Whether a transfer changes a *played*
+  season is not asserted (the quick-sim's coarse rating model ignores any single sale); transfer sensitivity of play is
+  witnessed by the buyer-selection and ban-served locks of §5.3. The "no RNG stream" half is asserted structurally by
+  `TransfersT0Tests.TheTransfersAssembly_IsDrawFree_NoMethodCallsOrConstructsAnRngType` (no method calls or constructs
+  `System.Random`, `DeterministicRngService` or `RngStreamState`; a probe proves the scan can see one).
+  Mutation-verified: a stray #40 posting in step (d″) fails the first.
 - **T-TX-INT-001** — transfer state/valuation/spend fields are integer; no float/double state is introduced.
 
 ## 5.6 Fail-loud vs normal outcomes
@@ -121,9 +150,10 @@
 ## 5.7 Requirement traceability
 
 Every FR-TX-001..029 maps to a T-TX-* test above or a recorded §7 deferral (FR-TX-029 → T-TX-DEP-001,
-T-TX-FIN-001, T-TX-NORMAL-001; FR-TX-019 → T-TX-WIN-002). T0 now locks the reviewed public
+T-TX-FIN-001, T-TX-NORMAL-001; FR-TX-019 → T-TX-WIN-002; FR-TX-027 → T-TX-DET-001/003). Every T-TX-* id in this section
+now has a live test (AR round 3 landed T-TX-BID-008, T-TX-DET-003 and T-TX-REKEY-003, which G15 had counted without one). T0 now locks the reviewed public
 API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and both sides
-of the defensive commit-not-landed breach. T2 owed — and AR round 3 landed — the production carry-everything re-home lock in
+of the defensive commit-not-landed breach. T2 owed — and AR round 2 landed — the production carry-everything re-home lock in
 T-TX-REKEY-005 (the re-home carries the player's #28 record + lifecycle, #29/#41/#30 rows and #44 tally under the
 same id and leaves nothing behind). *(ERR-031-006: originally "the production hook-dispatch/no-op lock" — the
 re-key hook was deleted at ERR-031-005.)*
@@ -142,5 +172,6 @@ re-key hook was deleted at ERR-031-005.)*
 | 0.9 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): T-TX-BID-005 restated as "a commit that does not land" (was "returns a different id"); §5.7's T2 obligation is the T-TX-REKEY-005 carry-everything lock, not a hook-dispatch/no-op lock. The v0.6 row's hook-dispatch pin is superseded. |
 | 0.10 | 2026-10-20 | — | #31 T2: T-TX-DET-002 / T-TX-INIT-001 / T-TX-NEU-001 live; new T-TX-DEP-001 (ERR-031-007) and T-TX-FIN-001 (the #40 staging seam). |
 | 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): new T-TX-WIN-002 locks the re-anchored window (unit edges + roll-timing independence through `SeasonLoop`); T-TX-DET-002 restated; T-TX-NORMAL-001 adds F9 `SquadDepleted`; §5.7 counts FR-TX-001..029. T-TX-REKEY-005's "(deferred T2)" label is left for a later pass. |
-| 0.12 | 2026-10-20 | — | AR round 3: T-TX-REKEY-005 is live (named tests: whole-career equality at the buyer and absence at the source, buyer selection, #44 ban served by the new club); the "(deferred T2)" label and the §5.7 "owes" wording are retired. |
+| 0.12 | 2026-10-20 | — | AR round 2: T-TX-REKEY-005 is live (named tests: whole-career equality at the buyer and absence at the source, buyer selection, #44 ban served by the new club); the "(deferred T2)" label and the §5.7 "owes" wording are retired. |
+| 0.13 | 2026-10-20 | — | ERR-031-013 (AR round 3): T-TX-NEU-001's T2 lock never rolled, compared only `SeasonState` and #28, and compared a played season to an unplayed `NewCareer` for "non-vacuity" — restated and rewritten as played season → roll → season-2 round, the whole career snapshot minus the #31 block, wired vs unwired, with a one-sale non-vacuity leg; the unasserted "no RNG stream" claim is now asserted structurally. T-TX-DET-003 (FR-TX-027), T-TX-BID-008 and T-TX-REKEY-003 go live (no test existed for them although G15 was ✅). T-TX-REKEY-005 now compares the full `InjuryState` and a yellow-count tally, and its ban test runs a three-club league so "decided by the roster, never by the id" is observable. T-TX-FIN-001 records the unposted counterparty ledger. |
 #endregion

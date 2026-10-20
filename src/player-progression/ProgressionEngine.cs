@@ -1,6 +1,7 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-10-20 (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
+// Modified: 2026-10-20 (AR round 3 M13 — CanMovePlayer / MovePlayer demoted to internal; L9 stale comment — v1.12)
+//           (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
 //           AR round 1 P-M1 — every mutator goes through BeginMutation — v1.11)
 //           (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
 //           CommitSeasonBoundary, the boundary-scoped regen stream, the mutation generation — v1.10)
@@ -465,8 +466,8 @@ namespace TacticalDirector.PlayerProgression
             }
 
             // §3.4 daily retirement evaluation: deterministic, no draw (FR-PG-013). Flagged only — the
-            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation is
-            // the deferred landing's.
+            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation
+            // (retire + 1:1 regen) is CommitSeasonBoundary's (ERR-028-025).
             //
             // ERR-028-021: the comparison is in DAYS against a PER-PLAYER retirement day, not in whole
             // years against one league-wide integer. The retired form retired a goalkeeper on the same
@@ -684,14 +685,17 @@ namespace TacticalDirector.PlayerProgression
         }
 
         /// <summary>
-        /// Whether <see cref="MovePlayer"/> would succeed: both clubs carried and distinct, the player on
+        /// Whether <see cref="MovePlayer"/> would succeed (INTERNAL, AR round 3 M13: the roster authority's
+        /// re-home is a seam for #30's transfer adapter only — <c>SeasonTransferRoster</c> in TacticalDirector.SeasonSave,
+        /// via InternalsVisibleTo. A public re-home would let any client forge a free transfer that leaves the
+        /// #29/#41/#30 rows and #31's contracts behind): both clubs carried and distinct, the player on
         /// <paramref name="fromClubId"/>'s roster, and <paramref name="toClubId"/>'s roster below
         /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>. Exactly the move's preconditions, so a
         /// preview that asks this makes the commit infallible (#31 §3.4). The source keeping at least one
         /// player is implied by the caller's matchday-squad guard (ERR-031-007), and re-checked here so the
         /// store can never hold an empty club (F11).
         /// </summary>
-        public bool CanMovePlayer(int playerId, int fromClubId, int toClubId)
+        internal bool CanMovePlayer(int playerId, int fromClubId, int toClubId)
         {
             if (fromClubId == toClubId)
             {
@@ -712,9 +716,10 @@ namespace TacticalDirector.PlayerProgression
         /// <paramref name="fromClubId"/> to <paramref name="toClubId"/> under his UNCHANGED id. Nothing is
         /// allocated and the id cursor does not move (FR-PG-011: transfers allocate nothing). His growth
         /// cursor, potential and retirement state travel with him. Both clubs stay in ascending id order.
+        /// INTERNAL (AR round 3 M13): reachable only through #30's transfer adapter, never from a client.
         /// </summary>
         /// <exception cref="InvalidOperationException"><see cref="CanMovePlayer"/> is false.</exception>
-        public void MovePlayer(int playerId, int fromClubId, int toClubId)
+        internal void MovePlayer(int playerId, int fromClubId, int toClubId)
         {
             if (!CanMovePlayer(playerId, fromClubId, toClubId))
             {
@@ -1206,4 +1211,9 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | unchanged id; no allocation). AR round 1 P-M1: every mutator calls |
 // |         |            |        | BeginMutation, the one place the plan-staleness generation moves.  |
 // |         |            |        | P-L4: CommitSeasonBoundary installs COPIES of the plan's arrays.   |
+// | 1.12    | 2026-10-20 | —      | AR round 3 M13 (ERR-028-028): CanMovePlayer / MovePlayer demoted   |
+// |         |            |        | public -> internal (a public re-home forged a free transfer and    |
+// |         |            |        | orphaned the #29/#41/#30 rows); the IVT grant lives in            |
+// |         |            |        | AssemblyInfo.cs. L9: the retirement-evaluation comment no longer   |
+// |         |            |        | calls the boundary roster mutation "the deferred landing's".       |
 #endregion
