@@ -1,6 +1,6 @@
 // File:     src/player-progression/SeasonBoundaryPlan.cs
 // Created:  2026-10-19
-// Modified: 2026-10-19
+// Modified: 2026-10-20 (AR round 1 L4: PlannedSquadFor doc — post-commit snapshot semantics; doc-only — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.4 (RunSeasonBoundary as amended by ERR-028-025),
 //           FR-PG-012/015/019/021/024; Season & Competition Loop #30 §3.5 step (d); Code Standards #20
@@ -89,6 +89,12 @@ namespace TacticalDirector.PlayerProgression
         /// The club's roster as it WILL stand once the plan is committed — what #30's roster-membership
         /// reconciliation for #29/#41 must stage against, since it cannot read the store until the plan is
         /// installed. A fresh snapshot each call.
+        /// <para>
+        /// <b>After commit this is a historical snapshot.</b> <see cref="ProgressionEngine.CommitSeasonBoundary"/>
+        /// installs <i>copies</i> of the plan's arrays, so the plan keeps describing the boundary it staged
+        /// while the store diverges as days advance (AR round 1 P-L4); a retained plan is no longer a view of
+        /// the live roster.
+        /// </para>
         /// </summary>
         /// <returns>The planned squad, or <c>null</c> for a club the store does not carry (the
         /// <c>ISquadProvider.ResolveByClubId</c> contract).</returns>
@@ -105,4 +111,5 @@ namespace TacticalDirector.PlayerProgression
 // | 1.0     | 2026-10-19 | —      | Initial implementation (ERR-028-025): the staged season-boundary |
 // |         |            |        | roster mutation — #28 §3.4's RetirementResult/RegenResult as one |
 // |         |            |        | plan installed only after #30's roll can no longer fail.         |
+// | 1.1     | 2026-10-20 | —      | AR round 1 L4 (ERR-028-025), doc-only: PlannedSquadFor states that after CommitSeasonBoundary (which installs copies) the plan is a historical snapshot, not a live view. |
 #endregion

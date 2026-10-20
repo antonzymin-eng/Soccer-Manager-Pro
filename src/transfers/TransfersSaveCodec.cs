@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersSaveCodec.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #16 §3.2.4.1 (CanonicalSerializer / save framing helpers)
 //           Spec #20 §3.6.2 (style & docs governance)
@@ -66,7 +66,8 @@ namespace TacticalDirector.Transfers
             }
 
             // ContractsSnapshot is already in ascending PlayerId order (the state's SortedDictionary), and
-            // every entry passed InsertContract's validation, so Encode cannot write what Decode refuses.
+            // every entry passed InsertContract's validation, which also caps the set at CLUB_SQUAD_SIZE (the
+            // bound Decode enforces), so Encode cannot write what Decode refuses.
             CanonicalSerializer.WriteU32(blob, ref o, (uint)contracts.Length);
             for (int i = 0; i < contracts.Length; i++)
             {
@@ -154,6 +155,8 @@ namespace TacticalDirector.Transfers
                     "to the managed club's state and cannot exist without it; corrupt save.");
             }
 
+            // Pre-allocation guard, symmetric with TransfersState.InsertContract's live cap: it also stops a
+            // corrupt count from sizing the contracts array before any record is read.
             if (contractCount > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
             {
                 throw new InvalidOperationException(
@@ -209,4 +212,5 @@ namespace TacticalDirector.Transfers
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-10-18 | —      | #31 T1: magic-led transfers sub-blob codec (ERR-031-003 corrects Appendix B's version-first, magic-less layout). |
+// | 1.1     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1: the Encode-cannot-write-what-Decode-refuses claim is now true (InsertContract enforces the CLUB_SQUAD_SIZE contract cap); Decode's guard documented as the symmetric pre-allocation bound. |
 #endregion

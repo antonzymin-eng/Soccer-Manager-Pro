@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonBoundaryRegenTests.cs
 // Created:  2026-10-19
-// Modified: 2026-10-19
+// Modified: 2026-10-20 (P-M6 3/8/7/5 counts; P-M2(c) regen cursor/age lock — v1.1)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.5 step (d)/(d′); Player Progression & Lifecycle #28 §3.4
 //           (as amended by ERR-028-024 / ERR-028-025), FR-PG-011/015/019/024; Discipline #44 FR-DC-013;
@@ -77,8 +77,8 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 Squad squad = c.Progression.SquadFor(club);
                 Assert.That(squad.Count, Is.EqualTo(23), "1:1 replacement keeps the bootstrap size (FR-PG-019)");
-                Assert.That(PositionCounts(squad), Is.EqualTo(new[] { 3, 8, 8, 4 }),
-                    "every regen took its retiree's position (ERR-028-024), so the KD-6 shape survives");
+                Assert.That(PositionCounts(squad), Is.EqualTo(new[] { 3, 8, 7, 5 }),
+                    "every regen took its retiree's position (ERR-028-024), so the KD-6 shape (3/8/7/5) survives");
                 for (int i = 0; i < squad.Count; i++)
                 {
                     int id = squad.GetPlayer(i).PlayerId;
@@ -93,6 +93,52 @@ namespace TacticalDirector.SeasonSave.Tests
             }
 
             Assert.That(retireePositions[0], Is.EqualTo(PlayerPosition.Goalkeeper), "fixture sanity");
+        }
+
+        [Test]
+        public void EveryRegen_IsAnchoredOnTheLastLivedDay_AndKeepsItsDrawnAge()
+        {
+            // P-M2(c). RollToNextSeason constructs regens on the last LIVED day (clock − 1), where every
+            // carried player's progression cursor sits (ERR-030-053 guarantees the clock is past the final
+            // fixture day, so the subtraction cannot wrap). A mutant passing CurrentWorldTick instead
+            // puts the cursor one day ahead of the world's last lived day and, because BirthWorldDay =
+            // anchor − age × 365, derives every regen one year younger on that last lived day.
+            Career c = NewCareer(out int[] retirees, out _);
+            int cursorBefore = c.Progression.NextPlayerId;
+            PlayWholeSeason(c.Loop);
+
+            c.Loop.RollToNextSeason();
+
+            uint lastLivedDay = c.Loop.CurrentWorldDay - 1u;
+            int regens = 0;
+            ClubCareerStates[] blocks = c.Progression.ToBlocks();
+            for (int b = 0; b < blocks.Length; b++)
+            {
+                ClubCareerStates block = blocks[b];
+                for (int i = 0; i < block.Records.Length; i++)
+                {
+                    PlayerRecord record = block.Records[i];
+                    if (record.PlayerId < cursorBefore)
+                    {
+                        continue;
+                    }
+
+                    regens++;
+                    PlayerLifecycle life = block.Lifecycles[i];
+                    Assert.That(life.LastAdvancedWorldDay, Is.EqualTo(lastLivedDay),
+                        $"regen {record.PlayerId}: progression cursor must be the roll day minus one");
+
+                    // Age is DERIVED as (day − BirthWorldDay) / DAYS_PER_YEAR (KD-A); on the last lived day
+                    // it must equal the drawn age the record carries.
+                    long derivedAge = ((long)lastLivedDay - life.BirthWorldDay)
+                        / PlayerProgressionConstants.DAYS_PER_YEAR;
+                    Assert.That(derivedAge, Is.EqualTo((long)record.Age),
+                        $"regen {record.PlayerId}: derived age on the last lived day must equal his drawn age");
+                }
+            }
+
+            Assert.That(regens, Is.GreaterThanOrEqualTo(retirees.Length),
+                "non-vacuity: at least the three forced retirees were replaced by regens");
         }
 
         [Test]
@@ -147,7 +193,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 for (int club = 0; club < ClubCount; club++)
                 {
                     Squad squad = c.Progression.SquadFor(club);
-                    Assert.That(PositionCounts(squad), Is.EqualTo(new[] { 3, 8, 8, 4 }), $"season {season} club {club}");
+                    Assert.That(PositionCounts(squad), Is.EqualTo(new[] { 3, 8, 7, 5 }), $"season {season} club {club}");
                     Assert.That(SquadRating.CanFieldStartingEleven(squad), Is.True);
                 }
             }
@@ -168,7 +214,7 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         // Three forced retirees (age 45 ⇒ flagged on the first lived day): club 0's first goalkeeper and
-        // first defender, club 1's first forward. The goalkeeper also carries a 50-match ban — longer than
+        // first defender, club 1's index-19 forward (FW slots are indices 18-22 of the 3/8/7/5 template). The goalkeeper also carries a 50-match ban — longer than
         // the 6-round season, so it is still unserved at the boundary.
         private static readonly int[][] RetireeSlots = { new[] { 0, 0 }, new[] { 0, 3 }, new[] { 1, 19 } };
 
@@ -269,4 +315,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-10-19 | —      | Initial implementation (ERR-028-024 / ERR-028-025): #30-driven    |
 // |         |            |        | season-boundary regen locks.                                     |
+// | 1.1     | 2026-10-20 | —      | P-M6: position-shape expectations {3,8,8,4} -> {3,8,7,5}; club 1 index 19 is still a forward. |
+// |         |            |        | P-M2(c): EveryRegen_IsAnchoredOnTheLastLivedDay_AndKeepsItsDrawnAge — every regen's cursor is |
+// |         |            |        | clock - 1 and his age derived on that day equals his drawn age (kills a CurrentWorldTick mutant). |
 #endregion

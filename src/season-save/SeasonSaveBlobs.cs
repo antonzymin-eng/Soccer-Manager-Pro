@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-10-18 (#31 T1 — gains TransfersBlob)
+// Modified: 2026-10-20 (L2 doc drift — class summary FR list names #31 FR-TX-012)
+//           Prior: 2026-10-18 (#31 T1 — gains TransfersBlob)
 //           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — gains FinanceBlob)
 //           Prior: 2026-08-13 (#44 T1, roadmap C1 — gains DisciplineBlob)
 // Author:   —
@@ -20,7 +21,7 @@ namespace TacticalDirector.SeasonSave
 {
     /// <summary>
     /// The ten byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
-    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017 + #44 Appendix B + #40 FR-FN-020): the living-world composite
+    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017 + #44 Appendix B + #40 FR-FN-020 + #31 FR-TX-012): the living-world composite
     /// (<see cref="WorldBlob"/>), the season state (<see cref="SeasonBlob"/>), the #29 training block
     /// (<see cref="TrainingBlob"/>), the #41 medical block (<see cref="MedicalBlob"/>), the #30
     /// appearance block (<see cref="AppearanceBlob"/>), the #28 career-state block
@@ -124,4 +125,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.6     | 2026-09-10 | —      | #40 T1b (ERR-030-049): gains FinanceBlob (always present) —      |
 // |         |            |        | the ninth sub-blob.                                               |
 // | 1.7     | 2026-10-18 | —      | #31 T1: gains TransfersBlob (always present) — the tenth sub-blob. |
+// | 1.8     | 2026-10-20 | —      | L2 doc drift (comments only): the class summary's FR list now cites #31 FR-TX-012. |
 #endregion

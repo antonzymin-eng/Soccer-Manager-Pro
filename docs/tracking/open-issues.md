@@ -23,14 +23,13 @@ history by the original convention; they were not merged.
 
 **Closed record:** goalkeeper own-release re-handling landed in PR #511; [archived entry](open-issues-resolved.md#gk-rehandling-law12). Exact touch/team follow-up remains in the [B→C measurement requirements](w8-goalkeeper-distribution-decision.md#bc-keeper-release-follow-up-requirements).
 
-<a id="transfers-t2-capacity"></a>
+<a id="regen-club-strength"></a>
 
-- **#31 Transfers T2 is OWNER-BLOCKED: no production transfer can complete, because every bootstrapped club holds exactly the 25-player cap. The packed re-key id rule also conflicts with #28's monotonic regen ids.** *Opened October 18, 2026 (career-season-save lane; T1 landed).*
-  - **Capacity.** `LeagueBootstrapConstants` requires every squad to sum to `CLUB_SQUAD_SIZE` = 25, and 25 is also the hard maximum (`Squad`, `ProgressionSaveCodec.RequireClubSizeInRange`). The T2 preview must therefore return `SquadFull` for every buy (managed club full) and every sell (AI club full). Nothing opens a slot: regen is 1:1, and expired contracts keep the player on the roster.
-  - **Ids.** #31 §3.4 / T-TX-REKEY-001 re-key to `toClub*25+freeLocal`, and the T0 code derives club ownership from `id/25`. #28 FR-PG-011 allocates regen ids from the monotonic `NextPlayerId`. The advisor council recommends stable `PlayerId`s across a transfer (a re-home, with `ProgressionEngine.NextPlayerId` as the single allocator), which amends approved #31 KD-7.
-  - **Also found:** every genesis contract has the same 3-season length, so all managed contracts expire at the third boundary, and selling then throws.
-  - **Owner decisions needed:** separate bootstrap squad size from capacity (bootstrap below 25, or raise the cap); and choose stable ids or keep the re-key.
-  - **✅ OWNER DECISION, October 19, 2026:** *"Generate squads below the 25 cap (e.g. 23) and keep PlayerIds stable across transfers, with ProgressionEngine.NextPlayerId as the single allocator."* Landed as **ERR-031-004** (bootstrap template 3/8/8/4 = 23, strictly below the cap) and **ERR-031-005** (stable ids; the #31 port re-homes under the same id; nothing derives a club from an id). **What remains open here:** the T2 wiring itself and the genesis contract-expiry defect (every genesis contract shares one length), both in the T2 landing. This entry closes when T2 lands.
+- **#28 regens ignore club strength, so the league's strength ramp erodes over about one squad turnover (~18 seasons) — ERR-028-026, OPEN, owner decision.** *Opened October 20, 2026 (AR round 1 over the #28 boundary landing).* A regen draws from the bootstrap's senior distribution with no club-strength delta and no youth discount. A retiree at the strongest club (+3 on every attribute) and one at the weakest (−3) are both replaced by a +0 player, and a 16-year-old arrives as good as an average senior. The rate is estimated from the constants and is unmeasured. Options: pass a per-club quality offset into `PrepareSeasonBoundary` plus an age-scaled youth discount, or accept the erosion until #47's authored data lands. Nothing is tuned meanwhile (KD-W1).
+
+<a id="genesis-transfer-budget"></a>
+
+- **A new career cannot buy a player in its first season: #40's genesis transfer budget is 0. RECORDED, owner decision.** *Opened October 20, 2026 (#31 T2).* `ClubFinances.CreateInitial` sets `TransferBudget = 0`; only the season-end `SettleFinances` sets a ceiling. So every first-season buy returns `InsufficientBudget`, while sales work. Whether a new game should start with a budget is a #40 balance question, out of #31's scope. T2's end-to-end tests set a budget explicitly.
 
 <a id="d07-keeper-avoidance"></a>
 

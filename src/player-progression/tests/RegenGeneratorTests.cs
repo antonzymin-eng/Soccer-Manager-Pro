@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-24 (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
+// Modified: 2026-10-20 (AR round 1 L1 — production ordinal/site-id consts — v1.6)
+//           (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
 //           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
 //           (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
 //           property — v1.2)
@@ -8,7 +9,8 @@
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §4.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  T-PG-REG-001/003 — regen determinism, the exact PROGRESSION_REGEN_FIELDS budget, generated
 //           bounds, and the "attrs below PA / room to grow" contract. Registers the regen stream under
-//           a documented test-local ordinal literal (KD-B — the production const lands at T2). Also
+//           the production PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION and
+//           REGEN_STREAM_SITE_ID (landed with ERR-028-025; formerly a test-local literal). Also
 //           (M3, ERR-028-014 carryforward) that a generated regen never seeds the retired never-advanced
 //           sentinel and that a block built from one is accepted by ProgressionEngine.FromBlocks.
 
@@ -22,18 +24,16 @@ namespace TacticalDirector.PlayerProgression.Tests
     [TestFixture]
     public sealed class RegenGeneratorTests
     {
-        private const string SiteId = "player-progression.regen";
-
-        // = the T2 SubsystemOrdinals.PlayerProgression (#28 §4.3 / FR-PG-020); kept a local literal until
-        // T2 registers the production stream (KD-B — no early deterministic-sim change in T0).
-        private const int OrdinalPlayerProgression = 82;
-
         private const uint WorldDay = 100000;
 
         private static DeterministicRngService NewRng(ulong seed, int clubId, out int streamIndex)
         {
             var rng = new DeterministicRngService(seed);
-            streamIndex = rng.RegisterStream(SiteId, OrdinalPlayerProgression, clubId, streamVersion: 1);
+            streamIndex = rng.RegisterStream(
+                PlayerProgressionConstants.REGEN_STREAM_SITE_ID,
+                PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION,
+                clubId,
+                PlayerProgressionConstants.REGEN_STREAM_VERSION);
             return rng;
         }
 
@@ -293,4 +293,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | this case, which is the exact defect that shipped once and     |
 // |         |            |        | went a day undetected because nothing compared the two sites.  |
 // | 1.5     | 2026-10-19 | —      | ERR-028-024: every call passes the inherited position; new locks — the regen takes the retiree's position (all four), the position moves no other identity draw, an undefined position throws. |
+// | 1.6     | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025): the test-local ordinal literal 82 and site id "player-progression.regen" ("until the production const lands at T2") replaced by PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION / REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION, so a constant change can no longer leave this fixture drawing from a stream production never registers. |
 #endregion

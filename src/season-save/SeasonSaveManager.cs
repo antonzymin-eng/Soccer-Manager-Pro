@@ -1,5 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-10-20 (L2 doc drift — v1.33: Load summary names the #31 transfers state and the FOUR
+//           cross-blob coherence rules; comments only.)
 // Modified: 2026-10-18 (#31 T1 — v1.32: Save takes the #31 transfers state (null = unwired) and writes the
 //           mandatory XFER sub-blob; Load restores it into SeasonSaveContents; SeasonTransfersCoherence
 //           checks managed club + contract membership at Save and Load; RequireDestinationCarriesNoTransfers
@@ -755,8 +757,8 @@ namespace TacticalDirector.SeasonSave
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the full
         /// <see cref="SeasonSaveContents"/> this method returns — see its own summary for the complete
         /// enumeration (the world, the season, the per-club #29 training / #41 medical / #30 appearance
-        /// states, the #28 progression store, the #44 discipline state, and the #40 per-club finance
-        /// entries) — plus the
+        /// states, the #28 progression store, the #44 discipline state, the #40 per-club finance
+        /// entries, and the #31 transfers state, null when no #31 subsystem was wired) — plus the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
@@ -764,8 +766,12 @@ namespace TacticalDirector.SeasonSave
         /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TrainingSaveCodec.Decode"/> / <see cref="MedicalSaveCodec.Decode"/> / the match
         /// restore path; a season whose next fixture day is already behind the restored world day throws
-        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the TWO cross-blob coherence rules
-        /// this root owns, beside the career cursor-vs-clock rule, both enforced at Save and Load); and a distinct-squad match save
+        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the FOUR cross-blob coherence rules
+        /// this root owns, all enforced at Save and Load: the KD-4 calendar cursor, the career
+        /// cursors-vs-clock rule, the finance club-universe rule, and the #31 transfers rule — managed
+        /// club always, contract-roster membership against the file's #28 projection when it carries
+        /// one); a #31 transfers block naming another managed club or a player that projection does not
+        /// carry throws here (<c>SeasonTransfersCoherence</c>); and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
@@ -1510,4 +1516,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | transfersOrNull and writes the XFER sub-blob; Load restores   |
 // |         |            |        | it; SeasonTransfersCoherence at both; the fifth destination   |
 // |         |            |        | guard (RequireDestinationCarriesNoTransfers), keyed on wiring.|
+// | 1.33    | 2026-10-20 | —      | L2 doc drift (comments only): the Load summary now names the #31 |
+// |         |            |        | transfers state and counts FOUR cross-blob coherence rules (KD-4 |
+// |         |            |        | cursor, career cursors, finance, transfers), not "TWO".          |
 #endregion

@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.7 — ERR-031-005: G10 restated)
+**Last Updated:** October 20, 2026 (v0.8 — ERR-031-006: G6 evidence corrected — the sell removes its contract after the confirmed commit)
+**Last Updated (prior):** October 19, 2026 (v0.7 — ERR-031-005: G10 restated)
 **Last Updated (prior):** September 21, 2026 (v0.6 — ERR-031-001/002 T0 approval-evidence reconciliation)
 **Last Updated (prior):** July 23, 2026 (v0.5 — AR-8 (3L doc, non-gating); prior v0.4 AR-6 + AR-7 convergence, v0.3 AR-3/AR-4, v0.2 AR-1/AR-2 + sign-off, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -18,7 +19,7 @@
 | G3 | Determinism: minimal is **draw-free**; `_RESERVED_0x23_` / 85 stays reserved (no #16 change at approval) | ✅ | §1 KD-5, §8.2, #16 §3.4:267 |
 | G4 | KD-1: the **base** valuation is a pure integer function of #27 attributes + age; the minimal counterparty view then applies always-on #27 positional scarcity. **No** #33 read and **no** #28 CA/PA read at minimal; those and #34 staff remain deep refinements (`ERR-031-001`) | ✅ | §1 KD-1, §3.1, FR-TX-001/002/003 |
 | G5 | KD-2 #40 boundary: read `AvailableTransferBudget`, commit via `ApplyTransaction`, #31 owns `committedSpendThisWindow` (FR-FN-004), no parallel ledger, no direct field writes | ✅ | §3.3, FR-TX-004..008 |
-| G6 | Atomic commit: all gates validated before any mutation; buy affordability is decided before checked staged finance validation (`ERR-031-002`); a failed gate leaves finances **and** roster untouched (no half-written deal); the sell removes its `Contract` **before** the infallible re-key (no orphan) | ✅ | §3.3, FR-TX-008/009/023, F1/F2 |
+| G6 | Atomic commit: all gates validated before any mutation; buy affordability is decided before checked staged finance validation (`ERR-031-002`); a failed gate leaves finances **and** roster untouched (no half-written deal); the sell removes its `Contract` only **after** the confirmed roster commit (`RequestRosterCommit` re-homes under the unchanged id, then `TryGetPlayer` must report the destination before any local write), so a commit that does not land leaves the managed contract and finance intact *(ERR-031-006: originally "removes its `Contract` **before** the infallible re-key (no orphan)" — the reverse of §3.3/FR-TX-023 and the shipped code)* | ✅ | §3.3, FR-TX-008/009/023, F1/F2; `TransferCommands.SubmitBid` (`RequestRosterCommit` → `RequireCommitLanded` → `RemoveContract`); T-TX-BID-002/006 (`SubmitBid_Sell_CommitsRosterBeforeRemovingContract_AndCreditsFee`, `SubmitBid_SellRosterCommitThatDoesNotLand_RetainsLocalContractAndFinance`) |
 | G7 | KD-3: the offer/response seam is counterparty-generic; #31 builds no #32/#34 interface; #34 influence is a `×1000‰` identity seam | ✅ | §4.3, FR-TX-010/011 |
 | G8 | KD-4: one `TRANSFERS_SAVE_FORMAT_VERSION` season-save sub-blob (durable contracts + season-scoped state); **no** `WORLD_STORE_FORMAT_VERSION` bump; codec fail-loud posture mirrored | ✅ | §4.4, Appendix B, FR-TX-012..014 |
 | G9 | KD-6: the transfer-window model is #31-owned, derived read-only from #30's `SeasonCalendar`; #30 has none | ✅ | §3.5, FR-TX-019/020 |
@@ -80,4 +81,5 @@ no #16 change); #40/#33/#27 unchanged (their existing seams already name #31 the
 | 0.5 | 2026-07-23 | — | AR-8 (0H+0M+3L, non-gating doc): §9.5 chain corrected to record AR-5 as a premature false-clean (was skipped AR-4→AR-6); §3.3 note that sell income does not raise in-window buy headroom (static ceiling, `committedSpendThisWindow` is buy-side only); §3.7 `ResetWindow()` re-derives from the calendar. Loop remains converged (Lows do not gate). |
 | 0.6 | 2026-09-21 | — | ERR-031-001/002: G4 now matches shipped always-on positional scarcity, and G6 locks affordability before checked finance staging. |
 | 0.7 | 2026-10-19 | — | ERR-031-005: G10 restated for the stable-id re-home (post-approval correction, owner decision Oct 19, 2026). |
+| 0.8 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): G6's ✅ rested on false text ("removes its `Contract` **before** the infallible re-key"); restated to the shipped order — removal only after the commit is confirmed via `TryGetPlayer` — and re-verified against `src/transfers/TransferCommands.cs` and the two sell-path tests in `src/transfers/tests/TransfersT0Tests.cs` (evidence column now names them). |
 #endregion

@@ -1,9 +1,10 @@
 # Transfers, Contracts & Negotiation #31 — Section 8: References & Cross-References
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.3 — ERR-031-004/005: XC-031-001 ids and cap)
+**Last Updated:** October 20, 2026 (v0.4 — ERR-031-006: §8.3 names the landed season-save version 8 / ERR-030-054)
+**Last Updated (prior):** October 19, 2026 (v0.3 — ERR-031-004/005: XC-031-001 ids and cap)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -33,8 +34,9 @@
   tick-order null-seam slot (a fill of a documented position, the ERR-030-002 #41 precedent; the FR-SN-034
   enumeration extends to #31). Doc-only; the seam is empty until #31 T2/T3.
 - **ERR-030-005 (deferred, at #31 T2)** — #30 grows the mid-season `RequestRosterCommit` entry point (a
-  stable-id re-home since ERR-031-005; the re-key hook is deleted) (KD-7); the outer `SEASON_SAVE_FORMAT_VERSION` bump (T1, exact version TBD — §4.4) is
-  coordinated in the same #30 T-phase window.
+  stable-id re-home since ERR-031-005; the re-key hook is deleted) (KD-7); the outer `SEASON_SAVE_FORMAT_VERSION` bump landed with #31 T1 as
+  **7 → 8** under **ERR-030-054** (§4.4) *(ERR-031-006: originally "exact version TBD", written before T1 landed)*;
+  the roster-commit entry point remains #31 T2 work.
 - **ERR-016 (deferred, at #31 T3)** — `DOMAIN_TAG_TRANSFERS = 0x23` promotion at the first rival-bid draw.
 - **ERR-040 (deferred, at #31 T3)** — relax #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2) for #31's
   deep-tier wage producer + wire the `WageBudget` affordability gate #31 reads. **Not needed at approval** —
@@ -55,4 +57,5 @@
 | 0.1 | 2026-07-23 | — | Initial §8 (XC-031-001..007, determinism reference, back-prop references, master-plan anchor). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3: XC-031-005 records that #33 grants only `MoraleOf` (not `PersonalityProfile`) today (L); §8.3 adds deferred ERR-040 (FR-FN-015 relax + `WageBudget` gate, T3) and ERR-033 (personality-trait surface, T3). |
 | 0.3 | 2026-10-19 | — | ERR-031-004 / ERR-031-005: XC-031-001 records stable career-unique ids (genesis formula + #28 allocator) and the cap-vs-bootstrap distinction; ERR-030-005 names the re-home. |
+| 0.4 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion sweep): §8.3 ERR-030-005 replaces "exact version TBD" with the landed `SEASON_SAVE_FORMAT_VERSION` 7 → 8 (ERR-030-054). |
 #endregion

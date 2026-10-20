@@ -1,11 +1,13 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.8 — ERR-031-005: §5.3 re-home locks)
+**Last Updated:** October 20, 2026 (v0.10 — T2 locks live)
+**Last Updated (prior):** October 20, 2026 (v0.9 — ERR-031-006: T-TX-BID-005 and §5.7 restated for the stable-id re-home)
+**Last Updated (prior):** October 19, 2026 (v0.8 — ERR-031-005: §5.3 re-home locks)
 **Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.8
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -37,8 +39,10 @@
   not an exception, and leaves finance/spend/roster/contracts unchanged for that attempt.
 - **T-TX-BID-004 (F5)** — full destination returns `TransferSubmissionOutcome.SquadFull`, not an exception, with
   no local mutation.
-- **T-TX-BID-005 (F2)** — if a producer violates the successful-preview contract and returns a different id on
-  a **buy**, `SubmitBid` fails loud before staged finance/spend/contract state is applied.
+- **T-TX-BID-005 (F2)** — if a producer violates the successful-preview contract with a commit that does not land
+  (after `RequestRosterCommit`, `TryGetPlayer` does not report the player on the destination roster) on a **buy**,
+  `SubmitBid` fails loud before staged finance/spend/contract state is applied. *(ERR-031-006: originally "returns a
+  different id" — the commit returns nothing once ids are stable, ERR-031-005.)*
 - **T-TX-BID-006 (F2)** — the same producer breach on a **sell** leaves finance unchanged and deliberately retains
   the old managed contract locally; the external roster may already have moved, which is why T2 must make the
   production preview→commit contract infallible rather than relying on rollback.
@@ -69,10 +73,22 @@
 - **T-TX-DET-001** — live at T1: `Contract` + `ClubTransferState` restore field-identical across a mid-window save,
   through both the codec (`TransfersT1Tests`) and the season file + `SeasonLoop.Restore` resume path
   (`SeasonSaveTransfersTests`), with non-default spend so a reseed-on-load could not pass.
-- **T-TX-DET-002** — deferred T2: contracts age/decrement/remove at season boundary and window/spend resets.
-- **T-TX-INIT-001** — deferred T2: career genesis seeds one valid managed-club contract per #27 player.
+- **T-TX-DET-002** — live at T2: contracts age/decrement/remove at the season boundary, a retiree's contract is
+  removed and a managed regen contracted, spend resets, the window re-derives from the roll day, and the rolled
+  career still saves (`TransfersT2Tests`, `SeasonTransfersT2Tests.TheRoll_…`); three boundaries expire every genesis
+  contract without a throw and the manager can still sell (ERR-031-009).
+- **T-TX-INIT-001** — live at T2: `League.CreateLoop` with a #28 store seeds one genesis contract per managed player
+  and opens the window on the new-game day; a load never re-seeds (`ALoadNeverReSeeds_…`, after a sale, so a reseed
+  could not pass).
+- **T-TX-DEP-001 (F9, ERR-031-007)** — a release that would leave the releasing club below a matchday squad returns
+  `SquadDepleted` with #40, #28, #31 and the career byte-identical.
+- **T-TX-FIN-001 (§7.1 T2)** — through `SeasonLoop.SubmitTransferBid`, every non-accepted outcome (Rejected,
+  CounterOffered, InsufficientBudget, SquadFull, SquadDepleted) leaves the live #40 entry byte-identical; an
+  accepted buy debits exactly one fee; a raw `TransferFee` posting is refused once #31 is wired.
 - **T-TX-DET-003** — two runs over identical transfer activity produce identical transfer state.
 - **T-TX-NEU-001** — no manager transfer action leaves pre-#31 season behavior unchanged; no RNG stream exists.
+  Live at T2: a wired career that never bids plays a season byte-identically (season state + roster) to an unwired
+  one, and one transfer moves it (non-vacuity).
 - **T-TX-INT-001** — transfer state/valuation/spend fields are integer; no float/double state is introduced.
 
 ## 5.6 Fail-loud vs normal outcomes
@@ -89,8 +105,10 @@
 
 Every FR-TX-001..028 maps to a T-TX-* test above or a recorded §7 deferral. T0 now locks the reviewed public
 API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and both sides
-of the defensive roster preview/commit breach. T2 additionally owes the production hook-dispatch/no-op lock in
-T-TX-REKEY-005.
+of the defensive commit-not-landed breach. T2 additionally owes the production carry-everything re-home lock in
+T-TX-REKEY-005 (the re-home carries the player's #28 record + lifecycle, #29/#41/#30 rows and #44 tally under the
+same id and leaves nothing behind). *(ERR-031-006: originally "the production hook-dispatch/no-op lock" — the
+re-key hook was deleted at ERR-031-005.)*
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -103,4 +121,6 @@ T-TX-REKEY-005.
 | 0.6 | 2026-09-14 | — | Residual review cleanup: add sell-direction preview/commit breach coverage and pin the T2 production hook-dispatch plus observable managed↔external #31 no-op regression. |
 | 0.7 | 2026-10-18 | — | T1 landing: T-TX-DET-001 and T-TX-FAIL-001 move from deferred to live, with the golden vector and sibling-magic refusal (ERR-031-003). |
 | 0.8 | 2026-10-19 | — | ERR-031-005: §5.2/§5.3 restated for a stable-id re-home — T-TX-REKEY-001 locks roster-judged ownership including an off-range (regen) id; T-TX-REKEY-002 confirms the landing; T-TX-REKEY-005 becomes the T2 carry-everything integration lock. |
+| 0.9 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): T-TX-BID-005 restated as "a commit that does not land" (was "returns a different id"); §5.7's T2 obligation is the T-TX-REKEY-005 carry-everything lock, not a hook-dispatch/no-op lock. The v0.6 row's hook-dispatch pin is superseded. |
+| 0.10 | 2026-10-20 | — | #31 T2: T-TX-DET-002 / T-TX-INIT-001 / T-TX-NEU-001 live; new T-TX-DEP-001 (ERR-031-007) and T-TX-FIN-001 (the #40 staging seam). |
 #endregion

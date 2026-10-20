@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersState.cs
 // Created:  2026-09-12
-// Modified: 2026-10-19
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.3-§3.4 (managed contracts + season-scoped transfer state)
@@ -10,6 +10,8 @@
 
 using System;
 using System.Collections.Generic;
+
+using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.Transfers
 {
@@ -51,7 +53,10 @@ namespace TacticalDirector.Transfers
         }
 
         /// <summary>
-        /// Inserts one validated managed-player contract and fails on duplicate/default records.
+        /// Inserts one validated managed-player contract and fails on duplicate/default records, and when
+        /// the state already holds <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> contracts (a squad
+        /// cannot hold more, and <see cref="TransfersSaveCodec.Decode"/> refuses a larger block, so the
+        /// live state must never be able to encode one).
         /// <para>
         /// Membership in the managed club is NOT checked here: since ERR-031-005 PlayerIds are stable
         /// across transfers and post-genesis ids come from #28's monotonic cursor, so an id no longer
@@ -66,6 +71,13 @@ namespace TacticalDirector.Transfers
             if (_contracts.ContainsKey(contract.PlayerId))
             {
                 throw new InvalidOperationException("A contract already exists for PlayerId " + contract.PlayerId + ".");
+            }
+
+            if (_contracts.Count >= PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new InvalidOperationException(
+                    "The managed club already holds " + _contracts.Count + " contracts; a squad holds at most " +
+                    PlayerDatabaseConstants.CLUB_SQUAD_SIZE + " players.");
             }
 
             _contracts.Add(contract.PlayerId, contract);
@@ -126,6 +138,89 @@ namespace TacticalDirector.Transfers
             return Restore(ManagedClubId, _clubState.CommittedSpendThisWindow, in window, ContractsSnapshot());
         }
 
+        /// <summary>
+        /// New-career genesis (FR-TX-028 / §3.8): the managed club's state with one contract per rostered
+        /// player at the <c>[GT]</c> genesis terms (<see cref="TransfersConstants.DefaultWagePerPeriod"/>,
+        /// <see cref="TransfersConstants.DefaultContractSeasons"/>) and zero committed spend. Called by #30's
+        /// new-game composition ONLY — a load decodes the persisted block and never seeds.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="managedPlayerIds"/> is null.</exception>
+        public static TransfersState CreateAtGenesis(
+            int managedClubId, in TransferWindow window, IReadOnlyList<int> managedPlayerIds)
+        {
+            if (managedPlayerIds == null)
+            {
+                throw new ArgumentNullException(nameof(managedPlayerIds));
+            }
+
+            var state = new TransfersState(managedClubId, in window);
+            for (int i = 0; i < managedPlayerIds.Count; i++)
+            {
+                state.InsertContract(new Contract(
+                    managedPlayerIds[i], TransfersConstants.DefaultWagePerPeriod, TransfersConstants.DefaultContractSeasons));
+            }
+
+            return state;
+        }
+
+        /// <summary>
+        /// The season boundary (FR-TX-028 / §3.7, G14), as a NEW state — pure, so #30 can stage it before
+        /// its roll's one fallible write and install it after. Every carried contract ages one season and a
+        /// contract that would reach 0 is removed (F7: never stored as 0); each retiree's contract leaves
+        /// with him; each player arriving at the managed club through #28's regen is seeded the genesis
+        /// terms; committed spend resets to 0; the window becomes <paramref name="nextWindow"/>.
+        /// </summary>
+        /// <param name="retiredPlayerIds">#28's retirees this boundary (any club; only managed contracts exist).</param>
+        /// <param name="arrivingManagedPlayerIds">#28's regens joining the MANAGED club.</param>
+        /// <param name="nextWindow">The next season's summer window (#30 derives it).</param>
+        /// <exception cref="ArgumentNullException">A list is null.</exception>
+        /// <exception cref="InvalidOperationException">An arrival already holds a contract.</exception>
+        public TransfersState PrepareSeasonBoundary(
+            IReadOnlyList<int> retiredPlayerIds, IReadOnlyList<int> arrivingManagedPlayerIds, in TransferWindow nextWindow)
+        {
+            if (retiredPlayerIds == null)
+            {
+                throw new ArgumentNullException(nameof(retiredPlayerIds));
+            }
+
+            if (arrivingManagedPlayerIds == null)
+            {
+                throw new ArgumentNullException(nameof(arrivingManagedPlayerIds));
+            }
+
+            var next = new TransfersState(ManagedClubId, in nextWindow);
+            foreach (KeyValuePair<int, Contract> pair in _contracts)
+            {
+                if (Contains(retiredPlayerIds, pair.Key) || pair.Value.LengthSeasons <= 1)
+                {
+                    continue;
+                }
+
+                next.InsertContract(new Contract(pair.Key, pair.Value.WagePerPeriod, pair.Value.LengthSeasons - 1));
+            }
+
+            for (int i = 0; i < arrivingManagedPlayerIds.Count; i++)
+            {
+                next.InsertContract(new Contract(
+                    arrivingManagedPlayerIds[i], TransfersConstants.DefaultWagePerPeriod, TransfersConstants.DefaultContractSeasons));
+            }
+
+            return next;
+        }
+
+        private static bool Contains(IReadOnlyList<int> ids, int id)
+        {
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (ids[i] == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         internal void AddCommittedSpend(long amount)
         {
             if (amount < 0)
@@ -147,4 +242,6 @@ namespace TacticalDirector.Transfers
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 managed contract/window/spend state. |
 // | 1.1     | 2026-10-18 | —      | #31 T1: internal Restore (decode path) and public Clone (copy-on-compose). |
 // | 1.2     | 2026-10-19 | —      | ERR-031-005: stable PlayerIds — the packed-id managed-membership check and the OnPlayerRekeyed handler are deleted (an id no longer encodes its club, and nothing is ever re-keyed). |
+// | 1.3     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1: InsertContract refuses a CLUB_SQUAD_SIZE+1-th contract, so the live state can never encode a block Decode refuses. |
+// | 1.4     | 2026-10-20 | —      | #31 T2: CreateAtGenesis (FR-TX-028 / §3.8 genesis seeding at the [GT] terms) and PrepareSeasonBoundary (§3.7 aging + G14 retiree/regen lockstep + spend reset + next window, as a NEW state for #30's staged roll). |
 #endregion

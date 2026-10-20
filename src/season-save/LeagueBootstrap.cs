@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueBootstrap.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-20 (P-L2 — stale squad-size comment — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md)
 //           KD-1..KD-6, KD-9, §3 determinism, F1..F6; path-to-playable roadmap A3;
@@ -101,7 +101,8 @@ namespace TacticalDirector.SeasonSave
                     $"{DeterministicSimConstants.MaxRngStreams}; lower MaxClubCount or raise MaxRngStreams.");
             }
 
-            // F3 — template coherence (throws if the counts do not sum to CLUB_SQUAD_SIZE).
+            // F3 — template coherence (throws if the counts are incoherent: negative, a sum below a matchday
+            // squad, or a sum that reaches the CLUB_SQUAD_SIZE cap; the template sum is 23, not the cap — ERR-031-004).
             PlayerPosition[] template = LeagueBootstrapConstants.BuildSquadPositionTemplate();
 
             // KD-4: three domain-separated derivations from the one world seed.
@@ -308,4 +309,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (roadmap A3): domain-separated seed         |
 // |         |            |        | derivation, seeded strength ramp, position-template roster         |
 // |         |            |        | generation, per-club strength application, F1..F3 gates.           |
+// | 1.1     | 2026-10-20 | —      | P-L2: F3 comment restated — the template sum is 23 (strictly below |
+// |         |            |        | CLUB_SQUAD_SIZE, ERR-031-004), not the cap. Comment-only change.   |
 #endregion

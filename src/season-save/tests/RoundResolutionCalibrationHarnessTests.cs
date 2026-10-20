@@ -2,8 +2,8 @@
 // Created:  2026-07-26
 // Modified: 2026-07-26
 // Modified: 2026-07-28 (Step 0 re-run PASSED post-§5.Z.20/§5.Z.21; LogAssert wrapper on both env-gated drivers — playing matches emit FM-08/FM-03 as ordinary events)
-// Modified: 2026-08-12 (A4a run: TD_CALIBRATION_SAMPLE_FROM + window tiling/slice locks)
 // Modified: 2026-09-28 (FM-03 closeout: remove broad Error-log suppression from engine corpus drivers — v1.3)
+// Modified: 2026-10-20 (P-L3 — template-change comment: the step-10 recapture is required — v1.5)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
 //           roadmap A4a / C1a; Code Standards #20
@@ -47,9 +47,11 @@ namespace TacticalDirector.SeasonSave.Tests
             var seenRatings = new List<float>();
             for (int i = 0; i < rosters.Length; i++)
             {
-                // The harness builds from the production template (23 since ERR-031-004). The recorded
-                // A4a corpus was captured on 25-player squads; the model keys on the starting-XI rating
-                // differential only, and the step-10 recapture re-captures on the current template.
+                // The harness builds from the production template (23 since ERR-031-004, shaped 3/8/7/5
+                // since P-M6). The recorded A4a corpus was captured on 25-player squads of the 3/8/8/6
+                // shape. The starting XI is selected from the (reduced, reshaped) pool, so the rating
+                // distribution the corpus was fitted against has moved: the step-10 recapture on the
+                // current template is REQUIRED, not merely planned.
                 Assert.AreEqual(LeagueBootstrapConstants.BuildSquadPositionTemplate().Length, rosters[i].Count);
 
                 // Fieldable by the KD-6 template — if this threw, every corpus row would fail at
@@ -440,4 +442,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | the next explicit pilot/corpus run is the evidence that no other       |
 // |         |            |        | unexpected Error channel aborts these long runs at teardown.           |
 // | 1.4     | 2026-10-19 | —      | ERR-031-004: base-roster size lock reads the production template (23), not the cap. |
+// | 1.5     | 2026-10-20 | —      | P-L3: the template-change comment no longer claims the quick-sim keys on the XI differential only (unsupported: the XI is selected from the reduced pool, so the rating distribution moved); the step-10 recapture is REQUIRED. |
 #endregion

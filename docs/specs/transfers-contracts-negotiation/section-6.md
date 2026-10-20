@@ -1,8 +1,9 @@
 # Transfers, Contracts & Negotiation #31 — Section 6: Performance
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-4 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** October 20, 2026 (v0.3 — ERR-031-006: §6.2 `SubmitBid` roster cost restated for the stable-id re-home)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-4 fix pass; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -21,8 +22,11 @@ command time), so a day with no manager action costs **zero** #31 work. `SubmitB
 - **`EvaluateOffer`** — one integer comparison.
 - **`SubmitBid`** — the validate-all-first gate chain (window predicate, universe check, valuation,
   affordability) + **one** `ApplyTransaction` post (the transfer fee — wages are deep, FR-TX-005) + one
-  `RequestRosterCommit` (a squad-slot allocation + a record move + the hook dispatch): a fixed number of integer
-  ops + one bounded roster mutation. No allocation in the common path (the `Contract` insert is amortized).
+  `TryPreviewRosterCommit` (a source-membership check + a destination count against `CLUB_SQUAD_SIZE`) + one
+  `RequestRosterCommit` (an id-preserving re-home: the player's record moves to the destination roster under his
+  unchanged id, ERR-031-005) + one `TryGetPlayer` landing confirmation: a fixed number of integer ops + one bounded
+  roster mutation. *(ERR-031-006: the commit was originally costed as "a squad-slot allocation + a record move +
+  the hook dispatch" — with stable ids there is no slot/id allocation and the re-key hook is deleted.)* No allocation in the common path (the `Contract` insert is amortized).
 - **`DeriveCliques`-style scans:** none — #31 has no graph derivation.
 
 ## 6.3 Player search
@@ -46,4 +50,5 @@ budget concern. No RNG stream registered at minimal (KD-5), so no stream-advance
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §6 (cadence, per-operation cost, player search, save cost, budget). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-4: `SubmitBid` cost corrected to **one** `ApplyTransaction` post (fee-only at minimal; wages deep, FR-TX-005). |
+| 0.3 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §6.2 `SubmitBid` roster cost is a capacity-only preview + an id-preserving re-home + a `TryGetPlayer` confirmation; the former slot allocation and hook dispatch no longer exist. |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-10-19 (DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 — #28 regen, ERR-028-025)
+// Modified: 2026-10-20 (AR round 1 L1: DOMAIN_TAG_SEASON_LOOP doc annotated — 0x20 is allocated; doc-only — v1.12)
+//           Prior: 2026-10-19 (DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 — #28 regen, ERR-028-025)
 //           Prior: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
 //           prior same day ERR-016-010 SNAPSHOT_FILE_MAGIC / _FORMAT_VERSION v1.9;
 //           ERR-016-009 DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
@@ -172,6 +173,9 @@ namespace TacticalDirector.DeterministicSim
         /// #29 respectively (#30 KD-5's honesty note); #28 T0 recorded the same reservation from its own
         /// side (KD-B) and will claim 0x20 when its production regen stream lands. Allocating 0x22 here
         /// rather than compacting to 0x20 keeps the spec-pinned numbers stable across the three specs.
+        /// <b>Annotation (ERR-028-025, AR round 1 L1):</b> 0x20 is no longer a gap — it is allocated, as
+        /// <see cref="DOMAIN_TAG_PLAYER_PROGRESSION"/>, with #28's season-boundary regen. Only 0x21 remains
+        /// a reserved gap (Training #29, which registers no stream).
         /// </para>
         /// </summary>
         public const byte DOMAIN_TAG_SEASON_LOOP = 0x22;
@@ -424,4 +428,5 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | chain LINK: 4a asks whether this record follows the last one, 4b  |
 // |         |            |        | asks whether these bytes are the record they claim to be.         |
 // | 1.11    | 2026-10-19 | —      | ERR-028-001 code half / ERR-028-025: DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 lands at #28's first draw site (the season-boundary regen). |
+// | 1.12    | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025), doc-only: DOMAIN_TAG_SEASON_LOOP's "0x20 and 0x21 are deliberate gaps ... will claim 0x20" note annotated — 0x20 is now allocated (DOMAIN_TAG_PLAYER_PROGRESSION); 0x21 stays reserved. No value or behavior change. |
 #endregion

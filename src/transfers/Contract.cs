@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/Contract.cs
 // Created:  2026-09-12
-// Modified: 2026-09-12
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.3 (minimal contract state)
@@ -15,7 +15,7 @@ namespace TacticalDirector.Transfers
     /// <summary>Minimal durable player contract; deep-tier clauses append later without replacing this identity.</summary>
     public struct Contract
     {
-        /// <summary>Current club-scoped player identifier.</summary>
+        /// <summary>Stable, career-unique player identifier (ERR-031-005); it does not change when the player transfers.</summary>
         public int PlayerId;
 
         /// <summary>Non-negative wage recorded for the contract; not posted to #40 at minimal tier.</summary>
@@ -71,4 +71,5 @@ namespace TacticalDirector.Transfers
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 minimal contract value. |
+// | 1.1     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) L1: PlayerId doc reworded to stable career-unique id semantics (ERR-031-005). |
 #endregion

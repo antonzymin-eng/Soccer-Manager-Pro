@@ -1,9 +1,9 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-19
+// Modified: 2026-10-20 (#31 T2)
 // Author:   —
-// Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, re-key, window, fail-loud tests)
+// Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
 // ============================================================================
 
@@ -444,6 +444,136 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void InsertContract_BeyondTheSquadSize_FailsLoud_AndLeavesTheSetUntouched()
+        {
+            TransfersState state = CreateOpenState();
+            for (int i = 0; i < PlayerDatabaseConstants.CLUB_SQUAD_SIZE; i++)
+            {
+                Contract contract = new Contract(MANAGED_PLAYER_ID + i, 1_000L, 2);
+                state.InsertContract(in contract);
+            }
+
+            Contract extra = new Contract(MANAGED_PLAYER_ID + PlayerDatabaseConstants.CLUB_SQUAD_SIZE, 1_000L, 2);
+            var e = Assert.Throws<InvalidOperationException>(() => state.InsertContract(in extra));
+
+            StringAssert.Contains("at most", e.Message);
+            Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, state.ContractCount);
+            Assert.IsFalse(state.TryGetContract(extra.PlayerId, out Contract _));
+        }
+
+        [Test]
+        public void SubmitBid_BuyOfAPlayerWhoseIdAlreadyHoldsAManagedContract_FailsLoudBeforeTheRosterCommit()
+        {
+            // The contract set and the roster disagree: the external player already has a managed contract.
+            // The pre-check must fire before RequestRosterCommit, because the port cannot be unwound.
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            Contract stray = new Contract(COUNTERPARTY_PLAYER_ID, 777L, 1);
+            state.InsertContract(in stray);
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+
+            Assert.AreEqual(0, roster.CommitCount);
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.AreEqual(1, state.ContractCount);
+            Assert.IsTrue(state.TryGetContract(COUNTERPARTY_PLAYER_ID, out Contract retained));
+            Assert.AreEqual(777L, retained.WagePerPeriod);
+        }
+
+        [TestCase(-1)]
+        [TestCase(PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 1)]
+        public void SubmitBid_InvalidPositionalStockFromThePort_FailsLoudWithoutCommit(int portCount)
+        {
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            roster.PositionalStockOverride = portCount;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, 1L, 1_000L, 2, true);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+
+            Assert.AreEqual(0, roster.CommitCount);
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0, state.ContractCount);
+        }
+
+        [Test]
+        public void SubmitBid_BuyWithZeroPositionalStockAtTheSellingClub_FailsLoudWithoutCommit()
+        {
+            // The player is on the counterparty's roster, so a count of 0 at his position is inconsistent.
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            roster.PositionalStockOverride = 0;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, 1L, 1_000L, 2, true);
+
+            Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+
+            Assert.AreEqual(0, roster.CommitCount);
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0, state.ContractCount);
+        }
+
+        // ── #31 T2 command locks (ERR-031-007/009/010) ───────────────────────────────
+
+        [Test]
+        public void SubmitBid_AReleaseThatDepletesTheSellingSquad_ReturnsSquadDepleted_WithNoMutation()
+        {
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            roster.CanReleasePlayers = false;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
+
+            Assert.AreEqual(TransferSubmissionOutcome.SquadDepleted, commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.AreEqual(0, state.ContractCount);
+            Assert.AreEqual(0, roster.CommitCount);
+        }
+
+        [Test]
+        public void SubmitBid_AnUnknownCounterpartyClub_FailsLoud_BeforeAnyValuation()
+        {
+            FakeRosterPort roster = CreateRosterWithManagedPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            state.InsertContract(new Contract(MANAGED_PLAYER_ID, 1_000L, 2));
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer sellToNowhere = new Offer(MANAGED_PLAYER_ID, 999, 1L, 0L, 1, false);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => commands.SubmitBid(in sellToNowhere, 110U, ref finances, state));
+            Assert.AreEqual(0, roster.CommitCount);
+            Assert.AreEqual(1, state.ContractCount);
+        }
+
+        [Test]
+        public void SubmitBid_AnUncontractedManagedPlayer_IsSellable()
+        {
+            // ERR-031-009: a contract that aged out leaves the player un-contracted but on the roster.
+            FakeRosterPort roster = CreateRosterWithManagedPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, MANAGED_PLAYER_ID);
+            Offer offer = new Offer(MANAGED_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, false);
+
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(5_000_000L + valuation, finances.Balance);
+            Assert.IsTrue(roster.TryGetPlayer(MANAGED_PLAYER_ID, out PlayerRecord _, out int club));
+            Assert.AreEqual(COUNTERPARTY_CLUB_ID, club);
+        }
+
+        [Test]
         public void InsertContract_DefaultContract_FailsLoud()
         {
             TransfersState state = CreateOpenState();
@@ -543,6 +673,19 @@ namespace TacticalDirector.Transfers.Tests
 
             public Action BeforeCommit { get; set; }
 
+            // Port-breach injection: when set, every positional-stock query returns this value verbatim.
+            public int? PositionalStockOverride { get; set; }
+
+            // ERR-031-007: whether the releasing club keeps a matchday squad.
+            public bool CanReleasePlayers { get; set; } = true;
+
+            // ERR-031-010: the league's club universe.
+            public HashSet<int> Clubs { get; } = new HashSet<int> { MANAGED_CLUB_ID, COUNTERPARTY_CLUB_ID };
+
+            public bool CarriesClub(int clubId) => Clubs.Contains(clubId);
+
+            public bool CanRelease(int clubId, int playerId) => CanReleasePlayers;
+
             public void Add(PlayerRecord player, int clubId)
             {
                 _players.Add(player.PlayerId, player);
@@ -557,6 +700,11 @@ namespace TacticalDirector.Transfers.Tests
 
             public int CountPlayersAtPosition(int clubId, PlayerPosition position)
             {
+                if (PositionalStockOverride.HasValue)
+                {
+                    return PositionalStockOverride.Value;
+                }
+
                 int count = 0;
                 foreach (KeyValuePair<int, PlayerRecord> entry in _players)
                 {
@@ -571,9 +719,14 @@ namespace TacticalDirector.Transfers.Tests
 
             public bool TryPreviewRosterCommit(int fromClubId, int toClubId, int playerId)
             {
-                return HasDestinationCapacity
-                    && _clubOf.TryGetValue(playerId, out int owner)
-                    && owner == fromClubId;
+                // ERR-031-010: false means ONLY "destination full"; anything else is a defect and throws.
+                if (!_clubOf.TryGetValue(playerId, out int owner) || owner != fromClubId
+                    || !Clubs.Contains(fromClubId) || !Clubs.Contains(toClubId))
+                {
+                    throw new InvalidOperationException("Fake port: preview of an impossible move.");
+                }
+
+                return HasDestinationCapacity;
             }
 
             public void RequestRosterCommit(int fromClubId, int toClubId, int playerId)
@@ -598,4 +751,6 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.3     | 2026-09-14 | —      | Add sell-direction preview/commit mismatch regression locking retained local contract/finance on a port breach. |
 // | 1.4     | 2026-09-21 | —      | ERR-031-002: lock extreme coherent debt + over-budget buy returning InsufficientBudget before checked finance staging, with no mutation/roster commit. |
 // | 1.5     | 2026-10-19 | —      | ERR-031-005: stable-id fake port (explicit club membership); off-range-id ownership and roster-judged direction locks; commit breach is 'did not land'; the re-key test is deleted with the handler. |
+// | 1.6     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1/M5/L1: 26th-contract refusal, buy duplicate-contract pre-check, invalid positional-count and buy zero-stock throws (FakeRosterPort.PositionalStockOverride); header reworded to stable-id semantics. |
+// | 1.7     | 2026-10-20 | —      | #31 T2: fake port gains CarriesClub/CanRelease and throws on an impossible preview (ERR-031-010); locks SquadDepleted (ERR-031-007), unknown-counterparty fail-loud (ERR-031-010) and the un-contracted sale (ERR-031-009). |
 #endregion

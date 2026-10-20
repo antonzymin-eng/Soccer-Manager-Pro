@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueBootstrapConstants.cs
 // Created:  2026-07-25
-// Modified: 2026-10-19 (ERR-031-004 — bootstrap template 25 -> 23, strictly below the cap — v1.2)
+// Modified: 2026-10-20 (P-M6 — bootstrap template 3/8/8/4 -> 3/8/7/5, forward depth — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-2/KD-4/
 //           KD-5/KD-6/KD-9; path-to-playable roadmap A3; Code Standards #20
@@ -66,7 +66,7 @@ namespace TacticalDirector.SeasonSave
         // Backing store for SquadPositionCounts. Declared BEFORE the read-only wrapper below: within a
         // class, static field initializers run in textual order, so wrapping an as-yet-uninitialised
         // array would capture null (the PerceptionConstants.BASE_FOV_HALF_ANGLE static-init defect).
-        private static readonly int[] s_squadPositionCounts = { 3, 8, 8, 4 };
+        private static readonly int[] s_squadPositionCounts = { 3, 8, 7, 5 };
 
         /// <summary>[GT] Default number of clubs in a bootstrapped league — one 38-round double
         /// round-robin (380 fixtures). Config key <c>[league-bootstrap] DefaultClubCount</c>.</summary>
@@ -155,11 +155,16 @@ namespace TacticalDirector.SeasonSave
         /// then the template summed to the cap itself, 25, so every club began full and #31's roster
         /// preview could only answer <c>SquadFull</c>: no buy (the managed club full) and no sell (the
         /// buyer full) could ever complete, and nothing opened a slot (regen is 1:1, an expired
-        /// contract keeps the player). The owner chose to generate squads below the cap. 3/8/8/4 = 23
-        /// drops the template's last two forwards rather than one player from each line, because each
-        /// generated player's draws depend only on his index: players 0–20 of every club are therefore
-        /// byte-identical to the 25-player template's, and only the two trailing forwards are gone.
-        /// Four forwards still cover F433's three with one spare.
+        /// contract keeps the player). The owner chose to generate squads below the cap. 3/8/7/5 = 23
+        /// (GK 3, DF 8, MF 7, FW 5) is that template: each generated player's draws depend only on his
+        /// index, so players 0–17 of every club (all three goalkeepers, all eight defenders and the
+        /// first seven midfielders) are byte-identical to the original 25-player 3/8/8/6 template's,
+        /// while index 18 is now a forward drawn with a forward bias (it was a midfielder).
+        /// <i>(Updated October 20, 2026, P-M6: the interim 3/8/8/4 shape left one spare forward over
+        /// F433's three, so two forwards unavailable — injured, then the Laws-violating suspended tier —
+        /// forced AvailabilityComposition's press-back-in. 3/8/7/5 makes the spare per line over the
+        /// worst formation need (GK 1 / DF 4 / MF 5 / FW 3) 2/4/2/2: the minimum spare is 2 on every
+        /// line.)</i>
         /// </para>
         /// <para>
         /// Sized against the maximum any shipped formation family needs for a starting XI — F442
@@ -284,4 +289,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | longer the cap. Template 3/8/8/6 = 25 -> 3/8/8/4 = 23 (the last  |
 // |         |            |        | two forwards dropped, so players 0-20 are byte-identical); the  |
 // |         |            |        | sum must cover a matchday 18 and stay strictly below 25.         |
+// | 1.3     | 2026-10-20 | —      | P-M6: 3/8/8/4 -> 3/8/7/5 (still 23). 4 forwards left one spare   |
+// |         |            |        | over F433's 3, so two unavailable forwards forced the press-back-|
+// |         |            |        | in; spare per line over the worst formation need is now 2/4/2/2. |
+// |         |            |        | Players 0-17 keep position and draws; index 18 becomes a FW.     |
 #endregion

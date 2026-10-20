@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveTransfersTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-20 (M6 orphan-contract negatives at Load and composition; L2 stale comment — v1.1)
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §4.4 / §5.5 T-TX-DET-001 / §7.1 T1, FR-TX-012/014/027/028;
 //           Season & Competition Loop #30 Appendix B (frame v8); ERR-031-003; Code Standards #20
@@ -167,7 +167,8 @@ namespace TacticalDirector.SeasonSave
         public void Save_AContractForAPlayerTheRosterDoesNotCarry_IsRefused()
         {
             // One-player squads, so a contract can name a managed-club id the roster does not carry — the
-            // roster rule is then the only thing that can refuse it (TransfersState's own id check passes).
+            // roster rule is then the only thing that can refuse it (TransfersState checks no membership since
+            // ERR-031-005 — any non-negative id is insertable).
             Squad[] squads = new Squad[ClubCount];
             for (int c = 0; c < ClubCount; c++)
             {
@@ -206,6 +207,38 @@ namespace TacticalDirector.SeasonSave
 
             var e = Assert.Throws<ArgumentException>(() => SeasonSaveManager.Load(path));
             StringAssert.Contains("managed club", e.Message);
+        }
+
+        [Test]
+        public void Load_AFrameWhoseTransfersBlockHoldsAnOrphanContract_IsRefused()
+        {
+            // M6: the file's PROG projection (populated) is the roster authority at Load. A contract for a
+            // player id that projection's managed club does not carry — here another club's player, which
+            // TransfersState itself would insert and the codec would round-trip — is refused.
+            string path = TempPath("orphan-frame.season");
+            SeasonSaveManager.Save(NewLoop(NonDefaultState(), out _), matchOrNull: null, path);
+            SeasonSaveBlobs b = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+            byte[] orphan = TransfersSaveCodec.Encode(OrphanContractState());
+            File.WriteAllBytes(path, SeasonSaveCodec.Encode(
+                b.WorldBlob, b.SeasonBlob, new TrainingBlock(b.TrainingBlob), new MedicalBlock(b.MedicalBlob),
+                new AppearanceBlock(b.AppearanceBlob), new ProgressionBlock(b.ProgressionBlob),
+                new DisciplineBlock(b.DisciplineBlob), new FinanceBlock(b.FinanceBlob),
+                new TransfersBlock(orphan), b.MatchBlob));
+
+            var e = Assert.Throws<ArgumentException>(() => SeasonSaveManager.Load(path));
+            StringAssert.Contains("does not carry", e.Message);
+        }
+
+        [Test]
+        public void Composition_WithAnOrphanContract_IsRefused()
+        {
+            // M6: composition checks against the loop's resolved provider (here the progression
+            // projection), not the file — a state naming another club's player is refused before a loop
+            // exists, with the caller's parameter name.
+            var e = Assert.Throws<ArgumentException>(() => NewLoop(OrphanContractState(), out _));
+
+            Assert.That(e.ParamName, Is.EqualTo("transfersOrNull"));
+            StringAssert.Contains("does not carry", e.Message);
         }
 
         // ── F3 at the frame: D-10 / #50, saves are breakable — a v7 file is refused, not migrated ──
@@ -262,6 +295,16 @@ namespace TacticalDirector.SeasonSave
             return TransfersSaveCodec.Decode(blob);
         }
 
+        // A managed-club state whose only contract names a player of ANOTHER club (club 0's first player):
+        // legal to build (no membership check in TransfersState, ERR-031-005) and to encode, wrong for this
+        // career.
+        private static TransfersState OrphanContractState()
+        {
+            var state = new TransfersState(ManagedClubId, new TransferWindow(5, 50));
+            state.InsertContract(new Contract(0, 10, 2));
+            return state;
+        }
+
         private static void AssertSameState(TransfersState expected, TransfersState actual)
         {
             Assert.That(actual, Is.Not.Null);
@@ -298,4 +341,8 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-10-18 | —      | Initial implementation (#31 T1): frame-v8 transfers composition  |
 // |         |            |        | locks — round-trip/resume, slot, clone, guard, coherence, F3.    |
+// | 1.1     | 2026-10-20 | —      | M6: Load_AFrameWhoseTransfersBlockHoldsAnOrphanContract_IsRefused and |
+// |         |            |        | Composition_WithAnOrphanContract_IsRefused (the missing negatives for |
+// |         |            |        | the roster rule at Load and at composition); stale "TransfersState's  |
+// |         |            |        | own id check" comment corrected (deleted by ERR-031-005).             |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/LeagueBootstrapGoldenVectorTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-20 (P-M6 — digests re-pinned for the 3/8/7/5 template — v1.2)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) §3 + KD-10;
 //           Deterministic Simulation #16 §9.5 #4 (the golden-vector precedent)
@@ -61,14 +61,17 @@ namespace TacticalDirector.SeasonSave.Tests
         private const ulong ExpectedSeasonSeed = 0xCAA212CD2A2591EBUL;
 
         // FNV-1a-64 over every canonical field of every club and player — see Digest().
-        // Re-pinned 2026-10-19 (ERR-031-004): the template dropped its last two forwards (25 -> 23), so
-        // every club's two trailing players are gone; players 0-20 are untouched (the Player0 spot values
-        // below did not move). Previous value 0x6E0256C1CF1413C8.
-        private const ulong ExpectedLeagueDigest = 0x60F2B25D78FA7160UL;
+        // Re-pinned 2026-10-20 (P-M6): the template became 3/8/7/5 (was 3/8/8/4, itself re-pinned
+        // 2026-10-19 from 3/8/8/6 under ERR-031-004). Players 0-17 are untouched (the Player0 spot values
+        // below did not move); player 18 of every club is now a forward (it was a midfielder) and the
+        // squad still has 23 players. Previous values: 0x60F2B25D78FA7160 (3/8/8/4), before that
+        // 0x6E0256C1CF1413C8 (3/8/8/6).
+        private const ulong ExpectedLeagueDigest = 0x1814DB6EFD13BD22UL;
 
         // The same digest over a default-size (20-club) league — the shape a real career has.
-        // Re-pinned 2026-10-19 (ERR-031-004), same cause. Previous value 0x1E96ECA8D7B20854.
-        private const ulong ExpectedDefaultLeagueDigest = 0xB7C7E95010EC2D9FUL;
+        // Re-pinned 2026-10-20 (P-M6), same cause. Previous values: 0xB7C7E95010EC2D9F (3/8/8/4), before
+        // that 0x1E96ECA8D7B20854 (3/8/8/6).
+        private const ulong ExpectedDefaultLeagueDigest = 0x7CB4819D63002761UL;
 
         private static readonly int[] ExpectedStrengthDeltas = { 1, -1, 3, -3 };
 
@@ -296,4 +299,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | generation, which is persistence-equivalent because rosters are    |
 // |         |            |        | regenerated from the world seed rather than saved.                 |
 // | 1.1     | 2026-10-19 | —      | ERR-031-004: both league digests re-pinned for the 23-player template (25 -> 23, two trailing forwards dropped); spot values unchanged. |
+// | 1.2     | 2026-10-20 | —      | P-M6: both league digests re-pinned for the 3/8/7/5 template (was 3/8/8/4; index 18 becomes a forward, indices 0-17 unchanged); spot values unchanged. |
 #endregion

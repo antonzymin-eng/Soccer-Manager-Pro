@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT1Tests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-19
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #31 §5.5 T-TX-DET-001, §5.6 T-TX-FAIL-001, Appendix B (as corrected by ERR-031-003)
 // Purpose:  Locks the T1 transfers sub-blob: a pinned golden byte vector, field-identical round-trip of
@@ -248,6 +248,53 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void Decode_MoreContractsThanASquadHolds_IsRefused()
+        {
+            // The live state cannot hold CLUB_SQUAD_SIZE + 1 contracts (InsertContract refuses), so the block
+            // is built byte-by-byte.
+            int count = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 1;
+            int countOffset = TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES + TransfersConstants.TRANSFERS_SAVE_CLUB_RECORD_BYTES;
+            byte[] blob = BlockWithHeader(
+                clubCount: 1,
+                extraBytes: TransfersConstants.TRANSFERS_SAVE_CLUB_RECORD_BYTES + 4
+                    + count * TransfersConstants.TRANSFERS_SAVE_CONTRACT_RECORD_BYTES);
+            WriteI32(blob, TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES, MANAGED_CLUB_ID);
+            WriteI32(blob, TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES + 16, 2);   // CloseWorldDay 2 >= Open 0
+            WriteI32(blob, countOffset, count);
+            for (int i = 0; i < count; i++)
+            {
+                int record = countOffset + 4 + i * TransfersConstants.TRANSFERS_SAVE_CONTRACT_RECORD_BYTES;
+                WriteI32(blob, record, FIRST_MANAGED_PLAYER_ID + i);
+                WriteI32(blob, record + 12, 1);
+            }
+
+            var e = Assert.Throws<InvalidOperationException>(() => TransfersSaveCodec.Decode(blob));
+            StringAssert.Contains("at most", e.Message);
+        }
+
+        [Test]
+        public void Decode_NegativeManagedClubId_IsRefused()
+        {
+            byte[] blob = TransfersSaveCodec.Encode(new TransfersState(MANAGED_CLUB_ID, new TransferWindow(10, 20)));
+            WriteI32(blob, TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES, -1);
+
+            var e = Assert.Throws<InvalidOperationException>(() => TransfersSaveCodec.Decode(blob));
+            StringAssert.Contains("ManagedClubId", e.Message);
+        }
+
+        [Test]
+        public void Decode_NegativeContractPlayerId_IsRefused()
+        {
+            byte[] blob = TransfersSaveCodec.Encode(TransfersState.Restore(
+                MANAGED_CLUB_ID, 0, new TransferWindow(1, 2), new[] { new Contract(FIRST_MANAGED_PLAYER_ID, 5, 5) }));
+            int contract = TransfersConstants.TRANSFERS_SAVE_HEADER_BYTES + TransfersConstants.TRANSFERS_SAVE_CLUB_RECORD_BYTES + 4;
+            WriteI32(blob, contract, -1);
+
+            var e = Assert.Throws<InvalidOperationException>(() => TransfersSaveCodec.Decode(blob));
+            StringAssert.Contains("PlayerId", e.Message);
+        }
+
+        [Test]
         public void Decode_Null_Throws()
         {
             Assert.Throws<ArgumentNullException>(() => TransfersSaveCodec.Decode(null));
@@ -287,4 +334,5 @@ namespace TacticalDirector.Transfers.Tests
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-10-18 | —      | #31 T1: golden vector, round-trip, and F3/F6/F7 decode-refusal locks. |
 // | 1.1     | 2026-10-19 | —      | ERR-031-005: the codec-level managed-membership refusal is deleted — an id no longer encodes its club; membership is the season root's roster check (SeasonSaveTransfersTests). |
+// | 1.2     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1/M5: hand-built 26-contract block refusal; negative ManagedClubId and negative contract PlayerId decode refusals. |
 #endregion

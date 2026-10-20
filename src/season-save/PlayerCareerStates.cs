@@ -1,5 +1,7 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-10-20 (#31 T2: CanMovePlayerRows / MovePlayerRows carry a re-homed player's rows
+//           verbatim; AR round 1 L1 stale comments — v1.29)
 // Modified: 2026-10-19 (ERR-031-005 doc: the global-uniqueness rationale — v1.28)
 // Modified: 2026-08-22 (ERR-041-020 — football-judgment proxy review batch 1 — v1.27)
 // Modified: 2026-08-16, later (adversarial-review Medium — SelectAvailable was production-dead (its
@@ -989,12 +991,11 @@ namespace TacticalDirector.SeasonSave
         /// so a caller can assert a boundary was a no-op.
         /// <para>
         /// <b>Keyed on the roster, not on a #28 event.</b> Both FRs describe the handoff as reacting to
-        /// #28's <c>RegenResult</c> / <c>RetirementResult</c> at the boundary — but #28's roster churn
-        /// is unwired (roadmap D1) and those result types do not exist, so subscribing to them would be
-        /// a phantom seam. Reconciling against the roster #30 already holds is the same contract stated
-        /// over the state that exists: it inserts exactly the regens and removes exactly the retirees the
-        /// moment #28 T2 starts producing them, and it is exercisable today by a provider whose roster
-        /// changes. Keyed by <c>PlayerId</c> either way, as both FRs require.
+        /// #28's <c>RegenResult</c> / <c>RetirementResult</c> at the boundary. Since ERR-028-025 those
+        /// are one staged <c>SeasonBoundaryPlan</c>, and #30 reconciles against the plan's PLANNED rosters
+        /// (<c>PrepareRosterSync</c> takes any provider) — the same contract stated over the roster, which
+        /// inserts exactly the regens and removes exactly the retirees. Keyed by <c>PlayerId</c>, as both
+        /// FRs require.
         /// </para>
         /// <para>
         /// <b>Validate-all, then write.</b> Every club's roster is resolved and its new arrays built
@@ -1064,15 +1065,13 @@ namespace TacticalDirector.SeasonSave
                 var appearance = new AppearanceState[rosterIds.Length];
                 int carried = 0;
 
-                // RECORDED, NOT FIXED (AR pass 4): this reconciliation is PER CLUB, so a player who
-                // MOVES between two carried clubs is a departure here and a Create() there — his
-                // conditioning, injury history and any ACTIVE injury silently reset; he arrives fit.
-                // That is worse than the club-term key change #41 §3.1.1 refuses on the grounds that
-                // "the player carries his medical identity" (FR-MD-006). Inert today — no allocator
-                // moves players between clubs — but ERR-041-019's global-id guarantee is exactly what
-                // makes cross-club carry implementable (one pre-pass building id → held state before
-                // this walk), and that carry is #31 Transfers' arrival obligation, not a change to
-                // sneak in here without its spec.
+                // This reconciliation is PER CLUB, so a player who MOVED between two carried clubs
+                // would be a departure here and a Create() there — his conditioning, injury history and
+                // any ACTIVE injury silently reset (FR-MD-006: "the player carries his medical
+                // identity"). Transfers do NOT come through here: #31 T2 re-homes a player through
+                // MovePlayerRows, which carries his three rows verbatim under his unchanged id
+                // (ERR-031-005). This walk only ever sees roster changes that ARE departures and arrivals —
+                // #28's retirees and regens.
                 for (int i = 0; i < rosterIds.Length; i++)
                 {
                     int held = IndexOfPlayer(heldIds, rosterIds[i]);
@@ -1153,6 +1152,96 @@ namespace TacticalDirector.SeasonSave
             RosterGeneration++;
 
             return plan.Churn;
+        }
+
+        /// <summary>
+        /// Whether <see cref="MovePlayerRows"/> can re-home <paramref name="playerId"/>'s rows from
+        /// <paramref name="fromClubId"/> to <paramref name="toClubId"/>: both clubs carried, distinct, the
+        /// player on the source and not already on the destination, and the destination below
+        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>. Exactly the preconditions the move
+        /// checks — #31's preview asks this so the commit is infallible (§3.4, T2).
+        /// </summary>
+        internal bool CanMovePlayerRows(int playerId, int fromClubId, int toClubId)
+        {
+            if (fromClubId == toClubId)
+            {
+                return false;
+            }
+
+            int from = _clubIds.IndexOf(fromClubId);
+            int to = _clubIds.IndexOf(toClubId);
+            return from >= 0
+                && to >= 0
+                && IndexOfPlayer(_playerIds[from], playerId) >= 0
+                && IndexOfPlayer(_playerIds[to], playerId) < 0
+                && _playerIds[to].Length < PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+        }
+
+        /// <summary>
+        /// #31 T2's re-home of one player's #29/#41/#30 rows (ERR-031-005): his training, medical and
+        /// appearance states move VERBATIM from <paramref name="fromClubId"/> to <paramref name="toClubId"/>
+        /// under his unchanged id — an injured player sold stays injured, a tired one stays tired
+        /// (FR-MD-006). Both clubs' arrays stay in ascending id order. Bumps
+        /// <see cref="RosterGeneration"/>, so a roster-sync plan prepared before the move is refused.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><see cref="CanMovePlayerRows"/> is false.</exception>
+        internal void MovePlayerRows(int playerId, int fromClubId, int toClubId)
+        {
+            if (!CanMovePlayerRows(playerId, fromClubId, toClubId))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot re-home player {playerId}'s career rows from club {fromClubId} to club "
+                    + $"{toClubId}: a club is not carried, he is not on the source, he is already on the "
+                    + "destination, or the destination is full.");
+            }
+
+            int from = _clubIds.IndexOf(fromClubId);
+            int to = _clubIds.IndexOf(toClubId);
+            int index = IndexOfPlayer(_playerIds[from], playerId);
+            TrainingState training = _training[from][index];
+            InjuryState injury = _injury[from][index];
+            AppearanceState appearance = _appearance[from][index];
+
+            _playerIds[from] = RemoveAt(_playerIds[from], index);
+            _training[from] = RemoveAt(_training[from], index);
+            _injury[from] = RemoveAt(_injury[from], index);
+            _appearance[from] = RemoveAt(_appearance[from], index);
+
+            int insert = InsertionPoint(_playerIds[to], playerId);
+            _playerIds[to] = InsertAt(_playerIds[to], insert, playerId);
+            _training[to] = InsertAt(_training[to], insert, training);
+            _injury[to] = InsertAt(_injury[to], insert, injury);
+            _appearance[to] = InsertAt(_appearance[to], insert, appearance);
+
+            RosterGeneration++;
+        }
+
+        private static T[] RemoveAt<T>(T[] source, int index)
+        {
+            var result = new T[source.Length - 1];
+            Array.Copy(source, 0, result, 0, index);
+            Array.Copy(source, index + 1, result, index, source.Length - index - 1);
+            return result;
+        }
+
+        private static T[] InsertAt<T>(T[] source, int index, T value)
+        {
+            var result = new T[source.Length + 1];
+            Array.Copy(source, 0, result, 0, index);
+            result[index] = value;
+            Array.Copy(source, index, result, index + 1, source.Length - index);
+            return result;
+        }
+
+        private static int InsertionPoint(int[] ascendingIds, int playerId)
+        {
+            int i = 0;
+            while (i < ascendingIds.Length && ascendingIds[i] < playerId)
+            {
+                i++;
+            }
+
+            return i;
         }
 
         /// <summary>
@@ -1801,4 +1890,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | site of #41's step. #28 refreshes the derived-age cache at #30's KD-2 slot
 // |         |            |        | 1, before this slot-4 step, so the age reaching the term is the day's own.
 // | 1.28    | 2026-10-19 | —      | ERR-031-005 (doc only): RequireGloballyUniquePlayerIds' rationale names the genesis formula + #28's single monotonic allocator instead of 'an accident of today's formula'. |
+// | 1.29    | 2026-10-20 | —      | #31 T2 (ERR-031-005): CanMovePlayerRows / MovePlayerRows — a transfer carries the player's training/medical/appearance rows verbatim between clubs, bumping RosterGeneration. AR round 1 L1: the SyncToRoster doc names SeasonBoundaryPlan; the per-club-walk note says transfers bypass it. |
 #endregion

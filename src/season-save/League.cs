@@ -4,7 +4,7 @@
 //           progression and discipline state instead of bootstrapping finances by dropping them.)
 // Modified: 2026-09-11 (#40 T2b — League.CreateLoop is the #30-owned new-game composition seam that
 //           bootstraps exactly one finance entry per canonical squad and passes it into SeasonLoop.)
-// Modified: 2026-07-25
+// Modified: 2026-10-20 (#31 T2 genesis contract seeding in CreateLoop — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-9;
 //           Season & Competition Loop #30 §2.2 (SeasonState.CreateNew), §4.3;
@@ -22,6 +22,7 @@ using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -217,7 +218,9 @@ namespace TacticalDirector.SeasonSave
         /// <param name="careerOrNull">Existing #29/#41 career state, if already composed.</param>
         /// <param name="progressionOrNull">Existing #28 progression/roster authority, if already composed.</param>
         /// <param name="disciplineOrNull">Existing #44 discipline state, if already composed.</param>
-        /// <returns>A new loop with one initialized finance entry per club and all supplied subsystems preserved.</returns>
+        /// <returns>A new loop with one initialized finance entry per club, all supplied subsystems preserved,
+        /// and — when a populated progression store is supplied — the managed club's #31 contracts seeded
+        /// at the genesis terms (FR-TX-028).</returns>
         /// <exception cref="System.ArgumentNullException"><paramref name="world"/> is null.</exception>
         /// <exception cref="System.ArgumentException">The world and league seeds disagree, or a supplied
         /// subsystem violates <see cref="SeasonLoop"/>'s existing composition invariants.</exception>
@@ -247,6 +250,27 @@ namespace TacticalDirector.SeasonSave
             bool progressionIsRoster = progressionOrNull != null && progressionOrNull.ClubCount > 0;
             ISquadProvider careerSquads = careerOrNull != null && !progressionIsRoster ? this : null;
 
+            // #31 T2 genesis (FR-TX-028 / §3.8): a career with a #28 roster store gets the managed club's
+            // contracts seeded HERE and only here — a load decodes the persisted block and never seeds.
+            // Transfers re-home records in that store (KD-4), so without one #31 stays unwired. The first
+            // summer window opens on the new-game day (ERR-031-008).
+            TransfersState transfers = null;
+            if (progressionIsRoster)
+            {
+                Squad managedSquad = progressionOrNull.SquadFor(managedClubId);
+                if (managedSquad != null)
+                {
+                    var ids = new int[managedSquad.Count];
+                    for (int i = 0; i < ids.Length; i++)
+                    {
+                        ids[i] = managedSquad.GetPlayer(i).PlayerId;
+                    }
+
+                    transfers = TransfersState.CreateAtGenesis(
+                        managedClubId, TransferWindow.SummerWindowFrom(world.CurrentWorldTick), ids);
+                }
+            }
+
             return new SeasonLoop(
                 world,
                 CreateSeason(managedClubId, objective),
@@ -255,7 +279,8 @@ namespace TacticalDirector.SeasonSave
                 careerSquads,
                 progressionOrNull,
                 disciplineOrNull,
-                finances);
+                finances,
+                transfers);
         }
 
         /// <summary>
@@ -274,4 +299,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | CreateInitialForSquads exactly once before composing SeasonLoop.   |
 // | 1.2     | 2026-09-11 | —      | Review: CreateLoop forwards career/progression/discipline state,   |
 // |         |            |        | so enabling #40 cannot disable already-live subsystems.            |
+// | 1.3     | 2026-10-20 | —      | #31 T2 genesis (FR-TX-028 / §3.8): CreateLoop seeds the managed club's contracts at the genesis terms whenever a populated #28 store is supplied; first window opens on the new-game day (ERR-031-008). |
 #endregion

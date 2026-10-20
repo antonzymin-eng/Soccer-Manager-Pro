@@ -1,13 +1,16 @@
 // File:     src/season-save/SeasonTransfersCoherence.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-20 (M6 — wording: the roster authority differs by call site; comments only — v1.1)
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §4.4 / FR-TX-012/023/028, §7.1 T1;
 //           Season & Competition Loop #30 Appendix B.1 (cross-blob rules); Code Standards #20
 // Purpose:  The ONE owner of the cross-blob rule between the #31 transfers block and the rest of a
 //           career: its managed club is the season's managed club, and every managed contract names a
-//           player that club's roster actually carries. Called at loop composition, Save and Load, so
-//           none of the three can drift (the SeasonFinanceCoherence posture).
+//           player that club's roster actually carries. Called at loop composition, Save and Load (the
+//           SeasonFinanceCoherence posture) — ONE rule, but not one roster authority: composition passes
+//           the loop's resolved provider, Save/Load pass the file's #28 projection (none for a careerless
+//           save). The managed-club rule is unconditional; roster membership is checked only where an
+//           authority exists.
 
 using System;
 
@@ -30,8 +33,10 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         /// <param name="season">The season the state rides with.</param>
         /// <param name="transfersOrNull">The #31 state, or null.</param>
-        /// <param name="rosterOrNull">The roster authority (the #28 projection or a bootstrap provider), or
-        /// null when the caller holds none — then only the managed-club rule can be checked.</param>
+        /// <param name="rosterOrNull">The roster authority — the loop's resolved provider at composition, the
+        /// file's #28 projection at Save/Load — or null when the caller holds none (a careerless save): then
+        /// only the managed-club rule can be checked. TransfersState checks no membership itself
+        /// (ERR-031-005), so this is the only place an orphan contract is refused.</param>
         /// <param name="paramName">The caller's parameter name for the exception.</param>
         /// <exception cref="ArgumentException">The managed club differs, or a contract names a player the
         /// managed club's roster does not carry.</exception>
@@ -99,4 +104,7 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-10-18 | —      | Initial implementation (#31 T1): managed-club + contract-roster  |
 // |         |            |        | membership rule, one owner for composition/Save/Load.            |
+// | 1.1     | 2026-10-20 | —      | M6 (comments only): the Purpose and rosterOrNull docs no longer     |
+// |         |            |        | claim the three call sites cannot drift — the roster authority      |
+// |         |            |        | differs by site (ERR-030-055 narrowed Appendix B.1 to match).       |
 #endregion

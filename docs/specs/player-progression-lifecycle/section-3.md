@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.14 — ERR-028-024 / ERR-028-025: §3.3 inherited position; §3.4 staged boundary + the regen stream save story)
+**Last Updated:** October 20, 2026 (v0.15 — AR round 1 P-M3: §3.4's regen-seed line stated as a formula (domain, SplitMix64 finalizer, worked hex vector))
+**Last Updated (prior):** October 19, 2026 (v0.14 — ERR-028-024 / ERR-028-025: §3.3 inherited position; §3.4 staged boundary + the regen stream save story)
 **Last Updated (prior):** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short): §3.2's "Recorded limitation, not fixed
 here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated
@@ -24,7 +25,7 @@ numeric value, no draw, no format version. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.14
+**Version:** 0.15
 **Status:** APPROVED
 
 ---
@@ -603,7 +604,7 @@ this limitation directly, so the cross-reference is here rather than left implic
 **At the season boundary (`RunSeasonBoundary`, invoked by #30 KD-6) — as amended by ERR-028-024 / ERR-028-025:**
 ```
 PrepareSeasonBoundary(worldSeed, completedSeasonNumber, worldDay) -> plan:      # writes NOTHING
-    seed = Mix(Mix(DOMAIN_TAG_PLAYER_PROGRESSION ^ worldSeed) ^ completedSeasonNumber)
+    seed = DeriveRegenSeed(worldSeed, completedSeasonNumber)     # the formula below
     rng  = new DeterministicRngService(seed)              # boundary-scoped; discarded with the plan
     next = nextPlayerId
     for club in clubs ascending:
@@ -623,6 +624,32 @@ It **does not re-bank growth** (banked daily, KD-1) — its job is applying the 
 `plan.PlannedSquadFor` at (d′), and commits both after `BeginNextSeason` (#30 §3.5); the plan's
 `RetiredPlayerIds` / `RegenPlayerIds` / `RegenClubIds` are the `RetirementResult` / `RegenResult` FR-PG-012/015
 name, and #30 drops each retiree's #44 tally (FR-DC-013).
+
+**The regen seed, stated as a formula (AR round 1 P-M3).**
+```
+Mix(v : u64) -> u64                                  # the SplitMix64 finalizer, all arithmetic mod 2^64
+    z = v + 0x9E3779B97F4A7C15
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EB
+    return z ^ (z >> 31)
+
+DeriveRegenSeed(worldSeed, completedSeasonNumber) =
+    Mix( Mix(DOMAIN_TAG_PLAYER_PROGRESSION ^ worldSeed) ^ (u64)(u32) completedSeasonNumber )
+```
+*Units:* every term is a dimensionless unsigned 64-bit pattern; `DOMAIN_TAG_PLAYER_PROGRESSION` is the `byte`
+`0x20`, zero-extended. *Valid ranges:* `worldSeed` is any `u64` (the career's `WorldStore.WorldSeed`);
+`completedSeasonNumber >= 1` (the season the boundary closes — #30 numbers seasons from 1), an `i32` widened as
+`(u64)(u32)` so that every value in `[1, 2^31 - 1]` maps to itself; a negative value is outside the domain (it
+would widen to a distinct large `u32` pattern, not an error, but #30 never produces one). The result is the
+seed of a fresh `DeterministicRngService`. Any change to `worldSeed` or `completedSeasonNumber` changes it
+(SplitMix64 avalanche); the two-world and successive-boundary regen differences are asserted by §5 T-PG-RET-003.
+*Worked example (the golden vector, computed with a Python mirror that omits the `UL` suffixes and masks every
+intermediate product with `& 0xFFFFFFFFFFFFFFFF`, not by calling the code):* `worldSeed = 0xB0DA2028`,
+`completedSeasonNumber = 3`. `0x20 ^ 0xB0DA2028 = 0xB0DA2008`; `Mix(0xB0DA2008) = 0x0B9A85760C24CF95`;
+`0x0B9A85760C24CF95 ^ 3 = 0x0B9A85760C24CF96`; `Mix(0x0B9A85760C24CF96) = 0x443E7491A6459B6A`. So
+`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A` (pinned by
+`SeasonBoundaryTests.DeriveRegenSeed_MatchesTheIndependentlyComputedGolden`). The same world at season 1 gives
+`0x3296A16727870F78`; the world seed `0xB0DA2029` at season 3 gives `0xB3AAB61F6AEEE0DC`.
 
 **The regen stream's save story (ERR-028-025 — the question §3.5 had left unpinned, which kept this step
 unbuilt).** The stream is **boundary-scoped**: constructed fresh at each boundary from a seed derived from the
@@ -920,4 +947,5 @@ about not erasing a roster the codec can actually see.
 | 0.12 | 2026-08-24 | — | Round-2 adversarial finding `construction-day-credit-implemented-twice` (High), spec + code in the same commit. The construction-day credit — the rule that a site anchoring `LastAdvancedWorldDay` at its own construction day owes that day's band step to `GrowthCursor` — was IMPLEMENTED TWICE: inlined in `ProgressionEngine.SeedLifecycle` and again as `RegenGenerator.BandStepFor`, whose own documentation described itself as the shared owner of a rule it did not own. That duplication is not hypothetical debt here: it is why ERR-028-018 credited the seed site and left the regen site at `0` (found a day later, AR pass 7) and why ERR-028-020 then had to visit both sites again to move each off the retired three-way step. §3.3 now states the single-owner requirement normatively (`AbilityModel.ConstructionDayCredit`, alongside the §3.1.3 curve it reads) and §3.1's seed-credit MUST points at the same owner; §3.3's `BandStepFor(age)` reference retires with the method, which is deleted. **No behaviour change** — the two implementations were character-for-character identical, verified by probe over ages 0..200 and the `int` domain's edges (including `int.MinValue`/`MaxValue`) before the collapse, and the suite is unchanged at 147 pre-existing passes. What the landing adds is the divergence detection neither form had: a cross-SITE lock seeding a `ProgressionEngine` from a regen's own returned record and requiring both credits to agree, plus a seed-site case at a ramp age (every prior seed-credit case drove 18/27/34, all outside both ramps, where the retired step and the continuous curve agree day for day). No new constant, no `[GT]`, no draw, no stream, no domain tag, no format version. |
 | 0.13 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings, doc-only. **M2 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):** §3.2's "Recorded limitation, not fixed here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-`ABILITY_MAX` figure is unchanged (the P5 pivot makes it exact at every half-width). **L1 (four-guards-enumerated-as-five-and-mis-named):** §3.4's `RetirementAgeDays` pseudocode note corrected — it said "these TWO dial guards" for the single combined non-negativity `if`, which made the paragraph claim "four" and then list five items; now "this ONE combined dial guard". **M5 (retirement-day-derived-from-attributes-the-same-step-mutates):** new §3.4 paragraph states the retirement-day feedback-loop invariant — the day is re-evaluated against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and `RetirementFlag`'s stickiness — and cites the new **T-PG-RET-009** lock (`section-5.md` v0.9). No numeric value, no draw, no format version. |
 | 0.14 | 2026-10-19 | — | **ERR-028-024**: §3.3 — the regen takes the retiree's position; the position draw index stays reserved and undrawn. **ERR-028-025**: §3.4 — `PrepareSeasonBoundary` (pure) / `CommitSeasonBoundary` (infallible) replace the marker pseudocode; the boundary-scoped regen stream (seed from world seed + completed season, no serialized cursor) is the save story; normative draw and id orders pinned. |
+| 0.15 | 2026-10-20 | — | **AR round 1 P-M3 (ERR-028-025)**: §3.4's seed line `Mix(Mix(TAG ^ worldSeed) ^ completedSeasonNumber)` broke the every-formula-has-units-ranges-and-a-worked-example rule. The pseudocode now calls `DeriveRegenSeed`, and a new formula block states the domain (`completedSeasonNumber >= 1`, widened `(u64)(u32)`), names `Mix` as the SplitMix64 finalizer with its constants, and gives one worked hex vector (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`), computed with an independent Python mirror and pinned by `SeasonBoundaryTests`. |
 #endregion

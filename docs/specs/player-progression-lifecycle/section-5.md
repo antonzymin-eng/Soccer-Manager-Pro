@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.10 — ERR-028-024 / ERR-028-025: T-PG-RET-003 restated; T-PG-RET-005)
+**Last Updated:** October 20, 2026 (v0.11 — AR round 1 P-M4 / L1: the position-inheritance lock renumbered T-PG-RET-010 (duplicate id); T-PG-SAVE-001's stale "boundary marker" restated)
+**Last Updated (prior):** October 19, 2026 (v0.10 — ERR-028-024 / ERR-028-025: T-PG-RET-003 restated; the position-inheritance lock, then allocated as T-PG-RET-005 and renumbered T-PG-RET-010 at v0.11)
 **Last Updated (prior):** August 24, 2026 (v0.9 — round-2 Medium/Low adversarial findings. L2
 (new-test-ids-appended-out-of-sequence): §5.3.1 and §5.6's id lists reordered numerically — T-PG-ID-002
 moved to the end of §5.3.1 (after T-PG-AGE-007) and T-PG-RET-002/003/004 moved before T-PG-RET-005; no
@@ -15,7 +16,7 @@ Prior entry below.)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: §5.1's `AdvanceDay_FirstCall_*` passage corrected from the retired sentinel-anchored behaviour to the shipped seed-day-replay behaviour, with the inversion noted; new §5.9/§5.10 allocate T-PG-BLOCK-001..007 / T-PG-BATCH-001 / T-PG-CODEC-001..007 and §5.7 gains T-PG-SAVE-007/008 for ~17 mutation-audit-proven locks that landed across commits `043ccd0`/`1d19bc8`/`9392839` with no prior test-plan id)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: new locks for the signed anchor, the cross-blob cursor rule, the roster-overwrite refusal, and the F8 sentinel guard)
 **Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -167,9 +168,9 @@ renumbered, only reordered; every id below still names the exact same test as be
   count is unchanged (FR-PG-019, no unbounded growth).
 - **T-PG-RET-003 (F6; restated at ERR-028-025)** — preparation writes nothing; a plan commits once (a second
   commit, or a commit after any store mutation, is refused); a save taken BEFORE the boundary → restore → roll
-  draws the identical regens (`SeasonBoundaryRegenTests.ASaveTakenBeforeTheRoll_ReproducesTheSameRegens`).
-- **T-PG-RET-005 (ERR-028-024)** — every regen takes its retiree's position, and across several boundaries
-  every club keeps its bootstrap position shape and can field an XI.
+  draws the identical regens (`SeasonBoundaryRegenTests.ASaveTakenBeforeTheRoll_ReproducesTheSameRegens`). The regen seed is also pinned to the
+  §3.4 golden vector (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`), and the same season in two worlds
+  (different `worldSeed`), like two seasons in one world, draws different regens (AR round 1 P-M2).
 - **T-PG-RET-004** — `RunSeasonBoundary` does **not** re-bank growth (a Stable-band player's attributes
   are unchanged by the boundary step — growth was banked daily, KD-6).
 - **T-PG-RET-005 (per-player retirement day, ERR-028-021; property 3 corrected at ERR-028-022)** —
@@ -211,11 +212,15 @@ renumbered, only reordered; every id below still names the exact same test as be
   today's one-directional band order, not enforced by `RetirementAgeDays` itself, and the id exists so
   a future change letting the reading trio move in mixed directions within a band (the T3 curve; #47
   authored data) trips this lock rather than surfacing undiagnosed.
+- **T-PG-RET-010 (ERR-028-024; renumbered from a duplicate T-PG-RET-005 at v0.11, AR round 1 P-M4)** — every
+  regen takes its retiree's position, and across several boundaries every club keeps its bootstrap position
+  shape and can field an XI.
 
 ## 5.7 Persistence fail-loud (FR-PG-016..019)
 
 - **T-PG-SAVE-001** — Full-block save→restore round-trip is field-identical (records + overlays +
-  `NextPlayerId` + boundary marker).
+  `NextPlayerId`). *(No boundary marker exists — §3.4, ERR-028-025: the staged boundary is restartable by
+  construction, so nothing beyond the id cursor needs to round-trip; restated at v0.11.)*
 - **T-PG-SAVE-002** — Fail-loud on a bad `PROGRESSION_SAVE_FORMAT_VERSION` (F3), an out-of-bounds
   entry-count prefix (F5, overflow-safe), and trailing bytes (F5).
 - **T-PG-SAVE-003 (composed)** — The block round-trips through the season save (world + season +
@@ -334,5 +339,6 @@ previously unlocked by deletion).
 | 0.7 | 2026-08-22 | — | **ERR-028-022** — two §5.6 ids amended, spec + code in the same commit, because their implementing locks could not distinguish the behaviour they had been re-pointed at. **T-PG-RET-005:** property 3 said "the game-reading offsets over a uniform `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]` population sum to exactly 0" and the lock swept the `Anticipation == Positioning == Composure` diagonal — one line through the population, and precisely the line on which §3.4's retired `floor(sum/3)` is exact — so it passed against an implementation summing **−204,621 days** over the real product (−25.58 d/player) and passed a mutation to a differently-wrong rounding. Now the whole product, with a cardinality precondition so the sweep cannot silently narrow back to a line, and with the residual honest fact attached: the uniform product is a modelling idealisation, while #27's `RosterGenerator` draws `[6,14]` (centre 10 against the offset's neutral 10.5), leaving ≈ −38 days per generated player — recorded in §3.4, deliberately not fitted away. **T-PG-RET-001:** re-pointed from `RETIREMENT_AGE` to `RetirementAgeDays` at ERR-028-021 while both implementing cases used a default-attribute Midfielder at exactly `RETIREMENT_AGE` / `RETIREMENT_AGE − 1`, where the per-player day and the retired league-wide age agree by construction; mutation-verified that restoring the pre-fix `rec.Age >= RETIREMENT_AGE` left `PlayerProgression.Tests` 134/134 and `SeasonSave.Tests` 402/3 green. The id now MUST carry at least one case that fails against that comparison — the position half (goalkeeper vs identical outfielder at the baseline age) and the attribute/day-resolution half (two same-position players a year below the baseline, reading trios at both ends of the range, advanced to a day strictly between their retirement days). |
 | 0.8 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **guards-unexercised / ramp-guard-int-overflow:** new T-PG-AGE-006 (ramp half-width non-negativity) and T-PG-AGE-007 (disjointness, including the int-overflow class that let a wildly-too-wide half-width defeat the pre-fix guard and return garbage) — §5.3.1's ramp catalogue/config integrity guards previously had no test-plan id at all. **retirement-dials-no-overload:** new T-PG-RET-006 (the two retirement dials' non-negativity), T-PG-RET-007 (computed day at or before birth), and T-PG-RET-008 (the zero/zero OFF identity, executed rather than only hand-verified) — same gap on the §3.4 side. **f1-cursor-not-consumed-stale:** T-PG-CA-002 corrected from "the cursor is not consumed past the ceiling" (the pre-AR-pass-6 clamp posture) to the discard-to-zero behaviour §3.1 and the code have carried since AR pass 6; pre-existing staleness, not introduced by this batch. |
 | 0.9 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings. **new-test-ids-appended-out-of-sequence (L2):** §5.3.1's and §5.6's id lists reordered numerically by prefix-then-number — T-PG-ID-002 moved to the end of §5.3.1 (it sorts after the AGE run, not inside it), T-PG-RET-002/003/004 moved before T-PG-RET-005. No id renumbered; every id still names the same test as before. **retirement-day-derived-from-attributes-the-same-step-mutates (M5):** new **T-PG-RET-009** — the retirement day, re-evaluated daily against attributes §3.1.2's spend/drain step just mutated, MUST be monotone across a run of same-direction days (the one property keeping today's re-evaluation from oscillating); §3.4 gains the invariant statement this id locks. |
-| 0.10 | 2026-10-19 | — | **ERR-028-025**: T-PG-RET-003 restated for the staged, marker-free boundary. **ERR-028-024**: new T-PG-RET-005 (position inheritance + multi-boundary squad shape). |
+| 0.10 | 2026-10-19 | — | **ERR-028-025**: T-PG-RET-003 restated for the staged, marker-free boundary. **ERR-028-024**: new T-PG-RET-005 (position inheritance + multi-boundary squad shape) — **renumbered T-PG-RET-010 at v0.11**: the id duplicated the existing per-player-retirement-day T-PG-RET-005 (ERR-028-021/022). |
+| 0.11 | 2026-10-20 | — | **AR round 1 P-M4 (ERR-028-024)**: the v0.10 entry for the position-inheritance / squad-shape lock reused the id T-PG-RET-005, already owned by the per-player-retirement-day lock (ERR-028-021/022) and cited under that id in the error log and `AbilityModelTests`; renumbered to **T-PG-RET-010** and moved after T-PG-RET-009 (numeric order, v0.9 L2). **AR round 1 L1 (ERR-028-025)**: T-PG-SAVE-001 still required round-tripping a "boundary marker" §3.4 says does not exist; restated. |
 #endregion

@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/NegotiationOutcome.cs
 // Created:  2026-09-12
-// Modified: 2026-09-14
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.2, §3.2-§3.3 (negotiation + command outcomes)
@@ -41,8 +41,14 @@ namespace TacticalDirector.Transfers
         /// <summary>The managed club cannot fund the accepted fee within its remaining transfer ceiling.</summary>
         InsufficientBudget = 3,
 
-        /// <summary>The destination squad has no free deterministic local index.</summary>
-        SquadFull = 4
+        /// <summary>The destination roster is already at <c>CLUB_SQUAD_SIZE</c>, so it cannot take another player.</summary>
+        SquadFull = 4,
+
+        /// <summary>
+        /// The releasing club could no longer name a matchday squad without the player (ERR-031-007) — the
+        /// manager's sale, or an AI club's sale to the manager. An ordinary no-mutation outcome.
+        /// </summary>
+        SquadDepleted = 5
     }
 }
 
@@ -52,4 +58,6 @@ namespace TacticalDirector.Transfers
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 outcome enum. |
 // | 1.1     | 2026-09-14 | —      | CounterOffered becomes the deterministic T0 near-value outcome. |
 // | 1.2     | 2026-09-14 | —      | Add TransferSubmissionOutcome so player-reachable budget/full-squad results are typed, not exceptions. |
+// | 1.3     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) L1: SquadFull doc reworded to destination-roster-capacity semantics (stable PlayerIds, ERR-031-005; no local index is allocated). |
+// | 1.4     | 2026-10-20 | —      | #31 T2 (ERR-031-007): SquadDepleted = 5 — the releasing club would fall below a matchday squad. |
 #endregion

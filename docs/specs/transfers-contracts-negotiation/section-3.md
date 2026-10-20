@@ -1,11 +1,13 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.10 — ERR-031-005: §3.3/§3.4 re-home under a stable id)
+**Last Updated:** October 20, 2026 (v0.12 — T2: §3.3 ERR-031-007/009/010, §3.5 ERR-031-008, §3.7 the staged boundary)
+**Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-006: §3.4 test-id reference corrected to T-TX-REKEY-005)
+**Last Updated (prior):** October 19, 2026 (v0.10 — ERR-031-005: §3.3/§3.4 re-home under a stable id)
 **Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -83,6 +85,7 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     # ---- VALIDATE/PREFLIGHT (no local mutation) ----
     require offer well-formed                                                       else throw  # F6
     require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                else throw  # F4
+    require CarriesClub(offer.CounterpartyClubId)                                   else throw  # F6, ERR-031-010
     require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId)==fromClub else throw
         # ClubOf is the roster port's answer, never offer.PlayerId / CLUB_SQUAD_SIZE (ERR-031-005)
 
@@ -98,8 +101,12 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
         if offer.Fee > budget - committed:
             return InsufficientBudget                       # F1; no mutation
         # ERR-031-002: decide the ordinary affordability outcome before checked finance staging.
-    else:
-        require valid managed Contract(offer.PlayerId)       else throw
+    else if managed Contract(offer.PlayerId) exists:
+        require it is valid                                  else throw
+        # ERR-031-009: a sale no longer REQUIRES a contract — §3.7 leaves an expired player un-contracted
+
+    if !CanRelease(fromClub, offer.PlayerId):
+        return SquadDepleted                                 # F9 / FR-TX-029, ERR-031-007; no mutation
 
     txn := offer.IsBuy ? {Debit,TransferFee,offer.Fee} : {Credit,TransferFee,offer.Fee}
     stagedFinances := finances
@@ -118,7 +125,7 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
     if offer.IsBuy:
         txState.AddCommittedSpend(managerClubId, offer.Fee)
         txState.InsertContract(ContractFrom(offer, offer.PlayerId))
-    else:
+    else if managed Contract(offer.PlayerId) exists:
         txState.RemoveContract(offer.PlayerId)
 
     return Accepted
@@ -150,9 +157,13 @@ preflight facts before the commit: `TryGetPlayer` (the record **and the club who
 before applying any local state.
 
 ```
-TryPreviewRosterCommit(fromClubId, toClubId, playerId):
-    validate playerId is on fromClubId's roster
-    return Count(toClubId's roster) < CLUB_SQUAD_SIZE        # false = destination full (F5)
+TryPreviewRosterCommit(fromClubId, toClubId, playerId):        # ERR-031-010
+    if either club is not in the league, or fromClubId == toClubId,
+       or playerId is not on fromClubId's roster:  THROW        # an integration defect, never "full"
+    return Count(toClubId's roster) < CLUB_SQUAD_SIZE           # false = destination full (F5) — ONLY that
+
+CanRelease(clubId, playerId):                                    # ERR-031-007
+    return CanFieldStartingEleven(clubId's roster without playerId)   # the engine's own selector
 
 RequestRosterCommit(fromClubId, toClubId, playerId):
     # precondition: successful preview with no intervening roster mutation
@@ -168,14 +179,14 @@ state left behind (a ban, an injury, an appearance record) would have been inher
 stable id there is nothing to migrate: every subsystem's PlayerId-keyed state follows the player by construction,
 and #30 moves only its own per-club `(ClubId, PlayerId)` rows with the record. The old `OnPlayerRekeyed` /
 `DispatchRosterMoveHook` re-key hook is deleted; T2 instead locks that a real re-home carries the player's #28/#29/#41/#30
-career state and #44 tally with him and leaves nothing behind (§5.3 T-TX-REHOME-005).
+career state and #44 tally with him and leaves nothing behind (§5.3 T-TX-REKEY-005; *ERR-031-006: this reference originally read the non-existent id "T-TX-REHOME-005"*).
 
 ## 3.5 The transfer window — `IsWindowOpen` (FR-TX-019/020)
 
 ```
-DeriveSummerWindow(in SeasonCalendar cal):
-    return TransferWindow{ OpenWorldDay  = SEASON_START_WORLD_DAY,
-                           CloseWorldDay = SEASON_START_WORLD_DAY + SUMMER_WINDOW_LENGTH_DAYS }
+SummerWindowFrom(uint seasonStartWorldDay):                      # ERR-031-008
+    return TransferWindow{ OpenWorldDay  = seasonStartWorldDay,
+                           CloseWorldDay = seasonStartWorldDay + SUMMER_WINDOW_LENGTH_DAYS - 1 }
 
 IsWindowOpen(in TransferWindow w, uint worldDay):
     return w.OpenWorldDay <= worldDay AND worldDay <= w.CloseWorldDay
@@ -183,6 +194,15 @@ IsWindowOpen(in TransferWindow w, uint worldDay):
 
 The window cursor (`ActiveWindow`) is season state (serialized, reset at the season boundary). #30 owns the
 calendar; #31 derives the window from it and never mutates it.
+
+**Corrected at T2 (ERR-031-008).** This section originally derived the window from a `SEASON_START_WORLD_DAY`
+`[CROSS] #30` constant that #30 never defined — and a single constant cannot place season N > 1, whose start lies
+later on the absolute world-day axis — and its close day `start + LENGTH` made a `LENGTH`-day window `LENGTH + 1`
+days long under the inclusive `IsWindowOpen`. The start is now the world day #30 BEGINS the season: the new-game
+day at genesis (`League.CreateLoop`), the roll day at each boundary (`RollToNextSeason` step (d″)); it is persisted
+in the block as `ActiveWindow`, so a load never re-derives it. **Units:** world days (`uint`). **Range:** start +
+`SUMMER_WINDOW_LENGTH_DAYS` − 1 ≤ `uint.MaxValue`, else fail loud. **Example:** a season begun on day 280 with the
+default 45-day window is open on days 280..324 — 45 days.
 
 ## 3.6 Worked example (behaviour-neutral minimal)
 
@@ -198,15 +218,19 @@ transfer headroom, `SubmitBid` instead returns `InsufficientBudget`; if the dest
 `RollToNextSeason` ages the managed club's contracts (durable career state survives the roll):
 
 ```
-AgeContractsAtBoundary(ref TransfersState txState):
-    expired := []
-    for each playerId in txState.ManagedContractIds:
-        newLen := txState.ContractOf(playerId).LengthSeasons - 1
-        if newLen <= 0:  expired.Add(playerId)
-        else:            txState.SetContractLength(playerId, newLen)
-    for each playerId in expired: txState.RemoveContract(playerId)
-    txState.ResetWindow(); txState.ResetCommittedSpend()
+PrepareSeasonBoundary(retiredIds, arrivingManagedIds, nextWindow) -> TransfersState:   # PURE (T2)
+    next := new TransfersState(managedClub, nextWindow)          # committedSpend = 0
+    for each contract in txState (ascending PlayerId):
+        if contract.PlayerId in retiredIds:  continue            # G14: the retiree's contract leaves with him
+        if contract.LengthSeasons - 1 <= 0:  continue            # F7: expired, never stored as 0
+        next.Insert(contract with LengthSeasons - 1)
+    for each id in arrivingManagedIds:                            # #28 regens joining the MANAGED club
+        next.Insert(Contract{ id, DEFAULT_WAGE, DEFAULT_CONTRACT_SEASONS })   # genesis terms (§3.8)
+    return next
 ```
+#30 stages this at its roll step (d″) — after #28's boundary plan, whose `RetiredPlayerIds` and managed-club
+`RegenPlayerIds` it passes — and installs the returned state by reference only after `BeginNextSeason`, so a refused
+roll leaves #31 untouched (#30 §3.5, ERR-030-056).
 
 An expired contract is removed; the player becomes un-contracted. Free-agency, auto-renewal and warnings remain
 deep-tier. `ResetWindow()` re-derives the new window from #30's calendar rather than zeroing the cursor.
@@ -240,4 +264,6 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.8 | 2026-09-14 | — | Residual review cleanup: budget subtraction now explicitly requires `0 <= committed <= budget`; preview/commit mismatch limits are stated for both directions; T2 must lock real hook dispatch plus observable managed↔external #31 no-op behavior. |
 | 0.9 | 2026-09-21 | — | ERR-031-002: move the ordinary buy-affordability decision ahead of checked staged `ApplyTransaction`, preventing coherent extreme debt from throwing before `InsufficientBudget`; runtime regression lands with the spec. |
 | 0.10 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): §3.3 pseudocode confirms the commit through the port instead of comparing a previewed id; ownership from the port; §3.4 rewritten as a stable-id re-home with a capacity-only preview. ERR-031-004: F5 reachable because bootstrap squads sit below the cap. |
+| 0.11 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §3.4 cites the T2 carry-everything lock by its real id, T-TX-REKEY-005 (was the non-existent "T-TX-REHOME-005"). The v0.8 row's "hook dispatch" obligation is superseded by that lock (the hook is deleted). |
+| 0.12 | 2026-10-20 | — | #31 T2: §3.3 pseudocode — unknown counterparty fails loud (ERR-031-010), a sale needs no contract (ERR-031-009), `SquadDepleted` before staging (ERR-031-007); §3.5 window from the season-begin day, inclusive length corrected (ERR-031-008); §3.7 rewritten as the pure, staged `PrepareSeasonBoundary` with the G14 retiree/regen lockstep. |
 #endregion

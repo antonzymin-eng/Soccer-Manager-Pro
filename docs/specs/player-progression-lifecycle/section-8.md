@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 8: References
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** October 20, 2026 (v0.3 — AR round 1 L1: the _RESERVED_0x20_ / 82 reference annotated as landed)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -21,7 +22,8 @@
   that invoke #28, the `SeasonSaveCodec` opaque-sub-blob pattern (KD-1), the serialize-don't-regenerate
   posture (KD-5), and the reserved #28 seam.
 - **Deterministic Simulation #16** `docs/specs/deterministic-sim/section-3.md` — the `_RESERVED_0x20_`
-  / `SubsystemOrdinals` 82 rows this spec promotes; `DeterministicRngService` (Reserve/DrawReserved/
+  / `SubsystemOrdinals` 82 rows this spec promoted (**landed** October 19, 2026, ERR-028-025:
+  `DOMAIN_TAG_PLAYER_PROGRESSION = 0x20` / `SubsystemOrdinals.PlayerProgression = 82`); `DeterministicRngService` (Reserve/DrawReserved/
   CloseReservation) + `CanonicalSerializer`; the `world.arcs` / #30 `0x22` register-at-first-draw-site
   precedent (FR-LW-031).
 - **Living World #22** `FR-LW-031` (no phantom interfaces) — the rule behind the KD-2 method-parameter
@@ -50,4 +52,5 @@ No `[CITATION-PENDING]` rows. The spec's numeric contract is *shapes*, not tuned
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial references: internal authoritative sources (#27/#30/#16/#22/#20 + master plan); no external citations required (shapes-not-magnitudes). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-10-20 | — | **AR round 1 L1 (ERR-028-025)**, doc-only. The #16 reference described the `_RESERVED_0x20_` / `SubsystemOrdinals` 82 rows as ones this spec "promotes"; annotated as landed (`DOMAIN_TAG_PLAYER_PROGRESSION = 0x20`, `SubsystemOrdinals.PlayerProgression = 82`). |
 #endregion

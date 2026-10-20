@@ -1,6 +1,8 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-10-19 (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
+// Modified: 2026-10-20 (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
+//           AR round 1 P-M1 — every mutator goes through BeginMutation — v1.11)
+//           (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
 //           CommitSeasonBoundary, the boundary-scoped regen stream, the mutation generation — v1.10)
 //           (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
 //           the retirement-day feedback-loop invariant documented at the daily evaluation (M5) — v1.9)
@@ -60,10 +62,15 @@ namespace TacticalDirector.PlayerProgression
 
         private int _nextPlayerId;
 
-        // Bumped by every mutation of the per-club arrays (the daily step, a committed boundary), so a
-        // SeasonBoundaryPlan prepared before one cannot be installed after it — it would resurrect the
-        // records it was computed from (the PlayerCareerStates.RosterGeneration precedent). Not
-        // serialized: it guards an in-memory plan's lifetime, which never crosses a save.
+        // Bumped by every mutation of the per-club arrays or the id cursor, so a SeasonBoundaryPlan
+        // prepared before one cannot be installed after it — it would resurrect the records it was
+        // computed from (the PlayerCareerStates.RosterGeneration precedent). Not serialized: it guards
+        // an in-memory plan's lifetime, which never crosses a save.
+        //
+        // CLASS INVARIANT (AR round 1 P-M1): every method that writes _records, _lifecycles or
+        // _nextPlayerId calls BeginMutation() BEFORE its first write. A writer that forgets turns
+        // CommitSeasonBoundary's "infallible on a fresh plan" into a silent overwrite of its own work —
+        // a moved player duplicated at his old club, or a regen erasing a transfer.
         private int _generation;
 
         private ProgressionEngine()
@@ -395,7 +402,7 @@ namespace TacticalDirector.PlayerProgression
             }
 
             ValidateBatch(in trainingInputs);
-            _generation++;
+            BeginMutation();
 
             for (int c = 0; c < _clubIds.Count; c++)
             {
@@ -632,14 +639,117 @@ namespace TacticalDirector.PlayerProgression
                     nameof(plan));
             }
 
+            BeginMutation();
             for (int c = 0; c < _clubIds.Count; c++)
             {
-                _records[c] = plan.Records[c];
-                _lifecycles[c] = plan.Lifecycles[c];
+                // Copied, not aliased (AR round 1 P-L4): AdvanceDay mutates the store's arrays in place,
+                // and a retained plan's PlannedSquadFor must keep describing the boundary it staged.
+                _records[c] = (PlayerRecord[])plan.Records[c].Clone();
+                _lifecycles[c] = (PlayerLifecycle[])plan.Lifecycles[c].Clone();
             }
 
             _nextPlayerId = plan.NextPlayerId;
+        }
+
+        // The one place _generation moves (P-M1): see the field's class-invariant note.
+        private void BeginMutation()
+        {
             _generation++;
+        }
+
+        // ── Transfers: the stable-id re-home (#31 T2, ERR-031-005) ──────────────────────
+
+        /// <summary>
+        /// Finds a carried player by id across every club — the roster's answer to "who owns him",
+        /// which #31 must use instead of deriving a club from the id (ERR-031-005).
+        /// </summary>
+        /// <returns>True with his current record and club; false (and <c>clubId = -1</c>) when no carried
+        /// club has him.</returns>
+        public bool TryFindPlayer(int playerId, out PlayerRecord record, out int clubId)
+        {
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                int p = PlayerIndexOf(c, playerId);
+                if (p >= 0)
+                {
+                    record = _records[c][p];
+                    clubId = _clubIds[c];
+                    return true;
+                }
+            }
+
+            record = default;
+            clubId = -1;
+            return false;
+        }
+
+        /// <summary>
+        /// Whether <see cref="MovePlayer"/> would succeed: both clubs carried and distinct, the player on
+        /// <paramref name="fromClubId"/>'s roster, and <paramref name="toClubId"/>'s roster below
+        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>. Exactly the move's preconditions, so a
+        /// preview that asks this makes the commit infallible (#31 §3.4). The source keeping at least one
+        /// player is implied by the caller's matchday-squad guard (ERR-031-007), and re-checked here so the
+        /// store can never hold an empty club (F11).
+        /// </summary>
+        public bool CanMovePlayer(int playerId, int fromClubId, int toClubId)
+        {
+            if (fromClubId == toClubId)
+            {
+                return false;
+            }
+
+            int from = ClubIndexOf(fromClubId);
+            int to = ClubIndexOf(toClubId);
+            return from >= 0
+                && to >= 0
+                && PlayerIndexOf(from, playerId) >= 0
+                && _records[from].Length > 1
+                && _records[to].Length < PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+        }
+
+        /// <summary>
+        /// #31 T2's re-home (ERR-031-005): moves one player's record AND lifecycle from
+        /// <paramref name="fromClubId"/> to <paramref name="toClubId"/> under his UNCHANGED id. Nothing is
+        /// allocated and the id cursor does not move (FR-PG-011: transfers allocate nothing). His growth
+        /// cursor, potential and retirement state travel with him. Both clubs stay in ascending id order.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><see cref="CanMovePlayer"/> is false.</exception>
+        public void MovePlayer(int playerId, int fromClubId, int toClubId)
+        {
+            if (!CanMovePlayer(playerId, fromClubId, toClubId))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot re-home player {playerId} from club {fromClubId} to club {toClubId}: a club is "
+                    + "not carried, he is not on the source, the source would be emptied, or the destination "
+                    + "is at CLUB_SQUAD_SIZE.");
+            }
+
+            BeginMutation();
+            int from = ClubIndexOf(fromClubId);
+            int to = ClubIndexOf(toClubId);
+            int p = PlayerIndexOf(from, playerId);
+            PlayerRecord record = _records[from][p];
+            PlayerLifecycle life = _lifecycles[from][p];
+
+            var fromRecords = new PlayerRecord[_records[from].Length - 1];
+            var fromLives = new PlayerLifecycle[fromRecords.Length];
+            Array.Copy(_records[from], 0, fromRecords, 0, p);
+            Array.Copy(_records[from], p + 1, fromRecords, p, fromRecords.Length - p);
+            Array.Copy(_lifecycles[from], 0, fromLives, 0, p);
+            Array.Copy(_lifecycles[from], p + 1, fromLives, p, fromLives.Length - p);
+
+            var toRecords = new PlayerRecord[_records[to].Length + 1];
+            var toLives = new PlayerLifecycle[toRecords.Length];
+            Array.Copy(_records[to], toRecords, _records[to].Length);
+            Array.Copy(_lifecycles[to], toLives, _lifecycles[to].Length);
+            toRecords[toRecords.Length - 1] = record;
+            toLives[toLives.Length - 1] = life;
+            SortByPlayerId(toRecords, toLives);
+
+            _records[from] = fromRecords;
+            _lifecycles[from] = fromLives;
+            _records[to] = toRecords;
+            _lifecycles[to] = toLives;
         }
 
         /// <summary>
@@ -1091,4 +1201,9 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | registration per club (ordinal 82), no serialized cursor. A     |
 // |         |            |        | mutation generation (bumped by AdvanceDay too) refuses stale    |
 // |         |            |        | plans. #28's first draw site.                                   |
+// | 1.11    | 2026-10-20 | —      | #31 T2 (ERR-031-005): TryFindPlayer (roster-answered ownership),  |
+// |         |            |        | CanMovePlayer / MovePlayer (record + lifecycle re-homed under the |
+// |         |            |        | unchanged id; no allocation). AR round 1 P-M1: every mutator calls |
+// |         |            |        | BeginMutation, the one place the plan-staleness generation moves.  |
+// |         |            |        | P-L4: CommitSeasonBoundary installs COPIES of the plan's arrays.   |
 #endregion

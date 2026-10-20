@@ -26,8 +26,8 @@
 
 **In scope (A3, buildable now):**
 
-- A `LeagueBootstrap` that turns one `ulong worldSeed` into `N` clubs, each with a 25-player
-  `Squad`, deterministically and with no authored data files.
+- A `LeagueBootstrap` that turns one `ulong worldSeed` into `N` clubs, each with a 23-player
+  `Squad` (the KD-6 template sum; 25 in the original draft — ERR-031-004), deterministically and with no authored data files.
 - Club identity: ids, names, and a per-club **strength** so the league is not 20 statistically
   identical teams (which would make the table meaningless).
 - The `ISquadProvider` the match engine and #30 T2 both consume.
@@ -58,7 +58,7 @@
 
 | Piece | Where | State |
 |---|---|---|
-| Deterministic 25-player squad generation | `RosterGenerator.Generate(rng, streamIndex, clubId, count)` | ✅ exact per-player RNG budget; caller registers the stream |
+| Deterministic squad generation (the bootstrap template sums to 23; 25 in the original draft) | `RosterGenerator.Generate(rng, streamIndex, clubId, count)` | ✅ exact per-player RNG budget; caller registers the stream |
 | Canonical player record | `PlayerRecord` / `PlayerAttributes` (31 × `[1,20]` + `WeakFootRating` `[1,5]`) | ✅ |
 | Club-scoped roster container | `Squad` (`ClubId` + ≤ `CLUB_SQUAD_SIZE`=25 players) | ✅ |
 | Roster → match-engine seam | `ISquadProvider.ResolveByClubId(int) → Squad` | ✅ (snapshot-deserialize Phase 2) |
@@ -192,7 +192,8 @@ Notes and deliberate limits:
 
 This is a correctness requirement, not a nicety. `LineupSelector` **fails loud** when a starter
 slot's required position has no eligible player, and `RosterGenerator` draws positions uniformly
-over the four `PlayerPosition` values. For a 25-player squad the defender count is
+over the four `PlayerPosition` values. For a 25-player squad (the original draft's size; the template sum is now 23 — the argument
+is unchanged) the defender count is
 `Binomial(25, 0.25)` (mean 6.25), so `P(fewer than the 4 defenders a back four needs) ≈ 3%` **per
 club per line** — across a 20-club league, a bootstrapped season would fail to start most of the
 time. A league generator that produces unusable squads a few percent of the time is worse than one
@@ -204,18 +205,29 @@ The bootstrap therefore supplies a fixed position template:
 |---|---|
 | Goalkeeper | 3 |
 | Defender | 8 |
-| Midfielder | 8 |
-| Forward | ~~6~~ **4** |
+| Midfielder | ~~8~~ **7** |
+| Forward | ~~6~~ ~~4~~ **5** |
 | **Total** | ~~25~~ **23** |
 
 **Amended October 19, 2026 (ERR-031-004, owner decision): the bootstrap no longer fills to the cap.** At 25 the
 template equalled `CLUB_SQUAD_SIZE`, the roster's hard maximum, so every club began full and #31's transfer
 preview could only answer `SquadFull` — no transfer could ever complete. The template now sums to **23**, strictly
-below the cap and at least a matchday 18, and `BuildSquadPositionTemplate` enforces both bounds (F3 below). The two
-dropped players are the template's last two forwards: each generated player's draws depend only on his index, so
-players 0–20 of every club are byte-identical to the 25-player league's; only the golden league digests moved.
-Four forwards still cover F433's three. The recorded A4a corpus was captured on 25-player squads; the quick-sim keys
-on the starting-XI rating differential only, and step 10's recapture runs on the current template.
+below the cap and at least a matchday 18, and `BuildSquadPositionTemplate` enforces both bounds (F3 below). The first
+cut (3/8/8/4) dropped the template's last two forwards; each generated player's draws depend only on his index, so
+players 0–20 of every club were byte-identical to the 25-player league's and only the golden league digests moved.
+
+**Amended again October 20, 2026 (P-M6): the shape is 3/8/7/5, not 3/8/8/4.** With four forwards an F433 club needs
+only two forwards unavailable to force `AvailabilityComposition`'s press-back-in — injured first, then the
+Laws-violating suspended tier — because the spare over F433's three was one. The sum stays 23 but moves one player
+from midfield to attack: spare per line over the worst formation need (GK 1 / DF 4 / MF 5 / FW 3) is **2 / 4 / 2 / 2**
+instead of 2 / 4 / 3 / 1, so the minimum spare is 2 on every line. Players 0–17 of every club keep their position and
+their draws (each player's draws depend only on his index); index 18 becomes a forward with a forward bias (it was a
+midfielder), so the golden digests were re-pinned a second time. The recorded A4a corpus was captured on 25-player
+squads of the original 3/8/8/6 shape. **The input distribution has moved, and the step-10 recapture is REQUIRED, not
+merely planned:** the quick-sim's rating is computed from the starting XI, the XI is selected from the (now smaller,
+differently-shaped) pool, so the XI-rating distribution the corpus was fitted against is not the distribution current
+rosters produce, and an earlier version of this note that claimed the quick-sim "keys on the starting-XI rating
+differential only" and was therefore unaffected was unsupported.
 
 Sized against the maximum any shipped formation family requires for a starting XI (F442 1/4/4/2,
 F433 1/4/3/3, F4231 1/4/5/1 → max GK 1, DF 4, MF 5, FW 3), leaving margin for the seven
@@ -265,7 +277,7 @@ harness would have to record a value that does not exist until after the fit.
 
 - **`Rating(club)`** = the mean `[1,20]` attribute over the club's selected starting XI
   (`LineupSelector` output — already deterministic and already the thing the engine actually
-  fields). Reusing the selector rather than the whole 25-man squad matters: a deep bench should not
+  fields). Reusing the selector rather than the whole squad (25-man in the original draft, 23 now) matters: a deep bench should not
   make a club stronger this Saturday.
   > **A4 prerequisite (found during A3's code review, recorded so A4 does not discover it):**
   > `LineupSelector` is `internal` to `match-engine` and visible only to `MatchEngine.Tests`, so
@@ -678,7 +690,7 @@ template been sized by eye.
 ### AR-1 (self, before implementation) — 1 H + 2 M + 2 L, all resolved in this text
 
 - **H-1 — Position coherence was missing entirely.** The first draft had the bootstrap call
-  `RosterGenerator.Generate(rng, streamIndex, clubId, 25)` and hand the result straight to #30. With
+  `RosterGenerator.Generate(rng, streamIndex, clubId, 25)` (25 = the draft's squad size; the template sum is now 23, ERR-031-004) and hand the result straight to #30. With
   uniform position draws that produces a squad `LineupSelector` refuses roughly 3% of the time per
   line per club, so a 20-club league would fail to start for most seeds — and *by seed*, which is
   the worst failure shape. Resolved: KD-6 (position template + generator overload) and F6 (the
@@ -707,7 +719,7 @@ template been sized by eye.
   generation constants keep clamping unreachable, i.e. it is a silent coupling to tuning values with
   no test that would catch a config change breaking it. Recorded properly in KD-6.
 - **L-1 — `Rating(club)` was unspecified in KD-7.** "Club strength" could reasonably mean the
-  strength delta, the 25-man mean, or the XI mean, and each fits differently. Pinned to the
+  strength delta, the whole-squad mean (25-man in the original draft), or the XI mean, and each fits differently. Pinned to the
   `LineupSelector` XI mean, with the reason (bench depth must not win Saturday's match).
 
 ### AR-3 (self) — 0 H + 0 M + 0 L — **DESIGN CONVERGENCE**
@@ -873,3 +885,4 @@ Windows certification host.
 | 1.8 | 2026-10-09 | — | Coordinates selected PM-2 engine anchor and milestone corpus recapture/refit with roadmap §5.1; distinguishes worker-hours from elapsed time and capture from cheap fitting; retains KD-7a HOLD and separate mean/shape verdicts. No model, acceptance or parameter change. |
 | 1.9 | 2026-10-09 | — | PR #493 review corrections: capture budget starts from measured ~90 s/match (~5 worker-hours for 198), with current throughput/added wiring cost remeasured. Marks the old 154 s universal lower-bound estimate as disproved; retains selected-anchor, shape and adoption gates. |
 | 1.10 | 2026-10-19 | — | **ERR-031-004** (owner decision Oct 19, 2026): KD-6 template 3/8/8/6 = 25 → 3/8/8/4 = 23, strictly below the `CLUB_SQUAD_SIZE` cap so #31 transfers can complete; F3 restated (sum ≥ matchday 18 and < cap). Players 0–20 byte-identical; golden digests re-pinned. |
+| 1.11 | 2026-10-20 | — | **P-M6 / P-L2 / P-L3.** KD-6 template 3/8/8/4 → **3/8/7/5** (still 23): with 4 forwards an F433 club needed only two forwards unavailable to force `AvailabilityComposition`'s press-back-in; spare per line over GK1/DF4/MF5/FW3 is now 2/4/2/2 (min 2). Players 0–17 byte-identical, index 18 becomes a forward; golden digests re-pinned. Stale "25-player" text restated as the template sum (23). The "quick-sim keys on the XI differential only, so the A4a corpus is unaffected" claim is withdrawn as unsupported: the XI is chosen from the reduced pool, the rating distribution moved, and the step-10 recapture is required. |

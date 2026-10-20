@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-10-18 (#31 T1 — gains the restored #31 transfers state, null when unwired)
+// Modified: 2026-10-20 (L2 doc drift — the class summary now lists Transfers)
+//           Prior: 2026-10-18 (#31 T1 — gains the restored #31 transfers state, null when unwired)
 //           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — gains the restored per-club finance entries)
 //           Prior: 2026-08-13 (#44 T1, roadmap C1 — gains the restored DisciplineState)
 // Author:   —
@@ -33,7 +34,9 @@ namespace TacticalDirector.SeasonSave
     /// carries both), the per-club <see cref="TrainingClubs"/> / <see cref="MedicalClubs"/> /
     /// <see cref="AppearanceClubs"/> (never null, possibly empty), the restored <see cref="Progression"/> /
     /// <see cref="Discipline"/> state (never null), the restored per-club <see cref="Finances"/> (never
-    /// null, possibly empty), and the in-progress <see cref="Match"/> (<c>null</c> when
+    /// null, possibly empty), the restored #31 <see cref="Transfers"/> state (<c>null</c> when the save
+    /// carried a zero-club block, i.e. no #31 subsystem was wired), and the in-progress
+    /// <see cref="Match"/> (<c>null</c> when
     /// the save carried no match, KD-3). Returned by <see cref="SeasonSaveManager.Load"/>; the caller
     /// checks <see cref="Match"/> for null before using it.
     /// </summary>
@@ -136,4 +139,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | entries (never null; empty until #40 T2 bootstraps them).       |
 // | 1.8     | 2026-10-18 | —      | #31 T1: gains the restored TransfersState (null = no #31 wired; |
 // |         |            |        | never a request to seed — FR-TX-028).                            |
+// | 1.9     | 2026-10-20 | —      | L2 doc drift (comments only): the class summary listed every      |
+// |         |            |        | member except Transfers.                                          |
 #endregion

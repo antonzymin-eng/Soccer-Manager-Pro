@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-10-19
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -45,6 +45,14 @@ namespace TacticalDirector.Transfers
             }
 
             ValidateOffer(in offer, state.ManagedClubId);
+            if (!_roster.CarriesClub(offer.CounterpartyClubId))
+            {
+                // ERR-031-010: an unknown counterparty is a caller-contract bug (F6). Unguarded, a sale to
+                // a club with no roster valued at maximum scarcity and moved the player out of the league.
+                throw new ArgumentOutOfRangeException(
+                    nameof(offer), offer.CounterpartyClubId, "CounterpartyClubId is not a club of this league (F6).");
+            }
+
             if (!state.ActiveWindow.IsWindowOpen(worldDay))
             {
                 throw new InvalidOperationException("Transfer command is outside the active transfer window (F4).");
@@ -111,13 +119,22 @@ namespace TacticalDirector.Transfers
                     return TransferSubmissionOutcome.InsufficientBudget;
                 }
             }
-            else if (!state.TryGetContract(offer.PlayerId, out Contract existingContract))
-            {
-                throw new InvalidOperationException("Cannot sell a managed player without an active #31 contract.");
-            }
-            else
+            else if (state.TryGetContract(offer.PlayerId, out Contract existingContract))
             {
                 Contract.Validate(in existingContract);
+            }
+
+            // ERR-031-009: an UN-contracted managed player is sellable. §3.7 removes a contract that ages to
+            // 0 and the player stays (re-signing is deep tier), so "every managed player has a contract" holds
+            // only at genesis; a sale requiring one threw for every expired player — a manager-reachable
+            // exception. His registration is what is sold; any contract leaves with him.
+
+            // ERR-031-007: the releasing club must still name a matchday squad. An ordinary outcome, decided
+            // before any staging — a manager stripping his own side below eighteen (or buying an AI club's
+            // eighteenth) would otherwise wedge the next round's selection.
+            if (!_roster.CanRelease(fromClubId, offer.PlayerId))
+            {
+                return TransferSubmissionOutcome.SquadDepleted;
             }
 
             FinanceTransaction transaction = new FinanceTransaction(
@@ -153,7 +170,7 @@ namespace TacticalDirector.Transfers
                 Contract contract = new Contract(offer.PlayerId, offer.WagePerPeriod, offer.LengthSeasons);
                 state.InsertContract(in contract);
             }
-            else
+            else if (state.TryGetContract(offer.PlayerId, out Contract _))
             {
                 state.RemoveContract(offer.PlayerId);
             }
@@ -209,4 +226,5 @@ namespace TacticalDirector.Transfers
 // | 1.2     | 2026-09-14 | —      | Type normal budget/full-squad outcomes; exclude negotiated player from need; commit staged finance and move port check ahead of local mutation. |
 // | 1.3     | 2026-09-21 | —      | ERR-031-002: resolve buy affordability before checked staged finance validation so extreme coherent debt returns InsufficientBudget instead of overflowing. |
 // | 1.4     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds — ownership from the port's roster answer, never id/CLUB_SQUAD_SIZE; the re-home keeps the id; local state applies only after the port confirms the player is on the destination roster. |
+// | 1.5     | 2026-10-20 | —      | #31 T2: unknown counterparty fails loud (ERR-031-010); an un-contracted managed player is sellable (ERR-031-009); a release that leaves a club below a matchday squad returns SquadDepleted before any staging (ERR-031-007). |
 #endregion
