@@ -1,0 +1,14 @@
+#!/bin/bash
+# layout-run.sh <scale> <pseudo:true|false> <long:true|false>
+U=/c/Users/azymi/Desktop/S0-host-acceptance-20261018/tools/ucmd.sh
+L=/c/Users/azymi/Desktop/S0-host-acceptance-20261018/run2/probe-log.txt
+$U stop >/dev/null; sleep 5
+$U open Assets/Scenes/Scene.unity >/dev/null
+$U set S0Probe.Pseudo $2 >/dev/null; $U set S0Probe.LongNames $3 >/dev/null
+$U call S0HostLayout.SetTextScale $1
+$U play >/dev/null; sleep 15
+UCMD_WAIT=60 $U state | cut -c1-60
+$U run S0HostRuns.Layout
+s=$(grep -n "\[Layout\] BEGIN" $L | tail -1 | cut -d: -f1)
+timeout 900 bash -c "until tail -n +$s $L | grep -q 'ABORT\|EXCEPTION\|matrix done'; do sleep 5; done"
+tail -n +$s $L | grep -E "loadedHash|CLIPAUDIT|REACHAUDIT|PAGEFIT|PITCHLABELS|LAYOUT |ABORT|EXCEPTION|matrix done|long-name" | cut -c1-330

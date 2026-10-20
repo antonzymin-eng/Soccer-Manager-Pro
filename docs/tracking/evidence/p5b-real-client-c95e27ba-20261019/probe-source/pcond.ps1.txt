@@ -1,0 +1,29 @@
+# One B8/B10 condition: launch the development player with its own profiler log, start a match by
+# keyboard, apply the condition's keys, verify by screenshot, hold N seconds in focus, quit.
+# Usage: pcond.ps1 -Build <dir> -Tag s100 -Cond 1x-closed -Keys "" [-Hold 30]
+param([string]$Build, [string]$Tag, [string]$Cond, [string]$Keys = '', [int]$Hold = 30, [int]$Width = 1920, [int]$Height = 1080)
+$root = 'C:\Users\azymi\Desktop\S0-host-acceptance-20261018'
+$k = Join-Path $root 'tools\pkey.ps1'
+$raw = Join-Path $root "perf\$Tag-$Cond.raw"
+Get-Process SystemXI -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Process -FilePath (Join-Path $Build 'SystemXI.exe') -ArgumentList "-screen-fullscreen 0 -screen-width $Width -screen-height $Height -profiler-enable -profiler-maxusedmemory 512000000 -profiler-log-file `"$raw`" -logFile `"$(Join-Path $Build "player-$Cond.log")`""
+Start-Sleep -Seconds 10
+# Park the pointer on blank page space so hover/click cannot reach a control during the hold.
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(1880, 1040)
+& $k -Tag $Tag -Keys 'TAB,ENTER' | Out-Null
+Start-Sleep -Milliseconds 800
+& $k -Tag $Tag -Keys 'TAB,TAB,TAB,TAB,TAB,TAB,TAB,TAB' | Out-Null
+Start-Sleep -Milliseconds 500
+& $k -Tag $Tag -Keys 'ENTER' | Out-Null
+Start-Sleep -Seconds 2
+& $k -Tag $Tag -Shot "$Cond-started"
+if ($Keys) { & $k -Tag $Tag -Keys $Keys | Out-Null; Start-Sleep -Seconds 1 }
+& $k -Tag $Tag -Shot "$Cond-set"
+$end = (Get-Date).AddSeconds($Hold)
+while ((Get-Date) -lt $end) { & $k -FocusOnly | Out-Null; Start-Sleep -Seconds 3 }
+& $k -Tag $Tag -Shot "$Cond-end"
+Get-Process SystemXI -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+Start-Sleep -Seconds 4
+Get-Process SystemXI -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-ChildItem (Split-Path $raw) -Filter "$Tag-$Cond.raw*" | Select-Object Name, Length

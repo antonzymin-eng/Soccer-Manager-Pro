@@ -1,0 +1,55 @@
+# B8/B10 render-loop capture session: keyboard-only drive of the S0 development player plus
+# Editor-side profiler windows (S0HostBuild.Capture via the file channel). Usage:
+#   perf-session.ps1 -Build C:\Users\azymi\HostBuilds\s0-...-s100 -Tag s100 [-Width 1920 -Height 1080]
+param([string]$Build, [string]$Tag, [int]$Width = 1920, [int]$Height = 1080, [int]$Windows = 5, [int]$Seconds = 5)
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+$root = 'C:\Users\azymi\Desktop\S0-host-acceptance-20261018'
+$cmd = Join-Path $root 'cmd'
+$perf = Join-Path $root 'perf'
+New-Item -ItemType Directory -Force $perf | Out-Null
+$shell = New-Object -ComObject WScript.Shell
+
+function Send-Channel([string]$text) { [IO.File]::WriteAllText((Join-Path $cmd ("{0}.cmd" -f [DateTime]::UtcNow.Ticks)), $text) }
+function Focus-Player { $p = Get-Process SystemXI | Select-Object -First 1; [void]$shell.AppActivate($p.Id); Start-Sleep -Milliseconds 400 }
+function Key([string]$k, [int]$n = 1) { for ($i = 0; $i -lt $n; $i++) { Focus-Player; [System.Windows.Forms.SendKeys]::SendWait($k); Start-Sleep -Milliseconds 350 } }
+function Shot([string]$name) {
+    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+    $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+    $bmp.Save((Join-Path $perf "$Tag-$name.png")); $g.Dispose(); $bmp.Dispose()
+}
+function Capture([string]$label) {
+    $log = Join-Path $perf 'capture.log'
+    $before = if (Test-Path $log) { (Get-Content $log | Select-String "DONE $Tag-$label$").Count } else { 0 }
+    Send-Channel "call S0HostBuild.Capture $Tag-$label $Windows $Seconds"
+    $deadline = (Get-Date).AddSeconds($Windows * $Seconds + 60)
+    while ((Get-Date) -lt $deadline) {
+        Focus-Player
+        Start-Sleep -Seconds 2
+        if ((Test-Path $log) -and (Get-Content $log | Select-String "DONE $Tag-$label$").Count -gt $before) { return "captured $label" }
+    }
+    return "TIMEOUT $label"
+}
+
+$exe = Join-Path $Build 'SystemXI.exe'
+Start-Process -FilePath $exe -ArgumentList "-screen-fullscreen 0 -screen-width $Width -screen-height $Height -logFile `"$(Join-Path $Build 'player.log')`""
+Start-Sleep -Seconds 10
+Focus-Player
+Shot 'boot'
+Key '{TAB}'; Key '{ENTER}'; Start-Sleep -Milliseconds 600
+Key '{TAB}' 8; Key '{ENTER}'; Start-Sleep -Seconds 4
+Shot '1x-closed'
+Capture '1x-closed'
+Key '{TAB}' 5; Key '{ENTER}'; Start-Sleep -Seconds 2      # Pause, Faster, Mentality, Substitution, statistics -> open
+Shot '1x-open'
+Capture '1x-open'
+Key '+{TAB}' 3; Key '{ENTER}' 3; Start-Sleep -Seconds 2   # back to Faster; 3x, 5x, 10x
+Shot '10x-open'
+Capture '10x-open'
+Key '{TAB}' 3; Key '{ENTER}'; Start-Sleep -Seconds 2      # Pause -> Mentality -> Substitution -> statistics -> close
+Shot '10x-closed'
+Capture '10x-closed'
+Shot 'end'
+Get-Process SystemXI | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+'session done'
