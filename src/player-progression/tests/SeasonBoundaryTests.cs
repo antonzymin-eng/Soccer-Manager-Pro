@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/SeasonBoundaryTests.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20 (AR round 1 P-M2: golden seed, non-index club ids, cursor exhaustion - v1.1)
+// Modified: 2026-10-20 (AR round 3 M8/M10: season-0 seed golden, ClubB stream, regen pin - v1.2)
+//           (AR round 1 P-M2: golden seed, non-index club ids, cursor exhaustion - v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §3.4 (as amended by ERR-028-024 / ERR-028-025),
 //           FR-PG-010/011/015/019/020/024, §5 T-PG-RET-002/003; Code Standards #20
@@ -122,6 +123,43 @@ namespace TacticalDirector.PlayerProgression.Tests
             Squad planned = plan.PlannedSquadFor(ClubA);
             AssertSameIdentity(first, planned.GetPlayer(IndexOf(planned, cursor)));
             AssertSameIdentity(second, planned.GetPlayer(IndexOf(planned, cursor + 1)));
+
+            // FR-PG-020 is PER CLUB: ClubB has its own stream (entityId = ClubB), so ClubB's one retiree takes
+            // THAT stream's FIRST reservation - not the third reservation of ClubA's stream, which is what a
+            // registration hoisted out of the club loop (one stream serving every club) would hand him (AR round 3
+            // M10).
+            int clubBStream = rng.RegisterStream(
+                PlayerProgressionConstants.REGEN_STREAM_SITE_ID,
+                SubsystemOrdinals.PlayerProgression,
+                entityId: ClubB,
+                streamVersion: PlayerProgressionConstants.REGEN_STREAM_VERSION);
+            Assert.That(clubBStream, Is.Not.EqualTo(clubAStream), "a second club registers a second stream");
+            (PlayerRecord third, _) = RegenGenerator.GenerateRegen(
+                rng, clubBStream, ClubB, cursor + 2, PlayerPosition.Goalkeeper, Day);
+
+            Squad plannedB = plan.PlannedSquadFor(ClubB);
+            AssertSameIdentity(third, plannedB.GetPlayer(IndexOf(plannedB, cursor + 2)));
+        }
+
+        [Test]
+        public void TheFirstRegen_IsPinnedAsAnAbsoluteGolden_SoADrawOrderChangeMustBumpTheStreamVersion()
+        {
+            // A CHARACTERIZATION pin (read back from the code at REGEN_STREAM_VERSION = 1, unlike the seed golden
+            // above, which was computed outside it): ClubA's first regen at (0xB0DA2028, season 3, day 400).
+            // The tests above re-derive draws from the same generator, so a change to the draw ORDER inside
+            // GenerateRegen moves both sides together and passes; this pin fails it. Changing the draw order
+            // is a stream-version bump (#16 SS3.2.5.1) - re-pin it here in the same commit.
+            ProgressionEngine store = StoreWithRetirees(out _);
+            SeasonBoundaryPlan plan = store.PrepareSeasonBoundary(WorldSeed, 3, Day);
+            Squad squad = plan.PlannedSquadFor(ClubA);
+            PlayerRecord regen = squad.GetPlayer(IndexOf(squad, plan.RegenPlayerIds[0]));
+
+            Assert.That(PlayerProgressionConstants.REGEN_STREAM_VERSION, Is.EqualTo((ushort)1),
+                "a stream-version bump means the pin below is re-derived on purpose");
+            Assert.That(
+                regen.FirstName + "|" + regen.LastName + "|" + regen.Age + "|" + regen.Position + "|"
+                    + regen.Attributes.Pace + "|" + regen.Attributes.Passing + "|" + regen.Attributes.Finishing,
+                Is.EqualTo("Anthony|Sanchez|19|Defender|13|10|6"));
         }
 
         [Test]
@@ -146,6 +184,18 @@ namespace TacticalDirector.PlayerProgression.Tests
             //   seed = mix(h ^ 3)              = 0x443E7491A6459B6A
             // A mutant that drops the tag, the world seed, the season, or reorders the folds moves this.
             Assert.That(ProgressionEngine.DeriveRegenSeed(WorldSeed, 3), Is.EqualTo(0x443E7491A6459B6AUL));
+        }
+
+        [Test]
+        public void DeriveRegenSeed_AtSeasonZero_MatchesTheIndependentlyComputedGolden()
+        {
+            // A career's FIRST boundary closes season 0 (SeasonState.CreateNew's default seasonNumber; ERR-028-027
+            // corrected the spec's `>= 1`). Same masked Python SplitMix64 mirror as above:
+            //   h    = mix(0x20 ^ 0xB0DA2028) = 0x0B9A85760C24CF95   (x ^ 0 == x, so h is the season-3 vector's)
+            //   seed = mix(h ^ 0)             = 0xD3E409D7732EBE4F
+            Assert.That(ProgressionEngine.DeriveRegenSeed(WorldSeed, 0), Is.EqualTo(0xD3E409D7732EBE4FUL));
+            Assert.That(ProgressionEngine.DeriveRegenSeed(WorldSeed, 0),
+                Is.Not.EqualTo(ProgressionEngine.DeriveRegenSeed(WorldSeed, 1)));
         }
 
         [Test]
@@ -325,4 +375,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // | 1.0     | 2026-10-19 | —      | Initial implementation (ERR-028-024 / ERR-028-025): staged      |
 // |         |            |        | season-boundary locks.                                          |
 // | 1.1     | 2026-10-20 | —      | AR round 1 P-M2 (ERR-028-025): + DeriveRegenSeed golden (0x443E7491A6459B6A for (0xB0DA2028, 3), computed with an independent Python SplitMix64 mirror) and TwoWorlds_SameSeason_DrawDifferentRegens, so dropping the world seed fails; fixture clubs are now 3 and 7 (ids were array indices), so keying the regen stream on the loop index fails the draw-order lock; + Prepare_WithAnExhaustedIdCursor_IsRefused (NextPlayerId == int.MaxValue). |
+// | 1.2     | 2026-10-20 | —      | AR round 3 (ERR-028-027): M8 + DeriveRegenSeed_AtSeasonZero golden (0xD3E409D7732EBE4F for (0xB0DA2028, 0), independent masked Python mirror) - a career's first boundary closes season 0; M10 TheIdAndDrawOrders now registers a separate ClubB stream and asserts ClubB's regen is that stream's first reservation (a registration hoisted out of the club loop fails it) + TheFirstRegen_IsPinnedAsAnAbsoluteGolden (characterization pin, so a draw-order change without a REGEN_STREAM_VERSION bump fails). |
 #endregion

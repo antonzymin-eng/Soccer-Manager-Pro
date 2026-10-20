@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 8: References & Cross-References
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.4 — ERR-031-006: §8.3 names the landed season-save version 8 / ERR-030-054)
+**Last Updated:** October 20, 2026 (v0.5 — ERR-031-011: XC-031-003 window inputs; §8.3 roster-commit entry point landed)
+**Last Updated (prior):** October 20, 2026 (v0.4 — ERR-031-006: §8.3 names the landed season-save version 8 / ERR-030-054)
 **Last Updated (prior):** October 19, 2026 (v0.3 — ERR-031-004/005: XC-031-001 ids and cap)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -15,7 +16,7 @@
 |---|---|---|---|
 | XC-031-001 | #31 → #27 | `PlayerRecord`/`PlayerAttributes`/`Squad`; `PlayerId` career-unique and stable (genesis allocation `clubId*CLUB_SQUAD_SIZE+localIndex`, later ids from #28 `NextPlayerId` — ERR-031-005); `CLUB_SQUAD_SIZE = 25` is the roster **cap**, bootstrap squads hold 23 (ERR-031-004) | Read the pool + valuation inputs; identity is #27-owned (KD-1/KD-7). |
 | XC-031-002 | #31 → #40 | `AvailableTransferBudget(in ClubFinances) → long` (read), `ApplyTransaction(ref ClubFinances, in FinanceTransaction)` (commit), `FinanceLineItem.{TransferFee,PlayerWage}` | The budget constraint + the single mutation path (KD-2). #40 FR-FN-013 already names #31 the caller. |
-| XC-031-003 | #31 → #30 (via composition root) | `RunWorldTickInFixedOrder` slot (new), `SeasonCalendar` (read), `SeasonSaveCodec`/`SEASON_SAVE_FORMAT_VERSION` (compose), `RequestRosterCommit` (new mid-season entry point) | #30 invokes #31 + owns roster/calendar/save (KD-4/KD-6/KD-7). #31 never references #30. |
+| XC-031-003 | #31 → #30 (via composition root) | `RunWorldTickInFixedOrder` slot (new), `SeasonCalendar` (read: its opening fixture day `DayOfRound(0)`, with the season-begin day, derives the window — §3.5, ERR-031-011), `SeasonSaveCodec`/`SEASON_SAVE_FORMAT_VERSION` (compose), `RequestRosterCommit` (new mid-season entry point; live at T2 as `SeasonTransferRoster`) | #30 invokes #31 + owns roster/calendar/save (KD-4/KD-6/KD-7). #31 never references #30. |
 | XC-031-004 | #31 → #16 | determinism namespace; `_RESERVED_0x23_` / `SubsystemOrdinals.Transfers = 85` (RESERVED); world-tick `DeterministicRngService` (deep only) | Draw-free minimal (KD-5); promotes at the deep-tier first draw. |
 | XC-031-005 | #33 → #31 (deferred) | `MoraleOf` (read-only — granted by #33 §7.3/FR-HS-024); `PersonalityProfile` traits (loyalty/ambition) **not yet granted** — a #33 back-prop at T3 exposes them | deep-tier valuation modulation (KD-1); minimal makes **no** #33 read. |
 | XC-031-006 | #28 → #31 (deferred) | CA/PA career-state keyed by `PlayerId` | Deep-tier valuation refinement (KD-1); not a minimal dependency. |
@@ -36,7 +37,8 @@
 - **ERR-030-005 (deferred, at #31 T2)** — #30 grows the mid-season `RequestRosterCommit` entry point (a
   stable-id re-home since ERR-031-005; the re-key hook is deleted) (KD-7); the outer `SEASON_SAVE_FORMAT_VERSION` bump landed with #31 T1 as
   **7 → 8** under **ERR-030-054** (§4.4) *(ERR-031-006: originally "exact version TBD", written before T1 landed)*;
-  the roster-commit entry point remains #31 T2 work.
+  the roster-commit entry point landed with #31 T2 (October 20, 2026) as #30's `SeasonTransferRoster`, driven by
+  `SeasonLoop.SubmitTransferBid` *(ERR-031-011: originally "remains #31 T2 work")*.
 - **ERR-016 (deferred, at #31 T3)** — `DOMAIN_TAG_TRANSFERS = 0x23` promotion at the first rival-bid draw.
 - **ERR-040 (deferred, at #31 T3)** — relax #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2) for #31's
   deep-tier wage producer + wire the `WageBudget` affordability gate #31 reads. **Not needed at approval** —
@@ -58,4 +60,5 @@
 | 0.2 | 2026-07-23 | — | AR-3: XC-031-005 records that #33 grants only `MoraleOf` (not `PersonalityProfile`) today (L); §8.3 adds deferred ERR-040 (FR-FN-015 relax + `WageBudget` gate, T3) and ERR-033 (personality-trait surface, T3). |
 | 0.3 | 2026-10-19 | — | ERR-031-004 / ERR-031-005: XC-031-001 records stable career-unique ids (genesis formula + #28 allocator) and the cap-vs-bootstrap distinction; ERR-030-005 names the re-home. |
 | 0.4 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion sweep): §8.3 ERR-030-005 replaces "exact version TBD" with the landed `SEASON_SAVE_FORMAT_VERSION` 7 → 8 (ERR-030-054). |
+| 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): XC-031-003 names the calendar read the window derivation uses (opening fixture day) and the live `SeasonTransferRoster`; §8.3 ERR-030-005 records the roster-commit entry point as landed at T2. |
 #endregion

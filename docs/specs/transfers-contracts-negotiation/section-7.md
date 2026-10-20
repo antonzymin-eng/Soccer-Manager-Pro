@@ -1,13 +1,15 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.10 — T2 landed)
+**Last Updated:** October 20, 2026 (v0.12 — T-TX-REKEY-005 no longer deferred)
+**Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: §7.2 no longer defers the spend reset / next window; T2 bullet names ERR-031-011)
+**Last Updated (prior):** October 20, 2026 (v0.10 — T2 landed)
 **Last Updated (prior):** October 20, 2026 (v0.9 — ERR-031-006: T2 plan, §7.2 and §7.3 restated for the stable-id re-home; hook obligation removed)
 **Last Updated (prior):** October 18, 2026 (v0.8 — T1 landed: codec + frame-v8 composition; ERR-031-003 / ERR-030-054)
 **Last Updated (prior):** September 21, 2026 (v0.7 — PR #407 current-main reconciliation: T0 status finalized; T2 finance-composition staging obligation recorded)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -35,7 +37,8 @@
   `League.CreateLoop`, the staged roll step (d″) (§3.7), and a refusal of raw `TransferFee` postings once #31 is
   wired. The world-tick slot 5 stays a documented null seam (ERR-030-004): the minimal tier has no daily work — the
   window is a predicate evaluated at command time (§6.1). T2 surfaced ERR-031-007 (depletion), ERR-031-008 (window),
-  ERR-031-009 (un-contracted sale), ERR-031-010 (preview semantics / unknown club) and #30's ERR-030-056.
+  ERR-031-009 (un-contracted sale), ERR-031-010 (preview semantics / unknown club) and #30's ERR-030-056;
+  AR round 2 re-anchored the window close to the opening fixture day (ERR-031-011).
   *(Original plan text follows.)* T2 — wire #30's transfers world-tick slot (ERR-030-004); build the production #30 adapter behind
   `ITransferRosterPort` over #30's mid-season roster-commit entry point (ERR-030-005) — a capacity-only
   `TryPreviewRosterCommit` and an id-preserving `RequestRosterCommit` re-home (ERR-031-005); add genesis contract
@@ -66,11 +69,11 @@
 - #34 staff influence.
 - Multi-day counter negotiation; T0 `CounterOffered` remains synchronous/no-state.
 - Indexed/cached player search.
-- `CommittedSpendThisWindow` reset/next-window mechanics, owned by T2 season-boundary/window wiring.
-- Production proof (T-TX-REKEY-005) that a real #30 re-home carries the player's whole career — #28 record +
-  lifecycle, #29/#41/#30 rows, #44 tally — under the same id and leaves nothing behind; T0 can only test the
-  fake-port contract. *(ERR-031-006: originally "proof that #30 hook dispatch and #31 managed↔external no-op
-  semantics coexist" — the hook and #31's subscriber were deleted at ERR-031-005.)*
+- *(No longer deferred — T-TX-REKEY-005, the production proof that a real #30 re-home carries the player's whole
+  career — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — under the same id and leaves nothing behind, landed
+  with AR round 3 in `SeasonTransfersT2Tests`; see §5.3. ERR-031-006 had restated it from "proof that #30 hook
+  dispatch and #31 managed↔external no-op semantics coexist" — the hook and #31's subscriber were deleted at
+  ERR-031-005.)*
 
 ## 7.3 Seam contracts recorded for downstream authors
 
@@ -111,4 +114,6 @@
 | 0.8 | 2026-10-18 | — | T1 landed: magic-led `TransfersSaveCodec` (ERR-031-003) composed into the v8 season frame (ERR-030-054); loop carries a cloned state; coherence + fifth destination guard. T2/T3 boundaries unchanged. |
 | 0.9 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §7.1 T2 builds the adapter over #30's roster-commit entry point with a capacity-only preview and an id-preserving re-home, and owes the T-TX-REKEY-005 carry-everything lock instead of `DispatchRosterMoveHook` + a hook-dispatch/no-op lock; §7.2 deferred proof and §7.3 #30/#40 seam contracts restated (commit returns nothing, confirmed via `TryGetPlayer`). The v0.6 row's hook-dispatch obligation is superseded. |
 | 0.10 | 2026-10-20 | — | #31 T2 landed: production port, bid seam, genesis, staged boundary; slot 5 remains a null seam at minimal; ERR-031-007..010. |
+| 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): §7.2 drops "`CommittedSpendThisWindow` reset/next-window mechanics" from the deferred list — T2 landed both (§3.7 step (d″), §3.5); the T2 bullet records ERR-031-011. The T-TX-REKEY-005 deferral line is left for the pass that completes that lock. |
+| 0.12 | 2026-10-20 | — | AR round 3: §7.2 drops the T-TX-REKEY-005 production proof from the deferred list — it is live (§5.3). |
 #endregion

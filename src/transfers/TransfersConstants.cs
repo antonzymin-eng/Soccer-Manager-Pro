@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersConstants.cs
 // Created:  2026-09-12
-// Modified: 2026-10-18
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #31 Appendix A, §3.1-§3.2, §3.5 (transfer constants)
@@ -92,8 +92,13 @@ namespace TacticalDirector.Transfers
             20,
             DeriveMaxClubNeedPerPlayerPermille());
 
-        /// <summary>[GT] Minimal summer-window length in world days. Config key [transfers] SummerWindowLengthDays. Spec #31 Appendix A.</summary>
-        public static readonly int SummerWindowLengthDays = Positive("SummerWindowLengthDays", 45);
+        /// <summary>
+        /// [GT] Days the summer window stays open from the season's opening fixture day on, inclusive of that
+        /// day (world days, ≥ 1): Close = openingFixtureDay + this − 1. Config key [transfers]
+        /// SummerWindowInSeasonDays. Spec #31 Appendix A / §3.5 (ERR-031-011, replacing the roll-day-anchored
+        /// SummerWindowLengthDays).
+        /// </summary>
+        public static readonly int SummerWindowInSeasonDays = Positive("SummerWindowInSeasonDays", 38);
 
         /// <summary>[GT] Genesis contract length used by the later T2 seeding step. Config key [transfers] DefaultContractSeasons. Spec #31 Appendix A.</summary>
         public static readonly int DefaultContractSeasons = Positive("DefaultContractSeasons", 3);
@@ -203,4 +208,5 @@ namespace TacticalDirector.Transfers
 // | 1.3     | 2026-09-14 | —      | Require positive PeakAgeMin so the young-discount region is non-empty and its boundary test is valid. |
 // | 1.4     | 2026-09-14 | —      | Derive club-need cap inline at its consumer so static-field declaration order cannot affect initialization. |
 // | 1.5     | 2026-10-18 | —      | #31 T1 (ERR-031-003): TRANSFERS_SAVE_MAGIC "XFER" + TRANSFERS_SAVE_FORMAT_VERSION 1 + derived block widths + the one-club bound. |
+// | 1.6     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): [GT] SummerWindowLengthDays (45) replaced by SummerWindowInSeasonDays (38), the in-season tail of the window from the opening fixture day. |
 #endregion

@@ -1,6 +1,8 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
+// Modified: 2026-10-20 (AR round 3 L5 — the ClubPlayerIds-membership remark said DropPlayer has no production
+//           caller; RollToNextSeason has called it since ERR-028-025. Comment-only — v1.12)
+//           Prior: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
 //           M2 remark still described the completeness lock as covering "every public static readonly
 //           field, of any type" — true of finding C's widening (any TYPE) but stale against M-A's later
 //           widening (any ACCESS LEVEL, via BindingFlags.NonPublic in
@@ -283,8 +285,10 @@ namespace TacticalDirector.Discipline
         /// squad he is really in and his ban is never decremented, so he is suspended forever, with no
         /// throw, no log and no test able to see it. Both the code and #44 §3.3 asserted the
         /// precondition was held by FR-DC-013's migration rule; it is not, because
-        /// <see cref="MigratePlayerId"/> and <see cref="DropPlayer"/> have no production caller at all
-        /// (recorded at <c>src/season-save/SeasonLoop.cs</c>'s <c>RollToNextSeason</c> roster sync).
+        /// <see cref="MigratePlayerId"/> had no production caller at all and <see cref="DropPlayer"/> had none
+        /// until ERR-028-025 (recorded at <c>src/season-save/SeasonLoop.cs</c>'s <c>RollToNextSeason</c> roster
+        /// sync). <see cref="DropPlayer"/> is now called from <c>RollToNextSeason</c> for each retiree the #28
+        /// boundary replaces; <see cref="MigratePlayerId"/> still has no production caller.
         /// This is ERR-041-019's defect one subsystem over, and it is closed the same way: one notion
         /// of membership, taken from the roster, enforced at the entry point.
         /// </para>
@@ -725,4 +729,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | .cs v1.2 (M-A) had since widened the scan to BindingFlags.NonPublic too.  |
 // |         |            |        | Corrected to "static readonly, any type and any access level, not only    |
 // |         |            |        | public int". No behaviour change.                                          |
+// | 1.12    | 2026-10-20 | — | AR round 3 L5 (comment-only): the membership remark's "MigratePlayerId and DropPlayer have no production caller at all" corrected — DropPlayer is called from SeasonLoop.RollToNextSeason for each retiree since ERR-028-025 (FR-DC-013's retirement drop); MigratePlayerId still has none. No behaviour change. |
 #endregion

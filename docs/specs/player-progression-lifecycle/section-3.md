@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.15 — AR round 1 P-M3: §3.4's regen-seed line stated as a formula (domain, SplitMix64 finalizer, worked hex vector))
+**Last Updated:** October 20, 2026 (v0.16 — **ERR-028-027** (AR round 3): §3.4's `completedSeasonNumber` domain widened to `>= 0` (a career's first season is 0) with a season-0 golden vector; §3.3's `GenerateRegen` pseudocode restated to the shipped signature; §3.4 states that a retiree is replaced at the club carrying him at the boundary)
+**Last Updated (prior):** October 20, 2026 (v0.15 — AR round 1 P-M3: §3.4's regen-seed line stated as a formula (domain, SplitMix64 finalizer, worked hex vector))
 **Last Updated (prior):** October 19, 2026 (v0.14 — ERR-028-024 / ERR-028-025: §3.3 inherited position; §3.4 staged boundary + the regen stream save story)
 **Last Updated (prior):** August 24, 2026 (v0.13 — round-2 Medium/Low adversarial findings. M2
 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short): §3.2's "Recorded limitation, not fixed
@@ -25,7 +26,7 @@ numeric value, no draw, no format version. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.15
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -406,21 +407,32 @@ why this number needed no re-derivation.)*
 ## 3.3 Regen generation (KD-3)
 
 ```
-GenerateRegen(rng, streamIndex, clubId, ref nextPlayerId, referenceRosterWorld):
+GenerateRegen(rng, streamIndex, clubId, newPlayerId, position, worldDay) -> (PlayerRecord, PlayerLifecycle):
+    # ERR-028-027: the shipped signature. The CALLER allocates the id (FR-PG-011) and passes the retiree's
+    # position and the construction day; GenerateRegen allocates nothing and reads no roster world.
     reserveErr = rng.Reserve(streamIndex, PROGRESSION_REGEN_FIELDS)     # fixed budget (#27 pattern)
     ...draw name/nation/attributes/PA from the reservation, mirroring RosterGenerator...
-    # position = the RETIREE's (ERR-028-024); its draw index stays reserved, undrawn
+    # position = the RETIREE's (ERR-028-024), passed in; its draw index stays reserved, undrawn
     rng.CloseReservation(streamIndex)
-    playerId = nextPlayerId; nextPlayerId += 1                          # FRESH id, monotonic (FR-PG-011)
-    return new PlayerRecord { PlayerId = playerId, ... } + PlayerLifecycle { PotentialAbility = drawnPA, ... }
+    return new PlayerRecord { PlayerId = newPlayerId, Position = position, ... }
+         + PlayerLifecycle { PotentialAbility = drawnPA, LastAdvancedWorldDay = worldDay, ... }
 ```
+
+*(ERR-028-027, approved-text correction: this pseudocode previously read
+`GenerateRegen(rng, streamIndex, clubId, ref nextPlayerId, referenceRosterWorld)`, allocating the id inside
+(`playerId = nextPlayerId; nextPlayerId += 1`) and carrying no position or day. The code never had that shape:
+`PrepareSeasonBoundary` takes `regenId = next++` itself, then calls
+`RegenGenerator.GenerateRegen(rng, streamIndex, clubId, newPlayerId, PlayerPosition position, worldDay)` —
+keeping the cursor arithmetic, and its exhaustion refusal, in the one place that owns `NextPlayerId`
+(FR-PG-011). `referenceRosterWorld` is not a parameter either: `ProgressionEngine` holds the career's records
+itself (KD-4), so the club is the one the caller names; nation is not a `PlayerRecord` field today, so it is not drawn.)*
 
 The reservation is a **fixed budget** (`PROGRESSION_REGEN_FIELDS`) so a regen consumes a constant
 number of draws regardless of outcome — the #27 `FIELDS_PER_PLAYER` discipline (the fixed-budget
 reservation is what keeps the stream position deterministic across fail-loud paths). `entityId =
 clubId`; successive regens for the same club draw at successive `ActionOrdinal`s (the stream advances),
-so a club's newgen sequence is reproducible. Club/nation come from `referenceRosterWorld` (read-only,
-#27). A regen's PA is drawn (a younger player with a high PA is a "wonderkid"); its `[1,20]` attributes
+so a club's newgen sequence is reproducible. The club is the caller's `clubId` (the retiree's club; the
+regen's stream is already scoped to it by `streamIndex`). Nation is not a `PlayerRecord` field today, so none is drawn. A regen's PA is drawn (a younger player with a high PA is a "wonderkid"); its `[1,20]` attributes
 are generated below PA so the player has room to grow.
 
 **A regen's `GrowthCursor` MUST credit its own construction day's band step, exactly like a seeded
@@ -601,7 +613,7 @@ selectability gate reads only the boolean flag). **See §5's T-PG-DET-002**, whi
 tests: a reader running that test against a player who crosses `RETIREMENT_AGE` mid-gap will observe
 this limitation directly, so the cross-reference is here rather than left implicit.
 
-**At the season boundary (`RunSeasonBoundary`, invoked by #30 KD-6) — as amended by ERR-028-024 / ERR-028-025:**
+**At the season boundary (`RunSeasonBoundary` — the name of the step; shipped as the `PrepareSeasonBoundary` / `CommitSeasonBoundary` pair below, ERR-028-027 — invoked by #30 KD-6) — as amended by ERR-028-024 / ERR-028-025:**
 ```
 PrepareSeasonBoundary(worldSeed, completedSeasonNumber, worldDay) -> plan:      # writes NOTHING
     seed = DeriveRegenSeed(worldSeed, completedSeasonNumber)     # the formula below
@@ -619,6 +631,13 @@ CommitSeasonBoundary(plan):                                 # infallible on a fr
     require plan prepared from this store at its current mutation generation   # else refuse (F6)
     install plan's per-club arrays in place; nextPlayerId = plan.nextPlayerId
 ```
+**A retiree is replaced at the club carrying him at the boundary (ERR-028-027).** The walk above is over the
+store's CURRENT per-club rosters, not over where a player started the season: a retirement-flagged player a
+#31 transfer re-homed (`MovePlayer`, ERR-031-005) is retired and replaced at his NEW club — his id is listed in
+`RetiredPlayerIds` under that club, the regen joins that club in his position (ERR-028-024), and the club he
+left receives no regen (it already lost him to the transfer, and FR-PG-019's 1:1 count is per carrying club).
+Locked by `ProgressionEngineMoveTests` (move a flagged player from club 3 to club 7, then prepare).
+
 It **does not re-bank growth** (banked daily, KD-1) — its job is applying the deferred roster mutations.
 #30 stages `PrepareSeasonBoundary` at its roll step (d), reconciles its #29/#41/#30 rows against
 `plan.PlannedSquadFor` at (d′), and commits both after `BeginNextSeason` (#30 §3.5); the plan's
@@ -638,9 +657,13 @@ DeriveRegenSeed(worldSeed, completedSeasonNumber) =
 ```
 *Units:* every term is a dimensionless unsigned 64-bit pattern; `DOMAIN_TAG_PLAYER_PROGRESSION` is the `byte`
 `0x20`, zero-extended. *Valid ranges:* `worldSeed` is any `u64` (the career's `WorldStore.WorldSeed`);
-`completedSeasonNumber >= 1` (the season the boundary closes — #30 numbers seasons from 1), an `i32` widened as
-`(u64)(u32)` so that every value in `[1, 2^31 - 1]` maps to itself; a negative value is outside the domain (it
-would widen to a distinct large `u32` pattern, not an error, but #30 never produces one). The result is the
+`completedSeasonNumber >= 0` (the season the boundary closes; **a new career's first season is 0**, because
+`SeasonState.CreateNew`'s `seasonNumber` defaults to 0 and `League.CreateSeason` takes the default — so a career's
+FIRST boundary is `DeriveRegenSeed(worldSeed, 0)`; ERR-028-027 corrects the original `>= 1` / "#30 numbers seasons
+from 1", which excluded the value production passes), an `i32` widened as `(u64)(u32)` so that every value in
+`[0, 2^31 - 1]` maps to itself; a negative value is outside the domain (it would widen to a distinct large `u32`
+pattern, not an error, but #30 never produces one). The formula is total over the `i32` range, so the code was
+never wrong — only the stated domain. The result is the
 seed of a fresh `DeterministicRngService`. Any change to `worldSeed` or `completedSeasonNumber` changes it
 (SplitMix64 avalanche); the two-world and successive-boundary regen differences are asserted by §5 T-PG-RET-003.
 *Worked example (the golden vector, computed with a Python mirror that omits the `UL` suffixes and masks every
@@ -650,6 +673,10 @@ intermediate product with `& 0xFFFFFFFFFFFFFFFF`, not by calling the code):* `wo
 `DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A` (pinned by
 `SeasonBoundaryTests.DeriveRegenSeed_MatchesTheIndependentlyComputedGolden`). The same world at season 1 gives
 `0x3296A16727870F78`; the world seed `0xB0DA2029` at season 3 gives `0xB3AAB61F6AEEE0DC`.
+**Season-0 vector (the career's first boundary, ERR-028-027):** `0xB0DA2028 ^ 0` leaves the inner term
+`Mix(0x20 ^ 0xB0DA2028) = 0x0B9A85760C24CF95` unchanged (`x ^ 0 = x`), so
+`DeriveRegenSeed(0xB0DA2028, 0) = Mix(0x0B9A85760C24CF95) = 0xD3E409D7732EBE4F` (same masked Python mirror;
+pinned by `SeasonBoundaryTests.DeriveRegenSeed_AtSeasonZero_MatchesTheIndependentlyComputedGolden`).
 
 **The regen stream's save story (ERR-028-025 — the question §3.5 had left unpinned, which kept this step
 unbuilt).** The stream is **boundary-scoped**: constructed fresh at each boundary from a seed derived from the
@@ -948,4 +975,5 @@ about not erasing a roster the codec can actually see.
 | 0.13 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings, doc-only. **M2 (spec-32-flat-band-step-sweep-stopped-two-paragraphs-short):** §3.2's "Recorded limitation, not fixed here" paragraph — two paragraphs below the v0.11 correction of the same stale phrasing — restated against §3.1.3's accrual curve instead of "the §4.3 flat band step"; the ~421-of-`ABILITY_MAX` figure is unchanged (the P5 pivot makes it exact at every half-width). **L1 (four-guards-enumerated-as-five-and-mis-named):** §3.4's `RetirementAgeDays` pseudocode note corrected — it said "these TWO dial guards" for the single combined non-negativity `if`, which made the paragraph claim "four" and then list five items; now "this ONE combined dial guard". **M5 (retirement-day-derived-from-attributes-the-same-step-mutates):** new §3.4 paragraph states the retirement-day feedback-loop invariant — the day is re-evaluated against the same record §3.1.2 just mutated, bounded today only by the one-directional band order and `RetirementFlag`'s stickiness — and cites the new **T-PG-RET-009** lock (`section-5.md` v0.9). No numeric value, no draw, no format version. |
 | 0.14 | 2026-10-19 | — | **ERR-028-024**: §3.3 — the regen takes the retiree's position; the position draw index stays reserved and undrawn. **ERR-028-025**: §3.4 — `PrepareSeasonBoundary` (pure) / `CommitSeasonBoundary` (infallible) replace the marker pseudocode; the boundary-scoped regen stream (seed from world seed + completed season, no serialized cursor) is the save story; normative draw and id orders pinned. |
 | 0.15 | 2026-10-20 | — | **AR round 1 P-M3 (ERR-028-025)**: §3.4's seed line `Mix(Mix(TAG ^ worldSeed) ^ completedSeasonNumber)` broke the every-formula-has-units-ranges-and-a-worked-example rule. The pseudocode now calls `DeriveRegenSeed`, and a new formula block states the domain (`completedSeasonNumber >= 1`, widened `(u64)(u32)`), names `Mix` as the SplitMix64 finalizer with its constants, and gives one worked hex vector (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`), computed with an independent Python mirror and pinned by `SeasonBoundaryTests`. |
+| 0.16 | 2026-10-20 | — | **ERR-028-027** (AR round 3, approved-text corrections, spec + test, no behaviour change): §3.4's `DeriveRegenSeed` valid range corrected `completedSeasonNumber >= 1` / "#30 numbers seasons from 1" → `>= 0` (a new career's first season is 0 — `SeasonState.CreateNew`'s default; the first boundary seeds from `DeriveRegenSeed(worldSeed, 0)`), plus a season-0 golden `DeriveRegenSeed(0xB0DA2028, 0) = 0xD3E409D7732EBE4F`; §3.3's `GenerateRegen` pseudocode restated to the shipped `(rng, streamIndex, clubId, newPlayerId, position, worldDay)` signature (the caller allocates the id; nation is not a record field, so none is drawn); §3.4 names `RunSeasonBoundary` as the step's name for the shipped Prepare/Commit pair and states that a retiree is replaced at the club carrying him at the boundary (`MovePlayer`-re-homed players), locked by `ProgressionEngineMoveTests`. |
 #endregion

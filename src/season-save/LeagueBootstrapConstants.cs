@@ -1,6 +1,7 @@
 // File:     src/season-save/LeagueBootstrapConstants.cs
 // Created:  2026-07-25
-// Modified: 2026-10-20 (P-M6 — bootstrap template 3/8/8/4 -> 3/8/7/5, forward depth — v1.3)
+// Modified: 2026-10-20 (AR round 3 L5 — ordinal-84 note restated; comment-only — v1.4)
+//           (P-M6 — bootstrap template 3/8/8/4 -> 3/8/7/5, forward depth — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-2/KD-4/
 //           KD-5/KD-6/KD-9; path-to-playable roadmap A3; Code Standards #20
@@ -51,8 +52,9 @@ namespace TacticalDirector.SeasonSave
         /// [FIXED] Draw-site id for the per-club roster-generation stream. Registered under
         /// <see cref="SubsystemOrdinals.PlayerDatabase"/> with <c>entityId = clubId</c> — exactly the
         /// registration <see cref="RosterGenerator"/> documents. No new #16 domain tag or subsystem
-        /// ordinal is allocated by the bootstrap (design KD-4: <c>DOMAIN_TAG_SEASON_LOOP</c> / ordinal
-        /// 84 stay pinned to #30 T2's first draw site per ERR-030-001).
+        /// ordinal is allocated by the bootstrap (design KD-4; <c>DOMAIN_TAG_SEASON_LOOP</c> landed with
+        /// #30 T2's first draw site, <c>RoundResolutionModel.FixtureKey</c>, and ordinal 84 is deliberately
+        /// unallocated in code — ERR-030-012 — and stays reserved in #16 §3.4 spec text).
         /// </summary>
         public const string ROSTER_STREAM_SITE_ID = "player-database.roster-generation";
 
@@ -293,4 +295,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | over F433's 3, so two unavailable forwards forced the press-back-|
 // |         |            |        | in; spare per line over the worst formation need is now 2/4/2/2. |
 // |         |            |        | Players 0-17 keep position and draws; index 18 becomes a FW.     |
+// | 1.4     | 2026-10-20 | —      | AR round 3 L5 (comment-only): the ROSTER_STREAM_SITE_ID note "ordinal 84 stays pinned to #30 T2's first draw site" restated — #30 T2 has landed; the tag landed with its FixtureKey, ordinal 84 is unallocated in code (ERR-030-012). |
 #endregion

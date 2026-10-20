@@ -3,12 +3,15 @@
 // Modified: 2026-10-20
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §7.1 T2, FR-TX-005/007/009/021..025/028, §5 T-TX-BID-001..004,
-//           T-TX-REKEY-005, T-TX-DET-001/002, T-TX-INIT-001, T-TX-NEU-001; ERR-031-005/007/008/009/010;
-//           Season & Competition Loop #30 §3.5 (d″), ERR-030-056; Code Standards #20
+//           T-TX-REKEY-005, T-TX-DET-001/002, T-TX-INIT-001, T-TX-NEU-001; ERR-031-005/007/008/009/010/011/012;
+//           ERR-044-014; Season & Competition Loop #30 §3.5 (d″), ERR-030-056; Code Standards #20
 // Purpose:  #31 T2 end to end through SeasonLoop: genesis seeding, the bid seam against the club's real #40
 //           entry, the production re-home carrying the player's whole career under his id, every
 //           non-accepted outcome leaving #40 byte-identical, the staged season-boundary step, and the
-//           save/load path never re-seeding.
+//           save/load path never re-seeding. AR round 3 adds the production SeasonTransferRoster adapter's
+//           throw paths, the whole-career REKEY lock (lifecycle + #29 + #30 rows), the ERR-044-014 ban
+//           property, the League.CreateLoop production composition, and a snapshot wide enough to back
+//           "career untouched".
 
 using System;
 using System.IO;
@@ -22,6 +25,7 @@ using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
+using TacticalDirector.TrainingSystem;
 using TacticalDirector.Transfers;
 
 using CFinances = TacticalDirector.ClubFinances.ClubFinances;
@@ -36,6 +40,13 @@ namespace TacticalDirector.SeasonSave.Tests
         private const int Managed = 0;
         private const int Seller = 2;
         private const long Budget = 50_000_000L;
+
+        /// <summary>The seller-club squad index NewCareer bans by default, and the length of that ban.</summary>
+        private const int BannedIndex = 12;
+        private const int BanMatches = 50;
+
+        /// <summary>Close − openingFixtureDay under ERR-031-011 (world days).</summary>
+        private static readonly uint InSeasonTail = (uint)TransfersConstants.SummerWindowInSeasonDays - 1u;
 
         private string _tempDir;
 
@@ -67,6 +78,8 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(t, Is.Not.Null, "FR-TX-028: a career with a #28 store is transfers-wired at genesis");
             Assert.That(t.ContractCount, Is.EqualTo(progression.SquadFor(Managed).Count));
             Assert.That(t.ActiveWindow.OpenWorldDay, Is.EqualTo(0u), "ERR-031-008: the window opens on the new-game day");
+            Assert.That(t.ActiveWindow.CloseWorldDay, Is.EqualTo(loop.State.Calendar.DayOfRound(0) + InSeasonTail),
+                "ERR-031-011: the close is anchored to season 1's opening fixture day");
             foreach (Contract c in t.ContractsSnapshot())
             {
                 Assert.That(c.LengthSeasons, Is.EqualTo(TransfersConstants.DefaultContractSeasons));
@@ -87,12 +100,27 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void ABuy_ReHomesTheWholeCareer_UnderTheSameId_AndDebitsExactlyTheFee()
         {
-            Rig c = NewCareer();
+            // T-TX-REKEY-005: ONE player carries every kind of per-player state — a banned, injured,
+            // retirement-flagged, trained, appeared-in Seller player — and all of it must follow him.
+            Rig c = NewCareer(sellerRetireeIndex: BannedIndex);
             int target = BannedAt(c);
+            Assert.That(target, Is.EqualTo(c.SellerRetiree), "the banned player is also the aged one");
+            c.Loop.AdvanceDays(6);   // lived days: growth accrues, the age-45 flag is raised, training advances
             var knock = InjuryState.Create();
             knock.Severity = InjurySeverity.Moderate;
             knock.RecoveryRemaining = 9;
             c.Career.SetMedicalState(Seller, target, in knock);
+            Assert.That(c.Career.TrySetFocus(Seller, target, TrainingFocus.Fitness), Is.True);
+            c.Career.RecordAppearances(Seller, new[] { target }, c.Loop.CurrentWorldDay);
+            PlayerLifecycle lifeBefore = LifecycleOf(c.Progression, Seller, target);
+            TrainingState trainingBefore = TrainingOf(c.Career, Seller, target);
+            AppearanceState appearanceBefore = AppearanceOf(c.Career, Seller, target);
+            Assert.That(lifeBefore.RetirementFlag, Is.True, "non-vacuity: the #28 retirement state is non-default");
+            Assert.That(lifeBefore.RetirementDay, Is.GreaterThan(0u));
+            Assert.That(lifeBefore.BirthWorldDay, Is.LessThan(0L));
+            Assert.That(lifeBefore.GrowthCursor, Is.Not.EqualTo(0L), "non-vacuity: the accumulator has moved");
+            Assert.That(trainingBefore.Focus, Is.EqualTo(TrainingFocus.Fitness));
+            Assert.That(appearanceBefore.RecentBits, Is.EqualTo(1u));
             long fee = ValueFor(c, target, buy: true);
             long balanceBefore = c.Loop.FinanceView(Managed).Balance;
 
@@ -101,16 +129,79 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(outcome, Is.EqualTo(TransferSubmissionOutcome.Accepted));
             Assert.That(IndexOf(c.Progression.SquadFor(Managed), target), Is.GreaterThanOrEqualTo(0), "re-homed to the buyer…");
             Assert.That(IndexOf(c.Progression.SquadFor(Seller), target), Is.LessThan(0), "…and gone from the seller");
-            Assert.That(c.Career.IsAvailable(Managed, target), Is.False, "T-TX-REKEY-005: his injury travelled with him");
+            Assert.That(c.Career.IsAvailable(Managed, target), Is.False, "his injury travelled with him");
             Assert.That(InjuryOf(c.Career, Managed, target).RecoveryRemaining, Is.EqualTo(9));
             Assert.Throws<ArgumentException>(() => c.Career.IsAvailable(Seller, target), "no row left behind");
-            Assert.That(c.Discipline.HasEntry(target, DisciplineConstants.LeagueCompetitionKey), Is.True,
-                "his ban is keyed by the unchanged id and so followed him");
+
+            // #28 lifecycle, #29 training row and #30 appearance row: moved verbatim…
+            AssertSameLifecycle(lifeBefore, LifecycleOf(c.Progression, Managed, target));
+            AssertSameTraining(trainingBefore, TrainingOf(c.Career, Managed, target));
+            AssertSameAppearance(appearanceBefore, AppearanceOf(c.Career, Managed, target));
+
+            // …and absent at the source, in every store that keys by club.
+            Assert.Throws<ArgumentException>(() => c.Progression.LifecycleView(Seller, target), "#28 row left behind");
+            Assert.Throws<ArgumentException>(() => c.Career.TrainingView(Seller, target), "#29 row left behind");
+            Assert.Throws<ArgumentException>(() => c.Career.MedicalView(Seller, target), "#41 row left behind");
+            Assert.That(AppearanceHas(c.Career, Seller, target), Is.False, "#30 row left behind");
+
             Assert.That(c.Loop.FinanceView(Managed).Balance, Is.EqualTo(balanceBefore - fee), "exactly one fee debit");
             TransfersState t = c.Loop.TransfersSnapshot();
             Assert.That(t.TryGetContract(target, out Contract contract), Is.True);
             Assert.That(contract.LengthSeasons, Is.EqualTo(2));
             Assert.That(t.CommittedSpendThisWindow, Is.EqualTo(fee));
+        }
+
+        [Test]
+        public void ASoldPlayer_IsSelectedByTheBuyersNextPlayedRound_AndIsGoneFromTheSellers()
+        {
+            // T-TX-REKEY-005, the downstream half: the buyer's next played round can actually field him. The
+            // subject is a managed starter the engine's own selector puts in the SELLER club's eleven (the
+            // managed club is the strongest in this league, so no buy into it could make its eleven).
+            int index = SelectableManagedIndex();
+            Rig c = NewCareer(bannedIndex: -1);
+            int target = c.Progression.SquadFor(Managed).GetPlayer(index).PlayerId;
+            Assert.That(c.Loop.SubmitTransferBid(new Offer(target, Seller, ValueFor(c, target, buy: false), 0L, 1, false)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+
+            c.Loop.AdvanceToNextFixtureDay();
+            uint day = c.Loop.CurrentWorldDay;
+            c.Loop.AdvanceAndPlayNextRound();
+
+            Assert.That(IndexOf(c.Progression.SquadFor(Seller), target), Is.GreaterThanOrEqualTo(0), "in the buyer's squad…");
+            Assert.That(IndexOf(c.Progression.SquadFor(Managed), target), Is.LessThan(0), "…and absent from the seller's");
+            Assert.That(FieldedOn(c.Career, Seller, target, day), Is.True, "the buyer's selector fielded him");
+            Assert.That(AppearanceHas(c.Career, Managed, target), Is.False, "and the seller's record carries nothing of him");
+        }
+
+        [Test]
+        public void ABannedPlayer_ServesHisBanAtTheBuyer_AndSitsOutThatClubsNextRound()
+        {
+            // ERR-044-014: whose ban a fixture serves is decided by the roster, never by the id. The
+            // control (same sale, no ban) shows this player WOULD have been fielded, so the ban is what
+            // kept him out, and the buyer's one played round served exactly one match of it.
+            int index = SelectableManagedIndex();
+            Rig banned = NewCareer(bannedIndex: index, bannedClub: Managed);
+            Rig control = NewCareer(bannedIndex: -1);
+            int target = BannedAt(banned);
+            Assert.That(control.Progression.SquadFor(Managed).GetPlayer(index).PlayerId, Is.EqualTo(target));
+            foreach (Rig rig in new[] { banned, control })
+            {
+                Assert.That(rig.Loop.SubmitTransferBid(new Offer(target, Seller, ValueFor(rig, target, buy: false), 0L, 1, false)),
+                    Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            }
+
+            int before = banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining;
+            Assert.That(before, Is.EqualTo(BanMatches), "the ban travelled under the unchanged id");
+            banned.Loop.AdvanceToNextFixtureDay();
+            control.Loop.AdvanceToNextFixtureDay();
+            uint day = banned.Loop.CurrentWorldDay;
+            banned.Loop.AdvanceAndPlayNextRound();
+            control.Loop.AdvanceAndPlayNextRound();
+
+            Assert.That(banned.Discipline.EntryFor(target, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining,
+                Is.EqualTo(before - 1), "the new club's one played round served exactly one match");
+            Assert.That(FieldedOn(banned.Career, Seller, target, day), Is.False, "he sat out the buyer's round");
+            Assert.That(FieldedOn(control.Career, Seller, target, day), Is.True, "non-vacuity: unbanned, the same sale fields him");
         }
 
         [Test]
@@ -161,19 +252,23 @@ namespace TacticalDirector.SeasonSave.Tests
             int third = PlayerAt(c, 3, PlayerPosition.Midfielder);
             AssertNoMutation(c, new Offer(third, 3, ValueFor(c, third, true), 0L, 1, true), TransferSubmissionOutcome.SquadFull);
 
-            // Sell defenders to club 3 until the managed club could no longer name a matchday squad.
+            // Sell goalkeepers to club 3 until the managed club has one left; selling that last one would leave
+            // no matchday squad. The refusal goes through AssertNoMutation, so it is proven byte-identical.
             Rig s = NewCareer();
-            TransferSubmissionOutcome last = TransferSubmissionOutcome.Accepted;
-            int sold = 0;
-            while (last == TransferSubmissionOutcome.Accepted && sold < 23)
+            int goalkeepers = CountAt(s.Progression.SquadFor(Managed), PlayerPosition.Goalkeeper);
+            Assert.That(goalkeepers, Is.GreaterThan(1), "precondition: the template carries spare goalkeepers");
+            for (int sold = 0; sold < goalkeepers - 1; sold++)
             {
-                int d = PlayerAt(s, Managed, PlayerPosition.Goalkeeper);
-                last = s.Loop.SubmitTransferBid(new Offer(d, 3, ValueFor(s, d, false, buyer: 3), 0L, 1, false));
-                sold++;
+                int spare = PlayerAt(s, Managed, PlayerPosition.Goalkeeper);
+                Assert.That(
+                    s.Loop.SubmitTransferBid(new Offer(spare, 3, ValueFor(s, spare, false, buyer: 3), 0L, 1, false)),
+                    Is.EqualTo(TransferSubmissionOutcome.Accepted));
             }
 
-            Assert.That(last, Is.EqualTo(TransferSubmissionOutcome.SquadDepleted),
-                "ERR-031-007: selling the last goalkeeper is refused as an ordinary outcome");
+            int lastKeeper = PlayerAt(s, Managed, PlayerPosition.Goalkeeper);
+            AssertNoMutation(s, new Offer(lastKeeper, 3, ValueFor(s, lastKeeper, false, buyer: 3), 0L, 1, false),
+                TransferSubmissionOutcome.SquadDepleted);   // ERR-031-007: an ordinary outcome, never a throw
+            Assert.That(CountAt(s.Progression.SquadFor(Managed), PlayerPosition.Goalkeeper), Is.EqualTo(1));
             Assert.That(SquadRating.CanFieldStartingEleven(s.Progression.SquadFor(Managed)), Is.True);
         }
 
@@ -198,6 +293,153 @@ namespace TacticalDirector.SeasonSave.Tests
             var fee = new FinanceTransaction(FinanceTransactionKind.Debit, FinanceLineItem.TransferFee, 10L);
 
             Assert.Throws<InvalidOperationException>(() => c.Loop.ApplyTransaction(Managed, in fee));
+        }
+
+        // ── the production roster adapter, driven directly (AR round 3 M7a / L3) ─────────────────────────
+        // SubmitBid checks ownership before it ever asks the port, so none of these throw paths is reachable
+        // through the loop; each is an integration-defect guard and is locked here against the real adapter.
+
+        [Test]
+        public void TheAdapter_RefusesToBeBuiltWithoutTheRosterStore()
+        {
+            Assert.Throws<ArgumentNullException>(() => new SeasonTransferRoster(null, null));
+        }
+
+        [Test]
+        public void CanRelease_AnUnknownClub_Throws_NeverSquadDepleted()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int player = PlayerAt(c, Managed, PlayerPosition.Defender);
+
+            Assert.Throws<InvalidOperationException>(() => port.CanRelease(99, player));
+            Assert.Throws<InvalidOperationException>(() => port.CanRelease(-1, player));
+        }
+
+        [Test]
+        public void CanRelease_APlayerNotOnThatClubsRoster_Throws_NeverSquadDepleted()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int sellers = PlayerAt(c, Seller, PlayerPosition.Defender);
+
+            Assert.Throws<InvalidOperationException>(() => port.CanRelease(Managed, sellers), "owned by another club");
+            Assert.Throws<InvalidOperationException>(() => port.CanRelease(Managed, 987_654), "owned by nobody");
+        }
+
+        [Test]
+        public void CanRelease_IsFalseOnlyWhenTheClubCouldNoLongerFieldAMatchdaySquad()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int defender = PlayerAt(c, Managed, PlayerPosition.Defender);
+            Assert.That(port.CanRelease(Managed, defender), Is.True, "a full squad can spare a defender");
+
+            // Strip the managed club to one goalkeeper (store-level, so no bid is involved).
+            int keepers = CountAt(c.Progression.SquadFor(Managed), PlayerPosition.Goalkeeper);
+            for (int i = 0; i < keepers - 1; i++)
+            {
+                c.Progression.MovePlayer(PlayerAt(c, Managed, PlayerPosition.Goalkeeper), Managed, 3);
+            }
+
+            int lastKeeper = PlayerAt(c, Managed, PlayerPosition.Goalkeeper);
+            Assert.That(port.CanRelease(Managed, lastKeeper), Is.False, "ERR-031-007: no goalkeeper left to field");
+            Assert.That(port.CanRelease(Managed, defender), Is.True, "he can still spare a defender");
+        }
+
+        [Test]
+        public void TryPreviewRosterCommit_AnImpossibleMove_Throws_NeverFull()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int mine = PlayerAt(c, Managed, PlayerPosition.Defender);
+            int theirs = PlayerAt(c, Seller, PlayerPosition.Defender);
+            byte[] before = RosterSnapshot(c.Progression, c.Career);
+
+            Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(99, Seller, mine), "unknown source club");
+            Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(Managed, 99, mine), "unknown destination club");
+            Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(Managed, Managed, mine), "same club");
+            Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(Managed, Seller, theirs), "player is on the destination, not the source");
+            Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(Managed, Seller, 987_654), "player is nobody's");
+            Assert.That(RosterSnapshot(c.Progression, c.Career), Is.EqualTo(before), "a preview never writes");
+        }
+
+        [Test]
+        public void TryPreviewRosterCommit_WhenTheStoreAndTheCareerRowsDisagree_Throws_NeverFull()
+        {
+            // No test hook is needed: a career built over a store where the player has ALREADY moved
+            // carries him at the buyer, while the adapter's own store still has him at the seller.
+            Rig c = NewCareer();
+            int target = PlayerAt(c, Seller, PlayerPosition.Defender);
+            PlayerCareerStates skewed = CareerWhereAlreadyMoved(target, Seller, Managed);
+            SeasonTransferRoster port = new SeasonTransferRoster(c.Progression, skewed);
+
+            Assert.That(c.Progression.CanMovePlayer(target, Seller, Managed), Is.True, "the store allows the move…");
+            Assert.That(skewed.CanMovePlayerRows(target, Seller, Managed), Is.False, "…the career rows do not");
+            var e = Assert.Throws<InvalidOperationException>(() => port.TryPreviewRosterCommit(Seller, Managed, target));
+            StringAssert.Contains("disagree", e.Message);
+        }
+
+        [Test]
+        public void RequestRosterCommit_WithoutAPossibleMove_Throws_AndMovesNothing()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int mine = PlayerAt(c, Managed, PlayerPosition.Defender);
+            int theirs = PlayerAt(c, Seller, PlayerPosition.Defender);
+            byte[] before = RosterSnapshot(c.Progression, c.Career);
+
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(99, Seller, mine), "unknown club");
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Managed, Managed, mine), "same club");
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Managed, Seller, theirs), "not on the source");
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Managed, Seller, 987_654), "nobody's player");
+            Assert.That(RosterSnapshot(c.Progression, c.Career), Is.EqualTo(before), "a refused commit moves nothing");
+        }
+
+        [Test]
+        public void RequestRosterCommit_WhenThePreviewHasGoneStale_Throws_AndMovesNothing()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int target = PlayerAt(c, Seller, PlayerPosition.Defender);
+            Assert.That(port.TryPreviewRosterCommit(Seller, Managed, target), Is.True, "the preview succeeded…");
+
+            // …then the roster changes under it (a second writer — exactly what the preview contract forbids).
+            c.Progression.MovePlayer(target, Seller, 3);
+            byte[] before = RosterSnapshot(c.Progression, c.Career);
+
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Seller, Managed, target));
+            Assert.That(RosterSnapshot(c.Progression, c.Career), Is.EqualTo(before), "nothing moved on the stale commit");
+        }
+
+        [Test]
+        public void RequestRosterCommit_WhenTheDestinationFilledAfterThePreview_Throws_AndMovesNothing()
+        {
+            Rig c = NewCareer();
+            SeasonTransferRoster port = AdapterOf(c);
+            int target = PlayerAt(c, Seller, PlayerPosition.Defender);
+            c.Progression.MovePlayer(PlayerAt(c, 1, PlayerPosition.Midfielder), 1, Managed);   // 23 → 24
+            Assert.That(port.TryPreviewRosterCommit(Seller, Managed, target), Is.True, "one slot left at preview time");
+            c.Progression.MovePlayer(PlayerAt(c, 1, PlayerPosition.Defender), 1, Managed);     // 24 → 25: full
+            byte[] before = RosterSnapshot(c.Progression, c.Career);
+
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Seller, Managed, target));
+            Assert.That(RosterSnapshot(c.Progression, c.Career), Is.EqualTo(before), "nothing moved on the stale commit");
+        }
+
+        [Test]
+        public void RequestRosterCommit_WhenTheCareerRowsDisagree_ThrowsBeforeEitherWriter()
+        {
+            // Both predicates are asked before either write: the store must NOT move when the career refuses.
+            Rig c = NewCareer();
+            int target = PlayerAt(c, Seller, PlayerPosition.Defender);
+            PlayerCareerStates skewed = CareerWhereAlreadyMoved(target, Seller, Managed);
+            SeasonTransferRoster port = new SeasonTransferRoster(c.Progression, skewed);
+            byte[] before = RosterSnapshot(c.Progression, skewed);
+
+            Assert.Throws<InvalidOperationException>(() => port.RequestRosterCommit(Seller, Managed, target));
+            Assert.That(RosterSnapshot(c.Progression, skewed), Is.EqualTo(before), "neither the store nor the career moved");
+            Assert.That(IndexOf(c.Progression.SquadFor(Seller), target), Is.GreaterThanOrEqualTo(0), "he is still at the seller");
         }
 
         // ── save / load / the boundary ───────────────────────────────────────────────
@@ -238,6 +480,8 @@ namespace TacticalDirector.SeasonSave.Tests
             TransfersState t = c.Loop.TransfersSnapshot();
             Assert.That(t.CommittedSpendThisWindow, Is.EqualTo(0L), "FR-TX-007");
             Assert.That(t.ActiveWindow.OpenWorldDay, Is.EqualTo(rollDay), "ERR-031-008: opens on the roll day");
+            Assert.That(t.ActiveWindow.CloseWorldDay, Is.EqualTo(c.Loop.State.Calendar.DayOfRound(0) + InSeasonTail),
+                "ERR-031-011: closes N − 1 days after the new season's opening fixture day");
             Assert.That(t.TryGetContract(bought, out Contract boughtContract), Is.True);
             Assert.That(boughtContract.LengthSeasons, Is.EqualTo(2), "aged one season");
             Assert.That(t.TryGetContract(c.ForcedRetiree, out Contract _), Is.False, "the retiree's contract left with him (G14)");
@@ -253,6 +497,65 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonSaveManager.Save(c.Loop, matchOrNull: null, path);
             Assert.That(SeasonSaveManager.Load(path).Transfers.ContractCount, Is.EqualTo(t.ContractCount),
                 "AR round 1 M2: a roll that retires a contracted player leaves a saveable career");
+        }
+
+        // ── ERR-031-011: the summer window does not depend on when the client rolls ──────────────
+
+        [Test]
+        public void APromptRoll_OpensOnTheRollDay_AndCoversTheOpeningFixtureDay()
+        {
+            Rig c = NewCareer();
+            PlayWholeSeason(c.Loop);
+            uint rollDay = c.Loop.CurrentWorldDay;
+
+            c.Loop.RollToNextSeason();
+
+            TransferWindow w = c.Loop.TransfersSnapshot().ActiveWindow;
+            uint opening = c.Loop.State.Calendar.DayOfRound(0);
+            Assert.That(w.OpenWorldDay, Is.EqualTo(rollDay), "nothing transacts before the season exists");
+            Assert.That(opening, Is.GreaterThan(rollDay + (uint)TransfersConstants.SummerWindowInSeasonDays),
+                "non-vacuity: with the default break a roll-day-length window would close before the opening fixture");
+            Assert.That(w.IsWindowOpen(opening), Is.True, "AR round 2 M6: the window is still open on the opening fixture day");
+            Assert.That(w.CloseWorldDay, Is.EqualTo(opening + InSeasonTail));
+        }
+
+        [Test]
+        public void APromptRollAndALateRoll_CloseTheWindowOnTheSameDay()
+        {
+            Rig prompt = NewCareer();
+            PlayWholeSeason(prompt.Loop);
+            prompt.Loop.RollToNextSeason();
+
+            Rig late = NewCareer();
+            PlayWholeSeason(late.Loop);
+            late.Loop.AdvanceDays(30);   // linger in the close season (AdvanceDays allows up to the opening day)
+            uint lateRollDay = late.Loop.CurrentWorldDay;
+            late.Loop.RollToNextSeason();
+
+            TransferWindow p = prompt.Loop.TransfersSnapshot().ActiveWindow;
+            TransferWindow l = late.Loop.TransfersSnapshot().ActiveWindow;
+            Assert.That(late.Loop.State.Calendar.DayOfRound(0), Is.EqualTo(prompt.Loop.State.Calendar.DayOfRound(0)),
+                "precondition: the next calendar is roll-time independent (KD-6)");
+            Assert.That(l.OpenWorldDay, Is.EqualTo(lateRollDay), "only the open day follows the roll");
+            Assert.That(l.OpenWorldDay, Is.Not.EqualTo(p.OpenWorldDay), "non-vacuity: the two rolls really differ in time");
+            Assert.That(l.CloseWorldDay, Is.EqualTo(p.CloseWorldDay), "ERR-031-011: the close does not depend on roll timing");
+        }
+
+        [Test]
+        public void TheCloseSitsTheSameDistanceAfterTheOpeningFixture_AtGenesisAndAtABoundary()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(1, WorldSeed);
+            SeasonLoop loop = league.CreateLoop(
+                world, Managed, RoundResolutionMode.QuickSimAll, progressionOrNull: SeedFor(league, world));
+            uint genesisGap = loop.TransfersSnapshot().ActiveWindow.CloseWorldDay - loop.State.Calendar.DayOfRound(0);
+
+            PlayWholeSeason(loop);
+            loop.RollToNextSeason();
+            uint boundaryGap = loop.TransfersSnapshot().ActiveWindow.CloseWorldDay - loop.State.Calendar.DayOfRound(0);
+
+            Assert.That(genesisGap, Is.EqualTo(InSeasonTail));
+            Assert.That(boundaryGap, Is.EqualTo(InSeasonTail), "one derivation at genesis and at every boundary");
         }
 
         [Test]
@@ -284,12 +587,73 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(SeasonStateCodec.Encode(wired.Loop.State), Is.EqualTo(SeasonStateCodec.Encode(unwired.Loop.State)));
             Assert.That(wired.Progression.Snapshot(), Is.EqualTo(unwired.Progression.Snapshot()));
 
-            // Non-vacuity: one transfer moves the season.
-            Rig moved = NewCareer();
-            int target = PlayerAt(moved, Seller, PlayerPosition.Forward);
-            moved.Loop.SubmitTransferBid(new Offer(target, Seller, ValueFor(moved, target, true), 0L, 1, true));
-            PlayWholeSeason(moved.Loop);
-            Assert.That(moved.Progression.Snapshot(), Is.Not.EqualTo(unwired.Progression.Snapshot()));
+            // Non-vacuity of the comparison: the encoding really moves as a season is played, so the equality
+            // above is not two constant blobs. (A "one transfer changes the played season" leg was dropped: the
+            // quick-sim's coarse rating model ignores any single sale, a probe over all 23 managed players found
+            // none that changes a quick-simmed season, and an engine-resolved witness costs minutes per match.
+            // Transfer sensitivity of play is witnessed instead by the selected-player and ban-served tests.)
+            Assert.That(SeasonStateCodec.Encode(wired.Loop.State), Is.Not.EqualTo(SeasonStateCodec.Encode(NewCareer().Loop.State)));
+        }
+
+        // ── the production composition: League.CreateLoop → sale → roll → Save → Load → Restore → play ──────
+
+        [Test]
+        public void ASaleThroughCreateLoop_SurvivesTheRoll_ASaveLoadCycle_AndThePlayedRoundAfterIt()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(1, WorldSeed);
+            ProgressionEngine progression = SeedFor(league, world);
+            var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), ClubIds(), injuryOccurrenceEnabled: false);
+            SeasonLoop loop = league.CreateLoop(
+                world, Managed, RoundResolutionMode.QuickSimAll,
+                careerOrNull: career, progressionOrNull: progression, disciplineOrNull: new DisciplineState());
+
+            // The genesis budget is 0, so a SALE: the youngest managed defender (young, so he cannot retire at
+            // the boundary and vanish from the assertions below).
+            Squad managed = progression.SquadFor(Managed);
+            int sold = -1;
+            int youngest = int.MaxValue;
+            for (int i = 0; i < managed.Count; i++)
+            {
+                PlayerRecord p = managed.GetPlayer(i);
+                if (p.Position == PlayerPosition.Defender && p.Age < youngest)
+                {
+                    youngest = p.Age;
+                    sold = p.PlayerId;
+                }
+            }
+
+            Assert.That(sold, Is.GreaterThanOrEqualTo(0));
+            long fee = ValueFor(progression, sold, buy: false, buyer: Seller);
+            long balanceBefore = loop.FinanceView(Managed).Balance;
+            Assert.That(loop.SubmitTransferBid(new Offer(sold, Seller, fee, 0L, 1, false)),
+                Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            Assert.That(loop.FinanceView(Managed).Balance, Is.EqualTo(balanceBefore + fee));
+
+            PlayWholeSeason(loop);
+            loop.RollToNextSeason();
+            string path = Path.Combine(_tempDir, "create-loop.season");
+            SeasonSaveManager.Save(loop, matchOrNull: null, path);
+
+            SeasonSaveContents loaded = SeasonSaveManager.Load(path);
+            var restoredCareer = PlayerCareerStates.FromBlocks(
+                loaded.TrainingClubs, loaded.MedicalClubs, loaded.AppearanceClubs, injuryOccurrenceEnabled: false);
+            SeasonLoop resumed = SeasonLoop.Restore(
+                loaded.World, SeasonStateCodec.Encode(loaded.Season), RoundResolutionMode.QuickSimAll,
+                restoredCareer, null, loaded.Progression, loaded.Discipline, loaded.Finances, loaded.Transfers);
+
+            Assert.That(SeasonStateCodec.Encode(resumed.State), Is.EqualTo(SeasonStateCodec.Encode(loop.State)));
+            Assert.That(IndexOf(loaded.Progression.SquadFor(Seller), sold), Is.GreaterThanOrEqualTo(0), "he still plays for the buyer");
+            Assert.That(IndexOf(loaded.Progression.SquadFor(Managed), sold), Is.LessThan(0));
+            Assert.That(resumed.TransfersSnapshot().TryGetContract(sold, out Contract _), Is.False, "his contract left with him");
+            Assert.That(resumed.TransfersSnapshot().ContractCount, Is.EqualTo(loop.TransfersSnapshot().ContractCount));
+            Assert.That(restoredCareer.TrainingView(Seller, sold).Focus, Is.EqualTo(TrainingFocus.Balanced), "his #29 row is at the buyer");
+            Assert.Throws<ArgumentException>(() => restoredCareer.TrainingView(Managed, sold));
+
+            resumed.AdvanceToNextFixtureDay();
+            MatchResult[] played = resumed.AdvanceAndPlayNextRound();
+
+            Assert.That(played.Length, Is.EqualTo(ClubCount / 2), "the restored career plays a round with the moved roster");
         }
 
         // ── fixture ──────────────────────────────────────────────────────────────────
@@ -301,12 +665,16 @@ namespace TacticalDirector.SeasonSave.Tests
             internal PlayerCareerStates Career_;
             internal DisciplineState Discipline;
             internal int ForcedRetiree = -1;
+            internal int SellerRetiree = -1;
 
             internal PlayerCareerStates Career => Career_;
         }
 
+        // bannedIndex: the squad index (in bannedClub) carrying the unserved #44 ban (-1 = a clean league).
+        // sellerRetireeIndex: a seller-club squad index to age to 45, flagged on the first lived day (-1 = none).
         private static Rig NewCareer(
-            long budget = Budget, TransfersState transfers = null, bool transfersUnwired = false, bool forceManagedRetiree = false)
+            long budget = Budget, TransfersState transfers = null, bool transfersUnwired = false, bool forceManagedRetiree = false,
+            int bannedIndex = BannedIndex, int sellerRetireeIndex = -1, int bannedClub = Seller)
         {
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             var world = new WorldStore(1, WorldSeed);
@@ -331,15 +699,31 @@ namespace TacticalDirector.SeasonSave.Tests
                 squads[Managed] = new Squad(Managed, players);
             }
 
+            int sellerRetiree = -1;
+            if (sellerRetireeIndex >= 0)
+            {
+                var players = new PlayerRecord[squads[Seller].Count];
+                for (int i = 0; i < players.Length; i++)
+                {
+                    players[i] = squads[Seller].GetPlayer(i);
+                }
+
+                players[sellerRetireeIndex].Age = 45;
+                sellerRetiree = players[sellerRetireeIndex].PlayerId;
+                squads[Seller] = new Squad(Seller, players);
+            }
+
             ProgressionEngine progression = ProgressionEngine.SeedFrom(squads, world.CurrentWorldTick);
             var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), ClubIds(), injuryOccurrenceEnabled: false);
 
             // One unserved ban on a seller-club player, to prove a #44 tally follows a transfer.
-            int banned = squads[Seller].GetPlayer(12).PlayerId;
-            DisciplineState discipline = DisciplineState.FromEntries(new[]
-            {
-                new DisciplineEntry(banned, DisciplineConstants.LeagueCompetitionKey, 0, 50)
-            });
+            DisciplineState discipline = bannedIndex < 0
+                ? DisciplineState.FromEntries(new DisciplineEntry[0])
+                : DisciplineState.FromEntries(new[]
+                {
+                    new DisciplineEntry(
+                        squads[bannedClub].GetPlayer(bannedIndex).PlayerId, DisciplineConstants.LeagueCompetitionKey, 0, BanMatches)
+                });
 
             ClubFinanceEntry[] finances = ClubFinanceEntry.CreateInitialForSquads(squads);
             for (int i = 0; i < finances.Length; i++)
@@ -357,7 +741,8 @@ namespace TacticalDirector.SeasonSave.Tests
                     ids[i] = squads[Managed].GetPlayer(i).PlayerId;
                 }
 
-                transfers = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFrom(0), ids);
+                transfers = TransfersState.CreateAtGenesis(
+                    Managed, TransferWindow.SummerWindowFor(world.CurrentWorldTick, season.Calendar.DayOfRound(0)), ids);
             }
 
             var loop = new SeasonLoop(
@@ -365,7 +750,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 transfersUnwired ? null : transfers);
             return new Rig
             {
-                Loop = loop, Progression = progression, Career_ = career, Discipline = discipline, ForcedRetiree = forced
+                Loop = loop, Progression = progression, Career_ = career, Discipline = discipline, ForcedRetiree = forced,
+                SellerRetiree = sellerRetiree
             };
         }
 
@@ -388,11 +774,14 @@ namespace TacticalDirector.SeasonSave.Tests
         private static int BannedAt(Rig c) => c.Discipline.EntryAt(0).PlayerId;
 
         // #31's own counterparty valuation, re-derived from the roster the same way SubmitBid does.
-        private static long ValueFor(Rig c, int playerId, bool buy, int buyer = Seller)
+        private static long ValueFor(Rig c, int playerId, bool buy, int buyer = Seller) =>
+            ValueFor(c.Progression, playerId, buy, buyer);
+
+        private static long ValueFor(ProgressionEngine progression, int playerId, bool buy, int buyer = Seller)
         {
-            Assert.That(c.Progression.TryFindPlayer(playerId, out PlayerRecord rec, out int owner), Is.True);
+            Assert.That(progression.TryFindPlayer(playerId, out PlayerRecord rec, out int owner), Is.True);
             int counterparty = buy ? owner : buyer;
-            Squad squad = c.Progression.SquadFor(counterparty);
+            Squad squad = progression.SquadFor(counterparty);
             int stock = 0;
             for (int i = 0; i < squad.Count; i++)
             {
@@ -429,20 +818,173 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(Snapshot(c), Is.EqualTo(before), expected + " must leave #40, #28, #31 and the career untouched");
         }
 
+        // Everything a refused or non-accepted action must leave untouched: #40, #28, #31, #44, #29, #41, #30's
+        // appearance rows and the #30 season state itself.
         private static byte[] Snapshot(Rig c)
         {
             using (var ms = new MemoryStream())
             {
-                byte[] f = ClubFinancesSaveCodec.Encode(c.Loop.FinanceEntriesForSave());
-                ms.Write(f, 0, f.Length);
-                byte[] p = c.Progression.Snapshot();
-                ms.Write(p, 0, p.Length);
-                byte[] t = TransfersSaveCodec.Encode(c.Loop.TransfersSnapshot());
-                ms.Write(t, 0, t.Length);
-                byte[] m = MedicalSaveCodec.Encode(c.Career.MedicalBlocks());
-                ms.Write(m, 0, m.Length);
+                Append(ms, ClubFinancesSaveCodec.Encode(c.Loop.FinanceEntriesForSave()));
+                Append(ms, c.Progression.Snapshot());
+                Append(ms, TransfersSaveCodec.Encode(c.Loop.TransfersSnapshot()));
+                Append(ms, DisciplineSaveCodec.Encode(c.Discipline));
+                Append(ms, TrainingSaveCodec.Encode(c.Career.TrainingBlocks()));
+                Append(ms, MedicalSaveCodec.Encode(c.Career.MedicalBlocks()));
+                Append(ms, AppearanceSaveCodec.Encode(c.Career.AppearanceBlocks()));
+                Append(ms, SeasonStateCodec.Encode(c.Loop.State));
                 return ms.ToArray();
             }
+        }
+
+        // The roster authority and the career rows it must stay in lockstep with: the adapter's whole surface.
+        private static byte[] RosterSnapshot(ProgressionEngine progression, PlayerCareerStates career)
+        {
+            using (var ms = new MemoryStream())
+            {
+                Append(ms, progression.Snapshot());
+                Append(ms, TrainingSaveCodec.Encode(career.TrainingBlocks()));
+                Append(ms, MedicalSaveCodec.Encode(career.MedicalBlocks()));
+                Append(ms, AppearanceSaveCodec.Encode(career.AppearanceBlocks()));
+                return ms.ToArray();
+            }
+        }
+
+        private static void Append(MemoryStream ms, byte[] bytes) => ms.Write(bytes, 0, bytes.Length);
+
+        private static SeasonTransferRoster AdapterOf(Rig c) => new SeasonTransferRoster(c.Progression, c.Career);
+
+        // A career whose rows already have the player at `to`: a lockstep violation against any store that
+        // still has him at `from`, built with no test-only hook.
+        private static PlayerCareerStates CareerWhereAlreadyMoved(int playerId, int from, int to)
+        {
+            Rig other = NewCareer();
+            other.Progression.MovePlayer(playerId, from, to);
+            return PlayerCareerStates.ForLeague(new ProgressionSquads(other.Progression), ClubIds(), injuryOccurrenceEnabled: false);
+        }
+
+        // The index (in the league's managed squad) of a managed starter who, once re-homed to the seller club,
+        // is in THAT club's own starting eleven: found by asking the engine's selector, never assumed.
+        private static int SelectableManagedIndex()
+        {
+            Squad managedSquad = LeagueBootstrap.Generate(WorldSeed, ClubCount).ResolveByClubId(Managed);
+            int[] starters = SquadRating.StartingElevenPlayerIds(NewCareer().Progression.SquadFor(Managed));
+            for (int i = 0; i < starters.Length; i++)
+            {
+                Rig probe = NewCareer();
+                probe.Progression.MovePlayer(starters[i], Managed, Seller);
+                if (Array.IndexOf(SquadRating.StartingElevenPlayerIds(probe.Progression.SquadFor(Seller)), starters[i]) >= 0)
+                {
+                    return IndexOf(managedSquad, starters[i]);
+                }
+            }
+
+            Assert.Fail("no managed starter would make the seller club's eleven; the fixture has lost its subject");
+            return -1;
+        }
+
+        private static int CountAt(Squad squad, PlayerPosition position)
+        {
+            int count = 0;
+            for (int i = 0; i < squad.Count; i++)
+            {
+                count += squad.GetPlayer(i).Position == position ? 1 : 0;
+            }
+
+            return count;
+        }
+
+        private static PlayerLifecycle LifecycleOf(ProgressionEngine progression, int club, int playerId)
+        {
+            foreach (ClubCareerStates block in progression.ToBlocks())
+            {
+                if (block.ClubId != club)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < block.Count; i++)
+                {
+                    if (block.Records[i].PlayerId == playerId)
+                    {
+                        return block.Lifecycles[i];
+                    }
+                }
+            }
+
+            throw new ArgumentException("not carried");
+        }
+
+        private static TrainingState TrainingOf(PlayerCareerStates career, int club, int playerId)
+        {
+            foreach (ClubTrainingStates block in career.TrainingBlocks())
+            {
+                int at = block.ClubId == club ? Array.IndexOf(block.PlayerIds, playerId) : -1;
+                if (at >= 0)
+                {
+                    return block.States[at];
+                }
+            }
+
+            throw new ArgumentException("not carried");
+        }
+
+        private static AppearanceState AppearanceOf(PlayerCareerStates career, int club, int playerId)
+        {
+            foreach (ClubAppearanceStates block in career.AppearanceBlocks())
+            {
+                int at = block.ClubId == club ? Array.IndexOf(block.PlayerIds, playerId) : -1;
+                if (at >= 0)
+                {
+                    return block.States[at];
+                }
+            }
+
+            throw new ArgumentException("not carried");
+        }
+
+        private static bool AppearanceHas(PlayerCareerStates career, int club, int playerId)
+        {
+            foreach (ClubAppearanceStates block in career.AppearanceBlocks())
+            {
+                if (block.ClubId == club && Array.IndexOf(block.PlayerIds, playerId) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Fielded on `day`: the appearance record's bit 0 is anchored to that very day.
+        private static bool FieldedOn(PlayerCareerStates career, int club, int playerId, uint day)
+        {
+            AppearanceState row = AppearanceOf(career, club, playerId);
+            return row.BitsAsOfWorldDay == day && (row.RecentBits & 1u) != 0u;
+        }
+
+        private static void AssertSameLifecycle(PlayerLifecycle expected, PlayerLifecycle actual)
+        {
+            Assert.That(actual.PotentialAbility, Is.EqualTo(expected.PotentialAbility), "PA");
+            Assert.That(actual.CurrentAbility, Is.EqualTo(expected.CurrentAbility), "CA");
+            Assert.That(actual.GrowthCursor, Is.EqualTo(expected.GrowthCursor), "GrowthCursor");
+            Assert.That(actual.BirthWorldDay, Is.EqualTo(expected.BirthWorldDay), "BirthWorldDay");
+            Assert.That(actual.RetirementFlag, Is.EqualTo(expected.RetirementFlag), "RetirementFlag");
+            Assert.That(actual.RetirementDay, Is.EqualTo(expected.RetirementDay), "RetirementDay");
+            Assert.That(actual.LastAdvancedWorldDay, Is.EqualTo(expected.LastAdvancedWorldDay), "LastAdvancedWorldDay");
+        }
+
+        private static void AssertSameTraining(TrainingState expected, TrainingState actual)
+        {
+            Assert.That(actual.Focus, Is.EqualTo(expected.Focus), "Focus");
+            Assert.That(actual.Condition, Is.EqualTo(expected.Condition), "Condition");
+            Assert.That(actual.TrainingFatigue, Is.EqualTo(expected.TrainingFatigue), "TrainingFatigue");
+            Assert.That(actual.LastAdvancedWorldDay, Is.EqualTo(expected.LastAdvancedWorldDay), "LastAdvancedWorldDay");
+        }
+
+        private static void AssertSameAppearance(AppearanceState expected, AppearanceState actual)
+        {
+            Assert.That(actual.RecentBits, Is.EqualTo(expected.RecentBits), "RecentBits");
+            Assert.That(actual.BitsAsOfWorldDay, Is.EqualTo(expected.BitsAsOfWorldDay), "BitsAsOfWorldDay");
         }
 
         private static InjuryState InjuryOf(PlayerCareerStates career, int club, int playerId)
@@ -506,4 +1048,6 @@ namespace TacticalDirector.SeasonSave.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-10-20 | —      | Initial implementation (#31 T2): end-to-end transfer locks.       |
+// | 1.1     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): roll-timing-independent window close — prompt vs late roll, genesis vs boundary gap, prompt roll covers the opening fixture; rig/genesis/roll locks use SummerWindowFor. |
+// | 1.2     | 2026-10-20 | —      | AR round 3: M7 (direct SeasonTransferRoster throw-path tests; REKEY-005 lifecycle/#29/#30 rows + buyer selection; depletion through AssertNoMutation; wider Snapshot), the ERR-044-014 ban property replacing the vacuous HasEntry, a non-vacuous encoded-season leg, the League.CreateLoop sale/roll/save/load/play composition, L3 CanRelease throws (ERR-031-012). |
 #endregion

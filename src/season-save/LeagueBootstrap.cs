@@ -1,12 +1,13 @@
 // File:     src/season-save/LeagueBootstrap.cs
 // Created:  2026-07-25
-// Modified: 2026-10-20 (P-L2 — stale squad-size comment — v1.1)
+// Modified: 2026-10-20 (AR round 3 L5 — squad size 23 and the ordinal-84 note restated; comment-only — v1.2)
+//           (P-L2 — stale squad-size comment — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md)
 //           KD-1..KD-6, KD-9, §3 determinism, F1..F6; path-to-playable roadmap A3;
 //           Squad/Player Data #27 (RosterGenerator); Code Standards #20
-// Purpose:  Turn one world seed into a playable league — N clubs, one 25-player position-coherent
-//           Squad each, a per-club strength, and the derived season seed. The roadmap-C3 substitute
+// Purpose:  Turn one world seed into a playable league — N clubs, one 23-player (3/8/7/5, below the
+//           25-player cap, ERR-031-004) position-coherent Squad each, a per-club strength, and the derived season seed. The roadmap-C3 substitute
 //           for #47: playability needs a league to EXIST, not a database editor.
 //
 // Boot-time only (a new-game / new-season step, never the 10 Hz or 60 Hz loops), so the zero-alloc
@@ -21,8 +22,9 @@ namespace TacticalDirector.SeasonSave
     /// Deterministic league generation from a single <c>worldSeed</c> (design KD-4). Pure with respect
     /// to global state: it constructs its own <see cref="DeterministicRngService"/>, touches no
     /// <c>MatchEngine</c>, and registers nothing in the #16 domain-tag / subsystem-ordinal registry
-    /// (KD-4 — <c>DOMAIN_TAG_SEASON_LOOP</c> / ordinal 84 stay pinned to #30 T2's first draw site per
-    /// ERR-030-001).
+    /// (KD-4 — the bootstrap allocates no tag or ordinal of its own. <c>DOMAIN_TAG_SEASON_LOOP</c> (0x22)
+    /// landed with #30 T2's first draw site, <c>RoundResolutionModel.FixtureKey</c>; subsystem ordinal 84 is NOT
+    /// allocated in code — ERR-030-012: no registered stream backs it — and stays reserved in #16 §3.4 spec text).
     /// <para>
     /// <b>Determinism contract (§3).</b> The same <c>(worldSeed, clubCount)</c> yields byte-identical
     /// output: the same club ids, names, strength deltas, and every player's identity and all 31
@@ -311,4 +313,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | generation, per-club strength application, F1..F3 gates.           |
 // | 1.1     | 2026-10-20 | —      | P-L2: F3 comment restated — the template sum is 23 (strictly below |
 // |         |            |        | CLUB_SQUAD_SIZE, ERR-031-004), not the cap. Comment-only change.   |
+// | 1.2     | 2026-10-20 | —      | AR round 3 L5 (comment-only): the header's "25-player" squad is 23 (3/8/7/5, ERR-031-004); the KD-4 note "tag/ordinal 84 stay pinned to #30 T2's first draw site" restated — the tag landed with T2's FixtureKey, ordinal 84 is deliberately unallocated in code (ERR-030-012). |
 #endregion

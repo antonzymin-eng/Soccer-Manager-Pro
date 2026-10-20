@@ -65,7 +65,7 @@ namespace TacticalDirector.Transfers
         /// against the roster it rides with.
         /// </para>
         /// </summary>
-        public void InsertContract(in Contract contract)
+        internal void InsertContract(in Contract contract)
         {
             Contract.Validate(in contract);
             if (_contracts.ContainsKey(contract.PlayerId))
@@ -84,7 +84,7 @@ namespace TacticalDirector.Transfers
         }
 
         /// <summary>Removes a managed-player contract and fails if no such contract exists.</summary>
-        public void RemoveContract(int playerId)
+        internal void RemoveContract(int playerId)
         {
             if (!_contracts.Remove(playerId))
             {
@@ -174,7 +174,9 @@ namespace TacticalDirector.Transfers
         /// <param name="arrivingManagedPlayerIds">#28's regens joining the MANAGED club.</param>
         /// <param name="nextWindow">The next season's summer window (#30 derives it).</param>
         /// <exception cref="ArgumentNullException">A list is null.</exception>
-        /// <exception cref="InvalidOperationException">An arrival already holds a contract.</exception>
+        /// <exception cref="ArgumentException">An arrival already holds a contract (even one expiring this
+        /// boundary) or is among <paramref name="retiredPlayerIds"/> — a regen is a new id (#28), so either is
+        /// an integration defect, never silently re-seeded.</exception>
         public TransfersState PrepareSeasonBoundary(
             IReadOnlyList<int> retiredPlayerIds, IReadOnlyList<int> arrivingManagedPlayerIds, in TransferWindow nextWindow)
         {
@@ -186,6 +188,20 @@ namespace TacticalDirector.Transfers
             if (arrivingManagedPlayerIds == null)
             {
                 throw new ArgumentNullException(nameof(arrivingManagedPlayerIds));
+            }
+
+            // Checked against the SOURCE set before anything is built: an arrival that holds a contract
+            // expiring this boundary, or that retires in the same boundary, would otherwise vanish from the
+            // aged set and be re-seeded without a trace.
+            for (int i = 0; i < arrivingManagedPlayerIds.Count; i++)
+            {
+                int arriving = arrivingManagedPlayerIds[i];
+                if (_contracts.ContainsKey(arriving) || Contains(retiredPlayerIds, arriving))
+                {
+                    throw new ArgumentException(
+                        "Arriving player " + arriving + " already holds a managed contract or retires this boundary.",
+                        nameof(arrivingManagedPlayerIds));
+                }
             }
 
             var next = new TransfersState(ManagedClubId, in nextWindow);
@@ -244,4 +260,5 @@ namespace TacticalDirector.Transfers
 // | 1.2     | 2026-10-19 | —      | ERR-031-005: stable PlayerIds — the packed-id managed-membership check and the OnPlayerRekeyed handler are deleted (an id no longer encodes its club, and nothing is ever re-keyed). |
 // | 1.3     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1: InsertContract refuses a CLUB_SQUAD_SIZE+1-th contract, so the live state can never encode a block Decode refuses. |
 // | 1.4     | 2026-10-20 | —      | #31 T2: CreateAtGenesis (FR-TX-028 / §3.8 genesis seeding at the [GT] terms) and PrepareSeasonBoundary (§3.7 aging + G14 retiree/regen lockstep + spend reset + next window, as a NEW state for #30's staged roll). |
+// | 1.5     | 2026-10-20 | —      | AR round 3 (L4/L2): PrepareSeasonBoundary refuses an arrival that holds a contract (incl. one expiring now) or is retired, checked against the source before building; InsertContract/RemoveContract are internal (the only production writers are #31's). |
 #endregion

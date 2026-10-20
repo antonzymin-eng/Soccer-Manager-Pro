@@ -3,11 +3,11 @@
 // Created:  2026-10-20
 // Modified: 2026-10-20
 // Author:   —
-// Specs:    Spec #31 §3.5 (as corrected by ERR-031-008), §3.7, §3.8, FR-TX-007/019/028, G14;
+// Specs:    Spec #31 §3.5 (as corrected by ERR-031-008 and ERR-031-011), §3.7, §3.8, FR-TX-007/019/028, G14;
 //           §5.5 T-TX-DET-002, T-TX-INIT-001
 // Purpose:  Locks #31 T2's pure state operations: genesis seeding at the [GT] terms, the season-boundary
 //           aging with the retiree/regen lockstep and the spend/window reset, and the summer-window
-//           derivation's inclusive length.
+//           derivation (begin-day open, opening-fixture-anchored inclusive close).
 // ============================================================================
 
 using System;
@@ -22,34 +22,73 @@ namespace TacticalDirector.Transfers.Tests
         private const int Managed = 3;
 
         [Test]
-        public void SummerWindowFrom_IsExactlyTheConfiguredLength_Inclusive()
+        public void SummerWindowFor_OpensOnTheBeginDay_AndClosesInclusiveFromTheOpeningFixtureDay()
         {
-            TransferWindow w = TransferWindow.SummerWindowFrom(280);
+            // §3.5 worked example (ERR-031-011): season begun on day 267, opening fixture on day 322.
+            TransferWindow w = TransferWindow.SummerWindowFor(267, 322);
 
-            Assert.AreEqual(280u, w.OpenWorldDay);
-            Assert.AreEqual(280u + (uint)TransfersConstants.SummerWindowLengthDays - 1u, w.CloseWorldDay);
-            int openDays = 0;
-            for (uint d = 270; d < 400; d++)
+            Assert.AreEqual(267u, w.OpenWorldDay);
+            Assert.AreEqual(322u + (uint)TransfersConstants.SummerWindowInSeasonDays - 1u, w.CloseWorldDay);
+            int openDaysFromOpeningFixture = 0;
+            for (uint d = 270; d < 500; d++)
             {
-                if (w.IsWindowOpen(d))
+                if (d >= 322 && w.IsWindowOpen(d))
                 {
-                    openDays++;
+                    openDaysFromOpeningFixture++;
                 }
             }
 
-            Assert.AreEqual(TransfersConstants.SummerWindowLengthDays, openDays, "ERR-031-008: N days, not N + 1");
+            Assert.AreEqual(TransfersConstants.SummerWindowInSeasonDays, openDaysFromOpeningFixture,
+                "inclusive: exactly N open days from the opening fixture day on, not N + 1");
+            Assert.IsFalse(w.IsWindowOpen(266u), "nothing transacts before the season begins");
         }
 
         [Test]
-        public void SummerWindowFrom_PastTheLastWorldDay_FailsLoud()
+        public void SummerWindowFor_GenesisDefaults_AreDays0Through44()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => TransferWindow.SummerWindowFrom(uint.MaxValue));
+            // Pinned against the defaults: with FirstRoundDay 7 and 38 in-season days the genesis window is
+            // the same [0, 44] the roll-day-length derivation produced, so genesis bytes are unchanged.
+            TransferWindow w = TransferWindow.SummerWindowFor(0, 7);
+
+            Assert.AreEqual(0u, w.OpenWorldDay);
+            Assert.AreEqual(7u + (uint)TransfersConstants.SummerWindowInSeasonDays - 1u, w.CloseWorldDay);
+            if (TransfersConstants.SummerWindowInSeasonDays == 38)
+            {
+                Assert.AreEqual(44u, w.CloseWorldDay);
+            }
+        }
+
+        [Test]
+        public void SummerWindowFor_OpeningOnTheBeginDay_IsLegal()
+        {
+            TransferWindow w = TransferWindow.SummerWindowFor(50, 50);
+
+            Assert.AreEqual(50u, w.OpenWorldDay);
+            Assert.AreEqual(50u + (uint)TransfersConstants.SummerWindowInSeasonDays - 1u, w.CloseWorldDay);
+        }
+
+        [Test]
+        public void SummerWindowFor_OpeningBeforeTheBeginDay_FailsLoud()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => TransferWindow.SummerWindowFor(100, 99));
+        }
+
+        [Test]
+        public void SummerWindowFor_PastTheLastWorldDay_FailsLoud()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => TransferWindow.SummerWindowFor(0, uint.MaxValue));
+
+            // The last opening day whose close still fits succeeds.
+            uint lastFitting = uint.MaxValue - (uint)TransfersConstants.SummerWindowInSeasonDays + 1u;
+            TransferWindow w = TransferWindow.SummerWindowFor(0, lastFitting);
+            Assert.AreEqual(uint.MaxValue, w.CloseWorldDay);
+            Assert.Throws<ArgumentOutOfRangeException>(() => TransferWindow.SummerWindowFor(0, lastFitting + 1u));
         }
 
         [Test]
         public void CreateAtGenesis_SeedsOneContractPerPlayer_AtTheGenesisTerms()
         {
-            TransfersState s = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFrom(0), new[] { 75, 77, 76 });
+            TransfersState s = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFor(0, 7), new[] { 75, 77, 76 });
 
             Assert.AreEqual(Managed, s.ManagedClubId);
             Assert.AreEqual(0L, s.CommittedSpendThisWindow);
@@ -67,14 +106,14 @@ namespace TacticalDirector.Transfers.Tests
         public void PrepareSeasonBoundary_AgesRemovesExpiredAndRetired_SeedsArrivals_AndResetsSpendAndWindow()
         {
             TransfersState s = TransfersState.Restore(
-                Managed, 9_999, TransferWindow.SummerWindowFrom(0),
+                Managed, 9_999, TransferWindow.SummerWindowFor(0, 7),
                 new[]
                 {
                     new Contract(75, 500, 1),    // expires: would reach 0
                     new Contract(76, 600, 3),    // ages to 2
                     new Contract(77, 700, 2),    // retires this boundary
                 });
-            TransferWindow next = TransferWindow.SummerWindowFrom(300);
+            TransferWindow next = TransferWindow.SummerWindowFor(300, 355);
 
             TransfersState after = s.PrepareSeasonBoundary(new[] { 77, 4242 }, new[] { 900 }, in next);
 
@@ -93,22 +132,40 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void PrepareSeasonBoundary_AnArrivalThatAlreadyHoldsAContract_FailsLoud()
+        public void PrepareSeasonBoundary_AnArrivalThatAlreadyHoldsAContract_FailsLoud_EvenOneExpiringNow()
         {
+            TransferWindow next = TransferWindow.SummerWindowFor(300, 355);
             TransfersState s = TransfersState.Restore(
-                Managed, 0, TransferWindow.SummerWindowFrom(0), new[] { new Contract(76, 600, 3) });
+                Managed, 0, TransferWindow.SummerWindowFor(0, 7),
+                new[] { new Contract(76, 600, 3), new Contract(77, 700, 1) });   // 77 would expire at this boundary
 
-            Assert.Throws<InvalidOperationException>(
-                () => s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 76 }, TransferWindow.SummerWindowFrom(300)));
+            Assert.Throws<ArgumentException>(
+                () => s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 76 }, in next), "a live contract");
+            Assert.Throws<ArgumentException>(
+                () => s.PrepareSeasonBoundary(Array.Empty<int>(), new[] { 77 }, in next),
+                "L4: a contract expiring this boundary must not be silently replaced by a fresh genesis one");
+            Assert.AreEqual(2, s.ContractCount, "pure: a refused boundary leaves the source untouched");
+        }
+
+        [Test]
+        public void PrepareSeasonBoundary_AnArrivalThatIsAlsoRetired_FailsLoud()
+        {
+            TransferWindow next = TransferWindow.SummerWindowFor(300, 355);
+            TransfersState s = TransfersState.Restore(
+                Managed, 0, TransferWindow.SummerWindowFor(0, 7), new[] { new Contract(76, 600, 3) });
+
+            Assert.Throws<ArgumentException>(
+                () => s.PrepareSeasonBoundary(new[] { 900 }, new[] { 900 }, in next),
+                "L4: a regen id is new — it can neither retire in the same boundary nor already be held");
         }
 
         [Test]
         public void ThreeBoundaries_ExpireEveryGenesisContract_WithoutAThrow()
         {
-            TransfersState s = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFrom(0), new[] { 75, 76 });
+            TransfersState s = TransfersState.CreateAtGenesis(Managed, TransferWindow.SummerWindowFor(0, 7), new[] { 75, 76 });
             for (int b = 0; b < TransfersConstants.DefaultContractSeasons; b++)
             {
-                s = s.PrepareSeasonBoundary(Array.Empty<int>(), Array.Empty<int>(), TransferWindow.SummerWindowFrom((uint)(300 * (b + 1))));
+                s = s.PrepareSeasonBoundary(Array.Empty<int>(), Array.Empty<int>(), TransferWindow.SummerWindowFor((uint)(300 * (b + 1)), (uint)(300 * (b + 1)) + 55u));
             }
 
             Assert.AreEqual(0, s.ContractCount, "every genesis contract has aged out — F7: never stored as 0");
@@ -120,4 +177,6 @@ namespace TacticalDirector.Transfers.Tests
 // | Version | Date       | Author | Change |
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-10-20 | —      | #31 T2: genesis seeding, boundary aging + retiree/regen lockstep + resets, window derivation locks. |
+// | 1.1     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): window locks rewritten for SummerWindowFor(begin, openingFixture) — inclusive close, genesis [0,44] pin, opening<begin and uint-overflow edges. |
+// | 1.2     | 2026-10-20 | —      | AR round 3 L4: PrepareSeasonBoundary refuses an arrival that holds a contract (live or expiring this boundary) or is retired — ArgumentException, source untouched. |
 #endregion

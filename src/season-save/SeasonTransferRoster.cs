@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonTransferRoster.cs
 // Created:  2026-10-19
-// Modified: 2026-10-19
+// Modified: 2026-10-20
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §3.4 / §4.5 / KD-7 (as amended by ERR-031-005/007),
 //           §7.1 T2, FR-TX-021..023; Season & Competition Loop #30 (the mid-season roster commit,
@@ -78,15 +78,20 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// <c>false</c> only when the club left behind could not name a matchday squad (ERR-031-007). An
+        /// unknown club, or a player who is not on that club's roster, is an integration defect and throws —
+        /// it must never surface to the manager as "squad depleted".
+        /// </remarks>
         public bool CanRelease(int clubId, int playerId)
         {
             Squad squad = _progression.SquadFor(clubId);
-            if (squad == null || squad.Count <= 1)
+            if (squad == null)
             {
-                return false;
+                throw new InvalidOperationException($"CanRelease asked about club {clubId}, which is not in this league.");
             }
 
-            var remaining = new PlayerRecord[squad.Count - 1];
+            var remaining = new PlayerRecord[squad.Count > 0 ? squad.Count - 1 : 0];
             int w = 0;
             bool found = false;
             for (int i = 0; i < squad.Count; i++)
@@ -98,17 +103,20 @@ namespace TacticalDirector.SeasonSave
                     continue;
                 }
 
-                if (w == remaining.Length)
+                if (w < remaining.Length)
                 {
-                    return false;   // the player is not on this roster
+                    remaining[w++] = rec;
                 }
+            }
 
-                remaining[w++] = rec;
+            if (!found)
+            {
+                throw new InvalidOperationException($"CanRelease asked about player {playerId}, who is not on club {clubId}'s roster.");
             }
 
             // ERR-031-007: the club left behind must still be able to name a matchday squad — the rule
             // #30 §2.3 F9's back-fill relies on. Asked of the engine's own selector, never a head count.
-            return found && SquadRating.CanFieldStartingEleven(new Squad(clubId, remaining));
+            return remaining.Length > 0 && SquadRating.CanFieldStartingEleven(new Squad(clubId, remaining));
         }
 
         /// <inheritdoc />
@@ -169,4 +177,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the #28 store + #29/#41/#30 career rows; stable-id re-home       |
 // |         |            |        | (ERR-031-005); source-depletion guard (ERR-031-007); preview     |
 // |         |            |        | false only when full, impossible moves throw (ERR-031-010).      |
+// | 1.1     | 2026-10-20 | —      | AR round 3 L3: CanRelease throws for an unknown club or a player not on the roster (false is depletion only, ITransferRosterPort contract). |
 #endregion

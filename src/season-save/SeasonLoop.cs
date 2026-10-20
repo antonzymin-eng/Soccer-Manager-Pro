@@ -1,6 +1,8 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-20 (#31 T2 — v1.40: SubmitTransferBid, TransfersSnapshot, the TransferFee refusal,
+// Modified: 2026-10-20 (ERR-031-011 — v1.41: (d″) window close anchored to the next calendar's opening
+//           fixture day; SubmitTransferBid refuses mid-fixture; roll/bid docs corrected.)
+//           Prior: 2026-10-20 (#31 T2 — v1.40: SubmitTransferBid, TransfersSnapshot, the TransferFee refusal,
 //           and the staged #31 boundary step (d″).)
 //           Prior: 2026-10-19 (ERR-028-025 — v1.39: #28's season boundary is live at step (d) — staged before
 //           BeginNextSeason, installed after; (d′) reconciles against the planned rosters; retirees' #44
@@ -735,11 +737,28 @@ namespace TacticalDirector.SeasonSave
         /// <b>Roster.</b> The production port (<see cref="SeasonTransferRoster"/>) re-homes the player in
         /// the #28 store and moves his #29/#41/#30 rows, all under his unchanged id (ERR-031-005).
         /// </para>
+        /// <para>
+        /// <b>Never mid-fixture.</b> A transfer re-homes a player in the very rosters the managed fixture's
+        /// engine was booted from, so a bid while <see cref="ActiveMatch"/> is non-null fails loud. Within
+        /// the synchronous <see cref="AdvanceAndPlayNextRound"/> that window is reachable only from another
+        /// thread (the #38 observer seam); the guard is there for the later interactive match flow.
+        /// </para>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">#31 or #28 is not wired, or a #31
-        /// fail-loud condition (F4 out of window, F6 malformed or foreign terms).</exception>
+        /// <exception cref="System.InvalidOperationException">A managed fixture is in progress; #31 or #28
+        /// is not wired; or a #31 fail-loud condition — F4 (the command is outside the active window) or the
+        /// F6 offer-direction mismatch (the player is not at the club the offer moves him from).</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">A #31 F6 caller-contract violation:
+        /// malformed terms (negative fee/wage/id, non-positive length), the managed club or an unknown club
+        /// named as counterparty (ERR-031-010), or a player outside the current #27 club universe.</exception>
         public TransferSubmissionOutcome SubmitTransferBid(in Offer offer)
         {
+            if (_activeMatch != null)
+            {
+                throw new System.InvalidOperationException(
+                    "A transfer cannot commit while a managed fixture is in progress; it would re-home a "
+                    + "player out of the rosters the running match engine was booted from.");
+            }
+
             if (_transfers == null)
             {
                 throw new System.InvalidOperationException(
@@ -1161,12 +1180,17 @@ namespace TacticalDirector.SeasonSave
         /// the next season's seed, regenerate its schedule and calendar, and reset. Returns what the
         /// board decided and what the new season starts from.
         /// <para>
-        /// <b>KD-6 — one restartable transform.</b> The result is a pure function of the prior
-        /// <see cref="SeasonState"/> alone: the next seed derives from the current seed and season
-        /// number, the schedule from that seed, and the calendar by shifting THIS season's round spacing
-        /// forward by one season-length plus the close-season break. Nothing is drawn from a cursor and
-        /// nothing reads the wall clock, so a save taken either side of this call restores to the same
-        /// continuation, and rolling twice from the same prior state yields the same next state.
+        /// <b>KD-6 — one restartable transform.</b> The result is a pure function of the persisted
+        /// career state — the prior <see cref="SeasonState"/>, the world clock and seed, and the staged
+        /// subsystem blocks (#40 finances, the #28 store, the #29/#41 career, #31 transfers): the next
+        /// seed derives from the current seed and season number, the schedule from that seed, and the
+        /// calendar by shifting THIS season's round spacing forward by one season-length plus the
+        /// close-season break. Nothing is drawn from a cursor and nothing reads the wall clock, so a save
+        /// taken either side of this call restores to the same continuation, and rolling twice from the
+        /// same prior state yields the same next state. The world clock enters only as the boundary's
+        /// "today": #28's regen construction day (clock − 1) and the open day of #31's next window — the
+        /// window's CLOSE is anchored to the next calendar's opening fixture day (ERR-031-011), so how
+        /// long a client lingers in the close season before rolling changes only the day transfers open.
         /// </para>
         /// <para>
         /// <b>Ordering is load-bearing.</b> Everything is computed and validated before anything is
@@ -1181,7 +1205,9 @@ namespace TacticalDirector.SeasonSave
         /// declared empty position. (b') #40's finance settlement is LIVE: it follows (a') and precedes
         /// (c) regeneration so budgets are derived from the completed season/post-promotion division.
         /// (d) #28's season boundary is LIVE (ERR-028-025): retiree removal + 1:1 regen, STAGED at (d)
-        /// and installed after (e) like (b').
+        /// and installed after (e) like (b'). (d″) #31's boundary is LIVE (ERR-030-056): contract aging,
+        /// the retiree/regen contract lockstep, the committed-spend reset and the next summer window
+        /// (ERR-031-011), STAGED after (d′) and installed after (e) the same way.
         /// </para>
         /// <para>
         /// <b>Determinism across a save.</b> The regen stream is boundary-scoped — seeded from the world
@@ -1297,14 +1323,17 @@ namespace TacticalDirector.SeasonSave
             // (b′)/(d)/(d′): every managed contract ages one season (a contract that would reach 0 is
             // removed); the retirees' contracts leave with them and each regen joining the MANAGED club is
             // seeded the genesis terms (G14 lockstep with #28); committed spend resets; the next summer
-            // window opens on the roll day (ERR-031-008). Pure — builds a new state, writes nothing.
+            // window opens on the roll day and closes SummerWindowInSeasonDays into the next season,
+            // counted from nextCalendar's opening fixture day (ERR-031-011) — so the close does not depend
+            // on when the client rolls; only the open day (the day the season begins) does. Pure — builds
+            // a new state, writes nothing.
             TransfersState nextTransfers = null;
             if (_transfers != null)
             {
                 nextTransfers = _transfers.PrepareSeasonBoundary(
                     boundary == null ? System.Array.Empty<int>() : RetiredFrom(boundary),
                     boundary == null ? System.Array.Empty<int>() : ArrivalsAt(boundary, _transfers.ManagedClubId),
-                    TransferWindow.SummerWindowFrom(_world.CurrentWorldTick));
+                    TransferWindow.SummerWindowFor(_world.CurrentWorldTick, nextCalendar.DayOfRound(0)));
             }
 
             // ── (e) commit: schedule + table + season number + seed, then the board verdict ─────
@@ -2446,4 +2475,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.38 | 2026-10-18 | — | #31 T1: carry a cloned TransfersState (ctor/Restore transfersOrNull, SeasonTransfersCoherence, internal TransfersForSave); nothing drives it until T2. |
 // | 1.39 | 2026-10-19 | — | ERR-028-025: step (d) LIVE — PrepareSeasonBoundary staged before (e), CommitSeasonBoundary after; (d′) PrepareRosterSync reads the planned rosters (PlannedSquads); FR-DC-013 retirement drop delivered; M11 resolved. |
 // | 1.40 | 2026-10-20 | — | #31 T2: SubmitTransferBid (exact-value #40 staging, publish only on Accepted, the SeasonTransferRoster port); TransfersSnapshot; ApplyTransaction refuses TransferFee once #31 is wired; roll step (d″) stages #31's season boundary (aging, retiree/regen contract lockstep, spend reset, next window) and installs after BeginNextSeason. AR round 1 L2: version rows reordered. |
+// | 1.41 | 2026-10-20 | — | ERR-031-011 (AR round 2): (d″) passes SummerWindowFor(roll day, nextCalendar.DayOfRound(0)) so the window close no longer depends on roll timing; SubmitTransferBid fails loud while ActiveMatch is non-null; its exception docs name ArgumentOutOfRangeException for F6 caller-contract violations; the RollToNextSeason summary lists (d″) and states KD-6 over persisted career state. |
 #endregion

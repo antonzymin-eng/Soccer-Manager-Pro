@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** October 20, 2026 (v2.25 — ERR-030-056: §3.5 gains step (d″), #31's staged boundary, and names `SubmitTransferBid` as ERR-030-005's mid-season roster commit)
+**Last Updated:** October 20, 2026 (v2.26 — ERR-030-057: §3.5 (d″) pseudocode guards a null #28 boundary and derives #31's window from the next calendar's opening fixture day; the (c′) note records that the window's close does not follow roll timing)
+**Last Updated (prior):** October 20, 2026 (v2.25 — ERR-030-056: §3.5 gains step (d″), #31's staged boundary, and names `SubmitTransferBid` as ERR-030-005's mid-season roster commit)
 **Last Updated (prior):** October 19, 2026 (v2.24 — ERR-028-025: step (d) LIVE — the staged #28 season boundary)
 **Last Updated (prior):** October 9, 2026 (v2.23 — ERR-030-053: complete the final fixture day before settlement; preserve refused-roll atomicity)
 **Last Updated (prior):** October 8, 2026 (v2.22 — finance slot 11a publishes only after every club succeeds)
@@ -234,7 +235,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.25
+**Version:** 2.26
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -979,8 +980,11 @@ RollToNextSeason():
     boundary := Progression?.PrepareSeasonBoundary(worldSeed, SeasonNumber, clock − 1)   # (d) #28 — LIVE
                                                           #     (ERR-028-025): STAGED here, writes nothing
     rosterSync := Career?.PrepareRosterSync(boundary ? PlannedSquads : provider)          # (d′) staged
-    nextTransfers := Transfers?.PrepareSeasonBoundary(boundary.RetiredPlayerIds,
-                         boundary's regens at the managed club, SummerWindowFrom(clock))  # (d″) staged (ERR-030-056)
+    nextTransfers := Transfers?.PrepareSeasonBoundary(                                  # (d″) staged (ERR-030-056)
+                         boundary ? boundary.RetiredPlayerIds : [],                     #   (ERR-030-057: no #28
+                         boundary ? boundary's regens at the managed club : [],         #    store ⇒ no boundary)
+                         SummerWindowFor(clock, Calendar.DayOfRound(0)))                #   #31 §3.5, ERR-031-011:
+                                                          #     Calendar is ALREADY the next season's (c′)
     Table := LeagueTable.Empty(ClubIds)                # (e) reset
     SeasonNumber++
     Seed := nextSeed
@@ -988,7 +992,7 @@ RollToNextSeason():
     Progression?.CommitSeasonBoundary(boundary)        # commit (d) — cannot throw on a fresh plan
     Career?.CommitRosterSync(rosterSync)               # commit (d′) against the installed roster
     Transfers := nextTransfers                         # commit (d″) — a reference swap, cannot fail
-    for pid in boundary.RetiredPlayerIds: DisciplineRules?.DropPlayer(pid)   # FR-DC-013 retirement drop
+    for pid in (boundary ? boundary.RetiredPlayerIds : []): DisciplineRules?.DropPlayer(pid)   # FR-DC-013
     # (f) #44's season-boundary sweep (FR-DC-017) — LIVE since T2 (C1/C2, August 13, 2026):
     # DisciplineRules.RollToNextSeason() resets every yellow count to 0; UNSERVED BANS CARRY
     # UNCHANGED — a red card in the final round is still a ban in August, which is the whole reason
@@ -1033,7 +1037,9 @@ had no step for #31, so T1's carried contracts could not follow #28's retirement
 left a contract the save root's coherence rule then refused, and the career could no longer be saved. (d″) is
 #31's `PrepareSeasonBoundary` (#31 §3.7) — every managed contract ages one season, the retirees' contracts leave,
 each regen joining the managed club is contracted at the genesis terms, committed spend resets, and the next
-summer window opens on the roll day (#31 §3.5, ERR-031-008). It is staged after (d)/(d′), whose plan it reads,
+summer window opens on the roll day (#31 §3.5, ERR-031-008) and closes `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 days after
+the next calendar's opening fixture day (ERR-031-011). Without #28 there is no boundary plan, so (d″) passes no
+retirees and no arrivals (ERR-030-057). It is staged after (d)/(d′), whose plan it reads,
 and installed after (e) by a reference swap. **The mid-season roster commit ERR-030-005 reserved is
 `SeasonLoop.SubmitTransferBid`** — the only public writer of #31 state: it copies the managed club's exact live
 #40 value, lets #31 stage its fee through `FinanceLedger.ApplyTransaction` on that copy, re-homes the player
@@ -1062,7 +1068,11 @@ would notice, since schedule, table, seed and season number are all exactly righ
 one break after the old one's finale. Shifting the mapping rather than rebuilding a linear calendar is
 what keeps the transform pure (a clock-derived first day would make the roll depend on when the client
 happened to call it) and preserves a non-uniform schedule — a calendar with a mid-season gap keeps that
-gap next season instead of being flattened. The step sits after (c) so a future competition set that
+gap next season instead of being flattened. The same discipline holds downstream: #31's next transfer window
+CLOSES on the next calendar's opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 (#31 §3.5, ERR-031-011),
+not a fixed length from the roll day, so the window's close does not depend on roll timing. The roll's only
+clock-dependent outputs are the day the season BEGINS — which is, by definition, the window's open day — and #28's
+regen construction day (`clock − 1`, the last lived day, step (d)) (ERR-030-057). The step sits after (c) so a future competition set that
 changes the round count regenerates the schedule first; it does not disturb (a')/(b').
 
 **Boundary condition on (c′).** Because the derived calendar is a function of the old one alone, a
@@ -1198,4 +1208,5 @@ formula inputs and tuning remain T3b2; this back-prop grants no amount-productio
 | 2.23 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** complete the final fixture day before settlement; preserve refused-roll atomicity. |
 | 2.24 | 2026-10-19 | — | **ERR-028-025** (#28 boundary landing): §3.5 pseudocode replaces the reserved `AdvanceAges()` with the staged `PrepareSeasonBoundary` / `CommitSeasonBoundary`, (d′) reconciles against the planned rosters, commits after (e), and the FR-DC-013 retirement drop follows; the "only partly landed" paragraph is superseded. |
 | 2.25 | 2026-10-20 | — | **ERR-030-056** (#31 T2): §3.5 pseudocode gains step (d″) — #31's `PrepareSeasonBoundary` staged after (d)/(d′), installed after (e); the new paragraph names `SeasonLoop.SubmitTransferBid` as ERR-030-005's mid-season roster commit (exact-value #40 staging, `SeasonTransferRoster` re-home, publish on Accepted) and records the `TransferFee` refusal once #31 is wired. |
+| 2.26 | 2026-10-20 | — | **ERR-030-057** (#31 T2 AR round 2): §3.5 (d″) pseudocode read `boundary.RetiredPlayerIds` unconditionally although `boundary` is null without #28 — now `boundary ? … : []` for the retirees, the arrivals and the FR-DC-013 drop, matching `SeasonLoop.RollToNextSeason`; (d″) derives the window as `SummerWindowFor(clock, Calendar.DayOfRound(0))` against the already-rolled calendar (ERR-031-011, was `SummerWindowFrom(clock)`); the (d″) paragraph and the (c′) correction note record that the window's close no longer follows roll timing — only its open day (the season-begin day) and #28's regen construction day do. |
 #endregion

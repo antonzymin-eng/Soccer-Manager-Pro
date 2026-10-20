@@ -1,13 +1,15 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.10 — T2 locks live)
+**Last Updated:** October 20, 2026 (v0.12 — T-TX-REKEY-005 live)
+**Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: window locks; T-TX-NORMAL-001 and §5.7 cover FR-TX-029 / F9)
+**Last Updated (prior):** October 20, 2026 (v0.10 — T2 locks live)
 **Last Updated (prior):** October 20, 2026 (v0.9 — ERR-031-006: T-TX-BID-005 and §5.7 restated for the stable-id re-home)
 **Last Updated (prior):** October 19, 2026 (v0.8 — ERR-031-005: §5.3 re-home locks)
 **Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -59,14 +61,27 @@
   does not land fails loud with local state untouched (both directions).
 - **T-TX-REKEY-003** — #31 migrates only its own contract state; #28/#33 state is not referenced.
 - **T-TX-REKEY-004** — positional-stock read is read-only and bounded; an invalid producer count fails loud.
-- **T-TX-REKEY-005 (deferred T2; restated at ERR-031-005)** — a real #30 re-home MUST carry the player's whole
-  career with him under the same id — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — and leave nothing at the
-  source club; the moved player is then selectable by, and records appearances for, his new club.
+- **T-TX-REKEY-005 (live since AR round 3; restated at ERR-031-005)** — a real #30 re-home MUST carry the player's
+  whole career with him under the same id — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — and leave nothing
+  at the source club; the moved player is then selectable by, and records appearances for, his new club. Locked by
+  `SeasonTransfersT2Tests.ABuy_ReHomesTheWholeCareer_UnderTheSameId_AndDebitsExactlyTheFee` (PA, `GrowthCursor`,
+  `BirthWorldDay`, `RetirementFlag`/`RetirementDay`, the #29 training row, the #30 appearance row and the #41 injury
+  all equal at the buyer and absent at the source), `ASoldPlayer_IsSelectedByTheBuyersNextPlayedRound_AndIsGoneFromTheSellers`
+  (the buyer's next played round fields him) and `ABannedPlayer_ServesHisBanAtTheBuyer_AndSitsOutThatClubsNextRound`
+  (the #44 ban follows him: the new club's one played round serves exactly one match and he sits it out — ERR-044-014;
+  the unbanned control is fielded).
 
 ## 5.4 Window (KD-6)
 
 - **T-TX-WIN-001** — `IsWindowOpen` is inclusive at both boundaries; outside-window `SubmitBid` fails loud
   before valuation or mutation.
+- **T-TX-WIN-002 (ERR-031-011)** — live at T2: `SummerWindowFor` opens on the begin day and closes exactly
+  `SUMMER_WINDOW_IN_SEASON_DAYS` days into the season counting the opening fixture day (inclusive); an opening day
+  before the begin day and a close past `uint.MaxValue` fail loud; the genesis defaults give `[0, 44]`
+  (`TransfersT2Tests.SummerWindowFor_*`). Through `SeasonLoop`, a prompt roll opens on the roll day and is still open
+  on the opening fixture day, a prompt and a late roll close on the same day, and `Close − openingFixtureDay` is
+  identical at genesis and at a boundary (`SeasonTransfersT2Tests.APromptRoll…`, `…ALateRoll…`,
+  `TheCloseSitsTheSameDistance…`).
 
 ## 5.5 Save round-trip & determinism (KD-4/KD-8)
 
@@ -74,7 +89,8 @@
   through both the codec (`TransfersT1Tests`) and the season file + `SeasonLoop.Restore` resume path
   (`SeasonSaveTransfersTests`), with non-default spend so a reseed-on-load could not pass.
 - **T-TX-DET-002** — live at T2: contracts age/decrement/remove at the season boundary, a retiree's contract is
-  removed and a managed regen contracted, spend resets, the window re-derives from the roll day, and the rolled
+  removed and a managed regen contracted, spend resets, the window re-derives (open on the roll day, close anchored to the next opening fixture day —
+  ERR-031-011), and the rolled
   career still saves (`TransfersT2Tests`, `SeasonTransfersT2Tests.TheRoll_…`); three boundaries expire every genesis
   contract without a throw and the manager can still sell (ERR-031-009).
 - **T-TX-INIT-001** — live at T2: `League.CreateLoop` with a #28 store seeds one genesis contract per managed player
@@ -98,14 +114,16 @@
   window and negative spend all throw at decode; a pinned golden byte vector locks the layout (ERR-031-003).
 - **T-TX-FAIL-002 (F6)** — invalid player id or malformed fee/wage/length throws at consuming seams.
 - **T-TX-FAIL-003 (F7)** — `default(Contract)` fails insertion validation.
-- **T-TX-NORMAL-001 (F1/F5)** — insufficient budget and full destination are explicitly **not** fail-loud paths;
-  they return typed no-mutation submission outcomes.
+- **T-TX-NORMAL-001 (F1/F5/F9)** — insufficient budget, full destination and a depleted releasing club are
+  explicitly **not** fail-loud paths; they return typed no-mutation submission outcomes (`InsufficientBudget`,
+  `SquadFull`, `SquadDepleted`).
 
 ## 5.7 Requirement traceability
 
-Every FR-TX-001..028 maps to a T-TX-* test above or a recorded §7 deferral. T0 now locks the reviewed public
+Every FR-TX-001..029 maps to a T-TX-* test above or a recorded §7 deferral (FR-TX-029 → T-TX-DEP-001,
+T-TX-FIN-001, T-TX-NORMAL-001; FR-TX-019 → T-TX-WIN-002). T0 now locks the reviewed public
 API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and both sides
-of the defensive commit-not-landed breach. T2 additionally owes the production carry-everything re-home lock in
+of the defensive commit-not-landed breach. T2 owed — and AR round 3 landed — the production carry-everything re-home lock in
 T-TX-REKEY-005 (the re-home carries the player's #28 record + lifecycle, #29/#41/#30 rows and #44 tally under the
 same id and leaves nothing behind). *(ERR-031-006: originally "the production hook-dispatch/no-op lock" — the
 re-key hook was deleted at ERR-031-005.)*
@@ -123,4 +141,6 @@ re-key hook was deleted at ERR-031-005.)*
 | 0.8 | 2026-10-19 | — | ERR-031-005: §5.2/§5.3 restated for a stable-id re-home — T-TX-REKEY-001 locks roster-judged ownership including an off-range (regen) id; T-TX-REKEY-002 confirms the landing; T-TX-REKEY-005 becomes the T2 carry-everything integration lock. |
 | 0.9 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): T-TX-BID-005 restated as "a commit that does not land" (was "returns a different id"); §5.7's T2 obligation is the T-TX-REKEY-005 carry-everything lock, not a hook-dispatch/no-op lock. The v0.6 row's hook-dispatch pin is superseded. |
 | 0.10 | 2026-10-20 | — | #31 T2: T-TX-DET-002 / T-TX-INIT-001 / T-TX-NEU-001 live; new T-TX-DEP-001 (ERR-031-007) and T-TX-FIN-001 (the #40 staging seam). |
+| 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): new T-TX-WIN-002 locks the re-anchored window (unit edges + roll-timing independence through `SeasonLoop`); T-TX-DET-002 restated; T-TX-NORMAL-001 adds F9 `SquadDepleted`; §5.7 counts FR-TX-001..029. T-TX-REKEY-005's "(deferred T2)" label is left for a later pass. |
+| 0.12 | 2026-10-20 | — | AR round 3: T-TX-REKEY-005 is live (named tests: whole-career equality at the buyer and absence at the source, buyer selection, #44 ban served by the new club); the "(deferred T2)" label and the §5.7 "owes" wording are retired. |
 #endregion

@@ -1,13 +1,15 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.12 — T2: §3.3 ERR-031-007/009/010, §3.5 ERR-031-008, §3.7 the staged boundary)
+**Last Updated:** October 20, 2026 (v0.14 — ERR-031-012: §3.4 CanRelease throws on impossible input; §3.7 arrival-collision guard)
+**Last Updated (prior):** October 20, 2026 (v0.13 — ERR-031-011: §3.5 window re-anchored to the opening fixture day; §3.3 SquadDepleted intro and gate order; §3.7 next-window sentence)
+**Last Updated (prior):** October 20, 2026 (v0.12 — T2: §3.3 ERR-031-007/009/010, §3.5 ERR-031-008, §3.7 the staged boundary)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-006: §3.4 test-id reference corrected to T-TX-REKEY-005)
 **Last Updated (prior):** October 19, 2026 (v0.10 — ERR-031-005: §3.3/§3.4 re-home under a stable id)
 **Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -74,7 +76,8 @@ only “close enough to keep negotiation open”; it stores no in-flight state a
 ## 3.3 The bid pipeline — `SubmitBid` (FR-TX-009/025, atomic)
 
 `SubmitBid` returns `TransferSubmissionOutcome`. Negotiation results map one-for-one to `Rejected`, `Accepted`
-and `CounterOffered`; ordinary player-reachable resource conditions add `InsufficientBudget` and `SquadFull`.
+and `CounterOffered`; ordinary player-reachable resource conditions add `InsufficientBudget`, `SquadFull` and
+`SquadDepleted` (FR-TX-029 / F9, ERR-031-007).
 Malformed terms, out-of-window commands and violated producer/state invariants still fail loud.
 
 ```
@@ -84,8 +87,8 @@ SubmitBid(managerClubId, in Offer offer, worldDay, ref ClubFinances finances, re
 
     # ---- VALIDATE/PREFLIGHT (no local mutation) ----
     require offer well-formed                                                       else throw  # F6
-    require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                else throw  # F4
     require CarriesClub(offer.CounterpartyClubId)                                   else throw  # F6, ERR-031-010
+    require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                else throw  # F4
     require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId)==fromClub else throw
         # ClubOf is the roster port's answer, never offer.PlayerId / CLUB_SQUAD_SIZE (ERR-031-005)
 
@@ -162,8 +165,10 @@ TryPreviewRosterCommit(fromClubId, toClubId, playerId):        # ERR-031-010
        or playerId is not on fromClubId's roster:  THROW        # an integration defect, never "full"
     return Count(toClubId's roster) < CLUB_SQUAD_SIZE           # false = destination full (F5) — ONLY that
 
-CanRelease(clubId, playerId):                                    # ERR-031-007
-    return CanFieldStartingEleven(clubId's roster without playerId)   # the engine's own selector
+CanRelease(clubId, playerId):                                    # ERR-031-007, ERR-031-012
+    if clubId is not in the league, or playerId is not on clubId's roster:  THROW   # an integration defect,
+                                                                  # never "depleted" (the F9 outcome SubmitBid reports)
+    return CanFieldStartingEleven(clubId's roster without playerId)   # the engine's own selector; false = F9 ONLY
 
 RequestRosterCommit(fromClubId, toClubId, playerId):
     # precondition: successful preview with no intervening roster mutation
@@ -184,25 +189,48 @@ career state and #44 tally with him and leaves nothing behind (§5.3 T-TX-REKEY-
 ## 3.5 The transfer window — `IsWindowOpen` (FR-TX-019/020)
 
 ```
-SummerWindowFrom(uint seasonStartWorldDay):                      # ERR-031-008
-    return TransferWindow{ OpenWorldDay  = seasonStartWorldDay,
-                           CloseWorldDay = seasonStartWorldDay + SUMMER_WINDOW_LENGTH_DAYS - 1 }
+SummerWindowFor(uint seasonBeginWorldDay, uint openingFixtureWorldDay):     # ERR-031-011
+    require openingFixtureWorldDay >= seasonBeginWorldDay                    else throw (ArgumentOutOfRange)
+    close := openingFixtureWorldDay + SUMMER_WINDOW_IN_SEASON_DAYS - 1        # computed in 64 bits
+    require close <= uint.MaxValue                                           else throw (ArgumentOutOfRange)
+    return TransferWindow{ OpenWorldDay = seasonBeginWorldDay, CloseWorldDay = close }
 
 IsWindowOpen(in TransferWindow w, uint worldDay):
     return w.OpenWorldDay <= worldDay AND worldDay <= w.CloseWorldDay
 ```
 
-The window cursor (`ActiveWindow`) is season state (serialized, reset at the season boundary). #30 owns the
-calendar; #31 derives the window from it and never mutates it.
+The window cursor (`ActiveWindow`) is season state (serialized, re-derived at the season boundary). #30 owns the
+calendar; #31 derives the window from two facts #30 supplies — the day the season begins and the calendar's
+opening fixture day (`SeasonCalendar.DayOfRound(0)`) — and never mutates it. At genesis `League.CreateLoop` passes
+the new-game day and season 1's calendar; at each boundary `RollToNextSeason` step (d″) passes the roll day and the
+next season's calendar, which it has already derived before `BeginNextSeason` (#30 §3.5).
 
-**Corrected at T2 (ERR-031-008).** This section originally derived the window from a `SEASON_START_WORLD_DAY`
-`[CROSS] #30` constant that #30 never defined — and a single constant cannot place season N > 1, whose start lies
-later on the absolute world-day axis — and its close day `start + LENGTH` made a `LENGTH`-day window `LENGTH + 1`
-days long under the inclusive `IsWindowOpen`. The start is now the world day #30 BEGINS the season: the new-game
-day at genesis (`League.CreateLoop`), the roll day at each boundary (`RollToNextSeason` step (d″)); it is persisted
-in the block as `ActiveWindow`, so a load never re-derives it. **Units:** world days (`uint`). **Range:** start +
-`SUMMER_WINDOW_LENGTH_DAYS` − 1 ≤ `uint.MaxValue`, else fail loud. **Example:** a season begun on day 280 with the
-default 45-day window is open on days 280..324 — 45 days.
+**Inputs, units and range.** `seasonBeginWorldDay`, `openingFixtureWorldDay`: world days (`uint`), with
+`openingFixtureWorldDay ≥ seasonBeginWorldDay` (a season cannot open its fixtures before it exists).
+`SUMMER_WINDOW_IN_SEASON_DAYS`: world days, `≥ 1` (`[GT]`, default 38). Output: an inclusive `[Open, Close]`
+world-day interval, `Close ≥ Open`; `Close ≤ uint.MaxValue`, else fail loud. The window is therefore open on the
+whole close season remaining after the roll plus exactly `SUMMER_WINDOW_IN_SEASON_DAYS` days of the new season,
+counting the opening fixture day.
+
+**Worked example (defaults: `FirstRoundDay` 7, `SeasonBreakDays` 56, `SUMMER_WINDOW_IN_SEASON_DAYS` 38).**
+- *Genesis:* begin day 0, opening fixture day 7 ⇒ `[0, 7 + 38 − 1] = [0, 44]` — 45 open days, the same window
+  ERR-031-008's derivation produced, so genesis saves are byte-unchanged.
+- *Prompt roll:* a 20-club league (38 rounds, 7 days apart from day 7) plays its last fixture on day
+  7 + 37 × 7 = 266; the client rolls on day 267; the next season opens on day 266 + 56 = 322 ⇒
+  `[267, 322 + 38 − 1] = [267, 359]` — 93 days (≈ 13 weeks): the 55-day close season plus 38 days in season.
+- *Late roll:* the same career lingers in the close season and rolls on day 300 ⇒ `[300, 359]`. The close is
+  identical; only the open day — the day the season begins — follows the roll.
+
+**Corrected at T2 (ERR-031-008), re-anchored at AR round 2 (ERR-031-011).** This section originally derived the
+window from a `SEASON_START_WORLD_DAY` `[CROSS] #30` constant that #30 never defined — and a single constant cannot
+place season N > 1, whose start lies later on the absolute world-day axis — and its close day `start + LENGTH` made
+a `LENGTH`-day window `LENGTH + 1` days long under the inclusive `IsWindowOpen`. ERR-031-008 replaced it with
+`[start, start + SUMMER_WINDOW_LENGTH_DAYS − 1]`, start = the season-begin day. That fixed the inclusive length but
+left the CLOSE a function of when the client rolls: the shipped client rolls on the day after the last fixture, so
+with the 45-day default the window shut 11 days before the next season's first match, and a client that rolled later
+would have shifted the close with it. ERR-031-011 keeps the open day and anchors the close to the season's own
+opening fixture day; `SUMMER_WINDOW_LENGTH_DAYS` is withdrawn in favour of `SUMMER_WINDOW_IN_SEASON_DAYS`. The window
+is persisted in the block as `ActiveWindow`, so a load never re-derives it.
 
 ## 3.6 Worked example (behaviour-neutral minimal)
 
@@ -219,6 +247,8 @@ transfer headroom, `SubmitBid` instead returns `InsufficientBudget`; if the dest
 
 ```
 PrepareSeasonBoundary(retiredIds, arrivingManagedIds, nextWindow) -> TransfersState:   # PURE (T2)
+    require no id in arrivingManagedIds is held in txState (even by a contract expiring now) or is in retiredIds
+                                                                  else throw ArgumentException   # ERR-031-012
     next := new TransfersState(managedClub, nextWindow)          # committedSpend = 0
     for each contract in txState (ascending PlayerId):
         if contract.PlayerId in retiredIds:  continue            # G14: the retiree's contract leaves with him
@@ -233,7 +263,9 @@ PrepareSeasonBoundary(retiredIds, arrivingManagedIds, nextWindow) -> TransfersSt
 roll leaves #31 untouched (#30 §3.5, ERR-030-056).
 
 An expired contract is removed; the player becomes un-contracted. Free-agency, auto-renewal and warnings remain
-deep-tier. `ResetWindow()` re-derives the new window from #30's calendar rather than zeroing the cursor.
+deep-tier. There is no `ResetWindow()`: the roll's step (d″) computes the next window with §3.5's
+`SummerWindowFor(roll day, next calendar's opening fixture day)` and passes it in as `nextWindow`, so the cursor is
+re-derived from #30's calendar rather than zeroed (ERR-031-011).
 
 ## 3.8 Initial contract population (career start)
 
@@ -266,4 +298,6 @@ not seeded at minimal. A load reconstructs contracts from the transfers sub-blob
 | 0.10 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): §3.3 pseudocode confirms the commit through the port instead of comparing a previewed id; ownership from the port; §3.4 rewritten as a stable-id re-home with a capacity-only preview. ERR-031-004: F5 reachable because bootstrap squads sit below the cap. |
 | 0.11 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §3.4 cites the T2 carry-everything lock by its real id, T-TX-REKEY-005 (was the non-existent "T-TX-REHOME-005"). The v0.8 row's "hook dispatch" obligation is superseded by that lock (the hook is deleted). |
 | 0.12 | 2026-10-20 | — | #31 T2: §3.3 pseudocode — unknown counterparty fails loud (ERR-031-010), a sale needs no contract (ERR-031-009), `SquadDepleted` before staging (ERR-031-007); §3.5 window from the season-begin day, inclusive length corrected (ERR-031-008); §3.7 rewritten as the pure, staged `PrepareSeasonBoundary` with the G14 retiree/regen lockstep. |
+| 0.13 | 2026-10-20 | — | ERR-031-011 (AR round 2, completing the ERR-031-007/008 back-prop): §3.5 rewritten — `SummerWindowFor(seasonBeginWorldDay, openingFixtureWorldDay)` = `[begin, opening + SUMMER_WINDOW_IN_SEASON_DAYS − 1]`, so the close no longer depends on roll timing; units, range and a genesis / prompt-roll / late-roll worked example; `SUMMER_WINDOW_LENGTH_DAYS` withdrawn. §3.3 intro lists `SquadDepleted`; the pseudocode checks the unknown counterparty (F6) before the window (F4), the shipped order. §3.7 no longer cites a non-existent `ResetWindow()` — step (d″) computes the next window. |
+| 0.14 | 2026-10-20 | — | ERR-031-012 (AR round 3): §3.4 `CanRelease` throws for an unknown club or a player not on the roster (false is F9 depletion only, like the preview's F5-only false); §3.7 `PrepareSeasonBoundary` refuses an arrival that already holds a contract (including one expiring this boundary) or is retired, checked against the source before building, so it is never silently re-seeded. |
 #endregion

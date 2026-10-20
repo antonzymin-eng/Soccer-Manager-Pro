@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.11 — ERR-028-024 / ERR-028-025: regen position inheritance; staged, marker-free boundary)
+**Last Updated:** October 20, 2026 (v0.12 — ERR-028-027: FR-PG-012 / FR-PG-021 / §2.2 annotated in place — the boundary API is `PrepareSeasonBoundary` / `CommitSeasonBoundary` and #28 itself installs the roster mutation)
+**Last Updated (prior):** October 19, 2026 (v0.11 — ERR-028-024 / ERR-028-025: regen position inheritance; staged, marker-free boundary)
 **Last Updated (prior):** October 19, 2026 (v0.10 — ERR-031-005: NextPlayerId is the single post-genesis allocator; transfers re-home)
 **Last Updated (prior):** August 23, 2026 (v0.9 — football-judgment proxy review, batch-1 adversarial findings: F1's row corrected (f1-cursor-not-consumed-stale — it still said "the cursor is not consumed past the ceiling", the retired clamp-to-`POINT_COST − 1` posture; §3.1 and the code have discarded the fraction to zero since AR pass 6) and the `RetirementFlag` field comment corrected (still cited "RETIREMENT_AGE" for the per-player day KD-5/§3.4 now compute). Prior entry below.)
 **Last Updated (prior):** August 22, 2026 (v0.8 — **ERR-028-020 / ERR-028-021: two FRs in this section were themselves the defect and are revised in place.** FR-PG-007 made the three-way §4.3 band step the normative curve-off behaviour, i.e. it mandated a hard discontinuity at an exact integer age; it now names the ramp dial's OFF position as the identity. FR-PG-013 mandated "hard at `RETIREMENT_AGE`", one league-wide integer age with no position or attribute input; it now names §3.4's per-player `RetirementAgeDays`, still draw-free. Both revisions annotate what the FR used to require rather than silently restating it. See §3.1.3 and §3.4.)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §2.3 F3's exception type corrected (`InvalidOperationException`, matching #29/#41's own ERR-029-004/ERR-041-008 corrections), F5 gains the same type, F8 extended from one refusing site to five, new F9 for the FR-PG-021 batch's four validation gates, §2.2 gains `ClubTrainingInputs`/`TrainingInputBatch`)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -66,6 +67,12 @@
   `ProgressionEngine` moves the record and lifecycle between clubs without touching either id or cursor.
 - **FR-PG-012** — Regen club/nation MUST be read from #27's roster world (read-only); #28 MUST NOT
   mutate #27's `Squad` directly — it emits a `RegenResult` the roster owner (#30/#27) applies.
+  *(Annotated in place, ERR-028-027: **#28's own `CommitSeasonBoundary` is the installer** (KD-4 — #28 owns the
+  career-state block and is its sole writer, FR-PG-022); #27's canonical `Squad` is never mutated, and
+  `ProgressionSquads` projections re-read the store. #30 STAGES the boundary (`PrepareSeasonBoundary`) and
+  decides WHEN it commits; it does not apply a Squad mutation. "Club/nation read from #27's roster world" is
+  likewise historical: `GenerateRegen` takes the club from the caller and draws no nation, since nation is not a
+  `PlayerRecord` field today.)*
 
 **Retirement (KD-5)**
 - **FR-PG-013** — Retirement MUST be evaluated on the world tick against the **per-player**
@@ -107,6 +114,10 @@
 **Invocation & discipline (KD-6 / KD-7)**
 - **FR-PG-021** — #28 MUST expose `AdvanceDay(worldDay, in trainingInputs)` + `RunSeasonBoundary(...)`
   invoked by #30; #28 MUST NOT reference #30 / the season assembly.
+  *(Annotated in place, ERR-028-027: `RunSeasonBoundary` is the NAME of the step, never a method. The shipped
+  surface is the staged pair `PrepareSeasonBoundary(worldSeed, completedSeasonNumber, worldDay)` — pure, returns a
+  `SeasonBoundaryPlan` — and `CommitSeasonBoundary(plan)` — infallible on a fresh plan (§3.4, ERR-028-025). The
+  MUST is met by that pair; the three-argument `Prepare` replaces the unspecified `(...)`.)*
 - **FR-PG-022** — `ProgressionEngine` MUST be the **sole writer** of lifecycle state and the sole
   mutator of the managed roster's attributes; #30/tests MUST mutate only through the public step API,
   never by poking fields.
@@ -184,7 +195,9 @@ public readonly struct TrainingInput
     // Stage-3 #29 fields (focus/intensity/coach quality) append here; the daily step reads them.
 }
 
-// The season-boundary signals #28 emits (KD-5); #30/#27 apply the Squad mutation.
+// The season-boundary signals #28 emits (KD-5). ERR-028-027: #28's own CommitSeasonBoundary installs the roster
+// mutation (KD-4/FR-PG-022); #30 stages it and picks the commit point. In code these are
+// SeasonBoundaryPlan.RetiredPlayerIds / RegenPlayerIds / RegenClubIds, not separate structs.
 public readonly struct RetirementResult { /* retiree PlayerIds, per club */ }
 public readonly struct RegenResult      { /* new PlayerRecords + their fresh PlayerIds, per club */ }
 
@@ -267,4 +280,5 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | 0.9 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **f1-cursor-not-consumed-stale:** F1's Handling column still read "the cursor is not consumed past the ceiling", the pre-AR-pass-6 clamp-to-`POINT_COST − 1` posture — §3.1 and the code have discarded the refused spend's fraction to zero (`GrowthCursor = 0`) since AR pass 6, and `PaBoundSpendRefusal_LeavesNoResidue` locks it; pre-existing staleness, not introduced at v0.8. **The `RetirementFlag` field comment (§2.2):** still read "set on the world tick at RETIREMENT_AGE (KD-5)" after v0.8 revised the underlying rule to the per-player `RetirementAgeDays`; corrected to name it. |
 | 0.10 | 2026-10-19 | — | **ERR-031-005** (owner decision Oct 19, 2026): FR-PG-011 names `NextPlayerId` the career's single post-genesis allocator and records that a #31 transfer re-homes a record + lifecycle under the unchanged id (no allocation, no cursor movement). |
 | 0.11 | 2026-10-19 | — | **ERR-028-024**: FR-PG-010 — a regen takes its retiree's position. **ERR-028-025**: FR-PG-024/F6 — restartability by staging (prepare writes nothing, commit after #30's last fallible write); no boundary marker. |
+| 0.12 | 2026-10-20 | — | **ERR-028-027** (AR round 3, approved-text corrections, no behaviour change): FR-PG-012 and the §2.2 boundary-signal comment said #30/#27 apply the Squad mutation — #28's own `CommitSeasonBoundary` is the installer (KD-4, FR-PG-022); FR-PG-021 required a `RunSeasonBoundary(...)` method — the shipped surface is the `PrepareSeasonBoundary` / `CommitSeasonBoundary` pair. Annotated in place; the MUSTs are unchanged. |
 #endregion

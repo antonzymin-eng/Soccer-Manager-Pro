@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
+**Last Updated:** October 20, 2026 (v0.5 — ERR-031-011: KD-6 states the window derivation)
+**Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
 **Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -86,7 +87,8 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
   **stays reserved** (the #40 ERR-040-001 / #29 precedent). Rival bidding is the deep-tier first draw
   (promotes `DOMAIN_TAG_TRANSFERS = 0x23` at T3, keyed on `(clubId, playerId, worldDay, purpose)`).
 - **KD-6 (the transfer-window model — #31-owned).** #30 has no window concept; #31 owns a `TransferWindow`
-  derived deterministically from #30's `SeasonCalendar` (read-only). Minimal = one summer window.
+  derived deterministically from #30's `SeasonCalendar` (read-only). Minimal = one summer window per season:
+  `Open` = the world day #30 begins the season (the new-game day at genesis, the roll day at each boundary); `Close` = the season's opening fixture day (`SeasonCalendar.DayOfRound(0)`) + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1, inclusive (ERR-031-011) — so the close never depends on when the client rolls; only the open day follows the roll (§3.5).
 - **KD-7 (roster commit — a STABLE-id re-home through a NEW #30 mid-season entry point; ERR-031-005).** A transfer
   **re-homes** the player: #31 **requests** a commit through a #30-owned mid-season roster-mutation entry point that
   moves the player's record to the destination club **under his unchanged `PlayerId`**. The id is career-unique and
@@ -113,4 +115,5 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 | 0.2 | 2026-07-23 | — | AR-3 (H): wage posting deferred to the deep tier (minimal fee-only, preserves #40 FR-FN-015) — §1.1/KD-2; KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
 | 0.3 | 2026-09-21 | — | ERR-031-001/002: KD-1 now matches FR-TX-002's always-on minimal positional scarcity, and KD-2 explicitly orders affordability before staged #40 mutation validation. |
 | 0.4 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): KD-7 rewritten from a packed-id re-key to a stable-id re-home; the packed formula is genesis allocation only, #28 `NextPlayerId` is the single post-genesis allocator, and club membership is a roster fact. |
+| 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): KD-6 restated with the window derivation — open on the day #30 begins the season, close at the opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 — superseding ERR-031-008's roll-day-length window. |
 #endregion

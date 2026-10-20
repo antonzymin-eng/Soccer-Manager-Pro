@@ -4,6 +4,7 @@
 //           progression and discipline state instead of bootstrapping finances by dropping them.)
 // Modified: 2026-09-11 (#40 T2b — League.CreateLoop is the #30-owned new-game composition seam that
 //           bootstraps exactly one finance entry per canonical squad and passes it into SeasonLoop.)
+// Modified: 2026-10-20 (ERR-031-011 — v1.4: genesis window anchored to season 1's opening fixture day.)
 // Modified: 2026-10-20 (#31 T2 genesis contract seeding in CreateLoop — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-9;
@@ -27,8 +28,9 @@ using TacticalDirector.Transfers;
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// A bootstrapped league: <c>N</c> clubs with contiguous ids <c>0 .. N-1</c>, one 25-player
-    /// <see cref="Squad"/> each, and the derived season seed the fixture schedule is generated from
+    /// A bootstrapped league: <c>N</c> clubs with contiguous ids <c>0 .. N-1</c>, one 23-player
+    /// <see cref="Squad"/> each (the 3/8/7/5 bootstrap template, below the 25-player cap so transfers
+    /// have room — ERR-031-004), and the derived season seed the fixture schedule is generated from
     /// (design KD-9).
     /// <para>
     /// Immutable after construction: the club and squad arrays are snapshot-copied in, every accessor
@@ -253,7 +255,9 @@ namespace TacticalDirector.SeasonSave
             // #31 T2 genesis (FR-TX-028 / §3.8): a career with a #28 roster store gets the managed club's
             // contracts seeded HERE and only here — a load decodes the persisted block and never seeds.
             // Transfers re-home records in that store (KD-4), so without one #31 stays unwired. The first
-            // summer window opens on the new-game day (ERR-031-008).
+            // summer window opens on the new-game day and closes SummerWindowInSeasonDays into season 1,
+            // counted from its opening fixture day (ERR-031-011) — the same anchor the roll's (d″) uses.
+            SeasonState season = CreateSeason(managedClubId, objective);
             TransfersState transfers = null;
             if (progressionIsRoster)
             {
@@ -267,13 +271,15 @@ namespace TacticalDirector.SeasonSave
                     }
 
                     transfers = TransfersState.CreateAtGenesis(
-                        managedClubId, TransferWindow.SummerWindowFrom(world.CurrentWorldTick), ids);
+                        managedClubId,
+                        TransferWindow.SummerWindowFor(world.CurrentWorldTick, season.Calendar.DayOfRound(0)),
+                        ids);
                 }
             }
 
             return new SeasonLoop(
                 world,
-                CreateSeason(managedClubId, objective),
+                season,
                 mode,
                 careerOrNull,
                 careerSquads,
@@ -300,4 +306,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-09-11 | —      | Review: CreateLoop forwards career/progression/discipline state,   |
 // |         |            |        | so enabling #40 cannot disable already-live subsystems.            |
 // | 1.3     | 2026-10-20 | —      | #31 T2 genesis (FR-TX-028 / §3.8): CreateLoop seeds the managed club's contracts at the genesis terms whenever a populated #28 store is supplied; first window opens on the new-game day (ERR-031-008). |
+// | 1.4     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): genesis window = SummerWindowFor(new-game day, season 1 opening fixture day), so its close is anchored like the roll's; class summary says 23-player squads (ERR-031-004). |
 #endregion

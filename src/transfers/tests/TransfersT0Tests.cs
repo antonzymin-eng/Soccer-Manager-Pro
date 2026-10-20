@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20 (#31 T2)
+// Modified: 2026-10-20 (#31 T2; AR round 3 L3)
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -684,7 +684,17 @@ namespace TacticalDirector.Transfers.Tests
 
             public bool CarriesClub(int clubId) => Clubs.Contains(clubId);
 
-            public bool CanRelease(int clubId, int playerId) => CanReleasePlayers;
+            public bool CanRelease(int clubId, int playerId)
+            {
+                // AR round 3 L3: false means ONLY "cannot field a matchday squad"; an unknown club or a player
+                // not on that club's roster is an integration defect and throws, like the preview.
+                if (!Clubs.Contains(clubId) || !_clubOf.TryGetValue(playerId, out int owner) || owner != clubId)
+                {
+                    throw new InvalidOperationException("Fake port: CanRelease of an impossible player/club pair.");
+                }
+
+                return CanReleasePlayers;
+            }
 
             public void Add(PlayerRecord player, int clubId)
             {
@@ -753,4 +763,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.5     | 2026-10-19 | —      | ERR-031-005: stable-id fake port (explicit club membership); off-range-id ownership and roster-judged direction locks; commit breach is 'did not land'; the re-key test is deleted with the handler. |
 // | 1.6     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) M1/M5/L1: 26th-contract refusal, buy duplicate-contract pre-check, invalid positional-count and buy zero-stock throws (FakeRosterPort.PositionalStockOverride); header reworded to stable-id semantics. |
 // | 1.7     | 2026-10-20 | —      | #31 T2: fake port gains CarriesClub/CanRelease and throws on an impossible preview (ERR-031-010); locks SquadDepleted (ERR-031-007), unknown-counterparty fail-loud (ERR-031-010) and the un-contracted sale (ERR-031-009). |
+// | 1.8     | 2026-10-20 | —      | AR round 3 L3: the fake's CanRelease throws for an unknown club or a player not on the club (false is depletion only). |
 #endregion

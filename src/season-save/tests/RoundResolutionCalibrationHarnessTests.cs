@@ -2,8 +2,10 @@
 // Created:  2026-07-26
 // Modified: 2026-07-26
 // Modified: 2026-07-28 (Step 0 re-run PASSED post-§5.Z.20/§5.Z.21; LogAssert wrapper on both env-gated drivers — playing matches emit FM-08/FM-03 as ordinary events)
+// Modified: 2026-08-12 (A4a run: TD_CALIBRATION_SAMPLE_FROM + window tiling/slice locks)
 // Modified: 2026-09-28 (FM-03 closeout: remove broad Error-log suppression from engine corpus drivers — v1.3)
 // Modified: 2026-10-20 (P-L3 — template-change comment: the step-10 recapture is required — v1.5)
+// Modified: 2026-10-20 (AR round 3 L5 — the 2026-08-12 header line, deleted by an earlier edit, restored; header-only — v1.6)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
 //           roadmap A4a / C1a; Code Standards #20
@@ -443,4 +445,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | unexpected Error channel aborts these long runs at teardown.           |
 // | 1.4     | 2026-10-19 | —      | ERR-031-004: base-roster size lock reads the production template (23), not the cap. |
 // | 1.5     | 2026-10-20 | —      | P-L3: the template-change comment no longer claims the quick-sim keys on the XI differential only (unsupported: the XI is selected from the reduced pool, so the rating distribution moved); the step-10 recapture is REQUIRED. |
+// | 1.6     | 2026-10-20 | —      | AR round 3 L5 (header-only): the `Modified: 2026-08-12 (A4a run ...)` line, dropped from the file header by an earlier edit although its v1.2 history row survives, is restored from d23847b5; no code change. |
 #endregion

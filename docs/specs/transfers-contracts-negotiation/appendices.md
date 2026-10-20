@@ -1,12 +1,13 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.9 — T2: ERR-031-008 window constants)
+**Last Updated:** October 20, 2026 (v0.10 — ERR-031-011: `SUMMER_WINDOW_IN_SEASON_DAYS` replaces `SUMMER_WINDOW_LENGTH_DAYS`)
+**Last Updated (prior):** October 20, 2026 (v0.9 — T2: ERR-031-008 window constants)
 **Last Updated (prior):** October 19, 2026 (v0.8 — ERR-031-005: contract membership is a roster check)
 **Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: Appendix B gains the leading `XFER` magic and pins `clubCount ∈ {0,1}` as a wiring fact; Appendix A gains `TRANSFERS_SAVE_MAGIC`; T1 live)
 **Last Updated (prior):** September 14, 2026 (v0.6 — require a non-empty young-age band)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -25,10 +26,11 @@
 | `MINIMUM_AGE_MULTIPLIER_PERMILLE` | `[GT]` | illustrative | `[0,1000)` floor for old-age decline. |
 | `NEGOTIATION_COUNTER_BAND_PERMILLE` | `[GT]` | illustrative | strict `(0,1000)` synchronous counter-offer half-band; positive valuation retains both counter and reject regions. |
 | `CLUB_NEED_PER_PLAYER_PERMILLE` | `[GT]` | illustrative | upper bound is **derived** as `floor((PERMILLE_DENOM-1)/(CLUB_SQUAD_SIZE-neutralCount))`, keeping the multiplier positive for every legal stock count even if #27 cardinalities change. |
-| `SUMMER_WINDOW_LENGTH_DAYS` | `[GT]` | illustrative | length of the single minimal transfer window, in days, INCLUSIVE: the window is `[start, start + LENGTH − 1]` (ERR-031-008). |
+| `SUMMER_WINDOW_IN_SEASON_DAYS` | `[GT]` | illustrative (fallback 38) | world days, `≥ 1`: how long the single minimal window stays open from the season's opening fixture day on, counting that day — `Close = openingFixtureDay + IN_SEASON_DAYS − 1` (§3.5, ERR-031-011). Config key `[transfers] SummerWindowInSeasonDays`. With `FirstRoundDay` 7 the genesis window is `[0, 44]`. |
+| ~~`SUMMER_WINDOW_LENGTH_DAYS`~~ | ~~`[GT]`~~ | ~~45~~ | **Withdrawn at AR round 2 (ERR-031-011):** a length counted from the roll day made the close depend on when the client rolled (with prompt rolls it shut 11 days before the first match). Replaced by `SUMMER_WINDOW_IN_SEASON_DAYS`. |
 | `DEFAULT_CONTRACT_SEASONS` | `[GT]` | illustrative | genesis contract length; `> 0`. |
 | `DEFAULT_WAGE_*` (`DefaultWageFor`) | `[GT]` | illustrative | genesis wage; `≥ 0`. |
-| ~~`SEASON_START_WORLD_DAY`~~ | ~~`[CROSS]`~~ | ~~#30~~ | **Withdrawn at T2 (ERR-031-008):** #30 never defined it, and one constant cannot place season N > 1. The window starts on the world day #30 begins the season (genesis day / roll day), passed to `TransferWindow.SummerWindowFrom` and persisted as `ActiveWindow`. |
+| ~~`SEASON_START_WORLD_DAY`~~ | ~~`[CROSS]`~~ | ~~#30~~ | **Withdrawn at T2 (ERR-031-008):** #30 never defined it, and one constant cannot place season N > 1. The window starts on the world day #30 begins the season (genesis day / roll day), passed to `TransferWindow.SummerWindowFor` (as its open day) and persisted as `ActiveWindow`. |
 | `TRANSFERS_STAFF_MULT_IDENTITY` | `[FIXED]` | 1000 | deferred #34 staff multiplier identity. |
 | `TRANSFERS_PERSONALITY_MULT_IDENTITY` | `[FIXED]` | 1000 | deferred #33 personality multiplier identity. |
 
@@ -103,4 +105,5 @@ For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `A
 | 0.7 | 2026-10-18 | — | **ERR-031-003** (#31 T1): Appendix B gains the leading `TRANSFERS_SAVE_MAGIC` (`"XFER"`) before the version — the table had specified the ERR-029-005-class version-first, magic-less layout — and pins `clubCount ∈ {0,1}` as a wiring fact, `contractCount = 0` without a club, ascending contract ids and `≤ CLUB_SQUAD_SIZE`; Appendix A gains the magic row and marks both rows live. |
 | 0.8 | 2026-10-19 | — | ERR-031-005: Appendix B — contract membership is checked by #30 against the roster, not derived from the id. |
 | 0.9 | 2026-10-20 | — | #31 T2 (ERR-031-008): `SUMMER_WINDOW_LENGTH_DAYS` is an inclusive length; `SEASON_START_WORLD_DAY` withdrawn (never defined by #30; the start is the season-begin day). |
+| 0.10 | 2026-10-20 | — | ERR-031-011 (AR round 2): `SUMMER_WINDOW_IN_SEASON_DAYS` (`[GT]`, fallback 38) replaces the roll-day-anchored `SUMMER_WINDOW_LENGTH_DAYS` (withdrawn row kept); the `SEASON_START_WORLD_DAY` withdrawal row names `SummerWindowFor`. |
 #endregion

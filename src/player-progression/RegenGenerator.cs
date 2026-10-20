@@ -1,6 +1,8 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
+// Modified: 2026-10-20 (AR round 3 L5 — the position param doc's Binomial(25, 0.25) restated for the
+//           23-player squad; comment-only — v1.10)
+//           Prior: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
 //           (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
 //           (BandStepFor made internal + directly locked — v1.7)
 //           (ERR-028-020 — the construction-day credit takes the continuous step —
@@ -60,8 +62,9 @@ namespace TacticalDirector.PlayerProgression
         /// <param name="newPlayerId">The fresh, monotonically-allocated PlayerId (FR-PG-011).</param>
         /// <param name="position">The position of the retiree this regen replaces 1:1 (ERR-028-024). A
         /// uniform draw drifted squads off the KD-6 template — after one full turnover each line is
-        /// Binomial(25, 0.25), so a back four or a three-forward line goes missing for a material share of
-        /// clubs — and #28 FR-PG-019's 1:1 replacement is a replacement of the PLAYER, so it keeps his
+        /// Binomial(squad size, 0.25) (squad size = the bootstrap's 23 today, 25 when this was written; either
+        /// way a quarter of the line, not the template's 3/8/7/5), so a back four or a three-forward line goes
+        /// missing for a material share of clubs — and #28 FR-PG-019's 1:1 replacement is a replacement of the PLAYER, so it keeps his
         /// place in the squad's shape.</param>
         /// <param name="worldDay">The current world-day (anchors <see cref="PlayerLifecycle.BirthWorldDay"/>).</param>
         /// <exception cref="ArgumentNullException"><paramref name="rng"/> is null.</exception>
@@ -282,4 +285,5 @@ namespace TacticalDirector.PlayerProgression
 // | 1.9     | 2026-10-19 | —      | ERR-028-024: GenerateRegen takes the retiree's position instead of  |
 // |         |            |        | drawing one uniformly (KD-6 template drift); draw index 3 stays     |
 // |         |            |        | reserved and undrawn so every later draw value is unchanged.        |
+// | 1.10    | 2026-10-20 | — | AR round 3 L5 (comment-only): the `position` parameter doc's `Binomial(25, 0.25)` restated as `Binomial(squad size, 0.25)` (23 in today's bootstrap, ERR-031-004). No behaviour change. |
 #endregion

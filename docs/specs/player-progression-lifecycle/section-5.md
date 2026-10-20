@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.11 — AR round 1 P-M4 / L1: the position-inheritance lock renumbered T-PG-RET-010 (duplicate id); T-PG-SAVE-001's stale "boundary marker" restated)
+**Last Updated:** October 20, 2026 (v0.12 — ERR-028-027: T-PG-RET-003 gains the season-0 golden; new T-PG-RET-011 (the `MovePlayer` re-home contract and a re-homed retiree's replacement); T-PG-RET-003 / -009's per-club regen stream lock now covers every retiring club)
+**Last Updated (prior):** October 20, 2026 (v0.11 — AR round 1 P-M4 / L1: the position-inheritance lock renumbered T-PG-RET-010 (duplicate id); T-PG-SAVE-001's stale "boundary marker" restated)
 **Last Updated (prior):** October 19, 2026 (v0.10 — ERR-028-024 / ERR-028-025: T-PG-RET-003 restated; the position-inheritance lock, then allocated as T-PG-RET-005 and renumbered T-PG-RET-010 at v0.11)
 **Last Updated (prior):** August 24, 2026 (v0.9 — round-2 Medium/Low adversarial findings. L2
 (new-test-ids-appended-out-of-sequence): §5.3.1 and §5.6's id lists reordered numerically — T-PG-ID-002
@@ -16,7 +17,7 @@ Prior entry below.)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: §5.1's `AdvanceDay_FirstCall_*` passage corrected from the retired sentinel-anchored behaviour to the shipped seed-day-replay behaviour, with the inversion noted; new §5.9/§5.10 allocate T-PG-BLOCK-001..007 / T-PG-BATCH-001 / T-PG-CODEC-001..007 and §5.7 gains T-PG-SAVE-007/008 for ~17 mutation-audit-proven locks that landed across commits `043ccd0`/`1d19bc8`/`9392839` with no prior test-plan id)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: new locks for the signed anchor, the cross-blob cursor rule, the roster-overwrite refusal, and the F8 sentinel guard)
 **Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -169,7 +170,8 @@ renumbered, only reordered; every id below still names the exact same test as be
 - **T-PG-RET-003 (F6; restated at ERR-028-025)** — preparation writes nothing; a plan commits once (a second
   commit, or a commit after any store mutation, is refused); a save taken BEFORE the boundary → restore → roll
   draws the identical regens (`SeasonBoundaryRegenTests.ASaveTakenBeforeTheRoll_ReproducesTheSameRegens`). The regen seed is also pinned to the
-  §3.4 golden vector (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`), and the same season in two worlds
+  §3.4 golden vectors (`DeriveRegenSeed(0xB0DA2028, 3) = 0x443E7491A6459B6A`, and the career's first-boundary
+  season-0 vector `DeriveRegenSeed(0xB0DA2028, 0) = 0xD3E409D7732EBE4F`, ERR-028-027), and the same season in two worlds
   (different `worldSeed`), like two seasons in one world, draws different regens (AR round 1 P-M2).
 - **T-PG-RET-004** — `RunSeasonBoundary` does **not** re-bank growth (a Stable-band player's attributes
   are unchanged by the boundary step — growth was banked daily, KD-6).
@@ -215,6 +217,15 @@ renumbered, only reordered; every id below still names the exact same test as be
 - **T-PG-RET-010 (ERR-028-024; renumbered from a duplicate T-PG-RET-005 at v0.11, AR round 1 P-M4)** — every
   regen takes its retiree's position, and across several boundaries every club keeps its bootstrap position
   shape and can field an XI.
+- **T-PG-RET-011 (ERR-028-027)** — `ProgressionEngine.MovePlayer` (#31's re-home, ERR-031-005) is locked
+  directly (`ProgressionEngineMoveTests`): the record and lifecycle are identical after the move, the
+  destination stays ascending, the source is compacted and `NextPlayerId` does not move; every
+  `CanMovePlayer` false case (same club, unknown club, player not on the source, a source of one player, a
+  destination at `CLUB_SQUAD_SIZE`) makes `MovePlayer` throw with no mutation; a move invalidates a staged
+  `SeasonBoundaryPlan` (the commit throws `ArgumentException`, the store unchanged); and a retirement-flagged
+  player moved from one club to another is retired and replaced at his new club (§3.4). The per-club regen
+  stream (FR-PG-020) is checked for EVERY retiring club, not only the first
+  (`SeasonBoundaryTests.TheIdAndDrawOrders_AreTheNormativeOnes`).
 
 ## 5.7 Persistence fail-loud (FR-PG-016..019)
 
@@ -341,4 +352,5 @@ previously unlocked by deletion).
 | 0.9 | 2026-08-24 | — | Round-2 Medium/Low adversarial findings. **new-test-ids-appended-out-of-sequence (L2):** §5.3.1's and §5.6's id lists reordered numerically by prefix-then-number — T-PG-ID-002 moved to the end of §5.3.1 (it sorts after the AGE run, not inside it), T-PG-RET-002/003/004 moved before T-PG-RET-005. No id renumbered; every id still names the same test as before. **retirement-day-derived-from-attributes-the-same-step-mutates (M5):** new **T-PG-RET-009** — the retirement day, re-evaluated daily against attributes §3.1.2's spend/drain step just mutated, MUST be monotone across a run of same-direction days (the one property keeping today's re-evaluation from oscillating); §3.4 gains the invariant statement this id locks. |
 | 0.10 | 2026-10-19 | — | **ERR-028-025**: T-PG-RET-003 restated for the staged, marker-free boundary. **ERR-028-024**: new T-PG-RET-005 (position inheritance + multi-boundary squad shape) — **renumbered T-PG-RET-010 at v0.11**: the id duplicated the existing per-player-retirement-day T-PG-RET-005 (ERR-028-021/022). |
 | 0.11 | 2026-10-20 | — | **AR round 1 P-M4 (ERR-028-024)**: the v0.10 entry for the position-inheritance / squad-shape lock reused the id T-PG-RET-005, already owned by the per-player-retirement-day lock (ERR-028-021/022) and cited under that id in the error log and `AbilityModelTests`; renumbered to **T-PG-RET-010** and moved after T-PG-RET-009 (numeric order, v0.9 L2). **AR round 1 L1 (ERR-028-025)**: T-PG-SAVE-001 still required round-tripping a "boundary marker" §3.4 says does not exist; restated. |
+| 0.12 | 2026-10-20 | — | **ERR-028-027** (AR round 3): T-PG-RET-003 pins the season-0 seed vector alongside the season-3 one; new **T-PG-RET-011** (`MovePlayer` contract, stale-plan refusal after a move, a re-homed retiree replaced at his new club, and the per-club regen stream asserted for every retiring club). |
 #endregion
