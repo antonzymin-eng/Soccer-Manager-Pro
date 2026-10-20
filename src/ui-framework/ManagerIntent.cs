@@ -1,6 +1,6 @@
 // File:     src/ui-framework/ManagerIntent.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-18
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 / §3.3 (FR-UI-012/013/014, failure mode F3),
 //           docs/tracking/ui-framework-t0-implementation-plan.md KD-U2, Code Standards #20
@@ -90,6 +90,18 @@ namespace TacticalDirector.UiFramework
         /// <summary>Intent to swap bench player <paramref name="benchIndex"/> onto pitch slot <paramref name="outSlotIndex"/>.</summary>
         public static ManagerIntent Substitute(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason) =>
             new ManagerIntent(IntentKind.Substitute, teamId, 0, default, default, outSlotIndex, benchIndex, reason);
+
+        /// <summary>Intent to resolve the round at the season cursor (season dispatcher; no payload).</summary>
+        public static ManagerIntent AdvanceRound() =>
+            new ManagerIntent(IntentKind.AdvanceRound, 0, 0, default, default, 0, 0, default);
+
+        /// <summary>Intent to advance the career one calendar day (season dispatcher; no payload).</summary>
+        public static ManagerIntent AdvanceDay() =>
+            new ManagerIntent(IntentKind.AdvanceDay, 0, 0, default, default, 0, 0, default);
+
+        /// <summary>Intent to run the season-boundary roll (season dispatcher; no payload).</summary>
+        public static ManagerIntent StartNextSeason() =>
+            new ManagerIntent(IntentKind.StartNextSeason, 0, 0, default, default, 0, 0, default);
     }
 }
 
@@ -99,4 +111,6 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | factory per kind. Translation to the match channel's           |
 // |         |            |        | ManagerCommand lives in the dispatcher (plan AR-1 M-1), so     |
 // |         |            |        | this type carries no channel dependency.                       |
+// | 1.1     | 2026-10-18 | —      | §5-P7: payload-free factories for the three season kinds        |
+// |         |            |        | (AdvanceRound / AdvanceDay / StartNextSeason).                 |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/ui-framework/MatchTacticsDispatcher.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-18
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.3 (FR-UI-012/013/014/023, failure modes F3/F6),
 //           docs/tracking/ui-framework-t0-implementation-plan.md KD-U1/KD-U2, Code Standards #20
@@ -120,6 +120,15 @@ namespace TacticalDirector.UiFramework
                     throw new InvalidOperationException(
                         "ManagerIntent is uninitialized (default value); construct it via a factory.");
 
+                case IntentKind.AdvanceRound:
+                case IntentKind.AdvanceDay:
+                case IntentKind.StartNextSeason:
+                    // #38 Appendix C: a season intent is owned by the season dispatcher, never by the
+                    // live-match channel. Routing one here is a wiring bug, refused at the click.
+                    throw new InvalidOperationException(
+                        "IntentKind." + intent.Kind + " is a season intent (see IntentRouting); route it " +
+                        "to the season dispatcher, not the match-tactics dispatcher.");
+
                 default:
                     // F3: an intent kind with no mapped public seam. Never invent one, never drop it.
                     throw new InvalidOperationException(
@@ -138,4 +147,7 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | Code AR pass-1 Medium: live mode takes the MatchSession, not a  |
 // |         |            |        | bare ManagerCommandQueue — an undrained queue would have made  |
 // |         |            |        | silent-drop constructible.                                     |
+// | 1.1     | 2026-10-18 | —      | §5-P7: the three season kinds (AdvanceRound / AdvanceDay /      |
+// |         |            |        | StartNextSeason) are refused with a routing message — they     |
+// |         |            |        | belong to the season dispatcher (#38 Appendix C).              |
 #endregion

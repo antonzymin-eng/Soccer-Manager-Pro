@@ -1,8 +1,8 @@
 # UI / Client Framework #38 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+2L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** October 18, 2026 (v0.3 — ERR-038-005: Appendix C season rows for day advance and the season roll)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -44,15 +44,17 @@ analytics VM) are projected by **their** owning spec's source, not #38 (KD-5).
 
 Each intent kind maps to exactly one **existing public** seam; an unmapped kind throws (F3). The routing
 is split across dispatchers by owning surface — the **match-tactics** dispatcher owns the first three
-(live-match intents, marshaled per FR-UI-023); a **season** dispatcher owns `AdvanceRound` (a
-single-threaded turn-based seam, called directly):
+(live-match intents, marshaled per FR-UI-023); a **season** dispatcher owns `AdvanceRound`, `AdvanceDay` and
+`StartNextSeason` (single-threaded turn-based seams, called directly; ERR-038-005):
 
 | `ManagerIntent.Kind` | Dispatcher | Public seam (verified) | Payload |
 |---|---|---|---|
 | `SetTeamTactic` | match-tactics | `MatchEngine.SetTeamTactic(teamId, in tactic)` | teamId + `TeamTactic` |
 | `SetPlayerTactic` | match-tactics | `MatchEngine.SetPlayerTactic(agentId, in tactic)` | agentId + `PlayerTactic` |
 | `Substitute` | match-tactics | `MatchEngine.SubstitutePlayer(teamId, outSlot, benchIndex, reason)` | slots + reason |
-| `AdvanceRound` | season | #30 `AdvanceAndPlayNextRound(squads)` (forward seam) | (squad provider) |
+| `AdvanceRound` | season | #30 `AdvanceAndPlayNextRound(squads)` (forward seam); for a loop that owns its provider, the no-argument `AdvanceAndPlayNextRound()` (ERR-028-010) | (squad provider) / none |
+| `AdvanceDay` | season | #30 `SeasonLoop.AdvanceDays(1)` (ERR-038-005) | none |
+| `StartNextSeason` | season | #30 `SeasonLoop.RollToNextSeason()` (ERR-038-005) | none |
 | any management action whose owning-spec seam is not built | — | **throws** (F3) | filed against the owning spec (KD-4) |
 
 ## Appendix D — Worked navigation transition (§3.5)
@@ -75,4 +77,5 @@ substrate the framework pins.
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial appendices: constant catalogue, observation→VM projection table, intent→seam routing table, worked navigation transition. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-10-18 | — | ERR-038-005: the season dispatcher's rows extended to `AdvanceDay → AdvanceDays(1)` and `StartNextSeason → RollToNextSeason()`, and `AdvanceRound` notes the no-argument overload. Additive; no existing row changed meaning. Landed with the code (`IntentKind` 4–6, `IntentRouting`, `client-app/SeasonCommandDispatcher`). |
 #endregion
