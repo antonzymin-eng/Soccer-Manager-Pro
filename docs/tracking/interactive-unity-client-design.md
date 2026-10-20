@@ -677,6 +677,115 @@ shell cases 10 → 11. Unity 6000.4.9f1 compile 0 errors; ClientApp.Tests 26/26 
 - On the pinned host: open the scene, run a live match, capture the FR-PO-052-class render-loop perf
   number, confirm 60 FPS, sign off the rendering half.
 
+### P7 — Career management screens (roadmap C3/C4) — host-free decisions LANDED 2026-10-18
+
+**Governance.** This section is the roadmap §6 item 2 governance for C3 (season/squad screens) and C4
+(new-game flow): an extension of this note rather than the Wave-7 #38 screens spec, on the precedent
+§6 names. #38 §7.1 gates each screen on its data spec; #30 and #27 are APPROVED **and implemented**
+(`src/season-save/`, `src/player-database/`), so the gate is met. The only framework change is the
+additive season-intent row of #38 Appendix C (ERR-038-005, below). The P7 screens register into
+`src/client-app/` by the §5-P5a precedent.
+
+**Owner product decisions — October 18, 2026.** `ux-detailed-plan.md` §7.4 lists the product decisions
+UX may not invent. The owner answered them on October 18, 2026; they are recorded here as the
+authority the code below implements:
+
+| ID | Decision | Implementation consequence |
+|---|---|---|
+| **D-P7-1** new-game options | The world seed is generated; the player picks a club from the generated league; the board objective is the bootstrap default (top half). No seed entry in Early Access. | `NewCareerSetup.Prepare(seed)` / `Select(club)` / `Start()`. The seed is a parameter: the host binding supplies entropy, this assembly reads no clock and no `System.Random`. |
+| **D-P7-2** save promise | One autosave slot, written when a career is created and after every played round and every season roll, plus three manual slots. **Continue** loads the most recently written loadable slot directly; **Load** opens a picker. | `CareerSaveSlots` (four slots; `.tdsave` + client-owned `.slot` sidecar; store-wide monotonic write sequence decides "latest" without clock or file timestamps). `CareerSession` autosaves; `LoadCareerSource.TryContinue/TryLoad`. |
+| **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
+| **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
+| **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION` is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. |
+| **D-P7-6** career match interactivity | *Not an owner question; a seam fact.* #30 has no seam that plays the managed fixture interactively and folds its result back into the round (`ActiveMatch` is visible only inside the synchronous `AdvanceAndPlayNextRound`). | **No Career Home → Tactics Setup and no Post-Match → Career Home edge** — each would be the FR-CS-049 phantom. Matchday resolves on Career Home through the season dispatcher. Named dependency below. |
+
+**The progress rule (D-P7-3), against #30's guards.** The client offers only what `SeasonLoop` would
+accept, and each withheld action is one #30 refuses (each row has a positive-control test):
+
+| State | Offered | Seam | Withheld, and why #30 refuses it |
+|---|---|---|---|
+| mid-season, clock before the pending fixture day | `AdvanceDay` | `AdvanceDays(1)` | Play: `PlayNextRound` refuses a round the clock has not reached (§3.3) |
+| mid-season, clock ON the fixture day | `PlayMatchday` | `AdvanceAndPlayNextRound()` | Day: `AdvanceDays(1)` would pass the target — KD-4 / FR-SN-011 |
+| season complete, final fixture day not yet ticked | `AdvanceDay` | `AdvanceDays(1)` | Roll: ERR-030-053 — the final day's finance accounting must precede settlement |
+| season complete, final fixture day ticked | `StartNextSeason` | `RollToNextSeason()` | — (the roll opens the next season; its first fixture day is then ahead, so `AdvanceDay` follows) |
+
+**ERR-038-005 — #38 Appendix C had one season row, and the owner's progress model needs three.**
+Appendix C (and `IntentKind`'s own "append ordinal 4 when #30 is built" note) routed only
+`AdvanceRound → AdvanceAndPlayNextRound`. With day-granular progress the season dispatcher also owns
+`AdvanceDays(1)` and `RollToNextSeason()` — both existing public #30 seams, so the Appendix C rule
+("each kind maps to exactly one existing public seam") holds. Landed together: `IntentKind`
+**appends** `AdvanceRound = 4`, `AdvanceDay = 5`, `StartNextSeason = 6` (ordinals 1–3 unchanged);
+`ManagerIntent` gains three payload-free factories; the new `IntentRouting` is the single
+match-vs-season classifier; `MatchTacticsDispatcher` refuses the season kinds with a routing message;
+and #38 Appendix C gains the two rows. The KD-U2 drift guard (`EveryMatchIntentKind_MapsToACommandKind`)
+would otherwise have failed on the new kinds — it now skips season kinds through `IntentRouting` and
+**counts** the three match kinds, and a sibling test asserts every season kind is refused by the match
+channel, so the guard is narrowed by classification, not weakened.
+
+**What landed (host-free, gate-compiled, `src/client-app/` unless noted).**
+
+- *Navigation* — `ClientScreens` gains `CareerHome` (5), `NewCareer` (6), `LoadCareer` (7).
+  `ClientScreenFlow` gains a seven-registration constructor (the four-registration PM-1 constructor and
+  graph are unchanged) and eight guarded career moves: `OpenNewCareer`/`CancelNewCareer`/`StartCareer`,
+  `OpenLoadCareer`/`CancelLoadCareer`/`EnterLoadedCareer`, `ContinueCareer`, `QuitToMainMenu`. Both form
+  screens are **`Replace`d** by Career Home, so the career root always sits exactly one screen above
+  Main Menu and Quit can never land on a stale New/Load form — locked by where Quit lands. On a
+  four-screen flow every career move throws.
+- *Career runtime* — `CareerSession` owns one running career. **New game (C4)** is the canonical full
+  composition: `LeagueBootstrap.Generate` → `ProgressionEngine.SeedFrom` (#28 roster authority, KD-4) →
+  `PlayerCareerStates.ForLeague(new ProgressionSquads(...), armed)` (#29/#41, production dial posture,
+  FR-MD-027) → `new DisciplineState()` (#44) → `League.CreateLoop` (#40 bootstrapped once, FR-FN-025) →
+  autosave. **Resume** threads every `SeasonSaveManager.Load` block back verbatim; the league is
+  regenerated from the saved world seed for club identity only, never rosters. `Execute(action)`
+  accepts only `NextAction`; `Revision` increments per operation; an autosave failure does not undo the
+  step and is held in `LastAutosaveError` until the next success (ux-experience-architecture §7 rule 5).
+  `CareerSessionHolder` is the one owned, constructor-injected slot for "the active career".
+- *Season dispatcher* — `SeasonCommandDispatcher` is the #38 Appendix C season dispatcher: routes the
+  three season kinds through `CareerSession.Execute` (one path for intent and direct call), refuses
+  `None` and match kinds (F3).
+- *Screens' sources* — `CareerHomeSource` → `CareerHomeViewModel` answers ux-detailed-plan §7.5 in
+  order from LIVE surfaces only: what changed (`CareerChange`: managed result / roll outcome), what needs
+  attention (injured count via #41 `IsAvailable`, objective on/off track, autosave error), what is next
+  (the managed club's fixture in #30's own fixture list, its day, days until), how to progress
+  (`NextAction`, `IsProgressBlocked`), plus the ordered table with names. It **caches on the session's
+  `Revision`**, so a per-frame `Project()` allocates nothing between operations (#30 has no writer but
+  the session, FR-SN-032). `NewCareerSetup` → `NewCareerViewModel`; `LoadCareerSource` →
+  `LoadCareerViewModel` (`CanContinue` is Main Menu's Continue enablement; `LastError` is kept until the
+  next success; a failed load leaves the active career untouched — §7 rule 4).
+- *ui-framework* — `IntentKind` 4–6, `ManagerIntent` factories, `IntentRouting`, the match-dispatcher
+  refusal (ERR-038-005).
+
+**Tests.** `ClientApp.Tests` +34 (`ClientScreenFlowCareerTests` 6, `CareerProgressTests` 6,
+`CareerSessionTests` 8, `CareerSaveSlotsTests` 7, `CareerScreensTests` 7) plus the three career screens
+added to `ClientScreensTests`' three locks; `UiFramework.Tests` +2 with the KD-U2 drift guard narrowed by
+classification. The decisive lock is `ResumedCareer_ContinuesExactlyAsTheUninterruptedOne`: two careers
+from one seed, one saved to a manual slot and resumed mid-season, played on in lockstep — season state
+`FieldsEqual` **and** `SeasonLoop.Snapshot()` bytes equal. All career suites run under
+`RoundResolutionMode.QuickSimAll` (a whole season in seconds); `ManagedThroughEngine` is the
+production default and is exercised by the existing #30 suites.
+
+**No sim reach.** No `SNAPSHOT_SCHEMA_VERSION` or `SEASON_SAVE_FORMAT_VERSION` change, no RNG stream,
+domain tag, draw site or draw-order change; the client calls only public #30 seams. No scenario window,
+rate band, corpus fit or perf baseline is perturbed.
+
+**Remaining, in order (none is decided by this landing).**
+
+1. **P7b — UGUI binding on the pinned host** (Career Home, New Career, Load Career, Main Menu's
+   New/Continue/Load entries) against these sources, with the S0 shared interaction system
+   (`S0TextFormatter`/focus/layout) and its pseudo-locale/text-scale checks. **Matchday under
+   `ManagedThroughEngine` runs a real 90-minute match synchronously (~2 minutes of compute, roadmap C1)**,
+   so the binding must run `Execute` off the UI thread and render `IsProgressBlocked`; that threading is
+   binding work, not a decision — the session already refuses re-entry. P7b also extends `ClientScreenVisibility` (today an exhaustive
+   four-screen projection that fails loud on the career ids — correct while the shell builds the
+   four-screen flow) and builds the seven-registration `ClientScreenFlow`.
+2. **The interactive career-fixture seam (D-P7-6)** — owned by #30 / `season-save`: play the managed
+   fixture through `MatchSession` and fold its `MatchResult` into the round. When it exists, the career
+   gains `CareerHome → TacticsSetup` and `PostMatchReport → CareerHome` as **new named moves**, never a
+   reuse of `ReturnToMainMenu` (ux-experience-architecture §3.1).
+3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
+4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
+   per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
+
 ## 6. Deterministic manager-command channel (design detail)
 
 This is the one part of the plan with genuine architectural risk, so it is specified further even
@@ -948,6 +1057,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.30 | 2026-10-18 | **§5-P7 — career management screens (roadmap C3/C4): governance + host-free landing.** Records the owner's October 18, 2026 product decisions D-P7-1..D-P7-5 (club-only new game; autosave + 3 manual slots with direct Continue; day-granular progress; no mandatory blockers; D-10 breakable saves through PM-3) and the D-P7-6 seam fact (no interactive career-fixture seam, so no career → Tactics/Match edges). Landed in `client-app`: three career `ScreenId`s, the seven-registration `ClientScreenFlow` with eight guarded career moves, `CareerProgress` (the progress rule against #30's guards), `CareerSession`/`CareerSessionHolder`, `CareerSaveSlots`, `SeasonCommandDispatcher`, and the Career Home / New Career / Load Career sources; in `ui-framework`, ERR-038-005 (`IntentKind` 4–6, `IntentRouting`). ClientApp.Tests +34, UiFramework.Tests +2. No sim reach. Remaining: P7b host binding, the #30 interactive fixture seam, S1 Gates B–I. |
 | 0.29 | 2026-10-06 | Records consumed lifecycle/identity candidate and explicit development host; host-free evidence and pending Unity/full fixture comparison tracked separately. Complete localized screens and acceptance remain open. |
 | 0.28 | 2026-10-05 | PR #479 review corrections: implementation pointer v0.2 with explicit analytics locking, observer composition and dependency-lock work; screen/navigation scope retained in B9b. Approved scope and host acceptance unchanged. |
 | 0.27 | 2026-10-05 | Records #470 foundation merged at f276f700 with green PR CI; routes consumed lifecycle/identity/analytics and renderer attachment to the new plan. Full P5b/Gate-J acceptance remains open. |
