@@ -1,6 +1,9 @@
 // File:     src/deterministic-sim/SnapshotCodec.cs
 // Created:  2026-05-29
-// Modified: 2026-08-22 (ERR-016-011: the §3.2.3 preimage gets a single owner, ComputeSnapshotDigest,
+// Modified: 2026-10-21 (Gate-J J-05 / P1b: the digest hashes one reused contiguous preimage buffer —
+//           CNG on Windows, a reused managed SHA-256 elsewhere — instead of creating a SHA256 and
+//           copying the whole payload through TransformFinalBlock every tick)
+// Modified (prior): 2026-08-22 (ERR-016-011: the §3.2.3 preimage gets a single owner, ComputeSnapshotDigest,
 //           and the new ValidateCurrentDigest re-derives a loaded record's own digest — replay step 4b)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.9.2, §3.2.3, §3.2.4.1, §3.4, §4.2.2, §4.6.1, Code Standards #20
@@ -33,13 +36,22 @@ namespace TacticalDirector.DeterministicSim
         private const int HeaderPreimageBytes =
             1 + 4 + 8 + DeterministicSimConstants.SHA256_BYTES + DeterministicSimConstants.SHA256_BYTES;
 
-        private static readonly byte[] s_payloadDomainTag =
-            { DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD };
+        // Offset of the payload bytes inside _preimage: the header region, then the 0x11 domain tag.
+        private const int PayloadPreimageOffset = HeaderPreimageBytes + 1;
 
         private static readonly byte[] s_zeroDigest = new byte[DeterministicSimConstants.SHA256_BYTES];
 
         private readonly byte[] _prevDigest;
-        private readonly byte[] _headerPreimage; // reused per tick — no per-tick alloc for the header region
+
+        // The whole §3.2.3 preimage, contiguous and reused every tick: header ‖ 0x11 ‖ payload. One
+        // contiguous range is what lets a single one-shot hash call (CngSha256) cover it, and copying
+        // the payload in is far cheaper than hashing it. Sized for MaxSnapshotBytes, which every
+        // SnapshotPayload is allocated with.
+        private byte[] _preimage;
+        private readonly byte[] _digest;
+
+        // Managed SHA-256 for hosts without CNG (the Linux gate). Created on first use and reused.
+        private SHA256 _managedSha;
 
         /// <summary>
         /// Constructs a SnapshotCodec.
@@ -47,8 +59,9 @@ namespace TacticalDirector.DeterministicSim
         /// </summary>
         public SnapshotCodec()
         {
-            _prevDigest     = new byte[DeterministicSimConstants.SHA256_BYTES];
-            _headerPreimage = new byte[HeaderPreimageBytes];
+            _prevDigest = new byte[DeterministicSimConstants.SHA256_BYTES];
+            _preimage   = new byte[PayloadPreimageOffset + DeterministicSimConstants.MaxSnapshotBytes];
+            _digest     = new byte[DeterministicSimConstants.SHA256_BYTES];
         }
 
         // ── Encode ────────────────────────────────────────────────────────────────────
@@ -68,12 +81,12 @@ namespace TacticalDirector.DeterministicSim
             // Thread the previous digest into the header BEFORE hashing — it is part of the preimage.
             Array.Copy(_prevDigest, 0, header.PrevSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
 
-            byte[] digest = ComputeSnapshotDigest(header, payload);
+            ComputeSnapshotDigest(header, payload, _digest);
 
-            Array.Copy(digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            Array.Copy(_digest, 0, header.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
 
             // Advance chain
-            Array.Copy(digest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
+            Array.Copy(_digest, 0, _prevDigest, 0, DeterministicSimConstants.SHA256_BYTES);
         }
 
         /// <summary>
@@ -86,29 +99,48 @@ namespace TacticalDirector.DeterministicSim
         /// computing a *different* preimage from the recorder would reject every honest record.
         /// </para>
         /// <para>
-        /// Reads only from <paramref name="header"/> / <paramref name="payload"/> and the reused
-        /// scratch buffer — it does NOT touch the chain state, so a validator may call it freely.
+        /// Reads only from <paramref name="header"/> / <paramref name="payload"/>, and writes only the
+        /// reused preimage buffer and <paramref name="digest"/> — it does NOT touch the chain state,
+        /// so a validator may call it freely.
         /// </para>
         /// </summary>
-        private byte[] ComputeSnapshotDigest(SnapshotHeader header, SnapshotPayload payload)
+        private void ComputeSnapshotDigest(SnapshotHeader header, SnapshotPayload payload, byte[] digest)
         {
+            int payloadBytes = payload.BytesWritten;
+            if (_preimage.Length < PayloadPreimageOffset + payloadBytes)
+            {
+                // Unreachable for a SnapshotPayload (its buffer is MaxSnapshotBytes); kept so an
+                // oversized payload is hashed whole rather than truncated.
+                _preimage = new byte[PayloadPreimageOffset + payloadBytes];
+            }
+
+            byte[] pre = _preimage;
             int o = 0;
-            CanonicalSerializer.WriteU8 (_headerPreimage, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);
-            CanonicalSerializer.WriteU32(_headerPreimage, ref o, header.SchemaVersion);
-            CanonicalSerializer.WriteU64(_headerPreimage, ref o, header.Tick);
-            Array.Copy(header.PrevSnapshotDigest, 0, _headerPreimage, o, DeterministicSimConstants.SHA256_BYTES);
+            CanonicalSerializer.WriteU8 (pre, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);
+            CanonicalSerializer.WriteU32(pre, ref o, header.SchemaVersion);
+            CanonicalSerializer.WriteU64(pre, ref o, header.Tick);
+            Array.Copy(header.PrevSnapshotDigest, 0, pre, o, DeterministicSimConstants.SHA256_BYTES);
             o += DeterministicSimConstants.SHA256_BYTES;
             byte[] envFpDigest = header.Fingerprint != null ? header.Fingerprint.ComputeDigest() : s_zeroDigest;
-            Array.Copy(envFpDigest, 0, _headerPreimage, o, DeterministicSimConstants.SHA256_BYTES);
+            Array.Copy(envFpDigest, 0, pre, o, DeterministicSimConstants.SHA256_BYTES);
             o += DeterministicSimConstants.SHA256_BYTES;
+            CanonicalSerializer.WriteU8 (pre, ref o, DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD);
+            Buffer.BlockCopy(payload.PayloadBytes, 0, pre, o, payloadBytes);
+            o += payloadBytes;
 
-            // TransformBlock feeds the three regions without allocating a combined preimage buffer.
-            using (SHA256 sha = SHA256.Create())
+            if (CngSha256.IsAvailable && CngSha256.TryHash(pre, o, digest))
             {
-                sha.TransformBlock(_headerPreimage, 0, o, null, 0);
-                sha.TransformBlock(s_payloadDomainTag, 0, s_payloadDomainTag.Length, null, 0);
-                sha.TransformFinalBlock(payload.PayloadBytes, 0, payload.BytesWritten);
-                return sha.Hash;
+                return;
+            }
+
+            if (_managedSha == null)
+            {
+                _managedSha = SHA256.Create();
+            }
+            if (!_managedSha.TryComputeHash(new ReadOnlySpan<byte>(pre, 0, o), digest, out int written) ||
+                written != DeterministicSimConstants.SHA256_BYTES)
+            {
+                throw new InvalidOperationException("SHA-256 did not produce a 32-byte snapshot digest.");
             }
         }
 
@@ -139,11 +171,11 @@ namespace TacticalDirector.DeterministicSim
                 return DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH;
             }
 
-            byte[] recomputed = ComputeSnapshotDigest(header, payload);
+            ComputeSnapshotDigest(header, payload, _digest);
 
             for (int i = 0; i < DeterministicSimConstants.SHA256_BYTES; i++)
             {
-                if (recomputed[i] != header.CurrentSnapshotDigest[i])
+                if (_digest[i] != header.CurrentSnapshotDigest[i])
                 {
                     return DeterministicSimConstants.ERR_DS_SNAPSHOT_DIGEST_MISMATCH;
                 }
@@ -242,4 +274,13 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | honest record, an incomplete one accepts tampering. The          |
 // |         |            |        | validator is pure with respect to the chain — it does not       |
 // |         |            |        | advance _prevDigest — so it may run between steps 4a and 5.     |
+// | 1.4     | 2026-10-21 | —      | Gate-J J-05 / perception-shared-pass-design.md P1b. The digest   |
+// |         |            |        | no longer calls SHA256.Create() per tick or passes the payload   |
+// |         |            |        | through TransformFinalBlock, which copied all ~35 KB of it — the |
+// |         |            |        | whole of RunTick's per-tick allocation. ComputeSnapshotDigest    |
+// |         |            |        | writes header ‖ 0x11 ‖ payload into one reused buffer and hashes |
+// |         |            |        | it with CngSha256 on Windows (Unity Mono's SHA256Managed was the |
+// |         |            |        | largest single cost of a tick) or a reused managed SHA-256       |
+// |         |            |        | elsewhere, into a reused digest buffer. Same preimage bytes,     |
+// |         |            |        | same digest; still the single preimage owner (ERR-016-011).     |
 #endregion
