@@ -1,6 +1,7 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-10-20 (AR round 3 M13 — CanMovePlayer / MovePlayer demoted to internal; L9 stale comment — v1.12)
+// Modified: 2026-10-20 (AR round 4 M13 / L12 / L16 — AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary demoted to internal; SeedFrom doc; Prepare refuses a worldDay outside the cursor span — v1.13)
+//           2026-10-20 (AR round 3 M13 — CanMovePlayer / MovePlayer demoted to internal; L9 stale comment — v1.12)
 //           (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
 //           AR round 1 P-M1 — every mutator goes through BeginMutation — v1.11)
 //           (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
@@ -106,8 +107,9 @@ namespace TacticalDirector.PlayerProgression
         /// from <see cref="PlayerProgressionConstants.NEW_GAME_PA_HEADROOM"/> above his computed CA.
         /// <para>
         /// <b>The PA seed is a placeholder for #47's authored value (ERR-028-003)</b>, and deliberately
-        /// deterministic: a draw here would be #28's first draw site and would force the regen stream to
-        /// register for a number the authored database is going to replace.
+        /// deterministic: a draw here would put a draw site on the new-game path for a number the
+        /// authored database is going to replace. (The regen stream has been registered since ERR-028-025 —
+        /// its only draw site is <see cref="PrepareSeasonBoundary"/>'s regen generation; this seed adds none.)
         /// </para>
         /// </summary>
         /// <param name="squads">The bootstrap's day-0 rosters, one per club. Copied in — the caller's
@@ -372,8 +374,11 @@ namespace TacticalDirector.PlayerProgression
         // ── The daily step (FR-PG-021 / §3.1) ─────────────────────────────────────────
 
         /// <summary>
-        /// #28's public daily entry point (FR-PG-021) — the batch #30 drives at its KD-2 slot 1 and #29
+        /// #28's daily entry point (FR-PG-021) — the batch #30 drives at its KD-2 slot 1 and #29
         /// §3.5 composes against. Advances every carried player to <paramref name="worldDay"/>.
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> reachable only from <c>TacticalDirector.SeasonSave</c>
+        /// (and the test assemblies) through <c>InternalsVisibleTo</c>. A public day step was reachable through
+        /// <c>SeasonLoop.Progression</c> and advanced the roster without the per-day career seams.
         /// <para>
         /// <b>Idempotent per day, and gap-complete.</b> Each player carries
         /// <see cref="PlayerLifecycle.LastAdvancedWorldDay"/>: a day already advanced is a no-op (which
@@ -388,7 +393,7 @@ namespace TacticalDirector.PlayerProgression
         /// <see cref="TrainingInputBatch.Neutral"/> for none (FR-PG-009).</param>
         /// <exception cref="ArgumentException">A bound batch does not describe exactly the players being
         /// advanced — a club this store does not carry, or a club whose ids do not match the store's.</exception>
-        public void AdvanceDay(uint worldDay, in TrainingInputBatch trainingInputs)
+        internal void AdvanceDay(uint worldDay, in TrainingInputBatch trainingInputs)
         {
             // F8 (ERR-028-009): the never-advanced sentinel is not a legal world day. Storing it would re-arm the
             // day-0 trap (a player anchored at the sentinel reads as never-advanced forever, so the
@@ -507,6 +512,11 @@ namespace TacticalDirector.PlayerProgression
         /// from <see cref="NextPlayerId"/> (FR-PG-011). <b>Writes nothing</b> — the store is unchanged until
         /// <see cref="CommitSeasonBoundary"/>.
         /// <para>
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> a seam for #30's roll (<c>SeasonLoop.RollToNextSeason</c>,
+        /// step (d)) only. A public Prepare/Commit pair reachable through <c>SeasonLoop.Progression</c> removed
+        /// retirees and inserted regens mid-season with no reconciliation of the #29/#41/#30 career rows.
+        /// </para>
+        /// <para>
         /// <b>Draw order (normative, ERR-028-025).</b> One stream per club that has a retiree, registered
         /// under <see cref="PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION"/> with
         /// <c>entityId = clubId</c>; a club's k-th retiree by ascending PlayerId consumes that stream's k-th
@@ -530,15 +540,47 @@ namespace TacticalDirector.PlayerProgression
         /// its peers' agree and the next day step advances all of them together.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="worldDay"/> is the never-advanced
         /// sentinel (F8).</exception>
+        /// <exception cref="ArgumentException"><paramref name="worldDay"/> is outside the span of the carried
+        /// players' progression cursors (AR round 4 L16 — the §3.5 anchor MUST).</exception>
         /// <exception cref="InvalidOperationException">The id cursor would overflow, or regen generation
         /// failed (a draw-site misuse).</exception>
-        public SeasonBoundaryPlan PrepareSeasonBoundary(ulong worldSeed, int completedSeasonNumber, uint worldDay)
+        internal SeasonBoundaryPlan PrepareSeasonBoundary(ulong worldSeed, int completedSeasonNumber, uint worldDay)
         {
             if (worldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(worldDay), worldDay,
                     "The never-advanced sentinel is not a legal day to construct a regen on (F8).");
+            }
+
+            // AR round 4 L16 (the M12 MUST, enforced): a regen is anchored on worldDay and the next day step
+            // advances every player from his own cursor, so a worldDay OUTSIDE the span the carried players'
+            // cursors occupy plants a regen ahead of (or behind) every peer — one day ahead skips that day's
+            // step by the ERR-030-027 same-day idempotence and the regen trails his peers for life. The
+            // caller MUST pass the day the cursors sit on (#30: clock - 1); this refuses the unambiguous
+            // violations (an empty store has no span to violate).
+            bool anyPlayer = false;
+            uint minCursor = uint.MaxValue;
+            uint maxCursor = 0u;
+            for (int c = 0; c < _lifecycles.Count; c++)
+            {
+                PlayerLifecycle[] held = _lifecycles[c];
+                for (int p = 0; p < held.Length; p++)
+                {
+                    uint cursor = held[p].LastAdvancedWorldDay;
+                    anyPlayer = true;
+                    minCursor = cursor < minCursor ? cursor : minCursor;
+                    maxCursor = cursor > maxCursor ? cursor : maxCursor;
+                }
+            }
+
+            if (anyPlayer && (worldDay < minCursor || worldDay > maxCursor))
+            {
+                throw new ArgumentException(
+                    $"worldDay {worldDay} is outside the span [{minCursor}, {maxCursor}] the carried players' "
+                    + "progression cursors occupy: a regen must be constructed on the day his peers' cursors "
+                    + "sit on (#28 §3.5), or the next day step skips or trails him (AR round 4 L16).",
+                    nameof(worldDay));
             }
 
             DeterministicRngService rng = null;
@@ -621,11 +663,13 @@ namespace TacticalDirector.PlayerProgression
         /// plan this store prepared with no mutation since, which is what lets #30 call it after its roll's
         /// last fallible write. The store instance is kept (arrays are replaced in place), so every
         /// <c>ProgressionSquads</c> projection and every holder of this reference sees the new roster.
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> #30's roll only, for the reason
+        /// <see cref="PrepareSeasonBoundary"/> states.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="plan"/> is null.</exception>
         /// <exception cref="ArgumentException">The plan belongs to another store, or this store has mutated
         /// since it was prepared (installing it would resurrect stale records).</exception>
-        public void CommitSeasonBoundary(SeasonBoundaryPlan plan)
+        internal void CommitSeasonBoundary(SeasonBoundaryPlan plan)
         {
             if (plan == null)
             {
@@ -1216,4 +1260,17 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | orphaned the #29/#41/#30 rows); the IVT grant lives in            |
 // |         |            |        | AssemblyInfo.cs. L9: the retirement-evaluation comment no longer   |
 // |         |            |        | calls the boundary roster mutation "the deferred landing's".       |
+// | 1.13    | 2026-10-20 | —      | AR round 4 M13 / L12 (ERR-028-028 widening): AdvanceDay /          |
+// |         |            |        | PrepareSeasonBoundary / CommitSeasonBoundary demoted public ->     |
+// |         |            |        | internal — the same forged-roster-mutation class as CanMovePlayer /|
+// |         |            |        | MovePlayer, reachable through the public SeasonLoop.Progression:   |
+// |         |            |        | a client's CommitSeasonBoundary(PrepareSeasonBoundary(..)) mid-    |
+// |         |            |        | season removed retirees and inserted regens with no career-row     |
+// |         |            |        | reconciliation. Callers (grep of src/): SeasonLoop and the         |
+// |         |            |        | SeasonSave / PlayerProgression test assemblies only — all covered  |
+// |         |            |        | by the existing IVT grants. SeedFrom doc: the regen stream has     |
+// |         |            |        | been registered since ERR-028-025. No behaviour change.            |
+// |         |            |        | L16: PrepareSeasonBoundary also refuses (ArgumentException) a      |
+// |         |            |        | worldDay outside [min, max] of the carried players' cursors —      |
+// |         |            |        | enforcing the §3.5 anchor MUST; no legal call changes behaviour.   |
 #endregion

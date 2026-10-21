@@ -1,5 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-10-20 (AR round 4 R4-L1 — three stale docs and the RequireLocalIndex message restated; text-only — v1.31)
 // Modified: 2026-10-20 (AR round 3 S-L4 — RosterGeneration doc: also bumped by every MovePlayerRows — v1.30)
 // Modified: 2026-10-20 (#31 T2: CanMovePlayerRows / MovePlayerRows carry a re-homed player's rows
 //           verbatim; AR round 1 L1 stale comments — v1.29)
@@ -1105,8 +1106,11 @@ namespace TacticalDirector.SeasonSave
             }
 
             // The ERR-041-019 precondition is re-checked here because the sync is the third id
-            // entry point (after ForLeague and FromBlocks) — and the one #42's youth intake and
-            // #31's transfers will actually come through. In the validating half, deliberately:
+            // entry point (after ForLeague and FromBlocks) — and the one #42's youth intake will
+            // actually come through (and #28's retirees/regens today). #31's transfers do NOT: they
+            // bypass the sync through MovePlayerRows (ERR-031-005), which keeps the precondition by
+            // construction (the id moves and is never duplicated: CanMovePlayerRows refuses a destination
+            // that already carries him). In the validating half, deliberately:
             // CommitRosterSync's contract is "cannot fail on a plan this career prepared".
             RequireGloballyUniquePlayerIds(_clubIds, nextIds, nameof(squads));
 
@@ -1443,8 +1447,9 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// <b>A command rather than a handle, deliberately.</b> The obvious shape here is "hand out a
         /// <see cref="TrainingSchedule"/> and let the caller keep it", and it is wrong: the schedule
-        /// binds a club's id and state arrays BY REFERENCE, and <see cref="SyncToRoster"/> replaces both
-        /// wholesale at every season boundary. A screen that cached the handle across a roll — the
+        /// binds a club's id and state arrays BY REFERENCE, and both <see cref="SyncToRoster"/> (at every
+        /// season boundary) and <see cref="MovePlayerRows"/> (on every transfer, mid-season) replace the
+        /// arrays wholesale. A screen that cached the handle across a roll — the
         /// obvious thing to write — would then call <c>TrySetFocus</c>, get <c>true</c> back, and write
         /// the manager's instruction into a discarded array. Nothing throws and nothing is logged; the
         /// player simply trains Balanced all season.
@@ -1475,8 +1480,8 @@ namespace TacticalDirector.SeasonSave
         /// A <see cref="TrainingSchedule"/> over one club's live id and state arrays.
         /// <para>
         /// <b><c>internal</c>: the handle must not outlive the call that acquired it.</b> It binds both
-        /// arrays by reference and <see cref="SyncToRoster"/> replaces them, so a cached handle silently
-        /// discards writes — see <see cref="TrySetFocus"/>, which is the public surface and is a command
+        /// arrays by reference and <see cref="SyncToRoster"/> and <see cref="MovePlayerRows"/> replace them,
+        /// so a cached handle silently discards writes — see <see cref="TrySetFocus"/>, which is the public surface and is a command
         /// precisely so no caller can hold one. This exists for in-assembly use where the lifetime is
         /// visibly bounded.
         /// </para>
@@ -1570,7 +1575,7 @@ namespace TacticalDirector.SeasonSave
             return squad;
         }
 
-        /// <summary>The squad-local index of a held player id, failing loud when the roster no longer carries him (F7 / F2 — call <see cref="SyncToRoster"/> at the boundary).</summary>
+        /// <summary>The squad-local index of a held player id, failing loud when the roster no longer carries him (F7 / F2). A roster change reaches the career only through <see cref="SyncToRoster"/> (the season boundary) or <see cref="MovePlayerRows"/> (a transfer); a miss here means the roster changed without the career being reconciled — an integration defect, not a caller error.</summary>
         private static int RequireLocalIndex(Squad squad, int clubId, int playerId)
         {
             for (int i = 0; i < squad.Count; i++)
@@ -1583,8 +1588,9 @@ namespace TacticalDirector.SeasonSave
 
             throw new ArgumentException(
                 $"Club {clubId} carries career state for player {playerId}, who is no longer on its "
-                + "roster. Roster membership is reconciled at the season boundary (FR-TR-025 / "
-                + "FR-MD-025) — call SyncToRoster after a roster change.",
+                + "roster: the roster changed without the career being reconciled. Roster membership is "
+                + "reconciled at the season boundary (FR-TR-025 / FR-MD-025) and by a transfer's row move; "
+                + "reaching this is an integration defect in whatever mutated the roster, not a caller error.",
                 nameof(squad));
         }
 
@@ -1894,4 +1900,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.28    | 2026-10-19 | —      | ERR-031-005 (doc only): RequireGloballyUniquePlayerIds' rationale names the genesis formula + #28's single monotonic allocator instead of 'an accident of today's formula'. |
 // | 1.29    | 2026-10-20 | —      | #31 T2 (ERR-031-005): CanMovePlayerRows / MovePlayerRows — a transfer carries the player's training/medical/appearance rows verbatim between clubs, bumping RosterGeneration. AR round 1 L1: the SyncToRoster doc names SeasonBoundaryPlan; the per-club-walk note says transfers bypass it. |
 // | 1.30    | 2026-10-20 | —      | AR round 3 S-L4 (doc only): RosterGeneration's summary no longer says it moves 'once per season boundary' — MovePlayerRows bumps it on every transfer too. |
+// | 1.31    | 2026-10-20 | —      | AR round 4 R4-L1 (text only): the sync's ERR-041-019 remark no longer says #31's transfers come through it (they bypass it via MovePlayerRows); TrySetFocus / ScheduleFor name MovePlayerRows as an array replacer alongside SyncToRoster; RequireLocalIndex's message no longer tells a public caller to call the internal SyncToRoster — it states the roster changed without the career being reconciled (an integration defect). |
 #endregion

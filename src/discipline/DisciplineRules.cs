@@ -1,6 +1,7 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-10-20 (AR round 2 L5 — the ClubPlayerIds-membership remark said DropPlayer has no production
+// Modified: 2026-10-20 (AR round 4 L12 — the MigratePlayerId doc no longer frames a transfer as a re-key; comment-only — v1.13)
+//           2026-10-20 (AR round 2 L5 — the ClubPlayerIds-membership remark said DropPlayer has no production
 //           caller; RollToNextSeason has called it since ERR-028-025. Comment-only — v1.12)
 //           Prior: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
 //           M2 remark still described the completeness lock as covering "every public static readonly
@@ -399,8 +400,14 @@ namespace TacticalDirector.Discipline
         /// Re-keys a player's whole discipline history from <paramref name="oldPlayerId"/> to
         /// <paramref name="newPlayerId"/> across every competition (§3.4, FR-DC-013) — tally AND
         /// unserved bans, verbatim. <b>Bans follow the player</b>, the deliberate contrast with #32's
-        /// drop rule: a player suspended when he transfers is suspended when he arrives.
-        /// <para>A player with no rows is a legitimate no-op — most transfers move a clean player.</para>
+        /// drop rule: a player suspended when he is re-keyed stays suspended under the new id.
+        /// <para>
+        /// <b>No production caller, by design (ERR-031-005; AR round 4 L12).</b> A transfer is NOT a
+        /// re-key: #31 keeps the <c>PlayerId</c> across a move, so the tally and any ban follow the
+        /// player with no migration. This method is retained for the FR-DC-013 contract (an id change
+        /// that is not a transfer, e.g. a future id-space widening) and is exercised by tests only.
+        /// </para>
+        /// <para>A player with no rows is a legitimate no-op.</para>
         /// </summary>
         /// <exception cref="ArgumentException">The target id already carries a row in a competition the
         /// source also carries — <b>F2</b>. There is no defined winner, and merging two players'
@@ -730,4 +737,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | Corrected to "static readonly, any type and any access level, not only    |
 // |         |            |        | public int". No behaviour change.                                          |
 // | 1.12    | 2026-10-20 | — | AR round 2 L5 (comment-only): the membership remark's "MigratePlayerId and DropPlayer have no production caller at all" corrected — DropPlayer is called from SeasonLoop.RollToNextSeason for each retiree since ERR-028-025 (FR-DC-013's retirement drop); MigratePlayerId still has none. No behaviour change. |
+// | 1.13    | 2026-10-20 | — | AR round 4 L12 (comment-only): the MigratePlayerId doc framed a transfer as a re-key ("suspended when he transfers is suspended when he arrives", "most transfers move a clean player"); under ERR-031-005 transfers keep the PlayerId, so it has no caller by design. No behaviour change. |
 #endregion

@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.13 — AR round 3: T-PG-RET-011 records `CanMovePlayer`/`MovePlayer` as INTERNAL (ERR-028-028))
+**Last Updated:** October 20, 2026 (v0.14 — AR round 4: T-PG-RET-011's INTERNAL seam note widened to AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary (ERR-028-028 widening))
+**Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3: T-PG-RET-011 records `CanMovePlayer`/`MovePlayer` as INTERNAL (ERR-028-028))
 **Last Updated (prior):** October 20, 2026 (v0.12 — ERR-028-027: T-PG-RET-003 gains the season-0 golden; new T-PG-RET-011 (the `MovePlayer` re-home contract and a re-homed retiree's replacement); T-PG-RET-003 / -009's per-club regen stream lock now covers every retiring club)
 **Last Updated (prior):** October 20, 2026 (v0.11 — AR round 1 P-M4 / L1: the position-inheritance lock renumbered T-PG-RET-010 (duplicate id); T-PG-SAVE-001's stale "boundary marker" restated)
 **Last Updated (prior):** October 19, 2026 (v0.10 — ERR-028-024 / ERR-028-025: T-PG-RET-003 restated; the position-inheritance lock, then allocated as T-PG-RET-005 and renumbered T-PG-RET-010 at v0.11)
@@ -18,7 +19,7 @@ Prior entry below.)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: §5.1's `AdvanceDay_FirstCall_*` passage corrected from the retired sentinel-anchored behaviour to the shipped seed-day-replay behaviour, with the inversion noted; new §5.9/§5.10 allocate T-PG-BLOCK-001..007 / T-PG-BATCH-001 / T-PG-CODEC-001..007 and §5.7 gains T-PG-SAVE-007/008 for ~17 mutation-audit-proven locks that landed across commits `043ccd0`/`1d19bc8`/`9392839` with no prior test-plan id)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: new locks for the signed anchor, the cross-blob cursor rule, the roster-overwrite refusal, and the F8 sentinel guard)
 **Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -220,7 +221,9 @@ renumbered, only reordered; every id below still names the exact same test as be
   shape and can field an XI.
 - **T-PG-RET-011 (ERR-028-027)** — `ProgressionEngine.MovePlayer` (#31's re-home, ERR-031-005) is **INTERNAL**
   (AR round 3 M13 / ERR-028-028: a seam for #30's transfer adapter only, `SeasonTransferRoster`, reached by it and by
-  the test assemblies through `InternalsVisibleTo`; a public re-home forged free transfers) and is locked
+  the test assemblies through `InternalsVisibleTo`; a public re-home forged free transfers; **AR round 4 widening:**
+  `AdvanceDay`, `PrepareSeasonBoundary` and `CommitSeasonBoundary` are internal for the same reason — #30's loop
+  and roll are their only production callers) and is locked
   directly (`ProgressionEngineMoveTests`): the record and lifecycle are identical after the move, the
   destination stays ascending, the source is compacted and `NextPlayerId` does not move; every
   `CanMovePlayer` false case (same club, unknown club, player not on the source, a source of one player, a
@@ -357,4 +360,5 @@ previously unlocked by deletion).
 | 0.11 | 2026-10-20 | — | **AR round 1 P-M4 (ERR-028-024)**: the v0.10 entry for the position-inheritance / squad-shape lock reused the id T-PG-RET-005, already owned by the per-player-retirement-day lock (ERR-028-021/022) and cited under that id in the error log and `AbilityModelTests`; renumbered to **T-PG-RET-010** and moved after T-PG-RET-009 (numeric order, v0.9 L2). **AR round 1 L1 (ERR-028-025)**: T-PG-SAVE-001 still required round-tripping a "boundary marker" §3.4 says does not exist; restated. |
 | 0.12 | 2026-10-20 | — | **ERR-028-027** (AR round 2): T-PG-RET-003 pins the season-0 seed vector alongside the season-3 one; new **T-PG-RET-011** (`MovePlayer` contract, stale-plan refusal after a move, a re-homed retiree replaced at his new club, and the per-club regen stream asserted for every retiring club). |
 | 0.13 | 2026-10-20 | — | **AR round 3 (ERR-028-028 M13)**: T-PG-RET-011 states `ProgressionEngine.CanMovePlayer` / `MovePlayer` are internal — a seam for #30's transfer adapter only. The lock itself is unchanged (`ProgressionEngineMoveTests` reaches them through the existing `InternalsVisibleTo`). |
+| 0.14 | 2026-10-20 | — | **AR round 4 (ERR-028-028 widening M13)**, doc-only. T-PG-RET-011 records that `AdvanceDay` / `PrepareSeasonBoundary` / `CommitSeasonBoundary` are internal as well (the locks are unchanged — the two test assemblies call them through `InternalsVisibleTo`). |
 #endregion

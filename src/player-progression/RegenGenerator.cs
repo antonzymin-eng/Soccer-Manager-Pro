@@ -1,6 +1,7 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 2 L5 — the position param doc's Binomial(25, 0.25) restated for the
+// Modified: 2026-10-20 (AR round 4 L12 — clubId param / nation comment restated; comment-only — v1.11)
+//           2026-10-20 (AR round 2 L5 — the position param doc's Binomial(25, 0.25) restated for the
 //           23-player squad; comment-only — v1.10)
 //           Prior: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
 //           (construction-day-credit-implemented-twice — BandStepFor deleted — v1.8)
@@ -55,9 +56,11 @@ namespace TacticalDirector.PlayerProgression
         /// <param name="rng">The deterministic RNG service (the caller has registered the regen stream).</param>
         /// <param name="streamIndex">The registered <c>player-progression.regen</c> stream index — this alone scopes the draw to the club's stream (the caller registered it with <c>entityId = clubId</c>).</param>
         /// <param name="clubId">
-        /// The club the regen joins. Retained for the §3.3 signature and T2 use (the <c>RegenResult</c>
-        /// per-club grouping and nation-from-the-reference-roster). NOT consumed at T0 — the stream is
-        /// already scoped by <paramref name="streamIndex"/> and the id is the explicit <paramref name="newPlayerId"/>.
+        /// The club the regen joins. Retained for the §3.3 signature only; <b>not consumed by this method</b>
+        /// (the per-club grouping is <c>SeasonBoundaryPlan</c>'s, which
+        /// <see cref="ProgressionEngine.PrepareSeasonBoundary"/> builds from its own club loop, and #27's
+        /// <c>PlayerRecord</c> has no nation field today — ERR-028-027). The stream is already scoped by
+        /// <paramref name="streamIndex"/> and the id is the explicit <paramref name="newPlayerId"/>.
         /// </param>
         /// <param name="newPlayerId">The fresh, monotonically-allocated PlayerId (FR-PG-011).</param>
         /// <param name="position">The position of the retiree this regen replaces 1:1 (ERR-028-024). A
@@ -96,8 +99,9 @@ namespace TacticalDirector.PlayerProgression
 
             int firstNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawFirstName, NameCatalogue.FirstNames.Length);
             int lastNameIdx = PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawLastName, NameCatalogue.LastNames.Length);
-            // Nation is not a #27 PlayerRecord field today, so a regen draws name/age/position/weakFoot/
-            // attrs/PA only (the §3.3 "club/nation from the reference roster" is a forward reference).
+            // Nation is not a #27 PlayerRecord field, so a regen draws name/age/weakFoot/attrs/PA only
+            // (position is the retiree's, ERR-028-024; the club is the caller's, from its own club loop —
+            // ERR-028-027 retired the §3.3 "club/nation from the reference roster" reading).
             int ageSpan = PlayerProgressionConstants.REGEN_AGE_MAX - PlayerProgressionConstants.REGEN_AGE_MIN + 1;
             int age = PlayerProgressionConstants.REGEN_AGE_MIN + PlayerGenerationRng.DrawBounded(rng, streamIndex, DrawAge, ageSpan);
 
@@ -286,4 +290,5 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | drawing one uniformly (KD-6 template drift); draw index 3 stays     |
 // |         |            |        | reserved and undrawn so every later draw value is unchanged.        |
 // | 1.10    | 2026-10-20 | — | AR round 2 L5 (comment-only): the `position` parameter doc's `Binomial(25, 0.25)` restated as `Binomial(squad size, 0.25)` (23 in today's bootstrap, ERR-031-004). No behaviour change. |
+// | 1.11    | 2026-10-20 | — | AR round 4 L12 (comment-only): the `clubId` parameter doc and the nation comment no longer call the per-club grouping / nation read "T2 use" or a forward reference — the grouping is `SeasonBoundaryPlan`'s (landed, ERR-028-025) and `PlayerRecord` has no nation field (ERR-028-027). No behaviour change. |
 #endregion

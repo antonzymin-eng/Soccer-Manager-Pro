@@ -22,7 +22,7 @@ namespace TacticalDirector.Transfers
     {
         private readonly ITransferRosterPort _roster;
 
-        /// <summary>Creates the command surface over the specified future-#30 roster port.</summary>
+        /// <summary>Creates the command surface over the roster port (production: the season-save <c>SeasonTransferRoster</c> adapter; tests: a fake).</summary>
         public TransferCommands(ITransferRosterPort roster)
         {
             _roster = roster ?? throw new ArgumentNullException(nameof(roster));
@@ -227,4 +227,5 @@ namespace TacticalDirector.Transfers
 // | 1.3     | 2026-09-21 | —      | ERR-031-002: resolve buy affordability before checked staged finance validation so extreme coherent debt returns InsufficientBudget instead of overflowing. |
 // | 1.4     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds — ownership from the port's roster answer, never id/CLUB_SQUAD_SIZE; the re-home keeps the id; local state applies only after the port confirms the player is on the destination roster. |
 // | 1.5     | 2026-10-20 | —      | #31 T2: unknown counterparty fails loud (ERR-031-010); an un-contracted managed player is sellable (ERR-031-009); a release that leaves a club below a matchday squad returns SquadDepleted before any staging (ERR-031-007). |
+// | 1.6     | 2026-10-20 | —      | AR round 4 (R4-L5, ERR-031-014): the constructor summary no longer calls the roster port "future" — the #30 adapter has landed. |
 #endregion

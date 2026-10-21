@@ -1,6 +1,7 @@
 // File:     src/player-progression/AssemblyInfo.cs
 // Created:  2026-08-23
-// Modified: 2026-10-20 (AR round 3 M13 — IVT for the SeasonSave transfer adapter and its tests — v1.2)
+// Modified: 2026-10-20 (AR round 4 M13 / L11 — the grant's true breadth stated; the three sibling mutators internal — v1.3)
+//           2026-10-20 (AR round 3 M13 — IVT for the SeasonSave transfer adapter and its tests — v1.2)
 //           2026-08-24 (round-2 finding fr-cs-015-rationale-false-and-applied-unevenly — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28, Code Standards #20 FR-CS-015
@@ -18,6 +19,15 @@
 //           is that a DIAL-TAKING form bypassing the catalogue is a test affordance and internal, while
 //           a CATALOGUE-READING form is #28's published pure-arithmetic API and stays public whether or
 //           not anything outside this assembly calls it yet.
+//           BREADTH OF THE GRANTS (AR round 4 L11): an InternalsVisibleTo grant is ASSEMBLY-WIDE — it
+//           exposes EVERY internal member of this assembly to the named assembly, not just the members
+//           the comment beside it was written for. That includes the TestOnly_* dial overloads, the
+//           ProgressionSaveCodec internals, SeasonBoundaryPlan's internal constructor and replacement
+//           arrays, DeriveRegenSeed, and the internal ProgressionEngine mutators. The grants therefore
+//           narrow the PUBLIC surface (which a client or any other production assembly compiles against);
+//           they do not narrow what the three named assemblies can reach. TacticalDirector.SeasonSave
+//           is the composition root and is trusted with all of it; keep the list to composition-root
+//           and test assemblies, never a presentation or client assembly.
 
 using System.Runtime.CompilerServices;
 
@@ -27,6 +37,9 @@ using System.Runtime.CompilerServices;
 // authority's id-preserving re-home is a seam for #30's transfer adapter (SeasonTransferRoster) only — a
 // public one forged a free transfer through SeasonLoop.Progression and orphaned the #29/#41/#30 rows. The
 // season-save assembly is the adapter's home; its test assembly drives the same members directly.
+// AR round 4 M13 widening: AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary are INTERNAL for the
+// same reason — #30's loop and roll are their only production callers. This grant is assembly-wide
+// (see the BREADTH note in the header): it exposes every internal, not only the members named here.
 [assembly: InternalsVisibleTo("TacticalDirector.SeasonSave")]
 [assembly: InternalsVisibleTo("TacticalDirector.SeasonSave.Tests")]
 
@@ -54,4 +67,10 @@ using System.Runtime.CompilerServices;
 // |         |            |        | and TacticalDirector.SeasonSave.Tests so ProgressionEngine.        |
 // |         |            |        | CanMovePlayer / MovePlayer can be internal (transfer-adapter seam  |
 // |         |            |        | only) without breaking SeasonTransferRoster or its tests.          |
+// | 1.3     | 2026-10-20 | —      | AR round 4 M13 / L11: no IVT-target change. AdvanceDay /           |
+// |         |            |        | PrepareSeasonBoundary / CommitSeasonBoundary are internal (ERR-    |
+// |         |            |        | 028-028 widening); existing grants cover their callers. L11: the   |
+// |         |            |        | header and grant comments now state that a grant is assembly-wide  |
+// |         |            |        | (every internal, incl. TestOnly_*, codec internals, SeasonBoundary-|
+// |         |            |        | Plan's constructor/arrays), not scoped to the members named.       |
 #endregion

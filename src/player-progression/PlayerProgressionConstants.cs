@@ -1,6 +1,7 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 3 L9 — DECLINE_DAILY_POINTS doc: retirement removal has landed; version rows reordered — v1.7)
+// Modified: 2026-10-20 (AR round 4 L12 — NEW_GAME_PA_HEADROOM doc: the regen stream is registered; doc-only — v1.8)
+//           2026-10-20 (AR round 3 L9 — DECLINE_DAILY_POINTS doc: retirement removal has landed; version rows reordered — v1.7)
 //           (ERR-028-025 — regen stream identity + the 0x20/82 mirrors — v1.6)
 //           (round-2 finding decline-tail-degeneracy-undocumented-on-the-owning-side —
 //           DECLINE_DAILY_POINTS doc — v1.5)
@@ -301,9 +302,10 @@ namespace TacticalDirector.PlayerProgression
         /// (ERR-028-003). §3.2 sources new-game PA from the authored player database — which is
         /// <b>#47</b>'s (New-Game Setup &amp; Database Editor), a spec with no <c>src/</c> assembly — so
         /// until #47 lands, a procedurally bootstrapped league has no authored PA to read and #28 must
-        /// seed one. Deliberately <b>deterministic, not drawn</b>: a draw here would be #28's first draw
-        /// site and would force the <c>player-progression.regen</c> stream to register (FR-PG-020) for a
-        /// value #47 is going to overwrite. #47 fills real values through the same seam.
+        /// seed one. Deliberately <b>deterministic, not drawn</b>: a draw here would add a new-game draw
+        /// site (FR-PG-020) for a value #47 is going to overwrite. (The <c>player-progression.regen</c>
+        /// stream itself has been registered since ERR-028-025 — the season boundary's regen generation
+        /// is its only draw site; this seed adds none.) #47 fills real values through the same seam.
         /// </para>
         /// <para>
         /// <b>Recorded, not fixed:</b> over §3.1.3's accrual curve a whole youth career raises CA by
@@ -385,4 +387,5 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | visible diff. No value changed.
 // | 1.6     | 2026-10-19 | —      | ERR-028-025: REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION [FIXED]; DOMAIN_TAG_PLAYER_PROGRESSION (0x20) and SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION (82) [CROSS] mirrors land with the first regen draw site. |
 // | 1.7     | 2026-10-20 | —      | AR round 3 L9 (ERR-028-028): DECLINE_DAILY_POINTS doc no longer says retirement is FLAG-ONLY / removal deferred (ERR-028-025 landed it); version rows reordered chronologically (1.0..1.6, content unchanged). No value changed. |
+// | 1.8     | 2026-10-20 | —      | AR round 4 L12, doc-only: NEW_GAME_PA_HEADROOM no longer says a draw here would be "#28's first draw site" forcing the regen stream to register — the stream has been registered since ERR-028-025. No value changed. |
 #endregion

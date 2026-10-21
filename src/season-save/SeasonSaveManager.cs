@@ -1,5 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-10-20 (AR round 4 S4-L3 — v1.34: the guard summary's <see cref> names the real long-form Save signature; comments only.)
 // Modified: 2026-10-20 (L2 doc drift — v1.33: Load summary names the #31 transfers state and the FOUR
 //           cross-blob coherence rules; comments only.)
 // Modified: 2026-10-18 (#31 T1 — v1.32: Save takes the #31 transfers state (null = unwired) and writes the
@@ -603,7 +604,7 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038) —
         /// and <c>disciplineWired</c> is a required parameter of the one public long-form
-        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool)"/>,
+        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool,ClubFinanceEntry[],TransfersState)"/>,
         /// never asserted on a caller's behalf by a forwarding overload (ERR-030-039). The
         /// two sibling guards may key on emptiness because their families have no legitimate empty
         /// state — a career roster never empties — but #44's does: FR-DC-017 drops a row the instant it
@@ -1519,4 +1520,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.33    | 2026-10-20 | —      | L2 doc drift (comments only): the Load summary now names the #31 |
 // |         |            |        | transfers state and counts FOUR cross-blob coherence rules (KD-4 |
 // |         |            |        | cursor, career cursors, finance, transfers), not "TWO".          |
+// | 1.34    | 2026-10-20 | —      | AR round 4 S4-L3 (comments only): the DisciplineState guard summary's <see cref> pointed at a Save overload that no longer exists (the long form gained ClubFinanceEntry[] and TransfersState); it names the real signature. |
 #endregion

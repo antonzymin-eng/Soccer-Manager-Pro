@@ -1,10 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Section 6: Performance
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.4 — AR round 3, ERR-031-013: §6.2 names ValuePlayer (not ValuePlayerPermille), lists the CanRelease probe, and states the bounded on-demand allocation)
+**Last Updated:** October 20, 2026 (v0.5 — AR round 4, ERR-031-014: §6.2 no longer calls the Contract insert amortised)
+**Last Updated (prior):** October 20, 2026 (v0.4 — AR round 3, ERR-031-013: §6.2 names ValuePlayer (not ValuePlayerPermille), lists the CanRelease probe, and states the bounded on-demand allocation)
 **Last Updated (prior):** October 20, 2026 (v0.3 — ERR-031-006: §6.2 `SubmitBid` roster cost restated for the stable-id re-home)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-4 fix pass; prior v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -32,7 +33,7 @@ command time), so a day with no manager action costs **zero** #31 work. `SubmitB
   unchanged id, ERR-031-005) + one `TryGetPlayer` landing confirmation: a fixed number of integer ops + one bounded
   roster mutation. *(ERR-031-006: the commit was originally costed as "a squad-slot allocation + a record move +
   the hook dispatch" — with stable ids there is no slot/id allocation and the re-key hook is deleted.)* **Allocation (AR round 3, ERR-031-013):** the command is NOT allocation-free — `CanRelease` allocates a `PlayerRecord[]`,
-a `Squad` and the selector's buffers, `CanonicalAttributeSum` calls `ToArray`, and the `Contract` insert is amortised —
+a `Squad` and the selector's buffers, `CanonicalAttributeSum` calls `ToArray`, and every `Contract` insert allocates a `SortedDictionary` node —
 but every allocation is bounded (at most `CLUB_SQUAD_SIZE` records) and on-demand: one manager command, off the
 10 Hz / 60 Hz ticks, so the zero-allocation hot-path rule does not apply.
 - **`DeriveCliques`-style scans:** none — #31 has no graph derivation.
@@ -60,4 +61,5 @@ budget concern. No RNG stream registered at minimal (KD-5), so no stream-advance
 | 0.2 | 2026-07-23 | — | AR-4: `SubmitBid` cost corrected to **one** `ApplyTransaction` post (fee-only at minimal; wages deep, FR-TX-005). |
 | 0.3 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): §6.2 `SubmitBid` roster cost is a capacity-only preview + an id-preserving re-home + a `TryGetPlayer` confirmation; the former slot allocation and hook dispatch no longer exist. |
 | 0.4 | 2026-10-20 | — | ERR-031-013 (AR round 3): §6.2 named `ValuePlayerPermille` (the code is `ValuePlayer` / `CounterpartyValue`), omitted the `CanRelease` selector probe, and claimed "no allocation in the common path" — false (`CanRelease` allocates a `PlayerRecord[]`, a `Squad` and selector buffers; `CanonicalAttributeSum` calls `ToArray`). Restated as bounded, on-demand allocation off the tick. |
+| 0.5 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L5): §6.2 said the `Contract` insert is amortised; `TransfersState` keeps its contracts in a `SortedDictionary`, which allocates a node on every insert. The bounded, on-demand, off-tick conclusion is unchanged. |
 #endregion

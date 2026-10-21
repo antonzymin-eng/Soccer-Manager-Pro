@@ -1,12 +1,13 @@
 # Player Progression & Lifecycle #28 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.6 — AR round 3 widening of ERR-028-027: KD-3 no longer says club/nation are read from #27's roster world and that #28 emits a `RegenResult` the roster owner applies; `CommitSeasonBoundary` is the installer; KD-6 names the step as Prepare/Commit)
+**Last Updated:** October 20, 2026 (v0.7 — AR round 4 L12: KD-3's heading no longer says "#27's roster world")
+**Last Updated (prior):** October 20, 2026 (v0.6 — AR round 3 widening of ERR-028-027: KD-3 no longer says club/nation are read from #27's roster world and that #28 emits a `RegenResult` the roster owner applies; `CommitSeasonBoundary` is the installer; KD-6 names the step as Prepare/Commit)
 **Last Updated (prior):** August 23, 2026 (v0.5 — football-judgment proxy review, batch-1 adversarial findings: KD-5 revised (kd5-stale-hard-retirement — it still said retirement is "hard at `RETIREMENT_AGE`", the exact wording FR-PG-013 was revised to remove at v0.4); §1.2's out-of-scope paragraph corrected (s12-29-does-not-exist-stale — it still described #29 as a spec with no assembly). Prior entry below.)
 **Last Updated (prior):** August 22, 2026 (v0.4 — **ERR-028-020**: §1.3's staging split and KD-8 revised. The age-continuity of the growth rate moves from the Stage-3 promise to the Stage-2 shipped tier (§3.1.3), because the tier as described was a cliff rather than a simplification of the curve §1.3 promised; KD-8's byte-for-byte identity moves onto the new ramp dial's OFF position. What stays Stage-3 is the `(PA − CA)` magnitude modulation and per-attribute weighting. Prior entry below.)
 **Last Updated (prior):** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -97,7 +98,7 @@ precedent).
   is the sole attribute-mutation path; #29 supplies a per-player `TrainingInput` the daily step
   **reads** (a method parameter defaulted to `Neutral`), never a parallel mutation. No interface
   against the absent #29 producer (FR-LW-031; the #21 routing-field-seeded-to-identity precedent).
-- **KD-3 (regens — day-deterministic, fresh `PlayerId`, #27's roster world).** `RegenGenerator`
+- **KD-3 (regens — day-deterministic, fresh `PlayerId`, joining the retiree's club).** `RegenGenerator`
   produces one `PlayerRecord` per vacancy from the `progression.regen` stream (reusing #27's
   fixed-budget draw pattern), with a **fresh monotonic `PlayerId`** (never a retiree's — the block
   keys on `PlayerId`); the regen joins the club carrying the retiree it replaces, in his position
@@ -108,7 +109,8 @@ precedent).
   *(Annotated in place, AR round 3 widening of ERR-028-027: this KD still read "read from #27's roster
   world; #28 emits a `RegenResult` the roster owner applies" after ERR-028-027 corrected the same claim in
   FR-PG-012, FR-PG-021 and §2.2 — the sole-writer rule (KD-4/FR-PG-022) and the staged boundary
-  (ERR-028-025) had already replaced it.)*
+  (ERR-028-025) had already replaced it. AR round 4 L12: the KD's HEADING still read "#27's roster world" —
+  restated to "joining the retiree's club"; #28 reads no roster world, it holds the records itself (KD-4).)*
 - **KD-4 (career-state ownership — a #28-owned block, not a #27 record change).** #28 owns a block
   keyed by `PlayerId` holding the **complete career-state `PlayerRecord` set** (identity + evolving
   attributes) **plus** the lifecycle overlay, serialized under `PROGRESSION_SAVE_FORMAT_VERSION`.
@@ -147,4 +149,5 @@ precedent).
 | 0.4 | 2026-08-22 | — | **ERR-028-020** (football-judgment proxy review, batch 1 — spec + code, same commit). §1.3 named "per-attribute CA/PA growth-decline curves keyed to age" as the Stage-3 tier while §3 contained no age-continuous formula anywhere, so what shipped as "the flat step" was a hard discontinuity at an exact integer age rather than a coarse approximation of a curve — pattern (d) as well as (b). The age-continuity of the rate is now Stage 2 (§3.1.3's centred ramps; §3.4's per-player retirement day under ERR-028-021); Stage 3 keeps the `(PA − CA)` magnitude modulation and per-attribute weighting, which is what always distinguished it. **KD-8** revised in the same way: the byte-for-byte identity is the ramp dial's OFF position, exercised by §5 rather than asserted. No other key decision moved. |
 | 0.5 | 2026-08-23 | — | Football-judgment proxy review, batch-1 adversarial findings. **kd5-stale-hard-retirement:** KD-5 still read "Retirement is evaluated on the world tick (hard at `RETIREMENT_AGE`) and only flagged" — the v0.4 row's "no other key decision moved" was true of that commit but left KD-5 stale against the SAME commit's own §3.4/FR-PG-013 revision (ERR-028-020/-021), which removed exactly that wording. Revised to name the per-player `RetirementAgeDays(record)`; the season-boundary / flag-then-remove shape is unchanged. **s12-29-does-not-exist-stale:** §1.2's out-of-scope paragraph still described #29 as a spec #28 must reference "that does not exist yet" — `src/training-system/` has existed since #29 T0 (August 5, 2026) and the seam has been live since #30 T1/T2a (August 8); restated as history, with the no-phantom-interface rule it exists to state left intact. |
 | 0.6 | 2026-10-20 | — | **AR round 3 (ERR-028-027 widening)**, doc-only. KD-3 said "club/nation are read from #27's roster world; #28 emits a `RegenResult` the roster owner applies" — the same claim ERR-028-027 corrected in FR-PG-012 / FR-PG-021 / §2.2 but did not reach here. Restated against the shipped design: the regen joins the retiree's club in his position, no nation is drawn, and `CommitSeasonBoundary` is the installer (KD-4, FR-PG-022; the plan carries the Retired/Regen/RegenClub id lists). KD-6 notes `RunSeasonBoundary` is the name of the step, shipped as Prepare/Commit. No KD changed. |
+| 0.7 | 2026-10-20 | — | **AR round 4 (L12)**, doc-only. KD-3's heading still named "#27's roster world" one revision after the body (v0.6) stopped reading one; restated to "joining the retiree's club". No behaviour change. |
 #endregion

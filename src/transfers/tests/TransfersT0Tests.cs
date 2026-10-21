@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20 (#31 T2; AR round 2 L3; AR round 3 M14/M15 — v1.9)
+// Modified: 2026-10-20 (#31 T2; AR round 2 L3; AR round 3 M14/M15; AR round 4 R4-L1 — v1.10)
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -624,15 +624,19 @@ namespace TacticalDirector.Transfers.Tests
                 }
             }
 
-            // (3) No method body in the assembly stores to a ClubFinances field (the only way to bypass the
-            // ledger on a public-field struct), and the scan is proven able to see one.
-            Assert.IsTrue(StoresToAFinanceField(typeof(BID008Probe).GetMethod(nameof(BID008Probe.WriteBalance)), finance),
-                "non-vacuity: the IL scan detects a direct field store");
+            // (3) No method body in the assembly stores to, or takes the address of, a ClubFinances or
+            // ClubFinanceEntry field (the ways to bypass the ledger on a public-field struct: stfld/stsfld, and
+            // ldflda/ldsflda feeding a `ref` write), and the scan is proven able to see each shape.
+            Assert.IsTrue(StoresToAFinanceField(typeof(BID008Probe).GetMethod(nameof(BID008Probe.WriteBalance))),
+                "non-vacuity: the IL scan detects a direct field store (stfld)");
+            Assert.IsTrue(StoresToAFinanceField(typeof(BID008Probe).GetMethod(nameof(BID008Probe.WriteBalanceThroughARef))),
+                "non-vacuity: the IL scan detects a field address taken for a ref write (ldflda)");
             foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
             {
                 foreach (System.Reflection.MethodBase method in Methods(type, all))
                 {
-                    Assert.IsFalse(StoresToAFinanceField(method, finance), type.Name + "." + method.Name + " writes a ClubFinances field directly");
+                    Assert.IsFalse(StoresToAFinanceField(method),
+                        type.Name + "." + method.Name + " writes or takes the address of a ClubFinances/ClubFinanceEntry field directly");
                 }
             }
         }
@@ -656,12 +660,14 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
-        public void TheTransfersAssembly_IsDrawFree_NoMethodCallsOrConstructsAnRngType()
+        public void TheTransfersAssembly_RegistersNoRngStream_NoMethodCallsOrConstructsAnRngType()
         {
-            // T-TX-NEU-001 (AR round 3, M14): the "no RNG stream exists" half. #31 is draw-free (G3/G11). The
-            // assembly legitimately uses DeterministicSim's save-framing helpers, so the assertion is about
-            // the RNG TYPES, not the assembly: no method may call into, or construct, System.Random,
-            // DeterministicRngService or RngStreamState. The probe proves the scan can see a construction.
+            // FR-TX-016 / G3 (AR round 3, M14; scope narrowed at AR round 4 R4-L1): the minimal tier registers no
+            // RNG stream. The assembly legitimately uses DeterministicSim's save-framing helpers, so the
+            // assertion is about the RNG TYPES, not the assembly: no method may call into, or construct,
+            // System.Random, DeterministicRngService or RngStreamState. This is NOT a proof of general
+            // determinism — clock/entropy reads and a hand-rolled mixer are the separate test below. The probe
+            // proves the scan can see a construction.
             System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
                 | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
                 | System.Reflection.BindingFlags.DeclaredOnly;
@@ -676,6 +682,40 @@ namespace TacticalDirector.Transfers.Tests
                 foreach (System.Reflection.MethodBase method in Methods(type, all))
                 {
                     Assert.IsFalse(CallsOrConstructs(method, isRng), type.Name + "." + method.Name + " reaches an RNG type");
+                }
+            }
+        }
+
+        [Test]
+        public void TheTransfersAssembly_ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant()
+        {
+            // The two ways a draw-free assembly could still be non-replayable that the RNG-type scan cannot see:
+            // a wall-clock / process-entropy read (src/CLAUDE.md Determinism: DateTime.Now, Guid.NewGuid, ...)
+            // and a hand-rolled SplitMix64 mixer (its two multipliers and the golden-gamma increment would be
+            // 64-bit literals in the IL). Both are scanned with a probe proving the scan can see them.
+            System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
+                | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.DeclaredOnly;
+            Func<System.Reflection.MemberInfo, bool> isAmbient = m =>
+                (m.DeclaringType == typeof(DateTime) && (m.Name == "get_Now" || m.Name == "get_UtcNow" || m.Name == "get_Today"))
+                || (m.DeclaringType == typeof(DateTimeOffset) && (m.Name == "get_Now" || m.Name == "get_UtcNow"))
+                || (m.DeclaringType == typeof(Guid) && m.Name == "NewGuid")
+                || (m.DeclaringType == typeof(Environment) && (m.Name == "get_TickCount" || m.Name == "get_TickCount64"))
+                || (m.DeclaringType == typeof(System.Diagnostics.Stopwatch) && m.Name == "GetTimestamp");
+            ulong[] mixers = { 0x9E3779B97F4A7C15UL, 0xBF58476D1CE4E5B9UL, 0x94D049BB133111EBUL };
+
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Clock)), isAmbient),
+                "non-vacuity: the IL scan detects a wall-clock read");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Entropy)), isAmbient),
+                "non-vacuity: the IL scan detects Guid.NewGuid");
+            Assert.IsTrue(LoadsA64BitConstant(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Mix)), mixers),
+                "non-vacuity: the IL scan detects a SplitMix64 literal");
+            foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
+            {
+                foreach (System.Reflection.MethodBase method in Methods(type, all))
+                {
+                    Assert.IsFalse(CallsOrConstructs(method, isAmbient), type.Name + "." + method.Name + " reads a clock or ambient entropy");
+                    Assert.IsFalse(LoadsA64BitConstant(method, mixers), type.Name + "." + method.Name + " embeds a SplitMix64 mixing constant");
                 }
             }
         }
@@ -710,13 +750,45 @@ namespace TacticalDirector.Transfers.Tests
 
         private static void AssertNotFinanceShaped(Type owner, string name, Type memberType, Type finance)
         {
-            Type element = memberType.IsArray ? memberType.GetElementType() : memberType;
-            Assert.AreNotEqual(finance, element, owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
-            Assert.AreNotEqual(typeof(ClubFinanceEntry), element, owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
+            // Unwraps arrays, by-refs and every generic argument (Nullable<ClubFinances>, List<ClubFinanceEntry>,
+            // Dictionary<int, ClubFinances>, ...), so a wrapped finance value is as visible as a bare one.
+            Assert.IsFalse(MentionsType(memberType, finance), owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
+            Assert.IsFalse(MentionsType(memberType, typeof(ClubFinanceEntry)), owner.Name + "." + name + " holds #40 finance state (a parallel ledger)");
             foreach (string cash in new[] { "Balance", "Cash", "Ledger", "Wallet" })
             {
                 Assert.IsFalse(name.IndexOf(cash, StringComparison.OrdinalIgnoreCase) >= 0, owner.Name + "." + name + " is cash-shaped");
             }
+        }
+
+        internal static bool MentionsType(Type type, Type target)
+        {
+            if (type == null)
+            {
+                return false;
+            }
+
+            if (type == target)
+            {
+                return true;
+            }
+
+            if (type.HasElementType)
+            {
+                return MentionsType(type.GetElementType(), target);
+            }
+
+            if (type.IsGenericType)
+            {
+                foreach (Type argument in type.GetGenericArguments())
+                {
+                    if (MentionsType(argument, target))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> Methods(
@@ -737,8 +809,47 @@ namespace TacticalDirector.Transfers.Tests
         private static bool CallsOrConstructs(System.Reflection.MethodBase method, Func<System.Reflection.MemberInfo, bool> match) =>
             IlReferences(method, 0x28, match) || IlReferences(method, 0x6F, match) || IlReferences(method, 0x73, match);
 
-        private static bool StoresToAFinanceField(System.Reflection.MethodBase method, Type finance) =>
-            IlReferences(method, 0x7D, m => m is System.Reflection.FieldInfo && m.DeclaringType == finance);
+        // stfld (0x7D), stsfld (0x80), ldflda (0x7C) or ldsflda (0x7F) of a field declared on ClubFinances or
+        // ClubFinanceEntry: every way to write a #40 value other than through FinanceLedger. (Reading a field
+        // — ldfld/ldsfld — is legal and not flagged.)
+        private static bool StoresToAFinanceField(System.Reflection.MethodBase method)
+        {
+            Func<System.Reflection.MemberInfo, bool> isFinanceField = m => m is System.Reflection.FieldInfo
+                && (m.DeclaringType == typeof(ClubFinancesState) || m.DeclaringType == typeof(ClubFinanceEntry));
+            return IlReferences(method, 0x7D, isFinanceField) || IlReferences(method, 0x80, isFinanceField)
+                || IlReferences(method, 0x7C, isFinanceField) || IlReferences(method, 0x7F, isFinanceField);
+        }
+
+        // ldc.i8 (0x21) followed by one of `values` (8 little-endian bytes). The 8-byte operand is specific
+        // enough that a stray byte cannot realistically collide with a mixer constant.
+        private static bool LoadsA64BitConstant(System.Reflection.MethodBase method, ulong[] values)
+        {
+            System.Reflection.MethodBody body = method.GetMethodBody();
+            if (body == null)
+            {
+                return false;
+            }
+
+            byte[] il = body.GetILAsByteArray();
+            for (int i = 0; i + 8 < il.Length; i++)
+            {
+                if (il[i] != 0x21)
+                {
+                    continue;
+                }
+
+                ulong operand = BitConverter.ToUInt64(il, i + 1);
+                foreach (ulong v in values)
+                {
+                    if (operand == v)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
         // True when the method's IL holds `opcode` followed by a metadata token that resolves to a member
         // `match` accepts (0x7D = stfld, 0x73 = newobj). Every byte offset is tried, so an instruction
@@ -779,6 +890,14 @@ namespace TacticalDirector.Transfers.Tests
                 catch (NotSupportedException)
                 {
                 }
+                catch (BadImageFormatException)
+                {
+                    // Unity's Mono reports a stray byte that is not a metadata token this way rather than as an
+                    // ArgumentException; it is not an instruction boundary, so it is skipped, not an error.
+                }
+                catch (TypeLoadException)
+                {
+                }
             }
 
             return false;
@@ -792,9 +911,30 @@ namespace TacticalDirector.Transfers.Tests
                 finances.Balance = 1L;
             }
 
+            public static void WriteBalanceThroughARef(ref ClubFinancesState finances)
+            {
+                ref long balance = ref finances.Balance;
+                balance -= 1L;
+            }
+
             public static int Draw()
             {
                 return new Random(1).Next();
+            }
+
+            public static long Clock()
+            {
+                return DateTime.UtcNow.Ticks;
+            }
+
+            public static Guid Entropy()
+            {
+                return Guid.NewGuid();
+            }
+
+            public static ulong Mix(ulong x)
+            {
+                return unchecked((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9UL);
             }
         }
 
@@ -953,4 +1093,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.7     | 2026-10-20 | —      | #31 T2: fake port gains CarriesClub/CanRelease and throws on an impossible preview (ERR-031-010); locks SquadDepleted (ERR-031-007), unknown-counterparty fail-loud (ERR-031-010) and the un-contracted sale (ERR-031-009). |
 // | 1.8     | 2026-10-20 | —      | AR round 2 L3: the fake's CanRelease throws for an unknown club or a player not on the club (false is depletion only). |
 // | 1.9     | 2026-10-20 | —      | AR round 3 M15 (T-TX-BID-008): SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState — ledger-equivalence of an accepted buy's finance, a reflection scan for finance-typed or cash-named members across the assembly, and an IL stfld scan (with a violating probe proving it can see a store); M14 TheTransfersAssembly_IsDrawFree_… (no call/newobj of System.Random, DeterministicRngService or RngStreamState; probe-proven scan) backing T-TX-NEU-001's 'no RNG stream' half; M15 TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState (T-TX-REKEY-003: no reference to the assemblies owning PlayerId-keyed state). |
+// | 1.10    | 2026-10-20 | —      | AR round 4 R4-L1: the T-TX-BID-008 IL scan also flags ldflda/ldsflda/stsfld of a ClubFinances/ClubFinanceEntry field (probe: a ref write through ldflda); AssertNotFinanceShaped unwraps Nullable/generic arguments; the RNG scan is renamed ...RegistersNoRngStream... and scoped to FR-TX-016/G3; new ...ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant scan with probes; the token-resolve catch also covers BadImageFormatException and TypeLoadException (Unity Mono). |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/season-save/SeasonCalendar.cs
 // Created:  2026-07-25
+// Modified: 2026-10-20 (AR round 4 S4-L2 — v1.4: RequireCursorInvariant, the one KD-4 constructor refusal.)
 // Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.3 (cursor + day advance), Appendix B row 8,
@@ -172,6 +173,26 @@ namespace TacticalDirector.SeasonSave
             IsSeasonComplete || _roundToDay[NextRoundIndex] >= currentWorldDay;
 
         /// <summary>
+        /// The ONE constructor-time refusal of a violated KD-4 invariant (AR round 4 S4-L2: <c>League.CreateLoop</c>
+        /// and <c>SeasonLoop</c>'s constructor each carried a copy of this predicate and message). A no-op when
+        /// <see cref="SatisfiesCursorInvariant"/> holds.
+        /// </summary>
+        /// <param name="currentWorldDay">The world day to check the cursor against.</param>
+        /// <param name="paramName">The argument the caller reports as the offender (<c>world</c> at
+        /// <c>League.CreateLoop</c>, <c>season</c> at <c>SeasonLoop</c>'s constructor).</param>
+        /// <exception cref="System.ArgumentException">The next fixture day is before <paramref name="currentWorldDay"/>.</exception>
+        internal void RequireCursorInvariant(uint currentWorldDay, string paramName)
+        {
+            if (!SatisfiesCursorInvariant(currentWorldDay))
+            {
+                throw new System.ArgumentException(
+                    $"KD-4 cursor invariant violated: the world is on day {currentWorldDay} but the "
+                    + $"season's next fixture is day {NextFixtureDay()} (round {NextRoundIndex}).",
+                    paramName);
+            }
+        }
+
+        /// <summary>
         /// This calendar's round spacing shifted forward into the next season (#30 §3.5 step (c′)): every
         /// round day moves by one season length plus <paramref name="breakDays"/>, and the cursor returns
         /// to round 0. The first round of the new season therefore lands exactly
@@ -301,4 +322,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | private constructor is reached directly. Plus a positive-breakDays |
 // |         |            |        | gate — at zero a single-round calendar reproduces itself.          |
 // | 1.3     | 2026-09-08 | —      | Snapshot the supplied day mapping before validating that snapshot. |
+// | 1.4     | 2026-10-20 | —      | AR round 4 S4-L2: RequireCursorInvariant — the single KD-4 constructor refusal that League.CreateLoop and SeasonLoop's constructor now share (was a duplicated predicate and message). |
 #endregion

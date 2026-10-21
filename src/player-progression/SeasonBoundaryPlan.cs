@@ -1,6 +1,7 @@
 // File:     src/player-progression/SeasonBoundaryPlan.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20 (AR round 1 L4: PlannedSquadFor doc — post-commit snapshot semantics; doc-only — v1.1)
+// Modified: 2026-10-20 (AR round 4 L11: the immutability claim scoped to the PUBLIC surface; doc-only — v1.2)
+//           2026-10-20 (AR round 1 L4: PlannedSquadFor doc — post-commit snapshot semantics; doc-only — v1.1)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.4 (RunSeasonBoundary as amended by ERR-028-025),
 //           FR-PG-012/015/019/021/024; Season & Competition Loop #30 §3.5 step (d); Code Standards #20
@@ -17,9 +18,12 @@ using TacticalDirector.PlayerDatabase;
 namespace TacticalDirector.PlayerProgression
 {
     /// <summary>
-    /// One season boundary's roster mutation, staged (#28 §3.4, ERR-028-025). Immutable to every caller:
-    /// the replacement arrays are internal and only <see cref="ProgressionEngine.CommitSeasonBoundary"/>
-    /// installs them; the public surface is read-only copies.
+    /// One season boundary's roster mutation, staged (#28 §3.4, ERR-028-025). Immutable through its PUBLIC
+    /// surface, which is read-only copies. The replacement arrays and the constructor are <c>internal</c>
+    /// and only <see cref="ProgressionEngine.CommitSeasonBoundary"/> installs them — but the assembly's
+    /// <c>InternalsVisibleTo</c> grants are assembly-wide (AR round 4 L11), so TacticalDirector.SeasonSave and
+    /// the two test assemblies can construct a plan and read those arrays directly; "immutable" binds
+    /// every other caller, not those three.
     /// <para>
     /// <b>Why staged.</b> #30's <c>RollToNextSeason</c> has exactly one write that can fail
     /// (<c>BeginNextSeason</c>). A boundary that mutated the store in place before it would leave a refused
@@ -112,4 +116,5 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | roster mutation — #28 §3.4's RetirementResult/RegenResult as one |
 // |         |            |        | plan installed only after #30's roll can no longer fail.         |
 // | 1.1     | 2026-10-20 | —      | AR round 1 L4 (ERR-028-025), doc-only: PlannedSquadFor states that after CommitSeasonBoundary (which installs copies) the plan is a historical snapshot, not a live view. |
+// | 1.2     | 2026-10-20 | —      | AR round 4 L11, doc-only: the "Immutable to every caller" claim is scoped to the public surface — the assembly-wide InternalsVisibleTo grants expose the internal constructor and arrays to SeasonSave and the test assemblies. |
 #endregion

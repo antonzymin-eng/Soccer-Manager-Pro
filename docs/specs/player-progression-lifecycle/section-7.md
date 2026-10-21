@@ -1,9 +1,10 @@
 # Player Progression & Lifecycle #28 — Section 7: Future Extensions & Implementation Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** October 20, 2026 (v0.4 — AR round 4 L12: §7.1 brought current against the landed code (T0's `RetirementResult` / `RegenResult` superseded by `SeasonBoundaryPlan`; T2's boundary pair and the registered regen stream); §7.2's stale "Stage-2 hard `RETIREMENT_AGE`" and "Stage-2 club/nation read" restated)
+**Last Updated (prior):** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -15,22 +16,29 @@ so a season with the engine wired but the dial off ages players by the literal �
 identity.
 
 - **T0 (value types + the §4.3 identity, behaviour-defining but self-contained).** `PlayerLifecycle`
-  / `TrainingInput` / `RetirementResult` / `RegenResult` / `LifecycleViewModel`; `GrowthProjection`
+  / `TrainingInput` / `LifecycleViewModel`; `GrowthProjection`
   (§3.1, `curveEnabled` off = the §4.3 step); `AbilityModel` (`ComputeCA` + band classify + weighted
   spend); `RegenGenerator` (§3.3, reusing #27's draw pattern); `PlayerProgressionConstants`. New
   assembly `TacticalDirector.PlayerProgression`. Not yet driven by anything (unit-tested standalone —
-  the §5 determinism/identity/regen locks). Unlike a typical behaviour-neutral T0 this *defines* the
+  the §5 determinism/identity/regen locks). *(Annotated in place, AR round 4 L12: this list also named
+  `RetirementResult` / `RegenResult`. They were never built — `SeasonBoundaryPlan` (landed with the boundary,
+  ERR-028-025) carries what they were sketched to carry, so they are not T0 deliverables.)* Unlike a typical behaviour-neutral T0 this *defines* the
   aging behaviour, but it is inert until T2 wires the driver, so it lands with its own reviewed change.
 - **T1 (persistence).** `ProgressionSaveCodec` + `ProgressionEngine.Snapshot()/Restore()`
   (`PROGRESSION_SAVE_FORMAT_VERSION` = 1); the §5.7 fail-loud + round-trip locks. The season-save
   composition is a **#30 change** (its root frames the blob + bumps `SEASON_SAVE_FORMAT_VERSION`) —
   co-sequenced, not landed here.
-- **T2 (wire the driver).** `ProgressionEngine.AdvanceDay` / `RunSeasonBoundary` wired at #30's
-  reserved day-advance seam + season-boundary "advance ages via #28" slot (#30 KD-2 / KD-6). **This
+- **T2 (wire the driver).** `ProgressionEngine.AdvanceDay` and the season-boundary pair
+  `PrepareSeasonBoundary` / `CommitSeasonBoundary` (`RunSeasonBoundary` is the NAME of the step, ERR-028-027) wired at
+  #30's reserved day-advance seam + season-boundary "advance ages via #28" slot (#30 KD-2 / KD-6). **This
   requires #30 implemented first** (the Wave-1 → Wave-2 ordering guarantees it — #28 T2 must not land
   before #30's seam code exists, or it would wire against a phantom seam). The `progression.regen` RNG
   stream registers here (the first draw site); the #16 `0x20`/82 promotion back-prop lands with it.
   The optional `#19` capstone (T-PG-SIM-001) lands here.
+  *(Landed, annotated in place, AR round 4 L12: `AdvanceDay` wired at T2a (August 8, 2026); the boundary pair and
+  the boundary-scoped regen stream — `DOMAIN_TAG` `0x20`, ordinal 82, one registration per club — landed with
+  ERR-028-025 (October 19, 2026), whose regen generation is that stream's one draw site. All three are
+  INTERNAL, a seam for #30's composition root (§4.5, ERR-028-028).)*
 - **T3 (deep tier + #29).** The `curveEnabled` deep CA/PA growth-decline curve (per-attribute, age ×
   position × CA→PA-gap keyed); the #29 training-input consumption (a non-neutral `TrainingInput` from
   #29's producer). The `[GT]` balance pass pins the illustrative magnitudes (the #21 §9.2 precedent).
@@ -40,10 +48,13 @@ identity.
 - **The deep CA/PA curve** (per-attribute age/position/gap-keyed growth-decline) — the `curveEnabled`
   path; Stage-3. Adds no new draw site if kept deterministic; a stochastic **growth-jitter** dial
   would add an APPEND-only draw on the `progression.*` stream (documented, §4.3).
-- **Probabilistic retirement** past a soft threshold (vs. the Stage-2 hard `RETIREMENT_AGE`) — adds an
-  APPEND-only draw site; Stage-3.
-- **Nation/second-nationality / DOB modeling** for regens beyond the Stage-2 club/nation read — folds
-  into #36 (national teams) / #47 (new-game setup) when those land.
+- **Probabilistic retirement** past a soft threshold (vs. the shipped deterministic, attribute-and-position-derived
+  `AbilityModel.RetirementAgeDays`, ERR-028-021 — no draw; it replaced the single hard `RETIREMENT_AGE`
+  comparison this line named) — adds an APPEND-only draw site; Stage-3.
+- **Nation/second-nationality / DOB modeling** for regens — a regen takes the retiree's club (and position) and
+  no nation is drawn, because nation is not a `PlayerRecord` field (ERR-028-027; the earlier "Stage-2 club/nation
+  read" from a reference roster was never built and is retired) — folds into #36 (national teams) / #47 (new-game
+  setup) when those land.
 - **The #42 youth-academy structure** (facilities → intake quality — the facility level itself is **#53**'s,
   per ERR-028-002 at #53's approval; #42 consumes it as a value input and #28 stays out of scope for both)
   modulates regen quality via the
@@ -65,4 +76,5 @@ section-file stage.
 | 0.1 | 2026-07-23 | — | Initial future-extensions + T0–T3 implementation plan; Stage-3 deferrals; the #29 seam contract for #29's author. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-27 | — | **ERR-028-002** (at #53's approval): the #42 deferral names **#53** as the facility producer behind the academy structure. |
+| 0.4 | 2026-10-20 | — | **AR round 4 (L12)**, doc-only. §7.1 listed `RetirementResult` / `RegenResult` as T0 deliverables and `RunSeasonBoundary` plus the regen stream as future T2 work, all superseded by ERR-028-025 / ERR-028-027 (annotated in place). §7.2's "Stage-2 hard `RETIREMENT_AGE`" (stale since ERR-028-021) and "Stage-2 club/nation read" (stale since ERR-028-027) restated. |
 #endregion

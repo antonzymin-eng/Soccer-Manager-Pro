@@ -1,14 +1,15 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.11 — AR round 3, ERR-031-013: Appendix A matches TransfersConstants.cs exactly)
+**Last Updated:** October 20, 2026 (v0.12 — AR round 4, ERR-031-014: Appendix A regains the TRANSFERS_STAFF_MULT_IDENTITY row #34 cites)
+**Last Updated (prior):** October 20, 2026 (v0.11 — AR round 3, ERR-031-013: Appendix A matches TransfersConstants.cs exactly)
 **Last Updated (prior):** October 20, 2026 (v0.10 — ERR-031-011: `SUMMER_WINDOW_IN_SEASON_DAYS` replaces `SUMMER_WINDOW_LENGTH_DAYS`)
 **Last Updated (prior):** October 20, 2026 (v0.9 — T2: ERR-031-008 window constants)
 **Last Updated (prior):** October 19, 2026 (v0.8 — ERR-031-005: contract membership is a roster check)
 **Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: Appendix B gains the leading `XFER` magic and pins `clubCount ∈ {0,1}` as a wiring fact; Appendix A gains `TRANSFERS_SAVE_MAGIC`; T1 live)
 **Last Updated (prior):** September 14, 2026 (v0.6 — require a non-empty young-age band)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -24,7 +25,8 @@
 | `TRANSFERS_SAVE_CONTRACT_RECORD_BYTES` | `[DERIVED]` | 16 | one contract record: PlayerId i32 + WagePerPeriod i64 + LengthSeasons i32. |
 | `TRANSFERS_SAVE_MAX_CLUBS` | `[FIXED]` | 1 | most club records the block may carry: `TransfersState` is scoped to the ONE managed club (§2.2), so a block carries 0 (not wired) or 1. |
 | `PERMILLE_DENOM` | `[FIXED]` | 1000 | shared integer per-mille denominator. |
-| `IDENTITY_MULTIPLIER_PERMILLE` | `[FIXED]` | 1000 | the identity multiplier for the deferred #34 staff and #33 personality modulation (one constant: the two deep-tier multipliers share the same identity). #34 cites it as `TRANSFERS_STAFF_MULT_IDENTITY`; that name, and a separate `TRANSFERS_PERSONALITY_MULT_IDENTITY`, were never declared in code (AR round 3, ERR-031-013). |
+| `IDENTITY_MULTIPLIER_PERMILLE` | `[FIXED]` | 1000 | the identity multiplier for the deferred #34 staff and #33 personality modulation (one constant: the two deep-tier multipliers share the same identity). #34 cites it by the name in the `TRANSFERS_STAFF_MULT_IDENTITY` row below; a separate `TRANSFERS_PERSONALITY_MULT_IDENTITY` was never declared in code and nothing cites it (AR round 3, ERR-031-013). |
+| `TRANSFERS_STAFF_MULT_IDENTITY` | `[DERIVED]` | `IDENTITY_MULTIPLIER_PERMILLE` (1000) | the `staffMult` identity #34 produces by default and cites as `[CROSS]` from this appendix (#34 `appendices.md`, FR-TX-011). A spec-level name for the one shared constant above: the code declares only `IDENTITY_MULTIPLIER_PERMILLE`, so there is no second symbol to drift (AR round 4, ERR-031-014 — AR round 3 had dropped this row, leaving #34's citation dangling). |
 | `VALUE_PER_RATING_POINT` | `[GT]` | illustrative | integer currency per one full canonical mean-attribute point; base computation keeps `sum/ATTRIBUTE_COUNT` exact until final division. |
 | `PEAK_AGE_MIN` / `PEAK_AGE_MAX` | `[GT]` | illustrative | inclusive neutral-age band; `PEAK_AGE_MIN > 0` and `PEAK_AGE_MAX >= PEAK_AGE_MIN`, preserving a non-empty young-discount region. |
 | `YOUNG_DISCOUNT_PERMILLE` | `[GT]` | illustrative | `[0,1000)`; must be a real discount below the peak. |
@@ -115,4 +117,5 @@ For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `A
 | 0.9 | 2026-10-20 | — | #31 T2 (ERR-031-008): `SUMMER_WINDOW_LENGTH_DAYS` is an inclusive length; `SEASON_START_WORLD_DAY` withdrawn (never defined by #30; the start is the season-begin day). |
 | 0.10 | 2026-10-20 | — | ERR-031-011 (AR round 2): `SUMMER_WINDOW_IN_SEASON_DAYS` (`[GT]`, fallback 38) replaces the roll-day-anchored `SUMMER_WINDOW_LENGTH_DAYS` (withdrawn row kept); the `SEASON_START_WORLD_DAY` withdrawal row names `SummerWindowFor`. |
 | 0.11 | 2026-10-20 | — | ERR-031-013 (AR round 3): Appendix A brought to `TransfersConstants.cs`: gains `TRANSFERS_SAVE_HEADER_BYTES` (12), `_CLUB_RECORD_BYTES` (20), `_CONTRACT_RECORD_BYTES` (16) and `_MAX_CLUBS` (1), which the T1 codec declares; `DEFAULT_WAGE_*` (`DefaultWageFor`) becomes the flat `DEFAULT_WAGE_PER_PERIOD`; the never-declared `TRANSFERS_STAFF_MULT_IDENTITY` / `TRANSFERS_PERSONALITY_MULT_IDENTITY` rows are replaced by the single shipped `IDENTITY_MULTIPLIER_PERMILLE` (#34's cited name recorded as an alias); the tag note maps the PascalCase code names and config keys. |
+| 0.12 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L6): AR round 3 removed `TRANSFERS_STAFF_MULT_IDENTITY` from Appendix A while #34 `appendices.md` (and its §3/§7/§8) still cite it as a `[CROSS]` constant sourced here. Re-added as a `[DERIVED]` alias of `IDENTITY_MULTIPLIER_PERMILLE` (one source tag; no second code symbol), so #34 stays correct untouched. |
 #endregion

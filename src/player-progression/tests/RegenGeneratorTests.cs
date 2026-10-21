@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 1 L1 — production ordinal/site-id consts — v1.6)
+// Modified: 2026-10-20 (AR round 4 L12 — the stale Binomial(25, 0.25) comment restated; comment-only — v1.7)
+//           2026-10-20 (AR round 1 L1 — production ordinal/site-id consts — v1.6)
 //           (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
 //           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
 //           (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
@@ -176,7 +177,8 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_TakesTheRetireesPosition_AndBiasesTheAttributesForIt(PlayerPosition position)
         {
             // ERR-028-024: a 1:1 replacement keeps the squad's shape. Under the retired uniform draw every
-            // line drifted to Binomial(25, 0.25) after one full turnover.
+            // line drifted to Binomial(squad size, 0.25) after one full turnover (squad size 23 in today's
+            // bootstrap, ERR-031-004; 25 when this was written).
             var rng = NewRng(3131UL, clubId: 6, out int idx);
             (PlayerRecord rec, PlayerLifecycle life) =
                 RegenGenerator.GenerateRegen(rng, idx, clubId: 6, newPlayerId: 900, position, WorldDay);
@@ -294,4 +296,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | went a day undetected because nothing compared the two sites.  |
 // | 1.5     | 2026-10-19 | —      | ERR-028-024: every call passes the inherited position; new locks — the regen takes the retiree's position (all four), the position moves no other identity draw, an undefined position throws. |
 // | 1.6     | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025): the test-local ordinal literal 82 and site id "player-progression.regen" ("until the production const lands at T2") replaced by PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION / REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION, so a constant change can no longer leave this fixture drawing from a stream production never registers. |
+// | 1.7     | 2026-10-20 | —      | AR round 4 L12 (comment-only): "Binomial(25, 0.25)" restated as Binomial(squad size, 0.25) — 23 today (ERR-031-004), as RegenGenerator's own doc already says. |
 #endregion

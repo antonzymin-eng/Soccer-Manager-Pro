@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: §7.2 records the counterparty-ledger owner decision)
+**Last Updated:** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: §7.2 records option (b) as the interim behaviour and the counterparty-ledger choice as an open owner decision)
+**Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: §7.2 records the counterparty-ledger owner decision)
 **Last Updated (prior):** October 20, 2026 (v0.12 — T-TX-REKEY-005 no longer deferred)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: §7.2 no longer defers the spend reset / next window; T2 bullet names ERR-031-011)
 **Last Updated (prior):** October 20, 2026 (v0.10 — T2 landed)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** September 21, 2026 (v0.7 — PR #407 current-main reconciliation: T0 status finalized; T2 finance-composition staging obligation recorded)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup: T2 hook regression pinned)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction to T0 public API and valuation contract; prior v0.4 T0 review close-out, v0.3 T0 authored, v0.2 AR-3, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -70,12 +71,14 @@
 - #34 staff influence.
 - Multi-day counter negotiation; T0 `CounterOffered` remains synchronous/no-state.
 - Indexed/cached player search.
-- **Mirror posting to the counterparty AI club's #40 entry — OWNER DECISION (AR round 3, ERR-031-013; open-issues
-  `transfer-counterparty-ledger`).** Minimal posts the fee to the MANAGED club only (KD-2), so AI clubs' `FinanceView`
+- **Mirror posting to the counterparty AI club's #40 entry — OPEN OWNER DECISION (AR round 3, ERR-031-013; open-issues
+  `transfer-counterparty-ledger`).** Option (b) is the recorded INTERIM behaviour the minimal tier ships (the
+  counterparty is left unposted); the (a)-vs-(b) choice has NOT been made by the project owner and nothing here
+  claims it has. Minimal posts the fee to the MANAGED club only (KD-2), so AI clubs' `FinanceView`
   and `SettleFinances` never see transfer cash and money enters or leaves the league on every transfer. Option (a):
   post the mirror leg (a buy credits the seller, a sale debits the buyer) inside the same staged, publish-on-`Accepted`
   seam as the managed leg, which needs a #40 cross-reference for the AI club's affordability and an invariant
-  that the two entries change by equal and opposite amounts. Option (b): keep the minimal tier as is.
+  that the two entries change by equal and opposite amounts. Option (b): keep the minimal tier as is (the interim behaviour that ships).
 - *(No longer deferred — T-TX-REKEY-005, the production proof that a real #30 re-home carries the player's whole
   career — #28 record + lifecycle, #29/#41/#30 rows, #44 tally — under the same id and leaves nothing behind, landed
   with AR round 2 in `SeasonTransfersT2Tests`; see §5.3. ERR-031-006 had restated it from "proof that #30 hook
@@ -124,4 +127,5 @@
 | 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): §7.2 drops "`CommittedSpendThisWindow` reset/next-window mechanics" from the deferred list — T2 landed both (§3.7 step (d″), §3.5); the T2 bullet records ERR-031-011. The T-TX-REKEY-005 deferral line is left for the pass that completes that lock. |
 | 0.12 | 2026-10-20 | — | AR round 2: §7.2 drops the T-TX-REKEY-005 production proof from the deferred list — it is live (§5.3). |
 | 0.13 | 2026-10-20 | — | ERR-031-013 (AR round 3, M16): §7.2 adds the deferred owner decision on mirror-posting transfer cash to the counterparty AI club's #40 entry (option (a) mirror post in the same staged seam vs (b) keep the minimal tier), cross-referencing open-issues `transfer-counterparty-ledger` and KD-2. |
+| 0.14 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L3): §7.2 states that option (b) ships as the recorded interim behaviour and that the (a)-vs-(b) choice has NOT been made by the project owner (the 0.13 wording read as a recorded owner decision). |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/SeasonBoundaryTests.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20 (AR round 3 L7: the regen pin covers every drawn value + the lifecycle; the tautological stream-index assert removed - v1.3)
+// Modified: 2026-10-20 (AR round 4 L16: Prepare refuses a worldDay outside the carried cursors' span - v1.4)
+//           2026-10-20 (AR round 3 L7: the regen pin covers every drawn value + the lifecycle; the tautological stream-index assert removed - v1.3)
 //           (AR round 2 M8/M10: season-0 seed golden, ClubB stream, regen pin - v1.2)
 //           (AR round 1 P-M2: golden seed, non-index club ids, cursor exhaustion - v1.1)
 // Author:   —
@@ -325,6 +326,28 @@ namespace TacticalDirector.PlayerProgression.Tests
                 WorldSeed, 1, PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL));
         }
 
+        [TestCase(Day - 1u)]
+        [TestCase(Day + 1u)]
+        public void Prepare_OnADayOutsideTheCarriedCursors_IsRefused(uint worldDay)
+        {
+            // AR round 4 L16: every carried player's cursor sits on Day. A regen constructed one day ahead
+            // would skip that day's step (ERR-030-027 same-day idempotence) and trail his peers for life.
+            ProgressionEngine store = StoreWithRetirees(out _);
+
+            ArgumentException ex = Assert.Throws<ArgumentException>(
+                () => store.PrepareSeasonBoundary(WorldSeed, 1, worldDay));
+            Assert.That(ex.ParamName, Is.EqualTo("worldDay"));
+            Assert.DoesNotThrow(() => store.PrepareSeasonBoundary(WorldSeed, 1, Day), "the cursors' own day is legal");
+        }
+
+        [Test]
+        public void Prepare_OnAnEmptyStore_HasNoCursorSpanToViolate()
+        {
+            SeasonBoundaryPlan plan = ProgressionEngine.Empty.PrepareSeasonBoundary(WorldSeed, 1, 12345u);
+
+            Assert.That(plan.RetiredPlayerIds.Count, Is.EqualTo(0));
+        }
+
         // ── fixtures ─────────────────────────────────────────────────────────────────
 
         // Two five-man clubs: ClubA = 3 (player ids 75..79) and ClubB = 7 (175..179) - club ids that are not
@@ -410,4 +433,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // | 1.1     | 2026-10-20 | —      | AR round 1 P-M2 (ERR-028-025): + DeriveRegenSeed golden (0x443E7491A6459B6A for (0xB0DA2028, 3), computed with an independent Python SplitMix64 mirror) and TwoWorlds_SameSeason_DrawDifferentRegens, so dropping the world seed fails; fixture clubs are now 3 and 7 (ids were array indices), so keying the regen stream on the loop index fails the draw-order lock; + Prepare_WithAnExhaustedIdCursor_IsRefused (NextPlayerId == int.MaxValue). |
 // | 1.2     | 2026-10-20 | —      | AR round 2 (ERR-028-027): M8 + DeriveRegenSeed_AtSeasonZero golden (0xD3E409D7732EBE4F for (0xB0DA2028, 0), independent masked Python mirror) - a career's first boundary closes season 0; M10 TheIdAndDrawOrders now registers a separate ClubB stream and asserts ClubB's regen is that stream's first reservation (a registration hoisted out of the club loop fails it) + TheFirstRegen_IsPinnedAsAnAbsoluteGolden (characterization pin, so a draw-order change without a REGEN_STREAM_VERSION bump fails). |
 // | 1.3     | 2026-10-20 | —      | AR round 3 L7: TheFirstRegen_IsPinnedAsAnAbsoluteGolden… pins ALL 31 attributes + weak foot + names/age/position and the lifecycle (PA, CA, BirthWorldDay, GrowthCursor, LastAdvancedWorldDay) as a characterization string read back from the code (was 7 of ~37 values; a PA draw on the reserved index 3 passed). Removed the tautological clubBStream != clubAStream assert. |
+// | 1.4     | 2026-10-20 | —      | AR round 4 L16: Prepare_OnADayOutsideTheCarriedCursors_IsRefused (Day-1 / Day+1 refused, Day legal) and Prepare_OnAnEmptyStore_HasNoCursorSpanToViolate - the §3.5 anchor MUST is enforced, not only documented. |
 #endregion

@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: T-TX-NEU-001 restated and re-locked; T-TX-DET-003, T-TX-BID-008, T-TX-REKEY-003 live; T-TX-REKEY-005 claims match what is asserted)
+**Last Updated:** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: §5.7 gains the explicit FR-TX-001..029 traceability table; T-TX-BID-008 and the RNG scan restated to what is asserted)
+**Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: T-TX-NEU-001 restated and re-locked; T-TX-DET-003, T-TX-BID-008, T-TX-REKEY-003 live; T-TX-REKEY-005 claims match what is asserted)
 **Last Updated (prior):** October 20, 2026 (v0.12 — T-TX-REKEY-005 live)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: window locks; T-TX-NORMAL-001 and §5.7 cover FR-TX-029 / F9)
 **Last Updated (prior):** October 20, 2026 (v0.10 — T2 locks live)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -54,10 +55,12 @@
   ERR-031-013) as `TransfersT0Tests.SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState`:
   (a) an accepted buy's finance equals exactly `FinanceLedger.ApplyTransaction` of the same fee transaction (byte-compared
   through the #40 codec); (b) a reflection scan of every type in the assembly finds no `ClubFinances`- or
-  `ClubFinanceEntry`-typed member and no `Balance`/`Cash`/`Ledger`/`Wallet`-named member; (c) an IL scan of every method
-  body finds no `stfld` to a `ClubFinances` field — a violating probe in the test proves the scan can see one.
-  Mutation-verified (a direct `finances.Balance = …` in `SubmitBid`, and a `ClubFinances` field on `TransfersState`, each fail
-  it). The **counterparty** club's #40 entry is deliberately never posted at minimal (KD-2, §7.2):
+  `ClubFinanceEntry`-typed member (also when wrapped in an array, `Nullable<>` or any generic argument) and no
+  `Balance`/`Cash`/`Ledger`/`Wallet`-named member; (c) an IL scan of every method body finds no `stfld`/`stsfld` to, and no
+  `ldflda`/`ldsflda` (address taken for a `ref` write) of, a `ClubFinances` or `ClubFinanceEntry` field — violating probes for
+  the store and for the ref-write shape prove the scan can see each.
+  Mutation-verified (a direct `finances.Balance = …` in `SubmitBid`, an `ldflda` ref-write bypass
+  `ref long b = ref finances.Balance; b -= 1;`, and a `ClubFinances` field on `TransfersState`, each fail it). The **counterparty** club's #40 entry is deliberately never posted at minimal (KD-2, §7.2):
   `SeasonTransfersT2Tests.AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign` pins that decision.
 
 ## 5.3 Roster re-home (KD-7; stable ids since ERR-031-005)
@@ -130,9 +133,12 @@
   Non-vacuity: `OneAcceptedSale_MovesTheProgressionSnapshot_SoTheNeutralityComparisonIsNotVacuous` — one accepted sale
   makes the wired career's `Progression.Snapshot()` differ from the unwired one's. Whether a transfer changes a *played*
   season is not asserted (the quick-sim's coarse rating model ignores any single sale); transfer sensitivity of play is
-  witnessed by the buyer-selection and ban-served locks of §5.3. The "no RNG stream" half is asserted structurally by
-  `TransfersT0Tests.TheTransfersAssembly_IsDrawFree_NoMethodCallsOrConstructsAnRngType` (no method calls or constructs
-  `System.Random`, `DeterministicRngService` or `RngStreamState`; a probe proves the scan can see one).
+  witnessed by the buyer-selection and ban-served locks of §5.3. The "no RNG stream" half (FR-TX-016 / G3 — and only that) is asserted structurally by
+  `TransfersT0Tests.TheTransfersAssembly_RegistersNoRngStream_NoMethodCallsOrConstructsAnRngType` (no method calls or constructs
+  `System.Random`, `DeterministicRngService` or `RngStreamState`; a probe proves the scan can see one). It is not a proof of
+  general determinism; `…ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant` separately scans for wall-clock and entropy
+  reads (`DateTime.Now`/`UtcNow`, `Guid.NewGuid`, `Environment.TickCount`, `Stopwatch.GetTimestamp`) and the SplitMix64 literals,
+  each with a probe.
   Mutation-verified: a stray #40 posting in step (d″) fails the first.
 - **T-TX-INT-001** — transfer state/valuation/spend fields are integer; no float/double state is introduced.
 
@@ -149,8 +155,43 @@
 
 ## 5.7 Requirement traceability
 
-Every FR-TX-001..029 maps to a T-TX-* test above or a recorded §7 deferral (FR-TX-029 → T-TX-DEP-001,
-T-TX-FIN-001, T-TX-NORMAL-001; FR-TX-019 → T-TX-WIN-002; FR-TX-027 → T-TX-DET-001/003). Every T-TX-* id in this section
+Every FR-TX-001..029 maps to a T-TX-* test above, a recorded §7 deferral, or a structural enforcement — the explicit table
+below (AR round 4, ERR-031-014: G15's FR → test direction was a bare assertion). Every test name in it was verified against `src/`.
+
+| FR | Evidence |
+|---|---|
+| FR-TX-001 | T-TX-VAL-001/002: `TransfersT0Tests.ValuePlayer_IsDeterministic_WeakFootExcluded_AndGoldenVectorPinned` (golden `100000`, one-point `100322`); T-TX-INT-001: `T0StateAndCommands_ContainNoFloatOrDoubleFields` |
+| FR-TX-002 | T-TX-VAL-003/004/005: `AgeCurvePermille_HasStrictDiscounts_PeakBoundary_AndFloor`, `ClubNeedMultiplier_ValuesScarcityAboveNeutralAndOverstockBelowNeutral`, `SubmitBid_PositionalNeedExcludesNegotiatedPlayerSymmetrically`; T-TX-REKEY-004: `SubmitBid_InvalidPositionalStockFromThePort_FailsLoudWithoutCommit` |
+| FR-TX-003 | T-TX-OFF-001: `EvaluateOffer_UsesAcceptedCounterAndRejectedBands_ForBuyAndSell`; T-TX-BID-007: `SubmitBid_CounterOffer_MutatesNothing`, `SubmitBid_RejectedBuy_MutatesNothing`; no draw — FR-TX-016's scan |
+| FR-TX-004 | T-TX-BID-001/003: `SubmitBid_AcceptedBuy_PostsFeeOnly_CommitsSpend_AndInsertsContractUnderTheStableId`, `SubmitBid_SecondBuyOverStaticCeiling_ReturnsInsufficientBudgetWithoutSecondMutation` |
+| FR-TX-005 | T-TX-BID-001/002: `…AcceptedBuy_PostsFeeOnly…`, `SubmitBid_Sell_CommitsRosterBeforeRemovingContract_AndCreditsFee`; T-TX-BID-008: `SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState`; T-TX-FIN-001: `SeasonTransfersT2Tests.EveryNonAcceptedOutcome_LeavesFinancesRosterAndContractsByteIdentical`, `ARawTransferFeePosting_IsRefusedOnceTransfersAreWired` |
+| FR-TX-006 | T-TX-BID-008 (no parallel ledger); T-TX-BID-003 (the ceiling is static, never decremented by `ApplyTransaction`) |
+| FR-TX-007 | T-TX-BID-003; T-TX-DET-002: `SeasonTransfersT2Tests.TheRoll_AgesContracts_ResetsSpend_RedrawsTheWindow_AndKeepsTheCareerSaveable`; `TransfersT2Tests.PrepareSeasonBoundary_AgesRemovesExpiredAndRetired_SeedsArrivals_AndResetsSpendAndWindow` |
+| FR-TX-008 | T-TX-BID-003: `SubmitBid_OverBudgetBuyWithExtremeDebt_ReturnsInsufficientBudgetBeforeFinanceStaging`; T-TX-NORMAL-001 |
+| FR-TX-009 | T-TX-BID-001..007 (gate order and no-mutation); T-TX-DEP-001; T-TX-WIN-001: `SubmitBid_OutsideWindow_FailsBeforeValuationOrMutation`; T-TX-FIN-001: `EveryNonAcceptedOutcome_…` |
+| FR-TX-010 | T-TX-OFF-001/002 (the evaluator takes a caller-supplied valuation: `EvaluateOffer_MalformedWageOrLength_FailsLoudAtReusableSeam`); structural: `TransferSubmissionOutcome` and `NegotiationOutcome` are distinct types |
+| FR-TX-011 | structural: `TacticalDirector.Transfers` references only ClubFinances, DeterministicSim, PlayerDatabase and ProjectConstants (its asmdef), so no #32/#34 type can be named; the staff influence is the §7.2 deferral (identity constant `IDENTITY_MULTIPLIER_PERMILLE`) |
+| FR-TX-012 | T-TX-DET-001: `TransfersT1Tests.Encode_PinsTheAppendixBLayout_ByteForByte`; `SeasonSaveTransfersTests.TheTransfersBlock_SitsInItsOwnFrameSlot` |
+| FR-TX-013 | structural: the transfers asmdef does not reference LivingWorld (T-TX-REKEY-003 lists it), so #31 cannot touch `WORLD_STORE_FORMAT_VERSION`; durable contracts live in the season-save block (`TheTransfersBlock_SitsInItsOwnFrameSlot`) |
+| FR-TX-014 | T-TX-FAIL-001: `TransfersT1Tests.Decode_ASiblingSubBlob_IsRefusedAtTheMagic`, `Decode_AnotherGeneration_IsRefused`, `Decode_EveryTruncation_IsRefusedLoud`, `Decode_TrailingByte_IsRefused` |
+| FR-TX-015 | §7.2 deferral (deep-tier fields append behind `deepTransfersEnabled`); the minimal schema is byte-pinned by `Encode_PinsTheAppendixBLayout_ByteForByte` |
+| FR-TX-016 | `TransfersT0Tests.TheTransfersAssembly_RegistersNoRngStream_NoMethodCallsOrConstructsAnRngType` (G3); `…ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant` |
+| FR-TX-017 | §7.1/§7.2 deferral (stochastic rival bidding is the first #31 draw site; no deep-tier draw exists at minimal) |
+| FR-TX-018 | T-TX-DET-001: `TransfersT1Tests.Encode_PinsTheAppendixBLayout_ByteForByte` (the pinned layout carries no cursor field) |
+| FR-TX-019 | T-TX-WIN-002: `TransfersT2Tests.SummerWindowFor_OpensOnTheBeginDay_AndClosesInclusiveFromTheOpeningFixtureDay`, `SeasonTransfersT2Tests.APromptRoll_OpensOnTheRollDay_AndCoversTheOpeningFixtureDay`, `APromptRollAndALateRoll_CloseTheWindowOnTheSameDay` |
+| FR-TX-020 | T-TX-WIN-001: `TransfersT0Tests.TransferWindow_IsInclusiveAtBothEdges`, `SeasonTransfersT2Tests.ABidOutsideTheWindow_FailsLoud_WithNoMutation` |
+| FR-TX-021 | T-TX-REKEY-001/002: `SubmitBid_PlayerWhoseIdIsOutsideHisClubsPackedRange_IsOwnedByTheRoster`, `SubmitBid_RosterCommitThatDoesNotLand_FailsBeforeLocalStateMutation`; T-TX-REKEY-005: `SeasonTransfersT2Tests.ABuy_ReHomesTheWholeCareer_UnderTheSameId_AndDebitsExactlyTheFee` |
+| FR-TX-022 | T-TX-BID-004: `SubmitBid_FullDestination_ReturnsSquadFullWithoutFinanceOrContractMutation`, `SeasonTransfersT2Tests.AFullDestination_IsSquadFull_AndADepletedSeller_IsSquadDepleted` |
+| FR-TX-023 | T-TX-REKEY-001/003/005: `…ABuy_ReHomesTheWholeCareer…`, `TransfersT0Tests.TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState`; T-TX-BID-001 (the contract is keyed by the unchanged id) |
+| FR-TX-024 | T-TX-NEU-001: `SeasonTransfersT2Tests.NoTransferAction_IsBehaviourNeutral`, `OneAcceptedSale_MovesTheProgressionSnapshot_SoTheNeutralityComparisonIsNotVacuous` |
+| FR-TX-025 | T-TX-BID-001..007; T-TX-WIN-001; `SeasonTransfersT2Tests.ARawTransferFeePosting_IsRefusedOnceTransfersAreWired` (the command is the only path); `SeasonSaveTransfersTests.TheLoopClonesItsState_SoTheCallersReferenceIsNotASecondWriter` |
+| FR-TX-026 | T-TX-FAIL-002/003: `TransfersT0Tests.SubmitBid_MalformedOffer_FailsLoud`, `SubmitBid_AnUnknownCounterpartyClub_FailsLoud_BeforeAnyValuation`, `EvaluateOffer_MalformedWageOrLength_FailsLoudAtReusableSeam`, `InsertContract_DefaultContract_FailsLoud` |
+| FR-TX-027 | T-TX-DET-001: `TransfersT1Tests.RoundTrip_NonDefaultMidWindowState_IsFieldIdentical`, `SeasonSaveTransfersTests.SaveLoad_ThroughTheLoop_RoundTripsNonDefaultTransfersState_AndResumesIt`; T-TX-DET-003: `SeasonTransfersT2Tests.TwoRunsOverIdenticalTransferActivity_ProduceByteIdenticalState` |
+| FR-TX-028 | T-TX-INIT-001: `SeasonTransfersT2Tests.CreateLoop_WithAProgressionStore_SeedsOneGenesisContractPerManagedPlayer`, `ALoadNeverReSeeds_TheResumedLoopCarriesTheSavedContracts`, `TransfersT2Tests.CreateAtGenesis_SeedsOneContractPerPlayer_AtTheGenesisTerms`; T-TX-DET-002: `TheRoll_AgesContracts_ResetsSpend_RedrawsTheWindow_AndKeepsTheCareerSaveable` |
+| FR-TX-029 | T-TX-DEP-001: `TransfersT0Tests.SubmitBid_AReleaseThatDepletesTheSellingSquad_ReturnsSquadDepleted_WithNoMutation`; T-TX-NORMAL-001; T-TX-FIN-001: `SeasonTransfersT2Tests.AFullDestination_IsSquadFull_AndADepletedSeller_IsSquadDepleted` |
+
+
+Every T-TX-* id in this section
 now has a live test (AR round 3 landed T-TX-BID-008, T-TX-DET-003 and T-TX-REKEY-003, which G15 had counted without one). T0 now locks the reviewed public
 API shape, precise integer valuation, symmetric positional need, typed normal command outcomes, and both sides
 of the defensive commit-not-landed breach. T2 owed — and AR round 2 landed — the production carry-everything re-home lock in
@@ -174,4 +215,5 @@ re-key hook was deleted at ERR-031-005.)*
 | 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): new T-TX-WIN-002 locks the re-anchored window (unit edges + roll-timing independence through `SeasonLoop`); T-TX-DET-002 restated; T-TX-NORMAL-001 adds F9 `SquadDepleted`; §5.7 counts FR-TX-001..029. T-TX-REKEY-005's "(deferred T2)" label is left for a later pass. |
 | 0.12 | 2026-10-20 | — | AR round 2: T-TX-REKEY-005 is live (named tests: whole-career equality at the buyer and absence at the source, buyer selection, #44 ban served by the new club); the "(deferred T2)" label and the §5.7 "owes" wording are retired. |
 | 0.13 | 2026-10-20 | — | ERR-031-013 (AR round 3): T-TX-NEU-001's T2 lock never rolled, compared only `SeasonState` and #28, and compared a played season to an unplayed `NewCareer` for "non-vacuity" — restated and rewritten as played season → roll → season-2 round, the whole career snapshot minus the #31 block, wired vs unwired, with a one-sale non-vacuity leg; the unasserted "no RNG stream" claim is now asserted structurally. T-TX-DET-003 (FR-TX-027), T-TX-BID-008 and T-TX-REKEY-003 go live (no test existed for them although G15 was ✅). T-TX-REKEY-005 now compares the full `InjuryState` and a yellow-count tally, and its ban test runs a three-club league so "decided by the roster, never by the id" is observable. T-TX-FIN-001 records the unposted counterparty ledger. |
+| 0.14 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L4/R4-L1): §5.7 asserted that every FR maps to a test but listed only a few; it now carries the explicit 29-row table (every cited test name grep-verified against `src/`). T-TX-BID-008 (c) also scans `stsfld`/`ldflda`/`ldsflda` and (b) unwraps `Nullable<>`/generic arguments; the RNG-type scan is renamed `…RegistersNoRngStream…` and its claim narrowed to FR-TX-016/G3, with a separate clock/entropy/SplitMix-literal scan. |
 #endregion

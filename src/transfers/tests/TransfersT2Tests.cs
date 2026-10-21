@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-20 (AR round 3 — v1.3)
+// Modified: 2026-10-20 (AR round 4 — v1.4)
 // Author:   —
 // Specs:    Spec #31 §3.5 (as corrected by ERR-031-008 and ERR-031-011), §3.7, §3.8, FR-TX-007/019/028, G14;
 //           §5.5 T-TX-DET-002, T-TX-INIT-001
@@ -32,7 +32,8 @@ namespace TacticalDirector.Transfers.Tests
             Assert.AreEqual(267u, w.OpenWorldDay);
             Assert.AreEqual(322u + (uint)TransfersConstants.SummerWindowInSeasonDays - 1u, w.CloseWorldDay);
             int openDaysFromOpeningFixture = 0;
-            for (uint d = 270; d < 500; d++)
+            // Bounded by the window itself (one day past its close), never by a literal that assumes N = 38.
+            for (uint d = 270; d <= w.CloseWorldDay + 1u; d++)
             {
                 if (d >= 322 && w.IsWindowOpen(d))
                 {
@@ -78,6 +79,9 @@ namespace TacticalDirector.Transfers.Tests
         [Test]
         public void SummerWindowFor_PastTheLastWorldDay_FailsLoud()
         {
+            // N = 1 makes opening = uint.MaxValue legal and lastFitting + 1 wrap to 0, so the overflow edges below
+            // only exist for N > 1; under a tuned N = 1 this lock is skipped rather than asserting a wrapped edge.
+            Assume.That(TransfersConstants.SummerWindowInSeasonDays, Is.GreaterThan(1), "the overflow edge needs an in-season span above one day");
             Assert.Throws<ArgumentOutOfRangeException>(() => TransferWindow.SummerWindowFor(0, uint.MaxValue));
 
             // The last opening day whose close still fits succeeds.
@@ -221,4 +225,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.1     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): window locks rewritten for SummerWindowFor(begin, openingFixture) — inclusive close, genesis [0,44] pin, opening<begin and uint-overflow edges. |
 // | 1.2     | 2026-10-20 | —      | AR round 2 L4: PrepareSeasonBoundary refuses an arrival that holds a contract (live or expiring this boundary) or is retired — ArgumentException, source untouched. |
 // | 1.3     | 2026-10-20 | —      | AR round 3: T-L8 locks (a duplicated arrival and aged contracts plus arrivals above CLUB_SQUAD_SIZE are ArgumentExceptions, the cap itself is legal); T-L9: the genesis [0,44] pin is an unconditional assertion under Assume.That(SummerWindowInSeasonDays == 38) and no longer restates the formula. |
+// | 1.4     | 2026-10-20 | —      | AR round 4 R4-L2: the inclusive-close loop is bounded by the window's own close + 1 (not a literal 500); the uint-overflow edge test is guarded by Assume.That(N > 1) so a tuned SummerWindowInSeasonDays = 1 skips instead of wrapping. |
 #endregion

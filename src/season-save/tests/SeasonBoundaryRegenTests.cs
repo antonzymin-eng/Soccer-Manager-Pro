@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonBoundaryRegenTests.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20 (P-M6 3/8/7/5 counts; P-M2(c) regen cursor/age lock — v1.1)
+// Modified: 2026-10-20 (AR round 4 L16 — the regen cursor is also compared with a non-regen peer's on the same club — v1.2)
+//           2026-10-20 (P-M6 3/8/7/5 counts; P-M2(c) regen cursor/age lock — v1.1)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.5 step (d)/(d′); Player Progression & Lifecycle #28 §3.4
 //           (as amended by ERR-028-024 / ERR-028-025), FR-PG-011/015/019/024; Discipline #44 FR-DC-013;
@@ -111,10 +112,27 @@ namespace TacticalDirector.SeasonSave.Tests
 
             uint lastLivedDay = c.Loop.CurrentWorldDay - 1u;
             int regens = 0;
+            int peerComparisons = 0;
             ClubCareerStates[] blocks = c.Progression.ToBlocks();
             for (int b = 0; b < blocks.Length; b++)
             {
                 ClubCareerStates block = blocks[b];
+
+                // L16 (AR round 4): the M12 MUST is that a regen's cursor EQUALS his peers' — the next day
+                // step advances all of them together. Asserting against the stand-in 'CurrentWorldDay - 1'
+                // alone would stay green if the peers' cursor and that stand-in ever diverged, so compare
+                // against a non-regen peer on the same club directly.
+                bool havePeer = false;
+                uint peerCursor = 0u;
+                for (int i = 0; i < block.Records.Length && !havePeer; i++)
+                {
+                    if (block.Records[i].PlayerId < cursorBefore)
+                    {
+                        havePeer = true;
+                        peerCursor = block.Lifecycles[i].LastAdvancedWorldDay;
+                    }
+                }
+
                 for (int i = 0; i < block.Records.Length; i++)
                 {
                     PlayerRecord record = block.Records[i];
@@ -127,6 +145,12 @@ namespace TacticalDirector.SeasonSave.Tests
                     PlayerLifecycle life = block.Lifecycles[i];
                     Assert.That(life.LastAdvancedWorldDay, Is.EqualTo(lastLivedDay),
                         $"regen {record.PlayerId}: progression cursor must be the roll day minus one");
+                    if (havePeer)
+                    {
+                        peerComparisons++;
+                        Assert.That(life.LastAdvancedWorldDay, Is.EqualTo(peerCursor),
+                            $"regen {record.PlayerId}: progression cursor must equal a non-regen peer's on club {block.ClubId}");
+                    }
 
                     // Age is DERIVED as (day − BirthWorldDay) / DAYS_PER_YEAR (KD-A); on the last lived day
                     // it must equal the drawn age the record carries.
@@ -139,6 +163,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.That(regens, Is.GreaterThanOrEqualTo(retirees.Length),
                 "non-vacuity: at least the three forced retirees were replaced by regens");
+            Assert.That(peerComparisons, Is.EqualTo(regens),
+                "non-vacuity: every regen was compared with a surviving non-regen peer on his club");
         }
 
         [Test]
@@ -318,4 +344,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.1     | 2026-10-20 | —      | P-M6: position-shape expectations {3,8,8,4} -> {3,8,7,5}; club 1 index 19 is still a forward. |
 // |         |            |        | P-M2(c): EveryRegen_IsAnchoredOnTheLastLivedDay_AndKeepsItsDrawnAge — every regen's cursor is |
 // |         |            |        | clock - 1 and his age derived on that day equals his drawn age (kills a CurrentWorldTick mutant). |
+// | 1.2     | 2026-10-20 | —      | AR round 4 L16: EveryRegen_IsAnchoredOnTheLastLivedDay_AndKeepsItsDrawnAge also asserts each regen's LastAdvancedWorldDay equals a non-regen peer's on the same club (the M12 MUST itself, not only its clock-1 stand-in), with a non-vacuity count. |
 #endregion

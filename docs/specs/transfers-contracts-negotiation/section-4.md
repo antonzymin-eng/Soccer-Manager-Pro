@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: §4.2 file rows list the shipped members)
+**Last Updated:** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: the composition-root bullet no longer says #31 is invoked at a T2 season slot)
+**Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: §4.2 file rows list the shipped members)
 **Last Updated (prior):** October 20, 2026 (v0.12 — ERR-031-012: §4.5 CanRelease contract)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: §4.1 references/diagram as shipped; §4.2 window derivation live; §4.3 SquadDepleted)
 **Last Updated (prior):** October 20, 2026 (v0.10 — T2: the production port and its new members)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — #31 T1 landed: §4.2 codec row live, §4.4 rewritten for the shipped composition; ERR-031-003)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 review correction: submission-result seam + prospective-stock semantics)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 T0 landing, v0.3 AR-6, v0.2 AR-3, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -90,8 +91,9 @@ references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still n
   players). `RequestRosterCommit` re-homes the player under his unchanged id and is contractually infallible after
   that preview; #31 confirms through `TryGetPlayer` that he is on the destination roster **before** applying staged
   finance/spend/contract state.
-- **The composition root** MUST invoke #31 at the recorded T2 season slot, route UI commands through `SubmitBid`,
-  adapt the #30 roster owner to `ITransferRosterPort`, and never let the UI mutate #31 state directly.
+- **The composition root** MUST run #31 only through the manager command (`SeasonLoop.SubmitTransferBid` → `SubmitBid`)
+  and the staged roll step (d″) — the world-tick slot 5 stays a null seam at minimal (§7.1, ERR-030-004), so nothing
+  invokes #31 on a daily tick — adapt the #30 roster owner to `ITransferRosterPort`, and never let the UI mutate #31 state directly.
 - **#30** owns the future tick slot, the production id-preserving roster re-home (`RequestRosterCommit`) and
   season-save composition. *(ERR-031-006: originally "production roster move/hook" — the re-key hook was deleted
   at ERR-031-005; nothing re-keys, so there is no hook to own.)*
@@ -116,4 +118,5 @@ references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still n
 | 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2): §4.1 no longer claims T0's "no codec" posture is current — it records the T1 `DeterministicSim` serialization edge and the T2 #30-side composition, and the diagram shows them; §4.2 `TransferWindow.cs` row names the live `SummerWindowFor` derivation (was "remains T2 composition work"); §4.3 lists `SquadDepleted`. |
 | 0.12 | 2026-10-20 | — | ERR-031-012 (AR round 2): §4.5 states that `CanRelease`'s `false` is depletion only; impossible input throws. |
 | 0.13 | 2026-10-20 | — | ERR-031-013 (AR round 3): §4.2's `ITransferRosterPort.cs` row omitted `CarriesClub` / `CanRelease` and the `TransfersState.cs` row omitted `CreateAtGenesis` / `PrepareSeasonBoundary` (all shipped at T2); both rows restated. |
+| 0.14 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L5): §4.5 said the composition root MUST invoke #31 at the recorded T2 season slot; §7.1 keeps slot 5 a null seam and #31 runs only via `SubmitTransferBid` and the staged roll step (d″). Restated. |
 #endregion
