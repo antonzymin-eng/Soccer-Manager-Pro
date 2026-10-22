@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/PitchCameraRigTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-04
+// Modified: 2026-10-21 (Gate J J-04: whole-pitch framing)
+// Modified (prior): 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7),
 //           Testing Strategy #19, Code Standards #20
@@ -23,6 +24,32 @@ namespace TacticalDirector.MatchClientCore.Tests
 
         private static Vector2 Centre =>
             new Vector2(MatchEngineConstants.PITCH_LENGTH_M * 0.5f, MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
+
+        [TestCase(105f / 68f)]
+        [TestCase(1f)]
+        [TestCase(3f)]
+        public void WholePitchFramingContainsBothGoalLinesAndBothTouchlines(float aspect)
+        {
+            float size = PitchCameraRig.WholePitchOrthographicSize(aspect);
+            float margin = PitchCameraRig.WholePitchMarginM;
+            Assert.GreaterOrEqual(size, PitchViewProjection.HalfWidthM + margin, "touchlines inside the image");
+            Assert.GreaterOrEqual(size * aspect, PitchViewProjection.HalfLengthM + margin - 1e-4f, "goal lines inside the image");
+            // Tight on the limiting axis: no wasted frame.
+            Assert.That(size == PitchViewProjection.HalfWidthM + margin ||
+                Mathf.Abs(size * aspect - (PitchViewProjection.HalfLengthM + margin)) < 1e-3f);
+        }
+
+        [Test]
+        public void WholePitchCameraSitsAboveTheCentreSpotAndRejectsDegenerateAspect()
+        {
+            Vector3 p = PitchCameraRig.WholePitchPosition();
+            Assert.AreEqual(0f, p.x, 1e-5f);
+            Assert.AreEqual(0f, p.z, 1e-5f);
+            Assert.AreEqual(MatchClientConstants.CameraHeightM, p.y, 1e-5f);
+            float pitchAspect = PitchCameraRig.WholePitchOrthographicSize((PitchViewProjection.HalfLengthM + PitchCameraRig.WholePitchMarginM) / (PitchViewProjection.HalfWidthM + PitchCameraRig.WholePitchMarginM));
+            Assert.AreEqual(pitchAspect, PitchCameraRig.WholePitchOrthographicSize(float.NaN), 1e-4f);
+            Assert.AreEqual(pitchAspect, PitchCameraRig.WholePitchOrthographicSize(0f), 1e-4f);
+        }
 
         [Test]
         public void TheCameraLooksAtTheGroundPointItWasGiven()
@@ -223,4 +250,6 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | and the consistency check against CameraViewHalfHeightM, which  |
 // |         |            |        | the follow-ball clamp uses and which nothing otherwise ties to  |
 // |         |            |        | what the camera can actually see.                               |
+// | 1.2     | 2026-10-21 | —      | Gate J J-04: whole-pitch framing holds both goal lines and both |
+// |         |            |        | touchlines at any aspect and sits over the centre spot.         |
 #endregion

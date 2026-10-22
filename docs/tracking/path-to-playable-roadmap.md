@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **October 22 — Gate J fixes landed on `client/p5b-host-acceptance` (v0.77):** the owner's October 20 decisions are implemented and pass on the pinned host: J-01 (goalkeeper-mismatched choices greyed out with a reason), J-02 (a refusal names its engine-typed reason; the button is kept) and J-04 (H v0.2 skin, whole-pitch view, statistics in the rail). Gate J is a technical CONDITIONAL PASS: still due are the B8/B10 re-capture on the new skin, one clean I-Q15 pass, the owner's wording approval and acceptance. J-05 is PR #520 ([record](p5b-real-client-acceptance.md) v0.2).
+
 > **October 19 — P5b real-client run; B8/B10 captured; Gate J technical FAIL (v0.76):** real-client I-Q01–19 ran on the pinned host at main `c95e27ba` ([record](p5b-real-client-acceptance.md)). One High defect, keyboard arrows crashing the client (J-03), is fixed on `client/p5b-host-acceptance`. The B8/B10 render-loop capture passes the owner budget (Mono development player, p99 ≤ 16.7 ms): no frame over budget in any of eight conditions, 202–275 FPS. Gate J fails technically on two substitution-contract gaps left by #505 (J-01 keeper pairs, J-02 Law 3 windows). Owner items J-04 (visual) and J-05 (10× delivers about 5.5×) remain.
 
 > **October 18 — D-07 landed (v0.74):** PR #515 merged `1a3b4271`. The [six-seed census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and reproduces all six adopted post-law B digests byte for byte, so D-07 does not move the B→C comparison digests on that corpus. Keeper hand avoidance remains an [open residual](open-issues.md#d07-keeper-avoidance).
@@ -716,6 +718,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.77 | October 22, 2026 | Gate J fixes J-01/J-02/J-04 implemented and host-verified on `client/p5b-host-acceptance`; technical CONDITIONAL PASS pending the B8/B10 re-capture, one clean I-Q15 pass and owner copy approval/acceptance; J-05 in PR #520 ([record](p5b-real-client-acceptance.md) v0.2). |
 | v0.76 | October 19, 2026 | Real-client I-Q01–19 run on the pinned host; B8/B10 render-loop capture PASS; J-03 keyboard crash fixed on branch; Gate J technical FAIL on J-01/J-02 with owner items J-04/J-05 ([record](p5b-real-client-acceptance.md)). |
 | v0.75 | October 18, 2026 | §5.1 specification gates: the #3 FR-03 `AgentPosition` line was stale, because `ERR-003-009` landed it October 10. It is now recorded as closed, with `ERR-003-010` completing §4.2.4/§4.5.1/§8.3. Sequencing only. |
 | v0.74 | October 18, 2026 | PR #515 merged 1a3b4271; D-07 landed. Six-seed census: 0 D-07 free kicks, all six B digests unchanged. Avoidance residual filed in open-issues. |

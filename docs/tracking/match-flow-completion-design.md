@@ -1,7 +1,9 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 18, 2026 (v1.10 — §5.2 landed: PR #515 merge `1a3b4271`.)
+> **Last Updated:** October 21, 2026 (v1.11 — §6 UX copy decided: Gate J J-01/J-02.)
+
+> **Last Updated (prior):** October 18, 2026 (v1.10 — §5.2 landed: PR #515 merge `1a3b4271`.)
 
 > **Last Updated (prior):** October 18, 2026 (v1.9 — §5.2 governing Unity host validation met at PR #515 head `a7800579`.)
 
@@ -639,7 +641,9 @@ use the match save format v3 off-tick overlay (`match-save-file-design.md` KD-8)
 - **UX copy.** `NotApplied(OutgoingSentOff)` has no feedback key and needs one before the landing that
   exposes it (§6.2.6). `NoWindowsLeft` and `GoalkeeperRoleMismatch` fall under the generic
   `feedback.substitution_refused` key; whether they get specific copy, and how windows left are shown, is a
-  UX-document decision.
+  UX-document decision. *Decided October 20, 2026 (Gate J J-01/J-02, journey v0.37 §§14.4–14.5):* the
+  chooser greys out goalkeeper-mismatched pairs with a reason, and every typed refusal gets its own
+  `feedback.substitution_refused_*` row; windows left are not projected, and Make substitution stays available.
 
 ## 7. Half-time break & full-time end
 
@@ -809,6 +813,7 @@ project's established pattern for this environment.
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
 | 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |
+| 1.11 | 2026-10-21 | §6 open-items UX copy decided by the owner (Gate J J-01/J-02): goalkeeper-mismatched pairs greyed out with a reason; typed refusal rows; no windows projection. |
 | 1.10 | 2026-10-18 | §5.2 landed: PR #515 merge 1a3b4271; six-seed census 0 D-07 free kicks, digests unchanged. |
 | 1.9 | 2026-10-18 | §5.2: PR #515 CI green and pinned-host Unity validation met at `a7800579` (evidence `host-d07-a7800579-20261018`). |
 | 1.8 | 2026-10-18 | PR #515 review: acquisition snap of a legal catch is not a carry; carries sanction only an outward move; goal-line overhang is on the line; handling restart spot clamped onto the pitch. |

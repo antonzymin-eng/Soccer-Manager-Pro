@@ -1,7 +1,7 @@
 // File:     src/client-app/S0ScreenPresenter.cs
 // Created:  2026-10-08
-// Modified: 2026-10-15 (Match Flow §6: pending reservations)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-21 (Gate J J-01 goalkeeper pairs; J-02 typed refusal copy)
+// Modified (prior): 2026-10-15
 // Author:   —
 // Spec:     S0 journey §§14.3–14.8, binding contracts §§2–4, Code Standards #20
 // Purpose:  Consumed four-screen presentation, staging, enablement, copy, statistics and disclosure state.
@@ -35,6 +35,7 @@ namespace TacticalDirector.ClientApp
         private readonly List<PlayerChoice> _outgoing = new List<PlayerChoice>();
         private readonly List<PlayerChoice> _incoming = new List<PlayerChoice>();
         private readonly List<string> _feedback = new List<string>();
+        private readonly List<ClientChangeStatus> _feedbackStatus = new List<ClientChangeStatus>();
         private readonly List<StatisticRow> _statistics = new List<StatisticRow>();
         private int _outgoingPlayerId = -1;
         private int _incomingPlayerId = -1;
@@ -45,6 +46,7 @@ namespace TacticalDirector.ClientApp
         private readonly string[] _markerText = new string[MatchEngineConstants.SQUAD_SIZE];
         private readonly string[] _playerDescriptions = new string[MatchEngineConstants.SQUAD_SIZE];
         private readonly LiveAgentCue[] _lastCues = new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE];
+        private readonly bool[] _benchKeeper = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
         private bool _hasChoices;
         // Players reserved by pending requests when the choices were last built: outgoing roster
         // slots in bits 0-31, bench indices from bit 32. Acceptance changes no roster cue, so the
@@ -75,11 +77,17 @@ namespace TacticalDirector.ClientApp
             public readonly MatchPlayerIdentity Player;
             /// <summary>Complete localized name/shirt label.</summary>
             public readonly string Label;
-            internal PlayerChoice(int index, in MatchPlayerIdentity player, string label)
+            /// <summary>False when the engine would refuse this choice against the current selection.</summary>
+            public readonly bool IsAvailable;
+            /// <summary>Localized reason shown with an unavailable choice; empty when available.</summary>
+            public readonly string UnavailableReason;
+            internal PlayerChoice(int index, in MatchPlayerIdentity player, string label, bool isAvailable = true, string unavailableReason = "")
             {
                 Index = index;
                 Player = player;
                 Label = label;
+                IsAvailable = isAvailable;
+                UnavailableReason = unavailableReason;
             }
         }
 
@@ -109,6 +117,7 @@ namespace TacticalDirector.ClientApp
             Outgoing = _outgoing.AsReadOnly();
             Incoming = _incoming.AsReadOnly();
             Feedback = _feedback.AsReadOnly();
+            FeedbackStatus = _feedbackStatus.AsReadOnly();
             Statistics = _statistics.AsReadOnly();
             ResetMatch();
         }
@@ -161,10 +170,13 @@ namespace TacticalDirector.ClientApp
         public bool IsStatisticsIncomplete => _analytics.IsIncomplete;
         /// <summary>Legal outgoing slots, including an unreplaced keeper.</summary>
         public ReadOnlyCollection<PlayerChoice> Outgoing { get; }
-        /// <summary>Unused bench origins with one-based displayed labels.</summary>
+        /// <summary>Unused bench origins with one-based displayed labels; goalkeeper-mismatched origins for the
+        /// selected outgoing player stay listed but unavailable, with a reason (Gate J J-01).</summary>
         public ReadOnlyCollection<PlayerChoice> Incoming { get; }
         /// <summary>Persistent chronological localized request labels.</summary>
         public ReadOnlyCollection<string> Feedback { get; }
+        /// <summary>Outcome of each <see cref="Feedback"/> row, index-aligned, for glyph/colour reinforcement only.</summary>
+        public ReadOnlyCollection<ClientChangeStatus> FeedbackStatus { get; }
         /// <summary>Independent statistics from one synchronized publication.</summary>
         public ReadOnlyCollection<StatisticRow> Statistics { get; }
         /// <summary>Withheld before the first frame.</summary>
@@ -316,6 +328,7 @@ namespace TacticalDirector.ClientApp
             PlayerChoice choice = Find(_outgoing, index);
             SelectedOutgoing = index;
             _outgoingPlayerId = choice.Player.PlayerId;
+            UpdateIncomingAvailability();
             UpdatePair();
         }
 
@@ -324,6 +337,8 @@ namespace TacticalDirector.ClientApp
         {
             RequireSubstitution();
             PlayerChoice choice = Find(_incoming, index);
+            if (!choice.IsAvailable)
+                throw new ArgumentException("Choice is unavailable for the selected outgoing player.");
             SelectedIncoming = index;
             _incomingPlayerId = choice.Player.PlayerId;
             UpdatePair();
@@ -567,6 +582,8 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>Compact marker already cached from the currently accepted player identity and cues.</summary>
         public string PitchMarker(int agentId) => _markerText[agentId] ?? "";
+        /// <summary>Whether a pitch agent plays for the managed home side; colour reinforcement only.</summary>
+        public bool PitchMarkerIsHome(int agentId) => _context != null && _context.Identity.Roster.TeamId(agentId) == 0;
         /// <summary>Complete semantic name/shirt/cue text from that same accepted frame.</summary>
         public string PitchPlayerDescription(int agentId) => _playerDescriptions[agentId] ?? "";
         private bool UpdateChoices(in LiveMatchFrame frame)
@@ -619,9 +636,11 @@ namespace TacticalDirector.ClientApp
                 MatchPlayerIdentity p = _context.Identity.Bench(0, b);
                 bool keeper = _coordinator.Fixture.IsAuthoredGoalkeeper(p.PlayerId);
                 string label = keeper ? Text.Format("bench." + b, "identity.bench_keeper", Text.Label("team.home"), p.FirstName, p.LastName, p.ShirtNumber, b + 1, Text.Label("identity.goalkeeper")) : Text.Format("bench." + b, "identity.bench", Text.Label("team.home"), p.FirstName, p.LastName, p.ShirtNumber, b + 1);
+                _benchKeeper[b] = keeper;
                 _incoming.Add(new PlayerChoice(b, in p, label));
             }
 
+            UpdateIncomingAvailability();
             if (Dialog == DialogKind.Substitution && !PairIsCurrent())
                 CanSubmitSubstitution = false;
             return true;
@@ -718,9 +737,10 @@ namespace TacticalDirector.ClientApp
             bool capped = !_frame.IsEmpty &&
                 _frame.SubstitutionsUsed[0] + CountPendingHomeSubstitutions() >= MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM;
             CanChangeMentality = a.TacticalInputEnabled && !_context.Changes.IsMentalityPending;
-            CanSubstitute = a.SubstitutionEnabled && !_context.Changes.IsSubstitutionPending && !capped && _outgoing.Count != 0 && _incoming.Count != 0;
+            bool anyPair = AnyLegalPair();
+            CanSubstitute = a.SubstitutionEnabled && !_context.Changes.IsSubstitutionPending && !capped && anyPair;
             MentalityReason = _context.Changes.IsMentalityPending ? Text.Label("reason.mentality_pending") : "";
-            SubstitutionReasonText = _context.Changes.IsSubstitutionPending ? Text.Label("reason.substitution_pending") : capped ? Text.Label("reason.substitution_cap") : a.SubstitutionEnabled && (_outgoing.Count == 0 || _incoming.Count == 0) ? Text.Label("reason.no_pair") : "";
+            SubstitutionReasonText = _context.Changes.IsSubstitutionPending ? Text.Label("reason.substitution_pending") : capped ? Text.Label("reason.substitution_cap") : a.SubstitutionEnabled && !anyPair ? Text.Label("reason.no_pair") : "";
         }
 
         private void UpdatePlayback()
@@ -733,6 +753,7 @@ namespace TacticalDirector.ClientApp
         private void UpdateFeedback()
         {
             _feedback.Clear();
+            _feedbackStatus.Clear();
             for (int i = 0; i < _context.Changes.Records.Count; i++)
             {
                 ClientChangeRecord row = _context.Changes.Records[i];
@@ -746,7 +767,7 @@ namespace TacticalDirector.ClientApp
                         suffix = "applied";
                         break;
                     case ClientChangeStatus.Refused:
-                        suffix = "refused";
+                        suffix = row.Command.Kind == ManagerCommandKind.Substitute ? RefusedSuffix(row.RefusalReason) : "refused";
                         break;
                     case ClientChangeStatus.NotApplied:
                         suffix = "not_applied";
@@ -759,6 +780,7 @@ namespace TacticalDirector.ClientApp
                 }
 
                 string cell = "feedback." + i;
+                _feedbackStatus.Add(row.Status);
                 if (row.Command.Kind == ManagerCommandKind.SetTeamTactic)
                     _feedback.Add(row.Status == ClientChangeStatus.Applied ? Text.Format(cell, "feedback.mentality_" + suffix, MentalityLabel(row.Command.NewTeamTactic.Mentality), Minute(row.OutcomeTick)) : Text.Format(cell, "feedback.mentality_" + suffix, MentalityLabel(row.Command.NewTeamTactic.Mentality)));
                 else
@@ -816,7 +838,7 @@ namespace TacticalDirector.ClientApp
                 if (c.Index == SelectedOutgoing && c.Player.PlayerId == _outgoingPlayerId)
                     o = true;
             foreach (PlayerChoice c in _incoming)
-                if (c.Index == SelectedIncoming && c.Player.PlayerId == _incomingPlayerId)
+                if (c.Index == SelectedIncoming && c.Player.PlayerId == _incomingPlayerId && c.IsAvailable)
                     n = true;
             return o && n;
         }
@@ -826,6 +848,97 @@ namespace TacticalDirector.ClientApp
             CanSubmitSubstitution = PairIsCurrent();
             ChoiceNotice = "";
             Revision++;
+        }
+
+        // Mirrors the engine's request-time role check (MatchEngine.RequestSubstitution ->
+        // GoalkeeperRoleMismatch) so the chooser never offers a pair the engine always refuses.
+        // The engine still owns races and legality; this only greys choices out, with a reason.
+        private void UpdateIncomingAvailability()
+        {
+            for (int i = 0; i < _incoming.Count; i++)
+            {
+                PlayerChoice c = _incoming[i];
+                string role = SelectedOutgoing < 0 ? null : KeeperPairReason(SelectedOutgoing, c.Index);
+                _incoming[i] = new PlayerChoice(c.Index, in c.Player, c.Label, role == null, role == null ? "" : Text.Label(role));
+                if (role != null && c.Index == SelectedIncoming)
+                {
+                    SelectedIncoming = -1;
+                    _incomingPlayerId = -1;
+                }
+            }
+        }
+
+        private bool AnyLegalPair()
+        {
+            foreach (PlayerChoice o in _outgoing)
+                foreach (PlayerChoice n in _incoming)
+                    if (KeeperPairReason(o.Index, n.Index) == null)
+                        return true;
+            return false;
+        }
+
+        /// <summary>The reason role for a goalkeeper-mismatched pair, or null when the engine role check admits it.</summary>
+        private string KeeperPairReason(int outSlot, int bench)
+        {
+            bool outKeeper = _choiceFrame.AgentCues[outSlot].IsGoalkeeper;
+            bool inKeeper = _benchKeeper[bench];
+            if (outKeeper == inKeeper)
+                return null;
+            if (outKeeper)
+                return "reason.keeper_out";
+            // A bench keeper may replace an outfield player only while the team has no keeper on the
+            // pitch, and only once until that replacement executes.
+            if (HomeKeeperOnPitch())
+                return "reason.keeper_in";
+            return KeeperFallbackPending() ? "reason.keeper_on_way" : null;
+        }
+
+        private bool HomeKeeperOnPitch()
+        {
+            for (int i = 0; i < _context.Identity.Roster.AgentCount; i++)
+            {
+                LiveAgentCue cue = _choiceFrame.AgentCues[i];
+                if (_context.Identity.Roster.TeamId(i) == 0 && cue.IsGoalkeeper && !cue.IsSentOff)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool KeeperFallbackPending()
+        {
+            PendingSubstitution[] queued = _choiceFrame.PendingSubstitutions;
+            if (queued != null)
+                for (int i = 0; i < queued.Length; i++)
+                    if (queued[i].Team == 0 && _benchKeeper[queued[i].Bench] && !_choiceFrame.AgentCues[queued[i].OutSlot].IsGoalkeeper)
+                        return true;
+            foreach (ClientChangeRecord row in _context.Changes.Records)
+                if (row.Status == ClientChangeStatus.Pending && row.Command.Kind == ManagerCommandKind.Substitute &&
+                    _benchKeeper[row.Command.BenchIndex] && !_choiceFrame.AgentCues[row.Command.OutSlotIndex].IsGoalkeeper)
+                    return true;
+            return false;
+        }
+
+        private static string RefusedSuffix(SubstitutionRequestStatus reason)
+        {
+            switch (reason)
+            {
+                case SubstitutionRequestStatus.LimitReached:
+                    return "refused_cap";
+                case SubstitutionRequestStatus.MatchEnded:
+                    return "refused_ended";
+                case SubstitutionRequestStatus.GoalkeeperRoleMismatch:
+                    return "refused_keeper";
+                case SubstitutionRequestStatus.OutgoingSentOff:
+                    return "refused_sent_off";
+                case SubstitutionRequestStatus.OutgoingAlreadyReplaced:
+                case SubstitutionRequestStatus.OutgoingAlreadyPending:
+                case SubstitutionRequestStatus.BenchPlayerUnavailable:
+                    return "refused_unavailable";
+                case SubstitutionRequestStatus.NoWindowsLeft:
+                    return "refused_windows";
+                default:
+                    return "refused"; // no typed reason (a refusal that threw)
+            }
         }
 
         private void ResetMatch()
@@ -846,6 +959,7 @@ namespace TacticalDirector.ClientApp
             _outgoing.Clear();
             _incoming.Clear();
             _feedback.Clear();
+            _feedbackStatus.Clear();
             _statistics.Clear();
             Text.ClearMatch();
             Dialog = DialogKind.None;
@@ -866,4 +980,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-10-08 | —      | Poll changed command outcomes atomically; structural revision excludes ordinary frames. |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): outgoing, bench and cap selectors reserve players named by the frame pending queue and by in-flight commands, each counted once. Last-frame roster evidence settles executed orders before the end barrier marks the rest NotApplied. |
 // | 1.3     | 2026-10-15 | —      | PR #505 review (Medium): choice lists also rebuild when the set of players reserved by pending engine or client requests changes (bitmask), including on a request-state change without a new frame. An accepted request changes no roster cue, so a second dialog could offer the same outgoing or bench player. |
+// | 1.4     | 2026-10-21 | —      | Gate J J-01: bench choices the engine's goalkeeper role check would refuse for the selected outgoing player stay listed but unavailable, with a reason (the keeper fallback after a sent-off keeper is admitted once); entry needs a role-legal pair. J-02: a Refused substitution row names the engine's typed reason. J-04: FeedbackStatus and PitchMarkerIsHome feed glyph/colour reinforcement only. |
 #endregion

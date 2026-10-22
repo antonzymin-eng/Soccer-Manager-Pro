@@ -1,7 +1,7 @@
 // File:     src/match-client-core/MatchClientDriver.cs
 // Created:  2026-07-24
-// Modified: 2026-10-15 (Match Flow §6.4: applied only when accepted)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-21 (Gate J J-02: refused records keep the typed substitution reason)
+// Modified (prior): 2026-10-15
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P2/§6),
 //           Code Standards #20
@@ -12,6 +12,7 @@
 
 using System;
 using System.Collections.Generic;
+using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.MatchClientCore
 {
@@ -129,13 +130,15 @@ namespace TacticalDirector.MatchClientCore
                 // writing), so dropping it leaves no partial state, and never entering Log keeps the
                 // reproducible-from-the-log contract intact.
                 bool applied;
+                SubstitutionRequestStatus refusal = SubstitutionRequestStatus.Accepted;
                 try
                 {
-                    applied = command.Apply(mutations);
+                    applied = command.Apply(mutations, out refusal);
                 }
                 catch (Exception)
                 {
                     applied = false;
+                    refusal = SubstitutionRequestStatus.Accepted; // no typed reason for a throw
                 }
 
                 // Brief per-command lock (uncontended on the sim thread; readers are rare) so a
@@ -143,7 +146,7 @@ namespace TacticalDirector.MatchClientCore
                 lock (_logLock)
                 {
                     if (applied) { _log.Add(new TickStampedCommand(appliedTick, in command)); }
-                    else { _failedLog.Add(new TickStampedCommand(appliedTick, in command)); }
+                    else { _failedLog.Add(new TickStampedCommand(appliedTick, in command, refusal)); }
                 }
             }
             _drainBuffer.Clear();
@@ -165,4 +168,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | pre-tick hook and killing the background pacing thread.         |
 // | 1.3     | 2026-10-08 | —      | Atomic conditional outcome snapshots for allocation-free unchanged UI polling. |
 // | 1.4     | 2026-10-15 | —      | Match Flow §6.4: a command is logged as applied only when Apply reports acceptance. |
+// | 1.5     | 2026-10-21 | —      | Gate J J-02: a refused substitution record carries the engine's typed SubstitutionRequestStatus (no reason is inferred). |
 #endregion

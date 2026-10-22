@@ -1,15 +1,22 @@
 # P5b real-client acceptance, B8/B10 render-loop capture and S0 Gate J — pinned host
 
 **Created:** October 19, 2026\
-**Last Updated:** October 19, 2026\
-**Version:** 0.1\
-**Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget;
-**S0 Gate J technical verdict: FAIL** (two Major contract gaps and one owner-judgement set remain). One High defect found and fixed on this branch.
-Owner acceptance of the verdict is pending.\
+**Last Updated:** October 22, 2026\
+**Version:** 0.2\
+**Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
+(v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
+- **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
+- **J-02 FIXED:** a refusal names its engine-typed reason; the button is kept.
+- **J-04 FIXED:** H v0.2 skin, whole-pitch view, statistics in the rail.
+- **J-05:** separate PR #520.
+
+Still due: the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, the owner's wording approval and Gate-J acceptance.
+**S0 Gate J technical verdict: CONDITIONAL PASS** (§5).\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
 [p5b-screens-validation.md](p5b-screens-validation.md) §"Acceptance matrix" (v0.14) for everything recorded here.\
-**Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md).
+**Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
+[`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes).
 
 ## 1. Identity, host and method
 
@@ -44,7 +51,7 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 | I-Q06 | PASS | Applied from a new suffix; identical resubmit is a new record; one log entry each. |
 | I-Q07 | PASS | Paused Mentality and substitution coexist as Pending with the Resume instruction; no ticks; Mentality applies on the first drain, the substitution at the next restart. |
 | I-Q08 | PASS | Generic persistent Refused; last Applied value kept; playback continues. |
-| I-Q09 | **FAIL (J-01, J-02)** | Keeper offered; bench labels 1–7; used/reserved exclusions correct. Role-mismatched pairs and window exhaustion are not gated (§3). |
+| I-Q09 | **FAIL (J-01, J-02)** → PASS after fixes (§6) | Keeper offered; bench labels 1–7; used/reserved exclusions correct. Role-mismatched pairs and window exhaustion are not gated (§3). |
 | I-Q10 | PASS | A chooser open at the whistle closes; focus goes to the report action; every request settles; no mutation after the end. A deferred substitution submitted at 1× near the whistle applied at a minute-89 stoppage; the unmatched-at-end path did not occur live and stays covered host-free. |
 | I-Q11 | PASS | Same snapshot both columns; no shots row; xG omitted; possession not renormalized; disclosure and focus survive updates. |
 | I-Q12 | PASS (mid-match) | Incomplete warning persists, no healthy partial interval, play continues, report partials start hidden. The before-first-publication variant is not reachable in the real client (the first frame publishes); host-free covers it. |
@@ -52,19 +59,19 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 | I-Q14 | PASS | Return clears; second match has fresh session, context, observer, feedback and draft; old session stays stopped; no blank markers. |
 | I-Q15 | **PASS after fix (J-03)** | First run: any arrow key on a choice group crashed the client. With v1.7: 38/38 keyboard checks — action-only Tab, MV order Pause → Faster → Change Mentality → Make substitution → statistics → pitch entry, modal wrap both directions, Escape restores the invoker, Submit focuses the new feedback row, Tab then reaches statistics, read-only pitch inspection re-enters at the inspected player, focus ring visible. Earlier-feedback disclosure by keyboard was not reached in this run (three records). |
 | I-Q16 | PASS (with limits) | 1366/1920/2560 × 100/150/200% plus 200% pseudo and 200% long names: 0 clipped texts, 0 unreachable actions, 0 pitch-label overlaps, `PitchLayoutFailureCount` 0, true 105:68 pitch aspect, full strings wrap with no autoshrink, narrow-pitch case clean. At base size the live Match View fits without scrolling at 1920 and 2560. The packaged/published catalogue identity proof is still TO BUILD (journey §14.8). |
-| I-Q17 | PARTIAL | No glyph failure with the packaged LegacyRuntime font; meaning carried by words. Contrast not measured; see J-04. |
-| I-Q18 | PARTIAL | Real unusual scores (15–14, 14–13, 12–12) and dense chronological history render legibly. The five-substitution cap could not be reached in a real match because of J-02. |
+| I-Q17 | PARTIAL → glyphs PASS (§6) | No glyph failure with the packaged LegacyRuntime font; meaning carried by words. Contrast not measured; see J-04. |
+| I-Q18 | PARTIAL → windows path PASS (§6) | Real unusual scores (15–14, 14–13, 12–12) and dense chronological history render legibly. The five-substitution cap could not be reached in a real match because of J-02. |
 | I-Q19 | PASS | Pinned-host compile, live inputs and the cert capture below. |
 
 ## 3. Findings
 
 | ID | Severity | Finding | Disposition |
 | --- | --- | --- | --- |
-| J-01 | Major | The substitution chooser offers goalkeeper↔outfield pairs that the engine always refuses (`GoalkeeperRoleMismatch`, added by #505). The bench keeper is listed first; eight consecutive outfield requests choosing him were each Refused with the generic row. Journey §14.4 places legal-pair filtering, with a reason, in the presenter. | Open. Fix needs a presenter rule mirroring the engine role check and an owner-approved reason string (binding-contract role register). |
-| J-02 | Major | After three Law 3 windows, the engine refuses every second-half request (`NoWindowsLeft`) while Make substitution stays enabled at 4/5 with no reason; each submit is a generic Refused. `LiveMatchFrame` carries substitutions used but not windows used. | Open. Needs a frame projection of windows used (viewer/engine contract), presenter gating and an owner-approved reason. |
+| J-01 | Major — **fixed v0.2** | The substitution chooser offers goalkeeper↔outfield pairs that the engine always refuses (`GoalkeeperRoleMismatch`, added by #505). The bench keeper is listed first; eight consecutive outfield requests choosing him were each Refused with the generic row. Journey §14.4 places legal-pair filtering, with a reason, in the presenter. | Open. Fix needs a presenter rule mirroring the engine role check and an owner-approved reason string (binding-contract role register). |
+| J-02 | Major — **fixed v0.2** | After three Law 3 windows, the engine refuses every second-half request (`NoWindowsLeft`) while Make substitution stays enabled at 4/5 with no reason; each submit is a generic Refused. `LiveMatchFrame` carries substitutions used but not windows used. | Open. Needs a frame projection of windows used (viewer/engine contract), presenter gating and an owner-approved reason. |
 | J-03 | High | Keyboard arrows on any choice group re-entered `Keyboard()` through the Control's `Refresh()` in the same frame until the stack overflowed; the exception rejected the pitch renderer and the next Start failed. Gate-invisible (Unity binding only). | **Fixed on this branch**: `S0ScreensBehaviour.cs` v1.7 processes keyboard input once per frame. Verified by the I-Q15 rerun. |
-| J-04 | Minor (owner judgement) | The skin is neutral: plain text buttons without chrome, dialogs as full pages, outcome words without the ✓ ✕ – glyphs of I-C11, shirt labels drawn on the marker discs in dark text, and the follow camera frames part of the pitch while `pitch.description` says goals are shown. Opening statistics at 1920×1080 shrinks the pitch to about 305 px wide. | For the owner's Gate-J visual acceptance against H v0.2. |
-| J-05 | Minor (owner decision) | The 10× rung delivers about 5.5× on this host (315–340 ticks/s instead of 600). The sim thread is the limit; the engine's per-tick snapshot encode allocates about 35 KB per tick. 1× holds 60 ticks/s. | Owner: accept, relabel, or open engine performance work. Rendering is unaffected (below). |
+| J-04 | Minor — **fixed v0.2** | The skin is neutral: plain text buttons without chrome, dialogs as full pages, outcome words without the ✓ ✕ – glyphs of I-C11, shirt labels drawn on the marker discs in dark text, and the follow camera frames part of the pitch while `pitch.description` says goals are shown. Opening statistics at 1920×1080 shrinks the pitch to about 305 px wide. | For the owner's Gate-J visual acceptance against H v0.2. |
+| J-05 | Minor — owner chose 10×; PR #520 | The 10× rung delivers about 5.5× on this host (315–340 ticks/s instead of 600). The sim thread is the limit; the engine's per-tick snapshot encode allocates about 35 KB per tick. 1× holds 60 ticks/s. | Owner: accept, relabel, or open engine performance work. Rendering is unaffected (below). |
 | J-06 | Info | Editor-only: an unfocused Editor runs the sim far slower (70–550 ticks/s); never use Editor timing as performance evidence. | Recorded. |
 
 ## 4. B8/B10 render-loop capture
@@ -96,6 +103,8 @@ and one whose profiler log stopped when the Editor was not recording.
 
 ## 5. Gate-J technical verdict
 
+*Superseded by §7 (v0.2) after the owner's decisions and fixes; kept as the v0.1 record.*
+
 Against [ux-detailed-plan.md](../design/ux-detailed-plan.md) §5 Gate J and §6.9:
 
 | Gate-J requirement | Result |
@@ -111,8 +120,56 @@ Against [ux-detailed-plan.md](../design/ux-detailed-plan.md) §5 Gate J and §6.
 the I-Q09/I-Q18 cap case is re-run, and the owner accepts J-04 and J-05. B8 and B10 performance obligations are
 discharged by §4. This verdict is technical; owner acceptance is a separate decision.
 
+## 6. Owner decisions and Gate-J fixes (v0.2)
+
+On October 20, 2026 the owner, Anton Zymin, chose a fix for each open finding:
+
+| ID | Owner decision | Landed on this branch |
+| --- | --- | --- |
+| J-01 | Show goalkeeper-mismatched choices greyed out, with a reason. The owner approves the wording. | `S0ScreenPresenter` v1.4 mirrors the engine's request-time role check. When the outgoing player is chosen, each bench player the engine would refuse stays listed but is unavailable, with a reason in words: `reason.keeper_out`, `reason.keeper_in`, or `reason.keeper_on_way` (one keeper fallback already pending). The keeper fallback after a sent-off keeper stays available once. Entry needs a role-legal pair. The Unity binding disables the choice and shows the reason under its label. |
+| J-02 | Keep the button and show the refusal message more clearly. No engine change. | The engine already returns a typed `SubstitutionRequestStatus`. `ManagerCommand.Apply` now passes it to the driver, which keeps it on its refused record (`TickStampedCommand.SubstitutionRefusal`, not part of the replay identity). `ClientChangeRecord.RefusalReason` stores it. Each typed refusal gets its own row: `feedback.substitution_refused_{cap, ended, keeper, sent_off, unavailable, windows}`. A refusal that threw keeps the generic row. No reason is inferred. Make substitution stays available. |
+| J-04 | Fix the visual issues before acceptance. | The S0 skin is rebuilt to H v0.2:<br>• navy page with a centred column; bordered panels for the scoreboard, home changes and statistics, the entry pages under a blue rule;<br>• raised and primary control chrome; dashed borders and secondary text when a control is unavailable; gold outline and tag on a selected choice;<br>• reason and warning boxes;<br>• outcome rows with a status bar and ✓ ✕ – … badge;<br>• zebra statistics table;<br>• navy and gold shirt chips with leaders;<br>• the whole pitch framed top-down by an orthographic camera, so `pitch.description` ("goals … shown") is true;<br>• a centred modal staging dialog over a dimmed backdrop.<br>Statistics moved into the rail, so opening them no longer shrinks the pitch. |
+| J-05 | Make 10× really deliver 10×. | Separate session and [PR #520](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/520) (engine throughput, bit-identical). It still needs a Unity compile and a 10× re-measure on this host. |
+
+The new copy is drafted in the binding-contract register (`ux-s0-binding-contracts.md` v0.7, 150 roles). **The owner has not yet approved the wording.**
+
+**Host-free tests (Windows .NET 8 shim):** MatchClientCore 190/190, ClientApp 58/58, UiFramework 50/50. New tests:
+- the presenter greys out keeper pairs with their reasons;
+- the fallback after a sent-off keeper is offered and Applied;
+- a real-drain refusal shows `OutgoingAlreadyReplaced` as "one of these players is no longer available";
+- the driver keeps a typed refusal, and a thrown refusal stays untyped;
+- the whole-pitch framing holds both goal lines.
+
+**Pinned host (Unity 6000.4.9f1).** Every compile was a forced recursive re-import, with 0 `error CS`; the only warnings are the two existing `GetInstanceID` ones. The loaded content hash is `96fe4eee…8b864c98`, equal to the canonical base hash for 150 roles.
+
+| Check | Result |
+| --- | --- |
+| J-01 (run 3, run 4, Shots) | **PASS** ×3:<br>• nothing greys before an outgoing pick;<br>• outfield out → only the bench keeper is unavailable ("…can only come on for the goalkeeper.");<br>• keeper out → all six outfield bench players are unavailable ("…can only be replaced by a goalkeeper."), shown under the label;<br>• a click on a greyed choice changes nothing;<br>• the keeper-for-keeper swap is Applied with no refusal. |
+| J-02 (run 3) | **PASS:**<br>• windows used: 1 (keeper swap), then 2 at tick 1732 and 3 at tick 2405, each Applied;<br>• in the second half Make substitution stays enabled;<br>• the next request is Refused with `NoWindowsLeft`;<br>• the row reads "Refused — Daniel North (shirt 4) → Oliver Shaw (shirt 15, bench slot 4); no substitution windows are left; substitution count unchanged.";<br>• two later requests are refused the same way. |
+| Full time with windows left (run 4) | **PASS** 12/12, including:<br>• a deferred substitution near the whistle settles as Applied;<br>• no mutation after the end;<br>• the report is available only from the end.<br>Run 3's two I-Q10/13 FAIL lines are void: its oracle assumes unused windows (the near-whistle request was correctly refused `NoWindowsLeft`), and the report screen had already been opened by outside input (below). |
+| J-04 views | Menu, setup, live, statistics, Mentality and substitution dialogs, report and the J-02 row match H v0.2 (`shots-*.tar`). The pitch is 1055×683 at 105:68 with statistics open or closed (v0.1: shrank to about 305 px). |
+| I-Q16 matrix (second run, 90 samples) | **PASS:**<br>• 100/150/200%, 200% pseudo and 200% long names at 1366/1920/2560 plus narrow 800×1000;<br>• 0 clipped texts, 0 pitch-label overlaps, 0 layout failures; every pitch sample 105:68.<br>Three samples are void: the Editor reported a transient screen size while sampling (1411×298, 1094×45, 367×618), and every control those audits flagged lies inside the requested resolution. The rerun found one defect: at 800×1000/200% the scoreboard broke "Home"/"Away" mid-word. It is fixed (team labels keep their own width) and the 200% passes re-ran clean. |
+| I-Q15 keyboard | **PASS in parts; one clean pass still due.** Attempt 1 passed all 28 checks from boot through statistics open; attempt 3 passed dialog, feedback, statistics and pitch inspection (25). Both were cut short when another application took the foreground; the guard stopped each attempt without sending a key. Attempts 2–3 also booted into a match already started by stray input (the owner was playing a game on the same PC), so their boot-dependent checks are void. |
+| B8/B10 on the new skin | **Not re-run.** The v0.1 capture (§4) used the neutral skin. The re-capture needs the PC idle for about 30 minutes of player keystrokes. |
+
+**Harness safety change.** The Editor focus helper no longer taps Alt to steal the foreground. Each harness key now goes only to the Unity Editor and aborts otherwise. The player driver already had this guard (v0.1).
+
+## 7. Gate-J technical verdict (v0.2)
+
+J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q09/I-Q18 cases pass on the host. J-04's visual set is implemented against H v0.2.
+
+**Verdict: CONDITIONAL PASS.** Gate J can pass when all of these hold:
+- B8/B10 are re-captured on this skin within the 16.7 ms p99 budget;
+- one uninterrupted I-Q15 run passes;
+- the owner approves the new wording and accepts the visuals;
+- J-05 lands, or its re-measure is accepted.
+
+Owner acceptance stays a separate decision.
+
+
 ## Version History
 
 | Version | Date | Notes |
 | --- | --- | --- |
 | 0.1 | October 19, 2026 | First real-client run of I-Q01–19, B8/B10 render-loop capture against the owner budget, J-03 fix verified, Gate-J technical verdict FAIL on J-01/J-02 with owner items J-04/J-05. |
+| 0.2 | October 22, 2026 | Owner decisions of October 20 implemented and host-verified (§6): J-01 greyed keeper pairs with reasons, J-02 typed refusal rows, J-04 H v0.2 skin with whole-pitch view and statistics in the rail; narrow-width team-label fix found by the I-Q16 rerun. Verdict CONDITIONAL PASS pending the B8/B10 re-capture, one clean I-Q15 pass, owner copy approval and acceptance. |
