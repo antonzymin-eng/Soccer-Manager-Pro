@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/Offer.cs
 // Created:  2026-09-12
-// Modified: 2026-09-14
+// Modified: 2026-10-20
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #31 §2.3, §3.2-§3.3 (counterparty-generic offer seam)
@@ -15,7 +15,7 @@ namespace TacticalDirector.Transfers
     /// <summary>Immutable bid/listing terms for one synchronous minimal-tier negotiation.</summary>
     public readonly struct Offer
     {
-        /// <summary>Current player identifier before any accepted roster re-key.</summary>
+        /// <summary>Stable, career-unique player identifier; a transfer re-homes the player under this same id (ERR-031-005).</summary>
         public readonly int PlayerId;
 
         /// <summary>The non-managed counterparty club participating in the offer.</summary>
@@ -89,4 +89,5 @@ namespace TacticalDirector.Transfers
 // | --------|------------|--------|---------------------------------------------- |
 // | 1.0     | 2026-09-12 | —      | Initial #31 T0 offer value. |
 // | 1.1     | 2026-09-14 | —      | Codex P2: centralize fail-loud term validation for every consuming seam. |
+// | 1.2     | 2026-10-20 | —      | AR round 1 (ERR-031-006 cycle) L1: PlayerId doc reworded to stable-id semantics (no re-key since ERR-031-005). |
 #endregion

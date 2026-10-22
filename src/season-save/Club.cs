@@ -1,6 +1,6 @@
 // File:     src/season-save/Club.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-20 (AR round 3 L9 — squad-size comment: 23, not 25 — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-2/KD-3/
 //           KD-5/KD-9; Code Standards #20
@@ -10,7 +10,7 @@
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// One club in a bootstrapped league (design KD-9). Identity only — the 25-player
+    /// One club in a bootstrapped league (design KD-9). Identity only — the 23-player (3/8/7/5, below the 25 cap)
     /// <c>PlayerDatabase.Squad</c> is resolved through <see cref="League.ResolveByClubId"/>.
     /// <para>
     /// <b>Not serialized.</b> The season blob persists <c>ClubId</c>s (in
@@ -62,4 +62,5 @@ namespace TacticalDirector.SeasonSave
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial implementation (roadmap A3).                               |
+// | 1.1     | 2026-10-20 | —      | AR round 3 L9: the type summary's "25-player Squad" is the 23-player 3/8/7/5 template (ERR-031-004). Comment-only. |
 #endregion

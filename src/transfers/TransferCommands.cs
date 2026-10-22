@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-09-21
+// Modified: 2026-10-21
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -22,7 +22,7 @@ namespace TacticalDirector.Transfers
     {
         private readonly ITransferRosterPort _roster;
 
-        /// <summary>Creates the command surface over the specified future-#30 roster port.</summary>
+        /// <summary>Creates the command surface over the roster port (production: the season-save <c>SeasonTransferRoster</c> adapter; tests: a fake).</summary>
         public TransferCommands(ITransferRosterPort roster)
         {
             _roster = roster ?? throw new ArgumentNullException(nameof(roster));
@@ -45,12 +45,20 @@ namespace TacticalDirector.Transfers
             }
 
             ValidateOffer(in offer, state.ManagedClubId);
+            if (!_roster.CarriesClub(offer.CounterpartyClubId))
+            {
+                // ERR-031-010: an unknown counterparty is a caller-contract bug (F6). Unguarded, a sale to
+                // a club with no roster valued at maximum scarcity and moved the player out of the league.
+                throw new ArgumentOutOfRangeException(
+                    nameof(offer), offer.CounterpartyClubId, "CounterpartyClubId is not a club of this league (F6).");
+            }
+
             if (!state.ActiveWindow.IsWindowOpen(worldDay))
             {
                 throw new InvalidOperationException("Transfer command is outside the active transfer window (F4).");
             }
 
-            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player)
+            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player, out int ownerClubId)
                 || player.PlayerId != offer.PlayerId)
             {
                 throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId, "PlayerId is outside the current #27 club universe (F6).");
@@ -58,7 +66,10 @@ namespace TacticalDirector.Transfers
 
             int fromClubId = offer.IsBuy ? offer.CounterpartyClubId : state.ManagedClubId;
             int toClubId = offer.IsBuy ? state.ManagedClubId : offer.CounterpartyClubId;
-            int ownerClubId = offer.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+
+            // ERR-031-005: ownership is the roster's answer, never the id's arithmetic. Ids are stable
+            // across transfers and post-genesis ids come from #28's monotonic cursor, so the packed
+            // clubId*CLUB_SQUAD_SIZE+local formula describes only a player's genesis club.
             if (ownerClubId != fromClubId)
             {
                 throw new InvalidOperationException("Offer direction does not match the player's current club ownership (F6).");
@@ -108,13 +119,22 @@ namespace TacticalDirector.Transfers
                     return TransferSubmissionOutcome.InsufficientBudget;
                 }
             }
-            else if (!state.TryGetContract(offer.PlayerId, out Contract existingContract))
-            {
-                throw new InvalidOperationException("Cannot sell a managed player without an active #31 contract.");
-            }
-            else
+            else if (state.TryGetContract(offer.PlayerId, out Contract existingContract))
             {
                 Contract.Validate(in existingContract);
+            }
+
+            // ERR-031-009: an UN-contracted managed player is sellable. §3.7 removes a contract that ages to
+            // 0 and the player stays (re-signing is deep tier), so "every managed player has a contract" holds
+            // only at genesis; a sale requiring one threw for every expired player — a manager-reachable
+            // exception. His registration is what is sold; any contract leaves with him.
+
+            // ERR-031-007: the releasing club must still name a matchday squad. An ordinary outcome, decided
+            // before any staging — a manager stripping his own side below eighteen (or buying an AI club's
+            // eighteenth) would otherwise wedge the next round's selection.
+            if (!_roster.CanRelease(fromClubId, offer.PlayerId))
+            {
+                return TransferSubmissionOutcome.SquadDepleted;
             }
 
             FinanceTransaction transaction = new FinanceTransaction(
@@ -126,78 +146,46 @@ namespace TacticalDirector.Transfers
             ClubFinancesState stagedFinances = finances;
             FinanceLedger.ApplyTransaction(ref stagedFinances, in transaction);
 
-            if (!_roster.TryPreviewRosterCommit(fromClubId, toClubId, offer.PlayerId, out int newPlayerId))
+            if (!_roster.TryPreviewRosterCommit(fromClubId, toClubId, offer.PlayerId))
             {
                 return TransferSubmissionOutcome.SquadFull;
             }
 
-            ValidatePreviewId(newPlayerId, toClubId);
-            if (offer.IsBuy && state.TryGetContract(newPlayerId, out Contract duplicateContract))
+            if (offer.IsBuy && state.TryGetContract(offer.PlayerId, out Contract duplicateContract))
             {
                 Contract.Validate(in duplicateContract);
-                throw new InvalidOperationException("Destination PlayerId already has a managed contract.");
+                throw new InvalidOperationException(
+                    "An external player already holds a managed contract — the contract set and the roster disagree.");
             }
 
+            // AR round 5 L-H (ERR-031-015): InsertContract refuses a squad-size-plus-one contract set, but it runs
+            // AFTER the irreversible roster commit. A buy with a full contract set can only mean the contract set
+            // and the roster disagree (a legal roster that had room would hold fewer contracts), so refuse it here,
+            // beside the duplicate pre-check, while nothing local or external has moved.
+            if (offer.IsBuy && state.ContractCount >= PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new InvalidOperationException(
+                    "The managed club already holds " + state.ContractCount + " contracts — the contract set and the roster disagree.");
+            }
+
+            // ---- COMMIT ---- the re-home keeps the id (ERR-031-005), then local state applies only once
+            // the port confirms the player really is on the destination roster.
+            _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
+            RequireCommitLanded(offer.PlayerId, toClubId);
+
+            finances = stagedFinances;
             if (offer.IsBuy)
             {
-                CommitBuy(
-                    in offer,
-                    fromClubId,
-                    toClubId,
-                    newPlayerId,
-                    ref finances,
-                    state,
-                    in stagedFinances);
+                state.AddCommittedSpend(offer.Fee);
+                Contract contract = new Contract(offer.PlayerId, offer.WagePerPeriod, offer.LengthSeasons);
+                state.InsertContract(in contract);
             }
-            else
+            else if (state.TryGetContract(offer.PlayerId, out Contract _))
             {
-                CommitSell(
-                    in offer,
-                    fromClubId,
-                    toClubId,
-                    newPlayerId,
-                    ref finances,
-                    state,
-                    in stagedFinances);
+                state.RemoveContract(offer.PlayerId);
             }
 
             return TransferSubmissionOutcome.Accepted;
-        }
-
-        private void CommitBuy(
-            in Offer offer,
-            int fromClubId,
-            int toClubId,
-            int previewPlayerId,
-            ref ClubFinancesState finances,
-            TransfersState state,
-            in ClubFinancesState stagedFinances)
-        {
-            int committedPlayerId = _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
-            RequirePreviewMatch(previewPlayerId, committedPlayerId);
-
-            finances = stagedFinances;
-            state.AddCommittedSpend(offer.Fee);
-            Contract contract = new Contract(previewPlayerId, offer.WagePerPeriod, offer.LengthSeasons);
-            state.InsertContract(in contract);
-        }
-
-        private void CommitSell(
-            in Offer offer,
-            int fromClubId,
-            int toClubId,
-            int previewPlayerId,
-            ref ClubFinancesState finances,
-            TransfersState state,
-            in ClubFinancesState stagedFinances)
-        {
-            // Commit the preflighted roster move first. #31's managed↔external re-key hook is a specified no-op,
-            // so retaining the old contract until this infallible port call succeeds cannot double-handle it.
-            int committedPlayerId = _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
-            RequirePreviewMatch(previewPlayerId, committedPlayerId);
-
-            state.RemoveContract(offer.PlayerId);
-            finances = stagedFinances;
         }
 
         private static TransferSubmissionOutcome ToSubmissionOutcome(NegotiationOutcome negotiation)
@@ -227,18 +215,12 @@ namespace TacticalDirector.Transfers
             }
         }
 
-        private static void ValidatePreviewId(int newPlayerId, int toClubId)
+        // F2: the producer's successful-preview contract is that the commit lands. A breach is an
+        // integration defect after the external port has already mutated; #31 can only guarantee its own
+        // state is untouched, which is why the check precedes every local write.
+        private void RequireCommitLanded(int playerId, int toClubId)
         {
-            if (newPlayerId < 0
-                || newPlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != toClubId)
-            {
-                throw new InvalidOperationException("Roster preview returned a PlayerId outside the destination club's deterministic id range.");
-            }
-        }
-
-        private static void RequirePreviewMatch(int previewPlayerId, int committedPlayerId)
-        {
-            if (committedPlayerId != previewPlayerId)
+            if (!_roster.TryGetPlayer(playerId, out PlayerRecord _, out int clubId) || clubId != toClubId)
             {
                 throw new InvalidOperationException("Roster commit violated its successful preview contract.");
             }
@@ -253,4 +235,8 @@ namespace TacticalDirector.Transfers
 // | 1.1     | 2026-09-14 | —      | Fix finance type alias; share offer validation; apply always-on counterparty positional need. |
 // | 1.2     | 2026-09-14 | —      | Type normal budget/full-squad outcomes; exclude negotiated player from need; commit staged finance and move port check ahead of local mutation. |
 // | 1.3     | 2026-09-21 | —      | ERR-031-002: resolve buy affordability before checked staged finance validation so extreme coherent debt returns InsufficientBudget instead of overflowing. |
+// | 1.4     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds — ownership from the port's roster answer, never id/CLUB_SQUAD_SIZE; the re-home keeps the id; local state applies only after the port confirms the player is on the destination roster. |
+// | 1.5     | 2026-10-20 | —      | #31 T2: unknown counterparty fails loud (ERR-031-010); an un-contracted managed player is sellable (ERR-031-009); a release that leaves a club below a matchday squad returns SquadDepleted before any staging (ERR-031-007). |
+// | 1.6     | 2026-10-20 | —      | AR round 4 (R4-L5, ERR-031-014): the constructor summary no longer calls the roster port "future" — the #30 adapter has landed. |
+// | 1.7     | 2026-10-21 | —      | AR round 5 L-H (ERR-031-015): a buy with a full contract set (ContractCount >= CLUB_SQUAD_SIZE) fails loud beside the duplicate-contract pre-check, before the roster commit — InsertContract's cap check would otherwise throw after the irreversible commit. |
 #endregion

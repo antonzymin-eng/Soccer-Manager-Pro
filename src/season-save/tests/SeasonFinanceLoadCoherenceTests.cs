@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonFinanceLoadCoherenceTests.cs
 // Created:  2026-09-10
-// Modified: 2026-09-10
+// Modified: 2026-10-18 (#31 T1 — call sites carry the transfers block)
+//           Prior: 2026-09-10
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-020/021/025; Season & Competition Loop #30 Appendix B.1;
 //           ERR-030-050; Code Standards #20
@@ -18,6 +19,7 @@ using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 using CFinances = TacticalDirector.ClubFinances.ClubFinances;
 
@@ -86,7 +88,7 @@ namespace TacticalDirector.SeasonSave
                 in appearance,
                 in progression,
                 in discipline,
-                in finance,
+                in finance, new TransfersBlock(TransfersSaveCodec.Encode(null)),
                 matchBlobOrNull: null);
 
             string path = Path.Combine(_tempDir, "mispaired.season");
@@ -101,4 +103,5 @@ namespace TacticalDirector.SeasonSave
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
 // | 1.0     | 2026-09-10 | —      | ERR-030-050: raw-frame Load-side ClubId coherence lock.      |
+// | 1.1 | 2026-10-18 | — | #31 T1 (ERR-030-054): frame Encode call site passes an unwired TransfersBlock. |
 #endregion

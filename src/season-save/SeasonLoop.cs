@@ -1,6 +1,25 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-13
+// Modified: 2026-10-20 (AR round 5 L17/S-L2/S-L4/S-L5 — v1.46: doc comments only — Progression names the mutators' real visibility,
+//           the constructor/Restore/RollToNextSeason/SubmitTransferBid exception docs list every confirmed cause, ActiveMatch and
+//           AvailableTransferBudget are sim-thread-only, AvailableTransferBudget is the season CEILING.)
+//           Prior: 2026-10-20 (AR round 4 S4-L2/L3/L5 — v1.45: the constructor's KD-4 refusal is SeasonCalendar.RequireCursorInvariant; RollToNextSeason's
+//           exception docs list every (d″)/#28/window refusal; TransfersSnapshot/FinanceView state the sim-thread-only contract.)
+//           Prior: 2026-10-20 (AR round 4 M13 — v1.44: doc comment only on Progression — every mutator is internal.)
+//           Prior: 2026-10-20 (AR round 3 S-L1/S-L4/T-L8 — v1.43: the SubmitTransferBid _activeMatch guard is deleted (sim-thread contract documented instead);
+//           stale (d″)/contracts comment corrected; RollToNextSeason documents (d″)'s ArgumentException.)
+//           Prior: 2026-10-20 (AR round 3 M13 — v1.42: doc-comment only on Progression — reads only; roster moves
+//           go through SubmitTransferBid.)
+//           Prior: 2026-10-20 (ERR-031-011 — v1.41: (d″) window close anchored to the next calendar's opening
+//           fixture day; SubmitTransferBid refuses mid-fixture; roll/bid docs corrected.)
+//           Prior: 2026-10-20 (#31 T2 — v1.40: SubmitTransferBid, TransfersSnapshot, the TransferFee refusal,
+//           and the staged #31 boundary step (d″).)
+//           Prior: 2026-10-19 (ERR-028-025 — v1.39: #28's season boundary is live at step (d) — staged before
+//           BeginNextSeason, installed after; (d′) reconciles against the planned rosters; retirees' #44
+//           rows dropped.)
+//           Prior: 2026-10-18 (#31 T1 — v1.38: the loop carries a cloned #31 TransfersState through the
+//           constructor and Restore, checked by SeasonTransfersCoherence, for the save root.)
+//           Prior: 2026-10-13
 //           Prior: 2026-09-11 (T2b review — v1.33: legacy empty finance migration is Restore-only;
 //           generic legacy/unwired empty composition is preserved but every finance read/roll fails loud.)
 // Modified: 2026-09-11 (ERR-030-051 — v1.32: #40 T2b runtime wiring. Finance bootstrap is owned by
@@ -89,6 +108,7 @@ using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -134,6 +154,11 @@ namespace TacticalDirector.SeasonSave
         // persisted T1b block. The generic constructor may still carry the explicit legacy/unwired empty
         // state, but finance reads/commands and the season-boundary settlement fail loud on that state.
         private ClubFinanceEntry[] _finances;
+
+        // #31: the managed club's transfers state. A clone taken at composition (copied, not borrowed);
+        // null = #31 not wired. Written only by SubmitTransferBid (through #31's SubmitBid) and by the
+        // roll's staged boundary step, which REPLACES the reference after BeginNextSeason (T2).
+        private TransfersState _transfers;
 
         // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
         // has no day step, no cursor and no provider of its own, so nothing here can fall out of step
@@ -254,12 +279,24 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="League.CreateLoop"/> bootstraps new games, while <see cref="Restore"/> alone may
         /// migrate an empty persisted T1b block. A non-empty set must exactly match the season's club set
         /// and is snapshot-copied/canonicalized at composition (ERR-030-050 / ERR-030-051).</param>
+        /// <param name="transfersOrNull">The #31 transfers state this loop carries (#31 T1), or <c>null</c>
+        /// when no #31 subsystem is wired. Cloned at composition. It must belong to the season's managed
+        /// club and, when a roster provider is resolvable, every contract must name a player that club's
+        /// roster carries (<see cref="SeasonTransfersCoherence"/>).</param>
         /// <exception cref="System.ArgumentNullException">A required reference is null.</exception>
         /// <exception cref="System.ArgumentException">
         /// The KD-4 cursor invariant is already violated: the world clock has passed the season's pending
         /// round (F4). Checked here as well as at <c>SeasonSaveManager.Load</c> because a loop can be
         /// composed from a freshly built world and an advanced season without any file involved. Or the
         /// career pair is half-supplied, or a non-empty finance set disagrees with the season's club set.
+        /// </exception>
+        /// <exception cref="System.InvalidOperationException">
+        /// A carried player's cursor or birth anchor is outside the coherent band against the world clock
+        /// (AR round 5 S-L2): a #29 training, #41 medical or appearance cursor ahead of the clock or more than
+        /// one day behind it (<c>PlayerCareerStates.RequireCursorsWithinClock</c>; the appearance anchor is
+        /// ahead-checked only), a #28 progression cursor likewise (<c>RequireProgressionCursorWithinClock</c> —
+        /// the sentinel is NOT exempt), or a #28 <c>BirthWorldDay</c> ahead of the clock
+        /// (<c>RequireBirthWorldDayWithinClock</c>).
         /// </exception>
         public SeasonLoop(
             WorldStore world,
@@ -269,10 +306,12 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
             DisciplineState disciplineOrNull = null,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
             : this(
                 world, season, mode, careerOrNull, careerSquadsOrNull, progressionOrNull,
-                disciplineOrNull, disciplineDriverOrNull: null, financesOrNull: financesOrNull)
+                disciplineOrNull, disciplineDriverOrNull: null, financesOrNull: financesOrNull,
+                transfersOrNull: transfersOrNull)
         {
         }
 
@@ -299,7 +338,8 @@ namespace TacticalDirector.SeasonSave
             ProgressionEngine progressionOrNull,
             DisciplineState disciplineOrNull,
             IFixtureDisciplineDriver disciplineDriverOrNull,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
         {
             if (world == null)
             {
@@ -317,14 +357,7 @@ namespace TacticalDirector.SeasonSave
                     nameof(mode), mode, "Undefined RoundResolutionMode.");
             }
 
-            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
-            {
-                throw new System.ArgumentException(
-                    $"KD-4 cursor invariant violated: the world is on day {world.CurrentWorldTick} but the "
-                    + $"season's next fixture is day {season.Calendar.NextFixtureDay()} (round "
-                    + $"{season.Calendar.NextRoundIndex}).",
-                    nameof(season));
-            }
+            season.Calendar.RequireCursorInvariant(world.CurrentWorldTick, nameof(season));
 
             // #28 T2a — ONE roster authority, enforced by the signature rather than by convention.
             // When a progression store is supplied it IS the roster (KD-4), so the loop derives the
@@ -472,6 +505,10 @@ namespace TacticalDirector.SeasonSave
             ClubFinanceEntry[] resolvedFinances = SeasonFinanceCoherence.Normalize(
                 season, financesOrNull, nameof(financesOrNull));
 
+            // #31 T1: the save root's cross-blob rule, at the composition boundary too — a loop can be
+            // composed from a transfers state and a roster that never met a save file.
+            SeasonTransfersCoherence.Require(season, transfersOrNull, resolvedSquads, nameof(transfersOrNull));
+
             _world = world;
             _state = season;
             Mode = mode;
@@ -485,6 +522,7 @@ namespace TacticalDirector.SeasonSave
             // block it was built from.
             _progression = progressionIsRoster ? progressionOrNull : null;
             _finances = resolvedFinances;
+            _transfers = transfersOrNull?.Clone();
 
             // #44 T2. Optional and UNPAIRED, unlike the career/provider pair above: #44 needs no squad
             // provider of its own (it reads the squads the seam already resolved) and no world clock
@@ -556,9 +594,16 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// The managed club's in-progress match, or <c>null</c> between fixtures (§4.3 / the KD-1
         /// <c>matchPresent</c> flag). Non-null only while a <see cref="RoundResolutionMode.ManagedThroughEngine"/>
-        /// or <see cref="RoundResolutionMode.FullEngine"/> fixture is being played, which within a single
-        /// synchronous <see cref="AdvanceAndPlayNextRound"/> call is visible only to a #38 observer on
-        /// another thread — the seam a later interactive "watch my match" flow drives.
+        /// or <see cref="RoundResolutionMode.FullEngine"/> fixture is being played, i.e. only inside the
+        /// synchronous <see cref="AdvanceAndPlayNextRound"/> call that is ticking it.
+        /// <para>
+        /// <b>SIM-THREAD ONLY (AR round 5 S-L4)</b> until a seam that can stop the match between ticks exists. The
+        /// engine is being advanced by the sim thread at the only moments this is non-null, so a read from
+        /// any other thread (the class's THREAD SAFETY note: none) observes a mid-<c>RunTick</c> engine, and
+        /// handing it to <see cref="SeasonSaveManager"/> would encode a blob mixing pre- and post-tick state. A
+        /// later interactive "watch my match" flow must add that stop-between-ticks seam first; this property is
+        /// not it.
+        /// </para>
         /// </summary>
         public TacticalDirector.MatchEngine.MatchEngine ActiveMatch => _activeMatch;
 
@@ -660,26 +705,140 @@ namespace TacticalDirector.SeasonSave
         /// progression block from, and the surface #31/#38 read
         /// <c>LifecycleView</c> through (FR-PG-023).
         /// </para>
+        /// <para>
+        /// For READS only (AR round 3 M13; AR round 4 widening; AR round 5 L17): a roster move goes through
+        /// <see cref="SubmitTransferBid"/>, never the store directly — EVERY mutator of the store
+        /// (<c>AdvanceDay</c>, <c>PrepareSeasonBoundary</c>, <c>CommitSeasonBoundary</c> and <c>MovePlayer</c>;
+        /// <c>CanMovePlayer</c> is its read-only predicate) is internal to
+        /// <c>TacticalDirector.PlayerProgression</c> and visible only to <c>TacticalDirector.SeasonSave</c> and
+        /// the test assemblies through <c>InternalsVisibleTo</c> (ERR-028-028), so a client cannot forge a
+        /// roster change that leaves the #29/#41/#30 career rows behind.
+        /// </para>
         /// </summary>
         public ProgressionEngine Progression => _progression;
 
-        /// <summary>Returns a detached #40 observer value for one club (FR-FN-003/026).</summary>
+        /// <summary>
+        /// Returns a detached #40 observer value for one club (FR-FN-003/026). SIM-THREAD ONLY (AR round 4 S4-L5): it reads
+        /// the live finance entries, so per the class's THREAD SAFETY note a UI thread must not call it —
+        /// the sim thread reads it between rounds and marshals the returned value (or a
+        /// <see cref="SeasonViewModel"/> snapshot) across.
+        /// </summary>
         public FinancesViewModel FinanceView(int clubId) =>
             SeasonFinanceRuntime.View(_finances, clubId);
 
-        /// <summary>Returns the club's currently available transfer budget through #40's ledger API.</summary>
+        /// <summary>
+        /// Returns the club's transfer-spending CEILING for the current season through #40's ledger API
+        /// (<c>FinanceLedger.AvailableTransferBudget</c>). It is the ceiling, not the remaining headroom: it
+        /// does not subtract #31's committed spend. The headroom a bid is gated against is this value minus
+        /// <c>TransfersSnapshot().CommittedSpendThisWindow</c> (AR round 5 S-L5; <c>TransferCommands.SubmitBid</c>
+        /// computes exactly that). SIM-THREAD ONLY (AR round 5 S-L4): it reads the live finance entries, so per
+        /// the class's THREAD SAFETY note a UI thread must not call it — the sim thread reads it between
+        /// rounds and marshals the value across.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">Club finances are not initialized on this loop
+        /// (the generic legacy/unwired empty state).</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">No finance entry exists for
+        /// <paramref name="clubId"/>.</exception>
         public long AvailableTransferBudget(int clubId) =>
             SeasonFinanceRuntime.AvailableTransferBudget(_finances, clubId);
 
         /// <summary>Applies one validated #40 ledger transaction to the selected club.</summary>
-        public void ApplyTransaction(int clubId, in FinanceTransaction transaction) =>
+        /// <exception cref="System.InvalidOperationException">#31 is wired and the line item is
+        /// <see cref="FinanceLineItem.TransferFee"/>: transfer fees are posted only by
+        /// <see cref="SubmitTransferBid"/>, which also keeps #31's committed-spend counter (KD-2). A second,
+        /// spend-blind path for the same money would let a fee bypass the window and budget gates.</exception>
+        public void ApplyTransaction(int clubId, in FinanceTransaction transaction)
+        {
+            if (_transfers != null && transaction.LineItem == FinanceLineItem.TransferFee)
+            {
+                throw new System.InvalidOperationException(
+                    "Transfer fees are posted only through SubmitTransferBid once #31 is wired (KD-2): a direct "
+                    + "TransferFee transaction would bypass the window, budget and committed-spend gates.");
+            }
+
             SeasonFinanceRuntime.ApplyTransaction(_finances, clubId, in transaction);
+        }
+
+        /// <summary>
+        /// A DETACHED copy of the managed club's #31 state — contracts, the active window, committed
+        /// spend — for display, or <c>null</c> when #31 is not wired. A copy, because the UI drives #31
+        /// only through <see cref="SubmitTransferBid"/> and never mutates its state directly (FR-TX-025).
+        /// SIM-THREAD ONLY (AR round 4 S4-L5): the clone is taken from the live state, so a UI thread must not
+        /// call it (class THREAD SAFETY note) — the sim thread calls it between rounds and marshals the copy
+        /// across, the same way it marshals a <see cref="SeasonViewModel"/>.
+        /// </summary>
+        public TransfersState TransfersSnapshot() => _transfers?.Clone();
+
+        /// <summary>
+        /// The manager's transfer command (#31 FR-TX-025, §7.1 T2): evaluates and, when accepted, commits
+        /// one buy or sell for the managed club on today's world day.
+        /// <para>
+        /// <b>Finance (§7.1 T2's staging seam).</b> The managed club's EXACT live #40 value is copied out,
+        /// #31 stages its fee on that copy through <c>FinanceLedger.ApplyTransaction</c> — the canonical
+        /// #40 mutation path — and the copy is published back only when the outcome is
+        /// <see cref="TransferSubmissionOutcome.Accepted"/>, which #31 returns only after the roster
+        /// commit is confirmed. Every other outcome leaves #40 byte-identical. The entry's index is
+        /// resolved before the bid, so the publish cannot fail on a lookup after the roster moved.
+        /// </para>
+        /// <para>
+        /// <b>Roster.</b> The production port (<see cref="SeasonTransferRoster"/>) re-homes the player in
+        /// the #28 store and moves his #29/#41/#30 rows, all under his unchanged id (ERR-031-005).
+        /// </para>
+        /// <para>
+        /// <b>Sim thread, between rounds.</b> Like every command on this class, a bid must be called on the
+        /// sim thread between rounds (see the class's THREAD SAFETY note: none). A transfer re-homes a
+        /// player in the very rosters a round's engines are booted from; nothing here can detect a caller
+        /// that breaks that contract from another thread, so the contract is the only protection (AR round 3).
+        /// </para>
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">#31 or #28 is not wired; or club finances are
+        /// not initialized on this loop (the generic legacy/unwired empty state — <c>StageFor</c> resolves the
+        /// managed club's entry before the bid, AR round 5 S-L2); or a #31 fail-loud
+        /// condition — F4 (the command is outside the active window) or the F6 offer-direction mismatch (the
+        /// player is not at the club the offer moves him from).</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">A #31 F6 caller-contract violation:
+        /// malformed terms (negative fee/wage/id, non-positive length), the managed club or an unknown club
+        /// named as counterparty (ERR-031-010), or a player outside the current #27 club universe.</exception>
+        public TransferSubmissionOutcome SubmitTransferBid(in Offer offer)
+        {
+            if (_transfers == null)
+            {
+                throw new System.InvalidOperationException(
+                    "No #31 transfers state is wired on this loop; transfers are a new-game career feature "
+                    + "(League.CreateLoop with a progression store) or a restored one.");
+            }
+
+            if (_progression == null)
+            {
+                throw new System.InvalidOperationException(
+                    "Transfers re-home players in the #28 store, the roster authority (KD-4); this loop has none.");
+            }
+
+            int managed = _state.ManagedClubId;
+            ClubFinances.ClubFinances staged = SeasonFinanceRuntime.StageFor(_finances, managed, out int index);
+            var commands = new TransferCommands(new SeasonTransferRoster(_progression, _career));
+            TransferSubmissionOutcome outcome =
+                commands.SubmitBid(in offer, _world.CurrentWorldTick, ref staged, _transfers);
+            if (outcome == TransferSubmissionOutcome.Accepted)
+            {
+                SeasonFinanceRuntime.ReplaceStaged(_finances, index, managed, in staged);
+            }
+
+            return outcome;
+        }
 
         /// <summary>
         /// A value-copy snapshot of the live #40 entries for the save root. The clone prevents a save
         /// consumer from becoming a second mutation owner.
         /// </summary>
         internal ClubFinanceEntry[] FinanceEntriesForSave() => (ClubFinanceEntry[])_finances.Clone();
+
+        /// <summary>
+        /// The carried #31 state for the save root, or null when #31 is not wired. Internal: the codec only
+        /// reads it, and a public accessor would hand every caller a second writer of #31 state (the UI must
+        /// go through #31's command seam, FR-TX-025).
+        /// </summary>
+        internal TransfersState TransfersForSave() => _transfers;
 
         /// <summary>
         /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
@@ -1063,12 +1222,17 @@ namespace TacticalDirector.SeasonSave
         /// the next season's seed, regenerate its schedule and calendar, and reset. Returns what the
         /// board decided and what the new season starts from.
         /// <para>
-        /// <b>KD-6 — one restartable transform.</b> The result is a pure function of the prior
-        /// <see cref="SeasonState"/> alone: the next seed derives from the current seed and season
-        /// number, the schedule from that seed, and the calendar by shifting THIS season's round spacing
-        /// forward by one season-length plus the close-season break. Nothing is drawn from a cursor and
-        /// nothing reads the wall clock, so a save taken either side of this call restores to the same
-        /// continuation, and rolling twice from the same prior state yields the same next state.
+        /// <b>KD-6 — one restartable transform.</b> The result is a pure function of the persisted
+        /// career state — the prior <see cref="SeasonState"/>, the world clock and seed, and the staged
+        /// subsystem blocks (#40 finances, the #28 store, the #29/#41 career, #31 transfers): the next
+        /// seed derives from the current seed and season number, the schedule from that seed, and the
+        /// calendar by shifting THIS season's round spacing forward by one season-length plus the
+        /// close-season break. Nothing is drawn from a cursor and nothing reads the wall clock, so a save
+        /// taken either side of this call restores to the same continuation, and rolling twice from the
+        /// same prior state yields the same next state. The world clock enters only as the boundary's
+        /// "today": #28's regen construction day (clock − 1) and the open day of #31's next window — the
+        /// window's CLOSE is anchored to the next calendar's opening fixture day (ERR-031-011), so how
+        /// long a client lingers in the close season before rolling changes only the day transfers open.
         /// </para>
         /// <para>
         /// <b>Ordering is load-bearing.</b> Everything is computed and validated before anything is
@@ -1082,11 +1246,19 @@ namespace TacticalDirector.SeasonSave
         /// <b>Insertion points (FR-SN-031).</b> (a') #43's promotion/relegation transform remains a
         /// declared empty position. (b') #40's finance settlement is LIVE: it follows (a') and precedes
         /// (c) regeneration so budgets are derived from the completed season/post-promotion division.
-        /// (d) #28's season-boundary churn remains its separately documented reserved position.
+        /// (d) #28's season boundary is LIVE (ERR-028-025): retiree removal + 1:1 regen, STAGED at (d)
+        /// and installed after (e) like (b'). (d″) #31's boundary is LIVE (ERR-030-056): contract aging,
+        /// the retiree/regen contract lockstep, the committed-spend reset and the next summer window
+        /// (ERR-031-011), STAGED after (d′) and installed after (e) the same way.
+        /// </para>
+        /// <para>
+        /// <b>Determinism across a save.</b> The regen stream is boundary-scoped — seeded from the world
+        /// seed and the completed season number, both persisted — so the KD-6 property above extends to
+        /// the roster: a save taken before this call reproduces the same regens.
         /// </para>
         /// <para>
         /// <b>(d′) the FR-TR-025 / FR-MD-025 roster reconciliation is LIVE, and split in two.</b> It
-        /// reads the provider at (d′) — after #28's churn would have happened — but installs only after
+        /// reads the PLANNED rosters at (d′) — after #28's churn — but installs only after
         /// (e)'s commits, because <c>BeginNextSeason</c> is the one write here that can fail and a
         /// career reconciled against a season that never began is the same half-rolled state the
         /// ordering above exists to prevent. Staging throws where the sync throws; installing cannot.
@@ -1096,7 +1268,31 @@ namespace TacticalDirector.SeasonSave
         /// The season is not over (F5 — rounds remain, or a fixture in a resolved round was never
         /// played), or the world clock has already passed the day the new season would open on, which
         /// would install a state violating the KD-4 cursor invariant (FR-SN-011); or the final fixture
-        /// day has not been completed through day advancement (ERR-030-053).
+        /// day has not been completed through day advancement (ERR-030-053). Also thrown while staging
+        /// (AR round 5 S-L2): the (b') finance settlement when club finances are not initialized on this
+        /// loop (<c>SeasonFinanceRuntime.PrepareSettlement</c> — the generic legacy/unwired empty state);
+        /// and #28's <c>PrepareSeasonBoundary</c> when the PlayerId cursor is exhausted or a generated regen
+        /// carries a value the save path would refuse.
+        /// </exception>
+        /// <exception cref="System.ArgumentException">
+        /// The roll can refuse while staging, before anything is written (AR rounds 3-5), and a refused roll
+        /// leaves season, board, finances, rosters and contracts untouched. All are integration defects —
+        /// #28's boundary plan and the production calendar never produce them. (d′)
+        /// (<c>PlayerCareerStates.PrepareRosterSync</c>) refuses a held club the roster provider cannot
+        /// resolve, a squad listing a <c>PlayerId</c> twice, and a planned roster that puts one id in two
+        /// clubs; (e) <c>SeasonState.BeginNextSeason</c> validates before it mutates and refuses a
+        /// next-season schedule whose fixture count differs, that names a club outside the season's club
+        /// set, or that spans more rounds than its calendar maps (or a calendar mapping none). (d″)
+        /// (<c>TransfersState.PrepareSeasonBoundary</c>) refuses four ways: an arriving managed regen already
+        /// holds a contract, an arriving regen is also retired this boundary, an arriving id is listed twice,
+        /// or the aged contracts plus the arrivals would exceed <c>CLUB_SQUAD_SIZE</c>. #28's
+        /// <c>PrepareSeasonBoundary</c> refuses a <c>worldDay</c> outside the span the carried players'
+        /// progression cursors occupy (AR round 4 L16: the regen anchor MUST sit on the cursor day).
+        /// </exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">
+        /// <c>TransferWindow.SummerWindowFor</c> cannot derive the next window: its close would run past
+        /// <c>uint.MaxValue</c> (or the opening fixture day precedes the roll day, which the KD-4 refusal
+        /// above already excludes).
         /// </exception>
         public SeasonRollOutcome RollToNextSeason()
         {
@@ -1159,22 +1355,51 @@ namespace TacticalDirector.SeasonSave
                     + "invariant (FR-SN-011). Roll at the end of the season, then advance the world.");
             }
 
-            // ── (d) #28 season boundary — RESERVED, still empty. ────────────────────────────────
-            // The DAILY step is live at slot 1 since T2a, and age is derived there rather than
-            // advanced here, so there is no "age advance" left for this position. What the slot
-            // still holds open is RunSeasonBoundary: retiree removal + 1:1 regen, which needs the
-            // player-progression.regen stream (#28 §3.5 does not pin how that survives a save).
-            // #30 §3.5 carries the same wording.
+            // ── (d) #28 season boundary — LIVE (ERR-028-025): STAGED here, installed after (e). ──
+            // Retiree removal + 1:1 regen in the retiree's position (ERR-028-024) with fresh ids from
+            // NextPlayerId. PrepareSeasonBoundary writes nothing; the regen stream is boundary-scoped,
+            // seeded from (world seed, the season being completed), so it needs no persisted cursor and
+            // a save taken before this roll reproduces it. Regens are constructed on the last LIVED day
+            // (clock − 1), where every carried player's cursor sits; ERR-030-053 guarantees the clock is
+            // past the final fixture day, so the subtraction cannot wrap.
+            SeasonBoundaryPlan boundary = null;
+            if (_progression != null)
+            {
+                boundary = _progression.PrepareSeasonBoundary(
+                    _world.WorldSeed, _state.SeasonNumber, _world.CurrentWorldTick - 1u);
+            }
+
             // (d′) the FR-TR-025 / FR-MD-025 roster-membership handoff, STAGED here and installed
             // below. #28's regens and retirements are the roster change, so the reconciliation reads
-            // the provider at this point — after (d) — but it must not WRITE here: BeginNextSeason is
-            // the one commit in this method that can fail, and a career reconciled against a season
-            // that never began is exactly the half-rolled state this method's ordering exists to
-            // prevent. Staging is pure and throws where the sync throws; installing cannot fail.
+            // the PLANNED rosters — the store itself is not mutated until (d) is committed, so reading
+            // the live provider here would reconcile against the pre-boundary roster and then install
+            // a career that disagrees with the committed one. It must not WRITE here either:
+            // BeginNextSeason is the one commit in this method that can fail, and a career reconciled
+            // against a season that never began is exactly the half-rolled state this method's
+            // ordering exists to prevent. Staging is pure and throws where the sync throws; installing
+            // cannot fail.
             PlayerCareerStates.RosterSyncPlan rosterSync = default;
             if (_career != null)
             {
-                rosterSync = _career.PrepareRosterSync(_careerSquads);
+                rosterSync = _career.PrepareRosterSync(
+                    boundary == null ? _careerSquads : new PlannedSquads(boundary));
+            }
+
+            // (d″) #31's boundary (FR-TX-028 / §3.7, ERR-030-056), STAGED here and installed below like
+            // (b′)/(d)/(d′): every managed contract ages one season (a contract that would reach 0 is
+            // removed); the retirees' contracts leave with them and each regen joining the MANAGED club is
+            // seeded the genesis terms (G14 lockstep with #28); committed spend resets; the next summer
+            // window opens on the roll day and closes SummerWindowInSeasonDays into the next season,
+            // counted from nextCalendar's opening fixture day (ERR-031-011) — so the close does not depend
+            // on when the client rolls; only the open day (the day the season begins) does. Pure — builds
+            // a new state, writes nothing.
+            TransfersState nextTransfers = null;
+            if (_transfers != null)
+            {
+                nextTransfers = _transfers.PrepareSeasonBoundary(
+                    boundary == null ? System.Array.Empty<int>() : RetiredFrom(boundary),
+                    boundary == null ? System.Array.Empty<int>() : ArrivalsAt(boundary, _transfers.ManagedClubId),
+                    TransferWindow.SummerWindowFor(_world.CurrentWorldTick, nextCalendar.DayOfRound(0)));
             }
 
             // ── (e) commit: schedule + table + season number + seed, then the board verdict ─────
@@ -1189,30 +1414,49 @@ namespace TacticalDirector.SeasonSave
             // so this copy cannot create/remove a club and cannot throw after composition validation.
             System.Array.Copy(settledFinances, _finances, settledFinances.Length);
 
-            // The staged reconciliation installs last, after the final write that could have refused
-            // the roll. The returned churn count is deliberately dropped: what a caller wants to know
-            // about a boundary is which players the career now carries, which is readable off
-            // Career itself — a count would be a second, weaker answer to the same question.
+            // (d) installs here, after the final write that could have refused the roll. Cannot fail:
+            // nothing has mutated the store since PrepareSeasonBoundary (its generation check is the
+            // proof), and the store instance is kept, so ProgressionSquads sees the new roster.
+            if (boundary != null)
+            {
+                _progression.CommitSeasonBoundary(boundary);
+            }
+
+            // The staged reconciliation installs next, against the roster (d) just installed. The
+            // returned churn count is deliberately dropped: what a caller wants to know about a
+            // boundary is which players the career now carries, which is readable off Career itself —
+            // a count would be a second, weaker answer to the same question.
             if (_career != null)
             {
                 _career.CommitRosterSync(in rosterSync);
             }
 
-            // M11: FR-DC-013 names the T-phase roster-event delivery point as WHERE #44's re-key
-            // (DisciplineRules.MigratePlayerId) and retirement drop (DisciplineRules.DropPlayer) are
-            // meant to be called — and the roster sync immediately above IS that T-phase for #29/#41.
-            // Neither #44 method is called anywhere in this assembly (or any other) today; both have
-            // zero references outside src/discipline/ and its own unit tests. That is inert while
-            // #28's boundary regen stays deferred (RunSeasonBoundary above is a documented, still-empty
-            // position — see the (d) note two screens up), but the consequence when it lands is NOT an
-            // orphan discipline row: player ids are `clubId * CLUB_SQUAD_SIZE + localIndex`
-            // (PlayerDatabase), so a regen filling a retiree's vacated slot INHERITS the identical id —
-            // and with it, silently, the retiree's outstanding ban and yellow tally, on a player who
-            // never earned either. Recorded here rather than wired: the roster-move hook FR-DC-013
-            // needs (something that tells this call site "id X left, id Y arrived, are they the same
-            // player") does not exist yet, and #29/#41's own CommitRosterSync above solves a narrower
-            // problem (per-club membership, not identity/re-key). #28's boundary landing must not miss
-            // this — see also #44 §7.2's deferred list.
+            // (d″) installs: a reference swap, so it cannot fail.
+            if (nextTransfers != null)
+            {
+                _transfers = nextTransfers;
+            }
+
+            // FR-DC-013's retirement drop, delivered here at last (the M11 gap). A retiree's tally and
+            // any unserved ban leave with him; nothing can inherit them, because a regen takes a FRESH
+            // id from NextPlayerId (FR-PG-011) rather than the retiree's slot. A TRANSFER needs no #44
+            // counterpart: PlayerIds are stable across a re-home (ERR-031-005), so a tally follows its
+            // player by construction and MigratePlayerId has no caller by design. (The #29/#41/#30 rows do
+            // move on a transfer — PlayerCareerStates.MovePlayerRows — and #31's own contracts are inserted or
+            // removed by TransferCommands.SubmitBid at the bid; the (d″) step above only ages them, drops
+            // the retirees' and seeds the managed regens'.) DropPlayer is infallible.
+            if (boundary != null && _disciplineRules != null)
+            {
+                for (int i = 0; i < boundary.RetiredPlayerIds.Count; i++)
+                {
+                    _disciplineRules.DropPlayer(boundary.RetiredPlayerIds[i]);
+                }
+            }
+
+            // M11 (resolved October 19, 2026 — ERR-028-025 / ERR-031-005): FR-DC-013's roster-event
+            // delivery point is the block above. The hazard recorded here — a regen filling a vacated
+            // packed slot would inherit the retiree's ban — cannot occur: regens take fresh monotonic ids
+            // and transfers keep ids.
             //
             // ── (f) #44's season-boundary sweep (FR-DC-017) ────────────────────────────────────
             // Yellows reset; UNSERVED BANS CARRY. A red card in the final round is still a ban in
@@ -1235,6 +1479,45 @@ namespace TacticalDirector.SeasonSave
                 _state.SeasonNumber,
                 nextSeed,
                 nextCalendar.NextFixtureDay());
+        }
+
+        private static int[] RetiredFrom(SeasonBoundaryPlan boundary)
+        {
+            var ids = new int[boundary.RetiredPlayerIds.Count];
+            boundary.RetiredPlayerIds.CopyTo(ids, 0);
+            return ids;
+        }
+
+        // The regens joining one club — the managed club's arrivals are the ones #31 contracts (G14).
+        private static int[] ArrivalsAt(SeasonBoundaryPlan boundary, int clubId)
+        {
+            var ids = new List<int>();
+            for (int i = 0; i < boundary.RegenPlayerIds.Count; i++)
+            {
+                if (boundary.RegenClubIds[i] == clubId)
+                {
+                    ids.Add(boundary.RegenPlayerIds[i]);
+                }
+            }
+
+            return ids.ToArray();
+        }
+
+        /// <summary>
+        /// The planned post-boundary rosters as an <see cref="ISquadProvider"/>, for (d′)'s staged career
+        /// reconciliation — read-only, never retained past the roll.
+        /// </summary>
+        private sealed class PlannedSquads : ISquadProvider
+        {
+            private readonly SeasonBoundaryPlan _plan;
+
+            internal PlannedSquads(SeasonBoundaryPlan plan)
+            {
+                _plan = plan;
+            }
+
+            /// <inheritdoc />
+            public Squad ResolveByClubId(int clubId) => _plan.PlannedSquadFor(clubId);
         }
 
         /// <summary>
@@ -1346,9 +1629,16 @@ namespace TacticalDirector.SeasonSave
         /// pre-producer representation and is upgraded by this Restore entry point to one initial entry
         /// per restored SeasonState ClubId before normal composition validation. No ordinary constructor
         /// path performs that migration (ERR-030-050 / T2b review).</param>
+        /// <param name="transfersOrNull">The restored #31 state from <see cref="SeasonSaveContents.Transfers"/>,
+        /// or null when the save carried none. Threaded here so the documented resume path can carry it at
+        /// all — the ERR-030-036 lesson (a Restore with no parameter for a block makes the correct resume
+        /// inexpressible).</param>
         /// <exception cref="System.ArgumentException">The blob is malformed (F3), the restored pair
         /// violates the cursor invariant (F4), or a non-empty finance set disagrees with the season club
         /// universe.</exception>
+        /// <exception cref="System.InvalidOperationException">The constructor's cursor-vs-clock refusal
+        /// (AR round 5 S-L2): a restored career or progression cursor outside the coherent band against the
+        /// world clock, or a restored #28 <c>BirthWorldDay</c> ahead of it.</exception>
         public static SeasonLoop Restore(
             WorldStore world,
             byte[] seasonBlob,
@@ -1357,7 +1647,8 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
             DisciplineState disciplineOrNull = null,
-            ClubFinanceEntry[] financesOrNull = null)
+            ClubFinanceEntry[] financesOrNull = null,
+            TransfersState transfersOrNull = null)
         {
             SeasonState restoredSeason = SeasonStateCodec.Decode(seasonBlob);
             ClubFinanceEntry[] restoredFinances = SeasonFinanceCoherence.NormalizeLegacyRestore(
@@ -1365,7 +1656,7 @@ namespace TacticalDirector.SeasonSave
 
             return new SeasonLoop(
                 world, restoredSeason, mode, careerOrNull, careerSquadsOrNull,
-                progressionOrNull, disciplineOrNull, restoredFinances);
+                progressionOrNull, disciplineOrNull, restoredFinances, transfersOrNull);
         }
 
         /// <summary>
@@ -2251,4 +2542,13 @@ namespace TacticalDirector.SeasonSave
 // | 1.35    | 2026-10-08 | —      | PR #491 review: daily accounting publishes a staged array after all clubs succeed. |
 // | 1.36 | 2026-10-09 | — | ERR-030-053: require final fixture day completion before season settlement. |
 // | 1.37 | 2026-10-13 | — | T3b2: forward sole #40 config gate and day facts; parameter-only test seam shares guarded advance. |
+// | 1.38 | 2026-10-18 | — | #31 T1: carry a cloned TransfersState (ctor/Restore transfersOrNull, SeasonTransfersCoherence, internal TransfersForSave); nothing drives it until T2. |
+// | 1.39 | 2026-10-19 | — | ERR-028-025: step (d) LIVE — PrepareSeasonBoundary staged before (e), CommitSeasonBoundary after; (d′) PrepareRosterSync reads the planned rosters (PlannedSquads); FR-DC-013 retirement drop delivered; M11 resolved. |
+// | 1.40 | 2026-10-20 | — | #31 T2: SubmitTransferBid (exact-value #40 staging, publish only on Accepted, the SeasonTransferRoster port); TransfersSnapshot; ApplyTransaction refuses TransferFee once #31 is wired; roll step (d″) stages #31's season boundary (aging, retiree/regen contract lockstep, spend reset, next window) and installs after BeginNextSeason. AR round 1 L2: version rows reordered. |
+// | 1.41 | 2026-10-20 | — | ERR-031-011 (AR round 2): (d″) passes SummerWindowFor(roll day, nextCalendar.DayOfRound(0)) so the window close no longer depends on roll timing; SubmitTransferBid fails loud while ActiveMatch is non-null; its exception docs name ArgumentOutOfRangeException for F6 caller-contract violations; the RollToNextSeason summary lists (d″) and states KD-6 over persisted career state. |
+// | 1.42 | 2026-10-20 | — | AR round 3 M13 (ERR-028-028): doc comment on Progression only — a read surface; roster moves go through SubmitTransferBid. No behaviour change. |
+// | 1.43 | 2026-10-20 | — | AR round 3 S-L1/S-L4/T-L8: SubmitTransferBid's _activeMatch guard deleted (it could not fire on one thread and was a racy check-then-act across threads; the sim-thread-between-rounds contract is documented from the class's THREAD SAFETY note); the roll-time comment no longer says (d″) moves #31's contracts on a transfer; RollToNextSeason documents (d″)'s ArgumentException. |
+// | 1.44 | 2026-10-20 | — | AR round 4 M13 (ERR-028-028 widening): doc comment on Progression only — every mutator (AdvanceDay, PrepareSeasonBoundary, CommitSeasonBoundary, CanMovePlayer/MovePlayer) is internal. No behaviour change. |
+// | 1.45 | 2026-10-20 | — | AR round 4 S4-L2/L3/L5: the constructor's KD-4 refusal delegates to SeasonCalendar.RequireCursorInvariant (shared with League.CreateLoop; ParamName stays "season"); RollToNextSeason's ArgumentException doc lists all four (d″) causes and #28's worldDay-span refusal, plus SummerWindowFor's ArgumentOutOfRangeException; TransfersSnapshot and FinanceView state that they are sim-thread-only. |
+// | 1.46 | 2026-10-20 | — | AR round 5 (doc comments only, no behaviour change): L17 Progression's doc names the mutators' real visibility (internal to PlayerProgression, visible to SeasonSave and the test assemblies via InternalsVisibleTo; CanMovePlayer is a predicate); S-L2 the constructor, Restore, RollToNextSeason and SubmitTransferBid list the InvalidOperationException / ArgumentException causes confirmed in source (cursor-vs-clock band, PrepareSettlement and StageFor uninitialized finances, #28 Prepare, PrepareRosterSync, BeginNextSeason); S-L4 ActiveMatch and AvailableTransferBudget are sim-thread-only; S-L5 AvailableTransferBudget is documented as the season ceiling (headroom = ceiling - TransfersSnapshot().CommittedSpendThisWindow). |
 #endregion

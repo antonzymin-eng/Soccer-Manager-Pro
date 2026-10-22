@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-10-09 (ERR-030-053 — complete final fixture day before settlement)
+// Modified: 2026-10-18 (#31 T1 — call sites carry the transfers block)
+//           Prior: 2026-10-09 (ERR-030-053 — complete final fixture day before settlement)
 // Prior-Modified: 2026-09-11 (#40 T2b — roll fixtures use League.CreateLoop, persist live finance
 //           entries, and restore them rather than carrying the retired pre-T2 empty sentinel — v1.9)
 // Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
@@ -357,7 +358,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
                     Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
-                    interrupted.FinanceEntriesForSave());
+                    interrupted.FinanceEntriesForSave(), transfersOrNull: null);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
@@ -396,7 +397,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
                     Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
-                    loop.FinanceEntriesForSave());
+                    loop.FinanceEntriesForSave(), transfersOrNull: null);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
@@ -633,4 +634,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | change.                                                           |
 // | 1.9     | 2026-09-11 | —      | #40 T2b: production bootstrap plus live finance save/restore.     |
 // | 1.10 | 2026-10-09 | — | ERR-030-053: boundary fixtures complete their final day; break duration is unchanged. |
+// | 1.11 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call sites pass transfersOrNull: null. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/LeagueBootstrapTests.cs
 // Created:  2026-07-25
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.1)
+// Modified: 2026-10-20 (P-M6 — template 3/8/7/5 per-line lock — v1.3)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) §3
 //           (determinism contract), §4 (F1..F6), KD-2/KD-3/KD-5/KD-6/KD-9; path-to-playable A3
@@ -163,7 +163,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 }
             }
 
-            Assert.AreEqual(20 * PlayerDatabaseConstants.CLUB_SQUAD_SIZE, playerIds.Count);
+            Assert.AreEqual(20 * LeagueBootstrapConstants.BuildSquadPositionTemplate().Length, playerIds.Count);
         }
 
         [Test]
@@ -359,12 +359,30 @@ namespace TacticalDirector.SeasonSave.Tests
         public void BuildSquadPositionTemplate_MatchesTheCataloguedCountsAndFillsASquad()
         {
             PlayerPosition[] template = LeagueBootstrapConstants.BuildSquadPositionTemplate();
-            Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, template.Length);
+            // ERR-031-004: the bootstrap fills BELOW the cap, leaving transfer headroom, and above a
+            // matchday squad.
+            Assert.Less(template.Length, PlayerDatabaseConstants.CLUB_SQUAD_SIZE);
+            Assert.GreaterOrEqual(template.Length,
+                TacticalDirector.MatchEngine.MatchEngineConstants.PLAYERS_PER_TEAM
+                + TacticalDirector.MatchEngine.MatchEngineConstants.SUBSTITUTES_PER_TEAM);
+            Assert.AreEqual(23, template.Length, "the owner-chosen bootstrap size (October 19, 2026)");
 
             var counts = new int[LeagueBootstrapConstants.PositionCount];
             foreach (PlayerPosition p in template)
             {
                 counts[(int)p]++;
+            }
+
+            // P-M6: the per-line shape is pinned, not just the sum. 3/8/8/4 had the same sum but only
+            // one spare forward over F433's three, so two unavailable forwards forced
+            // AvailabilityComposition's press-back-in; 3/8/7/5 leaves 2/4/2/2 spare over GK 1 / DF 4 /
+            // MF 5 / FW 3 — the minimum spare is 2 on every line.
+            Assert.AreEqual(new[] { 3, 8, 7, 5 }, counts, "GK/DF/MF/FW template (P-M6)");
+            int[] worstNeed = { 1, 4, 5, 3 };
+            for (int p = 0; p < counts.Length; p++)
+            {
+                Assert.GreaterOrEqual(counts[p] - worstNeed[p], 2,
+                    $"{(PlayerPosition)p}: at least two spare over the worst formation need.");
             }
 
             for (int p = 0; p < counts.Length; p++)
@@ -395,6 +413,13 @@ namespace TacticalDirector.SeasonSave.Tests
                 Assert.GreaterOrEqual(counts[(int)PlayerPosition.Defender], 4, $"club {c}: defenders");
                 Assert.GreaterOrEqual(counts[(int)PlayerPosition.Midfielder], 5, $"club {c}: midfielders");
                 Assert.GreaterOrEqual(counts[(int)PlayerPosition.Forward], 3, $"club {c}: forwards");
+
+                // P-M6: two spare per line (3/8/7/5), so two simultaneously unavailable players on any
+                // one line still leave a fieldable XI without the press-back-in.
+                Assert.GreaterOrEqual(counts[(int)PlayerPosition.Goalkeeper], 1 + 2, $"club {c}: goalkeeper depth");
+                Assert.GreaterOrEqual(counts[(int)PlayerPosition.Defender], 4 + 2, $"club {c}: defender depth");
+                Assert.GreaterOrEqual(counts[(int)PlayerPosition.Midfielder], 5 + 2, $"club {c}: midfielder depth");
+                Assert.GreaterOrEqual(counts[(int)PlayerPosition.Forward], 3 + 2, $"club {c}: forward depth");
             }
         }
 
@@ -646,4 +671,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | rule it asserted (squads are not persisted; the provider is    |
 // |         |            |        | rebuilt from the seed) — generation stays seed-pure, but an    |
 // |         |            |        | existing career's rosters now come from the save file.         |
+// | 1.2     | 2026-10-19 | —      | ERR-031-004: the template lock asserts a bootstrap size strictly below the cap (23) and at least a matchday 18; the id-count lock reads the template length. |
+// | 1.3     | 2026-10-20 | —      | P-M6: the template lock pins the per-line shape {3,8,7,5} and a 2-spare-per-line margin over GK1/DF4/MF5/FW3; the fieldable-squad lock asserts the same depth on every generated club. |
 #endregion

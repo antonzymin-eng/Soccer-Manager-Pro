@@ -11,6 +11,7 @@
         "TacticalDirector.PlayerProgression",
         "TacticalDirector.Discipline",
         "TacticalDirector.ClubFinances",
+        "TacticalDirector.Transfers",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],

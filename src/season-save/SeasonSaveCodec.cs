@@ -1,20 +1,20 @@
 // File:     src/season-save/SeasonSaveCodec.cs
 // Created:  2026-07-22
-// Modified: 2026-09-10 (#40 T1b: the frame gains the mandatory finance sub-blob — v1.8)
+// Modified: 2026-10-18 (#31 T1: the frame gains the mandatory transfers sub-blob — v1.9)
+//           Prior: 2026-09-10 (#40 T1b: the frame gains the mandatory finance sub-blob — v1.8)
 //           Prior: 2026-08-13 (#44 T1: the frame gains the mandatory discipline sub-blob — v1.7)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2..KD-8;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019/020/023, ERR-030-049;
 //           Training System #29 §4.4 / FR-TR-018; Injuries & Medical #41 §4.4 / FR-MD-017;
 //           Discipline & Suspensions #44 Appendix B; Club Finances & Economy #40 §4.4 / FR-FN-020,
-//           §7.1 T1b;
+//           §7.1 T1b; Transfers #31 §4.4 / FR-TX-012, §7.1 T1;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §3.2.4.1
 //           (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the season save frame: packs the living-world composite blob, the
 //           season-state blob, the #29 training blob, the #41 medical blob, the #30 appearance blob,
-//           the #28 progression blob, the #44 discipline blob, the #40 finance blob, and an optional
-//           match save
-//           blob into one version-gated, self-describing frame and deframes it back, fail-loud on any
+//           the #28 progression blob, the #44 discipline blob, the #40 finance blob, the #31 transfers
+//           blob, and an optional match save blob into one version-gated, self-describing frame and deframes it back, fail-loud on any
 //           framing / length-bound / trailing-byte violation. Treats each sub-blob as opaque (never
 //           parses it — each keeps its own version gate). No file I/O (that is SeasonSaveManager), so
 //           the codec is exhaustively unit-testable in memory.
@@ -29,11 +29,11 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// Encodes / decodes the season save frame (unified-season-save-design.md §3 / #30 Appendix B). The
     /// frame is one <see cref="SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION"/>-gated wrapper around a
-    /// <c>matchPresent</c> flag and nine length-prefixed opaque sub-blobs, in order: the living-world
+    /// <c>matchPresent</c> flag and ten length-prefixed opaque sub-blobs, in order: the living-world
     /// composite (always), the season state (always), the #29 training block (always), the #41 medical
     /// block (always), the #30 appearance block (always), the #28 career-state block (always), the #44
-    /// discipline block (always), the #40 finance block (always), and the
-    /// match save (only when a match was in progress). Serialized through
+    /// discipline block (always), the #40 finance block (always), the #31 transfers block (always), and
+    /// the match save (only when a match was in progress). Serialized through
     /// <see cref="CanonicalSerializer"/>. Off the 60 Hz hot path (a save is a host action), so
     /// allocation is permitted.
     /// <para>
@@ -54,25 +54,27 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// Encodes a season blob from the living-world composite blob, the season-state blob, the #29
         /// training blob, the #41 medical blob, the #30 appearance blob, the #28 progression blob, the
-        /// #44 discipline blob, the #40 finance blob, and an
+        /// #44 discipline blob, the #40 finance blob, the #31 transfers blob, and an
         /// optional match save blob. Presence keys on
         /// <paramref name="matchBlobOrNull"/> being <c>null</c> (KD-8): null ⇒ no match (flag 0, no
-        /// match block); non-null ⇒ the bytes are written after the finance block (flag 1). Fail-loud on
+        /// match block); non-null ⇒ the bytes are written after the transfers block (flag 1). Fail-loud on
         /// a null <paramref name="worldBlob"/> or <paramref name="seasonBlob"/>, or an unbound
         /// <paramref name="training"/> / <paramref name="medical"/> / <paramref name="appearance"/> /
-        /// <paramref name="progression"/> / <paramref name="discipline"/> / <paramref name="finance"/>
-        /// — a season save always carries all eight mandatory blobs (KD-3 /
-        /// FR-SN-019 / FR-TR-018 / FR-MD-017 / FR-PG-017 / #44 Appendix B / #40 FR-FN-020 / #30 Appendix B).
+        /// <paramref name="progression"/> / <paramref name="discipline"/> / <paramref name="finance"/> /
+        /// <paramref name="transfers"/>
+        /// — a season save always carries all nine mandatory blobs (KD-3 /
+        /// FR-SN-019 / FR-TR-018 / FR-MD-017 / FR-PG-017 / #44 Appendix B / #40 FR-FN-020 / #31 FR-TX-012 /
+        /// #30 Appendix B).
         /// The buffer is sized exactly to the content;
         /// see <see cref="Decode"/> for the inverse (kept adjacent so a layout change is edited in one
         /// place — R1).
         /// <para>
-        /// <b>The six career blocks are typed, not bare <c>byte[]</c>.</b> They have the same byte shape as
+        /// <b>The seven career blocks are typed, not bare <c>byte[]</c>.</b> They have the same byte shape as
         /// each other, so a transposition in this parameter list produced a file that framed, decoded
         /// and reloaded without a single throw (ERR-029-005 / ERR-041-009). The leading magic in each
         /// block now catches it at load; <see cref="TrainingBlock"/> / <see cref="MedicalBlock"/> /
         /// <see cref="AppearanceBlock"/> / <see cref="ProgressionBlock"/> / <see cref="DisciplineBlock"/> /
-        /// <see cref="FinanceBlock"/>
+        /// <see cref="FinanceBlock"/> / <see cref="TransfersBlock"/>
         /// catch it at compile time,
         /// which is where a positional mistake should die.
         /// </para>
@@ -86,6 +88,7 @@ namespace TacticalDirector.SeasonSave
             in ProgressionBlock progression,
             in DisciplineBlock discipline,
             in FinanceBlock finance,
+            in TransfersBlock transfers,
             byte[] matchBlobOrNull)
         {
             if (worldBlob == null)
@@ -151,6 +154,14 @@ namespace TacticalDirector.SeasonSave
                     "block, not a null or a default(FinanceBlock) (#40 FR-FN-020).");
             }
 
+            byte[] transfersBlob = transfers.Bytes;
+            if (transfersBlob == null)
+            {
+                throw new ArgumentNullException(nameof(transfers),
+                    "A season save always carries a transfers block — an unwired one is a zero-club " +
+                    "block, not a null or a default(TransfersBlock) (#31 FR-TX-012).");
+            }
+
             bool hasMatch = matchBlobOrNull != null;
             int size = 4                              // SEASON_SAVE_FORMAT_VERSION
                      + 1                              // matchPresent flag
@@ -161,7 +172,8 @@ namespace TacticalDirector.SeasonSave
                      + 4 + appearanceBlob.Length      // appearance length prefix + body
                      + 4 + progressionBlob.Length     // progression length prefix + body
                      + 4 + disciplineBlob.Length      // discipline length prefix + body
-                     + 4 + financeBlob.Length;        // finance length prefix + body
+                     + 4 + financeBlob.Length         // finance length prefix + body
+                     + 4 + transfersBlob.Length;      // transfers length prefix + body
             if (hasMatch)
             {
                 size += 4 + matchBlobOrNull.Length;   // match length prefix + body
@@ -197,6 +209,9 @@ namespace TacticalDirector.SeasonSave
             CanonicalSerializer.WriteU32(buf, ref o, (uint)financeBlob.Length);
             Array.Copy(financeBlob, 0, buf, o, financeBlob.Length); o += financeBlob.Length;
 
+            CanonicalSerializer.WriteU32(buf, ref o, (uint)transfersBlob.Length);
+            Array.Copy(transfersBlob, 0, buf, o, transfersBlob.Length); o += transfersBlob.Length;
+
             if (hasMatch)
             {
                 CanonicalSerializer.WriteU32(buf, ref o, (uint)matchBlobOrNull.Length);
@@ -214,11 +229,11 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Decodes a season blob produced by <see cref="Encode"/> into its nine opaque sub-blobs.
+        /// Decodes a season blob produced by <see cref="Encode"/> into its ten opaque sub-blobs.
         /// Fail-loud (throws) on: a null blob; a <see cref="SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION"/>
-        /// mismatch (KD-4, no Stage-0 migration — a v1, v2, v3, v4, v5 or v6 file is rejected
+        /// mismatch (KD-4, no Stage-0 migration — a v1 through v7 file is rejected
         /// here); a <c>matchPresent</c> flag that is neither 0 nor 1; a length prefix (world, season,
-        /// training, medical, appearance, progression, discipline, finance, or match) that would read past the blob; or any trailing bytes after the
+        /// training, medical, appearance, progression, discipline, finance, transfers, or match) that would read past the blob; or any trailing bytes after the
         /// declared content (KD-8 / R1 truncation guard). The inner sub-blob version drift is caught by
         /// <see cref="TacticalDirector.LivingWorld.WorldStore.Restore"/> /
         /// <see cref="SeasonStateCodec.Decode"/> /
@@ -227,7 +242,8 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="AppearanceSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.PlayerProgression.ProgressionSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.Discipline.DisciplineSaveCodec.Decode"/> /
-        /// <see cref="TacticalDirector.ClubFinances.ClubFinancesSaveCodec.Decode"/> / the match decode path.
+        /// <see cref="TacticalDirector.ClubFinances.ClubFinancesSaveCodec.Decode"/> /
+        /// <see cref="TacticalDirector.Transfers.TransfersSaveCodec.Decode"/> / the match decode path.
         /// </summary>
         public static SeasonSaveBlobs Decode(byte[] blob)
         {
@@ -264,6 +280,7 @@ namespace TacticalDirector.SeasonSave
             byte[] progressionBlob = ReadBlock(blob, ref o, len, "progression block");
             byte[] disciplineBlob = ReadBlock(blob, ref o, len, "discipline block");
             byte[] financeBlob = ReadBlock(blob, ref o, len, "finance block");
+            byte[] transfersBlob = ReadBlock(blob, ref o, len, "transfers block");
 
             byte[] matchBlob = null;
             if (matchFlag == MatchPresent)
@@ -281,7 +298,7 @@ namespace TacticalDirector.SeasonSave
 
             return new SeasonSaveBlobs(
                 worldBlob, seasonBlob, trainingBlob, medicalBlob, appearanceBlob, progressionBlob,
-                disciplineBlob, financeBlob, matchBlob);
+                disciplineBlob, financeBlob, transfersBlob, matchBlob);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -356,4 +373,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | finance entries yet is an EMPTY set, not an absent one, so no    |
 // |         |            |        | presence flag is added and #40 T2's bootstrap needs no second    |
 // |         |            |        | frame bump.                                                      |
+// | 1.9     | 2026-10-18 | —      | #31 T1 (FR-TX-012): the frame gains the mandatory #31 transfers  |
+// |         |            |        | sub-blob between the finance block and the optional match block  |
+// |         |            |        | (SEASON_SAVE_FORMAT_VERSION 7 -> 8); typed as TransfersBlock per |
+// |         |            |        | the ERR-029-005 discipline. Mandatory: an unwired career is a    |
+// |         |            |        | zero-club block, so #31 T2's wiring needs no second frame bump.  |
 #endregion

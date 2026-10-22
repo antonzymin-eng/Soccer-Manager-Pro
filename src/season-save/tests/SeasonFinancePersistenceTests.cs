@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonFinancePersistenceTests.cs
 // Created:  2026-09-10
-// Modified: 2026-10-09
+// Modified: 2026-10-18 (#31 T1 — call sites carry the transfers block)
+//           Prior: 2026-10-09
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-020/021/025; Season & Competition Loop #30 Appendix B.1;
 //           ERR-030-050; Code Standards #20
@@ -95,7 +96,7 @@ namespace TacticalDirector.SeasonSave
                 ProgressionEngine.Empty,
                 new DisciplineState(),
                 disciplineWired: false,
-                finances);
+                finances, transfersOrNull: null);
         }
 
         private static void AssertSameFinances(ClubFinanceEntry[] expected, ClubFinanceEntry[] actual)
@@ -310,4 +311,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-10-08 | —      | T3b1: daily continuation through off-day and pre/post-fixture saves. |
 // | 1.3     | 2026-10-08 | —      | PR #491 review: label whole-save zero-revenue continuation precisely. |
 // | 1.4 | 2026-10-09 | — | ERR-030-053: final-day guard and whole-save continuation survive restore. |
+// | 1.5 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call site passes transfersOrNull: null. |
 #endregion

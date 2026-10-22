@@ -1,6 +1,7 @@
 // File:     src/deterministic-sim/SubsystemOrdinals.cs
 // Created:  2026-05-29
-// Modified: 2026-07-15 (PlayerDatabase = 81, squad-player-data-design.md KD-5)
+// Modified: 2026-10-19 (PlayerProgression = 82 — #28 regen, ERR-028-025)
+//           Prior: 2026-07-15 (PlayerDatabase = 81, squad-player-data-design.md KD-5)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.1.1, §3.4, Code Standards #20
 // Purpose:  Compile-time subsystem ordinals used as the secondary sort key in canonical intra-phase ordering.
@@ -83,6 +84,12 @@ namespace TacticalDirector.DeterministicSim
         /// per-tick match stream — off-pitch band per squad-player-data-design.md KD-5). Next value
         /// after LivingWorld.</summary>
         public const int PlayerDatabase = 81;
+
+        /// <summary>[FIXED] Player Progression &amp; Lifecycle #28 subsystem ordinal (the per-club
+        /// <c>player-progression.regen</c> stream, <c>entityId = clubId</c>; #28 FR-PG-020). Allocated
+        /// spec-text-first at #28's approval (ERR-028-001, roadmap §6 band); lands with the first regen
+        /// draw site at the season boundary (ERR-028-025). 83–95 stay reserved for #29–#45.</summary>
+        public const int PlayerProgression = 82;
     }
 }
 
@@ -94,4 +101,6 @@ namespace TacticalDirector.DeterministicSim
 // | 1.2     | 2026-07-15 | —      | PlayerDatabase = 81 allocated (squad-player-data-design.md     |
 // |         |            |        | KD-5; roster generation is boot/off-match-tick, same off-pitch |
 // |         |            |        | category as LivingWorld).                                     |
+// | 1.3     | 2026-10-19 | —      | PlayerProgression = 82 allocated in code at #28's first draw   |
+// |         |            |        | site (the season-boundary regen; ERR-028-001 / ERR-028-025).   |
 #endregion
