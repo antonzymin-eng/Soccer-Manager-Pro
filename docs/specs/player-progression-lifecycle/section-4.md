@@ -1,7 +1,8 @@
 # Player Progression & Lifecycle #28 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.9 — AR round 4: ERR-028-028 widened — `AdvanceDay` / `PrepareSeasonBoundary` / `CommitSeasonBoundary` join `CanMovePlayer` / `MovePlayer` as INTERNAL (a seam for #30's composition root); L11: the `InternalsVisibleTo` grant is assembly-wide, not scoped to the members named; L13: a transfer moves the #28 record + lifecycle and the #29/#41/#30 rows — the #44 tally and #31 contracts follow by stable id)
+**Last Updated:** October 20, 2026 (v0.10 — AR round 5 L13: §4.5's INTERNAL entry no longer says #31's contracts "follow the player with no migration" — #31 tracks only the managed club's contracts; `SubmitBid` inserts one on a buy and removes one on a sale)
+**Last Updated (prior):** October 20, 2026 (v0.9 — AR round 4: ERR-028-028 widened — `AdvanceDay` / `PrepareSeasonBoundary` / `CommitSeasonBoundary` join `CanMovePlayer` / `MovePlayer` as INTERNAL (a seam for #30's composition root); L11: the `InternalsVisibleTo` grant is assembly-wide, not scoped to the members named; L13: a transfer moves the #28 record + lifecycle and the #29/#41/#30 rows — the #44 tally and #31 contracts follow by stable id)
 **Last Updated (prior):** October 20, 2026 (v0.8 — AR round 3: ERR-028-027 back-prop widened to §4.1 (#30 calls Prepare/Commit), §4.2 (`SeasonBoundaryPlan.cs` in the file map, `RetirementResult`/`RegenResult` superseded, "RunSeasonBoundary NOT YET BUILT" removed), §4.5 (the public-surface list brought to the code); ERR-028-028: `CanMovePlayer`/`MovePlayer` are INTERNAL)
 **Last Updated (prior):** October 20, 2026 (v0.7 — AR round 1 L1: §4.3's _RESERVED_0x20_ language annotated as landed)
 **Last Updated (prior):** August 24, 2026 (v0.6 — round-2 finding assemblyinfo-missing-from-a-file-map-annotated-as-verified (L3): §4.2's file-map tree gains `AssemblyInfo.cs`, added at the round-1 Medium/Low pass (2026-08-23) but missing from this list despite its own "verified against src/player-progression/*.cs" claim, with a one-line note on what its `InternalsVisibleTo` grant does and why. No file moved, no reference direction changed. Prior entry below.)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** August 22, 2026 (v0.4 — **ERR-028-020 / ERR-028-021**: §4's file map for `AbilityModel.cs` brought current — it now carries §3.1.3's age curve (`DailyBandPoints` / `AccruedBandPoints`, with `ClassifyAgeBand` demoted to a read of it) and §3.4's `RetirementAgeDays`, neither of which existed when the map was written. No file added, no reference direction changed. Prior entry below.)
 **Last Updated (prior):** August 10, 2026 (v0.3 — ERR-028-017: §4.2's "Season-save composition" note corrected from a stale "2 → 3" frame-version claim to a citation of #30 Appendix A's 1→5 chain; §4.5's seam sentence restated in `TrainingInputBatch` terms and its "sole seam" claim replaced with the verified full public surface of `ProgressionEngine`)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -155,8 +156,9 @@ surface, split by who it is for:
 - **INTERNAL, not public (AR round 3 M13 / ERR-028-028)** — `CanMovePlayer` / `MovePlayer`, the id-preserving
   re-home #31's transfers use (ERR-031-005). They are a seam for **#30's transfer adapter only**
   (`SeasonTransferRoster` in `TacticalDirector.SeasonSave`, which moves the #28 record + lifecycle and the #29/#41/#30
-  rows in the same step — the #44 discipline tally and #31's contracts are keyed by `PlayerId` and the id is
-  unchanged, so they follow the player with no migration, ERR-031-005),
+  rows in the same step — #44's tally follows by stable id (it is keyed by `PlayerId`, which is unchanged); #31's
+  managed-club contract is inserted or removed by `SubmitBid`, never migrated: #31 tracks only the managed club's
+  contracts, ERR-031-005; AR round 5 L13),
   reached through `InternalsVisibleTo`; they were public at ERR-028-017's verification and for #31 T2, and a public
   re-home let any client holding `SeasonLoop.Progression` forge a free transfer — leaving those rows behind, so the
   next day step threw and an orphan contract made every save refuse. Clients move players through
@@ -179,4 +181,5 @@ of a step.)*
 | 0.7 | 2026-10-20 | — | **AR round 1 L1 (ERR-028-025)**, doc-only. §4.3 described the `_RESERVED_0x20_` row and the `0x20`/82 promotion in the present tense ("already holds", "files the back-prop that promotes") although both landed on October 19, 2026; reworded to the past tense with a "Landed" annotation naming the live consts. |
 | 0.8 | 2026-10-20 | — | **AR round 3** (ERR-028-027 widening + **ERR-028-028** M13), doc-only. §4.1 said #30 calls `RunSeasonBoundary` — restated as `PrepareSeasonBoundary` then `CommitSeasonBoundary`. §4.2's paragraph and tree kept "`RunSeasonBoundary` NOT YET BUILT" and `RetirementResult.cs`/`RegenResult.cs` NOT-YET-BUILT rows after ERR-028-025 landed the boundary; the tree gains `SeasonBoundaryPlan.cs` and drops the superseded pair, and `AssemblyInfo.cs`'s line names the new IVT grants. §4.5's "verified full public surface" list gains `PrepareSeasonBoundary`, `CommitSeasonBoundary` and `TryFindPlayer`, drops "`RunSeasonBoundary` does not yet exist", and records `CanMovePlayer`/`MovePlayer` as internal (a seam for #30's transfer adapter only; a public re-home forged free transfers). Re-verified by grep against `ProgressionEngine.cs`. |
 | 0.9 | 2026-10-20 | — | **AR round 4** (ERR-028-028 widening M13; L11; L13), doc-only. §4.5: `AdvanceDay`, `PrepareSeasonBoundary` and `CommitSeasonBoundary` move from the public "#30 contract" list to an INTERNAL entry (a seam for #30's composition root only; the same forged-roster-mutation class as `CanMovePlayer` / `MovePlayer`, reachable through the public `SeasonLoop.Progression`). **L11:** the `AssemblyInfo.cs` map line said the grant covered `CanMovePlayer`/`MovePlayer`; an `InternalsVisibleTo` grant is assembly-wide and exposes every internal (`TestOnly_*`, codec internals, `SeasonBoundaryPlan`'s constructor and arrays). **L13:** the re-home entry said `SeasonTransferRoster` moves "the #29/#41/#44/#31 rows"; it moves the #28 record + lifecycle and the #29/#41/#30 rows — #44's tally and #31's contracts follow by stable id (`SeasonTransferRoster.cs`). |
+| 0.10 | 2026-10-20 | — | **AR round 5 (L13, ERR-028-028)**, doc-only. §4.5's INTERNAL entry said the #44 tally and #31's contracts "are keyed by `PlayerId` … so they follow the player with no migration". #31's contracts are NOT keyed by player across clubs: #31 holds only the managed club's contracts, and `TransferCommands.SubmitBid` inserts one on a buy and removes one on a sale (`SeasonLoop` documents it correctly). Restated: #44's tally follows by stable id; #31's managed-club contract is inserted or removed by `SubmitBid`, never migrated. |
 #endregion

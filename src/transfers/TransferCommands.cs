@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20
+// Modified: 2026-10-21
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -158,6 +158,16 @@ namespace TacticalDirector.Transfers
                     "An external player already holds a managed contract — the contract set and the roster disagree.");
             }
 
+            // AR round 5 L-H (ERR-031-015): InsertContract refuses a squad-size-plus-one contract set, but it runs
+            // AFTER the irreversible roster commit. A buy with a full contract set can only mean the contract set
+            // and the roster disagree (a legal roster that had room would hold fewer contracts), so refuse it here,
+            // beside the duplicate pre-check, while nothing local or external has moved.
+            if (offer.IsBuy && state.ContractCount >= PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+            {
+                throw new InvalidOperationException(
+                    "The managed club already holds " + state.ContractCount + " contracts — the contract set and the roster disagree.");
+            }
+
             // ---- COMMIT ---- the re-home keeps the id (ERR-031-005), then local state applies only once
             // the port confirms the player really is on the destination roster.
             _roster.RequestRosterCommit(fromClubId, toClubId, offer.PlayerId);
@@ -228,4 +238,5 @@ namespace TacticalDirector.Transfers
 // | 1.4     | 2026-10-19 | —      | ERR-031-005 (owner decision): stable PlayerIds — ownership from the port's roster answer, never id/CLUB_SQUAD_SIZE; the re-home keeps the id; local state applies only after the port confirms the player is on the destination roster. |
 // | 1.5     | 2026-10-20 | —      | #31 T2: unknown counterparty fails loud (ERR-031-010); an un-contracted managed player is sellable (ERR-031-009); a release that leaves a club below a matchday squad returns SquadDepleted before any staging (ERR-031-007). |
 // | 1.6     | 2026-10-20 | —      | AR round 4 (R4-L5, ERR-031-014): the constructor summary no longer calls the roster port "future" — the #30 adapter has landed. |
+// | 1.7     | 2026-10-21 | —      | AR round 5 L-H (ERR-031-015): a buy with a full contract set (ContractCount >= CLUB_SQUAD_SIZE) fails loud beside the duplicate-contract pre-check, before the roster commit — InsertContract's cap check would otherwise throw after the irreversible commit. |
 #endregion

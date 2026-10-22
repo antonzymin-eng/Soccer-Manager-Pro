@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransfersConstants.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20 (AR round 3 — v1.7)
+// Modified: 2026-10-21 (AR round 5 — v1.8)
 // Author:   —
 // Specs:    Spec #20 §3.2.3, §3.6.2 (constant catalogue, GT loading, style/docs)
 //           Spec #31 Appendix A, §3.1-§3.2, §3.5 (transfer constants)
@@ -83,11 +83,13 @@ namespace TacticalDirector.Transfers
         public static readonly int NegotiationCounterBandPermille = PositiveSubPermille("NegotiationCounterBandPermille", 50);
 
         /// <summary>
-        /// [GT] Value multiplier step per player above/below the neutral positional-stock count.
-        /// The upper bound is derived inline from #27 squad/position cardinalities so every legal stock keeps
-        /// the resulting multiplier strictly positive without depending on static-field declaration order.
+        /// [GT] Value multiplier step per player above/below the neutral positional-stock count, in
+        /// [1, derived maximum]. The upper bound is derived inline from #27 squad/position cardinalities so every
+        /// legal stock keeps the resulting multiplier strictly positive without depending on static-field
+        /// declaration order; the lower bound is 1 because 0 makes the multiplier the identity for every stock
+        /// and so disables FR-TX-002's always-on positional scarcity (AR round 5 L-C, ERR-031-015).
         /// </summary>
-        public static readonly int ClubNeedPerPlayerPermille = BoundedNonNegative(
+        public static readonly int ClubNeedPerPlayerPermille = BoundedPositive(
             "ClubNeedPerPlayerPermille",
             20,
             DeriveMaxClubNeedPerPlayerPermille());
@@ -186,9 +188,9 @@ namespace TacticalDirector.Transfers
             return value;
         }
 
-        private static int BoundedNonNegative(string key, int fallback, int maximum)
+        private static int BoundedPositive(string key, int fallback, int maximum)
         {
-            int value = NonNegative(key, fallback);
+            int value = Positive(key, fallback);
             if (value > maximum)
             {
                 throw new InvalidOperationException("[transfers] " + key + " must not exceed " + maximum + ".");
@@ -210,4 +212,5 @@ namespace TacticalDirector.Transfers
 // | 1.5     | 2026-10-18 | —      | #31 T1 (ERR-031-003): TRANSFERS_SAVE_MAGIC "XFER" + TRANSFERS_SAVE_FORMAT_VERSION 1 + derived block widths + the one-club bound. |
 // | 1.6     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): [GT] SummerWindowLengthDays (45) replaced by SummerWindowInSeasonDays (38), the in-season tail of the window from the opening fixture day. |
 // | 1.7     | 2026-10-20 | —      | AR round 3 T-L7: DefaultContractSeasons/DefaultWagePerPeriod docs no longer say 'later T2 seeding step' (T2 has landed: CreateAtGenesis and the boundary regen seeding). |
+// | 1.8     | 2026-10-21 | —      | AR round 5 L-C (ERR-031-015): ClubNeedPerPlayerPermille is loaded with BoundedPositive (>= 1, not BoundedNonNegative): at 0 the positional multiplier is the identity and FR-TX-002's MUST is silently disabled. |
 #endregion

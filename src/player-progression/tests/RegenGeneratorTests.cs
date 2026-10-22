@@ -1,6 +1,8 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 4 L12 — the stale Binomial(25, 0.25) comment restated; comment-only — v1.7)
+// Modified: 2026-10-20 (AR round 5 L21 — the construction-day-credit precondition restated as "entirely below the growth
+//           ramp" — v1.8)
+//           2026-10-20 (AR round 4 L12 — the stale Binomial(25, 0.25) comment restated; comment-only — v1.7)
 //           2026-10-20 (AR round 1 L1 — production ordinal/site-id consts — v1.6)
 //           (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
 //           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
@@ -102,10 +104,14 @@ namespace TacticalDirector.PlayerProgression.Tests
             // Pinned to the literal, NOT re-derived through ClassifyAgeBand — routing the expectation
             // through the same function the production code calls would agree with it however wrong
             // either was. The precondition carries the reasoning instead: a regen is drawn in
-            // [REGEN_AGE_MIN, REGEN_AGE_MAX] and REGEN_AGE_MAX < GROWTH_AGE, so a regen is always in
-            // the Growth band, so its construction-day step is always GROWTH_DAILY_POINTS.
-            Assert.Less(PlayerProgressionConstants.REGEN_AGE_MAX, PlayerProgressionConstants.GROWTH_AGE,
-                "precondition: this lock's expected value only holds while every regen is Growth-band.");
+            // [REGEN_AGE_MIN, REGEN_AGE_MAX], and its construction day is credited the full
+            // GROWTH_DAILY_POINTS only while that age lies ENTIRELY below the growth ramp
+            // (§3.1.3: the rate falls from GROWTH_AGE - AgeBandRampHalfWidthYears, so merely being
+            // under GROWTH_AGE is not enough — inside the ramp the step is fractional).
+            Assert.LessOrEqual(
+                PlayerProgressionConstants.REGEN_AGE_MAX + 1,
+                PlayerProgressionConstants.GROWTH_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears,
+                "precondition: this lock's expected value only holds while every regen is drawn entirely below the growth ramp.");
             Assert.AreEqual(
                 (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, life.GrowthCursor,
                 "a regen's cursor must carry its construction day's own band step (ERR-028-018), the "
@@ -297,4 +303,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // | 1.5     | 2026-10-19 | —      | ERR-028-024: every call passes the inherited position; new locks — the regen takes the retiree's position (all four), the position moves no other identity draw, an undefined position throws. |
 // | 1.6     | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025): the test-local ordinal literal 82 and site id "player-progression.regen" ("until the production const lands at T2") replaced by PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION / REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION, so a constant change can no longer leave this fixture drawing from a stream production never registers. |
 // | 1.7     | 2026-10-20 | —      | AR round 4 L12 (comment-only): "Binomial(25, 0.25)" restated as Binomial(squad size, 0.25) — 23 today (ERR-031-004), as RegenGenerator's own doc already says. |
+// | 1.8     | 2026-10-20 | — | AR round 5 L21: the construction-day-credit lock's precondition was REGEN_AGE_MAX < GROWTH_AGE, which does not imply the full GROWTH_DAILY_POINTS step now that the rate ramps down from GROWTH_AGE - AgeBandRampHalfWidthYears; it is REGEN_AGE_MAX + 1 <= GROWTH_AGE - AgeBandRampHalfWidthYears (entirely below the ramp). Assertion value unchanged. |
 #endregion

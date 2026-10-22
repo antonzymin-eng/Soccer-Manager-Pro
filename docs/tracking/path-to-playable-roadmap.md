@@ -714,6 +714,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.82 | October 21, 2026 | D5: #31 T2 AR rounds 4-5 closed (the 5-round budget is spent; the last round had 0 High). The #28 roster mutators are internal. The counterparty ledger stays an open owner decision. |
 | v0.81 | October 20, 2026 | D5: #31 T2 AR rounds 2-3 (calendar-anchored window, counterparty-ledger decision recorded as an open issue). |
 | v0.80 | October 20, 2026 | D5: #31 T2 landed (production port, bid seam, genesis, roll step (d″)); bootstrap template 3/8/7/5. |
 | v0.79 | October 19, 2026 | D1: #28 season boundary landed (ERR-028-024 / ERR-028-025); only T3's deep curve remains. |

@@ -1,6 +1,8 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-10-20 (AR round 4 L12 — clubId param / nation comment restated; comment-only — v1.11)
+// Modified: 2026-10-20 (AR round 5 L21 — the "always Growth" precondition comment restated as "entirely below the
+//           growth ramp"; comment-only — v1.12)
+//           2026-10-20 (AR round 4 L12 — clubId param / nation comment restated; comment-only — v1.11)
 //           2026-10-20 (AR round 2 L5 — the position param doc's Binomial(25, 0.25) restated for the
 //           23-player squad; comment-only — v1.10)
 //           Prior: 2026-10-19 (ERR-028-024 — the regen inherits the retiree's position — v1.9)
@@ -176,9 +178,11 @@ namespace TacticalDirector.PlayerProgression
                 // AbilityModel, its one owner, rather than computed by a local BandStepFor whose own
                 // doc claimed to be the shared owner of a rule ProgressionEngine.SeedLifecycle
                 // implemented separately. Nothing about the value is decided here — including the
-                // question of whether a regen's drawn age is always Growth (it is, at today's
-                // REGEN_AGE_MAX < GROWTH_AGE, but that is a fact about those constants and not about
-                // this line, and the owner is age-continuous, so no such assumption is embedded).
+                // question of whether a regen's drawn age is always full-rate Growth (it is, at today's
+                // constants: REGEN_AGE_MAX + 1 <= GROWTH_AGE - AgeBandRampHalfWidthYears, i.e. the
+                // drawn age sits entirely below the growth ramp — but that is a fact about those
+                // constants and not about this line, and the owner is age-continuous, so no such
+                // assumption is embedded).
                 GrowthCursor = AbilityModel.ConstructionDayCredit(age),
 
                 BirthWorldDay = birthWorldDay,
@@ -291,4 +295,5 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | reserved and undrawn so every later draw value is unchanged.        |
 // | 1.10    | 2026-10-20 | — | AR round 2 L5 (comment-only): the `position` parameter doc's `Binomial(25, 0.25)` restated as `Binomial(squad size, 0.25)` (23 in today's bootstrap, ERR-031-004). No behaviour change. |
 // | 1.11    | 2026-10-20 | — | AR round 4 L12 (comment-only): the `clubId` parameter doc and the nation comment no longer call the per-club grouping / nation read "T2 use" or a forward reference — the grouping is `SeasonBoundaryPlan`'s (landed, ERR-028-025) and `PlayerRecord` has no nation field (ERR-028-027). No behaviour change. |
+// | 1.12    | 2026-10-20 | — | AR round 5 L21 (comment-only): the construction-day-credit comment said a regen is always Growth "at today's REGEN_AGE_MAX < GROWTH_AGE" - not the precondition that makes the cursor the full GROWTH_DAILY_POINTS now that the rate ramps down from GROWTH_AGE - AgeBandRampHalfWidthYears (ERR-028-020). Restated as REGEN_AGE_MAX + 1 <= GROWTH_AGE - AgeBandRampHalfWidthYears (the drawn age is entirely below the ramp). No behaviour change. |
 #endregion

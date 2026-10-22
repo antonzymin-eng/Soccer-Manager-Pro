@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonTransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-20 (AR round 4 — v1.4)
+// Modified: 2026-10-21 (AR round 5 L-A — v1.6: the counterparty-ledger test is renamed ..._InTheInterimMinimalTier)
+//           2026-10-20 (AR round 5 S-L6 — v1.5: AssertSameRecord compares WeakFootRating; the roll-window Assume.That sits below the core assertions)
+//           2026-10-20 (AR round 4 — v1.4)
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §7.1 T2, FR-TX-005/007/009/021..025/028, §5 T-TX-BID-001..004,
 //           T-TX-REKEY-005, T-TX-DET-001/002/003, T-TX-INIT-001, T-TX-NEU-001; ERR-031-005/007/008/009/010/011/012;
@@ -294,14 +296,14 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign()
+        public void AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_InTheInterimMinimalTier()
         {
             // KD-2 / FR-TX-005 (AR round 3, M16): the minimal tier posts the fee to the MANAGED club's #40 entry
             // only. The counterparty AI club's entry never sees the money — so AI clubs' FinanceView and
             // SettleFinances never see transfer cash, and money enters or leaves the league on every transfer.
-            // This pins the INTERIM behaviour (option (b), the minimal tier as shipped); the (a)-vs-(b) choice is an OPEN
-            // owner decision (spec §7.2, open-issues transfer-counterparty-ledger), so no owner choice is claimed here.
-            // A mirror-posting change must update this test deliberately.
+            // This pins the INTERIM behaviour (option (b), the minimal tier as shipped), not a design decision: the
+            // (a)-vs-(b) choice is an OPEN owner decision (spec §7.2, open-issues transfer-counterparty-ledger), so no
+            // owner choice is claimed here. Resolving it to (a) must rewrite this test, not merely update it.
             Rig c = NewCareer();
             int bought = PlayerAt(c, Seller, PlayerPosition.Midfielder);
             int sold = PlayerAt(c, Managed, PlayerPosition.Defender);
@@ -608,10 +610,13 @@ namespace TacticalDirector.SeasonSave.Tests
             TransferWindow w = c.Loop.TransfersSnapshot().ActiveWindow;
             uint opening = c.Loop.State.Calendar.DayOfRound(0);
             Assert.That(w.OpenWorldDay, Is.EqualTo(rollDay), "nothing transacts before the season exists");
-            Assume.That(opening, Is.GreaterThan(rollDay + (uint)TransfersConstants.SummerWindowInSeasonDays),
-                "non-vacuity needs the default close-season break: a roll-day-length window must close before the opening fixture");
             Assert.That(w.IsWindowOpen(opening), Is.True, "AR round 2 M6: the window is still open on the opening fixture day");
             Assert.That(w.CloseWorldDay, Is.EqualTo(opening + InSeasonTail));
+
+            // AR round 5 S-L6: the guard sits BELOW the core assertions, so a [GT] retune that shortens the close-season
+            // break marks only the non-vacuity claim inconclusive - it can no longer skip the assertions above.
+            Assume.That(opening, Is.GreaterThan(rollDay + (uint)TransfersConstants.SummerWindowInSeasonDays),
+                "non-vacuity needs the default close-season break: a roll-day-length window must close before the opening fixture");
         }
 
         [Test]
@@ -1190,6 +1195,9 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(actual.LastName, Is.EqualTo(expected.LastName), "LastName");
             Assert.That(actual.Age, Is.EqualTo(expected.Age), "Age");
             Assert.That(actual.Position, Is.EqualTo(expected.Position), "Position");
+            // AR round 5 S-L6: ToArray() below EXCLUDES WeakFootRating (a separate [1,5] scale), so a re-home that
+            // clobbered it passed every assertion here. It is the only PlayerRecord member not otherwise compared.
+            Assert.That(actual.Attributes.WeakFootRating, Is.EqualTo(expected.Attributes.WeakFootRating), "WeakFootRating");
             int[] after = actual.Attributes.ToArray();
             Assert.That(after.Length, Is.EqualTo(expectedAttributes.Length), "attribute count");
             for (int i = 0; i < after.Length; i++)
@@ -1277,4 +1285,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.2     | 2026-10-20 | —      | AR round 2: M7 (direct SeasonTransferRoster throw-path tests; REKEY-005 lifecycle/#29/#30 rows + buyer selection; depletion through AssertNoMutation; wider Snapshot), the ERR-044-014 ban property replacing the vacuous HasEntry, a non-vacuous encoded-season leg, the League.CreateLoop sale/roll/save/load/play composition, L3 CanRelease throws (ERR-031-012). |
 // | 1.3     | 2026-10-20 | —      | AR round 3: M16 AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign (pins the KD-2 decision); M14 NoTransferAction_IsBehaviourNeutral rewritten (played season → RollToNextSeason → one season-2 round; the full Snapshot minus the #31 block, wired vs unwired) + OneAcceptedSale_… non-vacuity; M15 TwoRunsOverIdenticalTransferActivity_… (T-TX-DET-003); S-L3 the ban test runs a 3-club (bye) league and asserts the decrement lands only in rounds the holding club plays; T-L9 REKEY-005 compares the full InjuryState and a yellow-count tally; S-L5 CreateLoop KD-4 refusal test. |
 // | 1.4     | 2026-10-20 | —      | AR round 4: L9 T-TX-REKEY-005 asserts the #28 PlayerRecord (id, names, age, position, every attribute) is unchanged by the re-home; S4-L2 the unwired CreateLoop KD-4 refusal asserts ParamName == "world"; R4-L2 the roll-window non-vacuity leg is an Assume.That. |
+// | 1.5     | 2026-10-20 | —      | AR round 5 S-L6: AssertSameRecord also compares Attributes.WeakFootRating (PlayerAttributes.ToArray() excludes it, so a re-home that clobbered it passed T-TX-REKEY-005); APromptRoll_OpensOnTheRollDay_AndCoversTheOpeningFixtureDay moves its non-vacuity Assume.That below the two core assertions, so a [GT] retune cannot silently skip them. |
+// | 1.6     | 2026-10-21 | —      | AR round 5 L-A (ERR-031-015): AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign renamed ..._InTheInterimMinimalTier — the unposted counterparty is the interim option (b), not a design decision (the (a)-vs-(b) owner decision is open, §7.2); the v1.3 row keeps the name it recorded. |
 #endregion

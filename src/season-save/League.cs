@@ -4,6 +4,8 @@
 //           progression and discipline state instead of bootstrapping finances by dropping them.)
 // Modified: 2026-09-11 (#40 T2b — League.CreateLoop is the #30-owned new-game composition seam that
 //           bootstraps exactly one finance entry per canonical squad and passes it into SeasonLoop.)
+// Modified: 2026-10-20 (AR round 5 S-L2 — v1.7: CreateLoop documents the InvalidOperationException a supplied career or
+//           progression store raises against the world clock; doc comment only.)
 // Modified: 2026-10-20 (AR round 4 S4-L2 — v1.6: the KD-4 refusal is SeasonCalendar.RequireCursorInvariant.)
 // Modified: 2026-10-20 (AR round 3 S-L5 — v1.5: CreateLoop checks the KD-4 cursor invariant before deriving the #31 window.)
 // Modified: 2026-10-20 (ERR-031-011 — v1.4: genesis window anchored to season 1's opening fixture day.)
@@ -230,6 +232,12 @@ namespace TacticalDirector.SeasonSave
         /// is already past season 1's opening fixture day (the KD-4 cursor invariant — thrown before any
         /// #31 window is derived), or a supplied subsystem violates <see cref="SeasonLoop"/>'s existing
         /// composition invariants.</exception>
+        /// <exception cref="System.InvalidOperationException">A supplied career or progression store carries a
+        /// cursor outside the coherent band against <paramref name="world"/>'s clock (ahead of it, or more than
+        /// one day behind it), or a #28 <c>BirthWorldDay</c> ahead of it — raised by
+        /// <see cref="SeasonLoop"/>'s constructor through <c>PlayerCareerStates.RequireCursorsWithinClock</c>,
+        /// <c>RequireProgressionCursorWithinClock</c> and <c>RequireBirthWorldDayWithinClock</c> (AR round 5
+        /// S-L2).</exception>
         public SeasonLoop CreateLoop(
             WorldStore world,
             int managedClubId,
@@ -320,4 +328,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.4     | 2026-10-20 | —      | ERR-031-011 (AR round 2 M6): genesis window = SummerWindowFor(new-game day, season 1 opening fixture day), so its close is anchored like the roll's; class summary says 23-player squads (ERR-031-004). |
 // | 1.5     | 2026-10-20 | —      | AR round 3 S-L5: CreateLoop throws the KD-4 cursor-invariant ArgumentException (ParamName "world") before deriving the #31 window when the clock is past season 1's opening fixture day (previously the window's ArgumentOutOfRangeException, or KD-4's with a different ParamName when unwired). |
 // | 1.6     | 2026-10-20 | —      | AR round 4 S4-L2: the KD-4 cursor-invariant refusal delegates to SeasonCalendar.RequireCursorInvariant (one predicate and message shared with SeasonLoop's constructor); ParamName stays "world". |
+// | 1.7     | 2026-10-20 | —      | AR round 5 S-L2 (doc comment only): CreateLoop documents the InvalidOperationException a supplied career or progression store raises when a cursor or BirthWorldDay is outside the coherent band against the world clock (thrown by SeasonLoop's constructor). |
 #endregion

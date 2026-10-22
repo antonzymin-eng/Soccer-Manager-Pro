@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonTransferRoster.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20
+// Modified: 2026-10-21
 // Author:   —
 // Spec:     Transfers, Contracts & Negotiation #31 §3.4 / §4.5 / KD-7 (as amended by ERR-031-005/007),
 //           §7.1 T2, FR-TX-021..023; Season & Competition Loop #30 (the mid-season roster commit,
@@ -30,9 +30,11 @@ namespace TacticalDirector.SeasonSave
     /// skips the preview cannot leave the store moved and the career rows behind.
     /// </para>
     /// <para>
-    /// <b>No PlayerId-keyed state migrates</b> (ERR-031-005): the id is unchanged, so #44's tally, #41's
-    /// draw key and #31's contracts follow the player by construction. Only the per-club rows move —
-    /// the #28 record + lifecycle and the #29/#41/#30 rows — because those are keyed by club too.
+    /// <b>No PlayerId-keyed state migrates</b> (ERR-031-005): the id is unchanged, so #44's tally and #41's
+    /// draw key follow the player by construction. Only the per-club rows move — the #28 record +
+    /// lifecycle and the #29/#41/#30 rows — because those are keyed by club too. #31's contracts are NOT
+    /// among the state that follows a player: #31 tracks only the MANAGED club's contracts, so
+    /// <c>SubmitBid</c> inserts one on a buy and removes one on a sale (AR round 5, ERR-031-015).
     /// </para>
     /// </summary>
     internal sealed class SeasonTransferRoster : ITransferRosterPort
@@ -178,4 +180,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (ERR-031-005); source-depletion guard (ERR-031-007); preview     |
 // |         |            |        | false only when full, impossible moves throw (ERR-031-010).      |
 // | 1.1     | 2026-10-20 | —      | AR round 2 L3: CanRelease throws for an unknown club or a player not on the roster (false is depletion only, ITransferRosterPort contract). |
+// | 1.2     | 2026-10-21 | —      | AR round 5 (ERR-031-015): the class doc no longer says #31's contracts follow a player by id — #31 tracks only the managed club's contracts (inserted on a buy, removed on a sale by SubmitBid). |
 #endregion

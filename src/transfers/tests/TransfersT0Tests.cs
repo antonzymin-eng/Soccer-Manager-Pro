@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-20 (#31 T2; AR round 2 L3; AR round 3 M14/M15; AR round 4 R4-L1 — v1.10)
+// Modified: 2026-10-21 (#31 T2; AR round 2 L3; AR round 3 M14/M15; AR round 4 R4-L1; AR round 5 L-C/D/E/G/H — v1.11)
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -75,6 +75,11 @@ namespace TacticalDirector.Transfers.Tests
             Assert.AreEqual(TransfersConstants.PERMILLE_DENOM, neutral);
             Assert.Less(overstocked, neutral);
             Assert.Greater(overstocked, 0);
+            // AR round 5 L-C (ERR-031-015): the step is >= 1. At 0 the multiplier is the identity for every stock
+            // and FR-TX-002's always-on scarcity is silently disabled. The loader's own refusal of a configured 0
+            // cannot be exercised in-process (a static readonly bound once from the process-wide config), so this
+            // pins the loaded value and the non-identity it buys.
+            Assert.GreaterOrEqual(TransfersConstants.ClubNeedPerPlayerPermille, 1);
             Assert.Greater(TransfersConstants.NegotiationCounterBandPermille, 0);
             Assert.Less(TransfersConstants.NegotiationCounterBandPermille, TransfersConstants.PERMILLE_DENOM);
         }
@@ -542,6 +547,73 @@ namespace TacticalDirector.Transfers.Tests
         }
 
         [Test]
+        public void SubmitBid_GateOrder_SquadDepletedPrecedesSquadFull_F9BeforeF5()
+        {
+            // T-TX-BID-009 (AR round 5 L-G): a release that depletes the seller AND a destination with no room
+            // is reported as SquadDepleted — the F9 release gate runs before the F5 capacity gate. Swapping them
+            // turns this into SquadFull.
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            roster.CanReleasePlayers = false;
+            roster.HasDestinationCapacity = false;
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
+
+            Assert.AreEqual(TransferSubmissionOutcome.SquadDepleted, commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0, roster.CommitCount);
+        }
+
+        [Test]
+        public void SubmitBid_GateOrder_UnknownCounterpartyPrecedesTheWindowGate_F6BeforeF4()
+        {
+            // T-TX-BID-009 (AR round 5 L-G): an unknown counterparty with the window ALSO closed is the F6
+            // argument error, not the F4 window error. Both are caller-contract throws, so the type is what
+            // tells them apart: ArgumentOutOfRangeException (F6) vs InvalidOperationException (F4). Swapping the
+            // two gates turns this into InvalidOperationException.
+            FakeRosterPort roster = CreateRosterWithManagedPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Offer sellToNowhere = new Offer(MANAGED_PLAYER_ID, 999, 1L, 0L, 1, false);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => commands.SubmitBid(in sellToNowhere, 5_000U, ref finances, state));
+            Assert.AreEqual(0, roster.CommitCount);
+        }
+
+        [Test]
+        public void SubmitBid_BuyWithAFullContractSet_FailsLoudBeforeTheRosterCommit()
+        {
+            // AR round 5 L-H: InsertContract's cap check runs after the irreversible roster commit, so a buy
+            // that would hit it must be refused beforehand. The fake roster has room (it holds one player), so
+            // only the contract set is full — the roster and the contract set disagree.
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            TransferCommands commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            for (int i = 0; i < PlayerDatabaseConstants.CLUB_SQUAD_SIZE; i++)
+            {
+                state.InsertContract(new Contract(MANAGED_PLAYER_ID + i, 1_000L, 2));
+            }
+
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            long valuation = CounterpartyValue(roster, COUNTERPARTY_PLAYER_ID);
+            Offer offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, valuation, 1_000L, 2, true);
+
+            var e = Assert.Throws<InvalidOperationException>(() => commands.SubmitBid(in offer, 110U, ref finances, state));
+
+            StringAssert.Contains("contract set and the roster disagree", e.Message);
+            Assert.AreEqual(0, roster.CommitCount, "the roster commit must not have run");
+            Assert.AreEqual(5_000_000L, finances.Balance);
+            Assert.AreEqual(0L, state.CommittedSpendThisWindow);
+            Assert.AreEqual(PlayerDatabaseConstants.CLUB_SQUAD_SIZE, state.ContractCount);
+            Assert.IsFalse(state.TryGetContract(COUNTERPARTY_PLAYER_ID, out Contract _));
+            Assert.IsTrue(roster.TryGetPlayer(COUNTERPARTY_PLAYER_ID, out PlayerRecord _, out int club));
+            Assert.AreEqual(COUNTERPARTY_CLUB_ID, club);
+        }
+
+        [Test]
         public void SubmitBid_AnUnknownCounterpartyClub_FailsLoud_BeforeAnyValuation()
         {
             FakeRosterPort roster = CreateRosterWithManagedPlayer();
@@ -631,12 +703,23 @@ namespace TacticalDirector.Transfers.Tests
                 "non-vacuity: the IL scan detects a direct field store (stfld)");
             Assert.IsTrue(StoresToAFinanceField(typeof(BID008Probe).GetMethod(nameof(BID008Probe.WriteBalanceThroughARef))),
                 "non-vacuity: the IL scan detects a field address taken for a ref write (ldflda)");
+            Assert.IsTrue(StoresAWholeFinanceValue(typeof(BID008Probe).GetMethod(nameof(BID008Probe.OverwriteWholeValue))),
+                "non-vacuity: the IL scan detects a whole-value overwrite (stobj)");
+            Assert.IsTrue(StoresAWholeFinanceValue(typeof(BID008Probe).GetMethod(nameof(BID008Probe.ZeroWholeValue))),
+                "non-vacuity: the IL scan detects a whole-value zeroing (initobj)");
             foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
             {
                 foreach (System.Reflection.MethodBase method in Methods(type, all))
                 {
                     Assert.IsFalse(StoresToAFinanceField(method),
                         type.Name + "." + method.Name + " writes or takes the address of a ClubFinances/ClubFinanceEntry field directly");
+
+                    // SubmitBid's one commit store of the ledger-staged copy is the only whole-value store allowed.
+                    bool isTheCommitStore = type == typeof(TransferCommands) && method.Name == nameof(TransferCommands.SubmitBid);
+                    Assert.AreEqual(isTheCommitStore, StoresAWholeFinanceValue(method),
+                        type.Name + "." + method.Name + (isTheCommitStore
+                            ? " must commit the staged finance copy with a whole-value store (the scan lost sight of it)"
+                            : " overwrites or zeroes a whole ClubFinances/ClubFinanceEntry value"));
                 }
             }
         }
@@ -644,18 +727,23 @@ namespace TacticalDirector.Transfers.Tests
         [Test]
         public void TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState()
         {
-            // T-TX-REKEY-003 (AR round 3, M15): #31 migrates only its own contract state, and #28/#29/#41/#44/#33
-            // state is not referenced. A transfer keeps the player's id (ERR-031-005), so there is nothing to
-            // migrate; the structural half of that claim is that the compiled assembly names none of the
-            // assemblies that own PlayerId-keyed state. (Its roster access is the ITransferRosterPort seam.)
-            string[] owners =
+            // T-TX-REKEY-003 (AR round 3, M15; allow-list at AR round 5 L-E): #31 migrates only its own contract
+            // state, and #28/#29/#41/#44/#33 state is not referenced. A transfer keeps the player's id
+            // (ERR-031-005), so there is nothing to migrate; the structural half of that claim is that the compiled
+            // assembly names no project assembly beyond the four transfers.asmdef lists. An allow-list, not a
+            // deny-list: a new owner of PlayerId-keyed state (or a renamed one) cannot slip past an enumeration of
+            // today's owners. (Its roster access is the ITransferRosterPort seam.)
+            string[] allowed =
             {
-                "TacticalDirector.PlayerProgression", "TacticalDirector.TrainingSystem", "TacticalDirector.InjuriesMedical",
-                "TacticalDirector.Discipline", "TacticalDirector.LivingWorld", "TacticalDirector.SeasonSave"
+                "TacticalDirector.ClubFinances", "TacticalDirector.DeterministicSim",
+                "TacticalDirector.PlayerDatabase", "TacticalDirector.ProjectConstants"
             };
             foreach (System.Reflection.AssemblyName reference in typeof(TransfersState).Assembly.GetReferencedAssemblies())
             {
-                CollectionAssert.DoesNotContain(owners, reference.Name, "#31 must not reference " + reference.Name);
+                if (reference.Name.StartsWith("TacticalDirector.", StringComparison.Ordinal))
+                {
+                    CollectionAssert.Contains(allowed, reference.Name, "#31 must not reference " + reference.Name);
+                }
             }
         }
 
@@ -671,12 +759,22 @@ namespace TacticalDirector.Transfers.Tests
             System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
                 | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
                 | System.Reflection.BindingFlags.DeclaredOnly;
+            Type rngService = typeof(TacticalDirector.DeterministicSim.DeterministicRngService);
+            Type rngState = typeof(TacticalDirector.DeterministicSim.RngStreamState);
+            // A member is an RNG member when it is declared on an RNG type OR takes one as a parameter (AR round 5
+            // L-D): a helper on some other type that accepts a DeterministicRngService or RngStreamState is a draw
+            // site just as much as a call on the type itself.
             Func<System.Reflection.MemberInfo, bool> isRng = m => m.DeclaringType == typeof(Random)
-                || m.DeclaringType == typeof(TacticalDirector.DeterministicSim.DeterministicRngService)
-                || m.DeclaringType == typeof(TacticalDirector.DeterministicSim.RngStreamState);
+                || m.DeclaringType == rngService
+                || m.DeclaringType == rngState
+                || (m is System.Reflection.MethodBase mb && TakesAnyParameterOf(mb, rngService, rngState));
 
             Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Draw)), isRng),
                 "non-vacuity: the IL scan detects a constructed Random");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.PassesAService)), isRng),
+                "non-vacuity: the IL scan detects a call to a helper that takes a DeterministicRngService");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.PassesAStreamState)), isRng),
+                "non-vacuity: the IL scan detects a call to a helper that takes an RngStreamState");
             foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
             {
                 foreach (System.Reflection.MethodBase method in Methods(type, all))
@@ -701,13 +799,21 @@ namespace TacticalDirector.Transfers.Tests
                 || (m.DeclaringType == typeof(DateTimeOffset) && (m.Name == "get_Now" || m.Name == "get_UtcNow"))
                 || (m.DeclaringType == typeof(Guid) && m.Name == "NewGuid")
                 || (m.DeclaringType == typeof(Environment) && (m.Name == "get_TickCount" || m.Name == "get_TickCount64"))
-                || (m.DeclaringType == typeof(System.Diagnostics.Stopwatch) && m.Name == "GetTimestamp");
+                || m.DeclaringType == typeof(System.Diagnostics.Stopwatch)
+                || DerivesFromNamed(m.DeclaringType, "System.Security.Cryptography.RandomNumberGenerator")
+                || DerivesFromNamed(m.DeclaringType, "System.Security.Cryptography.RNGCryptoServiceProvider");
             ulong[] mixers = { 0x9E3779B97F4A7C15UL, 0xBF58476D1CE4E5B9UL, 0x94D049BB133111EBUL };
 
             Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Clock)), isAmbient),
                 "non-vacuity: the IL scan detects a wall-clock read");
             Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Entropy)), isAmbient),
                 "non-vacuity: the IL scan detects Guid.NewGuid");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Timer)), isAmbient),
+                "non-vacuity: the IL scan detects a Stopwatch member (StartNew / ElapsedTicks)");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.CryptoEntropy)), isAmbient),
+                "non-vacuity: the IL scan detects a RandomNumberGenerator member");
+            Assert.IsTrue(CallsOrConstructs(typeof(BID008Probe).GetMethod(nameof(BID008Probe.LegacyCryptoEntropy)), isAmbient),
+                "non-vacuity: the IL scan detects an RNGCryptoServiceProvider construction");
             Assert.IsTrue(LoadsA64BitConstant(typeof(BID008Probe).GetMethod(nameof(BID008Probe.Mix)), mixers),
                 "non-vacuity: the IL scan detects a SplitMix64 literal");
             foreach (Type type in typeof(TransfersState).Assembly.GetTypes())
@@ -810,14 +916,55 @@ namespace TacticalDirector.Transfers.Tests
             IlReferences(method, 0x28, match) || IlReferences(method, 0x6F, match) || IlReferences(method, 0x73, match);
 
         // stfld (0x7D), stsfld (0x80), ldflda (0x7C) or ldsflda (0x7F) of a field declared on ClubFinances or
-        // ClubFinanceEntry: every way to write a #40 value other than through FinanceLedger. (Reading a field
-        // — ldfld/ldsfld — is legal and not flagged.)
+        // ClubFinanceEntry: the field-level ways to write a #40 value that this scan can see, i.e. a direct store
+        // and an address taken for a `ref` write. It does NOT see a write through a pre-existing managed pointer
+        // or an array element of those types, nor an unsafe/Unsafe.* store — only the opcodes listed. (Reading a
+        // field — ldfld/ldsfld — is legal and not flagged.) Whole-value stores are the separate scan below.
         private static bool StoresToAFinanceField(System.Reflection.MethodBase method)
         {
             Func<System.Reflection.MemberInfo, bool> isFinanceField = m => m is System.Reflection.FieldInfo
                 && (m.DeclaringType == typeof(ClubFinancesState) || m.DeclaringType == typeof(ClubFinanceEntry));
             return IlReferences(method, 0x7D, isFinanceField) || IlReferences(method, 0x80, isFinanceField)
                 || IlReferences(method, 0x7C, isFinanceField) || IlReferences(method, 0x7F, isFinanceField);
+        }
+
+        // stobj (0x81) or initobj (0xFE 0x15; its second byte is what is matched) typed ClubFinances or
+        // ClubFinanceEntry: overwriting or zeroing a whole #40 value through a reference. The single legitimate
+        // one is SubmitBid committing the staged finance copy that FinanceLedger.ApplyTransaction produced.
+        private static bool StoresAWholeFinanceValue(System.Reflection.MethodBase method)
+        {
+            Func<System.Reflection.MemberInfo, bool> isFinanceType = m => m == typeof(ClubFinancesState) || m == typeof(ClubFinanceEntry);
+            return IlReferences(method, 0x81, isFinanceType) || IlReferences(method, 0x15, isFinanceType);
+        }
+
+        private static bool TakesAnyParameterOf(System.Reflection.MethodBase method, params Type[] targets)
+        {
+            foreach (System.Reflection.ParameterInfo parameter in method.GetParameters())
+            {
+                foreach (Type target in targets)
+                {
+                    if (MentionsType(parameter.ParameterType, target))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // The type or any base type has this full name (matched by name so an [Obsolete] type needs no reference).
+        private static bool DerivesFromNamed(Type type, string fullName)
+        {
+            for (Type t = type; t != null; t = t.BaseType)
+            {
+                if (t.FullName == fullName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // ldc.i8 (0x21) followed by one of `values` (8 little-endian bytes). The 8-byte operand is specific
@@ -935,6 +1082,52 @@ namespace TacticalDirector.Transfers.Tests
             public static ulong Mix(ulong x)
             {
                 return unchecked((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9UL);
+            }
+
+            public static long Timer()
+            {
+                return System.Diagnostics.Stopwatch.StartNew().ElapsedTicks;
+            }
+
+            public static void CryptoEntropy()
+            {
+                System.Security.Cryptography.RandomNumberGenerator.Create().GetBytes(new byte[4]);
+            }
+
+#pragma warning disable SYSLIB0023
+            public static object LegacyCryptoEntropy()
+            {
+                return new System.Security.Cryptography.RNGCryptoServiceProvider();
+            }
+#pragma warning restore SYSLIB0023
+
+            public static void TakesAService(TacticalDirector.DeterministicSim.DeterministicRngService service)
+            {
+            }
+
+            public static void TakesAStreamState(in TacticalDirector.DeterministicSim.RngStreamState state)
+            {
+            }
+
+            public static void PassesAService()
+            {
+                TakesAService(null);
+            }
+
+            public static void PassesAStreamState()
+            {
+                TacticalDirector.DeterministicSim.RngStreamState state = default(TacticalDirector.DeterministicSim.RngStreamState);
+                TakesAStreamState(in state);
+            }
+
+            public static void OverwriteWholeValue(ref ClubFinancesState target, ClubFinancesState replacement)
+            {
+                target = replacement;
+            }
+
+            public static void ZeroWholeValue(ref ClubFinancesState target)
+            {
+                target = default(ClubFinancesState);
             }
         }
 
@@ -1094,4 +1287,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.8     | 2026-10-20 | —      | AR round 2 L3: the fake's CanRelease throws for an unknown club or a player not on the club (false is depletion only). |
 // | 1.9     | 2026-10-20 | —      | AR round 3 M15 (T-TX-BID-008): SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState — ledger-equivalence of an accepted buy's finance, a reflection scan for finance-typed or cash-named members across the assembly, and an IL stfld scan (with a violating probe proving it can see a store); M14 TheTransfersAssembly_IsDrawFree_… (no call/newobj of System.Random, DeterministicRngService or RngStreamState; probe-proven scan) backing T-TX-NEU-001's 'no RNG stream' half; M15 TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState (T-TX-REKEY-003: no reference to the assemblies owning PlayerId-keyed state). |
 // | 1.10    | 2026-10-20 | —      | AR round 4 R4-L1: the T-TX-BID-008 IL scan also flags ldflda/ldsflda/stsfld of a ClubFinances/ClubFinanceEntry field (probe: a ref write through ldflda); AssertNotFinanceShaped unwraps Nullable/generic arguments; the RNG scan is renamed ...RegistersNoRngStream... and scoped to FR-TX-016/G3; new ...ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant scan with probes; the token-resolve catch also covers BadImageFormatException and TypeLoadException (Unity Mono). |
+// | 1.11    | 2026-10-21 | —      | AR round 5 (ERR-031-015): L-C ClubNeedPerPlayerPermille >= 1 pinned; L-D the stfld/ldflda scan comment states what it sees and a new stobj/initobj whole-value scan (allowing only SubmitBid's staged-finance commit) joins it, isAmbient matches every Stopwatch member and any RandomNumberGenerator/RNGCryptoServiceProvider member, isRng also matches members that take a DeterministicRngService/RngStreamState parameter — each with a probe; L-E REKEY-003 becomes an allow-list of the four asmdef references; L-G T-TX-BID-009 gate-order cases (F9 before F5, F6 before F4); L-H a buy with a full contract set fails loud before the roster commit. |
 #endregion

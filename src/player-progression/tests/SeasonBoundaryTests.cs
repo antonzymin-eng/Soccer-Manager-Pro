@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/SeasonBoundaryTests.cs
 // Created:  2026-10-19
-// Modified: 2026-10-20 (AR round 4 L16: Prepare refuses a worldDay outside the carried cursors' span - v1.4)
+// Modified: 2026-10-20 (AR round 5 L20: split-cursor span tests {400, 401} - 400/401 succeed, 399/402 refused - v1.5)
+//           2026-10-20 (AR round 4 L16: Prepare refuses a worldDay outside the carried cursors' span - v1.4)
 //           2026-10-20 (AR round 3 L7: the regen pin covers every drawn value + the lifecycle; the tautological stream-index assert removed - v1.3)
 //           (AR round 2 M8/M10: season-0 seed golden, ClubB stream, regen pin - v1.2)
 //           (AR round 1 P-M2: golden seed, non-index club ids, cursor exhaustion - v1.1)
@@ -340,6 +341,30 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.DoesNotThrow(() => store.PrepareSeasonBoundary(WorldSeed, 1, Day), "the cursors' own day is legal");
         }
 
+        [TestCase(Day)]
+        [TestCase(Day + 1u)]
+        public void Prepare_OnAnyDayInsideASplitCursorSpan_Succeeds(uint worldDay)
+        {
+            // AR round 5 L20: the span check is [min, max] of the carried cursors, not "every cursor equals
+            // worldDay". Here ClubA's players sit on Day and ClubB's on Day + 1 (the one-day lag the
+            // cursor-vs-clock band legalises), so BOTH days are inside the span. A check that demanded
+            // worldDay == every cursor would refuse both - and the all-equal fixture above could not tell.
+            ProgressionEngine store = StoreWithSplitCursors();
+
+            Assert.DoesNotThrow(() => store.PrepareSeasonBoundary(WorldSeed, 1, worldDay));
+        }
+
+        [TestCase(Day - 1u)]
+        [TestCase(Day + 2u)]
+        public void Prepare_OnADayOutsideASplitCursorSpan_IsRefused(uint worldDay)
+        {
+            ProgressionEngine store = StoreWithSplitCursors();
+
+            ArgumentException ex = Assert.Throws<ArgumentException>(
+                () => store.PrepareSeasonBoundary(WorldSeed, 1, worldDay));
+            Assert.That(ex.ParamName, Is.EqualTo("worldDay"));
+        }
+
         [Test]
         public void Prepare_OnAnEmptyStore_HasNoCursorSpanToViolate()
         {
@@ -360,6 +385,21 @@ namespace TacticalDirector.PlayerProgression.Tests
             Flag(blocks[0], 76, retirees);
             Flag(blocks[0], 78, retirees);
             Flag(blocks[1], 175, retirees);
+            return ProgressionEngine.FromBlocks(blocks, seeded.NextPlayerId);
+        }
+
+        // StoreWithRetirees, except that ClubB's players carry cursor Day + 1 while ClubA's carry Day - the
+        // carried cursors are {400, 401}. Built through FromBlocks, so the fixture is a legal restored store.
+        private static ProgressionEngine StoreWithSplitCursors()
+        {
+            ProgressionEngine seeded = ProgressionEngine.SeedFrom(new[] { Club(ClubA), Club(ClubB) }, Day);
+            ClubCareerStates[] blocks = seeded.ToBlocks();
+            Flag(blocks[0], 76, new Dictionary<int, PlayerPosition>());
+            for (int p = 0; p < blocks[1].Count; p++)
+            {
+                blocks[1].Lifecycles[p].LastAdvancedWorldDay = Day + 1u;
+            }
+
             return ProgressionEngine.FromBlocks(blocks, seeded.NextPlayerId);
         }
 
@@ -434,4 +474,5 @@ namespace TacticalDirector.PlayerProgression.Tests
 // | 1.2     | 2026-10-20 | —      | AR round 2 (ERR-028-027): M8 + DeriveRegenSeed_AtSeasonZero golden (0xD3E409D7732EBE4F for (0xB0DA2028, 0), independent masked Python mirror) - a career's first boundary closes season 0; M10 TheIdAndDrawOrders now registers a separate ClubB stream and asserts ClubB's regen is that stream's first reservation (a registration hoisted out of the club loop fails it) + TheFirstRegen_IsPinnedAsAnAbsoluteGolden (characterization pin, so a draw-order change without a REGEN_STREAM_VERSION bump fails). |
 // | 1.3     | 2026-10-20 | —      | AR round 3 L7: TheFirstRegen_IsPinnedAsAnAbsoluteGolden… pins ALL 31 attributes + weak foot + names/age/position and the lifecycle (PA, CA, BirthWorldDay, GrowthCursor, LastAdvancedWorldDay) as a characterization string read back from the code (was 7 of ~37 values; a PA draw on the reserved index 3 passed). Removed the tautological clubBStream != clubAStream assert. |
 // | 1.4     | 2026-10-20 | —      | AR round 4 L16: Prepare_OnADayOutsideTheCarriedCursors_IsRefused (Day-1 / Day+1 refused, Day legal) and Prepare_OnAnEmptyStore_HasNoCursorSpanToViolate - the §3.5 anchor MUST is enforced, not only documented. |
+// | 1.5     | 2026-10-20 | —      | AR round 5 L20: Prepare_OnAnyDayInsideASplitCursorSpan_Succeeds (cursors {400, 401}: 400 and 401 legal) and Prepare_OnADayOutsideASplitCursorSpan_IsRefused (399 / 402 -> ArgumentException, ParamName worldDay). The L16 fixture had every cursor on one day, so a check demanding worldDay == every cursor passed it; mutation-verified. |
 #endregion

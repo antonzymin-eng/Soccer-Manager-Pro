@@ -80,7 +80,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Transfer negotiation / manager command seam | #31 §2.2, §3.2–§3.3 | `transfers` | `Offer`, `NegotiationOutcome`, `TransferCommands` |
 | Transfer roster consumer port | #31 §4.5 | `transfers` | `ITransferRosterPort` |
 | Season-boundary roster mutation (retire + 1:1 regen) | #28 §3.4 (ERR-028-025), #30 §3.5 (d) | `player-progression` (`ProgressionEngine.PrepareSeasonBoundary` / `CommitSeasonBoundary`), `season-save` (`SeasonLoop.RollToNextSeason`) | `SeasonBoundaryPlan` |
-| Manager transfer command + production roster port | #31 §3.3–§3.5 / §7.1 T2, #30 §3.5 (ERR-030-056; window ERR-031-011; counterparty ledger untouched by design, ERR-031-013) | `season-save` (`SeasonLoop.SubmitTransferBid`, `SeasonTransferRoster`), `transfers` (`TransferCommands`) | `TransferSubmissionOutcome` (incl. `SquadDepleted`) |
+| Manager transfer command + production roster port | #31 §3.3–§3.5 / §7.1 T2, #30 §3.5 (ERR-030-056; window ERR-031-011; counterparty ledger left unposted as the interim option (b) with the owner decision open, ERR-031-013/015) | `season-save` (`SeasonLoop.SubmitTransferBid`, `SeasonTransferRoster`), `transfers` (`TransferCommands`) | `TransferSubmissionOutcome` (incl. `SquadDepleted`) |
 | Transfers save sub-blob (`XFER`) | #31 §4.4 / Appendix B (ERR-031-003) | `transfers` (codec), `season-save` (frame v8 slot, `TransfersBlock`, `SeasonTransfersCoherence`) | `TransfersSaveCodec`, `SeasonSaveContents.Transfers` |
 | Match outcome payload | #30 §2.2 | `season-save` | `MatchResult` |
 | Season state (serialized surface) | #30 §2.2, Appendix B | `season-save` | `SeasonState` |
@@ -261,6 +261,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.5 | October 21, 2026 | #31 T2 AR round 5 (ERR-031-015): the Manager-transfer-command row no longer says the counterparty ledger is untouched "by design" — it is the interim option (b) with the (a)-vs-(b) owner decision open (§7.2, open-issues `transfer-counterparty-ledger`). Pointer wording only; no contract changed. |
 | v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |
 | v1.3 | September 6, 2026 | #40 T0 + T1a landing: registered `ClubFinances` / `FinancesViewModel` and the finance transaction seam under `club-finances`, added the standalone `FINANCE_SAVE_FORMAT_VERSION` pointer, and removed #40 from the no-assembly table. The §8 percentage was deliberately removed rather than creating another volatile cardinality claim. |
 | v1.2 | August 22, 2026 | `ERR-016-009`'s `buildHash` half CLOSED. New §4 row **Build identity (`buildHash`) → #16 §2.3.2 → `deterministic-sim`, `match-engine` → `BuildIdentity` / `BuildModule` / `SnapshotHeader.BuildHash` / `MatchEngineBuildIdentity`**, and the note above it updated: the `DeterminismContext` mapping row reads SPLIT rather than SPLIT + GAP, and only `ToleranceRow`/`ComparatorRegistry` remain deferred. Every named type verified to exist per this file's own landing rule. No other row changed. |

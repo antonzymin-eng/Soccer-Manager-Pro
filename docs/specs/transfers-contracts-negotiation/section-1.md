@@ -1,13 +1,14 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.7 — AR round 4, ERR-031-014: KD-2 says option (b) is the recorded interim behaviour and the (a)-vs-(b) owner decision is open)
+**Last Updated:** October 21, 2026 (v0.8 — AR round 5, ERR-031-015: KD-2 no longer says the counterparty is "deliberately" left untouched — it is unposted in the interim, the choice is open)
+**Last Updated (prior):** October 20, 2026 (v0.7 — AR round 4, ERR-031-014: KD-2 says option (b) is the recorded interim behaviour and the (a)-vs-(b) owner decision is open)
 **Last Updated (prior):** October 20, 2026 (v0.6 — AR round 3, ERR-031-013: KD-2 records that the counterparty club's #40 entry is deliberately not posted)
 **Last Updated (prior):** October 20, 2026 (v0.5 — ERR-031-011: KD-6 states the window derivation)
 **Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
 **Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -78,8 +79,8 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
   `TransferFee`, so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2, "no #31/#34 producer exists yet") is
   preserved verbatim; the deep-tier wage producer lands with a #40 back-prop relaxing FR-FN-015 + a `WageBudget`
   affordability gate (§7). **The counterparty is not posted (AR round 3, ERR-031-013):** at minimal #31
-  posts the fee only to the MANAGED club's #40 entry; the AI counterparty club's entry is deliberately left
-  untouched. Consequence: AI clubs' `FinanceView` and the season-end `SettleFinances` never see transfer cash, so money
+  posts the fee only to the MANAGED club's #40 entry; the AI counterparty club's entry is, in the interim, left
+  untouched (not a decision — see below). Consequence: AI clubs' `FinanceView` and the season-end `SettleFinances` never see transfer cash, so money
   enters or leaves the league on every transfer (a buy debits the manager's club for a fee no club receives; a sale
   credits it from no club). Leaving the counterparty unposted (option (b)) is the recorded INTERIM behaviour the minimal tier ships; whether to
   mirror-post instead (option (a), inside the same staged, publish-on-`Accepted` seam) is an OPEN owner decision
@@ -126,4 +127,5 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 | 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): KD-6 restated with the window derivation — open on the day #30 begins the season, close at the opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 — superseding ERR-031-008's roll-day-length window. |
 | 0.6 | 2026-10-20 | — | ERR-031-013 (AR round 3, M16): KD-2 states that the minimal tier posts the fee to the MANAGED club's #40 entry only; the AI counterparty's entry is deliberately untouched, so AI clubs' `FinanceView` / `SettleFinances` never see transfer cash and money enters or leaves the league on every transfer. The mirror post is an owner decision (§7.2). |
 | 0.7 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L3): KD-2 no longer implies an owner choice — leaving the counterparty unposted (b) is the recorded interim behaviour of the minimal tier; the mirror-post choice is an open owner decision (§7.2, open-issues `transfer-counterparty-ledger`). |
+| 0.8 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-A): KD-2 said the AI counterparty's #40 entry is "deliberately left untouched", which still read as an owner decision; it now says the entry is left untouched in the interim (option (b)), with the (a)-vs-(b) owner decision open (§7.2). No requirement changed. |
 #endregion

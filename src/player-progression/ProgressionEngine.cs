@@ -1,6 +1,7 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-10-20 (AR round 4 M13 / L12 / L16 — AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary demoted to internal; SeedFrom doc; Prepare refuses a worldDay outside the cursor span — v1.13)
+// Modified: 2026-10-20 (AR round 5 L17 — the AdvanceDay backward-guard comment no longer says "AdvanceDay is public"; comment-only — v1.14)
+//           2026-10-20 (AR round 4 M13 / L12 / L16 — AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary demoted to internal; SeedFrom doc; Prepare refuses a worldDay outside the cursor span — v1.13)
 //           2026-10-20 (AR round 3 M13 — CanMovePlayer / MovePlayer demoted to internal; L9 stale comment — v1.12)
 //           (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
 //           AR round 1 P-M1 — every mutator goes through BeginMutation — v1.11)
@@ -464,8 +465,9 @@ namespace TacticalDirector.PlayerProgression
                 // is a no-op) — but for a BACKWARD call it is not: a player not yet flagged whose
                 // rec.Age already satisfies RETIREMENT_AGE would be flagged on that call, stamping
                 // RetirementDay with a day EARLIER than his own cursor. #30 never calls backward (the
-                // cursor-vs-clock gates refuse the composition that could), but AdvanceDay is public, so
-                // the guard stays. Locked by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement, which
+                // cursor-vs-clock gates refuse the composition that could), but AdvanceDay is reachable by
+                // the composition root and the test assemblies (internal + InternalsVisibleTo), which CAN
+                // call backward, so the guard stays. Locked by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement, which
                 // isolates the `return;` from the `if` condition above it.
                 return;
             }
@@ -1273,4 +1275,8 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | L16: PrepareSeasonBoundary also refuses (ArgumentException) a      |
 // |         |            |        | worldDay outside [min, max] of the carried players' cursors —      |
 // |         |            |        | enforcing the §3.5 anchor MUST; no legal call changes behaviour.   |
+// | 1.14    | 2026-10-20 | —      | AR round 5 L17 (comment-only): the backward-call guard's comment  |
+// |         |            |        | said "AdvanceDay is public, so the guard stays" - it has been     |
+// |         |            |        | internal since v1.13. Restated: reachable by the composition root |
+// |         |            |        | and the test assemblies, which can call backward. No behaviour.   |
 #endregion

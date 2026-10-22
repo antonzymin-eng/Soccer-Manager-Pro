@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.16 — AR round 4, ERR-031-014: §3.3 pseudocode signature matches the shipped SubmitBid; the counterparty-ledger note says option (b) is interim and the owner decision is open)
+**Last Updated:** October 21, 2026 (v0.17 — AR round 5, ERR-031-015: §3.3 pseudocode body restated against the shipped members, gains the positional-stock fail-louds and the full-contract-set pre-check; §3.4 counts five port facts)
+**Last Updated (prior):** October 20, 2026 (v0.16 — AR round 4, ERR-031-014: §3.3 pseudocode signature matches the shipped SubmitBid; the counterparty-ledger note says option (b) is interim and the owner decision is open)
 **Last Updated (prior):** October 20, 2026 (v0.15 — AR round 3, ERR-031-013: §3.8 is the shipped CreateAtGenesis with the flat [GT] wage; §3.7 duplicate/cap guards; §3.3 counterparty ledger)
 **Last Updated (prior):** October 20, 2026 (v0.14 — ERR-031-012: §3.4 CanRelease throws on impossible input; §3.7 arrival-collision guard)
 **Last Updated (prior):** October 20, 2026 (v0.13 — ERR-031-011: §3.5 window re-anchored to the opening fixture day; §3.3 SquadDepleted intro and gate order; §3.7 next-window sentence)
@@ -11,7 +12,7 @@
 **Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.16
+**Version:** 0.17
 **Status:** APPROVED
 
 ---
@@ -91,18 +92,24 @@ SubmitBid(in Offer offer, worldDay, ref ClubFinances finances, TransfersState tx
     # ---- VALIDATE/PREFLIGHT (no local mutation) ----
     require offer well-formed                                                       else throw  # F6
     require CarriesClub(offer.CounterpartyClubId)                                   else throw  # F6, ERR-031-010
-    require IsWindowOpen(txState.WindowFor(managerClubId), worldDay)                else throw  # F4
+    require IsWindowOpen(txState.ActiveWindow, worldDay)                            else throw  # F4
     require PlayerInClubUniverse(offer.PlayerId) AND ClubOf(offer.PlayerId)==fromClub else throw
         # ClubOf is the roster port's answer, never offer.PlayerId / CLUB_SQUAD_SIZE (ERR-031-005)
 
-    cv := counterpartyView(offer.PlayerId, offer.CounterpartyClubId, offer.IsBuy)
+    # Positional stock is the port's answer too, and a breach is an integration defect, not an outcome:
+    rawStock := CountPlayersAtPosition(offer.CounterpartyClubId, record.Position)
+    require 0 <= rawStock <= CLUB_SQUAD_SIZE                                        else throw  # invalid port count
+    if offer.IsBuy:
+        require rawStock >= 1                                                       else throw  # the seller carries him,
+                                                                                                # so his position is non-empty
+    cv := counterpartyView(offer.PlayerId, offer.CounterpartyClubId, offer.IsBuy)   # §3.1: excludes him in both directions
     negotiation := EvaluateOffer(offer, cv)
     if negotiation == Rejected:       return TransferSubmissionOutcome.Rejected
     if negotiation == CounterOffered: return TransferSubmissionOutcome.CounterOffered
 
     if offer.IsBuy:
         budget := AvailableTransferBudget(finances)
-        committed := txState.CommittedSpend(managerClubId)
+        committed := txState.CommittedSpendThisWindow
         require 0 <= committed <= budget                    else throw  # corrupted/invariant-breaking state
         if offer.Fee > budget - committed:
             return InsufficientBudget                       # F1; no mutation
@@ -121,7 +128,11 @@ SubmitBid(in Offer offer, worldDay, ref ClubFinances finances, TransfersState tx
     if !TryPreviewRosterCommit(fromClub, toClub, offer.PlayerId):
         return SquadFull                                     # F5; no mutation
 
-    require no managed contract already at offer.PlayerId   else throw  # on a buy
+    if offer.IsBuy:
+        require no managed contract already at offer.PlayerId        else throw  # contract set and roster disagree
+        require txState.ContractCount < CLUB_SQUAD_SIZE              else throw  # AR round 5 L-H: InsertContract's own
+                                                                                 # cap check would otherwise fire AFTER
+                                                                                 # the irreversible commit below
 
     # ---- COMMIT ---- (ERR-031-005: a stable-id re-home)
     RequestRosterCommit(fromClub, toClub, offer.PlayerId)
@@ -129,8 +140,9 @@ SubmitBid(in Offer offer, worldDay, ref ClubFinances finances, TransfersState tx
 
     finances := stagedFinances
     if offer.IsBuy:
-        txState.AddCommittedSpend(managerClubId, offer.Fee)
-        txState.InsertContract(ContractFrom(offer, offer.PlayerId))
+        txState.AddCommittedSpend(offer.Fee)                                      # long; the state is the managed club's
+        txState.InsertContract(Contract{offer.PlayerId, offer.WagePerPeriod, offer.LengthSeasons})
+        # the contract is built from the offer's own terms, keyed by the unchanged id
     else if managed Contract(offer.PlayerId) exists:
         txState.RemoveContract(offer.PlayerId)
 
@@ -163,9 +175,10 @@ open owner decision recorded in §7.2 — no owner choice has been made.
 
 ## 3.4 The #30 boundary — roster preflight/commit, a stable-id re-home (KD-7, ERR-031-005)
 
-`ITransferRosterPort` is #31-owned and T2 composition adapts it to #30's roster owner. #31 uses three read/
-preflight facts before the commit: `TryGetPlayer` (the record **and the club whose roster carries him**),
-`CountPlayersAtPosition`, and `TryPreviewRosterCommit`. A successful preview guarantees the commit lands;
+`ITransferRosterPort` is #31-owned and T2 composition adapts it to #30's roster owner. #31 uses five read/
+preflight facts before the commit: `CarriesClub` (the F6 counterparty gate), `TryGetPlayer` (the record **and the
+club whose roster carries him**), `CountPlayersAtPosition`, `CanRelease` (the F9 gate) and `TryPreviewRosterCommit`
+(the F5 gate). A successful preview guarantees the commit lands;
 `RequestRosterCommit` is contractually infallible after it, and #31 confirms the landing through `TryGetPlayer`
 before applying any local state.
 
@@ -191,7 +204,7 @@ That made the id encode the club, and it contradicted #28 FR-PG-011 — regens t
 `ProgressionEngine.NextPlayerId`, outside every club's packed range — and #27 FR-SQ-010 as amended by ERR-027-004
 (global uniqueness for any future allocator). It also reused a departed player's slot id, so any PlayerId-keyed
 state left behind (a ban, an injury, an appearance record) would have been inherited by a different player. With a
-stable id there is nothing to migrate: every subsystem's PlayerId-keyed state follows the player by construction,
+stable id there is nothing to migrate: every other subsystem's PlayerId-keyed state (#28/#29/#41/#44/#33) follows the player by construction (#31's own `Contract` does not — it exists only for the MANAGED club, so `SubmitBid` inserts one on a buy and removes one on a sale),
 and #30 moves only its own per-club `(ClubId, PlayerId)` rows with the record. The old `OnPlayerRekeyed` /
 `DispatchRosterMoveHook` re-key hook is deleted; T2 instead locks that a real re-home carries the player's #28/#29/#41/#30
 career state and #44 tally with him and leaves nothing behind (§5.3 T-TX-REKEY-005; *ERR-031-006: this reference originally read the non-existent id "T-TX-REHOME-005"*).
@@ -322,4 +335,5 @@ A load reconstructs contracts from the transfers sub-blob and MUST NOT re-seed.
 | 0.14 | 2026-10-20 | — | ERR-031-012 (AR round 2): §3.4 `CanRelease` throws for an unknown club or a player not on the roster (false is F9 depletion only, like the preview's F5-only false); §3.7 `PrepareSeasonBoundary` refuses an arrival that already holds a contract (including one expiring this boundary) or is retired, checked against the source before building, so it is never silently re-seeded. |
 | 0.15 | 2026-10-20 | — | ERR-031-013 (AR round 3): §3.8 specified `SeedInitialContracts(…, DefaultWageFor(…))`, which never existed — the code is `TransfersState.CreateAtGenesis` with the flat `[GT]` `DEFAULT_WAGE_PER_PERIOD`; restated. §3.7 `PrepareSeasonBoundary` also refuses a duplicated arrival and aged contracts plus arrivals above `CLUB_SQUAD_SIZE` with `ArgumentException` (previously an `InvalidOperationException` from the insert, T-L8). §3.3 records that the counterparty AI club's #40 entry is deliberately not posted (KD-2, M16). |
 | 0.16 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L5/R4-L3): the §3.3 pseudocode signature `SubmitBid(managerClubId, in Offer, worldDay, ref ClubFinances, ref TransfersState)` is the shipped `SubmitBid(in Offer, uint worldDay, ref ClubFinances, TransfersState)` — the club comes from `txState.ManagedClubId` and the state is a reference type. The counterparty-ledger note now says option (b) is the recorded interim behaviour and the (a)-vs-(b) owner decision is open. |
+| 0.17 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-B/L-H): the §3.3 pseudocode body named members that never existed (`txState.WindowFor(managerClubId)`, `CommittedSpend(managerClubId)`, `AddCommittedSpend(managerClubId, fee)`, `ContractFrom(…)`) — restated against the shipped `ActiveWindow`, `CommittedSpendThisWindow`, `AddCommittedSpend(long)` and the contract built from the offer's terms; the two positional-stock fail-louds (count outside `[0, CLUB_SQUAD_SIZE]`; a buy whose seller reports zero stock) are now in the pseudocode; a buy with a full contract set fails loud before the roster commit (new shipped guard); §3.4 counted three port facts where the port has five (`CarriesClub` and `CanRelease` added); §3.4's "every subsystem's PlayerId-keyed state follows the player" excludes #31's own managed-club-only `Contract`. |
 #endregion

@@ -1,6 +1,9 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-20 (AR round 4 S4-L2/L3/L5 — v1.45: the constructor's KD-4 refusal is SeasonCalendar.RequireCursorInvariant; RollToNextSeason's
+// Modified: 2026-10-20 (AR round 5 L17/S-L2/S-L4/S-L5 — v1.46: doc comments only — Progression names the mutators' real visibility,
+//           the constructor/Restore/RollToNextSeason/SubmitTransferBid exception docs list every confirmed cause, ActiveMatch and
+//           AvailableTransferBudget are sim-thread-only, AvailableTransferBudget is the season CEILING.)
+//           Prior: 2026-10-20 (AR round 4 S4-L2/L3/L5 — v1.45: the constructor's KD-4 refusal is SeasonCalendar.RequireCursorInvariant; RollToNextSeason's
 //           exception docs list every (d″)/#28/window refusal; TransfersSnapshot/FinanceView state the sim-thread-only contract.)
 //           Prior: 2026-10-20 (AR round 4 M13 — v1.44: doc comment only on Progression — every mutator is internal.)
 //           Prior: 2026-10-20 (AR round 3 S-L1/S-L4/T-L8 — v1.43: the SubmitTransferBid _activeMatch guard is deleted (sim-thread contract documented instead);
@@ -286,6 +289,14 @@ namespace TacticalDirector.SeasonSave
         /// round (F4). Checked here as well as at <c>SeasonSaveManager.Load</c> because a loop can be
         /// composed from a freshly built world and an advanced season without any file involved. Or the
         /// career pair is half-supplied, or a non-empty finance set disagrees with the season's club set.
+        /// </exception>
+        /// <exception cref="System.InvalidOperationException">
+        /// A carried player's cursor or birth anchor is outside the coherent band against the world clock
+        /// (AR round 5 S-L2): a #29 training, #41 medical or appearance cursor ahead of the clock or more than
+        /// one day behind it (<c>PlayerCareerStates.RequireCursorsWithinClock</c>; the appearance anchor is
+        /// ahead-checked only), a #28 progression cursor likewise (<c>RequireProgressionCursorWithinClock</c> —
+        /// the sentinel is NOT exempt), or a #28 <c>BirthWorldDay</c> ahead of the clock
+        /// (<c>RequireBirthWorldDayWithinClock</c>).
         /// </exception>
         public SeasonLoop(
             WorldStore world,
@@ -583,9 +594,16 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// The managed club's in-progress match, or <c>null</c> between fixtures (§4.3 / the KD-1
         /// <c>matchPresent</c> flag). Non-null only while a <see cref="RoundResolutionMode.ManagedThroughEngine"/>
-        /// or <see cref="RoundResolutionMode.FullEngine"/> fixture is being played, which within a single
-        /// synchronous <see cref="AdvanceAndPlayNextRound"/> call is visible only to a #38 observer on
-        /// another thread — the seam a later interactive "watch my match" flow drives.
+        /// or <see cref="RoundResolutionMode.FullEngine"/> fixture is being played, i.e. only inside the
+        /// synchronous <see cref="AdvanceAndPlayNextRound"/> call that is ticking it.
+        /// <para>
+        /// <b>SIM-THREAD ONLY (AR round 5 S-L4)</b> until a seam that can stop the match between ticks exists. The
+        /// engine is being advanced by the sim thread at the only moments this is non-null, so a read from
+        /// any other thread (the class's THREAD SAFETY note: none) observes a mid-<c>RunTick</c> engine, and
+        /// handing it to <see cref="SeasonSaveManager"/> would encode a blob mixing pre- and post-tick state. A
+        /// later interactive "watch my match" flow must add that stop-between-ticks seam first; this property is
+        /// not it.
+        /// </para>
         /// </summary>
         public TacticalDirector.MatchEngine.MatchEngine ActiveMatch => _activeMatch;
 
@@ -688,11 +706,13 @@ namespace TacticalDirector.SeasonSave
         /// <c>LifecycleView</c> through (FR-PG-023).
         /// </para>
         /// <para>
-        /// For READS only (AR round 3 M13; AR round 4 widening): a roster move goes through
+        /// For READS only (AR round 3 M13; AR round 4 widening; AR round 5 L17): a roster move goes through
         /// <see cref="SubmitTransferBid"/>, never the store directly — EVERY mutator of the store
-        /// (<c>AdvanceDay</c>, <c>PrepareSeasonBoundary</c>, <c>CommitSeasonBoundary</c>, <c>CanMovePlayer</c> /
-        /// <c>MovePlayer</c>) is internal to the season-save assembly, so a client cannot forge a roster
-        /// change that leaves the #29/#41/#30 career rows behind.
+        /// (<c>AdvanceDay</c>, <c>PrepareSeasonBoundary</c>, <c>CommitSeasonBoundary</c> and <c>MovePlayer</c>;
+        /// <c>CanMovePlayer</c> is its read-only predicate) is internal to
+        /// <c>TacticalDirector.PlayerProgression</c> and visible only to <c>TacticalDirector.SeasonSave</c> and
+        /// the test assemblies through <c>InternalsVisibleTo</c> (ERR-028-028), so a client cannot forge a
+        /// roster change that leaves the #29/#41/#30 career rows behind.
         /// </para>
         /// </summary>
         public ProgressionEngine Progression => _progression;
@@ -706,7 +726,19 @@ namespace TacticalDirector.SeasonSave
         public FinancesViewModel FinanceView(int clubId) =>
             SeasonFinanceRuntime.View(_finances, clubId);
 
-        /// <summary>Returns the club's currently available transfer budget through #40's ledger API.</summary>
+        /// <summary>
+        /// Returns the club's transfer-spending CEILING for the current season through #40's ledger API
+        /// (<c>FinanceLedger.AvailableTransferBudget</c>). It is the ceiling, not the remaining headroom: it
+        /// does not subtract #31's committed spend. The headroom a bid is gated against is this value minus
+        /// <c>TransfersSnapshot().CommittedSpendThisWindow</c> (AR round 5 S-L5; <c>TransferCommands.SubmitBid</c>
+        /// computes exactly that). SIM-THREAD ONLY (AR round 5 S-L4): it reads the live finance entries, so per
+        /// the class's THREAD SAFETY note a UI thread must not call it — the sim thread reads it between
+        /// rounds and marshals the value across.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">Club finances are not initialized on this loop
+        /// (the generic legacy/unwired empty state).</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException">No finance entry exists for
+        /// <paramref name="clubId"/>.</exception>
         public long AvailableTransferBudget(int clubId) =>
             SeasonFinanceRuntime.AvailableTransferBudget(_finances, clubId);
 
@@ -759,7 +791,9 @@ namespace TacticalDirector.SeasonSave
         /// that breaks that contract from another thread, so the contract is the only protection (AR round 3).
         /// </para>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">#31 or #28 is not wired; or a #31 fail-loud
+        /// <exception cref="System.InvalidOperationException">#31 or #28 is not wired; or club finances are
+        /// not initialized on this loop (the generic legacy/unwired empty state — <c>StageFor</c> resolves the
+        /// managed club's entry before the bid, AR round 5 S-L2); or a #31 fail-loud
         /// condition — F4 (the command is outside the active window) or the F6 offer-direction mismatch (the
         /// player is not at the club the offer moves him from).</exception>
         /// <exception cref="System.ArgumentOutOfRangeException">A #31 F6 caller-contract violation:
@@ -1234,12 +1268,21 @@ namespace TacticalDirector.SeasonSave
         /// The season is not over (F5 — rounds remain, or a fixture in a resolved round was never
         /// played), or the world clock has already passed the day the new season would open on, which
         /// would install a state violating the KD-4 cursor invariant (FR-SN-011); or the final fixture
-        /// day has not been completed through day advancement (ERR-030-053).
+        /// day has not been completed through day advancement (ERR-030-053). Also thrown while staging
+        /// (AR round 5 S-L2): the (b') finance settlement when club finances are not initialized on this
+        /// loop (<c>SeasonFinanceRuntime.PrepareSettlement</c> — the generic legacy/unwired empty state);
+        /// and #28's <c>PrepareSeasonBoundary</c> when the PlayerId cursor is exhausted or a generated regen
+        /// carries a value the save path would refuse.
         /// </exception>
         /// <exception cref="System.ArgumentException">
-        /// The roll can refuse while staging, before anything is written (AR rounds 3-4), and a refused roll
+        /// The roll can refuse while staging, before anything is written (AR rounds 3-5), and a refused roll
         /// leaves season, board, finances, rosters and contracts untouched. All are integration defects —
-        /// #28's boundary plan and the production calendar never produce them. (d″)
+        /// #28's boundary plan and the production calendar never produce them. (d′)
+        /// (<c>PlayerCareerStates.PrepareRosterSync</c>) refuses a held club the roster provider cannot
+        /// resolve, a squad listing a <c>PlayerId</c> twice, and a planned roster that puts one id in two
+        /// clubs; (e) <c>SeasonState.BeginNextSeason</c> validates before it mutates and refuses a
+        /// next-season schedule whose fixture count differs, that names a club outside the season's club
+        /// set, or that spans more rounds than its calendar maps (or a calendar mapping none). (d″)
         /// (<c>TransfersState.PrepareSeasonBoundary</c>) refuses four ways: an arriving managed regen already
         /// holds a contract, an arriving regen is also retired this boundary, an arriving id is listed twice,
         /// or the aged contracts plus the arrivals would exceed <c>CLUB_SQUAD_SIZE</c>. #28's
@@ -1593,6 +1636,9 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="System.ArgumentException">The blob is malformed (F3), the restored pair
         /// violates the cursor invariant (F4), or a non-empty finance set disagrees with the season club
         /// universe.</exception>
+        /// <exception cref="System.InvalidOperationException">The constructor's cursor-vs-clock refusal
+        /// (AR round 5 S-L2): a restored career or progression cursor outside the coherent band against the
+        /// world clock, or a restored #28 <c>BirthWorldDay</c> ahead of it.</exception>
         public static SeasonLoop Restore(
             WorldStore world,
             byte[] seasonBlob,
@@ -2504,4 +2550,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.43 | 2026-10-20 | — | AR round 3 S-L1/S-L4/T-L8: SubmitTransferBid's _activeMatch guard deleted (it could not fire on one thread and was a racy check-then-act across threads; the sim-thread-between-rounds contract is documented from the class's THREAD SAFETY note); the roll-time comment no longer says (d″) moves #31's contracts on a transfer; RollToNextSeason documents (d″)'s ArgumentException. |
 // | 1.44 | 2026-10-20 | — | AR round 4 M13 (ERR-028-028 widening): doc comment on Progression only — every mutator (AdvanceDay, PrepareSeasonBoundary, CommitSeasonBoundary, CanMovePlayer/MovePlayer) is internal. No behaviour change. |
 // | 1.45 | 2026-10-20 | — | AR round 4 S4-L2/L3/L5: the constructor's KD-4 refusal delegates to SeasonCalendar.RequireCursorInvariant (shared with League.CreateLoop; ParamName stays "season"); RollToNextSeason's ArgumentException doc lists all four (d″) causes and #28's worldDay-span refusal, plus SummerWindowFor's ArgumentOutOfRangeException; TransfersSnapshot and FinanceView state that they are sim-thread-only. |
+// | 1.46 | 2026-10-20 | — | AR round 5 (doc comments only, no behaviour change): L17 Progression's doc names the mutators' real visibility (internal to PlayerProgression, visible to SeasonSave and the test assemblies via InternalsVisibleTo; CanMovePlayer is a predicate); S-L2 the constructor, Restore, RollToNextSeason and SubmitTransferBid list the InvalidOperationException / ArgumentException causes confirmed in source (cursor-vs-clock band, PrepareSettlement and StageFor uninitialized finances, #28 Prepare, PrepareRosterSync, BeginNextSeason); S-L4 ActiveMatch and AvailableTransferBudget are sim-thread-only; S-L5 AvailableTransferBudget is documented as the season ceiling (headroom = ceiling - TransfersSnapshot().CommittedSpendThisWindow). |
 #endregion

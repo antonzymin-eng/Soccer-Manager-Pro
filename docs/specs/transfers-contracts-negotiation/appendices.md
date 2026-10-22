@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.12 — AR round 4, ERR-031-014: Appendix A regains the TRANSFERS_STAFF_MULT_IDENTITY row #34 cites)
+**Last Updated:** October 21, 2026 (v0.13 — AR round 5, ERR-031-015: Appendix A bounds CLUB_NEED_PER_PLAYER_PERMILLE to ≥ 1)
+**Last Updated (prior):** October 20, 2026 (v0.12 — AR round 4, ERR-031-014: Appendix A regains the TRANSFERS_STAFF_MULT_IDENTITY row #34 cites)
 **Last Updated (prior):** October 20, 2026 (v0.11 — AR round 3, ERR-031-013: Appendix A matches TransfersConstants.cs exactly)
 **Last Updated (prior):** October 20, 2026 (v0.10 — ERR-031-011: `SUMMER_WINDOW_IN_SEASON_DAYS` replaces `SUMMER_WINDOW_LENGTH_DAYS`)
 **Last Updated (prior):** October 20, 2026 (v0.9 — T2: ERR-031-008 window constants)
@@ -9,7 +10,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: Appendix B gains the leading `XFER` magic and pins `clubCount ∈ {0,1}` as a wiring fact; Appendix A gains `TRANSFERS_SAVE_MAGIC`; T1 live)
 **Last Updated (prior):** September 14, 2026 (v0.6 — require a non-empty young-age band)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -33,7 +34,7 @@
 | `DECLINE_PER_YEAR_PERMILLE` | `[GT]` | illustrative | positive annual decline after `PEAK_AGE_MAX`. |
 | `MINIMUM_AGE_MULTIPLIER_PERMILLE` | `[GT]` | illustrative | `[0,1000)` floor for old-age decline. |
 | `NEGOTIATION_COUNTER_BAND_PERMILLE` | `[GT]` | illustrative | strict `(0,1000)` synchronous counter-offer half-band; positive valuation retains both counter and reject regions. |
-| `CLUB_NEED_PER_PLAYER_PERMILLE` | `[GT]` | illustrative | upper bound is **derived** as `floor((PERMILLE_DENOM-1)/(CLUB_SQUAD_SIZE-neutralCount))`, keeping the multiplier positive for every legal stock count even if #27 cardinalities change. |
+| `CLUB_NEED_PER_PLAYER_PERMILLE` | `[GT]` | illustrative (fallback 20) | **`≥ 1`** (AR round 5, ERR-031-015: at `0` the multiplier is the identity for every stock count, which silently disables FR-TX-002's always-on scarcity MUST — the loader refuses it) and the upper bound is **derived** as `floor((PERMILLE_DENOM-1)/(CLUB_SQUAD_SIZE-neutralCount))`, keeping the multiplier positive for every legal stock count even if #27 cardinalities change. |
 | `SUMMER_WINDOW_IN_SEASON_DAYS` | `[GT]` | illustrative (fallback 38) | world days, `≥ 1`: how long the single minimal window stays open from the season's opening fixture day on, counting that day — `Close = openingFixtureDay + IN_SEASON_DAYS − 1` (§3.5, ERR-031-011). Config key `[transfers] SummerWindowInSeasonDays`. With `FirstRoundDay` 7 the genesis window is `[0, 44]`. |
 | ~~`SUMMER_WINDOW_LENGTH_DAYS`~~ | ~~`[GT]`~~ | ~~45~~ | **Withdrawn at AR round 2 (ERR-031-011):** a length counted from the roll day made the close depend on when the client rolled (with prompt rolls it shut 11 days before the first match). Replaced by `SUMMER_WINDOW_IN_SEASON_DAYS`. |
 | `DEFAULT_CONTRACT_SEASONS` | `[GT]` | illustrative (fallback 3) | genesis contract length, also the terms of a regen joining the managed club at the boundary (§3.7); `> 0`. Config key `[transfers] DefaultContractSeasons`. |
@@ -118,4 +119,5 @@ For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `A
 | 0.10 | 2026-10-20 | — | ERR-031-011 (AR round 2): `SUMMER_WINDOW_IN_SEASON_DAYS` (`[GT]`, fallback 38) replaces the roll-day-anchored `SUMMER_WINDOW_LENGTH_DAYS` (withdrawn row kept); the `SEASON_START_WORLD_DAY` withdrawal row names `SummerWindowFor`. |
 | 0.11 | 2026-10-20 | — | ERR-031-013 (AR round 3): Appendix A brought to `TransfersConstants.cs`: gains `TRANSFERS_SAVE_HEADER_BYTES` (12), `_CLUB_RECORD_BYTES` (20), `_CONTRACT_RECORD_BYTES` (16) and `_MAX_CLUBS` (1), which the T1 codec declares; `DEFAULT_WAGE_*` (`DefaultWageFor`) becomes the flat `DEFAULT_WAGE_PER_PERIOD`; the never-declared `TRANSFERS_STAFF_MULT_IDENTITY` / `TRANSFERS_PERSONALITY_MULT_IDENTITY` rows are replaced by the single shipped `IDENTITY_MULTIPLIER_PERMILLE` (#34's cited name recorded as an alias); the tag note maps the PascalCase code names and config keys. |
 | 0.12 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L6): AR round 3 removed `TRANSFERS_STAFF_MULT_IDENTITY` from Appendix A while #34 `appendices.md` (and its §3/§7/§8) still cite it as a `[CROSS]` constant sourced here. Re-added as a `[DERIVED]` alias of `IDENTITY_MULTIPLIER_PERMILLE` (one source tag; no second code symbol), so #34 stays correct untouched. |
+| 0.13 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-C): Appendix A gave `CLUB_NEED_PER_PLAYER_PERMILLE` only an upper bound while `TransfersConstants` loaded it with a non-negative loader, so a configured `0` made the positional multiplier the identity and disabled FR-TX-002's MUST. The row now states `≥ 1`; code back-prop: `ClubNeedPerPlayerPermille` loads through a positive-bounded loader. |
 #endregion
