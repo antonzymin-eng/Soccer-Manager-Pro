@@ -1,7 +1,7 @@
 // File:     src/client-app/S0ScreenContent.cs
 // Created:  2026-10-08
-// Modified: 2026-10-15 (Match Flow §6.2.6 copy)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-21 (Gate J J-01/J-02 goalkeeper-pair and refusal-reason copy)
+// Modified (prior): 2026-10-15
 // Author:   —
 // Spec:     S0 binding contracts §4, Localization #49, Code Standards #20
 // Purpose:  Compiled S0 role catalogue and typed argument schemas, consumed by the shipping shell.
@@ -75,6 +75,9 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("reason.choice_changed", "This choice is no longer available. Choose an available player.", ""),
             new S0TextRole("reason.ended", "Match ended — playback and team changes are unavailable.", ""),
             new S0TextRole("reason.fastest", "Already at the fastest speed — faster is unavailable.", ""),
+            new S0TextRole("reason.keeper_in", "Unavailable — a goalkeeper can only come on for the goalkeeper.", ""),
+            new S0TextRole("reason.keeper_on_way", "Unavailable — a replacement goalkeeper is already on the way.", ""),
+            new S0TextRole("reason.keeper_out", "Unavailable — a goalkeeper can only be replaced by a goalkeeper.", ""),
             new S0TextRole("reason.mentality_pending", "Mentality request pending — another request is unavailable until resolved.", ""),
             new S0TextRole("reason.no_pair", "No legal outgoing player and unused bench player pair is available.", ""),
             new S0TextRole("reason.resume", "Resume to apply pending requests.", ""),
@@ -133,6 +136,12 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("feedback.substitution_pending", "Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting to be applied.", "SSISSII"),
             new S0TextRole("feedback.substitution_pending_paused", "Pending — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); waiting; resume to continue.", "SSISSII"),
             new S0TextRole("feedback.substitution_refused", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_cap", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); all substitutions are used; substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_ended", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the match had ended; substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_keeper", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); a goalkeeper can only be replaced by a goalkeeper; substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_sent_off", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the outgoing player has been sent off; substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_unavailable", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); one of these players is no longer available; substitution count unchanged.", "SSISSII"),
+            new S0TextRole("feedback.substitution_refused_windows", "Refused — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); no substitution windows are left; substitution count unchanged.", "SSISSII"),
             new S0TextRole("feedback.substitution_send_failure", "Send failure — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); request could not be sent; substitution count unchanged.", "SSISSII"),
             new S0TextRole("identity.bench", "{0}: {1} {2} — shirt {3} — bench slot {4}", "SSSII"),
             new S0TextRole("identity.bench_keeper", "{0}: {1} {2} — shirt {3} — bench slot {4} — {5}", "SSSIIS"),
@@ -189,4 +198,5 @@ namespace TacticalDirector.ClientApp
 // | 1.2     | 2026-10-08 | —      | Restore owner-approved pitch legend verbatim; keyboard inspection remains in the focus binding. |
 // | 1.3     | 2026-10-08 | —      | Restore complete approved substitution, baseline pitch and loose-ball context sentences. |
 // | 1.4     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution says the request waits for the next eligible stoppage (for half-time when no window is left in the first half); feedback.substitution_not_applied covers cancellation as well as full time. |
+// | 1.5     | 2026-10-21 | —      | Gate J J-01/J-02: reason.keeper_in/keeper_on_way/keeper_out for unavailable goalkeeper pairs; six feedback.substitution_refused_* rows name the engine-typed refusal reason. Copy pending owner approval. |
 #endregion

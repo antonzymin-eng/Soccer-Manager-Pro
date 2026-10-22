@@ -1,0 +1,19 @@
+# Starts one Editor-side profiler capture through the channel and keeps the player focused until DONE.
+param([string]$Label, [int]$Windows = 5, [int]$Seconds = 5)
+$root = 'C:\Users\azymi\Desktop\S0-host-acceptance-20261018'
+$log = Join-Path $root 'perf\capture.log'
+[IO.File]::WriteAllText((Join-Path $root ("cmd\{0}.cmd" -f [DateTime]::UtcNow.Ticks)), "call S0HostBuild.Capture $Label $Windows $Seconds")
+$deadline = (Get-Date).AddSeconds($Windows * $Seconds + 90)
+$k = Join-Path $root 'tools\pkey.ps1'
+while ((Get-Date) -lt $deadline) {
+    & $k | Out-Null
+    $p = Get-Process SystemXI | Select-Object -First 1
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [Microsoft.VisualBasic.Interaction]::AppActivate($p.Id)
+    Start-Sleep -Seconds 2
+    if ((Test-Path $log) -and (Select-String -Path $log -Pattern "DONE $Label$" -Quiet)) {
+        Get-Content $log | Select-String "$Label-w" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(330, $_.Line.Length)) }
+        return
+    }
+}
+"TIMEOUT $Label"

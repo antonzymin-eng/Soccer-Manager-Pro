@@ -312,8 +312,23 @@ logs copy only on count changes. Explicit feedback sibling order keeps earlier r
 before latest records on both screens and on repeat entry. These changes still require
 actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match checks.
 
+## 9. Gate J skin and whole-pitch view — October 21, 2026
+
+After the owner's Gate-J decisions (record `docs/tracking/p5b-real-client-acceptance.md` v0.2), the
+S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
+- `S0UiConstants` holds the palette and widths.
+- `S0UiFactory` builds panels, control chrome, reason boxes and runtime-generated 1 px border sprites. Solid borders are sliced; dashed borders are tiled.
+- `S0ControlSkin` switches a control to a dashed border and secondary text while it is unavailable, and to a gold outline when it is selected.
+- `S0MaxWidth` centres each page column.
+- Statistics live in the rail, so opening them never shrinks the pitch.
+- `S0ScreensBehaviour` sets `MatchClientBehaviour.WholePitchView`: the camera then frames the whole pitch straight down, orthographically (`PitchCameraRig.WholePitchOrthographicSize`), instead of the tilted follow rig.
+- Shirt labels are navy (home) and gold (away) chips tethered to their markers.
+- Unavailable bench choices show their reason under the label (J-01).
+- Outcome rows carry a status bar and a ✓ ✕ – … badge. The badge falls back to a covered character when the font lacks the glyph.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| Gate J skin and whole-pitch view | October 21, 2026 | §9: H v0.2 skin components, statistics in the rail, unavailable-choice reasons and the whole-pitch top-down camera. Host verification in the acceptance record v0.2. |
 | PR #489 Tab order and contract parity | October 8, 2026 | Match View Tab follows journey §9.3 explicitly, then report and pitch entry; permanent 141-role contract parity test. Native input/compile proof remains due. |
 | PR #489 Codex layout/copy corrections | October 8, 2026 | Ignore focus overlays in layout; retain/rebind Current/Requested comparison tags; restore complete substitution/pitch/loose-ball context and audit all 141 base patterns. Native geometry/input proof remains due. |
 | PR #489 approved legend correction | October 8, 2026 | Restore binding-contract v0.4 legend and original content hash; retain keyboard inspection. Key instructions remain in implementation/QA documentation. |

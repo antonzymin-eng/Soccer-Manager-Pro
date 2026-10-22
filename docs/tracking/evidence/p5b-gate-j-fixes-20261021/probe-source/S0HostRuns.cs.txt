@@ -1,0 +1,144 @@
+// Composed host-run sequences started through S0HostChannel ("run S0HostRuns.<Name>").
+// Untracked probe source, archived with the evidence.
+
+using System.Collections;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.TacticalInstructions;
+using P = S0HostProbe;
+using C = S0HostCases;
+
+public static class S0HostRuns
+{
+    public static IEnumerator Boot()
+    {
+        yield return P.Frames(10);
+        var shell = GameObject.Find("S0 Client Shell");
+        foreach (Transform t in shell.transform) P.Log("root " + t.name + " activeInHierarchy=" + t.gameObject.activeInHierarchy);
+        P.Check(Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length == 1, "exactly one EventSystem");
+        P.Check(Object.FindObjectsByType<TacticalDirector.MatchClientUnity.DevelopmentMatchHost>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length == 0, "no DevelopmentMatchHost in scene");
+        P.Log("loadedHash=" + P.Screens.LoadedContentSha256 + " canonicalBaseHash=" + new S0TextFormatter().ContentSha256 + " textScale=" + P.View.Configuration.TextScale + " screen=" + Screen.width + "x" + Screen.height);
+        P.Check(P.View.Screen == ClientScreens.MainMenu && P.Session == null, "boots on Main Menu with no session");
+    }
+
+    /// <summary>I-Q07 (corrected pair), I-Q09 cap/no-pair, I-Q10/13 deferred substitution at the whistle, then Return.</summary>
+    public static IEnumerator Run2()
+    {
+        yield return Boot();
+        P.Begin("start");
+        yield return C.StartMatch(3);
+        P.Begin("I-Q07 rerun");
+        yield return C.IQ07();
+        P.Begin("I-Q09 role pairs");
+        yield return C.IQ09("before-cap");
+        P.Begin("I-Q09/18 cap");
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        yield return C.SubsToCap();
+        P.Log("after cap: canSub=" + P.View.CanSubstitute + " reason='" + P.View.SubstitutionReasonText + "' used='" + P.View.SubstitutionsUsed + "'");
+        P.Check(!P.View.CanSubstitute && P.View.SubstitutionReasonText.Length > 0, "substitution entry locked with a reason once the cap/windows are reached");
+        P.Shot("iq18-dense-history");
+        yield return null;
+        P.Begin("run to end");
+        yield return C.RunToNearEnd(1500UL);
+        P.Begin("I-Q10/13 deferred at whistle");
+        yield return C.IQ10_13(false);
+        P.Begin("I-Q14 return");
+        P.ClickText(P.View.Text.Label("action.return"));
+        yield return P.Frames(5);
+        P.Check(P.View.Screen == ClientScreens.MainMenu && !P.Coordinator.HasMatch, "Return clears the match");
+    }
+
+    /// <summary>I-Q10 variant with a full Law 3 window budget: one deferred substitution near the whistle.</summary>
+    public static IEnumerator Run2Whistle()
+    {
+        yield return Boot();
+        yield return C.StartMatch(3);
+        yield return C.RunToNearEnd(1500UL);
+        P.Begin("I-Q10/13 deferred at whistle (fresh windows)");
+        yield return C.IQ10_13(true);
+    }
+
+    /// <summary>Gate J fixes (Oct 21): J-01 chooser, three windows used, J-04 live views, J-02 second-half refusal.</summary>
+    public static IEnumerator Run3()
+    {
+        yield return Boot();
+        P.Begin("start");
+        yield return C.StartMatch(3);
+        P.Begin("J-04 live views");
+        yield return S0HostGateJ.J04Live();
+        P.Begin("J-01 goalkeeper pairs");
+        yield return S0HostGateJ.J01();
+        P.Begin("windows 2-3");
+        yield return S0HostGateJ.UseWindows(2);
+        P.Begin("J-02 second-half refusal");
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        yield return S0HostGateJ.J02();
+        P.Begin("run to end");
+        yield return C.RunToNearEnd(1500UL);
+        yield return C.IQ10_13(true);
+        P.Shot("j04-report");
+    }
+
+    /// <summary>Restyled views after the layout fixes, J-01 again, and the full-time path in a match with windows left.</summary>
+    public static IEnumerator Run4()
+    {
+        yield return Boot();
+        P.Shot("j04-menu");
+        yield return null;
+        yield return C.GoToSetup();
+        yield return P.Frames(5);
+        P.Shot("j04-setup");
+        yield return null;
+        P.Begin("start");
+        yield return C.StartMatch(3);
+        P.Begin("J-04 live views");
+        yield return S0HostGateJ.J04Live();
+        P.Begin("J-01 goalkeeper pairs");
+        yield return S0HostGateJ.J01();
+        P.Begin("run to end");
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        yield return C.RunToNearEnd(1500UL);
+        P.Begin("I-Q10/13 deferred at whistle (windows left)");
+        yield return C.IQ10_13(true);
+        P.Shot("j04-report");
+    }
+
+    /// <summary>J-04 screenshots only: menu, setup, live, statistics, both dialogs (J-01 states).</summary>
+    public static IEnumerator Shots()
+    {
+        yield return Boot();
+        P.Shot("j04-menu");
+        yield return null;
+        yield return C.GoToSetup();
+        yield return P.Frames(5);
+        P.Shot("j04-setup");
+        yield return null;
+        yield return C.StartMatch(3);
+        yield return P.Frames(30);
+        yield return S0HostGateJ.J04Live();
+        yield return S0HostGateJ.J01();
+        yield return P.Frames(30);
+        P.Shot("j04-live-after-sub");
+        yield return null;
+    }
+
+    public static IEnumerator Keyboard()
+    {
+        yield return Boot();
+        P.Begin("I-Q15");
+        yield return S0HostKeyboard.IQ15();
+    }
+
+    public static IEnumerator Layout()
+    {
+        P.Begin("I-Q16 matrix");
+        yield return S0HostLayout.Matrix();
+    }
+}

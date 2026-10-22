@@ -1,0 +1,62 @@
+# Drives the S0 development player by keyboard only (real OS keystrokes via SendKeys) for the
+# B8/B10 render-loop capture. Usage: drive-player.ps1 -Exe <path> -Width 1920 -Height 1080 -Step <name>
+param(
+    [string]$Exe,
+    [int]$Width = 1920,
+    [int]$Height = 1080,
+    [ValidateSet('launch', 'start-match', 'speed10', 'speed1', 'stats', 'quit')][string]$Step
+)
+Add-Type -AssemblyName System.Windows.Forms
+$shell = New-Object -ComObject WScript.Shell
+
+function Focus-Player {
+    $p = Get-Process SystemXI -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $p) { throw 'player not running' }
+    [void]$shell.AppActivate($p.Id)
+    Start-Sleep -Milliseconds 300
+}
+function Key([string]$k, [int]$times = 1) {
+    for ($i = 0; $i -lt $times; $i++) { [System.Windows.Forms.SendKeys]::SendWait($k); Start-Sleep -Milliseconds 250 }
+}
+
+switch ($Step) {
+    'launch' {
+        $log = Join-Path (Split-Path $Exe) 'player.log'
+        Start-Process -FilePath $Exe -ArgumentList "-screen-fullscreen 0 -screen-width $Width -screen-height $Height -logFile `"$log`""
+        Start-Sleep -Seconds 8
+        Focus-Player
+        'launched'
+    }
+    'start-match' {
+        Focus-Player
+        Key '{TAB}'          # heading -> Play a demo match
+        Key '{ENTER}'        # Tactics Setup
+        Start-Sleep -Milliseconds 500
+        Key '{TAB}' 8        # 7 Mentality choices -> Start match
+        Key '{ENTER}'
+        Start-Sleep -Seconds 3
+        'match started'
+    }
+    'speed10' {
+        Focus-Player
+        Key '{TAB}' 2        # heading -> Pause -> Faster (Slower is unavailable at 1x)
+        Key '{ENTER}' 3      # 3x, 5x, 10x; focus moves to Pause at the endpoint
+        'speed 10x'
+    }
+    'speed1' {
+        Focus-Player
+        Key '+{TAB}'         # Pause -> Slower
+        Key '{ENTER}' 3
+        'speed 1x'
+    }
+    'stats' {
+        Focus-Player
+        # From Pause: Faster (skipped when unavailable) -> Change Mentality -> Make substitution -> statistics
+        for ($i = 0; $i -lt 6; $i++) { Key '{TAB}' }
+        'tabbed toward statistics (verify via profiler/screenshot)'
+    }
+    'quit' {
+        Get-Process SystemXI -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+        'closed'
+    }
+}
