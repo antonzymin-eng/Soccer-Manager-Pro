@@ -1,12 +1,13 @@
 // File:     src/client-app/tests/CareerSessionTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1/2), roadmap C4,
 //           Season & Competition Loop #30 §4 (save/resume), Player Progression #28 KD-4, Code Standards #20
 // Purpose:  Locks the career session: the C4 new-game chain produces a full composition and an
 //           autosave, a resumed career continues exactly as the uninterrupted one would, autosave
-//           follows rounds and rolls only, and manual saves cannot target the autosave slot.
+//           follows rounds and rolls only, manual saves cannot target the autosave slot, and a caller
+//           error on Resume never invalidates a healthy slot.
 
 using System;
 
@@ -67,6 +68,20 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.Greater(afterRound.Sequence, afterStart, "a played round autosaves.");
             Assert.AreEqual(1, afterRound.RoundsPlayed);
             Assert.AreEqual(session.Loop.CurrentWorldDay, afterRound.WorldDay);
+        }
+
+        [Test]
+        public void Resume_WithAnUndefinedMode_LeavesAHealthySlotReady()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => CareerSession.Resume(temp.Slots, CareerSaveSlot.Manual1, (RoundResolutionMode)99));
+            Assert.AreEqual(CareerSlotState.Ready, temp.Slots.Describe(CareerSaveSlot.Manual1).State,
+                "a caller error is not the save's fault.");
+            Assert.DoesNotThrow(() => CareerSession.Resume(temp.Slots, CareerSaveSlot.Manual1, RoundResolutionMode.QuickSimAll));
         }
 
         [Test]
@@ -161,4 +176,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): 8 session locks incl. resume ≡       |
 // |         |            |        | uninterrupted (state + snapshot bytes).                        |
+// | 1.1     | 2026-10-27 | —      | PR 519 review 2: +1 lock — an undefined mode on Resume leaves  |
+// |         |            |        | the slot Ready (9 locks).                                      |
 #endregion

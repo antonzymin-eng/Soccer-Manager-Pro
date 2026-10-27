@@ -3657,7 +3657,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSlotState.cs.meta` | Stable Unity asset identity |
 | `CareerSlotSummary.cs` | One Load Career picker row (sidecar facts) |
 | `CareerSlotSummary.cs.meta` | Stable Unity asset identity |
-| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, temp cleanup, `MarkDamaged` |
+| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, save digest and interrupted-write recovery at open, temp cleanup, `MarkDamaged` |
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
@@ -3679,9 +3679,9 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `tests/ClientScreenFlowCareerTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerProgressTests.cs` | Progress rule with #30 positive controls; a full season + roll + season 2 (6) |
 | `tests/CareerProgressTests.cs.meta` | Stable Unity asset identity |
-| `tests/CareerSessionTests.cs` | New-game composition, autosave cadence, resume ≡ uninterrupted, Continue (8) |
+| `tests/CareerSessionTests.cs` | New-game composition, autosave cadence, resume ≡ uninterrupted, Continue, a caller error never invalidates a slot (9) |
 | `tests/CareerSessionTests.cs.meta` | Stable Unity asset identity |
-| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged` (13) |
+| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged`, interrupted-write recovery (17) |
 | `tests/CareerSaveSlotsTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerScreensTests.cs` | Career Home, season dispatcher, New Career, Load Career incl. corrupt-newest fallback (9) |
 | `tests/CareerScreensTests.cs.meta` | Stable Unity asset identity |

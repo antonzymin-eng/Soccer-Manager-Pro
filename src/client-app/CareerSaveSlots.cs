@@ -12,6 +12,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 
 using TacticalDirector.ClubFinances;
@@ -38,9 +39,12 @@ namespace TacticalDirector.ClientApp
     /// <b>Crash safety.</b> Both files are written in full to temporary siblings before either
     /// destination is touched; the save is then swapped in with <c>File.Replace</c> (keeping the
     /// previous save as a backup) and the sidecar after it. A failure at any step therefore leaves the
-    /// previous save + sidecar pair in place: a failed sidecar swap puts the backed-up save back. Only
-    /// a process death between the two swaps leaves a new save under the previous sidecar — still a
-    /// loadable save, reported with the facts of the one it replaced.
+    /// previous save + sidecar pair in place: a failed sidecar swap puts the backed-up save back. A
+    /// process death between the two swaps leaves the new save beside its staged sidecar temp; opening
+    /// the store recovers it. Each sidecar records the SHA-256 of the save it describes, so recovery
+    /// pairs files by content rather than by guessing which step was interrupted: a staged sidecar
+    /// that matches the save is swapped in, and otherwise a backup that matches the live sidecar is
+    /// put back.
     /// </para>
     /// <para>
     /// <b>D-10.</b> Saves are breakable through PM-3, so a slot whose sidecar records another
@@ -80,7 +84,10 @@ namespace TacticalDirector.ClientApp
 
         private readonly string _directory;
 
-        /// <summary>Opens (and creates if needed) the slot store rooted at <paramref name="directory"/>.</summary>
+        /// <summary>
+        /// Opens (and creates if needed) the slot store rooted at <paramref name="directory"/>, recovering
+        /// any slot whose last write was interrupted between its two swaps (see the class remarks).
+        /// </summary>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is null or empty.</exception>
         public CareerSaveSlots(string directory)
         {
@@ -91,6 +98,10 @@ namespace TacticalDirector.ClientApp
 
             _directory = directory;
             Directory.CreateDirectory(_directory);
+            for (int i = 0; i < SlotCount; i++)
+            {
+                RecoverInterruptedWrite((CareerSaveSlot)i);
+            }
         }
 
         /// <summary>The directory this store owns.</summary>
@@ -195,7 +206,7 @@ namespace TacticalDirector.ClientApp
             {
                 // Everything that can fail on content is done before a destination is touched.
                 SeasonSaveManager.Save(loop, null, saveTemp);
-                File.WriteAllText(sidecarTemp, FormatSidecar(in summary), SidecarEncoding);
+                File.WriteAllText(sidecarTemp, FormatSidecar(in summary, DigestOf(saveTemp)), SidecarEncoding);
 
                 bool hadSave = File.Exists(savePath);
                 if (hadSave)
@@ -308,6 +319,83 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        // Runs once per slot when the store opens. Only a process death leaves these files behind:
+        // Write removes its temps on any exception. Pairs by content (each sidecar records its save's
+        // digest), so it never needs to know which step was interrupted. Best effort: on an IO failure
+        // the files stay as they are and the slot reads as whatever Describe makes of them.
+        private void RecoverInterruptedWrite(CareerSaveSlot slot)
+        {
+            string savePath = SavePath(slot);
+            string saveTemp = savePath + TEMP_SUFFIX;
+            string saveBackup = savePath + BACKUP_SUFFIX;
+            string sidecarPath = SidecarPath(slot);
+            string sidecarTemp = sidecarPath + TEMP_SUFFIX;
+            // SeasonSaveManager.Save stages its own atomic write beside the path it is given.
+            string managerTemp = saveTemp + TEMP_SUFFIX;
+            if (!File.Exists(saveTemp) && !File.Exists(managerTemp) && !File.Exists(sidecarTemp)
+                && !File.Exists(saveBackup))
+            {
+                return;
+            }
+
+            try
+            {
+                // A save temp never became the slot's save: the write stopped before its first swap.
+                DeleteIfPresent(managerTemp);
+                DeleteIfPresent(saveTemp);
+
+                string liveDigest = File.Exists(savePath) ? DigestOf(savePath) : null;
+                if (liveDigest != null && SidecarDescribes(slot, sidecarTemp, liveDigest))
+                {
+                    // The save swap landed and the sidecar swap did not: finish the write.
+                    SwapIn(sidecarTemp, sidecarPath);
+                    DeleteIfPresent(saveBackup);
+                    return;
+                }
+
+                // A staged sidecar that does not describe the live save is never needed again.
+                DeleteIfPresent(sidecarTemp);
+                if (liveDigest != null && SidecarDescribes(slot, sidecarPath, liveDigest))
+                {
+                    DeleteIfPresent(saveBackup);
+                    return;
+                }
+
+                if (File.Exists(saveBackup) && SidecarDescribes(slot, sidecarPath, DigestOf(saveBackup)))
+                {
+                    // The new save swapped in but its sidecar was lost: put the previous pair back.
+                    SwapIn(saveBackup, savePath);
+                }
+
+                // Otherwise nothing pairs: any backup is kept on disk and the slot reads as Damaged.
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        private static bool SidecarDescribes(CareerSaveSlot slot, string sidecarPath, string saveDigest) =>
+            File.Exists(sidecarPath)
+            && TryReadSidecar(slot, sidecarPath, out _, out string recorded)
+            && recorded == saveDigest;
+
+        // Lower-case hex SHA-256 of a file's bytes (the S0DemoFixture/S0TextFormatter idiom). Off the
+        // hot path: once per write, and at open only for a slot an interrupted write left behind.
+        private static string DigestOf(string path)
+        {
+            using (FileStream stream = File.OpenRead(path))
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(stream);
+                var hex = new StringBuilder(hash.Length * 2);
+                foreach (byte value in hash) hex.Append(value.ToString("x2", CultureInfo.InvariantCulture));
+                return hex.ToString();
+            }
+        }
+
         // Puts the previous save back after its sidecar could not be swapped in, so the slot stays a
         // matching pair. The sidecar's own failure is the one reported; if this restore fails too, the
         // backup stays on disk rather than being deleted.
@@ -348,7 +436,7 @@ namespace TacticalDirector.ClientApp
             }
         }
 
-        private static string FormatSidecar(in CareerSlotSummary s)
+        private static string FormatSidecar(in CareerSlotSummary s, string saveDigest)
         {
             var b = new StringBuilder();
             b.Append("format=").Append(ClientAppConstants.CAREER_SLOT_META_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)).Append('\n');
@@ -362,14 +450,19 @@ namespace TacticalDirector.ClientApp
             b.Append("roundCount=").Append(s.RoundCount.ToString(CultureInfo.InvariantCulture)).Append('\n');
             b.Append("leaguePosition=").Append(s.LeaguePosition.ToString(CultureInfo.InvariantCulture)).Append('\n');
             b.Append("nestedFormats=").Append(NestedFormatStamp).Append('\n');
+            b.Append("saveDigest=").Append(saveDigest).Append('\n');
             // Last, so a name containing '=' is still read whole (the parser splits on the FIRST '=').
             b.Append("managedClubName=").Append(s.ManagedClubName.Replace('\n', ' ').Replace('\r', ' ')).Append('\n');
             return b.ToString();
         }
 
-        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary)
+        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary) =>
+            TryReadSidecar(slot, path, out summary, out _);
+
+        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary, out string saveDigest)
         {
             summary = default;
+            saveDigest = null;
             string[] lines;
             try
             {
@@ -390,6 +483,7 @@ namespace TacticalDirector.ClientApp
             bool hasSeed = false;
             string name = null;
             string nestedFormats = null;
+            string digest = null;
 
             foreach (string line in lines)
             {
@@ -414,6 +508,7 @@ namespace TacticalDirector.ClientApp
                     case "roundCount": roundCount = ParseLong(value); break;
                     case "leaguePosition": leaguePosition = ParseLong(value); break;
                     case "nestedFormats": nestedFormats = value; break;
+                    case "saveDigest": digest = value; break;
                     case "managedClubName": name = value; break;
                 }
             }
@@ -427,10 +522,10 @@ namespace TacticalDirector.ClientApp
                 return false;
             }
 
-            // A sidecar of this layout always records the stamp; one of an older layout never did, and is
-            // Incompatible on its format alone.
+            // A sidecar of this layout always records the stamp and the digest; one of an older layout
+            // never did, and is Incompatible on its format alone.
             bool currentLayout = format == ClientAppConstants.CAREER_SLOT_META_FORMAT_VERSION;
-            if (currentLayout && nestedFormats == null)
+            if (currentLayout && (nestedFormats == null || digest == null))
             {
                 return false;
             }
@@ -452,6 +547,7 @@ namespace TacticalDirector.ClientApp
                 (int)roundsPlayed,
                 (int)roundCount,
                 (int)leaguePosition);
+            saveDigest = digest;
             return true;
         }
 
@@ -470,4 +566,7 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | swap fails (the pair never splits); the sidecar records the    |
 // |         |            |        | nested sub-blob format stamp (layout v2) so an inner bump is   |
 // |         |            |        | Incompatible (D-10); MarkDamaged invalidates an unloadable slot. |
+// | 1.3     | 2026-10-27 | —      | PR 519 review 2: the sidecar records the save's SHA-256, and   |
+// |         |            |        | opening the store recovers a write interrupted between its two |
+// |         |            |        | swaps (staged sidecar swapped in, or the backup put back).     |
 #endregion

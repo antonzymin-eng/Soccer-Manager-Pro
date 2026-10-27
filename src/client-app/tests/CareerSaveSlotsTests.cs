@@ -6,7 +6,8 @@
 // Purpose:  Locks the slot store: empty listing, write/describe round trip, sequence-based latest,
 //           D-10 incompatibility (listed, never loaded or continued) including nested sub-blob
 //           versions, damage detection and invalidation, no stray temporary files after a write, and a
-//           failed write never splitting the save from its sidecar.
+//           failed write never splitting the save from its sidecar, and recovery at open of a write
+//           interrupted between its two swaps.
 
 using System;
 using System.IO;
@@ -255,6 +256,101 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void AnInterruptedFirstSave_IsCompletedWhenTheStoreReopens()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            CareerSlotSummary written = session.SaveTo(CareerSaveSlot.Manual1);
+
+            // Between the two swaps of a first write: the save is in place, its sidecar still staged.
+            string sidecar = Path.Combine(temp.Directory, "manual-1.slot");
+            File.Move(sidecar, sidecar + ".tmp");
+            Assert.AreEqual(CareerSlotState.Damaged, temp.Slots.Describe(CareerSaveSlot.Manual1).State,
+                "precondition: without recovery the slot is unusable.");
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            CareerSlotSummary row = reopened.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(written.Sequence, row.Sequence);
+            Assert.IsTrue(reopened.TryGetLatest(out CareerSlotSummary latest));
+            Assert.AreEqual(CareerSaveSlot.Manual1, latest.Slot);
+            Assert.AreEqual(row.WorldDay, reopened.Load(CareerSaveSlot.Manual1).World.CurrentWorldTick);
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.tmp"));
+        }
+
+        [Test]
+        public void AnInterruptedOverwrite_WithTheSaveSwappedIn_IsCompletedWhenTheStoreReopens()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            session.Progress();
+            CareerSlotSummary newer = session.SaveTo(CareerSaveSlot.Manual2);
+
+            // Stage Manual1 as an overwrite interrupted after its save swap: the old save is the
+            // backup, the new save is live, the new sidecar is staged, the old sidecar still in place.
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            File.Move(save1, save1 + ".bak");
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual2), save1);
+            File.Copy(Path.Combine(temp.Directory, "manual-2.slot"), Path.Combine(temp.Directory, "manual-1.slot.tmp"));
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            CareerSlotSummary row = reopened.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(newer.WorldDay, row.WorldDay, "the staged sidecar describing the live save is swapped in.");
+            Assert.AreEqual(newer.WorldDay, reopened.Load(CareerSaveSlot.Manual1).World.CurrentWorldTick);
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.tmp"));
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+        }
+
+        [Test]
+        public void AnInterruptedOverwrite_WhoseSidecarWasLost_PutsTheBackupBack()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            CareerSlotSummary older = session.SaveTo(CareerSaveSlot.Manual1);
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            byte[] olderBytes = File.ReadAllBytes(save1);
+            session.Progress();
+            session.SaveTo(CareerSaveSlot.Manual2);
+
+            // The new save is live and the old one is the backup, but the staged sidecar is truncated.
+            File.Move(save1, save1 + ".bak");
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual2), save1);
+            File.WriteAllText(Path.Combine(temp.Directory, "manual-1.slot.tmp"), "format=2\nseq");
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            CareerSlotSummary row = reopened.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(older.Sequence, row.Sequence);
+            CollectionAssert.AreEqual(olderBytes, File.ReadAllBytes(save1), "the previous pair is put back.");
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.tmp"));
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+        }
+
+        [Test]
+        public void StrayTempsBesideAConsistentPair_AreRemovedAndThePairKept()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            CareerSlotSummary written = session.SaveTo(CareerSaveSlot.Manual1);
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            byte[] bytes = File.ReadAllBytes(save1);
+
+            // A write that stopped before its first swap, plus a backup left after a completed one.
+            File.WriteAllText(save1 + ".tmp", "partial");
+            File.WriteAllText(save1 + ".tmp.tmp", "partial");
+            File.WriteAllText(Path.Combine(temp.Directory, "manual-1.slot.tmp"), "partial");
+            File.WriteAllText(save1 + ".bak", "previous");
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            Assert.AreEqual(written.Sequence, reopened.Describe(CareerSaveSlot.Manual1).Sequence);
+            CollectionAssert.AreEqual(bytes, File.ReadAllBytes(save1));
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.tmp"));
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+        }
+
+        [Test]
         public void Constructor_RefusesAnEmptyDirectory()
         {
             Assert.Throws<ArgumentException>(() => new CareerSaveSlots(""));
@@ -269,4 +365,7 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2     | 2026-10-27 | —      | PR 519 review: +6 locks — a failed sidecar write or swap keeps |
 // |         |            |        | the previous pair, nested-format and older-layout D-10 cases,  |
 // |         |            |        | the stamp drift guard, MarkDamaged (13 locks).                 |
+// | 1.3     | 2026-10-27 | —      | PR 519 review 2: +4 locks — recovery at open of an interrupted |
+// |         |            |        | first save, an interrupted overwrite (completed, or backup put |
+// |         |            |        | back), and stray temps beside a consistent pair (17 locks).    |
 #endregion

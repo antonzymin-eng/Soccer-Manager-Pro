@@ -145,9 +145,12 @@ namespace TacticalDirector.ClientApp
         /// Resumes the career saved in <paramref name="slot"/>. A <see cref="CareerSlotState.Ready"/>
         /// slot whose save then fails to decode or rebuild is invalidated
         /// (<see cref="CareerSaveSlots.MarkDamaged"/>) before the failure propagates, so it cannot keep
-        /// winning Continue; a read that fails on IO is left alone, as it may succeed on retry.
+        /// winning Continue; a read that fails on IO is left alone, as it may succeed on retry. Caller
+        /// arguments are validated first, so a caller error never invalidates a healthy slot.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="slots"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="slot"/> or
+        /// <paramref name="mode"/> is not defined.</exception>
         /// <exception cref="InvalidOperationException">The slot is not loadable, or it holds a mid-match
         /// save (the client never writes one; a supported mid-match resume needs the interactive
         /// career-fixture seam, D-P7-6).</exception>
@@ -161,6 +164,13 @@ namespace TacticalDirector.ClientApp
                 throw new ArgumentNullException(nameof(slots));
             }
 
+            if (!Enum.IsDefined(typeof(RoundResolutionMode), mode))
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, "Undefined RoundResolutionMode.");
+            }
+
+            // Describe also rejects an undefined slot. Past this point every input to the rebuild comes
+            // from the save, so a failure inside the try is the save's.
             CareerSlotSummary summary = slots.Describe(slot);
             if (!summary.IsLoadable)
             {
@@ -357,4 +367,6 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | autosave after rounds/rolls, manual slots, busy guard.         |
 // | 1.1     | 2026-10-27 | —      | PR 519 review: Resume invalidates a Ready slot whose save fails |
 // |         |            |        | to decode or rebuild, so Continue stops choosing it.           |
+// | 1.2     | 2026-10-27 | —      | PR 519 review 2: Resume validates the mode before the guarded  |
+// |         |            |        | rebuild, so a caller error never invalidates a healthy slot.   |
 #endregion
