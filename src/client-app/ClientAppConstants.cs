@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientAppConstants.cs
 // Created:  2026-08-07
-// Modified: 2026-10-18
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen-catalogue home, owner
 //           decision 2026-08-07), §5-P7 (career screens, save slots), UI / Client Framework #38
@@ -64,8 +64,11 @@ namespace TacticalDirector.ClientApp
         /// </summary>
         public const int CAREER_MANAGER_ID = 1;
 
-        /// <summary>[FIXED] Version of the client-owned career slot sidecar (<c>.slot</c>) text format.</summary>
-        public const int CAREER_SLOT_META_FORMAT_VERSION = 1;
+        /// <summary>
+        /// [FIXED] Version of the client-owned career slot sidecar (<c>.slot</c>) text format. v2 adds the
+        /// nested sub-blob format stamp; a v1 sidecar reads as Incompatible (D-10).
+        /// </summary>
+        public const int CAREER_SLOT_META_FORMAT_VERSION = 2;
 
         #endregion
     }
@@ -77,4 +80,6 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | unallocated (zero-value safety).                               |
 // | 1.1     | 2026-10-18 | —      | §5-P7: career screen ids 5–7, manual slot count, career        |
 // |         |            |        | manager id, slot sidecar format version.                       |
+// | 1.2     | 2026-10-27 | —      | PR 519 review: CAREER_SLOT_META_FORMAT_VERSION 1 → 2 (sidecar  |
+// |         |            |        | records the nested sub-blob format stamp).                     |
 #endregion

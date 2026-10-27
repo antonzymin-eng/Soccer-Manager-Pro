@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -141,7 +141,12 @@ namespace TacticalDirector.ClientApp
             return session;
         }
 
-        /// <summary>Resumes the career saved in <paramref name="slot"/>.</summary>
+        /// <summary>
+        /// Resumes the career saved in <paramref name="slot"/>. A <see cref="CareerSlotState.Ready"/>
+        /// slot whose save then fails to decode or rebuild is invalidated
+        /// (<see cref="CareerSaveSlots.MarkDamaged"/>) before the failure propagates, so it cannot keep
+        /// winning Continue; a read that fails on IO is left alone, as it may succeed on retry.
+        /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="slots"/> is null.</exception>
         /// <exception cref="InvalidOperationException">The slot is not loadable, or it holds a mid-match
         /// save (the client never writes one; a supported mid-match resume needs the interactive
@@ -156,6 +161,27 @@ namespace TacticalDirector.ClientApp
                 throw new ArgumentNullException(nameof(slots));
             }
 
+            CareerSlotSummary summary = slots.Describe(slot);
+            if (!summary.IsLoadable)
+            {
+                throw new InvalidOperationException(
+                    "Slot " + slot + " is " + summary.State + " and cannot be loaded.");
+            }
+
+            try
+            {
+                return ResumeLoadable(slots, slot, mode);
+            }
+            catch (Exception e) when (e is InvalidDataException || e is InvalidOperationException
+                || e is ArgumentException || e is FormatException)
+            {
+                slots.MarkDamaged(slot);
+                throw;
+            }
+        }
+
+        private static CareerSession ResumeLoadable(CareerSaveSlots slots, CareerSaveSlot slot, RoundResolutionMode mode)
+        {
             SeasonSaveContents contents = slots.Load(slot);
             if (contents.Match != null)
             {
@@ -329,4 +355,6 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7 / C3–C4): canonical new-game           |
 // |         |            |        | composition, resume, day-granular Execute with legality check, |
 // |         |            |        | autosave after rounds/rolls, manual slots, busy guard.         |
+// | 1.1     | 2026-10-27 | —      | PR 519 review: Resume invalidates a Ready slot whose save fails |
+// |         |            |        | to decode or rebuild, so Continue stops choosing it.           |
 #endregion

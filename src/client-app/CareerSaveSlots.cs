@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSaveSlots.cs
 // Created:  2026-10-18
-// Modified: 2026-10-19
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7, Season & Competition Loop #30 §4
@@ -14,7 +14,13 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
+using TacticalDirector.ClubFinances;
+using TacticalDirector.Discipline;
+using TacticalDirector.InjuriesMedical;
+using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.SeasonSave;
+using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.ClientApp
 {
@@ -29,15 +35,20 @@ namespace TacticalDirector.ClientApp
     /// store-wide monotonic <see cref="CareerSlotSummary.Sequence"/> answers it deterministically.
     /// </para>
     /// <para>
-    /// <b>Crash safety.</b> Each file is written to a temporary sibling and swapped in with
-    /// <c>File.Replace</c>/<c>File.Move</c>, the save before its sidecar. A crash mid-write therefore
-    /// leaves the previous save + sidecar pair intact, or (between the two swaps) a new save under the
-    /// previous sidecar — still a loadable save, reported with the facts of the one it replaced.
+    /// <b>Crash safety.</b> Both files are written in full to temporary siblings before either
+    /// destination is touched; the save is then swapped in with <c>File.Replace</c> (keeping the
+    /// previous save as a backup) and the sidecar after it. A failure at any step therefore leaves the
+    /// previous save + sidecar pair in place: a failed sidecar swap puts the backed-up save back. Only
+    /// a process death between the two swaps leaves a new save under the previous sidecar — still a
+    /// loadable save, reported with the facts of the one it replaced.
     /// </para>
     /// <para>
     /// <b>D-10.</b> Saves are breakable through PM-3, so a slot whose sidecar records another
-    /// <c>SEASON_SAVE_FORMAT_VERSION</c> is <see cref="CareerSlotState.Incompatible"/>: listed, never
-    /// loaded, never picked by Continue, and freely overwritten.
+    /// <c>SEASON_SAVE_FORMAT_VERSION</c>, or another version of any sub-blob nested inside it (KD-2:
+    /// each is gated independently, so an inner bump leaves the outer version alone), is
+    /// <see cref="CareerSlotState.Incompatible"/>: listed, never loaded, never picked by Continue, and
+    /// freely overwritten. A slot whose save fails to load anyway is invalidated by
+    /// <see cref="MarkDamaged"/>, so it cannot keep winning Continue.
     /// </para>
     /// Not thread-safe; the client drives one store from one thread.
     /// </summary>
@@ -46,6 +57,23 @@ namespace TacticalDirector.ClientApp
         private const string SAVE_EXTENSION = ".tdsave";
         private const string SIDECAR_EXTENSION = ".slot";
         private const string TEMP_SUFFIX = ".tmp";
+        private const string BACKUP_SUFFIX = ".bak";
+
+        // Every format gate a client-written save passes on load besides the outer
+        // SEASON_SAVE_FORMAT_VERSION: the eight mandatory sub-blobs and the world snapshot nested in the
+        // world blob. The match blob is absent: the client never writes one and Resume refuses one.
+        // Recorded in each sidecar and compared whole, so a bump to any of them makes older saves
+        // Incompatible rather than Ready-then-failing (D-10).
+        internal static readonly string NestedFormatStamp =
+            "world=" + LivingWorldConstants.WORLD_STORE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",worldSnapshot=" + LivingWorldConstants.WORLD_SNAPSHOT_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",seasonState=" + SeasonLoopConstants.SEASON_STATE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",training=" + TrainingSystemConstants.TRAINING_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",medical=" + InjuriesMedicalConstants.MEDICAL_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",appearance=" + SeasonSaveConstants.APPEARANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",progression=" + PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",discipline=" + DisciplineConstants.DISCIPLINE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",finance=" + ClubFinancesConstants.FINANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture);
 
         // No byte-order mark: a BOM would prefix the first key and the sidecar would never parse.
         private static readonly Encoding SidecarEncoding = new UTF8Encoding(false);
@@ -160,23 +188,71 @@ namespace TacticalDirector.ClientApp
 
             string savePath = SavePath(slot);
             string saveTemp = savePath + TEMP_SUFFIX;
+            string saveBackup = savePath + BACKUP_SUFFIX;
             string sidecarPath = SidecarPath(slot);
             string sidecarTemp = sidecarPath + TEMP_SUFFIX;
             try
             {
+                // Everything that can fail on content is done before a destination is touched.
                 SeasonSaveManager.Save(loop, null, saveTemp);
-                SwapIn(saveTemp, savePath);
                 File.WriteAllText(sidecarTemp, FormatSidecar(in summary), SidecarEncoding);
-                SwapIn(sidecarTemp, sidecarPath);
+
+                bool hadSave = File.Exists(savePath);
+                if (hadSave)
+                {
+                    // A backup left by an interrupted earlier write belongs to a pair already replaced.
+                    DeleteIfPresent(saveBackup);
+                    File.Replace(saveTemp, savePath, saveBackup);
+                }
+                else
+                {
+                    File.Move(saveTemp, savePath);
+                }
+
+                try
+                {
+                    SwapIn(sidecarTemp, sidecarPath);
+                }
+                catch
+                {
+                    RestorePreviousSave(hadSave, saveBackup, savePath);
+                    throw;
+                }
+
+                DeleteIfPresent(saveBackup);
             }
             finally
             {
-                // A failed write leaves the previous pair in place; never a stray half-written temp.
+                // Never a stray half-written temp. The backup is kept only if restoring it failed.
                 DeleteIfPresent(saveTemp);
                 DeleteIfPresent(sidecarTemp);
             }
 
             return summary;
+        }
+
+        /// <summary>
+        /// Invalidates <paramref name="slot"/> after its save failed to load, so it reads as
+        /// <see cref="CareerSlotState.Damaged"/> and Continue moves on to the next loadable slot. The
+        /// save bytes are kept (only the sidecar is removed); the slot is freely overwritten. Best
+        /// effort: false when the sidecar could not be removed.
+        /// </summary>
+        public bool MarkDamaged(CareerSaveSlot slot)
+        {
+            RequireSlot(slot);
+            try
+            {
+                DeleteIfPresent(SidecarPath(slot));
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
         }
 
         /// <summary>Loads the season save in <paramref name="slot"/>.</summary>
@@ -232,6 +308,30 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        // Puts the previous save back after its sidecar could not be swapped in, so the slot stays a
+        // matching pair. The sidecar's own failure is the one reported; if this restore fails too, the
+        // backup stays on disk rather than being deleted.
+        private static void RestorePreviousSave(bool hadSave, string saveBackup, string savePath)
+        {
+            try
+            {
+                if (hadSave)
+                {
+                    File.Replace(saveBackup, savePath, null);
+                }
+                else
+                {
+                    DeleteIfPresent(savePath);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
         private static void DeleteIfPresent(string path)
         {
             if (File.Exists(path))
@@ -261,6 +361,7 @@ namespace TacticalDirector.ClientApp
             b.Append("roundsPlayed=").Append(s.RoundsPlayed.ToString(CultureInfo.InvariantCulture)).Append('\n');
             b.Append("roundCount=").Append(s.RoundCount.ToString(CultureInfo.InvariantCulture)).Append('\n');
             b.Append("leaguePosition=").Append(s.LeaguePosition.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            b.Append("nestedFormats=").Append(NestedFormatStamp).Append('\n');
             // Last, so a name containing '=' is still read whole (the parser splits on the FIRST '=').
             b.Append("managedClubName=").Append(s.ManagedClubName.Replace('\n', ' ').Replace('\r', ' ')).Append('\n');
             return b.ToString();
@@ -288,6 +389,7 @@ namespace TacticalDirector.ClientApp
             ulong worldSeed = 0;
             bool hasSeed = false;
             string name = null;
+            string nestedFormats = null;
 
             foreach (string line in lines)
             {
@@ -311,6 +413,7 @@ namespace TacticalDirector.ClientApp
                     case "roundsPlayed": roundsPlayed = ParseLong(value); break;
                     case "roundCount": roundCount = ParseLong(value); break;
                     case "leaguePosition": leaguePosition = ParseLong(value); break;
+                    case "nestedFormats": nestedFormats = value; break;
                     case "managedClubName": name = value; break;
                 }
             }
@@ -324,8 +427,17 @@ namespace TacticalDirector.ClientApp
                 return false;
             }
 
-            bool compatible = format == ClientAppConstants.CAREER_SLOT_META_FORMAT_VERSION
-                && seasonSaveFormat == SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION;
+            // A sidecar of this layout always records the stamp; one of an older layout never did, and is
+            // Incompatible on its format alone.
+            bool currentLayout = format == ClientAppConstants.CAREER_SLOT_META_FORMAT_VERSION;
+            if (currentLayout && nestedFormats == null)
+            {
+                return false;
+            }
+
+            bool compatible = currentLayout
+                && seasonSaveFormat == SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION
+                && nestedFormats == NestedFormatStamp;
 
             summary = new CareerSlotSummary(
                 slot,
@@ -353,4 +465,9 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): four-slot store, sidecar summaries,  |
 // |         |            |        | sequence-based latest, crash-safe swap, D-10 Incompatible.     |
 // | 1.1     | 2026-10-19 | —      | Self-review: Write deletes both temp files on any failure.     |
+// | 1.2     | 2026-10-27 | —      | PR 519 review: Write prepares both temps before touching a     |
+// |         |            |        | destination and restores the backed-up save if the sidecar     |
+// |         |            |        | swap fails (the pair never splits); the sidecar records the    |
+// |         |            |        | nested sub-blob format stamp (layout v2) so an inner bump is   |
+// |         |            |        | Incompatible (D-10); MarkDamaged invalidates an unloadable slot. |
 #endregion

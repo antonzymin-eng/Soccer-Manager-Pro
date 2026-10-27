@@ -1,13 +1,14 @@
 // File:     src/client-app/tests/CareerScreensTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7, UI / Client Framework #38 §3.1
 //           (FR-UI-006) and Appendix C (season dispatcher, F3), Code Standards #20
 // Purpose:  Locks the career screens' sources and the season dispatcher: Career Home answers its
 //           questions from #30's own state and caches between operations; the dispatcher routes the
 //           three season kinds and refuses everything else; New Career previews the league it starts;
-//           Load Career keeps a failure visible and leaves the active career untouched.
+//           Load Career keeps a failure visible, leaves the active career untouched, and stops a
+//           corrupt newest slot from blocking Continue.
 
 using System;
 using System.IO;
@@ -195,6 +196,47 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreNotSame(continued, holder.Current);
             Assert.IsNull(load.Project().LastError);
         }
+
+        [Test]
+        public void LoadCareer_ACorruptNewestSlot_IsInvalidated_SoContinueFallsBackToTheOlderSave()
+        {
+            using var temp = new TempSlots();
+            CareerSession original = CareerTestSupport.StartQuick(temp.Slots);
+            original.SaveTo(CareerSaveSlot.Manual1);
+            string savePath = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            File.WriteAllBytes(savePath, new byte[] { 1, 2, 3 });
+
+            var holder = new CareerSessionHolder();
+            var load = new LoadCareerSource(holder, temp.Slots, RoundResolutionMode.QuickSimAll);
+            Assert.AreEqual(CareerSaveSlot.Manual1, load.Project().LatestSlot, "precondition: the corrupt slot is newest.");
+
+            Assert.IsFalse(load.TryContinue());
+            Assert.IsNotNull(load.Project().LastError);
+            Assert.IsFalse(holder.HasCareer);
+            Assert.AreEqual(CareerSlotState.Damaged, temp.Slots.Describe(CareerSaveSlot.Manual1).State);
+            Assert.AreEqual(3, File.ReadAllBytes(savePath).Length, "invalidation keeps the save bytes.");
+            Assert.AreEqual(CareerSaveSlot.Autosave, load.Project().LatestSlot);
+
+            Assert.IsTrue(load.TryContinue(), "Continue moves on to the older, loadable autosave.");
+            Assert.IsTrue(holder.HasCareer);
+        }
+
+        [Test]
+        public void LoadCareer_AnUnloadableSlot_IsNotInvalidated()
+        {
+            using var temp = new TempSlots();
+            CareerSession original = CareerTestSupport.StartQuick(temp.Slots);
+            original.SaveTo(CareerSaveSlot.Manual2);
+            string sidecar = Path.Combine(temp.Directory, "manual-2.slot");
+            string text = File.ReadAllText(sidecar);
+            string current = "seasonSaveFormat=" + SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION;
+            File.WriteAllText(sidecar, text.Replace(current, "seasonSaveFormat=" + (SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION - 1)));
+
+            var load = new LoadCareerSource(new CareerSessionHolder(), temp.Slots, RoundResolutionMode.QuickSimAll);
+            Assert.IsFalse(load.TryLoad(CareerSaveSlot.Manual2));
+            Assert.AreEqual(CareerSlotState.Incompatible, temp.Slots.Describe(CareerSaveSlot.Manual2).State,
+                "a refused load of an Incompatible slot leaves its D-10 classification alone.");
+        }
     }
 }
 
@@ -202,4 +244,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): 7 locks over Career Home, the season |
 // |         |            |        | dispatcher, New Career and Load Career.                        |
+// | 1.1     | 2026-10-27 | —      | PR 519 review: +2 locks — a corrupt newest slot is invalidated |
+// |         |            |        | so Continue falls back; a refused Incompatible slot is kept.   |
 #endregion

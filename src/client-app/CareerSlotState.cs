@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSlotState.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7 (save/load transition rules),
@@ -23,10 +23,16 @@ namespace TacticalDirector.ClientApp
         /// <summary>A save written by this build's season-save format; loadable.</summary>
         Ready = 1,
 
-        /// <summary>A save written under a different season-save or slot format version (D-10: not migrated).</summary>
+        /// <summary>
+        /// A save written under a different season-save, nested sub-blob or slot format version (D-10:
+        /// not migrated).
+        /// </summary>
         Incompatible = 2,
 
-        /// <summary>The save or its sidecar is missing, truncated or unreadable.</summary>
+        /// <summary>
+        /// The save or its sidecar is missing, truncated or unreadable — including a slot invalidated
+        /// after its save failed to load (<see cref="CareerSaveSlots.MarkDamaged"/>).
+        /// </summary>
         Damaged = 3,
     }
 }
@@ -34,4 +40,6 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): Empty / Ready / Incompatible / Damaged. |
+// | 1.1     | 2026-10-27 | —      | PR 519 review: Incompatible covers nested sub-blob versions;   |
+// |         |            |        | Damaged covers a slot invalidated after a failed load. Docs only. |
 #endregion
