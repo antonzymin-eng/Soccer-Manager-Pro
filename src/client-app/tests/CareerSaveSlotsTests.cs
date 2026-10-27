@@ -7,7 +7,7 @@
 //           D-10 incompatibility (listed, never loaded or continued) including nested sub-blob
 //           versions, damage detection and invalidation, no stray temporary files after a write, and a
 //           failed write never splitting the save from its sidecar, and recovery at open of a write
-//           interrupted between its two swaps.
+//           interrupted between its two swaps, which keeps every file when a sidecar is unreadable.
 
 using System;
 using System.IO;
@@ -329,6 +329,29 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void ALockedStagedSidecar_IsKeptByRecovery_AndRecoveredOnceUnlocked()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            CareerSlotSummary written = session.SaveTo(CareerSaveSlot.Manual1);
+            string staged = Path.Combine(temp.Directory, "manual-1.slot.tmp");
+            File.Move(Path.Combine(temp.Directory, "manual-1.slot"), staged);
+
+            // Unreadable is not invalid: recovery must stop, not judge the sidecar and delete it.
+            using (new FileStream(staged, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                Assert.DoesNotThrow(() => new CareerSaveSlots(temp.Directory));
+            }
+
+            Assert.IsTrue(File.Exists(staged), "the staged sidecar survives a recovery that could not read it.");
+            var reopened = new CareerSaveSlots(temp.Directory);
+            CareerSlotSummary row = reopened.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(written.Sequence, row.Sequence);
+            Assert.IsTrue(reopened.TryGetLatest(out _));
+        }
+
+        [Test]
         public void StrayTempsBesideAConsistentPair_AreRemovedAndThePairKept()
         {
             using var temp = new TempSlots();
@@ -368,4 +391,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.3     | 2026-10-27 | —      | PR 519 review 2: +4 locks — recovery at open of an interrupted |
 // |         |            |        | first save, an interrupted overwrite (completed, or backup put |
 // |         |            |        | back), and stray temps beside a consistent pair (17 locks).    |
+// | 1.4     | 2026-10-27 | —      | PR 519 review 3: +1 lock — a locked staged sidecar survives    |
+// |         |            |        | recovery and is recovered once unlocked (18 locks).            |
 #endregion

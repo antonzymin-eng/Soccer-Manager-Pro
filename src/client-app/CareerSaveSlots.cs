@@ -353,7 +353,7 @@ namespace TacticalDirector.ClientApp
                     return;
                 }
 
-                // A staged sidecar that does not describe the live save is never needed again.
+                // A staged sidecar read in full that does not describe the live save is never needed again.
                 DeleteIfPresent(sidecarTemp);
                 if (liveDigest != null && SidecarDescribes(slot, sidecarPath, liveDigest))
                 {
@@ -377,9 +377,12 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        // Recovery's read: unlike TryReadSidecar it lets an IO failure propagate, so a sidecar that is
+        // merely unreadable right now (locked, say) aborts recovery with every file kept, rather than
+        // being judged "does not describe" and deleted.
         private static bool SidecarDescribes(CareerSaveSlot slot, string sidecarPath, string saveDigest) =>
             File.Exists(sidecarPath)
-            && TryReadSidecar(slot, sidecarPath, out _, out string recorded)
+            && TryParseSidecar(slot, File.ReadAllLines(sidecarPath, SidecarEncoding), out _, out string recorded)
             && recorded == saveDigest;
 
         // Lower-case hex SHA-256 of a file's bytes (the S0DemoFixture/S0TextFormatter idiom). Off the
@@ -456,13 +459,10 @@ namespace TacticalDirector.ClientApp
             return b.ToString();
         }
 
-        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary) =>
-            TryReadSidecar(slot, path, out summary, out _);
-
-        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary, out string saveDigest)
+        // Describe's read: an unreadable sidecar is reported like an invalid one (the slot reads Damaged).
+        private static bool TryReadSidecar(CareerSaveSlot slot, string path, out CareerSlotSummary summary)
         {
             summary = default;
-            saveDigest = null;
             string[] lines;
             try
             {
@@ -477,6 +477,13 @@ namespace TacticalDirector.ClientApp
                 return false;
             }
 
+            return TryParseSidecar(slot, lines, out summary, out _);
+        }
+
+        private static bool TryParseSidecar(CareerSaveSlot slot, string[] lines, out CareerSlotSummary summary, out string saveDigest)
+        {
+            summary = default;
+            saveDigest = null;
             long format = -1, sequence = -1, seasonSaveFormat = -1, managedClubId = -1, seasonNumber = -1;
             long worldDay = -1, roundsPlayed = -1, roundCount = -1, leaguePosition = -1;
             ulong worldSeed = 0;
@@ -569,4 +576,7 @@ namespace TacticalDirector.ClientApp
 // | 1.3     | 2026-10-27 | —      | PR 519 review 2: the sidecar records the save's SHA-256, and   |
 // |         |            |        | opening the store recovers a write interrupted between its two |
 // |         |            |        | swaps (staged sidecar swapped in, or the backup put back).     |
+// | 1.4     | 2026-10-27 | —      | PR 519 review 3: recovery's sidecar reads propagate IO errors, |
+// |         |            |        | so a locked staged sidecar aborts recovery instead of being    |
+// |         |            |        | deleted; parsing split out of TryReadSidecar (TryParseSidecar). |
 #endregion
