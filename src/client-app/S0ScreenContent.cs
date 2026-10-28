@@ -1,7 +1,7 @@
 // File:     src/client-app/S0ScreenContent.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-01/J-02 goalkeeper-pair and refusal-reason copy)
-// Modified (prior): 2026-10-15
+// Modified: 2026-10-28 (owner decisions: partial-statistics disclosure title; pop-up Close role)
+// Modified (prior): 2026-10-21 (Gate J J-01/J-02 goalkeeper-pair and refusal-reason copy)
 // Author:   —
 // Spec:     S0 binding contracts §4, Localization #49, Code Standards #20
 // Purpose:  Compiled S0 role catalogue and typed argument schemas, consumed by the shipping shell.
@@ -20,11 +20,12 @@ namespace TacticalDirector.ClientApp
         {
             new S0TextRole("action.back", "Back", ""),
             new S0TextRole("action.cancel", "Cancel", ""),
+            new S0TextRole("action.close", "Close", ""),
             new S0TextRole("action.compare", "Compare all seven Mentalities", ""),
             new S0TextRole("action.demo", "Play a demo match", ""),
             new S0TextRole("action.faster", "Faster", ""),
             new S0TextRole("action.mentality", "Change Mentality", ""),
-            new S0TextRole("action.partial", "Show partial statistics — incomplete", ""),
+            new S0TextRole("action.partial", "Partial statistics — incomplete", ""),
             new S0TextRole("action.pause", "Pause", ""),
             new S0TextRole("action.report", "View match report", ""),
             new S0TextRole("action.resume", "Resume", ""),
@@ -199,4 +200,5 @@ namespace TacticalDirector.ClientApp
 // | 1.3     | 2026-10-08 | —      | Restore complete approved substitution, baseline pitch and loose-ball context sentences. |
 // | 1.4     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution says the request waits for the next eligible stoppage (for half-time when no window is left in the first half); feedback.substitution_not_applied covers cancellation as well as full time. |
 // | 1.5     | 2026-10-21 | —      | Gate J J-01/J-02: reason.keeper_in/keeper_on_way/keeper_out for unavailable goalkeeper pairs; six feedback.substitution_refused_* rows name the engine-typed refusal reason. Copy pending owner approval. |
+// | 1.6     | 2026-10-28 | —      | Owner decisions of October 28: `action.partial` becomes the disclosure title "Partial statistics — incomplete" (was "Show partial statistics — incomplete"); new `action.close` → "Close" for pop-ups. 150 → 151 roles. |
 #endregion

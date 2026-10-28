@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 28, 2026\
-**Version:** 0.6\
+**Version:** 0.7\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -18,7 +18,7 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 **Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
 [`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
 [`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
-[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10).
+[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11).
 
 ## 1. Identity, host and method
 
@@ -250,6 +250,45 @@ Evidence: [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-2026
 
 The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
 
+## 11. Owner decisions: report disclosure title and pop-up closing (v0.7)
+
+The owner answered both questions left open in §10 on October 28:
+
+1. **Report partial-statistics toggle:** use the suggested wording. `action.partial` is now the disclosure title
+   "Partial statistics — incomplete" (was "Show partial statistics — incomplete"), shown as "▸ Partial statistics —
+   incomplete" closed and "▾ Partial statistics — incomplete" open. `action.statistics_close` is no longer shown.
+2. **Pop-ups:** the one-title rule applies only to content that expands in place. A pop-up window (Change Mentality,
+   Make substitution) has a Close button, and a click outside it closes it too.
+
+`S0ScreensBehaviour` v1.11 adds a "✕ Close" control (new role `action.close` → "Close", with the `Glyph` fallback for
+the ✕) beside the dialog title, in the frame's top-right corner. The dimmed backdrop is now its own node behind the
+frame, so a left click on it closes the pop-up and a click inside the frame never reaches it. Close and the outside
+click do what Cancel and Escape already did: discard the draft, submit nothing and return focus to the button that
+opened the pop-up. Cancel stays. The register grows from 150 to 151 roles (`S0ScreenContent` v1.6; both role-count
+tests and binding contract v0.10). The owner's reply approves both strings.
+
+**Pinned host.** A probe run at 1920×1080 passes all 27 checks (3 boot, 24 case), with the loaded content hash equal to
+the new canonical 151-role hash:
+- Close: labelled "✕ Close", 16 px from the frame's top and right edges, right of the title; it closes the Mentality
+  pop-up with a draft pending, submits nothing and returns focus to "Change Mentality".
+- Outside click: a click on text inside the substitution frame keeps it open; a right click on the backdrop keeps it
+  open; a left click on the backdrop closes it, submits nothing and returns focus to "Make substitution". Pointer
+  events were raycast at a screen point and sent to the handler the input module would choose.
+- Report: after an injected observer fault and a full match at 10×, the toggle reads "▸ Partial statistics —
+  incomplete" with the table closed, "▾ …" with it open, and "▸ …" again after a second click; no "Show partial
+  statistics" or "Close statistics" label remains.
+
+The Editor import of the changed tree had 0 `error CS` (only the two known `GetInstanceID` warnings in this assembly).
+After the probe harness was removed, a batch EditMode run of the ClientApp, UiFramework and MatchClientCore tests
+passed 423/423, including both 151-role count tests. Evidence: [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) v1.3.
+
+**Not changed:** the journey (`ux-s0-pm1-journey.md`) and the two HTML prototypes still show the old partial-statistics
+wording and no pop-up Close control; the binding contract is the copy authority. The I-Q16 text-scale and resolution
+matrix was not re-run. The match in this run ended 12–12; the engine's high goal rate is already recorded in
+`open-issues.md` and is unrelated to this change.
+
+The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -260,3 +299,4 @@ The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-
 | 0.4 | October 28, 2026 | Owner wording approval recorded (§6): all nine new Gate J strings approved as drafted in `ux-s0-binding-contracts.md` v0.7 (now v0.8). No copy, code or evidence change. Still due: B8/B10 re-capture, one clean I-Q15 pass, visual acceptance and J-05. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.5 | October 28, 2026 | §9: the two points from the owner's J-04 screenshot review fixed in `S0ScreensBehaviour` v1.9 (no repeated "Match statistics"; whole statistics panel visible at 1920×1080). Unity compile clean; host captures pass. Evidence `p5b-j04-statsfix-20261028/`. Visual acceptance still due; Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.6 | October 28, 2026 | §10: owner decision that a control opening content keeps one title. The statistics, earlier-feedback and Compare toggles now show ▸/▾ on one title (`S0ScreensBehaviour` v1.10); the separate Open/Close statistics button is gone. Unity compile clean; host rerun 19/19 PASS after a Compare-label fix. The report partial-statistics toggle and the two dialog buttons await the owner's answer. Gate-J verdict unchanged (CONDITIONAL PASS). |
+| 0.7 | October 28, 2026 | §11: owner decisions on the two §10 questions. The report toggle is the one-title disclosure "Partial statistics — incomplete" with ▸/▾; pop-ups get a "✕ Close" control and close on an outside click (`S0ScreensBehaviour` v1.11, `S0ScreenContent` v1.6, 151 roles). Host probe 27/27 PASS. Gate-J verdict unchanged (CONDITIONAL PASS). |

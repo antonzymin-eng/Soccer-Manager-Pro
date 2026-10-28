@@ -1,7 +1,7 @@
 // File:     src/client-app/tests/S0ContentContractTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-01/J-02 roles: 150)
-// Modified (prior): 2026-10-15
+// Modified: 2026-10-28 (owner decision: pop-up Close role: 151)
+// Modified (prior): 2026-10-21 (Gate J J-01/J-02 roles: 150)
 // Author:   —
 // Spec:     S0 binding contracts §§4.2–4.3, Code Standards #20
 // Purpose:  Lock every compiled S0 base pattern to the approved binding-contract register.
@@ -43,7 +43,7 @@ namespace TacticalDirector.ClientApp.Tests
                 if (!compiled.Contains(suffix))
                     mismatches.Add(suffix + ": approved but not compiled");
             Assert.That(mismatches, Is.Empty, string.Join(Environment.NewLine, mismatches));
-            Assert.AreEqual(150, compiled.Count, "The reviewed register has 150 roles.");
+            Assert.AreEqual(151, compiled.Count, "The reviewed register has 151 roles.");
         }
 
         [Test]
@@ -124,4 +124,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-08 | —      | Verbatim 141-role contract parity, including semicolon-bearing sentences that were previously truncated. |
 // | 1.1     | 2026-10-15 | —      | Match Flow §6.2.6: context.substitution pin updated to the deferred, half-time-aware wording. |
 // | 1.2     | 2026-10-21 | —      | Gate J J-01/J-02: register grows to 150 roles (three goalkeeper-pair reasons, six typed refusal rows). |
+// | 1.3     | 2026-10-28 | —      | Owner decision of October 28: register grows to 151 roles (`action.close` for pop-ups). |
 #endregion

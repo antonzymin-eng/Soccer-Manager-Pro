@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-28 (owner decision: in-place disclosures keep one title with a ▸/▾ glyph; statistics title is the toggle)
-// Modified (prior): 2026-10-28 (J-04 owner review: no repeated statistics caption; rail table fits and is revealed on open)
+// Modified: 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
+// Modified (prior): 2026-10-28 (owner decision: in-place disclosures keep one title with a ▸/▾ glyph; statistics title is the toggle)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -73,7 +73,7 @@ namespace TacticalDirector.MatchClientUnity
         private bool _revealStatistics;
         private Selectable _statisticsHeading;
         private Button _compareToggle;
-        private string _statisticsOpenLabel, _statisticsClosedLabel, _compareOpenLabel, _compareClosedLabel, _earlierLabel;
+        private string _statisticsOpenLabel, _statisticsClosedLabel, _compareOpenLabel, _compareClosedLabel, _partialOpenLabel, _partialClosedLabel, _earlierLabel;
         private int _earlierLabelCount = -1;
         private bool _earlierLabelOpen;
         private GameObject _dialog, _mentalityDraft, _substitutionDraft, _compare;
@@ -428,7 +428,9 @@ namespace TacticalDirector.MatchClientUnity
             _reportResult = _ui.Label(parent, "", S0UiFactory.TextStyle.Subheading);
             _reportScore = _ui.Label(parent, "", S0UiFactory.TextStyle.Score);
             _reportNotice = _ui.Reason(parent, true);
-            _partialToggle = Control(parent, L("action.partial"), _view.TogglePartialReport, _reportScroll);
+            _partialOpenLabel = Disclosure(true, L("action.partial"));
+            _partialClosedLabel = Disclosure(false, L("action.partial"));
+            _partialToggle = Control(parent, _partialClosedLabel, _view.TogglePartialReport, _reportScroll);
             _reportStatistics = _ui.Column("Report statistics", parent, 0);
             _reportCaption = _ui.Label(_reportStatistics, "", S0UiFactory.TextStyle.Secondary);
             _reportCaption.fontStyle = FontStyle.Bold;
@@ -446,8 +448,18 @@ namespace TacticalDirector.MatchClientUnity
             _owned.Add(root);
             // Modal staging (H v0.2 dialog): dimmed backdrop over the match, centred bordered frame.
             _dialogCanvas = _ui.Canvas(root.transform, 1);
-            var backdrop = _dialogCanvas.gameObject.AddComponent<Image>();
-            backdrop.color = S0UiConstants.BACKDROP_COLOR;
+            // Owner decision (October 28): a click outside the frame closes the pop-up as Cancel does. The
+            // backdrop is the frame's sibling, not its parent, so a click inside the frame never reaches it.
+            RectTransform backdrop = _ui.Node("Backdrop", _dialogCanvas);
+            S0UiFactory.Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Image>().color = S0UiConstants.BACKDROP_COLOR;
+            var outside = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            outside.callback.AddListener(data =>
+            {
+                if (((PointerEventData)data).button == PointerEventData.InputButton.Left)
+                    CancelDialog();
+            });
+            backdrop.gameObject.AddComponent<EventTrigger>().triggers.Add(outside);
             _dialogFrame = _ui.Node("Dialog frame", _dialogCanvas);
             _dialogFrame.anchorMin = _dialogFrame.anchorMax = _dialogFrame.pivot = new Vector2(0.5f, 0.5f);
             var frameFill = _dialogFrame.gameObject.AddComponent<Image>();
@@ -464,7 +476,12 @@ namespace TacticalDirector.MatchClientUnity
             ruleImage.raycastTarget = false;
             RectTransform content = _ui.ScrollColumn(_dialogFrame, _dialogFrame, out _dialogScroll);
             _dialog = root;
-            _dialogHeading = Heading(content, "", _dialogScroll, S0UiFactory.TextStyle.Subheading);
+            // Owner decision (October 28): a pop-up has a Close control beside its title.
+            RectTransform header = _ui.Row("Dialog header", content, TextAnchor.UpperLeft);
+            _dialogHeading = Heading(header, "", _dialogScroll, S0UiFactory.TextStyle.Subheading);
+            Flexible(_dialogHeading, 1);
+            string close = Glyph('✕', '×');
+            Control(header, close.Length == 0 ? L("action.close") : close + " " + L("action.close"), CancelDialog, _dialogScroll);
             _dialogCurrent = _ui.Label(content, "");
             _ui.Label(content, L("context.submit"), S0UiFactory.TextStyle.Secondary);
             _mentalityDraft = _ui.Column("Mentality draft", content, 0).gameObject;
@@ -651,7 +668,7 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.SetBoxed(_reportNotice, _view.StatisticsNotice);
             S0UiFactory.Set(_reportCaption, _view.StatisticsCaption);
             _partialToggle.gameObject.SetActive(_view.IsStatisticsIncomplete && _view.HasStatistics);
-            _ui.SetButton(_partialToggle, L(_view.IsPartialReportOpen ? "action.statistics_close" : "action.partial"));
+            _ui.SetButton(_partialToggle, _view.IsPartialReportOpen ? _partialOpenLabel : _partialClosedLabel);
             _reportStatistics.gameObject.SetActive(_view.HasStatistics && (!_view.IsStatisticsIncomplete || _view.IsPartialReportOpen));
             BindStatistics();
             BindFeedback();
@@ -1310,4 +1327,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.8     | 2026-10-21 | —      | Gate J J-01: a goalkeeper-mismatched bench choice is unavailable and shows its reason. J-04 (H v0.2): scoreboard, changes and statistics panels (statistics now in the rail, so opening them no longer shrinks the pitch), primary/secondary control chrome with dashed unavailable borders and gold selection, reason/warning boxes, outcome rows with status bar and ✓ ✕ – … badge, zebra statistics table, navy/gold shirt chips with leaders, whole-pitch top-down view, centred modal staging dialog over a dimmed backdrop, centred entry pages. Scoreboard team labels keep their own width so narrow 200% never breaks them mid-word. |
 // | 1.9     | 2026-10-28 | —      | J-04 owner review: the rail statistics caption shows only for a partial cutoff (the panel heading already says "Match statistics"); rail table rows abut with no extra spacing; opening statistics scrolls the page just enough to show the whole panel, keeping its toggle in view. |
 // | 1.10    | 2026-10-28 | —      | Owner decision (October 28): a control that opens or closes content in place keeps one title with a ▸/▾ glyph (covered substitute when the font lacks it). The "Match statistics" title is the statistics toggle, replacing the separate Open/Close statistics button and its heading; the plain heading returns only at full time, when the toggle is hidden. "Earlier change feedback (N)" and "Compare all seven Mentalities" show the same glyph. Labels are composed at build, or when the earlier count or state changes. |
+// | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
 #endregion

@@ -1,7 +1,7 @@
 # J-04 owner review: statistics rail fix — pinned-host evidence
 
-**Captured:** October 28, 2026, 19:24–19:29 UTC (v1.0) and 19:55–20:17 UTC (v1.2); 12:24–13:17 on the host's Pacific clock\
-**Purpose:** Raw evidence for [`p5b-real-client-acceptance.md`](../../p5b-real-client-acceptance.md) v0.5 §9 and v0.6 §10. While
+**Captured:** October 28, 2026, 19:24–19:29 UTC (v1.0) and 19:55–20:17 UTC (v1.2) and 21:44–22:15 UTC (v1.3); 12:24–15:15 on the host's Pacific clock\
+**Purpose:** Raw evidence for [`p5b-real-client-acceptance.md`](../../p5b-real-client-acceptance.md) v0.5 §9, v0.6 §10 and v0.7 §11. While
 reviewing the J-04 screenshots, the owner asked for two points to be fixed before accepting the visuals: at 1920×1080
 the open statistics table ran off the bottom of the screen, and "Match statistics" appeared twice in the statistics panel.\
 **Host:** the owner's Windows 11 machine, Unity 6000.4.9f1 (f7258d6eebbe) editor (DX11, Mono). Certified determinism host.\
@@ -20,7 +20,11 @@ Editor and the `SMP-p5b-host` checkout were not used.\
 | `probe-log-disclosure.txt` | (v1.2) Rerun after the fix: 19 checks, all PASS. Statistics, Compare and Earlier change feedback each show ▸ closed and ▾ open on one title; there is no Open/Close statistics button and no separate heading; the open statistics panel fits the viewport with no scroll. |
 | `shots-disclosure-1.tar` | (v1.2) `d-statistics-closed.png` and `d-statistics-open.png` (Match View with the "Match statistics" title as the toggle, closed and open) and `d-compare-open.png` (Mentality dialog with "Compare all seven Mentalities" open). Plain `.tar` because `*.png` is LFS-tracked; split in two to stay under the 1 MiB binary guard. |
 | `shots-disclosure-2.tar` | (v1.2) `d-earlier-closed.png` and `d-earlier-open.png`: "Earlier change feedback (5)" closed and open, after the substitutions reached the window limit. |
-| `probe-source/` | `S0HostStatsFix.cs` (v1.0), `S0HostDisclosure.cs` (v1.2), plus `S0HostChannel.cs` and `S0HostCapture.cs`, which the earlier evidence did not archive. The other harness files are identical to `../p5b-gate-j-fixes-20261021/probe-source/` apart from the output folder. |
+| `compile-popup.txt` | (v1.3) Compile excerpts for the pop-up change: the Editor import with 0 `error CS` and only the two known `GetInstanceID` warnings in `match-client-unity`; the batch EditMode run after the harness was removed, which reused those assemblies; and its result line, 423/423 passed, with both 151-role count tests passing. `TacticalDirector.ClientApp` was rebuilt in the same import; its log line is not among the excerpted progress lines, but the passing count tests and the new loaded content hash show the 151-role catalogue. |
+| `probe-log-popup.txt` | (v1.3) 27 checks, all PASS (3 boot, 24 case). The loaded content hash equals the new canonical 151-role hash. Cases: `close-button` (the "✕ Close" label and its top-right placement; closing with a draft pending submits nothing and returns focus), `outside-click` (a click inside the frame and a right click keep the pop-up open; a left click on the backdrop closes it), `partial` (observer fault at tick 65, full match at 10×, the report toggle "▸/▾ Partial statistics — incomplete"). |
+| `shots-popup-1.tar` | (v1.3) `p-mentality-open.png` (Change Home Mentality with a draft and the "✕ Close" control) and `p-substitution-open.png` (Make Home substitution with the same control). |
+| `shots-popup-2.tar` | (v1.3) `p-partial-closed.png` and `p-partial-open.png`: the Post-Match Report after an observer fault, with the partial-statistics disclosure closed and open. |
+| `probe-source/` | `S0HostStatsFix.cs` (v1.0), `S0HostDisclosure.cs` (v1.2), `S0HostPopup.cs` (v1.3), plus `S0HostChannel.cs` and `S0HostCapture.cs`, which the earlier evidence did not archive. The other harness files are identical to `../p5b-gate-j-fixes-20261021/probe-source/` apart from the output folder. |
 
 **Result.** Both captures PASS all three checks: the whole statistics panel lies inside the viewport, its toggle is
 visible, and "Match statistics" is shown once. The panel is 541 px tall. Opening it scrolled the page 9 px with an empty
@@ -40,3 +44,4 @@ asset, scene or setting was modified.
 | 1.0 | October 28, 2026 | Initial evidence set for the J-04 statistics-rail fix. |
 | 1.1 | October 28, 2026 | The two `.png` captures are packed into `shots-statsfix.tar` (contents byte-identical) so `SHA256SUMS` verifies on the LFS-free CI checkout. |
 | 1.2 | October 28, 2026 | Owner decision: in-place disclosures keep one title with a ▸/▾ glyph, and the "Match statistics" title is the statistics toggle. Compile, both disclosure runs and five captures (in two plain `.tar` files) added. |
+| 1.3 | October 28, 2026 | Owner decisions: the report partial-statistics toggle keeps one title, and pop-ups get a Close control and close on an outside click. Compile and EditMode excerpt, the pop-up probe log, four captures in two plain `.tar` files and the probe source added. |
