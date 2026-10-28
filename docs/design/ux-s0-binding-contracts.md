@@ -1,8 +1,8 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 21, 2026\
-**Version:** 0.7\
+**Last Updated:** October 28, 2026\
+**Version:** 0.8\
 **Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
@@ -314,6 +314,14 @@ typed components and final role output without rewriting old request identities.
 | `feedback.substitution_not_applied` | Not applied — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); the request was cancelled or the match ended before it could apply. |
 | `feedback.substitution_send_failure` | Send failure — {0} {1} (shirt {2}) → {3} {4} (shirt {5}, bench slot {6}); request could not be sent; substitution count unchanged. |
 
+**Gate J copy approval:** Anton Zymin replied “approve all” on October 28, 2026 at
+12:10:36 America/Los_Angeles (19:10:36 UTC), directly answering a request to approve the nine
+roles added in v0.7: `reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way` (§4.2) and
+the six `feedback.substitution_refused_*` rows above. The base copy is approved exactly as drafted
+here and as shipped in `src/client-app/S0ScreenContent.cs` at PR #518 head `e4a0dec9`. Four optional
+rewordings offered with the request were not adopted. This approves wording only; the J-04 visual
+acceptance and the rest of Gate J remain due.
+
 Base-copy example: “Pending — Ben Calder (shirt 2) → Miles West (shirt 13, bench slot 2);
 waiting to be applied.” This is a planned formatting fixture, not an executed outcome.
 I-Q16 must cover all six substitution outcome roles, a translation pattern that reorders
@@ -396,3 +404,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.5 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): pitch descriptions are read-only rather than noninteractive, shown on pointer or the single keyboard pitch entry of journey §9.3. Role register, copy and content hash unchanged. |
 | 0.6 | October 15, 2026 | Match Flow §6.2.6 (PR #505): `context.substitution` says a request waits for the next eligible stoppage (half-time when no window is left in the first half), and `feedback.substitution_not_applied` covers a cancelled request as well as full time. No key, argument signature or binding changed. |
 | 0.7 | October 21, 2026 | Gate J owner decisions of October 20, 2026 (J-01, J-02): three availability roles (`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way`) for goalkeeper-mismatched bench choices, and six `feedback.substitution_refused_*` rows (cap, ended, keeper, sent_off, unavailable, windows) naming the engine-typed refusal, each with the existing `SSISSII` signature. Register 141 → 150 roles. Base copy drafted for the owner's wording approval at Gate J. |
+| 0.8 | October 28, 2026 | Records Anton Zymin's October 28 approval of the v0.7 base copy for all nine Gate J roles (three `reason.keeper_*`, six `feedback.substitution_refused_*`), unchanged. No key, argument signature, copy text or content hash changed. Visual acceptance and the remaining Gate J conditions are still due. |
