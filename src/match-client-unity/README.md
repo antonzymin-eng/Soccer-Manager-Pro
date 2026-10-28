@@ -321,6 +321,7 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 - `S0ControlSkin` switches a control to a dashed border and secondary text while it is unavailable, and to a gold outline when it is selected.
 - `S0MaxWidth` centres each page column.
 - Statistics live in the rail, so opening them never shrinks the pitch.
+  After the owner's October 28 screenshot review (record v0.5 §9), the rail table rows abut, its caption shows only for a partial cutoff (the panel heading already says "Match statistics"), and opening statistics scrolls the page just far enough to show the whole panel.
 - `S0ScreensBehaviour` sets `MatchClientBehaviour.WholePitchView`: the camera then frames the whole pitch straight down, orthographically (`PitchCameraRig.WholePitchOrthographicSize`), instead of the tilted follow rig.
 - Shirt labels are navy (home) and gold (away) chips tethered to their markers.
 - Unavailable bench choices show their reason under the label (J-01).
@@ -328,6 +329,7 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 
 | Documentation revision | Date | Notes |
 |---|---|---|
+| J-04 statistics-rail fix | October 28, 2026 | §9: rail table caption only for a partial cutoff, abutting rows, whole panel revealed on open. Host verification in the acceptance record v0.5 §9. |
 | Gate J skin and whole-pitch view | October 21, 2026 | §9: H v0.2 skin components, statistics in the rail, unavailable-choice reasons and the whole-pitch top-down camera. Host verification in the acceptance record v0.2. |
 | PR #489 Tab order and contract parity | October 8, 2026 | Match View Tab follows journey §9.3 explicitly, then report and pitch entry; permanent 141-role contract parity test. Native input/compile proof remains due. |
 | PR #489 Codex layout/copy corrections | October 8, 2026 | Ignore focus overlays in layout; retain/rebind Current/Requested comparison tags; restore complete substitution/pitch/loose-ball context and audit all 141 base patterns. Native geometry/input proof remains due. |

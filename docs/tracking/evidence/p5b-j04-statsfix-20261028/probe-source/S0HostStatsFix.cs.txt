@@ -1,0 +1,61 @@
+// J-04 owner review (October 28, 2026): statistics rail fit and caption check at 1920x1080.
+// Untracked probe source, archived with the evidence.
+
+using System.Collections;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
+using P = S0HostProbe;
+using C = S0HostCases;
+
+public static class S0HostStatsFix
+{
+    public static IEnumerator Shots()
+    {
+        P.SetGameViewSize(1920, 1080);
+        yield return P.Frames(10);
+        yield return S0HostRuns.Boot();
+        yield return C.StartMatch(3);
+        yield return P.Frames(30);
+        P.Begin("stats-live");
+        yield return Open("fix-live-statistics");
+        P.Click(P.ButtonField("_statisticsToggle"));
+        yield return P.Frames(3);
+        P.Begin("stats-after-sub");
+        yield return S0HostGateJ.J01();
+        yield return P.Frames(60);
+        yield return Open("fix-statistics-after-sub");
+    }
+
+    static IEnumerator Open(string shot)
+    {
+        ScrollRect scroll = P.Get<ScrollRect>(P.Screens, "_matchScroll");
+        scroll.content.anchoredPosition = Vector2.zero;
+        yield return P.Frames(3);
+        P.Click(P.ButtonField("_statisticsToggle"));
+        yield return P.Frames(5);
+        Fit(scroll);
+        P.Shot(shot);
+        yield return null;
+    }
+
+    static void Fit(ScrollRect scroll)
+    {
+        Canvas.ForceUpdateCanvases();
+        RectTransform panel = P.Get<RectTransform>(P.Screens, "_statisticsPanel");
+        RectTransform toggle = (RectTransform)P.ButtonField("_statisticsToggle").transform;
+        Rect view = scroll.viewport.rect;
+        Bounds p = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, panel);
+        Bounds t = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, toggle);
+        Text caption = P.Get<Text>(P.Screens, "_caption");
+        int rows = P.Get<RectTransform>(P.Screens, "_matchStatistics").GetComponentsInChildren<Text>(false).Count(x => x.text.Length > 0);
+        int titles = panel.GetComponentsInChildren<Text>(false).Count(x => x.text == P.View.Text.Label("heading.statistics"));
+        P.Log("STATSFIT screen=" + Screen.width + "x" + Screen.height + " viewport=" + view.height.ToString("F0") +
+              " panelTop=" + (view.yMax - p.max.y).ToString("F0") + " panelBottom=" + (view.yMax - p.min.y).ToString("F0") +
+              " panelHeight=" + p.size.y.ToString("F0") + " scrolled=" + scroll.content.anchoredPosition.y.ToString("F0") +
+              " captionActive=" + caption.gameObject.activeInHierarchy + " visibleMatchStatisticsTitles=" + titles + " tableTexts=" + rows);
+        P.Check(p.min.y >= view.yMin - 0.5f && p.max.y <= view.yMax + 0.5f, "whole statistics panel inside the viewport");
+        P.Check(t.max.y <= view.yMax + 0.5f && t.min.y >= view.yMin - 0.5f, "statistics toggle inside the viewport");
+        P.Check(titles == 1, "\"Match statistics\" shown once in the panel");
+    }
+}

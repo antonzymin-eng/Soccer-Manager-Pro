@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-01 unavailable bench choices; J-04 H v0.2 skin, whole pitch, modal dialog)
-// Modified (prior): 2026-10-19
+// Modified: 2026-10-28 (J-04 owner review: no repeated statistics caption; rail table fits and is revealed on open)
+// Modified (prior): 2026-10-21
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -69,7 +69,8 @@ namespace TacticalDirector.MatchClientUnity
         private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _controlReason, _slowerReason, _fasterReason, _mentalityReason, _substitutionReason;
         private Text _notice, _caption, _reportScore, _reportResult, _reportNotice, _reportCaption, _dialogCurrent, _choiceNotice;
         private RectTransform _reportFeedback, _matchFeedback;
-        private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot;
+        private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot, _statisticsPanel;
+        private bool _revealStatistics;
         private GameObject _dialog, _mentalityDraft, _substitutionDraft, _compare;
         private Button _submit, _cancel;
         private Selectable _invoker;
@@ -371,10 +372,16 @@ namespace TacticalDirector.MatchClientUnity
             _earlierToggle = Control(_matchFeedback, "", _view.ToggleEarlierFeedback, _matchScroll);
             _earlierRoot = _ui.Column("Earlier feedback", parent, 0);
             _notice = _ui.Reason(rail, true);
-            RectTransform statistics = _ui.Panel("Match statistics", rail);
-            Heading(statistics, L("heading.statistics"), _matchScroll, S0UiFactory.TextStyle.Subheading);
-            _statisticsToggle = Control(statistics, L("action.statistics_open"), _view.ToggleStatistics, _matchScroll);
-            _matchStatistics = _ui.Column("Statistics", statistics, 0);
+            _statisticsPanel = _ui.Panel("Match statistics", rail);
+            Heading(_statisticsPanel, L("heading.statistics"), _matchScroll, S0UiFactory.TextStyle.Subheading);
+            _statisticsToggle = Control(_statisticsPanel, L("action.statistics_open"), () =>
+            {
+                _view.ToggleStatistics();
+                _revealStatistics = _view.IsStatisticsOpen;
+            }, _matchScroll);
+            _matchStatistics = _ui.Column("Statistics", _statisticsPanel, 0);
+            // Rail rows abut, separated by their rules, so the table fits beside the pitch at 1920×1080.
+            _matchStatistics.GetComponent<VerticalLayoutGroup>().spacing = 0;
             _caption = _ui.Label(_matchStatistics, "", S0UiFactory.TextStyle.Secondary);
             _caption.fontStyle = FontStyle.Bold;
             _matchLooseBall = _ui.Label(_matchStatistics, L("statistics.loose_ball"));
@@ -617,6 +624,8 @@ namespace TacticalDirector.MatchClientUnity
             _ui.SetButton(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
             _matchStatistics.gameObject.SetActive(_view.IsStatisticsOpen && _view.HasStatistics);
             S0UiFactory.SetBoxed(_notice, _view.StatisticsNotice);
+            // The panel heading already names complete statistics; only a partial cutoff caption adds to it.
+            _caption.gameObject.SetActive(_view.IsStatisticsIncomplete);
             S0UiFactory.Set(_caption, _view.StatisticsCaption);
             S0UiFactory.Set(_reportScore, _view.Score);
             S0UiFactory.Set(_reportResult, _view.Result);
@@ -644,6 +653,14 @@ namespace TacticalDirector.MatchClientUnity
                 foreach (Button button in _incoming)
                     _ui.SetButton(button, "");
                 S0UiFactory.Set(_pitchDescription, L("pitch.description"));
+            }
+
+            if (_revealStatistics)
+            {
+                // Opening statistics scrolls just far enough to show the whole table, never past its toggle.
+                _revealStatistics = false;
+                Reveal(_matchScroll, _statisticsPanel);
+                Reveal(_matchScroll, (RectTransform)_statisticsToggle.transform);
             }
 
             RecoverFocus();
@@ -1257,4 +1274,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.6     | 2026-10-08 | —      | Match View Tab follows journey §9.3 explicitly: statistics before earlier feedback, then report and pitch entry. |
 // | 1.7     | 2026-10-19 | —      | Pinned-host I-Q15: process keyboard input once per frame; a choice arrow's Control refresh re-entered Keyboard() and overflowed the stack. |
 // | 1.8     | 2026-10-21 | —      | Gate J J-01: a goalkeeper-mismatched bench choice is unavailable and shows its reason. J-04 (H v0.2): scoreboard, changes and statistics panels (statistics now in the rail, so opening them no longer shrinks the pitch), primary/secondary control chrome with dashed unavailable borders and gold selection, reason/warning boxes, outcome rows with status bar and ✓ ✕ – … badge, zebra statistics table, navy/gold shirt chips with leaders, whole-pitch top-down view, centred modal staging dialog over a dimmed backdrop, centred entry pages. Scoreboard team labels keep their own width so narrow 200% never breaks them mid-word. |
+// | 1.9     | 2026-10-28 | —      | J-04 owner review: the rail statistics caption shows only for a partial cutoff (the panel heading already says "Match statistics"); rail table rows abut with no extra spacing; opening statistics scrolls the page just enough to show the whole panel, keeping its toggle in view. |
 #endregion

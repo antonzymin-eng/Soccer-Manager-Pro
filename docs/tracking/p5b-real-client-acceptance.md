@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 28, 2026\
-**Version:** 0.4\
+**Version:** 0.5\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -17,7 +17,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 [p5b-screens-validation.md](p5b-screens-validation.md) §"Acceptance matrix" (v0.14) for everything recorded here.\
 **Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
 [`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
-[`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8).
+[`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
+[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9).
 
 ## 1. Identity, host and method
 
@@ -183,6 +184,41 @@ This clears the Unity-compile condition for merging. It does not change the §7 
 clean I-Q15 pass, the owner's wording approval (since given, v0.4) and J-05 still gate Gate J.
 
 
+## 9. J-04 owner review: statistics rail fix (v0.5)
+
+On October 28 the owner reviewed the J-04 screenshots (menu, setup, live, statistics open, Mentality dialog, report)
+and asked for two points to be fixed before accepting the visuals:
+
+- at 1920×1080 the open statistics table ran off the bottom of the screen (the last visible row was Throw-ins);
+- "Match statistics" appeared twice in the statistics panel, as the panel heading and again as the table caption.
+
+`S0ScreensBehaviour` v1.9 fixes both in the Unity binding only:
+
+- the rail table caption is shown only when it adds something, i.e. the partial-statistics cutoff caption; complete
+  statistics keep the panel heading alone. The report table keeps its caption, since the report heading is
+  "Post-Match Report";
+- rail table rows abut, separated by their rule lines, instead of being spaced 8 px apart. Each row is 33 px instead
+  of 41 px; the report table keeps its spacing;
+- opening statistics scrolls the page just far enough to show the whole panel, never past its toggle.
+
+No copy, presenter, simulation or schema change; the loaded content hash is unchanged (`96fe4eee…8b864c98`).
+
+**Pinned host.** The changed tree compiles in Unity 6000.4.9f1 with 0 `error CS` and the two existing `GetInstanceID`
+warnings. At a 1920×1080 Game view and 100% text, both captures pass all three checks (whole panel inside the
+viewport, toggle visible, "Match statistics" shown once):
+
+| Capture | Panel | Page scrolled on open |
+| --- | --- | --- |
+| Right after kick-off, no feedback | 541 px, spanning 539–1080 px of the viewport | 9 px |
+| After one Applied substitution (one feedback row) | 541 px, spanning 539–1080 px | 62 px |
+
+In both, the score, clock and playback controls stay visible; only the page title scrolls out of view. With more
+feedback rows the page scrolls further, and the scoreboard can leave the view while statistics are open.
+Evidence: [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md).
+
+**Not re-run:** the I-Q16 text-scale and resolution matrix on this change, and the report screen capture. The owner's
+visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -191,3 +227,4 @@ clean I-Q15 pass, the owner's wording approval (since given, v0.4) and J-05 stil
 | 0.2 | October 22, 2026 | Owner decisions of October 20 implemented and host-verified (§6): J-01 greyed keeper pairs with reasons, J-02 typed refusal rows, J-04 H v0.2 skin with whole-pitch view and statistics in the rail; narrow-width team-label fix found by the I-Q16 rerun. Verdict CONDITIONAL PASS pending the B8/B10 re-capture, one clean I-Q15 pass, owner copy approval and acceptance. |
 | 0.3 | October 28, 2026 | §8: merge-readiness Unity compile of head `963f48ee`, the first Unity build with #519 merged in. Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 423/423 passed. Evidence `host-963f48ee-20261028/`. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.4 | October 28, 2026 | Owner wording approval recorded (§6): all nine new Gate J strings approved as drafted in `ux-s0-binding-contracts.md` v0.7 (now v0.8). No copy, code or evidence change. Still due: B8/B10 re-capture, one clean I-Q15 pass, visual acceptance and J-05. Gate-J verdict unchanged (CONDITIONAL PASS). |
+| 0.5 | October 28, 2026 | §9: the two points from the owner's J-04 screenshot review fixed in `S0ScreensBehaviour` v1.9 (no repeated "Match statistics"; whole statistics panel visible at 1920×1080). Unity compile clean; host captures pass. Evidence `p5b-j04-statsfix-20261028/`. Visual acceptance still due; Gate-J verdict unchanged (CONDITIONAL PASS). |
