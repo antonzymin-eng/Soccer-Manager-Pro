@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-28 (J-04 owner review: no repeated statistics caption; rail table fits and is revealed on open)
-// Modified (prior): 2026-10-21
+// Modified: 2026-10-28 (owner decision: in-place disclosures keep one title with a ▸/▾ glyph; statistics title is the toggle)
+// Modified (prior): 2026-10-28 (J-04 owner review: no repeated statistics caption; rail table fits and is revealed on open)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -71,6 +71,11 @@ namespace TacticalDirector.MatchClientUnity
         private RectTransform _reportFeedback, _matchFeedback;
         private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot, _statisticsPanel;
         private bool _revealStatistics;
+        private Selectable _statisticsHeading;
+        private Button _compareToggle;
+        private string _statisticsOpenLabel, _statisticsClosedLabel, _compareOpenLabel, _compareClosedLabel, _earlierLabel;
+        private int _earlierLabelCount = -1;
+        private bool _earlierLabelOpen;
         private GameObject _dialog, _mentalityDraft, _substitutionDraft, _compare;
         private Button _submit, _cancel;
         private Selectable _invoker;
@@ -373,8 +378,12 @@ namespace TacticalDirector.MatchClientUnity
             _earlierRoot = _ui.Column("Earlier feedback", parent, 0);
             _notice = _ui.Reason(rail, true);
             _statisticsPanel = _ui.Panel("Match statistics", rail);
-            Heading(_statisticsPanel, L("heading.statistics"), _matchScroll, S0UiFactory.TextStyle.Subheading);
-            _statisticsToggle = Control(_statisticsPanel, L("action.statistics_open"), () =>
+            // Owner decision (October 28): the panel title is itself the open/close control; the plain
+            // heading remains only at full time, when the toggle is gone.
+            _statisticsHeading = Heading(_statisticsPanel, L("heading.statistics"), _matchScroll, S0UiFactory.TextStyle.Subheading);
+            _statisticsOpenLabel = Disclosure(true, L("heading.statistics"));
+            _statisticsClosedLabel = Disclosure(false, L("heading.statistics"));
+            _statisticsToggle = Control(_statisticsPanel, _statisticsClosedLabel, () =>
             {
                 _view.ToggleStatistics();
                 _revealStatistics = _view.IsStatisticsOpen;
@@ -466,7 +475,9 @@ namespace TacticalDirector.MatchClientUnity
                 _mentalityChoices[i] = Control(_mentalityDraft.transform, _view.MentalityChoice(value), () => _view.SelectRequestedMentality(value), _dialogScroll);
             }
 
-            Control(_mentalityDraft.transform, L("action.compare"), () => _compare.SetActive(!_compare.activeSelf), _dialogScroll);
+            _compareOpenLabel = Disclosure(true, L("action.compare"));
+            _compareClosedLabel = Disclosure(false, L("action.compare"));
+            _compareToggle = Control(_mentalityDraft.transform, _compareClosedLabel, () => ShowComparison(!_compare.activeSelf), _dialogScroll);
             _compare = _ui.Column("Comparison", _mentalityDraft.transform, 0).gameObject;
             for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
             {
@@ -518,12 +529,19 @@ namespace TacticalDirector.MatchClientUnity
                 _dialogFrame.sizeDelta = size;
         }
 
+        // The comparison is binding-local state, so its label cannot wait for a presenter revision.
+        private void ShowComparison(bool open)
+        {
+            _compare.SetActive(open);
+            _ui.SetButton(_compareToggle, open ? _compareOpenLabel : _compareClosedLabel);
+        }
+
         private void OpenDialog(Selectable invoker, Action open)
         {
             open();
             _invoker = invoker;
             _dialog.SetActive(true);
-            _compare.SetActive(false);
+            ShowComparison(false);
             Refresh();
             Canvas.ForceUpdateCanvases();
             LayoutDialogFrame();
@@ -621,7 +639,8 @@ namespace TacticalDirector.MatchClientUnity
             _report.gameObject.SetActive(_view.CanReport);
             _statisticsToggle.gameObject.SetActive(!_view.IsFullTime);
             _statisticsToggle.interactable = !_view.Frame.IsEmpty;
-            _ui.SetButton(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
+            _statisticsHeading.gameObject.SetActive(_view.IsFullTime);
+            _ui.SetButton(_statisticsToggle, _view.IsStatisticsOpen ? _statisticsOpenLabel : _statisticsClosedLabel);
             _matchStatistics.gameObject.SetActive(_view.IsStatisticsOpen && _view.HasStatistics);
             S0UiFactory.SetBoxed(_notice, _view.StatisticsNotice);
             // The panel heading already names complete statistics; only a partial cutoff caption adds to it.
@@ -770,7 +789,14 @@ namespace TacticalDirector.MatchClientUnity
 
             _earlierToggle.gameObject.SetActive(earlier > 0);
             _earlierRoot.gameObject.SetActive(_view.IsEarlierFeedbackOpen);
-            _ui.SetButton(_earlierToggle, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+            if (earlier != _earlierLabelCount || _view.IsEarlierFeedbackOpen != _earlierLabelOpen)
+            {
+                _earlierLabelCount = earlier;
+                _earlierLabelOpen = _view.IsEarlierFeedbackOpen;
+                _earlierLabel = Disclosure(_earlierLabelOpen, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+            }
+
+            _ui.SetButton(_earlierToggle, _earlierLabel);
         }
 
         // H v0.2 outcome row: sunken surface, status-coloured left bar and a glyph badge. The row's words
@@ -847,6 +873,14 @@ namespace TacticalDirector.MatchClientUnity
         // The packaged font decides: the H v0.2 glyph when it has one, else a covered substitute.
         private string Glyph(char preferred, char substitute) =>
             _font.HasCharacter(preferred) ? preferred.ToString() : _font.HasCharacter(substitute) ? substitute.ToString() : "";
+
+        // Owner decision (October 28): a control that opens or closes content in place keeps one title and
+        // shows its state with a ▸/▾ glyph (a covered substitute, or none, when the font lacks it).
+        private string Disclosure(bool open, string label)
+        {
+            string glyph = open ? Glyph('▾', '▼') : Glyph('▸', '►');
+            return glyph.Length == 0 ? label : glyph + " " + label;
+        }
 
         private void BindStatistics()
         {
@@ -1275,4 +1309,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.7     | 2026-10-19 | —      | Pinned-host I-Q15: process keyboard input once per frame; a choice arrow's Control refresh re-entered Keyboard() and overflowed the stack. |
 // | 1.8     | 2026-10-21 | —      | Gate J J-01: a goalkeeper-mismatched bench choice is unavailable and shows its reason. J-04 (H v0.2): scoreboard, changes and statistics panels (statistics now in the rail, so opening them no longer shrinks the pitch), primary/secondary control chrome with dashed unavailable borders and gold selection, reason/warning boxes, outcome rows with status bar and ✓ ✕ – … badge, zebra statistics table, navy/gold shirt chips with leaders, whole-pitch top-down view, centred modal staging dialog over a dimmed backdrop, centred entry pages. Scoreboard team labels keep their own width so narrow 200% never breaks them mid-word. |
 // | 1.9     | 2026-10-28 | —      | J-04 owner review: the rail statistics caption shows only for a partial cutoff (the panel heading already says "Match statistics"); rail table rows abut with no extra spacing; opening statistics scrolls the page just enough to show the whole panel, keeping its toggle in view. |
+// | 1.10    | 2026-10-28 | —      | Owner decision (October 28): a control that opens or closes content in place keeps one title with a ▸/▾ glyph (covered substitute when the font lacks it). The "Match statistics" title is the statistics toggle, replacing the separate Open/Close statistics button and its heading; the plain heading returns only at full time, when the toggle is hidden. "Earlier change feedback (N)" and "Compare all seven Mentalities" show the same glyph. Labels are composed at build, or when the earlier count or state changes. |
 #endregion

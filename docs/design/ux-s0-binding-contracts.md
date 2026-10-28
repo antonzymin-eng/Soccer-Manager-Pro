@@ -2,7 +2,7 @@
 
 **Created:** October 3, 2026\
 **Last Updated:** October 28, 2026\
-**Version:** 0.8\
+**Version:** 0.9\
 **Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
@@ -405,3 +405,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.6 | October 15, 2026 | Match Flow §6.2.6 (PR #505): `context.substitution` says a request waits for the next eligible stoppage (half-time when no window is left in the first half), and `feedback.substitution_not_applied` covers a cancelled request as well as full time. No key, argument signature or binding changed. |
 | 0.7 | October 21, 2026 | Gate J owner decisions of October 20, 2026 (J-01, J-02): three availability roles (`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way`) for goalkeeper-mismatched bench choices, and six `feedback.substitution_refused_*` rows (cap, ended, keeper, sent_off, unavailable, windows) naming the engine-typed refusal, each with the existing `SSISSII` signature. Register 141 → 150 roles. Base copy drafted for the owner's wording approval at Gate J. |
 | 0.8 | October 28, 2026 | Records Anton Zymin's October 28 approval of the v0.7 base copy for all nine Gate J roles (three `reason.keeper_*`, six `feedback.substitution_refused_*`), unchanged. No key, argument signature, copy text or content hash changed. Visual acceptance and the remaining Gate J conditions are still due. |
+| 0.9 | October 28, 2026 | Owner decision of October 28 (record `p5b-real-client-acceptance.md` §10): a control that opens content in place keeps one title with a ▸/▾ state glyph. The Match View statistics toggle shows `heading.statistics` instead of `action.statistics_open` / `action.statistics_close`, and the earlier-feedback and comparison toggles gain the glyph. Binding only: no key, signature, copy text or content hash changed; `action.statistics_open` stays registered but is no longer shown. |

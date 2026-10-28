@@ -322,6 +322,7 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 - `S0MaxWidth` centres each page column.
 - Statistics live in the rail, so opening them never shrinks the pitch.
   After the owner's October 28 screenshot review (record v0.5 §9), the rail table rows abut, its caption shows only for a partial cutoff (the panel heading already says "Match statistics"), and opening statistics scrolls the page just far enough to show the whole panel.
+- Owner decision (October 28, record v0.6 §10): a control that opens content in place keeps one title and shows ▸ closed / ▾ open. The "Match statistics" title is the statistics toggle; "Earlier change feedback (N)" and "Compare all seven Mentalities" use the same glyph.
 - `S0ScreensBehaviour` sets `MatchClientBehaviour.WholePitchView`: the camera then frames the whole pitch straight down, orthographically (`PitchCameraRig.WholePitchOrthographicSize`), instead of the tilted follow rig.
 - Shirt labels are navy (home) and gold (away) chips tethered to their markers.
 - Unavailable bench choices show their reason under the label (J-01).
@@ -329,6 +330,7 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 
 | Documentation revision | Date | Notes |
 |---|---|---|
+| Disclosure titles | October 28, 2026 | §9: statistics, earlier-feedback and comparison toggles keep one title with a ▸/▾ glyph; the "Match statistics" title is the statistics toggle. Host verification in the acceptance record v0.6 §10. |
 | J-04 statistics-rail fix | October 28, 2026 | §9: rail table caption only for a partial cutoff, abutting rows, whole panel revealed on open. Host verification in the acceptance record v0.5 §9. |
 | Gate J skin and whole-pitch view | October 21, 2026 | §9: H v0.2 skin components, statistics in the rail, unavailable-choice reasons and the whole-pitch top-down camera. Host verification in the acceptance record v0.2. |
 | PR #489 Tab order and contract parity | October 8, 2026 | Match View Tab follows journey §9.3 explicitly, then report and pitch entry; permanent 141-role contract parity test. Native input/compile proof remains due. |

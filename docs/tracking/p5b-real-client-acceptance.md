@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 28, 2026\
-**Version:** 0.5\
+**Version:** 0.6\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -18,7 +18,7 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 **Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
 [`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
 [`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
-[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9).
+[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10).
 
 ## 1. Identity, host and method
 
@@ -219,6 +219,37 @@ Evidence: [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-2026
 **Not re-run:** the I-Q16 text-scale and resolution matrix on this change, and the report screen capture. The owner's
 visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
 
+## 10. Owner decision: a disclosure keeps one title (v0.6)
+
+After seeing §9, the owner decided on October 28 that "Match statistics" should itself be the open and close control,
+and then that, in general, every control that opens a drop-down or a sub-screen should work this way.
+
+`S0ScreensBehaviour` v1.10 applies this to the three in-place disclosures in the S0 screens. Each keeps one title and
+shows its state with a ▸ (closed) or ▾ (open) glyph, or a covered substitute when the font lacks one:
+
+| Control | Before | Now |
+| --- | --- | --- |
+| Match View statistics | heading "Match statistics" plus a button "Open statistics" / "Close statistics" | one button "▸ Match statistics" / "▾ Match statistics"; the plain heading returns only at full time, when the toggle is hidden |
+| Earlier change feedback | "Earlier change feedback (N)" in both states | "▸ / ▾ Earlier change feedback (N)" |
+| Mentality dialog comparison | "Compare all seven Mentalities" in both states | "▸ / ▾ Compare all seven Mentalities" |
+
+No role, copy or content hash changes. `action.statistics_open` is no longer shown; `action.statistics_close` is still
+used by the report's partial-statistics toggle.
+
+**Pinned host.** The final tree compiles with 0 `error CS` (the `MatchClientUnity` build artifacts were deleted first, so
+that assembly was rebuilt). The first probe run found that the Compare glyph stayed ▸ after opening; the comparison is
+binding-local state and its label had waited for a presenter revision. After the fix, the rerun passes all 19 checks at
+1920×1080: each title shows ▸ closed and ▾ open; there is no Open/Close statistics button and no separate heading; and
+the open statistics panel (548–1062 px) fits without scrolling, since the separate button row is gone.
+Evidence: [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) v1.2.
+
+**Not yet applied, pending the owner's answer:**
+- the report's "Show partial statistics — incomplete" / "Close statistics" toggle, whose title would need new wording
+  that reads correctly both open and closed;
+- "Change Mentality" and "Make substitution", which open modal dialogs rather than content in place.
+
+The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -228,3 +259,4 @@ visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one
 | 0.3 | October 28, 2026 | §8: merge-readiness Unity compile of head `963f48ee`, the first Unity build with #519 merged in. Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 423/423 passed. Evidence `host-963f48ee-20261028/`. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.4 | October 28, 2026 | Owner wording approval recorded (§6): all nine new Gate J strings approved as drafted in `ux-s0-binding-contracts.md` v0.7 (now v0.8). No copy, code or evidence change. Still due: B8/B10 re-capture, one clean I-Q15 pass, visual acceptance and J-05. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.5 | October 28, 2026 | §9: the two points from the owner's J-04 screenshot review fixed in `S0ScreensBehaviour` v1.9 (no repeated "Match statistics"; whole statistics panel visible at 1920×1080). Unity compile clean; host captures pass. Evidence `p5b-j04-statsfix-20261028/`. Visual acceptance still due; Gate-J verdict unchanged (CONDITIONAL PASS). |
+| 0.6 | October 28, 2026 | §10: owner decision that a control opening content keeps one title. The statistics, earlier-feedback and Compare toggles now show ▸/▾ on one title (`S0ScreensBehaviour` v1.10); the separate Open/Close statistics button is gone. Unity compile clean; host rerun 19/19 PASS after a Compare-label fix. The report partial-statistics toggle and the two dialog buttons await the owner's answer. Gate-J verdict unchanged (CONDITIONAL PASS). |
