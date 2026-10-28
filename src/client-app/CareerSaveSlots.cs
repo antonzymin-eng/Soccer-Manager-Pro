@@ -36,15 +36,16 @@ namespace TacticalDirector.ClientApp
     /// store-wide monotonic <see cref="CareerSlotSummary.Sequence"/> answers it deterministically.
     /// </para>
     /// <para>
-    /// <b>Crash safety.</b> Both files are written in full to temporary siblings before either
-    /// destination is touched; the save is then swapped in with <c>File.Replace</c> (keeping the
-    /// previous save as a backup) and the sidecar after it. A failure at any step therefore leaves the
-    /// previous save + sidecar pair in place: a failed sidecar swap puts the backed-up save back. A
-    /// process death between the two swaps leaves the new save beside its staged sidecar temp; opening
-    /// the store recovers it. Each sidecar records the SHA-256 of the save it describes, so recovery
-    /// pairs files by content rather than by guessing which step was interrupted: a staged sidecar
-    /// that matches the save is swapped in, and otherwise a backup that matches the live sidecar is
-    /// put back.
+    /// <b>Crash safety.</b> Both files are written in full (and flushed to disk) to temporary siblings
+    /// before either destination is touched; the save is then swapped in with <c>File.Replace</c>
+    /// (keeping the previous save as a backup) and the sidecar after it (keeping the previous sidecar
+    /// as a backup too, since a failed replace can leave the replaced file only under the backup name).
+    /// A failure at any step therefore leaves the previous save + sidecar pair in place: a failed
+    /// sidecar swap puts both backups back. A process death between the two swaps leaves the new save
+    /// beside its staged sidecar temp; opening the store recovers it. Each sidecar records the SHA-256
+    /// of the save it describes, so recovery pairs files by content rather than by guessing which step
+    /// was interrupted: a staged sidecar that matches the save is swapped in, and otherwise a backup
+    /// that matches the live sidecar is put back.
     /// </para>
     /// <para>
     /// <b>D-10.</b> Saves are breakable through PM-3, so a slot whose sidecar records another
@@ -52,7 +53,9 @@ namespace TacticalDirector.ClientApp
     /// each is gated independently, so an inner bump leaves the outer version alone), is
     /// <see cref="CareerSlotState.Incompatible"/>: listed, never loaded, never picked by Continue, and
     /// freely overwritten. A slot whose save fails to load anyway is invalidated by
-    /// <see cref="MarkDamaged"/>, so it cannot keep winning Continue.
+    /// <see cref="MarkDamaged"/>, so it cannot keep winning Continue. Invalidation is reversible: the
+    /// sidecar is set aside rather than deleted, and <see cref="RestoreDamaged"/> puts it back while it
+    /// still describes the save.
     /// </para>
     /// Not thread-safe; the client drives one store from one thread.
     /// </summary>
@@ -62,6 +65,7 @@ namespace TacticalDirector.ClientApp
         private const string SIDECAR_EXTENSION = ".slot";
         private const string TEMP_SUFFIX = ".tmp";
         private const string BACKUP_SUFFIX = ".bak";
+        private const string DAMAGED_SUFFIX = ".damaged";
 
         // Every format gate a client-written save passes on load besides the outer
         // SEASON_SAVE_FORMAT_VERSION: the eight mandatory sub-blobs and the world snapshot nested in the
@@ -202,16 +206,17 @@ namespace TacticalDirector.ClientApp
             string saveBackup = savePath + BACKUP_SUFFIX;
             string sidecarPath = SidecarPath(slot);
             string sidecarTemp = sidecarPath + TEMP_SUFFIX;
+            string sidecarBackup = sidecarPath + BACKUP_SUFFIX;
             try
             {
                 // Everything that can fail on content is done before a destination is touched.
                 SeasonSaveManager.Save(loop, null, saveTemp);
-                File.WriteAllText(sidecarTemp, FormatSidecar(in summary, DigestOf(saveTemp)), SidecarEncoding);
+                WriteDurably(sidecarTemp, FormatSidecar(in summary, DigestOf(saveTemp)));
 
+                // Backups left by an interrupted earlier write belong to the pair this write replaces.
                 bool hadSave = File.Exists(savePath);
                 if (hadSave)
                 {
-                    // A backup left by an interrupted earlier write belongs to a pair already replaced.
                     DeleteIfPresent(saveBackup);
                     File.Replace(saveTemp, savePath, saveBackup);
                 }
@@ -222,15 +227,26 @@ namespace TacticalDirector.ClientApp
 
                 try
                 {
-                    SwapIn(sidecarTemp, sidecarPath);
+                    if (File.Exists(sidecarPath))
+                    {
+                        DeleteIfPresent(sidecarBackup);
+                        File.Replace(sidecarTemp, sidecarPath, sidecarBackup);
+                    }
+                    else
+                    {
+                        File.Move(sidecarTemp, sidecarPath);
+                    }
                 }
                 catch
                 {
-                    RestorePreviousSave(hadSave, saveBackup, savePath);
+                    RestorePreviousPair(hadSave, saveBackup, savePath, sidecarBackup, sidecarPath);
                     throw;
                 }
 
                 DeleteIfPresent(saveBackup);
+                DeleteIfPresent(sidecarBackup);
+                // A sidecar set aside by MarkDamaged described the save this write just replaced.
+                DeleteIfPresent(DamagedSidecarPath(slot));
             }
             finally
             {
@@ -244,16 +260,56 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>
         /// Invalidates <paramref name="slot"/> after its save failed to load, so it reads as
-        /// <see cref="CareerSlotState.Damaged"/> and Continue moves on to the next loadable slot. The
-        /// save bytes are kept (only the sidecar is removed); the slot is freely overwritten. Best
-        /// effort: false when the sidecar could not be removed.
+        /// <see cref="CareerSlotState.Damaged"/> and Continue moves on to the next loadable slot. Nothing
+        /// is deleted: the save bytes stay, and the sidecar is set aside so that
+        /// <see cref="RestoreDamaged"/> can undo this (a load can fail on this build's code rather than
+        /// on the file). The slot is freely overwritten. Best effort: false when the sidecar could not
+        /// be set aside.
         /// </summary>
         public bool MarkDamaged(CareerSaveSlot slot)
         {
             RequireSlot(slot);
             try
             {
-                DeleteIfPresent(SidecarPath(slot));
+                string sidecarPath = SidecarPath(slot);
+                if (File.Exists(sidecarPath))
+                {
+                    SwapIn(sidecarPath, DamagedSidecarPath(slot));
+                }
+
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Undoes <see cref="MarkDamaged"/>: puts the set-aside sidecar back, so the slot reads as it did
+        /// before it was invalidated. Only while that sidecar still describes the save byte for byte
+        /// (its recorded digest) and the slot has not been written since. Best effort: false when there
+        /// is nothing to restore, it no longer matches, or the files could not be read or moved.
+        /// </summary>
+        public bool RestoreDamaged(CareerSaveSlot slot)
+        {
+            RequireSlot(slot);
+            string savePath = SavePath(slot);
+            string sidecarPath = SidecarPath(slot);
+            string damagedPath = DamagedSidecarPath(slot);
+            try
+            {
+                if (File.Exists(sidecarPath) || !File.Exists(savePath)
+                    || !SidecarDescribes(slot, damagedPath, DigestOf(savePath)))
+                {
+                    return false;
+                }
+
+                File.Move(damagedPath, sidecarPath);
                 return true;
             }
             catch (IOException)
@@ -286,6 +342,8 @@ namespace TacticalDirector.ClientApp
 
         private string SidecarPath(CareerSaveSlot slot) => Path.Combine(_directory, FileStem(slot) + SIDECAR_EXTENSION);
 
+        private string DamagedSidecarPath(CareerSaveSlot slot) => SidecarPath(slot) + DAMAGED_SUFFIX;
+
         private static string FileStem(CareerSaveSlot slot) =>
             slot == CareerSaveSlot.Autosave
                 ? "autosave"
@@ -297,15 +355,17 @@ namespace TacticalDirector.ClientApp
             for (int i = 0; i < SlotCount; i++)
             {
                 var slot = (CareerSaveSlot)i;
-                string sidecarPath = SidecarPath(slot);
-                if (File.Exists(sidecarPath) && TryReadSidecar(slot, sidecarPath, out CareerSlotSummary row) && row.Sequence > max)
-                {
-                    max = row.Sequence;
-                }
+                // A set-aside sidecar counts too: RestoreDamaged may bring it back, and its sequence
+                // must not then tie with one handed out meanwhile.
+                max = Math.Max(max, SequenceIn(slot, SidecarPath(slot)));
+                max = Math.Max(max, SequenceIn(slot, DamagedSidecarPath(slot)));
             }
 
             return max + 1;
         }
+
+        private static long SequenceIn(CareerSaveSlot slot, string sidecarPath) =>
+            File.Exists(sidecarPath) && TryReadSidecar(slot, sidecarPath, out CareerSlotSummary row) ? row.Sequence : 0;
 
         private static void SwapIn(string tempPath, string destinationPath)
         {
@@ -330,10 +390,11 @@ namespace TacticalDirector.ClientApp
             string saveBackup = savePath + BACKUP_SUFFIX;
             string sidecarPath = SidecarPath(slot);
             string sidecarTemp = sidecarPath + TEMP_SUFFIX;
+            string sidecarBackup = sidecarPath + BACKUP_SUFFIX;
             // SeasonSaveManager.Save stages its own atomic write beside the path it is given.
             string managerTemp = saveTemp + TEMP_SUFFIX;
             if (!File.Exists(saveTemp) && !File.Exists(managerTemp) && !File.Exists(sidecarTemp)
-                && !File.Exists(saveBackup))
+                && !File.Exists(saveBackup) && !File.Exists(sidecarBackup))
             {
                 return;
             }
@@ -350,14 +411,24 @@ namespace TacticalDirector.ClientApp
                     // The save swap landed and the sidecar swap did not: finish the write.
                     SwapIn(sidecarTemp, sidecarPath);
                     DeleteIfPresent(saveBackup);
+                    DeleteIfPresent(sidecarBackup);
                     return;
                 }
 
                 // A staged sidecar read in full that does not describe the live save is never needed again.
                 DeleteIfPresent(sidecarTemp);
+
+                // A sidecar swap that stopped after moving the previous sidecar aside left it only as
+                // the backup.
+                if (!File.Exists(sidecarPath) && File.Exists(sidecarBackup))
+                {
+                    File.Move(sidecarBackup, sidecarPath);
+                }
+
                 if (liveDigest != null && SidecarDescribes(slot, sidecarPath, liveDigest))
                 {
                     DeleteIfPresent(saveBackup);
+                    DeleteIfPresent(sidecarBackup);
                     return;
                 }
 
@@ -365,9 +436,11 @@ namespace TacticalDirector.ClientApp
                 {
                     // The new save swapped in but its sidecar was lost: put the previous pair back.
                     SwapIn(saveBackup, savePath);
+                    DeleteIfPresent(sidecarBackup);
                 }
 
-                // Otherwise nothing pairs: any backup is kept on disk and the slot reads as Damaged.
+                // Otherwise nothing pairs and the slot reads as Damaged. Any backup stays on disk until
+                // the slot is next written, which replaces the whole slot.
             }
             catch (IOException)
             {
@@ -399,10 +472,13 @@ namespace TacticalDirector.ClientApp
             }
         }
 
-        // Puts the previous save back after its sidecar could not be swapped in, so the slot stays a
-        // matching pair. The sidecar's own failure is the one reported; if this restore fails too, the
-        // backup stays on disk rather than being deleted.
-        private static void RestorePreviousSave(bool hadSave, string saveBackup, string savePath)
+        // Puts the previous pair back after the new sidecar could not be swapped in. The save comes back
+        // from its backup; the sidecar comes back from its backup only if the failed replace left it
+        // under that name alone (File.Replace can fail after renaming the replaced file). The sidecar
+        // swap's own failure is the one reported; if a restore fails too, its backup stays on disk for
+        // recovery at the next open rather than being deleted.
+        private static void RestorePreviousPair(
+            bool hadSave, string saveBackup, string savePath, string sidecarBackup, string sidecarPath)
         {
             try
             {
@@ -420,6 +496,32 @@ namespace TacticalDirector.ClientApp
             }
             catch (UnauthorizedAccessException)
             {
+            }
+
+            try
+            {
+                if (!File.Exists(sidecarPath) && File.Exists(sidecarBackup))
+                {
+                    File.Move(sidecarBackup, sidecarPath);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        // Flushed to disk before it is swapped in, as SeasonSaveManager flushes the save (§4.6.1.1): a
+        // sidecar renamed into place must not come back empty after a power loss.
+        private static void WriteDurably(string path, string text)
+        {
+            byte[] bytes = SidecarEncoding.GetBytes(text);
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush(flushToDisk: true);
             }
         }
 
@@ -579,4 +681,9 @@ namespace TacticalDirector.ClientApp
 // | 1.4     | 2026-10-27 | —      | PR 519 review 3: recovery's sidecar reads propagate IO errors, |
 // |         |            |        | so a locked staged sidecar aborts recovery instead of being    |
 // |         |            |        | deleted; parsing split out of TryReadSidecar (TryParseSidecar). |
+// | 1.5     | 2026-10-27 | —      | PR 519 review 4: MarkDamaged sets the sidecar aside (.damaged) |
+// |         |            |        | and RestoreDamaged puts it back while its digest matches;      |
+// |         |            |        | NextSequence counts set-aside sidecars; the sidecar swap keeps |
+// |         |            |        | a backup, restored on failure and by recovery; the sidecar is  |
+// |         |            |        | flushed to disk before it is swapped in.                       |
 #endregion
