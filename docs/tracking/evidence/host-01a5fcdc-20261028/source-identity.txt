@@ -1,0 +1,23 @@
+# Source identity — pinned-host Unity run at 01a5fcdc (PR #520 head after merging main)
+# Section 1 was captured BEFORE the compile; section 2 after both test runs, before this directory was written.
+
+## 1. Before compile
+commit: 01a5fcdc113591c4cc8f3a584ee23801f0b8a507
+tree repo: bc7de7e7143189060dae0a38b86b0723584bd1d0
+tree src: 13f5ff07544c0122548e2b501b49aac640d215a6
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain (src Packages ProjectSettings, untracked+ignored):
+  (end)
+Library present: no (deleted, so the compile is a full import)
+captured: 2026-10-28T17:25:28Z
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src
+
+## 2. After the test runs
+commit: 01a5fcdc113591c4cc8f3a584ee23801f0b8a507
+tree src: 13f5ff07544c0122548e2b501b49aac640d215a6
+porcelain (src Packages ProjectSettings, untracked+ignored):
+  (end)
+captured: 2026-10-28T17:35:53Z
