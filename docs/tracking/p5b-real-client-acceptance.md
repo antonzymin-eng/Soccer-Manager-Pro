@@ -1,8 +1,8 @@
 # P5b real-client acceptance, B8/B10 render-loop capture and S0 Gate J — pinned host
 
 **Created:** October 19, 2026\
-**Last Updated:** October 22, 2026\
-**Version:** 0.2\
+**Last Updated:** October 28, 2026\
+**Version:** 0.3\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -16,7 +16,8 @@ Still due: the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, 
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
 [p5b-screens-validation.md](p5b-screens-validation.md) §"Acceptance matrix" (v0.14) for everything recorded here.\
 **Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
-[`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes).
+[`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
+[`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8).
 
 ## 1. Identity, host and method
 
@@ -166,6 +167,21 @@ J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q
 
 Owner acceptance stays a separate decision.
 
+## 8. Merge-readiness Unity compile at `963f48ee` (v0.3)
+
+The last Unity compile on this branch ran on `37ca536` plus the uncommitted J-01/J-02/J-04 changes. The branch then
+gained `14b43e8` (a test's expected role count) and the merge of main that brought in #519's C3/C4 career shell.
+#519 landed without a Unity compile, so the combined tree had not been built in Unity.
+
+On October 28 the head `963f48ee` was built on the pinned host from a fresh worktree with an empty `Library`:
+`Tundra build success`, 0 `error CS`, all 75 `src` assemblies, and three warnings, none in #519's or this branch's
+files. The EditMode run of `TacticalDirector.ClientApp.Tests`, `TacticalDirector.UiFramework.Tests` and
+`TacticalDirector.MatchClientCore.Tests` passed 423 of 423 (181 / 52 / 190), with 0 failed and 0 skipped. Evidence:
+[`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md).
+
+This clears the Unity-compile condition for merging. It does not change the §7 verdict: the B8/B10 re-capture, the
+clean I-Q15 pass, the owner's wording approval and J-05 still gate Gate J.
+
 
 ## Version History
 
@@ -173,3 +189,4 @@ Owner acceptance stays a separate decision.
 | --- | --- | --- |
 | 0.1 | October 19, 2026 | First real-client run of I-Q01–19, B8/B10 render-loop capture against the owner budget, J-03 fix verified, Gate-J technical verdict FAIL on J-01/J-02 with owner items J-04/J-05. |
 | 0.2 | October 22, 2026 | Owner decisions of October 20 implemented and host-verified (§6): J-01 greyed keeper pairs with reasons, J-02 typed refusal rows, J-04 H v0.2 skin with whole-pitch view and statistics in the rail; narrow-width team-label fix found by the I-Q16 rerun. Verdict CONDITIONAL PASS pending the B8/B10 re-capture, one clean I-Q15 pass, owner copy approval and acceptance. |
+| 0.3 | October 28, 2026 | §8: merge-readiness Unity compile of head `963f48ee`, the first Unity build with #519 merged in. Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 423/423 passed. Evidence `host-963f48ee-20261028/`. Gate-J verdict unchanged (CONDITIONAL PASS). |
