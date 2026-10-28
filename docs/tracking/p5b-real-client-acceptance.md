@@ -2,15 +2,15 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 28, 2026\
-**Version:** 0.7\
+**Version:** 0.8\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
 - **J-02 FIXED:** a refusal names its engine-typed reason; the button is kept.
-- **J-04 FIXED:** H v0.2 skin, whole-pitch view, statistics in the rail.
+- **J-04 FIXED and ACCEPTED:** H v0.2 skin, whole-pitch view, statistics in the rail; the owner accepted the visuals on October 28 (§12, v0.8).
 - **J-05:** separate PR #520.
 
-Still due: the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, the owner's visual acceptance and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
+Still due: the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
 **S0 Gate J technical verdict: CONDITIONAL PASS** (§7; the v0.1 FAIL is kept in §5).\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
@@ -163,7 +163,7 @@ J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q
 **Verdict: CONDITIONAL PASS.** Gate J can pass when all of these hold:
 - B8/B10 are re-captured on this skin within the 16.7 ms p99 budget;
 - one uninterrupted I-Q15 run passes;
-- the owner accepts the visuals (the new wording was approved on October 28, v0.4);
+- ~~the owner accepts the visuals~~ — **done October 28** (J-04 visuals accepted, §12, v0.8; the new wording was approved the same day, v0.4);
 - J-05 lands, or its re-measure is accepted.
 
 Owner acceptance stays a separate decision.
@@ -289,6 +289,17 @@ matrix was not re-run. The match in this run ended 12–12; the engine's high go
 
 The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-capture, one clean I-Q15 pass and J-05.
 
+## 12. Owner visual acceptance of J-04 (v0.8)
+
+After reviewing the screenshots of §§9–11 (statistics rail, one-title disclosures, the report's partial-statistics
+disclosure and the pop-ups' Close control), the owner replied “Accept J-04” on October 28, 2026 (recorded 22:27 UTC, 15:27 America/Los_Angeles).
+The J-04 visuals are accepted as shipped at `2887ec10` (`S0ScreensBehaviour` v1.11, `S0ScreenContent` v1.6, 151 roles).
+
+This discharges the visual-acceptance condition of §7. No code, copy or evidence changes here. The Gate-J verdict
+stays **CONDITIONAL PASS** until the remaining conditions hold: the B8/B10 re-capture on this skin, one uninterrupted
+I-Q15 pass, and J-05 (PR #520) landing or its re-measure being accepted. Gate-J acceptance itself remains the owner's
+separate decision. Not re-run since the last visual changes: the I-Q16 text-scale and resolution matrix.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -300,3 +311,4 @@ The owner's visual acceptance of J-04 is still due, together with the B8/B10 re-
 | 0.5 | October 28, 2026 | §9: the two points from the owner's J-04 screenshot review fixed in `S0ScreensBehaviour` v1.9 (no repeated "Match statistics"; whole statistics panel visible at 1920×1080). Unity compile clean; host captures pass. Evidence `p5b-j04-statsfix-20261028/`. Visual acceptance still due; Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.6 | October 28, 2026 | §10: owner decision that a control opening content keeps one title. The statistics, earlier-feedback and Compare toggles now show ▸/▾ on one title (`S0ScreensBehaviour` v1.10); the separate Open/Close statistics button is gone. Unity compile clean; host rerun 19/19 PASS after a Compare-label fix. The report partial-statistics toggle and the two dialog buttons await the owner's answer. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.7 | October 28, 2026 | §11: owner decisions on the two §10 questions. The report toggle is the one-title disclosure "Partial statistics — incomplete" with ▸/▾; pop-ups get a "✕ Close" control and close on an outside click (`S0ScreensBehaviour` v1.11, `S0ScreenContent` v1.6, 151 roles). Host probe 27/27 PASS. Gate-J verdict unchanged (CONDITIONAL PASS). |
+| 0.8 | October 28, 2026 | §12: the owner accepted the J-04 visuals (“Accept J-04”) as shipped at `2887ec10`; the §7 visual-acceptance condition is met. No code, copy or evidence change. Gate-J verdict unchanged (CONDITIONAL PASS): B8/B10 re-capture, one clean I-Q15 pass and J-05 remain. |
