@@ -14,8 +14,7 @@ Editor and the `SMP-p5b-host` checkout were not used.\
 | --- | --- |
 | `compile.txt` | Batch-mode compile of the changed tree before the probe harness was added: `Tundra build success`, 0 `error CS`, the two existing `GetInstanceID` warnings. |
 | `probe-log.txt` | The probe run at a 1920×1080 Game view, 100% text: boot checks, the loaded content hash (equal to the canonical 150-role hash), the J-01 keeper swap, and the `STATSFIT` geometry line and three checks for each capture. |
-| `fix-live-statistics.png` | Match View right after kick-off with statistics opened. |
-| `fix-statistics-after-sub.png` | Match View after one Applied substitution (one feedback row in the changes panel) with statistics opened. |
+| `shots-statsfix.tar` | The two captures, packed in a plain `.tar` because `*.png` is LFS-tracked and the evidence job checks out without LFS: `fix-live-statistics.png` (Match View right after kick-off with statistics opened) and `fix-statistics-after-sub.png` (Match View after one Applied substitution, one feedback row in the changes panel, with statistics opened). |
 | `probe-source/` | `S0HostStatsFix.cs` (this run), plus `S0HostChannel.cs` and `S0HostCapture.cs`, which the earlier evidence did not archive. The other harness files are identical to `../p5b-gate-j-fixes-20261021/probe-source/` apart from the output folder. |
 
 **Result.** Both captures PASS all three checks: the whole statistics panel lies inside the viewport, its toggle is
@@ -34,3 +33,4 @@ asset, scene or setting was modified.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | October 28, 2026 | Initial evidence set for the J-04 statistics-rail fix. |
+| 1.1 | October 28, 2026 | The two `.png` captures are packed into `shots-statsfix.tar` (contents byte-identical) so `SHA256SUMS` verifies on the LFS-free CI checkout. |
