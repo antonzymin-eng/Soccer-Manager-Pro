@@ -1,6 +1,6 @@
 # Path to Playable — Implementation Roadmap
 
-> **October 28 — host evidence scope (v0.77, awaits owner ratification):** per-PR pinned-host evidence is graded in §5.1 (D-01a, *Host evidence scope per PR*): a Unity compile on every source-affecting final head, EditMode filtered to the changed assemblies, whole-MatchEngine EditMode only for engine behaviour/layout changes. It is not a broad EditMode run on every PR.
+> **October 28 — host evidence scope (v0.77, owner-ratified October 28, 2026):** per-PR pinned-host evidence is graded in §5.1 (D-01a, *Host evidence scope per PR*): a Unity compile on every source-affecting final head, EditMode filtered to the changed assemblies, whole-MatchEngine EditMode only for engine behaviour/layout changes. It is not a broad EditMode run on every PR.
 
 > **October 19 — C3/C4 host-free career shell (v0.76):** **C3/C4 host-free career shell landed on `feat/c3-c4-career-shell` (not yet merged).** `interactive-unity-client-design.md` v0.30 §5-P7 is the roadmap §6 item 2 governance and records the owner's October 18 product decisions: club-only new game, autosave + 3 manual slots with direct Continue, day-granular progress, no mandatory blockers, and **D-10: saves are breakable through PM-3** (#50 stays parked). `client-app` gains three career screens, eight guarded career moves, `CareerProgress`, `CareerSession`, `CareerSaveSlots`, `SeasonCommandDispatcher` and the Career Home / New Career / Load Career sources; `ui-framework` gains ERR-038-005 (`IntentKind` 4–6, `IntentRouting`). No sim reach. Remaining: P7b UGUI binding and pinned-host compile, the #30 interactive managed-fixture seam (D-P7-6), S1 Gates B–I.
 
@@ -332,7 +332,7 @@ one host session, but retain evidence at **each PR's actual final head**; a comb
 later `main` build does not certify untested heads. Substitutions, test repairs, P5b changes, C3/C4,
 W8 B/C, W9 and W10 all enter this queue.
 
-**Host evidence scope per PR (clarified October 28, 2026, v0.77; owner ratification pending).** The
+**Host evidence scope per PR (clarified October 28, 2026, v0.77; ratified by Anton Zymin October 28, 2026).** The
 words "compile/test" and "applicable evidence" had been read as a broad EditMode run on every final
 head. That can cost hours per PR: the MatchEngine `shot_speed` scenario took 39 m 29 s in Unity
 against 12 m 14 s on Linux (`evidence/host-matchengine-editmode-20261011/`), and the Linux PR gate
@@ -398,7 +398,7 @@ the owning document and link it here before the blocked landing/capture/closeout
 
 | ID | Decision / decision owner | Blocking deadline | Record owner |
 |---|---|---|---|
-| D-01a | Anton: ratify/adjust the interim operational host queue | **RATIFIED October 10, 2026** by Anton Zymin, as written in the queue paragraph above; the host-evidence scope paragraph (v0.77, October 28, 2026) **awaits owner ratification** | This roadmap and host bookings/evidence; scheduling does not amend #19/#20 |
+| D-01a | Anton: ratify/adjust the interim operational host queue | **RATIFIED October 10, 2026** by Anton Zymin, as written in the queue paragraph above; the host-evidence scope paragraph (v0.77) **RATIFIED October 28, 2026** by Anton Zymin, as written | This roadmap and host bookings/evidence; scheduling does not amend #19/#20 |
 | D-01b | Anton: optional licensed Unity CI posture | **No blocking deadline:** repairs and subsequent landings continue on the pinned host | CI licensing/cost/governance record linked here; final-head compile requirement alone belongs in the owning spec |
 | D-02 | Anton: explicit sign-off on proposed #19/#20 normative amendments | Before step 3 normative amendments land | Owning spec approval/version records |
 | D-03 | Anton: `Recovering` claim/save eligibility; no cooldown tuning by this decision | **DECIDED October 10, 2026:** a `Recovering` keeper stays unable to claim, rush or dive (option A); cause-split is a D-08 candidate after W8 B | #11 Section 3 v0.19 §3.1.1 note and the open Recovering issue |
@@ -743,7 +743,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
-| v0.77 | October 28, 2026 | §5.1 D-01a: per-PR host evidence is graded rather than a broad EditMode run — compile on every source-affecting head; EditMode filtered to changed assemblies plus Unity-sensitive suites; whole MatchEngine only for behaviour/layout changes or engine-evidence windows; no host run when the source trees match an evidenced head. Full EditMode once per host cycle on `main`. Awaits owner ratification. Sequencing/operations only; no spec change. |
+| v0.77 | October 28, 2026 | §5.1 D-01a: per-PR host evidence is graded rather than a broad EditMode run — compile on every source-affecting head; EditMode filtered to changed assemblies plus Unity-sensitive suites; whole MatchEngine only for behaviour/layout changes or engine-evidence windows; no host run when the source trees match an evidenced head. Full EditMode once per host cycle on `main`. Ratified by Anton Zymin October 28, 2026. Sequencing/operations only; no spec change. |
 | v0.76 | October 19, 2026 | C3/C4 governance and host-free career shell on `feat/c3-c4-career-shell`; D6/D-10 decided (saves breakable through PM-3). C3, C4 ◑; D6 ✅. |
 | v0.75 | October 18, 2026 | §5.1 specification gates: the #3 FR-03 `AgentPosition` line was stale, because `ERR-003-009` landed it October 10. It is now recorded as closed, with `ERR-003-010` completing §4.2.4/§4.5.1/§8.3. Sequencing only. |
 | v0.74 | October 18, 2026 | PR #515 merged 1a3b4271; D-07 landed. Six-seed census: 0 D-07 free kicks, all six B digests unchanged. Avoidance residual filed in open-issues. |
