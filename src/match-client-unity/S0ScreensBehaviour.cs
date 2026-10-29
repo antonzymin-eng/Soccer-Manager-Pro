@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
-// Modified (prior): 2026-10-28 (owner decision: in-place disclosures keep one title with a ▸/▾ glyph; statistics title is the toggle)
+// Modified: 2026-10-29 (PR #518 owner report: one fixed-height playback reason, so Faster never resizes the pitch)
+// Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -66,7 +66,7 @@ namespace TacticalDirector.MatchClientUnity
         private ScrollRect _menuScroll, _setupScroll, _matchScroll, _reportScroll, _dialogScroll;
         private Selectable _menuHeading, _setupHeading, _matchHeading, _reportHeading, _dialogHeading;
         private Button _pause, _slower, _faster, _mentality, _substitution, _statisticsToggle, _report, _partialToggle, _earlierToggle;
-        private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _controlReason, _slowerReason, _fasterReason, _mentalityReason, _substitutionReason;
+        private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _mentalityReason, _substitutionReason;
         private Text _notice, _caption, _reportScore, _reportResult, _reportNotice, _reportCaption, _dialogCurrent, _choiceNotice;
         private RectTransform _reportFeedback, _matchFeedback;
         private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot, _statisticsPanel;
@@ -82,6 +82,7 @@ namespace TacticalDirector.MatchClientUnity
         private RawImage _pitch;
         private RectTransform _pitchBounds;
         private S0PitchLayout _pitchLayout;
+        private S0ReservedReason _playbackReason;
         private bool _pitchLayoutDirty = true;
         private int _screenWidth, _screenHeight;
         private float _measuredWidth;
@@ -277,9 +278,10 @@ namespace TacticalDirector.MatchClientUnity
                 if (!_view.CanFaster)
                     Focus(_pause);
             }, _matchScroll);
-            _slowerReason = _ui.Reason(parent);
-            _fasterReason = _ui.Reason(parent);
-            _controlReason = _ui.Reason(parent);
+            // One box for the four playback reasons, which never apply together. It keeps the tallest one's height
+            // even while empty: the pitch is sized from the height left on the page, so a reason appearing at
+            // real time or top speed must not move it.
+            _playbackReason = _ui.ReservedReason(parent, L("reason.waiting"), L("reason.ended"), L("reason.slowest"), L("reason.fastest"));
             _ui.Label(parent, L("context.speed_steps"), S0UiFactory.TextStyle.Secondary);
             RectTransform body = _ui.Node("Match body", parent);
             var bodyLayout = body.gameObject.AddComponent<S0BodyLayout>();
@@ -642,9 +644,7 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.Set(_current, current);
             S0UiFactory.Set(_scoreMentality, _view.Frame.IsEmpty ? "" : current);
             S0UiFactory.Set(_used, _view.SubstitutionsUsed);
-            S0UiFactory.SetBoxed(_controlReason, _view.ControlReason);
-            S0UiFactory.SetBoxed(_slowerReason, _view.SlowerReason);
-            S0UiFactory.SetBoxed(_fasterReason, _view.FasterReason);
+            _playbackReason.Set(_view.ControlReason.Length > 0 ? _view.ControlReason : _view.SlowerReason.Length > 0 ? _view.SlowerReason : _view.FasterReason);
             S0UiFactory.SetBoxed(_mentalityReason, _view.MentalityReason);
             S0UiFactory.SetBoxed(_substitutionReason, _view.SubstitutionReasonText);
             _slower.interactable = _view.CanSlower;
@@ -1328,4 +1328,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.9     | 2026-10-28 | —      | J-04 owner review: the rail statistics caption shows only for a partial cutoff (the panel heading already says "Match statistics"); rail table rows abut with no extra spacing; opening statistics scrolls the page just enough to show the whole panel, keeping its toggle in view. |
 // | 1.10    | 2026-10-28 | —      | Owner decision (October 28): a control that opens or closes content in place keeps one title with a ▸/▾ glyph (covered substitute when the font lacks it). The "Match statistics" title is the statistics toggle, replacing the separate Open/Close statistics button and its heading; the plain heading returns only at full time, when the toggle is hidden. "Earlier change feedback (N)" and "Compare all seven Mentalities" show the same glyph. Labels are composed at build, or when the earlier count or state changes. |
 // | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
+// | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 #endregion

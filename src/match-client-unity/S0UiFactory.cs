@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0UiFactory.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-04: H v0.2 panels, control chrome, reason boxes and borders)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-29 (PR #518 owner report: fixed-height reason box for the playback reasons)
+// Modified (prior): 2026-10-21 (Gate J J-04: H v0.2 panels, control chrome, reason boxes and borders)
 // Author:   —
 // Spec:     S0 binding contracts §3, H v0.2 reference (docs/design/s0-high-fidelity/prototype.css),
 //           Code Standards #20
@@ -218,6 +218,21 @@ namespace TacticalDirector.MatchClientUnity
             return text;
         }
 
+        /// <summary>
+        /// A <see cref="Reason"/> box that is always laid out at the height of its tallest
+        /// <paramref name="candidates"/> text and only blanks while empty (<see cref="S0ReservedReason"/>).
+        /// </summary>
+        internal S0ReservedReason ReservedReason(Transform parent, params string[] candidates)
+        {
+            Text text = Reason(parent);
+            GameObject box = text.transform.parent.gameObject;
+            var reserved = text.gameObject.AddComponent<S0ReservedReason>();
+            reserved.Bind(text, candidates, box.GetComponentsInChildren<Image>(true));
+            box.SetActive(true);
+            reserved.Set("");
+            return reserved;
+        }
+
         /// <summary>A fixed-width accent bar as the first child of a row.</summary>
         internal Image Bar(Transform row, Color color)
         {
@@ -363,4 +378,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.0     | 2026-10-08 | —      | Persistent wrapped/scrolled neutral UGUI construction. |
 // | 1.1     | 2026-10-08 | —      | Retain button text references at construction instead of repeated component searches. |
 // | 1.2     | 2026-10-21 | —      | Gate J J-04: H v0.2 skin — navy page with centred max-width column, bordered panels with optional blue rule, raised/primary control chrome with dashed unavailable borders and gold selection (S0ControlSkin), reason/warning boxes hidden while empty, text style scale, generated pixel-perfect border sprites. |
+// | 1.3     | 2026-10-29 | —      | PR #518 owner report: `ReservedReason` builds a reason box that keeps the height of its tallest candidate text and blanks while empty, so a reason appearing never moves the content below it. |
 #endregion
