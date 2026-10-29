@@ -693,9 +693,11 @@ silently frozen at commit for up to a full windup.
 If Rejected/Cancelled occurs while the same keeper still owns controlled possession, the host clears
 only the distribution intent and leaves #11 in `HandsOnBall` with the original claim clock; a new
 intent may be attempted no earlier than a later 10 Hz tactical heartbeat **and only when #11 §3.8.4's
-retry predicate passes: `candidateContactFrame = currentFrame + WindupFrames + 1 ≤
+retry predicate passes: `candidateContactFrame = currentFrame + WindupFrames ≤
 handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES` (480 frames @ 60 Hz, `[CROSS]` #11 §3.8.5),
-i.e. candidate CONTACT at elapsed ≤ 480** (ERR-005-003, ERR-011-021). The retired six-second
+i.e. candidate CONTACT at elapsed ≤ 480** (ERR-005-003, ERR-011-021). `currentFrame` is the AI-phase
+commit frame; the executor's first windup decrement runs in Resolve of that same frame, so CONTACT
+lands on `currentFrame + WindupFrames` (§3.8.13 item 4). The same predicate gates the first commit. The retired six-second
 no-intent condition and the Match Engine's feet-only 360-frame ground drop no longer budget a hand
 retry. *Specified, not implemented: until the W8 C implementation lands, W8 B code still requires
 candidate CONTACT strictly before both inherited guards (the #11 no-intent boundary and the 360-frame
@@ -759,7 +761,7 @@ Neither flag blocks Section 2. Both flags block Section 3.
 | 1.5 | September 26, 2026 | — | Owner approval: W8 B amendment approved September 26, 2026 as part of the #5/#11/#21 bundle. #5 remains overall DRAFT; B wiring is authorized only after PR #461 merges. The 35 m LongKick target is accepted as an uncalibrated B default, while realistic punt length remains a separate #5 trajectory follow-up. |
 | 1.4 | September 26, 2026 | — | W8 B review closure follow-up: adds an explicit owner-approval gate and makes retained-possession Rejected/Cancelled retries conditional on #11 §3.8.4's live CONTACT-before-both-guards budget. |
 | 1.3 | September 26, 2026 | — | W8 B review closure: pins `TargetPosition` as the commit-time fallback while valid receiver execution re-aims at the receiver's live CONTACT-frame position; defines `Rejected` / `Cancelled` / `Completed` feedback and the exact #11 state/claim-clock consequence for retained-possession versus real possession loss. |
-| 1.6 | October 29, 2026 | — | ERR-005-003 (back-prop of ERR-011-021): §2.4.4 retained-possession retry is now gated by #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) predicate, `candidateContactFrame ≤ handControlStartFrame + 480`, instead of CONTACT strictly before both retired inherited guards. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Feet-possession text unchanged. |
+| 1.6 | October 29, 2026 | — | ERR-005-003 (back-prop of ERR-011-021): §2.4.4 retained-possession retry is now gated by #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) predicate, `candidateContactFrame ≤ handControlStartFrame + 480`, instead of CONTACT strictly before both retired inherited guards. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Feet-possession text unchanged. Review fix: `candidateContactFrame = currentFrame + WindupFrames` (no `+ 1`; CONTACT lands on commit frame + `WindupFrames`, §3.8.13 item 4 and the W8 B test pin), gating the first commit as well as retries. |
 
 ---
 

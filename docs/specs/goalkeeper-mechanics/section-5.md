@@ -214,11 +214,14 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
   an overhang inside `r` still gives the corner. (c) A §3.1.4 DFK on the frame gives the DFK and no
   corner. (d) A successful #5 CONTACT at elapsed 480 is legal and gives no corner; a possession loss
   earlier in the frame gives no corner. (e) Replay and restore of each case reproduce the same outcome.
-- T-5.1.10.13 §3.8.4 retry budget: live configured windups and all six #21 policy delays satisfy the
-  first-attempt bound; a retry reaching CONTACT at elapsed 480 is accepted and one at 481 refused;
-  repeated rejection until the budget closes; and §3.8.4 case (a), a late retained cancellation about
-  294 frames after the claim with the heartbeat at most 6 frames later and an 84-frame windup plus one
-  CONTACT frame, which reaches CONTACT at about elapsed 385 ≤ 480 and is accepted.
+- T-5.1.10.13 §3.8.4 admission/retry budget (`candidateContactFrame = currentFrame + WindupFrames`,
+  CONTACT asserted on exactly that frame): live configured windups and all six #21 policy delays
+  satisfy the first-attempt bound (`210 + 84 = 294 ≤ 480`); a retry reaching CONTACT at elapsed 480
+  is accepted and one at 481 refused (claim 1,000, heartbeat 1,398: `WindupFrames` 82 accepted, 83
+  and the 84-frame Kick refused); repeated rejection until the budget closes; and §3.8.4 case (a), a
+  late retained cancellation about 294 frames after the claim with the heartbeat at most 6 frames
+  later and an 84-frame windup, which reaches CONTACT at about elapsed `294 + 6 + 84 = 384 ≤ 480` and
+  is accepted.
 
 ---
 
@@ -311,4 +314,4 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 9 unit-test families, 11 integration tests, 4 validation scenarios, 7 cross-spec conformance gates | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | September 27, 2026 | ERR-011-018 | T-5.2.11 names the real #12 surface and records what is now locked (baseline read, cooldown) versus still unconsumed (reactive-radius clamp). | spec + code, same commit |
-| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. | W8 C contract v0.5 |
+| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. Review fix: T-5.1.10.13 uses CONTACT = commit frame + `WindupFrames` (no `+ 1`, #11 §3.8.4): first attempt 294, case (a) about 384, boundary pair `WindupFrames` 82 accepted / 83 refused at heartbeat 1,398. | W8 C contract v0.5 |

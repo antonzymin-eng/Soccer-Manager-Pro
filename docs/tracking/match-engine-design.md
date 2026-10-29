@@ -397,8 +397,13 @@ requires adding read/restore seams — parallel to
     frames. The regression set must include an early cancel that can retry, a last-windup-frame
     cancel whose maximum retry would reach about 385 frames and is refused, and repeated rejection
     until the budget closes. Tests must recompute the live configured values. *At C (#11 §3.8.4,
-    ERR-011-021) the hand budget becomes `CONTACT ≤ handControlStartFrame + 480`; the 385-frame
-    retry is then permitted. The B inequalities above describe code until C lands.*
+    ERR-011-021) the hand budget becomes `currentFrame + WindupFrames ≤ handControlStartFrame + 480`,
+    gating the first commit and every retry, with CONTACT counted on commit frame + `WindupFrames`
+    (#5 §3.8.13 item 4; `W8BDistributionTests` pins `ContactFrame == FrameNumber + WindupFrames`):
+    first attempt `210 + 84 = 294` frames (186-frame margin), and the late-cancel retry reaches CONTACT
+    at about `294 + 6 + 84 = 384` and is then permitted. The B figures above (295, 385, `+ 1`) describe
+    W8 B code, whose `DistributionContactFits` keeps `+ 1` as a harmless one-frame margin under its
+    strict guards, until C lands.*
 17. The frozen Stage A six-seed corpus exercised **SlowDown only**. Its A→B rerun therefore measures
     only that policy path. Before B merge, deterministic composed fixtures MUST exercise all six
     policy rows, including receiver and receiverless fallback arms.
@@ -2029,7 +2034,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
-| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. |
+| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. |
 | 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |

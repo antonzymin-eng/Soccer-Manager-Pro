@@ -1509,9 +1509,9 @@ is forbidden because ordinary kicks use the same possession seam.
 - **Completed CONTACT:** clear the intent and enter `Recovering` as normal completion.
 
 A retained-possession retry is **budget-gated, not unconditional**. At the later tactical heartbeat,
-let `candidateContactFrame = currentFrame + candidate.WindupFrames + 1`. The producer may submit the
-new #5 request only when `candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`
-(§3.8.4, ERR-011-021). If it fails, no new #5 request starts; #11 remains `HandsOnBall` and the
+let `candidateContactFrame = currentFrame + candidate.WindupFrames` (`currentFrame` is the AI-phase
+commit frame; §3.8.4). The producer may submit the new #5 request only when
+`candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES` (§3.8.4, ERR-011-021). If it fails, no new #5 request starts; #11 remains `HandsOnBall` and the
 §3.8.5 offence adjudicates the episode at elapsed 481. Repeated rejections are subject to the same
 check on every attempt. *W8 B code, until C lands, instead requires CONTACT strictly before both the
 corrected #11 no-intent boundary and the engine ground-drop boundary.*
@@ -1538,51 +1538,58 @@ distribution. In the atomic Stage-0 model the #5 CONTACT is the hand release, so
 measured to CONTACT: a delivery is legal when CONTACT occurs at elapsed ≤ 480. *Until the C
 implementation lands, W8 B code still budgets against both inherited backstops (CONTACT strictly
 before the corrected #11 no-intent boundary and the 360-frame ground drop); the B inequalities
-`295 < 355 < 360` recorded in v0.13–v0.23 describe that code.*
+`295 < 355 < 360` recorded in v0.13–v0.23 describe that code, whose `DistributionContactFits`
+counts CONTACT at `frame + windup + 1`, a harmless one-frame margin under B's strict guards; the C
+count below has no `+ 1`.*
 
 The maximum policy delay imported from #21 is
 `GK_DIST_MAX_POLICY_DELAY_TICKS = 35` tactical ticks (`[CROSS]`, 10 Hz). The largest allowed live
-windup is Kick `1400 ms = ceil(1400*60/1000) = 84 frames`. CONTACT occurs on the executor update
-after windup reaches zero, so budget one additional frame.
+windup is Kick `1400 ms = ceil(1400*60/1000) = 84 frames`. The producer commits in the AI phase of
+frame `F`, and the #5 executor's first windup decrement runs in Resolve of that **same** frame; after
+`WindupFrames` decrements (frames `F … F + WindupFrames − 1`) CONTACT occurs on the next executor
+update, frame `F + WindupFrames` (#5 §3.8.13 item 4; pinned by W8 B's
+`W8BDistributionTests` `feedback.ContactFrame == request.FrameNumber + request.WindupFrames`). No
+extra CONTACT frame is budgeted (B's `+ 1` above is B code only).
 
 Worst-case claim-to-CONTACT budget (first attempt):
 
 ```
 policy wait   = 35 ticks * 6 frames/tick = 210 frames   // upper bound: claimTick = floor(claimFrame/6)
-max windup    = 84 frames
-CONTACT step  = 1 frame
-total         = 295 frames ≤ 480                         // 185-frame margin
+max windup    = 84 frames                                // CONTACT on commitFrame + 84
+total         = 294 frames ≤ 480                         // 186-frame margin
 ```
 
 The policy wait cannot exceed `6·D` frames after the claim frame, because the commit heartbeat is
 tactical tick `claimTick + D` (or `releaseTickEarliest = claimTick + 1` when `D = 0`) and
-`6·claimTick ≤ claimFrame`. The 295-frame figure is the first-attempt bound only; retries use the
-predicate below.
+`6·claimTick ≤ claimFrame`. The 294-frame figure is the first-attempt bound only; retries use the
+predicate below, which also gates the first commit.
 
-**Retry predicate.** At a later tactical heartbeat on `currentFrame`, a retained-possession retry
-may submit a new #5 request only when
+**Admission and retry predicate.** At a tactical heartbeat on `currentFrame` (the AI-phase commit
+frame), the first commit and every retained-possession retry may submit a #5 request only when
 
 ```
-candidateContactFrame = currentFrame + candidate.WindupFrames + 1     // frames
+candidateContactFrame = currentFrame + candidate.WindupFrames         // frames @ 60 Hz
 candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES
 ```
 
 Valid inputs: `currentFrame ≥ handControlStartFrame`, `WindupFrames` from the live configured
-delivery windups (§3.4.6), integers in physics frames.
+delivery windups (§3.4.6, 1–84 frames at the current Kick maximum), integers in physics frames.
+The executor's first windup decrement runs in Resolve of `currentFrame`, so CONTACT lands exactly on
+`candidateContactFrame` (#5 §3.8.13 item 4).
 
 **Worked alignment example.** Claim at frame 101 (`claimTick = floor(101/6) = 16`). SlowDown may
 commit when tactical tick reaches 51, at frame 306: 205 frames after the claim. A maximum 84-frame
-Kick windup plus one CONTACT frame reaches frame 391, 290 frames after the claim and 190 frames
+Kick windup reaches CONTACT at frame `306 + 84 = 390`, 289 frames after the claim and 191 frames
 before the legal limit (frame 581 = 101 + 480). The §3.8.5 offence could first apply at frame 582.
 
 **Late-cancellation retry examples.** (a) A cancellation on the last windup frame about
 `210 + 84 = 294` frames after the claim, a heartbeat up to 6 frames later and another maximum
-84-frame windup plus CONTACT reach about `294 + 6 + 84 + 1 = 385` frames: `385 ≤ 480`, so the retry
+84-frame windup reach CONTACT at about `294 + 6 + 84 = 384` frames: `384 ≤ 480`, so the retry
 is **permitted** under C (W8 B code refuses it against its 355/360-frame backstops). (b) Claim at
 frame 1,000; a retained cancellation is followed by the heartbeat at frame 1,398 (elapsed 398). An
-84-frame Kick gives `1,398 + 84 + 1 = 1,483 > 1,480`: **refused**. A candidate with
-`WindupFrames ≤ 81` still fits (`1,398 + 81 + 1 = 1,480`, elapsed 480, legal). If no delivery
-fits and the keeper still holds the ball, §3.8.5 awards the corner on frame 1,481.
+84-frame Kick gives `1,398 + 84 = 1,482 > 1,480`: **refused**. A candidate with
+`WindupFrames ≤ 82` still fits (`1,398 + 82 = 1,480`, elapsed 480, legal; 83 gives 1,481,
+refused). If no delivery fits and the keeper still holds the ball, §3.8.5 awards the corner on frame 1,481.
 
 Regressions must read the **live configured** delivery windup values and all six #21 policy delays,
 recompute the first-attempt inequality, and fail if CONTACT can occur after elapsed 480. They must
@@ -1825,4 +1832,4 @@ standard rebound physics.
 | 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |
 | 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |
 | 0.23 | October 18, 2026 | — | D-07 review fixes: §3.1.4 `distanceOutside` formula; acquisition snap of a legal catch is not a carry, carries sanction only an outward move; a ball overhanging its own goal line (≤ r) is on the line; restart spot clamped onto the pitch; worked examples | PR #515 review |
-| 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. | W8 C contract v0.5 |
+| 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. Review fix: §3.8.3/§3.8.4 candidate CONTACT is `currentFrame + WindupFrames` (no `+ 1`; the executor's first decrement runs in Resolve of the commit frame, #5 §3.8.13 item 4 and the W8 B test pin), the predicate gates the first commit and retries; first-attempt 294 frames (186 margin), alignment example CONTACT at 390, late-cancel (a) 384, (b) `1,398 + 84 = 1,482` refused and `WindupFrames ≤ 82` fits; W8 B `+ 1` kept as a B-code description. | W8 C contract v0.5 |
