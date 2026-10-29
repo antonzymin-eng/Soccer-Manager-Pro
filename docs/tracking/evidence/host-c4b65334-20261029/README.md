@@ -24,11 +24,11 @@ before the compile and after the run. To check: `git rev-parse c4b65334:src` mus
 | `editmode-results.xml.xz` | NUnit 3.5 XML for the EditMode run of `TacticalDirector.ClientApp.Tests`, `TacticalDirector.UiFramework.Tests` and `TacticalDirector.MatchClientCore.Tests`: 424 passed, 0 failed, 0 skipped, 0 inconclusive. |
 | `editmode-summary.txt` | Command, times, per-assembly counts (182 / 52 / 190) and the pre-run build line (0 items updated). |
 | `captures/pitch-sizes-before.txt`, `captures/pitch-sizes-after.txt` | The pitch rectangle and selected speed logged at every step, before (`3061fcd9`) and after (`c4b65334`). |
-| `captures/compare.tar` | `compare-1920x1080.png` and `compare-1366x768.png`: side-by-side sheets, before on the left and after on the right, at 40% scale, labelled with each step's measured pitch size. |
-| `captures/shots-before.tar`, `captures/shots-after.tar` | The full-resolution PNG frames behind the sheets (14 each). |
-
-All images are in plain `.tar` files because `*.png` is LFS-tracked and the evidence job checks out without LFS.
+| `captures/compare-1920x1080.tar`, `captures/compare-1366x768.tar` | `compare-1920x1080.png` and `compare-1366x768.png`, one per archive: side-by-side sheets, before on the left and after on the right, at 40% scale, labelled with each step's measured pitch size. |
+| `captures/shots-before-1366x768.tar`, `captures/shots-before-1920x1080.tar`, `captures/shots-after-1366x768.tar`, `captures/shots-after-1920x1080.tar` | The full-resolution PNG frames behind the sheets (7 per archive; 14 before and 14 after). |
 | `captures/S0SpeedCapture.cs.txt`, `captures/S0CaptureBuild.cs.txt`, `captures/capture_run.ps1.txt`, `captures/runs.txt` | Capture harness source, archived verbatim, and each run's commit and exit codes. |
+
+All images are in plain `.tar` files, each under the 1 MiB binary guard, because `*.png` is LFS-tracked and the evidence job checks out without LFS.
 
 **Measured.** In each player the demo match was started through the real buttons, Faster was stepped from 1× to 10×
 and Slower back to 1×, and the frame was captured after each click.
@@ -63,3 +63,4 @@ identifier are left out of every excerpt.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | October 29, 2026 | Initial evidence set: full-import compile, ClientApp/UiFramework/MatchClientCore EditMode and before/after speed-step captures for the fixed-height playback reason at `c4b65334`. |
+| 1.1 | October 29, 2026 | The image archives are split by resolution so each stays under the 1 MiB un-LFS'd binary guard (`compare.tar` → two, `shots-before.tar` and `shots-after.tar` → two each; contents byte-identical). The note on plain `.tar` files moves below the table. |
