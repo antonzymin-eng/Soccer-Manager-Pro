@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 29, 2026\
-**Version:** 0.10\
+**Version:** 0.11\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -19,7 +19,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 [`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
 [`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
 [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11);
-[`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14).
+[`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14);
+[`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md) (v0.11 Unity compile and EditMode for the §13 fix, §15).
 
 ## 1. Identity, host and method
 
@@ -354,6 +355,20 @@ driver now starts Editor recording for each condition, and that condition was re
 changes. Gate J stays **CONDITIONAL PASS** with one condition left: J-05 (PR #520) lands or its re-measure is
 accepted. Gate-J acceptance remains the owner's separate decision.
 
+## 15. Unity compile and EditMode for the §13 fix at `fbcc3c2f` (v0.11)
+
+§13's presenter fix (`9139701c`) had been verified only on the Linux shim, and §14's host runs used `aa858e97`, which
+predates it. On October 29 the PR head `fbcc3c2f` was built on the pinned host from a fresh worktree with an empty
+`Library`. `fbcc3c2f` is docs-only after `9139701c`; both have `src` tree `3b7981ef`. Result: `Tundra build success`,
+0 `error CS`, all 75 `src` assemblies, and the same three warnings as §8, none in the fix's files. The EditMode run of
+`TacticalDirector.ClientApp.Tests`, `TacticalDirector.UiFramework.Tests` and `TacticalDirector.MatchClientCore.Tests`
+passed 424 of 424 (182 / 52 / 190), with 0 failed and 0 skipped. ClientApp's extra case against §8 is the §13
+regression test `ReopeningSubstitutionAfterCancelGreysNothingBeforeAnOutgoingPick`, which passed under Unity's
+NUnit 3.5. Evidence: [`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md).
+
+This closes §13's "not re-run" note. It does not touch the render loop or the §14 captures. Gate J stays
+**CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance remains the owner's separate decision.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -368,3 +383,4 @@ accepted. Gate-J acceptance remains the owner's separate decision.
 | 0.8 | October 28, 2026 | §12: the owner accepted the J-04 visuals (“Accept J-04”) as shipped at `2887ec10`; the §7 visual-acceptance condition is met. No code, copy or evidence change. Gate-J verdict unchanged (CONDITIONAL PASS): B8/B10 re-capture, one clean I-Q15 pass and J-05 remain. |
 | 0.9 | October 29, 2026 | §13: PR #518 review fix. `S0ScreenPresenter` v1.5 re-derives bench availability when the substitution dialog opens, so a cancelled goalkeeper pick no longer leaves bench choices greyed out on reopen; regression test added (failed before the fix). Linux shim ClientApp 182/182; the pinned-host Unity run is not repeated. Verdict unchanged. |
 | 0.10 | October 29, 2026 | §14: B8/B10 re-captured on the H v0.2 skin (8/8 within budget, worst p99 10.41 ms), one uninterrupted I-Q15 pass (37/37) and the I-Q16 matrix (95 samples, 0 problems) at `aa858e97`. Evidence `p5b-gatej-recapture-20261029/`. The §7 B8/B10 and I-Q15 conditions are met; Gate-J verdict CONDITIONAL PASS with J-05 remaining. |
+| 0.11 | October 29, 2026 | §15: pinned-host Unity compile and EditMode for the §13 fix at head `fbcc3c2f` (same `src` tree as `9139701c`). Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 424/424 passed, including the §13 regression test. Evidence `host-fbcc3c2f-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
