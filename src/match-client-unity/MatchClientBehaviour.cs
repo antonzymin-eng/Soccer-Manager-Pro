@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-10-08 (P5b screens)
-// Modified (prior): 2026-09-07 (P5b review — demo boot default-off; host wiring still validates; see VersionHistory 1.8)
+// Modified: 2026-10-21 (Gate J J-04: whole-pitch top-down view for the S0 pitch image)
+// Modified (prior): 2026-10-08 (P5b screens)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -165,6 +165,13 @@ namespace TacticalDirector.MatchClientUnity
             }
             finally { _attaching = false; }
         }
+
+        /// <summary>
+        /// When true, the camera frames the whole pitch straight down (orthographic, pitch +X right) instead
+        /// of following the ball on the tilted rig. The S0 screens set it: their pitch image promises the
+        /// whole pitch with both goals (journey I-C08; Gate J J-04).
+        /// </summary>
+        public bool WholePitchView { get; set; }
 
         /// <summary>Rendered host position only when its latched identity matches the accepted UI identity.</summary>
         public bool TryGetRenderedAgentPosition(int agentId, int playerId, out Vector3 position)
@@ -797,6 +804,17 @@ namespace TacticalDirector.MatchClientUnity
 
         private void UpdateCamera(Vector3 pitchBallPosition)
         {
+            if (WholePitchView)
+            {
+                RenderTexture target = _matchCamera.targetTexture;
+                float aspect = target != null && target.height > 0 ? (float)target.width / target.height : _matchCamera.aspect;
+                _matchCamera.orthographic = true;
+                _matchCamera.orthographicSize = PitchCameraRig.WholePitchOrthographicSize(aspect);
+                _matchCamera.transform.SetPositionAndRotation(PitchCameraRig.WholePitchPosition(), Quaternion.Euler(90f, 0f, 0f));
+                return;
+            }
+
+            _matchCamera.orthographic = false;
             Vector2 ballPitchXY = new Vector2(pitchBallPosition.x, pitchBallPosition.y);
 
             _cameraTarget = FollowBallCamera.ComputeTarget(_cameraTarget, ballPitchXY, Time.deltaTime);
@@ -1134,4 +1152,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.9     | 2026-10-06 | —      | External inactive-root Attach/detach; isolated generated container and callback-based rejection. |
 // | 1.10    | 2026-10-06 | —      | Restore the System.Globalization import the 1.9 edit dropped; the Inv helpers still use CultureInfo (Unity compile error CS0103). |
 // | 1.11    | 2026-10-08 | —      | Bind identity-matched rendered label positions and terminal presentation failures; texture viewport owns pointer selection. |
+// | 1.12    | 2026-10-21 | —      | Gate J J-04: WholePitchView frames the whole pitch top-down (orthographic) for the S0 pitch image instead of the tilted follow camera. |
 #endregion

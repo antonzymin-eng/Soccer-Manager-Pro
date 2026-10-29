@@ -1,0 +1,66 @@
+﻿20:06:39.680 [Shots] BEGIN
+20:06:39.691 [Shots] gameview size -> S0 1920x1080 index=7
+20:06:39.758 [Shots] root Main Menu activeInHierarchy=True
+20:06:39.760 [Shots] root Tactics Setup activeInHierarchy=False
+20:06:39.761 [Shots] root Match View activeInHierarchy=False
+20:06:39.762 [Shots] root Post-Match Report activeInHierarchy=False
+20:06:39.763 [Shots] root S0 dialog activeInHierarchy=False
+20:06:39.763 [Shots] root S0 EventSystem activeInHierarchy=True
+20:06:39.765 [Shots] PASS exactly one EventSystem
+20:06:39.767 [Shots] PASS no DevelopmentMatchHost in scene
+20:06:39.772 [Shots] loadedHash=96fe4eee9add4ba08f32fd0e61f783e7496240748a419246003175e58b864c98 canonicalBaseHash=96fe4eee9add4ba08f32fd0e61f783e7496240748a419246003175e58b864c98 textScale=1 screen=1920x1080
+20:06:39.774 [Shots] PASS boots on Main Menu with no session
+20:06:40.273 [statistics] BEGIN
+20:06:40.275 [statistics] LABEL closed '▸ Match statistics'
+20:06:40.276 [statistics] PASS closed: label is '▸ Match statistics…'
+20:06:40.278 [statistics] PASS no separate statistics heading while the toggle is shown
+20:06:40.278 [statistics] PASS no Open/Close statistics button
+20:06:40.281 [statistics] shot d-statistics-closed.png 1920x1080
+20:06:40.471 [statistics] LABEL open '▾ Match statistics'
+20:06:40.472 [statistics] PASS open: label is '▾ Match statistics…'
+20:06:40.475 [statistics] PASS clicking the title opens the table
+20:06:40.493 [statistics] STATSFIT viewport=1080 panelTop=548 panelBottom=1062 scrolled=0
+20:06:40.493 [statistics] PASS whole statistics panel inside the viewport
+20:06:40.495 [statistics] PASS "Match statistics" shown once in the panel
+20:06:40.496 [statistics] shot d-statistics-open.png 1920x1080
+20:06:40.653 [statistics] PASS clicking the title again closes the table
+20:06:40.653 [statistics] LABEL closed again '▸ Match statistics'
+20:06:40.654 [statistics] PASS closed again: label is '▸ Match statistics…'
+20:06:40.655 [compare] BEGIN
+20:06:40.720 [compare] LABEL closed '▸ Compare all seven Mentalities'
+20:06:40.721 [compare] PASS closed: label is '▸ Compare all seven Mentalities…'
+20:06:40.763 [compare] LABEL open '▾ Compare all seven Mentalities'
+20:06:40.764 [compare] PASS open: label is '▾ Compare all seven Mentalities…'
+20:06:40.764 [compare] PASS comparison shown
+20:06:40.766 [compare] shot d-compare-open.png 1920x1080
+20:06:40.950 [compare] LABEL closed again '▸ Compare all seven Mentalities'
+20:06:40.951 [compare] PASS closed again: label is '▸ Compare all seven Mentalities…'
+20:06:40.976 [earlier] BEGIN
+20:06:43.109 [earlier] ENGINE after sub 0 subsUsed=1 windowsUsed=1 pending=0 tick=701
+20:06:43.112 [earlier] sub 0 status=Applied used='Substitutions used: 1 / 5' canSub=True reason=''
+20:06:46.595 [earlier] ENGINE after sub 1 subsUsed=2 windowsUsed=2 pending=0 tick=1746
+20:06:46.597 [earlier] sub 1 status=Applied used='Substitutions used: 2 / 5' canSub=True reason=''
+20:06:48.831 [earlier] ENGINE after sub 2 subsUsed=3 windowsUsed=3 pending=0 tick=2417
+20:06:48.834 [earlier] sub 2 status=Applied used='Substitutions used: 3 / 5' canSub=True reason=''
+20:15:40.893 [earlier] ENGINE after sub 3 subsUsed=4 windowsUsed=3 pending=0 tick=162027
+20:15:40.897 [earlier] sub 3 status=Applied used='Substitutions used: 4 / 5' canSub=True reason=''
+20:15:41.126 [earlier] ENGINE after sub 4 subsUsed=4 windowsUsed=3 pending=0 tick=162097
+20:15:41.128 [earlier] sub 4 status=Refused used='Substitutions used: 4 / 5' canSub=True reason=''
+20:15:41.335 [earlier] ENGINE after sub 5 subsUsed=4 windowsUsed=3 pending=0 tick=162160
+20:15:41.337 [earlier] sub 5 status=Refused used='Substitutions used: 4 / 5' canSub=True reason=''
+20:15:41.527 [earlier] ENGINE after sub 6 subsUsed=4 windowsUsed=3 pending=0 tick=162217
+20:15:41.530 [earlier] sub 6 status=Refused used='Substitutions used: 4 / 5' canSub=True reason=''
+20:15:41.700 [earlier] ENGINE after sub 7 subsUsed=4 windowsUsed=3 pending=0 tick=162270
+20:15:41.703 [earlier] sub 7 status=Refused used='Substitutions used: 4 / 5' canSub=True reason=''
+20:15:41.705 [earlier] FEEDBACK after cap (8): Applied — Ben Calder (shirt 2) → Miles West (shirt 13, bench slot 2) at minute 0. || Applied — Daniel North (shirt 4) → Nico Hale (shirt 14, bench slot 3) at minute 0. || Applied — Felix Arden (shirt 6) → Oliver Shaw (shirt 15, bench slot 4) at minute 0. || Applied — Henry Moss (shirt 8) → Pat Linden (shirt 16, bench slot 5) at minute 45. || Refused — Jordan Bell (shirt 10) → Robin Ash (shirt 17, bench slot 6); no substitution windows are left; substitution count unchanged. || Refused — Kit Dawson (shirt 11) → Robin Ash (shirt 17, bench slot 6); no substitution windows are left; substitution count unchanged. || Refused — Kit Dawson (shirt 11) → Robin Ash (shirt 17, bench slot 6); no substitution windows are left; substitution count unchanged. || Refused — Kit Dawson (shirt 11) → Robin Ash (shirt 17, bench slot 6); no substitution windows are left; substitution count unchanged.
+20:15:41.708 [earlier] RECORDS after cap: Substitute:Applied@688 || Substitute:Applied@1733 || Substitute:Applied@2405 || Substitute:Applied@162002 || Substitute:Refused@162079 || Substitute:Refused@162143 || Substitute:Refused@162200 || Substitute:Refused@162252
+20:15:41.710 [earlier] shot iq09-cap.png 1920x1080
+20:15:41.858 [earlier] feedback rows=8 earlierActive=True
+20:15:41.859 [earlier] LABEL closed '▸ Earlier change feedback (5)'
+20:15:41.860 [earlier] PASS closed: label is '▸ Earlier change feedback…'
+20:15:41.861 [earlier] shot d-earlier-closed.png 1920x1080
+20:15:42.048 [earlier] LABEL open '▾ Earlier change feedback (5)'
+20:15:42.049 [earlier] PASS open: label is '▾ Earlier change feedback…'
+20:15:42.051 [earlier] PASS earlier feedback opened
+20:15:42.054 [earlier] shot d-earlier-open.png 1920x1080
+20:15:42.194 [earlier] END

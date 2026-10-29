@@ -1,0 +1,50 @@
+﻿19:28:04.646 [Shots] BEGIN
+19:28:04.654 [Shots] gameview size -> S0 1920x1080 index=7
+19:28:04.711 [Shots] root Main Menu activeInHierarchy=True
+19:28:04.712 [Shots] root Tactics Setup activeInHierarchy=False
+19:28:04.712 [Shots] root Match View activeInHierarchy=False
+19:28:04.713 [Shots] root Post-Match Report activeInHierarchy=False
+19:28:04.714 [Shots] root S0 dialog activeInHierarchy=False
+19:28:04.715 [Shots] root S0 EventSystem activeInHierarchy=True
+19:28:04.716 [Shots] PASS exactly one EventSystem
+19:28:04.717 [Shots] PASS no DevelopmentMatchHost in scene
+19:28:04.719 [Shots] loadedHash=96fe4eee9add4ba08f32fd0e61f783e7496240748a419246003175e58b864c98 canonicalBaseHash=96fe4eee9add4ba08f32fd0e61f783e7496240748a419246003175e58b864c98 textScale=1 screen=1920x1080
+19:28:04.728 [Shots] PASS boots on Main Menu with no session
+19:28:05.436 [stats-live] BEGIN
+19:28:05.574 [stats-live] STATSFIT screen=1920x1080 viewport=1080 panelTop=539 panelBottom=1080 panelHeight=541 scrolled=9 captionActive=False visibleMatchStatisticsTitles=1 tableTexts=37
+19:28:05.575 [stats-live] PASS whole statistics panel inside the viewport
+19:28:05.575 [stats-live] PASS statistics toggle inside the viewport
+19:28:05.576 [stats-live] PASS "Match statistics" shown once in the panel
+19:28:05.579 [stats-live] shot fix-live-statistics.png 1920x1080
+19:28:05.793 [stats-after-sub] BEGIN
+19:28:05.848 [stats-after-sub] PASS keeper and outfield outgoing choices listed
+19:28:05.850 [stats-after-sub] PASS no bench choice greyed before an outgoing player is chosen
+19:28:05.887 [stats-after-sub] incoming outfield-out [0] available=False interactable=False reason='Unavailable — a goalkeeper can only come on for the goalkeeper.' label='Home: Liam Hart — shirt 12 — bench slot 1 — goalkeeper'
+19:28:05.888 [stats-after-sub] incoming outfield-out [1] available=True interactable=True reason='' label='Home: Miles West — shirt 13 — bench slot 2'
+19:28:05.892 [stats-after-sub] incoming outfield-out [2] available=True interactable=True reason='' label='Home: Nico Hale — shirt 14 — bench slot 3'
+19:28:05.894 [stats-after-sub] incoming outfield-out [3] available=True interactable=True reason='' label='Home: Oliver Shaw — shirt 15 — bench slot 4'
+19:28:05.896 [stats-after-sub] incoming outfield-out [4] available=True interactable=True reason='' label='Home: Pat Linden — shirt 16 — bench slot 5'
+19:28:05.898 [stats-after-sub] incoming outfield-out [5] available=True interactable=True reason='' label='Home: Robin Ash — shirt 17 — bench slot 6'
+19:28:05.900 [stats-after-sub] incoming outfield-out [6] available=True interactable=True reason='' label='Home: Theo Fox — shirt 18 — bench slot 7'
+19:28:05.910 [stats-after-sub] PASS outfield out: only the bench keeper is unavailable, with its reason shown
+19:28:05.911 [stats-after-sub] shot j01-outfield-out.png 1920x1080
+19:28:06.114 [stats-after-sub] incoming keeper-out [0] available=True interactable=True reason='' label='Home: Liam Hart — shirt 12 — bench slot 1 — goalkeeper'
+19:28:06.116 [stats-after-sub] incoming keeper-out [1] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Miles West — shirt 13 — bench slot 2'
+19:28:06.119 [stats-after-sub] incoming keeper-out [2] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Nico Hale — shirt 14 — bench slot 3'
+19:28:06.121 [stats-after-sub] incoming keeper-out [3] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Oliver Shaw — shirt 15 — bench slot 4'
+19:28:06.124 [stats-after-sub] incoming keeper-out [4] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Pat Linden — shirt 16 — bench slot 5'
+19:28:06.126 [stats-after-sub] incoming keeper-out [5] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Robin Ash — shirt 17 — bench slot 6'
+19:28:06.128 [stats-after-sub] incoming keeper-out [6] available=False interactable=False reason='Unavailable — a goalkeeper can only be replaced by a goalkeeper.' label='Home: Theo Fox — shirt 18 — bench slot 7'
+19:28:06.142 [stats-after-sub] PASS keeper out: every outfield bench player is unavailable, with its reason shown
+19:28:06.144 [stats-after-sub] shot j01-keeper-out.png 1920x1080
+19:28:06.304 [stats-after-sub] click refused (not interactable/active): Home: Miles West — shirt 13 — bench slot 2 Unavailable — a goalkeeper can only be replaced by a goalkeeper.
+19:28:06.326 [stats-after-sub] PASS greyed choice cannot be selected or submitted
+19:28:06.352 [stats-after-sub] PASS keeper-for-keeper pair can be submitted
+19:28:16.335 [stats-after-sub] keeper sub status=Applied refusal=Accepted used='Substitutions used: 1 / 5'
+19:28:16.339 [stats-after-sub] PASS keeper-for-keeper substitution Applied, no refusal
+19:28:16.709 [stats-after-sub] STATSFIT screen=1920x1080 viewport=1080 panelTop=539 panelBottom=1080 panelHeight=541 scrolled=62 captionActive=False visibleMatchStatisticsTitles=1 tableTexts=37
+19:28:16.710 [stats-after-sub] PASS whole statistics panel inside the viewport
+19:28:16.711 [stats-after-sub] PASS statistics toggle inside the viewport
+19:28:16.711 [stats-after-sub] PASS "Match statistics" shown once in the panel
+19:28:16.713 [stats-after-sub] shot fix-statistics-after-sub.png 1920x1080
+19:28:16.829 [stats-after-sub] END

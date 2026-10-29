@@ -1,0 +1,7 @@
+after-200 commit: 4ff45ee89ffee2792155e7cda6c81d5fcb2306a3 textScale: 2 res: 1920x1080f,1366x768w,800x1000w
+scene _textScale set to 2 for this build only (_textScale: 2)
+build exit: 0
+player exit: 0
+after-100-narrow commit: 4ff45ee89ffee2792155e7cda6c81d5fcb2306a3 textScale: 1 res: 800x1000w
+build exit: 0
+player exit: 0

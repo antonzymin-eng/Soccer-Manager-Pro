@@ -1,0 +1,12 @@
+Pinned-host Unity compile of the disclosure change (batch mode, probe harness removed, MatchClientUnity artifacts deleted first so it is rebuilt)
+Unity 6000.4.9f1 (f7258d6eebbe), Mono; Unity.exe -batchmode -quit -projectPath <worktree> -logFile compile3.log
+Base commit: 1c491168 (PR #518 head) plus the working-tree change to src/match-client-unity/S0ScreensBehaviour.cs
+S0ScreensBehaviour.cs blob: 5da6b0f47cc6b71ae8d3db360c7145b33f2d1307 (was 708bd2cb56e3cfcbd2b6013e89bb69318e8f8dab at 1c491168)
+
+Lines matching 'Tundra build', 'error CS', 'warning CS' and the MatchClientUnity Csc step, verbatim:
+*** Tundra build success (2.52 seconds), 8 items updated, 1203 evaluated
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+[1200/1203  2s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.MatchClientUnity.dll (+2 others)
+
+error CS count: 0

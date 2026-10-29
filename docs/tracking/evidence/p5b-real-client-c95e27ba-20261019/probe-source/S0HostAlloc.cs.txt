@@ -1,0 +1,58 @@
+// GC-allocation and spike attribution over the currently loaded profile (untracked; archived with the evidence).
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using UnityEditor.Profiling;
+using UnityEditorInternal;
+
+public static class S0HostAlloc
+{
+    /// <summary>Top markers by self GC bytes, per thread, over the last `frames` loaded frames; plus the slowest frame's top samples.</summary>
+    public static string Top(int frames)
+    {
+        int last = ProfilerDriver.lastFrameIndex - 10, first = Math.Max(ProfilerDriver.firstFrameIndex, last - frames + 1);
+        var gc = new Dictionary<string, long>();
+        double worst = 0; int worstFrame = -1;
+        for (int f = first; f <= last; f++)
+        {
+            for (int th = 0; th < 64; th++)
+            {
+                using (HierarchyFrameDataView v = ProfilerDriver.GetHierarchyFrameDataView(f, th, HierarchyFrameDataView.ViewModes.MergeSamplesWithTheSameName, HierarchyFrameDataView.columnGcMemory, false))
+                {
+                    if (v == null || !v.valid) break;
+                    if (th == 0 && v.frameTimeMs > worst) { worst = v.frameTimeMs; worstFrame = f; }
+                    var stack = new Stack<int>();
+                    stack.Push(v.GetRootItemID());
+                    var children = new List<int>();
+                    while (stack.Count > 0)
+                    {
+                        int id = stack.Pop();
+                        v.GetItemChildren(id, children);
+                        long childGc = 0;
+                        foreach (int c in children) { childGc += (long)v.GetItemColumnDataAsFloat(c, HierarchyFrameDataView.columnGcMemory); stack.Push(c); }
+                        long self = (long)v.GetItemColumnDataAsFloat(id, HierarchyFrameDataView.columnGcMemory) - childGc;
+                        if (self > 0)
+                        {
+                            string path = v.GetItemPath(id); var parts = path.Split('/'); string key = v.threadName + " :: " + string.Join("/", parts.Skip(Math.Max(0, parts.Length - 3)));
+                            gc[key] = (gc.TryGetValue(key, out long o) ? o : 0) + self;
+                        }
+                    }
+                }
+            }
+        }
+        var sb = new StringBuilder("frames " + first + ".." + last + " top self-GC paths: ");
+        foreach (var kv in gc.OrderByDescending(k => k.Value).Take(12))
+            sb.Append(" || ").Append(kv.Key).Append(" = ").Append((kv.Value / 1024.0 / (last - first + 1)).ToString("F1", CultureInfo.InvariantCulture)).Append(" KB/frame");
+        if (worstFrame >= 0)
+            using (HierarchyFrameDataView w = ProfilerDriver.GetHierarchyFrameDataView(worstFrame, 0, HierarchyFrameDataView.ViewModes.MergeSamplesWithTheSameName, HierarchyFrameDataView.columnTotalTime, false))
+            {
+                sb.Append(" ## worst main-thread frame ").Append(worstFrame).Append(" = ").Append(worst.ToString("F1", CultureInfo.InvariantCulture)).Append(" ms:");
+                var stack = new Stack<int>(); stack.Push(w.GetRootItemID()); var children = new List<int>(); var items = new List<(string, float)>();
+                while (stack.Count > 0) { int id = stack.Pop(); w.GetItemChildren(id, children); foreach (int c in children) { items.Add((w.GetItemPath(c), w.GetItemColumnDataAsFloat(c, HierarchyFrameDataView.columnTotalTime))); stack.Push(c); } }
+                foreach (var it in items.OrderByDescending(i => i.Item2).Take(8)) sb.Append(" | ").Append(it.Item1).Append(" ").Append(it.Item2.ToString("F1", CultureInfo.InvariantCulture)).Append("ms");
+            }
+        return sb.ToString();
+    }
+}
