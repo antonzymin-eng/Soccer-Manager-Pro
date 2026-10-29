@@ -1,8 +1,8 @@
 # System XI — S0 PM-1 Journey Packet
 
 **Created:** September 12, 2026  
-**Last Updated:** October 8, 2026\
-**Version:** 0.36\
+**Last Updated:** October 21, 2026\
+**Version:** 0.37\
 **Status:** S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF (§14.11)\
 **Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.30 §5–§6\
 **Validation task authority:** [`ux-validation-protocol.md`](ux-validation-protocol.md) v0.37\
@@ -1225,6 +1225,10 @@ its plain-C# projection/decision in its first implementation landing.
 Substitution filtering belongs in the host-free presenter, using owner constants rather than copied
 5/7 literals: exclude sent-off or already-replaced outgoing slots and already-used incoming bench
 slots; disable entry at the team cap or when no legal pair exists, with a reason. Include the keeper.
+Gate J J-01 (owner decision, October 20, 2026): a bench choice the engine's goalkeeper role check
+would refuse for the selected outgoing player stays listed but unavailable, with its reason in words
+(`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way`); the keeper fallback after a
+sent-off keeper stays available once.
 Read cues afresh; never cache the boot goalkeeper flag. Engine validation still owns races/legality.
 S0 currently executes at command drain; the recorded next-stoppage owner rule is not implemented.
 When that rule lands, return this request-state contract to Gate A/B before changing the binding.
@@ -1255,9 +1259,11 @@ claimed existing tests or APIs. No sim/save schema change is implied.
    Repeated identical requests after settlement cannot reuse earlier evidence. Cursor consumption
    and request registration are serialized on the presenter thread; source snapshots stay copies.
 3. A click or successful enqueue establishes Pending only. An applied suffix record establishes
-   Applied and its minute; a refused suffix establishes Refused, persistent generic refusal copy,
-   and the unchanged last Applied current value. No exception message/reason exists in the driver
-   log, so do not invent one or expose internal diagnostics. A local dispatch failure is labelled
+   Applied and its minute; a refused suffix establishes Refused, persistent refusal copy,
+   and the unchanged last Applied current value. Gate J J-02 (owner decision, October 20, 2026): a
+   refused substitution names the engine's typed `SubstitutionRequestStatus`, which the driver now
+   keeps on its refused record (`feedback.substitution_refused_*`); a refusal that threw, or any
+   other kind, keeps the generic row. Never infer a reason, and never expose internal diagnostics. A local dispatch failure is labelled
    a send failure, never an engine Refused or Applied record.
 4. P5b does **not** call `ServiceOnce()` to execute gameplay requests while paused. No tick means
    Pending remains, with Resume instruction. Resume permits the next pre-tick drain; ordinary
@@ -1647,3 +1653,4 @@ remaining B8/B9b/B10 evidence stay open. This record authorizes no PR merge.
 | 0.34 | October 5, 2026 | Pointer/status sync after #470 foundation merged; detailed plan v1.29, protocol v0.36 and lifecycle/identity implementation plan v0.1. H/I approvals, reviewed behavior, source-audit pins and planned QA unchanged. |
 | 0.35 | October 5, 2026 | PR #479 review corrections: implementation plan v0.2, execution pointer v1.30 and protocol v0.37. Approved H/I contracts, references, decisions and planned QA unchanged. |
 | 0.36 | October 8, 2026 | Records Anton Zymin's October 8 decision to ship keyboard pitch player inspection (PR #489): §9.3 MV-L/P and §14 MV-L focus order gain one pitch Tab stop after the earlier-feedback disclosure, with arrow keys over visible markers; I-Q15 covers it. Read-only: inspection never stages or dispatches. Copy, other focus order, gates and QA unchanged. |
+| 0.37 | October 21, 2026 | Gate J owner decisions of October 20, 2026 (Anton Zymin): §14.4 greys out goalkeeper-mismatched bench choices with a reason (J-01); §14.5 point 3 names the engine-typed substitution refusal carried on the driver's refused record (J-02; Make substitution stays available). No gate, focus order or other copy changed. |

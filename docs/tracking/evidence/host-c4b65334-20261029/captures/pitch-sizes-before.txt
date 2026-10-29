@@ -1,0 +1,16 @@
+== resolution requested 1920x1080, screen 1920x1080
+1920x1080 step 00 start  speed="Selected speed 1×" pitch=1054.6x683.0 file=1920x1080-00-start.bmp
+1920x1080 step 01 faster speed="Selected speed 3×" pitch=1117.9x724.0 file=1920x1080-01-faster.bmp
+1920x1080 step 02 faster speed="Selected speed 5×" pitch=1117.9x724.0 file=1920x1080-02-faster.bmp
+1920x1080 step 03 faster speed="Selected speed 10×" pitch=1054.6x683.0 file=1920x1080-03-faster.bmp
+1920x1080 step 04 slower speed="Selected speed 5×" pitch=1117.9x724.0 file=1920x1080-04-slower.bmp
+1920x1080 step 05 slower speed="Selected speed 3×" pitch=1117.9x724.0 file=1920x1080-05-slower.bmp
+1920x1080 step 06 slower speed="Selected speed 1×" pitch=1054.6x683.0 file=1920x1080-06-slower.bmp
+== resolution requested 1366x768, screen 1366x768
+1366x768 step 00 start  speed="Selected speed 1×" pitch=542.0x351.0 file=1366x768-00-start.bmp
+1366x768 step 01 faster speed="Selected speed 3×" pitch=605.3x392.0 file=1366x768-01-faster.bmp
+1366x768 step 02 faster speed="Selected speed 5×" pitch=605.3x392.0 file=1366x768-02-faster.bmp
+1366x768 step 03 faster speed="Selected speed 10×" pitch=542.0x351.0 file=1366x768-03-faster.bmp
+1366x768 step 04 slower speed="Selected speed 5×" pitch=605.3x392.0 file=1366x768-04-slower.bmp
+1366x768 step 05 slower speed="Selected speed 3×" pitch=605.3x392.0 file=1366x768-05-slower.bmp
+1366x768 step 06 slower speed="Selected speed 1×" pitch=542.0x351.0 file=1366x768-06-slower.bmp

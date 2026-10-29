@@ -1,9 +1,9 @@
 # P5b screens — implementation and validation
 
 **Created:** October 8, 2026\
-**Last Updated:** October 9, 2026\
-**Version:** 0.14\
-**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile PASSED on main `93de60f6` October 9; EditMode CLEAN after the repo-root/timeout follow-up (1,064 passed / 0 failed, October 9); real-client/host acceptance OPEN\
+**Last Updated:** October 22, 2026\
+**Version:** 0.16\
+**Status:** MERGED to main October 8, 2026 (#489, merge `1c8366d`); pinned Unity compile PASSED on main `93de60f6` October 9; EditMode CLEAN after the repo-root/timeout follow-up (1,064 passed / 0 failed, October 9); real-client I-Q01–19 EXECUTED October 19 ([real-client acceptance](p5b-real-client-acceptance.md)); Gate J technical FAIL on J-01/J-02, fixes landed October 22 — CONDITIONAL PASS ([record](p5b-real-client-acceptance.md) v0.2)\
 **Purpose:** Record the consumed four-screen slice and concrete evidence required before B8/B9b/B10 and Gate J sign-off.\
 **Authority:** [S0 journey](../design/ux-s0-pm1-journey.md) §14; [binding contracts](../design/ux-s0-binding-contracts.md) §§3–5.\
 **Base:** main `574b0344db3cfe24ee6bef5db459e1b34e6365f4`, after L2 PR #487 merged. The coordinator's pinned-host acceptance is recorded separately in [lifecycle validation](p5b-lifecycle-validation.md) v0.5; that evidence is not carried forward as a screen compile.
@@ -472,6 +472,17 @@ The six failures above are fixed by the change that lands with [`evidence/host-c
 
 Step 2 of the procedure below is now discharged, compile and EditMode both. Still open: real-client I-Q01–19 (with `PitchLayoutFailureCount` 0), B8 1×/10× profiling, B9b/B10 and Gate J.
 
+## Real-client run (v0.15)
+
+On October 19, 2026 the real-client cases, the B8/B10 render-loop capture and the Gate-J technical review ran on the
+pinned host at main `c95e27ba`. The owning record is [p5b-real-client-acceptance.md](p5b-real-client-acceptance.md).
+It supersedes the "all real-client I-Q01–19 remain NOT RUN" line below. Two corrections to this record:
+
+- The canonical base content hash is now `2a8264372480725a076ed5cacdc6bdbe8f07c121be005adc0692a86d04202dec`.
+  `S0ScreenContent.cs` v1.4 (#505, Match Flow §6.2.6 copy) changed it after v0.8 recorded `51e1a2…`. The host loaded
+  exactly this hash with the packaged LegacyRuntime font, so no glyph fallback applied.
+- Keyboard arrow input in the Unity binding crashed the client (J-03). `S0ScreensBehaviour.cs` v1.7 fixes it.
+
 ## Content and dependency boundary
 
 The published representation is the compiled `S0ScreenContent` table: 141 roles
@@ -601,4 +612,6 @@ Supplementary results below cover portions of the contracts, not their complete 
 | 0.11 | October 8, 2026 | Records the #489 merge to main (`1c8366d` from `307b145`, CI 37848750594 green, Unity job skipped) ahead of host acceptance; the host procedure now targets main, and the repo-root lookup risk for the two contract tests is noted. All host gates remain open. |
 | 0.12 | October 9, 2026 | Pinned-host compile and EditMode on main `93de60f6`: 0 errors after Editor package resolution (the first round is void because the package state was stale), ClientApp 125/125, MatchClientCore 183/183, Localization 67/67, allocation tests passing, TestDirectory repo-root lookup observed working. Editor-regenerated package lock landed. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |
 | 0.13 | October 9, 2026 | Codex review on PR #492. A second run covers the omitted MatchAnalytics (58/59) and UiFramework (49/50) regressions; each failure is that assembly's repo-root lock. The status no longer calls the EditMode run passed. Its overall result is Failed on six tracked, pre-existing failures, so step 2's EditMode half and main's governing-build status stay red until they are fixed forward. |
+| 0.15 | October 19, 2026 | Points to the real-client acceptance record: I-Q01–19 executed, B8/B10 capture passed, Gate J technical FAIL on J-01/J-02. Canonical content hash corrected for #505; J-03 keyboard crash fixed. |
+| 0.16 | October 22, 2026 | Points to the acceptance record v0.2: J-01/J-02/J-04 fixed and host-verified; the loaded content hash for the 150-role register is `96fe4eee9add4ba08f32fd0e61f783e7496240748a419246003175e58b864c98`. |
 | 0.14 | October 9, 2026 | EditMode clean on the pinned host after the shared repo-root resolver and the SeasonSave `[Timeout]`s: 1,064 passed / 0 failed / 3 ignored across the eight assemblies, so step 2 is discharged. Real-client I-Q01–19, B8/B9b/B10 and Gate J remain open. |

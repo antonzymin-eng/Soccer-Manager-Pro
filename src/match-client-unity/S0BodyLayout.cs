@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/S0BodyLayout.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-21 (Gate J J-04: H v0.2 rail width; pitch sized from the page height)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     S0 binding contracts §3, Code Standards #20
 // Purpose:  Apply the host-free measured columns/stack decision to the live pitch and changes rail.
@@ -53,10 +54,15 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            float extra = width - _pitchMinimum - _railMinimum - S0UiConstants.GAP;
-            float pitch = Mathf.Min(_pitchMinimum + extra, WholePitchWidth());
-            SetChildAlongAxis(rectChildren[0], 0, 0, pitch);
-            SetChildAlongAxis(rectChildren[1], 0, pitch + S0UiConstants.GAP, width - pitch - S0UiConstants.GAP);
+            // H v0.2: the rail keeps its own width (27rem at 100% text); the pitch takes the rest up to
+            // the width at which the whole pitch fits the page height; leftover space is split evenly.
+            float scale = RailMeasure.fontSize / (float)S0UiConstants.TEXT_SIZE;
+            float railTarget = Mathf.Max(_railMinimum, S0UiConstants.RAIL_WIDTH * scale);
+            float pitch = Mathf.Max(_pitchMinimum, Mathf.Min(width - railTarget - S0UiConstants.GAP, WholePitchWidth()));
+            float rail = Mathf.Max(_railMinimum, Mathf.Min(width - pitch - S0UiConstants.GAP, railTarget));
+            float left = Mathf.Max(0, (width - pitch - S0UiConstants.GAP - rail) * 0.5f);
+            SetChildAlongAxis(rectChildren[0], 0, left, pitch);
+            SetChildAlongAxis(rectChildren[1], 0, left + pitch + S0UiConstants.GAP, rail);
         }
 
         private float WholePitchWidth()
@@ -109,4 +115,5 @@ namespace TacticalDirector.MatchClientUnity
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed measured pitch/rail reflow. |
+// | 1.1     | 2026-10-21 | —      | Gate J J-04: the rail keeps the H v0.2 width and the leftover is centred; statistics now live in the rail, so the page-height pitch bound no longer shrinks when they open. |
 #endregion

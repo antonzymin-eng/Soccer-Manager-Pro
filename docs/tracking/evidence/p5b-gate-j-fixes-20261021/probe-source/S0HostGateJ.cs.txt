@@ -1,0 +1,171 @@
+// Gate J fix verification on the pinned host (October 21, 2026): J-01 goalkeeper pairs greyed out
+// with a reason, J-02 refusal rows naming the engine-typed reason, J-04 restyled views captured.
+// Untracked probe source; archived verbatim with the evidence. Actions go through shipped UGUI controls.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchEngine;
+using P = S0HostProbe;
+using C = S0HostCases;
+
+public static class S0HostGateJ
+{
+    static S0ScreenPresenter V => P.View;
+    static Button B(string field) => P.ButtonField(field);
+    static Func<bool> Until(Func<bool> c) => c;
+    static string Keeper => V.Text.Label("identity.goalkeeper");
+
+    static int KeeperOut() { for (int i = 0; i < V.Outgoing.Count; i++) if (V.Outgoing[i].Label.Contains(Keeper)) return i; return -1; }
+    static int OutfieldOut(int skip) { for (int i = 0; i < V.Outgoing.Count; i++) if (i != skip && !V.Outgoing[i].Label.Contains(Keeper)) return i; return -1; }
+
+    static void LogIncoming(string tag)
+    {
+        var buttons = P.Get<List<Button>>(P.Screens, "_incoming");
+        for (int i = 0; i < V.Incoming.Count; i++)
+            P.Log("incoming " + tag + " [" + i + "] available=" + V.Incoming[i].IsAvailable + " interactable=" + buttons[i].interactable +
+                  " reason='" + V.Incoming[i].UnavailableReason + "' label='" + V.Incoming[i].Label + "'");
+    }
+
+    /// <summary>J-01 through the chooser: keeper out greys outfield bench players, outfield out greys the bench keeper.</summary>
+    public static IEnumerator J01()
+    {
+        P.Click(B("_substitution"));
+        yield return P.Frames(3);
+        var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+        var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+        int keeper = KeeperOut(), outfield = OutfieldOut(keeper);
+        P.Check(keeper >= 0 && outfield >= 0, "keeper and outfield outgoing choices listed");
+        P.Check(V.Incoming.All(c => c.IsAvailable), "no bench choice greyed before an outgoing player is chosen");
+
+        P.Click(outgoing[outfield]);
+        yield return P.Frames(3);
+        LogIncoming("outfield-out");
+        bool ok = true;
+        for (int i = 0; i < V.Incoming.Count; i++)
+        {
+            bool benchKeeper = V.Incoming[i].Label.Contains(Keeper);
+            ok &= incoming[i].interactable == !benchKeeper && V.Incoming[i].IsAvailable == !benchKeeper;
+            if (benchKeeper)
+                ok &= V.Incoming[i].UnavailableReason == V.Text.Label("reason.keeper_in") &&
+                      P.Get<Text[]>(P.Screens, "_incomingReason")[i].gameObject.activeInHierarchy;
+        }
+        P.Check(ok, "outfield out: only the bench keeper is unavailable, with its reason shown");
+        P.Shot("j01-outfield-out");
+        yield return null;
+
+        P.Click(outgoing[keeper]);
+        yield return P.Frames(3);
+        LogIncoming("keeper-out");
+        ok = true;
+        int benchKeeperIndex = -1;
+        for (int i = 0; i < V.Incoming.Count; i++)
+        {
+            bool benchKeeper = V.Incoming[i].Label.Contains(Keeper);
+            if (benchKeeper) benchKeeperIndex = i;
+            ok &= incoming[i].interactable == benchKeeper;
+            if (!benchKeeper)
+                ok &= V.Incoming[i].UnavailableReason == V.Text.Label("reason.keeper_out");
+        }
+        P.Check(ok, "keeper out: every outfield bench player is unavailable, with its reason shown");
+        P.Shot("j01-keeper-out");
+        yield return null;
+
+        // A click on a greyed choice changes nothing (UGUI non-interactable).
+        int greyed = benchKeeperIndex == 0 ? 1 : 0;
+        P.Click(incoming[greyed]);
+        yield return P.Frames(2);
+        P.Check(V.SelectedIncoming < 0 && !V.CanSubmitSubstitution, "greyed choice cannot be selected or submitted");
+
+        P.Click(incoming[benchKeeperIndex]);
+        yield return P.Frames(2);
+        P.Check(V.CanSubmitSubstitution, "keeper-for-keeper pair can be submitted");
+        int refusedBefore = P.Session.Driver.FailedCommands.Count;
+        P.Click(B("_submit"));
+        ClientChangeRecord r = P.Changes.Records.Last();
+        yield return Until(() => r.Status != ClientChangeStatus.Pending || V.IsFullTime);
+        yield return P.Frames(3);
+        P.Log("keeper sub status=" + r.Status + " refusal=" + r.RefusalReason + " used='" + V.SubstitutionsUsed + "'");
+        P.Check(r.Status == ClientChangeStatus.Applied && P.Session.Driver.FailedCommands.Count == refusedBefore, "keeper-for-keeper substitution Applied, no refusal");
+    }
+
+    /// <summary>Uses the remaining first-half windows with outfield pairs, each Applied at its own stoppage.</summary>
+    public static IEnumerator UseWindows(int count)
+    {
+        for (int n = 0; n < count && V.CanSubstitute && !V.IsFullTime; n++)
+        {
+            P.Click(B("_substitution"));
+            yield return P.Frames(3);
+            var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+            var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+            int o = OutfieldOut(KeeperOut());
+            P.Click(outgoing[o]);
+            yield return P.Frames(2);
+            int inc = -1;
+            for (int i = 0; i < V.Incoming.Count && inc < 0; i++) if (V.Incoming[i].IsAvailable) inc = i;
+            P.Click(incoming[inc]);
+            yield return P.Frames(2);
+            P.Click(B("_submit"));
+            ClientChangeRecord r = P.Changes.Records.Last();
+            yield return Until(() => r.Status != ClientChangeStatus.Pending || V.IsFullTime);
+            yield return P.Frames(3);
+            P.LogWindows("window sub " + n);
+            P.Log("window sub " + n + " status=" + r.Status + " tick=" + r.OutcomeTick + " used='" + V.SubstitutionsUsed + "'");
+        }
+    }
+
+    /// <summary>J-02: in the second half with no window left the button stays, and the refusal names its reason.</summary>
+    public static IEnumerator J02()
+    {
+        yield return Until(() => V.IsFullTime || V.Frame.Period == MatchPeriod.SecondHalf);
+        yield return P.Frames(5);
+        P.LogWindows("second half");
+        P.Check(V.CanSubstitute, "Make substitution stays available (owner choice: keep the button)");
+        P.Click(B("_substitution"));
+        yield return P.Frames(3);
+        var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+        var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+        P.Click(outgoing[OutfieldOut(KeeperOut())]);
+        yield return P.Frames(2);
+        int inc = -1;
+        for (int i = 0; i < V.Incoming.Count && inc < 0; i++) if (V.Incoming[i].IsAvailable) inc = i;
+        P.Click(incoming[inc]);
+        yield return P.Frames(2);
+        P.Click(B("_submit"));
+        ClientChangeRecord r = P.Changes.Records.Last();
+        yield return Until(() => r.Status != ClientChangeStatus.Pending || V.IsFullTime);
+        yield return P.Frames(3);
+        string row = V.Feedback[V.Feedback.Count - 1];
+        P.Log("second-half request status=" + r.Status + " refusal=" + r.RefusalReason + " row='" + row + "'");
+        P.Check(r.Status == ClientChangeStatus.Refused && r.RefusalReason == SubstitutionRequestStatus.NoWindowsLeft, "engine refused with NoWindowsLeft");
+        P.Check(row.Contains("no substitution windows are left"), "refusal row names the reason");
+        P.LogFeedback("j02");
+        P.Shot("j02-refused-windows");
+        yield return null;
+    }
+
+    /// <summary>J-04 restyled views on the 1920x1080 game view: live, statistics open, dialogs.</summary>
+    public static IEnumerator J04Live()
+    {
+        P.Shot("j04-live");
+        yield return null;
+        P.Log("PITCHGEOMETRY closed " + P.PitchGeometry());
+        P.Click(B("_statisticsToggle"));
+        yield return P.Frames(5);
+        P.Log("PITCHGEOMETRY open " + P.PitchGeometry());
+        P.Shot("j04-live-statistics");
+        yield return null;
+        P.Click(B("_statisticsToggle"));
+        yield return P.Frames(3);
+        P.Click(B("_mentality"));
+        yield return P.Frames(5);
+        P.Shot("j04-dialog-mentality");
+        yield return null;
+        P.ClickText(V.Text.Label("action.cancel"));
+        yield return P.Frames(3);
+    }
+}

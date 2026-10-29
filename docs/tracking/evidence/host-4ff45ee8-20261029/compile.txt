@@ -1,0 +1,18 @@
+# Unity compile — I-Q15 worktree at 4ff45ee8 with the untracked probe harness in Assets/HostProbes
+# Excerpts of the batch-mode first import and of the interactive Editor session that ran I-Q15.
+# Licensing and machine-identifier lines omitted.
+command (first import): Unity.exe -batchmode -quit -projectPath <worktree> -logFile <log>
+
+Built from '6000.4/staging' branch; Version is '6000.4.9f1 (f7258d6eebbe) revision 16197005'; Using compiler version '194234433'; Build Type 'Release'
+*** Tundra build success (31.93 seconds), 1165 items updated, 1218 evaluated
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0
+
+first import: error CS = 0; assemblies: 75 TacticalDirector.*.dll for 75 src asmdefs
+interactive session (harness recompiled after the pass-2 patch): error CS = 0; Tundra builds: 2 success, 0 failed
+
+warnings outside the harness (both logs):
+src/ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+src/match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+src/match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+warnings inside the harness (Assets/HostProbes, untracked): 13 distinct (CS0618 FindObjectsByType/FindFirstObjectByType deprecations, one CS0219)

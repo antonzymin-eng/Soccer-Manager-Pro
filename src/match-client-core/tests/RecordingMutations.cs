@@ -1,7 +1,7 @@
 // File:     src/match-client-core/tests/RecordingMutations.cs
 // Created:  2026-07-24
-// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
-// Modified (prior): 2026-08-08
+// Modified: 2026-10-21 (Gate J J-02: optional typed substitution refusal)
+// Modified (prior): 2026-10-15
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2), Code Standards #20
 // Purpose:  Head-less ILiveMatchMutations test double — a fake mutation surface with a settable current
@@ -29,6 +29,8 @@ namespace TacticalDirector.MatchClientCore.Tests
         public ulong CurrentTickValue;
         public bool MatchEndedValue;
         public int ThrowOnSetPlayerAgentId = -1;
+        /// <summary>When not Accepted, every substitution request is refused with this typed status.</summary>
+        public SubstitutionRequestStatus RefuseSubstitutionsWith = SubstitutionRequestStatus.Accepted;
         public readonly List<string> Calls = new List<string>();
 
         public ulong CurrentTick => CurrentTickValue;
@@ -53,7 +55,9 @@ namespace TacticalDirector.MatchClientCore.Tests
         {
             Calls.Add(string.Format(
                 CultureInfo.InvariantCulture, "sub:{0}:{1}:{2}:{3}", teamId, outSlotIndex, benchIndex, reason));
-            return SubstitutionRequestResult.Accept(1u);
+            return RefuseSubstitutionsWith == SubstitutionRequestStatus.Accepted
+                ? SubstitutionRequestResult.Accept(1u)
+                : SubstitutionRequestResult.Refuse(RefuseSubstitutionsWith);
         }
     }
 }
@@ -63,4 +67,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-07-24 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6.4: records RequestSubstitution and returns Accepted. |
+// | 1.3     | 2026-10-21 | —      | Gate J J-02: RefuseSubstitutionsWith returns a typed refusal. |
 #endregion

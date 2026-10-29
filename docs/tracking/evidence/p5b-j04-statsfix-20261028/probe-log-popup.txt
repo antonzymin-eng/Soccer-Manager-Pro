@@ -1,0 +1,64 @@
+﻿21:45:11.569 [Shots] BEGIN
+21:45:11.579 [Shots] gameview size -> S0 1920x1080 index=7
+21:45:11.685 [Shots] root Main Menu activeInHierarchy=True
+21:45:11.685 [Shots] root Tactics Setup activeInHierarchy=False
+21:45:11.686 [Shots] root Match View activeInHierarchy=False
+21:45:11.686 [Shots] root Post-Match Report activeInHierarchy=False
+21:45:11.687 [Shots] root S0 dialog activeInHierarchy=False
+21:45:11.687 [Shots] root S0 EventSystem activeInHierarchy=True
+21:45:11.689 [Shots] PASS exactly one EventSystem
+21:45:11.689 [Shots] PASS no DevelopmentMatchHost in scene
+21:45:11.692 [Shots] loadedHash=836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29 canonicalBaseHash=836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29 textScale=1 screen=1920x1080
+21:45:11.695 [Shots] PASS boots on Main Menu with no session
+21:45:12.182 [close-button] BEGIN
+21:45:12.284 [close-button] PASS the Mentality pop-up has a Close control
+21:45:12.286 [close-button] LABEL close '✕ Close'
+21:45:12.288 [close-button] PASS Close label is '✕ Close' (or a covered substitute)
+21:45:12.301 [close-button] HEADER frame=736x608 closeRightGap=16 closeTopGap=16 headingTopGap=16 headingRight=616 closeLeft=624
+21:45:12.302 [close-button] PASS Close sits to the right of the title
+21:45:12.303 [close-button] PASS Close is in the frame's top-right corner
+21:45:12.306 [close-button] PASS Cancel is still offered
+21:45:12.359 [close-button] draft requested=VeryDefensive current=Balanced
+21:45:12.364 [close-button] shot p-mentality-open.png 1920x1080
+21:45:12.551 [close-button] PASS Close closes the pop-up
+21:45:12.552 [close-button] PASS Close submits nothing (records 0->0)
+21:45:12.554 [close-button] PASS Close returns focus to the opening button (Change Mentality)
+21:45:12.555 [outside-click] BEGIN
+21:45:12.622 [outside-click] PASS substitution pop-up open
+21:45:12.624 [outside-click] shot p-substitution-open.png 1920x1080
+21:45:12.787 [outside-click] POINTER Left (960.00, 917.50) top=Dialog frame < S0 canvas clickHandler=none
+21:45:12.818 [outside-click] PASS a click on text inside the frame hits the frame (Dialog frame < S0 canvas)
+21:45:12.818 [outside-click] PASS a click inside the frame keeps the pop-up open
+21:45:12.821 [outside-click] POINTER Right (40.00, 40.00) top=Backdrop < S0 canvas clickHandler=Backdrop < S0 canvas
+21:45:12.847 [outside-click] PASS a right click outside does not close the pop-up (Backdrop < S0 canvas)
+21:45:12.854 [outside-click] POINTER Left (40.00, 40.00) top=Backdrop < S0 canvas clickHandler=Backdrop < S0 canvas
+21:45:12.879 [outside-click] PASS the click outside the frame hits the backdrop (Backdrop < S0 canvas)
+21:45:12.881 [outside-click] PASS outside click closes the pop-up
+21:45:12.882 [outside-click] PASS outside click submits nothing (records 0->0)
+21:45:12.883 [outside-click] PASS outside click returns focus to the opening button (Make substitution)
+21:45:12.884 [partial] BEGIN
+21:45:12.887 [partial] observer fault injected at tick 65
+21:45:28.318 [partial] progress tick=9296 score='0 – 0' layoutFailures=0
+21:46:28.325 [partial] progress tick=45298 score='3 – 0' layoutFailures=0
+21:47:28.330 [partial] progress tick=81302 score='4 – 1' layoutFailures=0
+21:48:28.337 [partial] progress tick=117306 score='5 – 6' layoutFailures=0
+21:49:28.345 [partial] progress tick=153310 score='6 – 9' layoutFailures=0
+21:50:28.350 [partial] progress tick=189313 score='8 – 10' layoutFailures=0
+21:51:28.356 [partial] progress tick=225317 score='10 – 11' layoutFailures=0
+21:52:28.368 [partial] progress tick=261322 score='12 – 11' layoutFailures=0
+21:53:28.369 [partial] progress tick=297324 score='12 – 12' layoutFailures=0
+21:54:12.835 [partial] STATE near end: screen=Screen#3 dialog=None score='12 – 12' clock='Minute 89' period='Second half' speed='Selected speed 10×' tick=324000 frameTick=323998 paused=True fullTime=False current=Balanced requested=VeryDefensive can[pause=True slower=True faster=False ment=True sub=True report=False] stats[open=False has=True incomplete=True] subsUsed='Substitutions used: 0 / 5' selected='Control:Pause' layoutFailures=0 rev=5365 attachment=1 hasMatch=True
+21:54:12.988 [partial] PASS report reached with incomplete statistics
+21:54:12.990 [partial] LABEL closed '▸ Partial statistics — incomplete'
+21:54:12.991 [partial] PASS closed: label is '▸ Partial statistics — incomplete'
+21:54:12.992 [partial] PASS partial table closed initially
+21:54:12.993 [partial] PASS no 'Show partial statistics' or 'Close statistics' label
+21:54:12.994 [partial] shot p-partial-closed.png 1920x1080
+21:54:13.124 [partial] LABEL open '▾ Partial statistics — incomplete'
+21:54:13.124 [partial] PASS open: label is '▾ Partial statistics — incomplete'
+21:54:13.126 [partial] PASS clicking the title opens the partial table
+21:54:13.127 [partial] shot p-partial-open.png 1920x1080
+21:54:13.236 [partial] LABEL closed again '▸ Partial statistics — incomplete'
+21:54:13.236 [partial] PASS closed again: label is '▸ Partial statistics — incomplete'
+21:54:13.239 [partial] PASS clicking the title again closes it
+21:54:13.240 [partial] END

@@ -443,8 +443,9 @@ The 14-window pre-law control-only proxy and 12 post-law restricted-spell window
 team/touch attribution; the owner accepts landing B and requires exact physical touches and shot/goal
 teams in both B→C arms. No new balance conclusion, calibration or match rerun is claimed.
 
-**Still open:** C's separate eight-second/corner law contract, D-07 general outside-area disposition,
-and the already recorded LongKick trajectory/recovery follow-ups. C remains approval-gated in the
+**Still open:** C's separate eight-second/corner law contract (D-07 general outside-area handling
+landed in PR #515, merge `1a3b4271`, October 18, 2026; its keeper-avoidance residual is in
+[open-issues.md](open-issues.md#d07-keeper-avoidance)), and the already recorded LongKick trajectory/recovery follow-ups. C remains approval-gated in the
 [decision packet](w8-goalkeeper-distribution-decision.md); current ordering belongs to roadmap §5.1.
 
 ### W9 — DT-emitted HEADER
@@ -758,6 +759,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |
 | 1.37 | 2026-10-15 | — | W8 B local branch wiring and evidence pointer recorded; governing final-head Unity validation, C law correction and LongKick trajectory follow-up remain open. |
 | 1.36 | 2026-10-11 | — | First #441 result recorded (run `38104571610`, PR #497 head `0eb36aa8`): 1,861 commits → 0 executed; timing-valid trajectory-head counterfactual 0/1,841, so not a #10 realization problem; commits fire on low rising balls already passing the agent (opportunity problem at the commit trigger). #441 stays open; no behavior, `[GT]`, schema or RNG change. |

@@ -1,7 +1,7 @@
 // File:     src/client-app/ClientChangeRequests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-15 (Match Flow §6: pending until roster evidence)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-21 (Gate J J-02: keep the engine-typed refusal reason)
+// Modified (prior): 2026-10-15
 // Author:   —
 // Spec:     S0 journey §14.5, Code Standards #20
 // Purpose:  Consume only new exact-payload suffixes; serialize one Pending request per kind on the client thread.
@@ -122,6 +122,8 @@ namespace TacticalDirector.ClientApp
                 Revision++;
                 return;
             }
+            if (status == ClientChangeStatus.Refused)
+                pending.RefusalReason = evidence.SubstitutionRefusal;
             Settle(pending, status, evidence.AppliedTick);
         }
 
@@ -189,4 +191,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Exact suffix reconciliation, duplicate-kind guard and end settlement. |
 // | 1.1     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution stays Pending until a captured roster cue proves execution or the authoritative pending queue proves cancellation (ObserveFrame). Only the in-flight command occupies the outbound slot, so several accepted orders can wait for one stoppage. Full time settles every unexecuted order as NotApplied. |
+// | 1.2     | 2026-10-21 | —      | Gate J J-02: a Refused row keeps the engine's typed substitution reason from the driver's refused record. |
 #endregion

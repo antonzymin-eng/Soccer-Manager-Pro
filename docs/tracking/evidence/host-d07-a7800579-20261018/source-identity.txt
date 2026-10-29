@@ -1,0 +1,25 @@
+# Pre-compile capture (in session, after removing generated outputs, before the forced reimport; exact UTC not recorded; before the targeted run started at about 2026-10-18T20:23:47Z)
+head_commit: a7800579337f76ff4fe924d75f25c2cd077e589b
+porcelain_src_untracked: 0 entries
+porcelain_src_ignored: 0 entries
+note: Packages/ProjectSettings were not listed at this point; they are covered by the post-run capture below and by the unchanged tree hashes
+
+# Post-run capture (after the full MatchEngine run and the clean-build-cache compile)
+captured_utc: 2026-10-18T22:28:54Z
+head_commit: a7800579337f76ff4fe924d75f25c2cd077e589b
+tree_root: 3d5eb22d44b27f22bd1c3a2ef1a4a2c79aa4ae9e
+tree_src: c3bb11ffa5ffe11832a2c7a4f74bb0238304df7e
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree_Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain_src_Packages_ProjectSettings_incl_untracked_ignored: 0 entries
+unity_editor: 6000.4.9f1 (f7258d6eebbe)
+assets_scripts_junction: C:\Users\azymi\Desktop\Soccer-Manager-Pro\src
+untracked_elsewhere:
+  ?? .agents/
+  ?? .codex/
+  ?? AGENTS.md
+  ?? Assets/_Recovery.meta
+  ?? Assets/_Recovery/
+  ?? docs/tracking/evidence/host-d07-a7800579-20261018/
+verify: git rev-parse a7800579337f76ff4fe924d75f25c2cd077e589b:src -> c3bb11ffa5ffe11832a2c7a4f74bb0238304df7e

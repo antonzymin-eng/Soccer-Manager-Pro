@@ -1,0 +1,24 @@
+// Throwaway build entry for the PR #518 before/after capture. Never committed.
+
+using System;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+
+public static class S0CaptureBuild
+{
+    public static void Build()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string exe = args[Array.IndexOf(args, "-captureExe") + 1];
+        BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        {
+            scenes = new[] { "Assets/Scenes/Scene.unity" },
+            locationPathName = exe,
+            target = BuildTarget.StandaloneWindows64,
+            options = BuildOptions.None
+        });
+        Debug.Log("[S0CaptureBuild] " + report.summary.result + " errors=" + report.summary.totalErrors + " -> " + exe);
+        EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
+    }
+}

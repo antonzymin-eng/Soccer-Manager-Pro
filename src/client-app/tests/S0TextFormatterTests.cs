@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/S0TextFormatterTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-28 (owner decision: register count 151)
+// Modified (prior): 2026-10-22 (Gate J J-01/J-02: register count 150)
 // Author:   —
 // Spec:     S0 binding contracts §4, I-Q16, Code Standards #20
 // Purpose:  Prove exact typed/reordered single-pass output, strict content admission and cache lifetime.
@@ -21,7 +22,7 @@ namespace TacticalDirector.ClientApp.Tests
             var b = new S0TextFormatter();
             Assert.AreEqual(64, a.ContentSha256.Length);
             Assert.AreEqual(a.ContentSha256, b.ContentSha256);
-            Assert.AreEqual(141, S0ScreenContent.All.Count);
+            Assert.AreEqual(151, S0ScreenContent.All.Count);
             var localizer = new Localizer(S0ScreenContent.CreateBaseCatalogue(), null, S0ScreenContent.Coverage());
             foreach (S0TextRole role in S0ScreenContent.All)
                 Assert.AreEqual(role.BasePattern, localizer.Resolve(role.Key), role.Key.Value);
@@ -132,4 +133,6 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Admission, fallback, reordered outcomes and fixed-context caches. |
+// | 1.1     | 2026-10-22 | —      | Gate J J-01/J-02: compiled register count 141 -> 150. |
+// | 1.2     | 2026-10-28 | —      | Owner decision of October 28: compiled register count 150 -> 151 (`action.close`). |
 #endregion

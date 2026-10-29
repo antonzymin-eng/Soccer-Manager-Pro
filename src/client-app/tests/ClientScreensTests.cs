@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientScreensTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-10-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen catalogue), Code
 //           Standards #20
@@ -23,10 +23,13 @@ namespace TacticalDirector.ClientApp.Tests
             ClientScreens.TacticsSetup,
             ClientScreens.MatchView,
             ClientScreens.PostMatchReport,
+            ClientScreens.CareerHome,
+            ClientScreens.NewCareer,
+            ClientScreens.LoadCareer,
         };
 
         [Test]
-        public void TheFourScreenIdsAreDistinct()
+        public void EveryCatalogueScreenIdIsDistinct()
         {
             ScreenId[] screens = AllScreens();
             for (int i = 0; i < screens.Length; i++)
@@ -60,6 +63,9 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(ClientAppConstants.SCREEN_ID_TACTICS_SETUP, ClientScreens.TacticsSetup.Value);
             Assert.AreEqual(ClientAppConstants.SCREEN_ID_MATCH_VIEW, ClientScreens.MatchView.Value);
             Assert.AreEqual(ClientAppConstants.SCREEN_ID_POST_MATCH_REPORT, ClientScreens.PostMatchReport.Value);
+            Assert.AreEqual(ClientAppConstants.SCREEN_ID_CAREER_HOME, ClientScreens.CareerHome.Value);
+            Assert.AreEqual(ClientAppConstants.SCREEN_ID_NEW_CAREER, ClientScreens.NewCareer.Value);
+            Assert.AreEqual(ClientAppConstants.SCREEN_ID_LOAD_CAREER, ClientScreens.LoadCareer.Value);
         }
     }
 }
@@ -68,4 +74,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-07 | —      | Initial creation: distinctness, zero-value safety, constant    |
 // |         |            |        | wiring.                                                        |
+// | 1.1     | 2026-10-18 | —      | §5-P7: the three career screens join all three locks.          |
 #endregion

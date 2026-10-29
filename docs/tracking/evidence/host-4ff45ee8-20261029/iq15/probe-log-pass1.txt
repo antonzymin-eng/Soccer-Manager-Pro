@@ -1,0 +1,248 @@
+17:27:19.727 [Keyboard] BEGIN
+17:27:19.790 [Keyboard] root Main Menu activeInHierarchy=True
+17:27:19.792 [Keyboard] root Tactics Setup activeInHierarchy=False
+17:27:19.793 [Keyboard] root Match View activeInHierarchy=False
+17:27:19.794 [Keyboard] root Post-Match Report activeInHierarchy=False
+17:27:19.796 [Keyboard] root S0 dialog activeInHierarchy=False
+17:27:19.797 [Keyboard] root S0 EventSystem activeInHierarchy=True
+17:27:19.801 [Keyboard] PASS exactly one EventSystem
+17:27:19.803 [Keyboard] PASS no DevelopmentMatchHost in scene
+17:27:19.807 [Keyboard] loadedHash=836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29 canonicalBaseHash=836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29 textScale=1 screen=3840x2160
+17:27:19.812 [Keyboard] PASS boots on Main Menu with no session
+17:27:19.813 [I-Q15] BEGIN
+17:27:20.790 [I-Q15] foreground=True
+17:27:20.791 [I-Q15] PASS menu heading focused at boot
+17:27:21.280 [I-Q15] KEY Tab -> selected=Control:Play a demo match ring=True screen=Screen#1 dialog=None tick=-
+17:27:21.281 [I-Q15] PASS Tab from heading reaches the demo action, not a heading
+17:27:21.284 [I-Q15] PASS focus ring visible on keyboard focus
+17:27:21.289 [I-Q15] shot iq15-01-menu-focus.png 3840x2160
+17:27:22.441 [I-Q15] KEY Enter -> selected=Text:Tactics Setup ring=True screen=Screen#2 dialog=None tick=-
+17:27:22.443 [I-Q15] PASS Enter opens setup; heading focused
+17:27:22.920 [I-Q15] KEY Tab -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:22.921 [I-Q15] PASS Tab reaches first Mentality choice
+17:27:23.402 [I-Q15] KEY Down -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:23.883 [I-Q15] KEY Down -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:23.885 [I-Q15] PASS arrows move and stage the draft (Cautious)
+17:27:24.362 [I-Q15] KEY Up -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:24.364 [I-Q15] PASS Up moves back
+17:27:24.366 [I-Q15] shot iq15-02-setup-arrows.png 3840x2160
+17:27:25.325 [I-Q15] KEY Tab (Start) -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:25.803 [I-Q15] KEY Tab (Start) -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:26.284 [I-Q15] KEY Tab (Start) -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:26.764 [I-Q15] KEY Tab (Start) -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:27.244 [I-Q15] KEY Tab (Start) -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:27.725 [I-Q15] KEY Tab (Start) -> selected=Control:Start match ring=True screen=Screen#2 dialog=None tick=-
+17:27:27.726 [I-Q15] PASS reached Start by keyboard
+17:27:28.307 [I-Q15] KEY Shift-Tab -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#2 dialog=None tick=-
+17:27:28.308 [I-Q15] PASS Shift-Tab from Start returns to the last choice
+17:27:28.785 [I-Q15] KEY Tab -> selected=Control:Start match ring=True screen=Screen#2 dialog=None tick=-
+17:27:29.926 [I-Q15] KEY Enter on Start -> selected=Text:Match View ring=True screen=Screen#3 dialog=None tick=25
+17:27:29.954 [I-Q15] PASS Start by keyboard; Match View heading focused
+17:27:30.446 [I-Q15] KEY Tab -> selected=Control:Pause ring=True screen=Screen#3 dialog=None tick=56
+17:27:30.941 [I-Q15] KEY Tab -> selected=Control:Faster ring=True screen=Screen#3 dialog=None tick=86
+17:27:31.440 [I-Q15] KEY Tab -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=116
+17:27:31.930 [I-Q15] KEY Tab -> selected=Control:Make substitution ring=True screen=Screen#3 dialog=None tick=145
+17:27:32.425 [I-Q15] KEY Tab -> selected=Control:▸ Match statistics ring=True screen=Screen#3 dialog=None tick=175
+17:27:32.917 [I-Q15] KEY Tab -> selected=Shirt chip:H1 ring=True screen=Screen#3 dialog=None tick=204
+17:27:33.407 [I-Q15] KEY Tab -> selected=Control:Pause ring=True screen=Screen#3 dialog=None tick=234
+17:27:33.898 [I-Q15] KEY Tab -> selected=Control:Faster ring=True screen=Screen#3 dialog=None tick=263
+17:27:34.394 [I-Q15] KEY Tab -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=293
+17:27:34.395 [I-Q15] MV Tab order: Control:Pause > Control:Faster > Control:Change Mentality > Control:Make substitution > Control:▸ Match statistics > Shirt chip:H1 > Control:Pause > Control:Faster > Control:Change Mentality
+17:27:34.396 [I-Q15] shot iq15-03-mv-tab.png 3840x2160
+17:27:35.460 [I-Q15] KEY Shift-Tab -> selected=Control:Faster ring=True screen=Screen#3 dialog=None tick=357
+17:27:36.061 [I-Q15] KEY Shift-Tab -> selected=Control:Pause ring=True screen=Screen#3 dialog=None tick=393
+17:27:36.064 [I-Q15] PASS live ticks continue during traversal (no tick reset)
+17:27:36.554 [I-Q15] KEY Tab (Change Mentality) -> selected=Control:Faster ring=True screen=Screen#3 dialog=None tick=422
+17:27:37.042 [I-Q15] KEY Tab (Change Mentality) -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=452
+17:27:37.043 [I-Q15] PASS reached Change Mentality by keyboard
+17:27:37.553 [I-Q15] KEY Enter on Change Mentality -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=482
+17:27:37.556 [I-Q15] PASS dialog opens with first selector focused
+17:27:38.053 [I-Q15] KEY Down -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=512
+17:27:38.557 [I-Q15] KEY Down -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=543
+17:27:38.559 [I-Q15] PASS arrows stage Requested only (Cautious)
+17:27:39.066 [I-Q15] KEY Tab in dialog -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=573
+17:27:39.576 [I-Q15] KEY Tab in dialog -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=604
+17:27:40.076 [I-Q15] KEY Tab in dialog -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=634
+17:27:40.586 [I-Q15] KEY Tab in dialog -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=664
+17:27:41.090 [I-Q15] KEY Tab in dialog -> selected=Control:▸ Compare all seven Mentalities ring=True screen=Screen#3 dialog=Mentality tick=694
+17:27:41.594 [I-Q15] KEY Tab in dialog -> selected=Control:Submit change ring=True screen=Screen#3 dialog=Mentality tick=725
+17:27:42.103 [I-Q15] KEY Tab in dialog -> selected=Control:Cancel ring=True screen=Screen#3 dialog=Mentality tick=755
+17:27:42.611 [I-Q15] KEY Tab in dialog -> selected=Control:✕ Close ring=True screen=Screen#3 dialog=Mentality tick=786
+17:27:43.112 [I-Q15] KEY Tab in dialog -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=816
+17:27:43.631 [I-Q15] KEY Tab in dialog -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=847
+17:27:44.136 [I-Q15] KEY Tab in dialog -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=877
+17:27:44.640 [I-Q15] KEY Tab in dialog -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=908
+17:27:45.144 [I-Q15] KEY Tab in dialog -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=938
+17:27:45.650 [I-Q15] KEY Tab in dialog -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=968
+17:27:45.650 [I-Q15] PASS Tab wraps inside the modal dialog
+17:27:46.275 [I-Q15] KEY Shift-Tab in dialog -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1006
+17:27:46.910 [I-Q15] KEY Shift-Tab in dialog -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1044
+17:27:47.526 [I-Q15] KEY Shift-Tab in dialog -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1081
+17:27:47.527 [I-Q15] PASS Shift-Tab wraps inside the modal dialog
+17:27:47.529 [I-Q15] shot iq15-04-dialog-focus.png 3840x2160
+17:27:48.501 [I-Q15] KEY Escape -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=1139
+17:27:48.504 [I-Q15] PASS Escape cancels and restores the invoker
+17:27:48.507 [I-Q15] PASS Escape sends nothing
+17:27:49.014 [I-Q15] KEY Enter on Change Mentality -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1170
+17:27:49.524 [I-Q15] KEY Down -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1201
+17:27:50.030 [I-Q15] KEY Down -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1231
+17:27:50.549 [I-Q15] KEY Down -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1262
+17:27:51.052 [I-Q15] KEY Down -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1292
+17:27:51.566 [I-Q15] KEY Down -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1323
+17:27:52.075 [I-Q15] KEY Tab (Submit) -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=1354
+17:27:52.586 [I-Q15] KEY Tab (Submit) -> selected=Control:▸ Compare all seven Mentalities ring=True screen=Screen#3 dialog=Mentality tick=1384
+17:27:53.087 [I-Q15] KEY Tab (Submit) -> selected=Control:Submit change ring=True screen=Screen#3 dialog=Mentality tick=1414
+17:27:53.088 [I-Q15] PASS reached Submit by keyboard
+17:27:53.574 [I-Q15] KEY Enter on Submit -> selected=Feedback row:✓ Applied — Mentality: Attacking at minute 0. ring=True screen=Screen#3 dialog=None tick=1444
+17:27:53.638 [I-Q15] FEEDBACK after keyboard submit (1): Applied — Mentality: Attacking at minute 0.
+17:27:53.642 [I-Q15] RECORDS after keyboard submit: SetTeamTactic:Applied@1424
+17:27:53.643 [I-Q15] PASS focus lands on the request's feedback row: Feedback row:✓ Applied — Mentality: Attacking at minute 0.
+17:27:54.133 [I-Q15] KEY Tab after feedback -> selected=Control:▸ Match statistics ring=True screen=Screen#3 dialog=None tick=1477
+17:27:54.135 [I-Q15] PASS Tab after feedback row reaches statistics (v0.9 anchor rule)
+17:27:54.727 [I-Q15] KEY Shift-Tab (Make substitution) -> selected=Control:Make substitution ring=True screen=Screen#3 dialog=None tick=1513
+17:27:54.730 [I-Q15] PASS reached Make substitution by keyboard
+17:27:55.240 [I-Q15] KEY Enter on Make substitution -> selected=Control:Home: Alex Rowan — shirt 1 — goalkeeper ring=True screen=Screen#3 dialog=Substitution tick=1544
+17:27:55.241 [I-Q15] PASS substitution dialog focuses first outgoing selector
+17:27:55.751 [I-Q15] KEY Down -> selected=Control:Home: Ben Calder — shirt 2 ring=True screen=Screen#3 dialog=Substitution tick=1574
+17:27:56.270 [I-Q15] KEY Down -> selected=Control:Home: Chris Vale — shirt 3 ring=True screen=Screen#3 dialog=Substitution tick=1605
+17:27:56.788 [I-Q15] KEY Down -> selected=Control:Home: Daniel North — shirt 4 ring=True screen=Screen#3 dialog=Substitution tick=1636
+17:27:57.302 [I-Q15] KEY Down -> selected=Control:Home: Eli Mercer — shirt 5 ring=True screen=Screen#3 dialog=Substitution tick=1667
+17:27:57.303 [I-Q15] selected outgoing=4
+17:27:57.810 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Felix Arden — shirt 6 ring=True screen=Screen#3 dialog=Substitution tick=1698
+17:27:58.326 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: George Lane — shirt 7 ring=True screen=Screen#3 dialog=Substitution tick=1729
+17:27:58.840 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Henry Moss — shirt 8 ring=True screen=Screen#3 dialog=Substitution tick=1760
+17:27:59.364 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Ian Parker — shirt 9 ring=True screen=Screen#3 dialog=Substitution tick=1791
+17:27:59.886 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Jordan Bell — shirt 10 ring=True screen=Screen#3 dialog=Substitution tick=1822
+17:28:00.398 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Kit Dawson — shirt 11 ring=True screen=Screen#3 dialog=Substitution tick=1853
+17:28:00.919 [I-Q15] KEY Tab (first incoming selector) -> selected=Control:Home: Miles West — shirt 13 — bench slot 2 ring=True screen=Screen#3 dialog=Substitution tick=1884
+17:28:00.920 [I-Q15] PASS reached first incoming selector by keyboard
+17:28:01.422 [I-Q15] KEY Down -> selected=Control:Home: Nico Hale — shirt 14 — bench slot 3 ring=True screen=Screen#3 dialog=Substitution tick=1914
+17:28:01.422 [I-Q15] selected incoming=2 canSubmit=True
+17:28:01.425 [I-Q15] shot iq15-05-sub-dialog.png 3840x2160
+17:28:02.406 [I-Q15] KEY Tab (Submit) -> selected=Control:Home: Oliver Shaw — shirt 15 — bench slot 4 ring=True screen=Screen#3 dialog=Substitution tick=1974
+17:28:02.921 [I-Q15] KEY Tab (Submit) -> selected=Control:Home: Pat Linden — shirt 16 — bench slot 5 ring=True screen=Screen#3 dialog=Substitution tick=2004
+17:28:03.443 [I-Q15] KEY Tab (Submit) -> selected=Control:Home: Robin Ash — shirt 17 — bench slot 6 ring=True screen=Screen#3 dialog=Substitution tick=2036
+17:28:03.968 [I-Q15] KEY Tab (Submit) -> selected=Control:Home: Theo Fox — shirt 18 — bench slot 7 ring=True screen=Screen#3 dialog=Substitution tick=2067
+17:28:04.487 [I-Q15] KEY Tab (Submit) -> selected=Control:Submit change ring=True screen=Screen#3 dialog=Substitution tick=2098
+17:28:04.489 [I-Q15] PASS reached Submit by keyboard
+17:28:04.990 [I-Q15] KEY Enter on Submit -> selected=Feedback row:… Pending — Eli Mercer (shirt 5) → Nico Hale (shirt 14, bench slot 3); waiting to be applied. ring=True screen=Screen#3 dialog=None tick=2128
+17:28:05.056 [I-Q15] FEEDBACK after keyboard substitution (2): Applied — Mentality: Attacking at minute 0. || Pending — Eli Mercer (shirt 5) → Nico Hale (shirt 14, bench slot 3); waiting to be applied.
+17:28:05.060 [I-Q15] RECORDS after keyboard substitution: SetTeamTactic:Applied@1424 || Substitute:Pending@0
+17:28:05.550 [I-Q15] KEY Tab (statistics) -> selected=Control:▸ Match statistics ring=True screen=Screen#3 dialog=None tick=2162
+17:28:05.553 [I-Q15] PASS reached statistics by keyboard
+17:28:06.041 [I-Q15] KEY Enter on statistics -> selected=Control:▾ Match statistics ring=True screen=Screen#3 dialog=None tick=2192
+17:28:06.043 [I-Q15] PASS statistics open, focus retained
+17:28:06.654 [I-Q15] KEY Shift-Tab (Change Mentality) -> selected=Control:Make substitution ring=True screen=Screen#3 dialog=None tick=2228
+17:28:07.263 [I-Q15] KEY Shift-Tab (Change Mentality) -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=2265
+17:28:07.264 [I-Q15] PASS reached Change Mentality by keyboard
+17:28:07.759 [I-Q15] KEY Enter on Change Mentality -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2295
+17:28:08.275 [I-Q15] KEY Down -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2326
+17:28:08.784 [I-Q15] KEY Tab (Submit) -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2356
+17:28:09.284 [I-Q15] KEY Tab (Submit) -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2386
+17:28:09.802 [I-Q15] KEY Tab (Submit) -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2417
+17:28:10.311 [I-Q15] KEY Tab (Submit) -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2448
+17:28:10.826 [I-Q15] KEY Tab (Submit) -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2479
+17:28:11.334 [I-Q15] KEY Tab (Submit) -> selected=Control:▸ Compare all seven Mentalities ring=True screen=Screen#3 dialog=Mentality tick=2509
+17:28:11.841 [I-Q15] KEY Tab (Submit) -> selected=Control:Submit change ring=True screen=Screen#3 dialog=Mentality tick=2540
+17:28:11.842 [I-Q15] PASS reached Submit by keyboard
+17:28:12.343 [I-Q15] KEY Enter on Submit -> selected=Feedback row:✓ Applied — Mentality: Defensive at minute 0. ring=True screen=Screen#3 dialog=None tick=2570
+17:28:12.407 [I-Q15] FEEDBACK after request 3 (3): Applied — Mentality: Attacking at minute 0. || Applied — Eli Mercer (shirt 5) → Nico Hale (shirt 14, bench slot 3) at minute 0. || Applied — Mentality: Defensive at minute 0.
+17:28:12.409 [I-Q15] RECORDS after request 3: SetTeamTactic:Applied@1424 || Substitute:Applied@2240 || SetTeamTactic:Applied@2550
+17:28:13.016 [I-Q15] KEY Shift-Tab (Change Mentality) -> selected=Control:Make substitution ring=True screen=Screen#3 dialog=None tick=2610
+17:28:13.620 [I-Q15] KEY Shift-Tab (Change Mentality) -> selected=Control:Change Mentality ring=True screen=Screen#3 dialog=None tick=2646
+17:28:13.621 [I-Q15] PASS reached Change Mentality by keyboard
+17:28:14.129 [I-Q15] KEY Enter on Change Mentality -> selected=Control:Very Defensive — Least risk in on-ball choices; deepest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2677
+17:28:14.631 [I-Q15] KEY Down -> selected=Control:Defensive — Less risk in on-ball choices; deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2707
+17:28:15.145 [I-Q15] KEY Down -> selected=Control:Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2738
+17:28:15.644 [I-Q15] KEY Tab (Submit) -> selected=Control:Balanced — Standard risk in on-ball choices and standard defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2768
+17:28:16.166 [I-Q15] KEY Tab (Submit) -> selected=Control:Positive — Slightly more risk in on-ball choices; slightly higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2799
+17:28:16.677 [I-Q15] KEY Tab (Submit) -> selected=Control:Attacking — More risk in on-ball choices; higher defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2830
+17:28:17.177 [I-Q15] KEY Tab (Submit) -> selected=Control:Very Attacking — Most risk in on-ball choices; highest defensive line. ring=True screen=Screen#3 dialog=Mentality tick=2860
+17:28:17.690 [I-Q15] KEY Tab (Submit) -> selected=Control:▸ Compare all seven Mentalities ring=True screen=Screen#3 dialog=Mentality tick=2891
+17:28:18.193 [I-Q15] KEY Tab (Submit) -> selected=Control:Submit change ring=True screen=Screen#3 dialog=Mentality tick=2921
+17:28:18.196 [I-Q15] PASS reached Submit by keyboard
+17:28:18.688 [I-Q15] KEY Enter on Submit -> selected=Feedback row:✓ Applied — Mentality: Cautious at minute 0. ring=True screen=Screen#3 dialog=None tick=2950
+17:28:18.751 [I-Q15] FEEDBACK after request 4 (4): Applied — Mentality: Attacking at minute 0. || Applied — Eli Mercer (shirt 5) → Nico Hale (shirt 14, bench slot 3) at minute 0. || Applied — Mentality: Defensive at minute 0. || Applied — Mentality: Cautious at minute 0.
+17:28:18.754 [I-Q15] RECORDS after request 4: SetTeamTactic:Applied@1424 || Substitute:Applied@2240 || SetTeamTactic:Applied@2550 || SetTeamTactic:Applied@2930
+17:28:18.755 [I-Q15] PASS four or more change records exist (4)
+17:28:18.757 [I-Q15] PASS earlier-feedback disclosure is shown: ▸ Earlier change feedback (1)
+17:28:19.247 [I-Q15] KEY Tab (earlier feedback (Tab)) -> selected=Control:▾ Match statistics ring=True screen=Screen#3 dialog=None tick=2984
+17:28:19.742 [I-Q15] KEY Tab (earlier feedback (Tab)) -> selected=Control:▸ Earlier change feedback (1) ring=True screen=Screen#3 dialog=None tick=3014
+17:28:19.742 [I-Q15] PASS reached earlier feedback (Tab) by keyboard
+17:28:19.744 [I-Q15] PASS focus ring visible on the earlier-feedback disclosure
+17:28:20.239 [I-Q15] KEY Tab past earlier feedback -> selected=Shirt chip:H1 ring=True screen=Screen#3 dialog=None tick=3044
+17:28:20.841 [I-Q15] KEY Shift-Tab back -> selected=Control:▸ Earlier change feedback (1) ring=True screen=Screen#3 dialog=None tick=3080
+17:28:20.843 [I-Q15] PASS Shift-Tab returns to the earlier-feedback disclosure from H1
+17:28:21.336 [I-Q15] KEY Enter on earlier feedback -> selected=Control:▾ Earlier change feedback (1) ring=True screen=Screen#3 dialog=None tick=3109
+17:28:21.338 [I-Q15] PASS earlier feedback disclosed by keyboard; focus retained: ▾ Earlier change feedback (1)
+17:28:21.339 [I-Q15] shot iq15-06-stats-history.png 3840x2160
+17:29:21.855 [I-Q15] live window: ticks 3140 -> 6740; feedback changed=False
+17:29:21.857 [I-Q15] FEEDBACK after live window (4): Applied — Mentality: Attacking at minute 0. || Applied — Eli Mercer (shirt 5) → Nico Hale (shirt 14, bench slot 3) at minute 0. || Applied — Mentality: Defensive at minute 0. || Applied — Mentality: Cautious at minute 0.
+17:29:21.859 [I-Q15] RECORDS after live window: SetTeamTactic:Applied@1424 || Substitute:Applied@2240 || SetTeamTactic:Applied@2550 || SetTeamTactic:Applied@2930
+17:29:21.862 [I-Q15] PASS live ticks ran with the disclosure open (3601 ticks)
+17:29:21.863 [I-Q15] PASS disclosure stays expanded through live updates (no collapse)
+17:29:21.865 [I-Q15] PASS focus and ring stay on the disclosure through live updates: Control:▾ Earlier change feedback (1)
+17:29:21.868 [I-Q15] shot iq15-06b-earlier-open-after-live.png 3840x2160
+17:29:22.826 [I-Q15] KEY Enter on earlier feedback (close) -> selected=Control:▸ Earlier change feedback (1) ring=True screen=Screen#3 dialog=None tick=6799
+17:29:22.828 [I-Q15] PASS Enter collapses the disclosure; focus retained
+17:29:23.317 [I-Q15] KEY Enter on earlier feedback (reopen) -> selected=Control:▾ Earlier change feedback (1) ring=True screen=Screen#3 dialog=None tick=6828
+17:29:23.317 [I-Q15] PASS Enter re-expands the disclosure; focus retained
+17:29:23.804 [I-Q15] KEY Tab (pitch entry) -> selected=Shirt chip:H1 ring=True screen=Screen#3 dialog=None tick=6857
+17:29:23.807 [I-Q15] PASS reached pitch entry by keyboard
+17:29:24.306 [I-Q15] KEY Right -> selected=Shirt chip:H2 ring=True screen=Screen#3 dialog=None tick=6887
+17:29:24.307 [I-Q15] pitch 1 desc='Home: Ben Calder — shirt 2.'
+17:29:24.797 [I-Q15] KEY Right -> selected=Shirt chip:H3 ring=True screen=Screen#3 dialog=None tick=6917
+17:29:24.797 [I-Q15] pitch 2 desc='Home: Chris Vale — shirt 3.'
+17:29:25.299 [I-Q15] KEY Right -> selected=Shirt chip:H4 ring=True screen=Screen#3 dialog=None tick=6947
+17:29:25.299 [I-Q15] pitch 3 desc='Home: Daniel North — shirt 4.'
+17:29:25.791 [I-Q15] KEY Right -> selected=Shirt chip:H14 ↔ ring=True screen=Screen#3 dialog=None tick=6977
+17:29:25.793 [I-Q15] pitch 4 desc='Home: Nico Hale — shirt 14. Applied substitute.'
+17:29:26.318 [I-Q15] KEY Right -> selected=Shirt chip:H6 ring=True screen=Screen#3 dialog=None tick=7008
+17:29:26.319 [I-Q15] pitch 5 desc='Home: Felix Arden — shirt 6.'
+17:29:26.816 [I-Q15] KEY Right -> selected=Shirt chip:H7 ring=True screen=Screen#3 dialog=None tick=7038
+17:29:26.818 [I-Q15] pitch 6 desc='Home: George Lane — shirt 7.'
+17:29:27.318 [I-Q15] KEY Right -> selected=Shirt chip:H8 ring=True screen=Screen#3 dialog=None tick=7068
+17:29:27.320 [I-Q15] pitch 7 desc='Home: Henry Moss — shirt 8.'
+17:29:27.806 [I-Q15] KEY Right -> selected=Shirt chip:H9 ring=True screen=Screen#3 dialog=None tick=7097
+17:29:27.806 [I-Q15] pitch 8 desc='Home: Ian Parker — shirt 9.'
+17:29:28.303 [I-Q15] KEY Right -> selected=Shirt chip:H10 ring=True screen=Screen#3 dialog=None tick=7127
+17:29:28.304 [I-Q15] pitch 9 desc='Home: Jordan Bell — shirt 10.'
+17:29:28.788 [I-Q15] KEY Right -> selected=Shirt chip:H11 ring=True screen=Screen#3 dialog=None tick=7156
+17:29:28.790 [I-Q15] pitch 10 desc='Home: Kit Dawson — shirt 11.'
+17:29:29.281 [I-Q15] KEY Right -> selected=Shirt chip:A1 ring=True screen=Screen#3 dialog=None tick=7186
+17:29:29.282 [I-Q15] pitch 11 desc='Away: Casey Brooks — shirt 1. Goalkeeper.'
+17:29:29.781 [I-Q15] KEY Right -> selected=Shirt chip:A2 ring=True screen=Screen#3 dialog=None tick=7216
+17:29:29.782 [I-Q15] pitch 12 desc='Away: Drew Ellis — shirt 2.'
+17:29:30.272 [I-Q15] KEY Right -> selected=Shirt chip:A3 ring=True screen=Screen#3 dialog=None tick=7245
+17:29:30.272 [I-Q15] pitch 13 desc='Away: Evan Reed — shirt 3.'
+17:29:30.757 [I-Q15] KEY Right -> selected=Shirt chip:A4 ring=True screen=Screen#3 dialog=None tick=7275
+17:29:30.758 [I-Q15] pitch 14 desc='Away: Finn Hayes — shirt 4.'
+17:29:31.259 [I-Q15] KEY Right -> selected=Shirt chip:A5 ring=True screen=Screen#3 dialog=None tick=7305
+17:29:31.260 [I-Q15] pitch 15 desc='Away: Gray Nolan — shirt 5.'
+17:29:31.746 [I-Q15] KEY Right -> selected=Shirt chip:A6 ring=True screen=Screen#3 dialog=None tick=7334
+17:29:31.747 [I-Q15] pitch 16 desc='Away: Hugo Wells — shirt 6.'
+17:29:32.236 [I-Q15] KEY Right -> selected=Shirt chip:A7 ring=True screen=Screen#3 dialog=None tick=7363
+17:29:32.237 [I-Q15] pitch 17 desc='Away: Isaac Cole — shirt 7.'
+17:29:32.731 [I-Q15] KEY Right -> selected=Shirt chip:A8 ring=True screen=Screen#3 dialog=None tick=7393
+17:29:32.732 [I-Q15] pitch 18 desc='Away: Jamie Quinn — shirt 8.'
+17:29:33.223 [I-Q15] KEY Right -> selected=Shirt chip:A9 ring=True screen=Screen#3 dialog=None tick=7422
+17:29:33.223 [I-Q15] pitch 19 desc='Away: Kai Foster — shirt 9.'
+17:29:33.718 [I-Q15] KEY Right -> selected=Shirt chip:A10 ring=True screen=Screen#3 dialog=None tick=7452
+17:29:33.719 [I-Q15] pitch 20 desc='Away: Leo Marsh — shirt 10.'
+17:29:34.210 [I-Q15] KEY Left -> selected=Shirt chip:A9 ring=True screen=Screen#3 dialog=None tick=7482
+17:29:34.212 [I-Q15] pitch 19 desc='Away: Kai Foster — shirt 9.'
+17:29:34.708 [I-Q15] KEY Left -> selected=Shirt chip:A8 ring=True screen=Screen#3 dialog=None tick=7512
+17:29:34.709 [I-Q15] pitch 18 desc='Away: Jamie Quinn — shirt 8.'
+17:29:35.202 [I-Q15] KEY Left -> selected=Shirt chip:A7 ring=True screen=Screen#3 dialog=None tick=7541
+17:29:35.202 [I-Q15] pitch 17 desc='Away: Isaac Cole — shirt 7.'
+17:29:35.695 [I-Q15] KEY Left -> selected=Shirt chip:A6 ring=True screen=Screen#3 dialog=None tick=7571
+17:29:35.696 [I-Q15] pitch 16 desc='Away: Hugo Wells — shirt 6.'
+17:29:35.696 [I-Q15] PASS arrow inspection reaches many distinct player descriptions (20)
+17:29:35.702 [I-Q15] PASS inspection dispatches nothing
+17:29:35.704 [I-Q15] shot iq15-07-pitch-inspect.png 3840x2160
+17:29:36.661 [I-Q15] KEY Tab out of pitch -> selected=Control:Pause ring=True screen=Screen#3 dialog=None tick=7629
+17:29:36.662 [I-Q15] PASS Tab leaves the pitch group
+17:29:37.254 [I-Q15] KEY Shift-Tab back -> selected=Shirt chip:A6 ring=True screen=Screen#3 dialog=None tick=7664
+17:29:37.255 [I-Q15] PASS Shift-Tab re-enters at the inspected player (16)
+17:29:37.256 [I-Q15] I-Q15 keyboard lane complete; full-time report focus precedence covered by I-Q10/13.
+17:29:37.257 [I-Q15] END
