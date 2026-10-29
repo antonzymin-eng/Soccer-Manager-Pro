@@ -1,0 +1,11 @@
+# EditMode run — pinned host, commit fbcc3c2f, NUnit XML summary
+command: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.UiFramework.Tests;TacticalDirector.MatchClientCore.Tests" -testResults <xml> -logFile <log>
+pre-run build: *** Tundra build success (0.34 seconds), 0 items updated, 1203 evaluated  (the compiled assemblies from compile.txt, unchanged)
+start: 2026-10-29 13:59:18Z  end: 2026-10-29 14:18:48Z  duration: 1169.9 s  nunit engine: 3.5.0.0
+run: result=Passed total=424 passed=424 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.ClientApp.Tests.dll: Passed total=182 passed=182 failed=0 skipped=0
+  TacticalDirector.MatchClientCore.Tests.dll: Passed total=190 passed=190 failed=0 skipped=0
+  TacticalDirector.UiFramework.Tests.dll: Passed total=52 passed=52 failed=0 skipped=0
+non-passed test cases: 0
+§13 regression test: S0ScreenPresentationTests.ReopeningSubstitutionAfterCancelGreysNothingBeforeAnOutgoingPick = Passed
+process exit code: 0 (log: 'Test run completed. Exiting with code 0 (Ok). Run completed.')

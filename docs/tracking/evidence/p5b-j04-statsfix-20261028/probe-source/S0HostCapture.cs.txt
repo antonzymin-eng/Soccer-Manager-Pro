@@ -1,0 +1,28 @@
+// Synchronous end-of-frame screen capture for the probe harness (untracked; archived with the evidence).
+// ScreenCapture.CaptureScreenshot writes asynchronously in the Editor and can land after the next
+// Game-view resize; this captures the composed frame (overlay UI included) at WaitForEndOfFrame.
+
+using System.Collections;
+using System.IO;
+using UnityEngine;
+
+public static class S0HostCapture
+{
+    public static bool Pending;
+
+    public static void Request(string path)
+    {
+        Pending = true;
+        // Any live scene MonoBehaviour can host the coroutine; the screen binding is always present.
+        S0HostProbe.Screens.StartCoroutine(Capture(path));
+    }
+
+    static IEnumerator Capture(string path)
+    {
+        yield return new WaitForEndOfFrame();
+        Texture2D tex = ScreenCapture.CaptureScreenshotAsTexture();
+        File.WriteAllBytes(path, tex.EncodeToPNG());
+        Object.Destroy(tex);
+        Pending = false;
+    }
+}

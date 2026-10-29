@@ -1,7 +1,7 @@
 // File:     src/client-app/tests/S0ScreenPresentationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-15 (Match Flow §6: acceptance is not execution)
-// Modified (prior): 2026-10-08
+// Modified: 2026-10-29 (cancel/reopen substitution availability regression)
+// Modified (prior): 2026-10-21
 // Author:   —
 // Spec:     S0 I-Q01–14/16/18, Code Standards #20
 // Purpose:  Exercise real coordinator/session/driver and admitted content through the shipping presenter path.
@@ -428,6 +428,114 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(ClientScreens.MainMenu, _view.Screen);
         }
 
+        private int HomeKeeperSlot()
+        {
+            for (int i = 0; i < _view.Frame.AgentCues.Count; i++)
+                if (_shell.Context.Identity.Roster.TeamId(i) == 0 && _view.Frame.AgentCues[i].IsGoalkeeper)
+                    return i;
+            Assert.Fail("No home keeper.");
+            return -1;
+        }
+
+        private int HomeOutfieldSlot(int keeper)
+        {
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Outgoing)
+                if (c.Index != keeper)
+                    return c.Index;
+            Assert.Fail("No home outfield player.");
+            return -1;
+        }
+
+        private bool BenchIsKeeper(int bench) => _shell.Fixture.IsAuthoredGoalkeeper(_shell.Context.Identity.Bench(0, bench).PlayerId);
+
+        [Test]
+        public void GoalkeeperMismatchedBenchChoicesAreListedButUnavailableWithReason()
+        {
+            // Gate J J-01: the engine always refuses a keeper/outfield pair (GoalkeeperRoleMismatch)
+            // while the team has a keeper on the pitch, so the chooser greys those choices out.
+            Start();
+            Tick();
+            _view.OpenSubstitution();
+            int keeper = HomeKeeperSlot();
+            int outfield = HomeOutfieldSlot(keeper);
+            int benchKeeper = -1, benchOutfield = -1;
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.IsTrue(c.IsAvailable, "nothing is greyed out before an outgoing player is chosen");
+                if (BenchIsKeeper(c.Index)) benchKeeper = c.Index; else if (benchOutfield < 0) benchOutfield = c.Index;
+            }
+            Assert.GreaterOrEqual(benchKeeper, 0, "precondition: the demo bench has a keeper");
+
+            _view.SelectOutgoing(keeper);
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.AreEqual(BenchIsKeeper(c.Index), c.IsAvailable);
+                if (!c.IsAvailable)
+                    Assert.AreEqual("Unavailable — a goalkeeper can only be replaced by a goalkeeper.", c.UnavailableReason);
+            }
+            Assert.Throws<ArgumentException>(() => _view.SelectIncoming(benchOutfield));
+            _view.SelectIncoming(benchKeeper);
+            Assert.IsTrue(_view.CanSubmitSubstitution);
+
+            // Switching to an outfield player clears the now-illegal keeper choice.
+            _view.SelectOutgoing(outfield);
+            Assert.AreEqual(-1, _view.SelectedIncoming);
+            Assert.IsFalse(_view.CanSubmitSubstitution);
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.AreEqual(!BenchIsKeeper(c.Index), c.IsAvailable);
+                if (!c.IsAvailable)
+                    Assert.AreEqual("Unavailable — a goalkeeper can only come on for the goalkeeper.", c.UnavailableReason);
+            }
+            Assert.AreEqual(0, _shell.Session.Commands.Count, "greying out sends nothing");
+        }
+
+        [Test]
+        public void ReopeningSubstitutionAfterCancelGreysNothingBeforeAnOutgoingPick()
+        {
+            // A cancelled keeper draft must not leave its keeper-specific reasons on the bench:
+            // the reopened dialog has no outgoing player, so every bench choice is available.
+            Start();
+            Tick();
+            _view.OpenSubstitution();
+            _view.SelectOutgoing(HomeKeeperSlot());
+            _view.CancelDialog();
+            _view.OpenSubstitution();
+            Assert.AreEqual(-1, _view.SelectedOutgoing);
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.IsTrue(c.IsAvailable, "nothing is greyed out before an outgoing player is chosen");
+                Assert.AreEqual("", c.UnavailableReason);
+            }
+        }
+
+        [Test]
+        public void BenchKeeperMayReplaceAnOutfieldPlayerAfterTheKeeperIsSentOff()
+        {
+            // The engine's keeper fallback: with no keeper on the pitch, a bench keeper may come on
+            // for an outfield player. The chooser must offer that pair, and the engine must accept it.
+            Start();
+            Tick();
+            int keeper = HomeKeeperSlot();
+            _shell.Session.TestOnly_Engine.TestOnly_SetIsSentOff(keeper, true);
+            Tick();
+            _view.OpenSubstitution();
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Outgoing)
+                Assert.AreNotEqual(keeper, c.Index, "a sent-off keeper is not offered");
+            int outfield = _view.Outgoing[0].Index;
+            _view.SelectOutgoing(outfield);
+            int benchKeeper = -1;
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.IsTrue(c.IsAvailable, "every bench player may replace an outfield player now");
+                if (BenchIsKeeper(c.Index)) benchKeeper = c.Index;
+            }
+            _view.SelectIncoming(benchKeeper);
+            ClientChangeRecord request = _view.SubmitSubstitution();
+            Tick();
+            Assert.AreNotEqual(ClientChangeStatus.Refused, request.Status, "the engine admits the fallback");
+        }
+
         [Test]
         public void RealDrainRefusalShowsGenericPersistentOutcomeAndNoPredictedReplacement()
         {
@@ -442,6 +550,9 @@ namespace TacticalDirector.ClientApp.Tests
             Tick();
             Assert.AreEqual(ClientChangeStatus.Refused, request.Status);
             StringAssert.Contains("Refused", _view.Feedback[0]);
+            // Gate J J-02: the engine-typed reason (OutgoingAlreadyReplaced) is named, not inferred.
+            Assert.AreEqual(SubstitutionRequestStatus.OutgoingAlreadyReplaced, request.RefusalReason);
+            StringAssert.Contains("one of these players is no longer available", _view.Feedback[0]);
             Assert.IsFalse(_view.Feedback[0].Contains("private"));
             _view.Refresh();
             StringAssert.Contains(request.Outgoing.FirstName, _view.Feedback[0]);
@@ -470,4 +581,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.4     | 2026-10-08 | —      | Composed read-only pitch inspection reaches all 22 current player descriptions without ticking or dispatching. |
 // | 1.5     | 2026-10-15 | —      | Match Flow §6 (PR #505): the substitution stays Pending after acceptance and settles only after a restart executes it. |
 // | 1.6     | 2026-10-15 | —      | PR #505 review: after an accepted, unexecuted substitution, a second dialog offers neither the reserved outgoing player nor the reserved bench player, through the presenter. Failed before the fix. |
+// | 1.7     | 2026-10-21 | —      | Gate J J-01: goalkeeper-mismatched bench choices are listed but unavailable with a reason, and the keeper fallback after a sent-off keeper is offered and accepted. J-02: a real-drain refusal names its engine-typed reason. |
+// | 1.8     | 2026-10-29 | —      | PR #518 review (P2): after a goalkeeper outgoing pick is cancelled, the reopened dialog greys out no bench choice. Failed before the fix. |
 #endregion

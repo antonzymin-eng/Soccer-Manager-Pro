@@ -1,6 +1,7 @@
 // File:     src/match-client-core/PitchCameraRig.cs
 // Created:  2026-08-04
-// Modified: 2026-08-04
+// Modified: 2026-10-21 (Gate J J-04: top-down whole-pitch framing for the S0 pitch image)
+// Modified (prior): 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Rendering, camera, HUD", §12 rule 1), Code Standards #20
@@ -123,6 +124,36 @@ namespace TacticalDirector.MatchClientCore
             return Mathf.Atan2(horizontal, height) * Mathf.Rad2Deg;
         }
 
+        /// <summary>
+        /// [FIXED] Ground margin framed beyond every touchline and goal line by the whole-pitch view,
+        /// metres — enough to keep both goals and their mouths inside the image. Presentation only.
+        /// </summary>
+        public const float WholePitchMarginM = 3f;
+
+        /// <summary>
+        /// Orthographic half-height (Unity <c>Camera.orthographicSize</c>, metres) that frames the whole
+        /// pitch plus <see cref="WholePitchMarginM"/> for an image of <paramref name="aspect"/>
+        /// (width ÷ height), looking straight down with pitch +X to the right and pitch +Y up the image.
+        /// The binding the S0 journey needs (I-C08: whole pitch, true aspect, goals shown) rather than
+        /// the follow camera's partial, tilted view. A non-finite or non-positive aspect frames the
+        /// pitch's own aspect.
+        /// </summary>
+        public static float WholePitchOrthographicSize(float aspect)
+        {
+            float halfHeight = PitchViewProjection.HalfWidthM + WholePitchMarginM;
+            float halfWidth  = PitchViewProjection.HalfLengthM + WholePitchMarginM;
+            if (!float.IsFinite(aspect) || aspect <= 0f)
+                aspect = halfWidth / halfHeight;
+            return Mathf.Max(halfHeight, halfWidth / aspect);
+        }
+
+        /// <summary>
+        /// World position of the whole-pitch camera: above the centre spot at <see
+        /// cref="MatchClientConstants.CameraHeightM"/>; the binding rotates it to look straight down.
+        /// </summary>
+        public static Vector3 WholePitchPosition() =>
+            PitchViewProjection.ToWorld(PitchCentre, MatchClientConstants.CameraHeightM);
+
         private static Vector2 PitchCentre =>
             new Vector2(PitchViewProjection.HalfLengthM, PitchViewProjection.HalfWidthM);
 
@@ -146,4 +177,6 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | on the pose, and + GroundExtentAlongTilt gives it a number:     |
 // |         |            |        | the near and far reach of visible ground, asymmetric because a  |
 // |         |            |        | tilted camera sees a trapezoid.                                 |
+// | 1.2     | 2026-10-21 | —      | Gate J J-04: WholePitchOrthographicSize / WholePitchPosition    |
+// |         |            |        | frame the whole pitch top-down for the S0 pitch image.          |
 #endregion
