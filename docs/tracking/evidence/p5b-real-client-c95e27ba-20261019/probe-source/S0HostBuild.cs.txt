@@ -1,0 +1,70 @@
+// B8/B10 player build + windowed profiler capture (edit-mode pump). Untracked probe source,
+// archived with the evidence. The scene's _textScale is changed only for the build and restored
+// with git afterwards; the tracked scene is never committed from this harness.
+
+using System;
+using System.Collections;
+using System.IO;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEditorInternal;
+using UnityEngine;
+
+public static class S0HostBuild
+{
+    /// <summary>Windows x64 Mono development player, profiler autoconnect, given text scale.</summary>
+    public static string Build(string outDir, float textScale)
+    {
+        EditorSceneManager.OpenScene("Assets/Scenes/Scene.unity");
+        S0HostLayout.SetTextScale(textScale);
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+        // Shipping configuration as committed: Mono (default backend), runInBackground off.
+        PlayerSettings.runInBackground = false;
+        var options = new BuildPlayerOptions
+        {
+            scenes = new[] { "Assets/Scenes/Scene.unity" },
+            locationPathName = Path.Combine(outDir, "SystemXI.exe"),
+            target = BuildTarget.StandaloneWindows64,
+            options = BuildOptions.Development | BuildOptions.ConnectWithProfiler | BuildOptions.CleanBuildCache
+        };
+        BuildReport report = BuildPipeline.BuildPlayer(options);
+        S0HostLayout.SetTextScale(1f);
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+        return "backend=" + PlayerSettings.GetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Standalone) + " runInBackground=" + PlayerSettings.runInBackground + " build " + report.summary.result + " errors=" + report.summary.totalErrors + " size=" + report.summary.totalSize + " time=" + report.summary.totalTime + " -> " + options.locationPathName;
+    }
+
+    static IEnumerator _routine;
+    static double _wait;
+
+    /// <summary>Records n profiler windows of `seconds` each and appends each window's summary.</summary>
+    public static void Capture(string label, int windows, float seconds)
+    {
+        _routine = CaptureRoutine(label, windows, seconds);
+        _wait = 0;
+        EditorApplication.update -= Pump;
+        EditorApplication.update += Pump;
+    }
+
+    static void Pump()
+    {
+        if (EditorApplication.timeSinceStartup < _wait) return;
+        if (_routine == null || !_routine.MoveNext()) { EditorApplication.update -= Pump; _routine = null; return; }
+        if (_routine.Current is float f) _wait = EditorApplication.timeSinceStartup + f;
+    }
+
+    static IEnumerator CaptureRoutine(string label, int windows, float seconds)
+    {
+        string dir = Path.Combine(S0HostProbe.OutDir, "..", "perf");
+        S0HostPerf.Start();
+        for (int w = 0; w < windows; w++)
+        {
+            ProfilerDriver.ClearAllFrames();
+            yield return seconds;
+            string line = S0HostPerf.Dump(label + "-w" + w, dir, 2);
+            File.AppendAllText(Path.Combine(dir, "capture.log"), DateTime.UtcNow.ToString("HH:mm:ss") + " " + line + "\n");
+        }
+        S0HostPerf.Stop();
+        File.AppendAllText(Path.Combine(dir, "capture.log"), DateTime.UtcNow.ToString("HH:mm:ss") + " DONE " + label + "\n");
+    }
+}

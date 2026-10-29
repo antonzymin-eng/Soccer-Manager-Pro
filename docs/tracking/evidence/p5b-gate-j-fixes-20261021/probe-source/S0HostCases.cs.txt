@@ -1,0 +1,560 @@
+// P5b real-client acceptance case routines (pinned host, October 18, 2026). Untracked probe source;
+// archived verbatim with the evidence. Every action goes through the shipped UGUI controls
+// (ExecuteEvents pointer path) unless a case explicitly names a fault/fixture injection.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchAnalytics;
+using TacticalDirector.MatchClientCore;
+using TacticalDirector.TacticalInstructions;
+using P = S0HostProbe;
+
+public static class S0HostCases
+{
+    static S0ScreenPresenter V => P.View;
+    static Button B(string field) => P.ButtonField(field);
+    static Selectable Sel(string field) => P.Get<Selectable>(P.Screens, field);
+    static int Applied => P.Session.Driver.Log.Count;
+    static int Refused => P.Session.Driver.FailedCommands.Count;
+    static Func<bool> Until(Func<bool> c) => c;
+
+    /// <summary>Index into the incoming button list of the first bench player whose role matches the outgoing slot.</summary>
+    public static int IncomingFor(int outgoingListIndex)
+    {
+        bool outKeeper = V.Outgoing[outgoingListIndex].Label.Contains(V.Text.Label("identity.goalkeeper"));
+        for (int i = 0; i < V.Incoming.Count; i++)
+            if (V.Incoming[i].Label.Contains(V.Text.Label("identity.goalkeeper")) == outKeeper) return i;
+        return -1;
+    }
+
+    public static IEnumerator GoToSetup()
+    {
+        if (V.Screen == ClientScreens.MainMenu) { P.ClickText("demo"); yield return P.Frames(3); }
+    }
+
+    public static IEnumerator StartMatch(int mentalityIndex = 3)
+    {
+        yield return GoToSetup();
+        P.Click(P.Get<Button[]>(P.Screens, "_setupChoices")[mentalityIndex]);
+        yield return P.Frames(2);
+        P.ClickText("Start");
+        yield return Until(() => !V.Frame.IsEmpty);
+        yield return P.Frames(3);
+    }
+
+    public static IEnumerator WaitTicks(ulong ticks)
+    {
+        ulong target = P.Session.CurrentTick + ticks;
+        yield return Until(() => P.Session == null || P.Session.CurrentTick >= target || V.IsFullTime);
+    }
+
+    // ---------------- I-Q02 / I-Q03 : Start at a given Mentality, repeated activation, first frame ----------------
+    public static IEnumerator IQ02_03(int mentalityIndex)
+    {
+        yield return P.Frames(5);
+        yield return GoToSetup();
+        Button[] choices = P.Get<Button[]>(P.Screens, "_setupChoices");
+        P.Click(choices[mentalityIndex]);
+        yield return P.Frames(3);
+        Mentality chosen = V.CurrentMentality;
+        P.Log("chosen setup mentality=" + chosen);
+        P.Shot("iq02-m" + mentalityIndex + "-setup");
+        yield return null;
+        Button start = P.FindButton("Start");
+        long before = P.Coordinator.AttachmentId;
+        // Repeated activation inside one frame: the second press must not create a second session.
+        P.Click(start);
+        bool secondAccepted = start.gameObject.activeInHierarchy && start.IsInteractable();
+        if (secondAccepted) P.Click(start);
+        P.Log("second press reachable=" + secondAccepted);
+        bool frameEmptyAtAttach = V.Frame.IsEmpty;
+        P.LogState("same frame as Start");
+        P.Check(P.Coordinator.AttachmentId == before + 1, "exactly one attachment from repeated activation (" + before + "->" + P.Coordinator.AttachmentId + ")");
+        P.Check(V.Screen == ClientScreens.MatchView, "Replace to Match View");
+        if (frameEmptyAtAttach)
+        {
+            P.LogText("MV-0 waiting");
+            P.Check(V.Score == "—" && V.Clock.Contains("awaiting") && V.Period.Contains("Waiting"), "score/time withheld before first frame ('" + V.Score + "', '" + V.Clock + "', '" + V.Period + "')");
+            P.Check(!V.CanChangeMentality && !V.CanSubstitute, "commands locked before first frame");
+            P.Check(P.Get<Text>(P.Screens, "_pitchWaiting").gameObject.activeInHierarchy, "pitch waiting label shown");
+            P.Shot("iq03-m" + mentalityIndex + "-waiting");
+            yield return null;
+        }
+        else P.Log("first frame already present in the Start frame; MV-0 not observable this run");
+        yield return Until(() => !V.Frame.IsEmpty);
+        yield return P.Frames(2);
+        P.LogState("first frame");
+        P.Check(V.Score.Length > 0 && V.Clock.Length > 0 && V.Period.Length > 0, "real score/period/minute after first frame");
+        P.Check(P.Changes.CurrentMentality == chosen, "authored home Mentality reaches session (" + P.Changes.CurrentMentality + ")");
+        // Projection is pure: pause, then project/refresh repeatedly; tick and digest must not move.
+        P.Click(B("_pause"));
+        yield return P.Frames(3);
+        ulong tick = P.Session.CurrentTick;
+        string digest = BitConverter.ToString(P.Session.CurrentSnapshotDigest);
+        for (int i = 0; i < 200; i++) { V.Refresh(); P.Coordinator.MatchView.Project(); P.Coordinator.Report.Project(); }
+        yield return P.Frames(30);
+        P.Check(P.Session.CurrentTick == tick && BitConverter.ToString(P.Session.CurrentSnapshotDigest) == digest, "200 projections while paused: tick and digest unchanged (" + tick + ")");
+        P.Shot("iq02-m" + mentalityIndex + "-live");
+        yield return null;
+    }
+
+    // ---------------- I-Q04 : speed ladder / pause ----------------
+    public static IEnumerator IQ04()
+    {
+        if (V.IsPaused) { P.Click(B("_pause")); yield return P.Frames(3); }
+        P.LogState("start");
+        float realTime = P.Session.Streamer.SpeedMultiplier;
+        // Step faster to the top.
+        for (int i = 0; i < 6 && V.CanFaster; i++)
+        {
+            P.Click(B("_faster"));
+            yield return P.Frames(3);
+            P.Log("faster -> speed='" + V.Speed + "' x" + P.Session.Streamer.SpeedMultiplier + " canFaster=" + V.CanFaster + " reason='" + V.FasterReason + "' selected=" + P.Selected?.name);
+        }
+        P.Check(!V.CanFaster && V.FasterReason.Length > 0, "top rung clamps with endpoint reason");
+        P.Check(P.Selected == B("_pause"), "focus moves to Pause/Resume at endpoint");
+        P.Shot("iq04-top-rung");
+        yield return null;
+        float top = P.Session.Streamer.SpeedMultiplier;
+        // Rung survives pause/resume.
+        P.Click(B("_pause"));
+        yield return P.Frames(3);
+        ulong pausedTick = P.Session.CurrentTick;
+        yield return 1.0f;
+        P.Check(P.Session.CurrentTick == pausedTick, "pause stops ticks");
+        P.Shot("iq04-paused");
+        yield return null;
+        P.Click(B("_pause"));
+        yield return P.Frames(3);
+        P.Check(P.Session.Streamer.SpeedMultiplier == top, "rung survives pause/resume (x" + top + ")");
+        // Clock uses physics ticks.
+        yield return 2.0f;
+        ulong t = V.Frame.Tick;
+        P.Check(V.Clock.Contains(S0ScreenPresenter.Minute(t).ToString()), "clock '" + V.Clock + "' equals tick/3600 minute for frame tick " + t);
+        for (int i = 0; i < 6 && V.CanSlower; i++)
+        {
+            P.Click(B("_slower"));
+            yield return P.Frames(3);
+            P.Log("slower -> speed='" + V.Speed + "' x" + P.Session.Streamer.SpeedMultiplier + " canSlower=" + V.CanSlower + " reason='" + V.SlowerReason + "' selected=" + P.Selected?.name);
+        }
+        P.Check(!V.CanSlower && V.SlowerReason.Length > 0, "bottom rung clamps with endpoint reason");
+        P.Check(P.Selected == B("_pause"), "focus moves to Pause/Resume at bottom endpoint");
+        P.Check(P.Session.Streamer.SpeedMultiplier == realTime, "bottom rung is the opening real-time rung (x" + realTime + ")");
+        // Measure effective tick rate at 1x over 3 s of wall time.
+        ulong a = P.Session.CurrentTick; double ta = UnityEditor.EditorApplication.timeSinceStartup;
+        yield return 3.0f;
+        ulong b = P.Session.CurrentTick; double tb = UnityEditor.EditorApplication.timeSinceStartup;
+        P.Log("1x measured ticks/s=" + ((b - a) / (tb - ta)).ToString("F1"));
+        P.Shot("iq04-bottom-rung");
+        yield return null;
+    }
+
+    // ---------------- I-Q05 : Mentality chooser cancel ----------------
+    public static IEnumerator IQ05()
+    {
+        int applied = Applied, queued = P.Session.Commands.Count, records = P.Changes.Records.Count;
+        Mentality current = V.CurrentMentality;
+        P.Click(B("_mentality"));
+        yield return P.Frames(3);
+        P.LogState("chooser open");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.Mentality, "dialog open");
+        Button[] choices = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        P.Check(P.Selected == choices[0], "focus starts on first available selector (" + P.Selected?.name + ")");
+        // Background is excluded from focus and pointer raycasts land on the dialog.
+        Selectable bg = B("_pause");
+        var pred = P.Get<Predicate<Selectable>>(P.Screens, "_isAllowed");
+        P.Check(!pred(bg), "background Pause excluded while modal");
+        var data = new PointerEventData(EventSystem.current) { position = RectTransformUtility.WorldToScreenPoint(null, bg.transform.position) };
+        var hits = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(data, hits);
+        GameObject dialog = P.Get<GameObject>(P.Screens, "_dialog");
+        P.Check(hits.Count > 0 && hits[0].gameObject.transform.IsChildOf(dialog.transform), "pointer over background Pause hits dialog first (" + (hits.Count > 0 ? hits[0].gameObject.name : "none") + ")");
+        P.Click(choices[6]);
+        yield return P.Frames(2);
+        P.ClickText("ompar"); // Compare
+        yield return P.Frames(3);
+        var cur = P.Get<Text[]>(P.Screens, "_comparisonCurrent");
+        var req = P.Get<Text[]>(P.Screens, "_comparisonRequested");
+        int ci = S0ScreenPresenter.Mentalities.IndexOf(current), ri = S0ScreenPresenter.Mentalities.IndexOf(V.RequestedMentality);
+        P.Check(cur[ci].gameObject.activeInHierarchy && req[ri].gameObject.activeInHierarchy && cur.Count(t => t.gameObject.activeInHierarchy) == 1 && req.Count(t => t.gameObject.activeInHierarchy) == 1,
+            "comparison tags: Current on " + current + ", Requested on " + V.RequestedMentality);
+        P.LogText("chooser compare");
+        P.Shot("iq05-compare");
+        yield return null;
+        P.Click(choices[ci]);
+        yield return P.Frames(3);
+        P.Check(cur[ci].gameObject.activeInHierarchy && req[ci].gameObject.activeInHierarchy, "equal draft shows both tags on the same row");
+        P.Click(choices[(ci + 1) % 7]);
+        yield return P.Frames(3);
+        P.Check(cur[ci].gameObject.activeInHierarchy && req[(ci + 1) % 7].gameObject.activeInHierarchy, "changing draft moves Requested only");
+        P.ClickText("Cancel");
+        yield return P.Frames(3);
+        P.LogState("after cancel");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.None && !dialog.activeSelf, "dialog closed");
+        P.Check(Applied == applied && P.Session.Commands.Count == queued && P.Changes.Records.Count == records, "no command sent / recorded");
+        P.Check(V.CurrentMentality == current, "current unchanged");
+        P.Check(P.Selected == B("_mentality"), "invoker restored");
+        // Reopen: draft resets to current (no selection-as-commit).
+        P.Click(B("_mentality"));
+        yield return P.Frames(3);
+        P.Check(V.RequestedMentality == current, "reopened draft = current, not the cancelled draft");
+        P.ClickText("Cancel");
+        yield return P.Frames(3);
+    }
+
+    // ---------------- I-Q06 : submit, drain, identical resubmit ----------------
+    public static IEnumerator IQ06()
+    {
+        Button[] choices = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        int applied = Applied;
+        P.Click(B("_mentality"));
+        yield return P.Frames(3);
+        P.Click(choices[5]);
+        yield return P.Frames(2);
+        Mentality target = V.RequestedMentality;
+        P.Click(B("_submit"));
+        ClientChangeRecord rec = P.Changes.Records.Last();
+        P.Log("submitted " + target + " status=" + rec.Status);
+        yield return P.Frames(1);
+        P.LogFeedback("after submit");
+        P.Check(P.Selected != null && P.Selected.name.Length > 0 && V.Feedback.Count > 0, "focus on feedback row (" + P.Selected?.name + ":" + P.LabelOf(P.Selected) + ")");
+        yield return Until(() => rec.Status != ClientChangeStatus.Pending);
+        yield return P.Frames(3);
+        P.LogFeedback("after drain");
+        P.Check(rec.Status == ClientChangeStatus.Applied && V.CurrentMentality == target, "Applied and current=" + V.CurrentMentality);
+        P.Check(Applied == applied + 1, "exactly one applied log entry");
+        P.Shot("iq06-applied");
+        yield return null;
+        // Identical second request.
+        P.Click(B("_mentality"));
+        yield return P.Frames(3);
+        P.Click(choices[5]);
+        yield return P.Frames(2);
+        P.Click(B("_submit"));
+        ClientChangeRecord rec2 = P.Changes.Records.Last();
+        P.Check(!ReferenceEquals(rec, rec2) && rec2.Status == ClientChangeStatus.Pending, "identical resubmit is a new Pending record (old log not reused)");
+        yield return Until(() => rec2.Status != ClientChangeStatus.Pending);
+        yield return P.Frames(3);
+        P.LogFeedback("after second drain");
+        P.Check(rec2.Status == ClientChangeStatus.Applied && Applied == applied + 2, "second Applied from a new suffix; no double dispatch (log " + Applied + ")");
+        P.Check(rec2.OutcomeTick > rec.OutcomeTick, "second outcome tick later (" + rec.OutcomeTick + " -> " + rec2.OutcomeTick + ")");
+    }
+
+    // ---------------- I-Q07 : paused submissions ----------------
+    public static IEnumerator IQ07()
+    {
+        if (!V.IsPaused) { P.Click(B("_pause")); yield return P.Frames(3); }
+        ulong tick = P.Session.CurrentTick;
+        Mentality current = V.CurrentMentality;
+        string used = V.SubstitutionsUsed;
+        Button[] choices = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        P.Click(B("_mentality"));
+        yield return P.Frames(3);
+        P.Click(choices[1]);
+        yield return P.Frames(2);
+        P.Click(B("_submit"));
+        ClientChangeRecord m = P.Changes.Records.Last();
+        yield return P.Frames(3);
+        P.Click(B("_substitution"));
+        yield return P.Frames(3);
+        var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+        var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+        P.Click(outgoing[5]);
+        yield return P.Frames(2);
+        P.Click(incoming[IncomingFor(5)]);
+        yield return P.Frames(2);
+        P.Click(B("_submit"));
+        ClientChangeRecord s = P.Changes.Records.Last();
+        yield return 2.0f;
+        P.LogFeedback("paused, after 2s");
+        P.LogText("paused requests");
+        P.Shot("iq07-paused-pending");
+        yield return null;
+        P.Check(P.Session.CurrentTick == tick, "no ticks while paused (" + P.Session.CurrentTick + ")");
+        P.Check(m.Status == ClientChangeStatus.Pending && s.Status == ClientChangeStatus.Pending, "both kinds Pending and coexisting");
+        P.Check(V.CurrentMentality == current && V.SubstitutionsUsed == used, "no premature current/count change");
+        P.Check(V.Feedback.Any(f => f.IndexOf("Resume", StringComparison.OrdinalIgnoreCase) >= 0) || V.ControlReason.IndexOf("Resume", StringComparison.OrdinalIgnoreCase) >= 0, "Resume instruction shown");
+        P.Click(B("_pause"));
+        yield return Until(() => m.Status != ClientChangeStatus.Pending);
+        P.LogFeedback("after resume drain");
+        P.Check(m.Status == ClientChangeStatus.Applied, "mentality reconciled Applied on first drain");
+        yield return Until(() => s.Status != ClientChangeStatus.Pending);
+        yield return P.Frames(3);
+        P.LogFeedback("after substitution execution");
+        P.LogState("after sub");
+        P.Check(s.Status == ClientChangeStatus.Applied, "substitution Applied at a restart (outcome tick " + s.OutcomeTick + ")");
+        P.Shot("iq07-applied");
+        yield return null;
+    }
+
+    // ---------------- I-Q08 : engine refusal ----------------
+    public static IEnumerator IQ08()
+    {
+        if (!V.IsPaused) { P.Click(B("_pause")); yield return P.Frames(3); }
+        Mentality lastApplied = V.CurrentMentality;
+        P.Click(B("_substitution"));
+        yield return P.Frames(3);
+        var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+        var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+        P.Click(outgoing[3]);
+        yield return P.Frames(2);
+        P.Click(incoming[IncomingFor(3)]);
+        yield return P.Frames(2);
+        P.Click(B("_submit"));
+        ClientChangeRecord r = P.Changes.Records.Last();
+        // Fixture injection: make the staged pair illegal before the drain (same move as the host-free test).
+        object engine = P.Prop(P.Session, "TestOnly_Engine");
+        var sub = engine.GetType().GetMethod("SubstitutePlayer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        sub.Invoke(engine, new object[] { 0, r.Command.OutSlotIndex, r.Command.BenchIndex, Enum.ToObject(sub.GetParameters()[3].ParameterType, 1) });
+        P.Log("injected direct engine substitution for slot " + r.Command.OutSlotIndex + " bench " + r.Command.BenchIndex);
+        P.Click(B("_pause"));
+        yield return Until(() => r.Status != ClientChangeStatus.Pending);
+        yield return P.Frames(5);
+        P.LogFeedback("after refusal");
+        P.LogState("after refusal");
+        P.Check(r.Status == ClientChangeStatus.Refused, "engine refusal surfaces as Refused");
+        string row = V.Feedback.Last(f => f.Contains("Refused"));
+        P.Check(!row.ToLowerInvariant().Contains("exception") && !row.Contains("private"), "generic refusal text, no invented reason: " + row);
+        P.Check(V.CurrentMentality == lastApplied, "last Applied value unchanged");
+        ulong t0 = P.Session.CurrentTick;
+        yield return 1.0f;
+        P.Check(P.Session.CurrentTick > t0 && V.CanPause, "playback continues after refusal");
+        yield return 2.0f;
+        P.Check(P.Changes.Records.Last().Status == ClientChangeStatus.Refused, "Refused persists");
+        P.Shot("iq08-refused");
+        yield return null;
+    }
+
+    // ---------------- I-Q09 : substitution chooser ownership ----------------
+    public static IEnumerator IQ09(string label)
+    {
+        P.Click(B("_substitution"));
+        yield return P.Frames(3);
+        P.LogState("chooser " + label);
+        P.Log("outgoing (" + V.Outgoing.Count + "): " + string.Join(" | ", V.Outgoing.Select(o => o.Index + "=" + o.Label)));
+        P.Log("incoming (" + V.Incoming.Count + "): " + string.Join(" | ", V.Incoming.Select(o => o.Index + "=" + o.Label)));
+        P.Log("choiceNotice='" + V.ChoiceNotice + "' subReason='" + V.SubstitutionReasonText + "' used='" + V.SubstitutionsUsed + "'");
+        var frame = V.Frame;
+        bool keeperOffered = V.Outgoing.Any(o => o.Index == 0) || V.Outgoing.Any(o => o.Label.IndexOf("keeper", StringComparison.OrdinalIgnoreCase) >= 0 || o.Label.Contains("GK"));
+        P.Check(keeperOffered, "home keeper offered as outgoing");
+        P.LogText("sub chooser " + label);
+        P.Shot("iq09-" + label);
+        yield return null;
+        P.ClickText("Cancel");
+        yield return P.Frames(3);
+    }
+
+    /// <summary>Submits substitutions until the engine cap/windows lock the control; records each outcome.</summary>
+    public static IEnumerator SubsToCap()
+    {
+        for (int n = 0; n < 8 && V.CanSubstitute && !V.IsFullTime; n++)
+        {
+            P.Click(B("_substitution"));
+            yield return P.Frames(3);
+            var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+            var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+            int o = Math.Min(1 + n, V.Outgoing.Count - 1);
+            P.Click(outgoing[o]);
+            yield return P.Frames(2);
+            int inc = IncomingFor(o);
+            if (inc < 0) { P.Log("no role-compatible bench player remains"); P.ClickText("Cancel"); yield return P.Frames(3); break; }
+            P.Click(incoming[inc]);
+            yield return P.Frames(2);
+            P.Click(B("_submit"));
+            ClientChangeRecord r = P.Changes.Records.Last();
+            yield return Until(() => r.Status != ClientChangeStatus.Pending || V.IsFullTime);
+            yield return P.Frames(3);
+            P.LogWindows("after sub " + n);
+            P.Log("sub " + n + " status=" + r.Status + " used='" + V.SubstitutionsUsed + "' canSub=" + V.CanSubstitute + " reason='" + V.SubstitutionReasonText + "'");
+        }
+        P.LogFeedback("after cap");
+        P.Shot("iq09-cap");
+        yield return null;
+    }
+
+    // ---------------- I-Q11 : statistics live ----------------
+    public static IEnumerator IQ11()
+    {
+        P.Click(B("_statisticsToggle"));
+        yield return P.Frames(3);
+        Selectable focus = P.Selected;
+        P.Check(V.IsStatisticsOpen, "statistics open");
+        for (int i = 0; i < 3; i++)
+        {
+            yield return 1.5f;
+            P.Log("caption='" + V.StatisticsCaption + "' rows: " + string.Join(" | ", V.Statistics.Select(s => s.Label + " " + s.Home + "/" + s.Away)));
+        }
+        P.Check(V.IsStatisticsOpen && P.Selected == focus, "disclosure and focus retained across live updates");
+        P.Check(!V.Statistics.Any(s => s.Label.IndexOf("shot", StringComparison.OrdinalIgnoreCase) >= 0), "no shots row");
+        P.Check(!V.Statistics.Any(s => s.Label.IndexOf("xG", StringComparison.OrdinalIgnoreCase) >= 0 || s.Label.IndexOf("expected", StringComparison.OrdinalIgnoreCase) >= 0), "xG omitted");
+        P.LogText("stats open");
+        P.Shot("iq11-stats");
+        yield return null;
+    }
+
+    // ---------------- I-Q12 : forced observer fault ----------------
+    sealed class FaultingSample : IWorldStateSample
+    {
+        readonly IWorldStateSample _inner;
+        public FaultingSample(IWorldStateSample inner) { _inner = inner; }
+        public Vector2 BallPosition => throw new ArgumentException("host QA controlled observer failure");
+        public int AgentCount => _inner.AgentCount;
+        public Vector2 AgentPosition(int i) => _inner.AgentPosition(i);
+        public int AgentTeamId(int i) => _inner.AgentTeamId(i);
+        public bool AgentIsActive(int i) => _inner.AgentIsActive(i);
+    }
+    public static void InjectObserverFault()
+    {
+        SessionMatchAnalytics a = P.Analytics;
+        var inner = (IWorldStateSample)P.GetField(a, "_sample");
+        P.SetField(a, "_sample", new FaultingSample(inner));
+        P.Log("observer fault injected at tick " + P.Session.CurrentTick);
+    }
+    public static IEnumerator IQ12(bool beforeFirstPublication)
+    {
+        if (beforeFirstPublication) P.Log("fault armed before first healthy publication");
+        bool hadStats = V.HasStatistics;
+        InjectObserverFault();
+        yield return Until(() => V.IsStatisticsIncomplete);
+        yield return P.Frames(3);
+        P.LogState("after fault");
+        P.Log("notice='" + V.StatisticsNotice + "' caption='" + V.StatisticsCaption + "' fault=" + P.Session.Streamer.PostTickObserverFault?.GetType().Name);
+        P.Check(V.StatisticsNotice.IndexOf("incomplete", StringComparison.OrdinalIgnoreCase) >= 0, "incomplete warning shown");
+        P.Check(V.HasStatistics == hadStats, "no healthy partial interval published after the fault (hasStatistics " + hadStats + "->" + V.HasStatistics + ")");
+        ulong t = V.Frame.Tick; string score = V.Score;
+        yield return 2.0f;
+        P.Check(V.Frame.Tick > t && V.CanPause, "frame/time continue after fault (" + t + "->" + V.Frame.Tick + ")");
+        P.Check(V.IsStatisticsIncomplete, "warning persists, no retry");
+        P.LogText("fault live");
+        P.Shot("iq12-fault-live");
+        yield return null;
+    }
+
+    // ---------------- I-Q10 / I-Q13 : whistle ----------------
+    public static IEnumerator RunToNearEnd(ulong ticksBeforeEnd)
+    {
+        while (V.CanFaster) { P.Click(B("_faster")); yield return P.Frames(2); }
+        ulong target = 324000UL - ticksBeforeEnd;
+        double last = 0;
+        yield return Until(() =>
+        {
+            if (UnityEditor.EditorApplication.timeSinceStartup - last > 60) { last = UnityEditor.EditorApplication.timeSinceStartup; P.Log("progress tick=" + P.Session.CurrentTick + " score='" + V.Score + "' layoutFailures=" + P.Screens.PitchLayoutFailureCount); }
+            return P.Session.CurrentTick >= target || V.IsFullTime;
+        });
+        if (!V.IsPaused) { P.Click(B("_pause")); yield return P.Frames(3); }
+        P.LogState("near end");
+    }
+
+    public static IEnumerator IQ10_13(bool statisticsOpenAtEnd)
+    {
+        // Realistic Pending-at-whistle: at 1x with a few seconds left, submit a deferred substitution
+        // (engine-Accepted, waits for a stoppage) and a Mentality change, then leave a chooser open.
+        if (V.IsStatisticsOpen != statisticsOpenAtEnd) { P.Click(B("_statisticsToggle")); yield return P.Frames(3); }
+        while (V.CanSlower) { P.Click(B("_slower")); yield return P.Frames(2); }
+        ClientChangeRecord pendingSub = null, pendingMentality = null;
+        if (V.CanSubstitute)
+        {
+            P.Click(B("_substitution"));
+            yield return P.Frames(3);
+            var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+            var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+            int inc = IncomingFor(2);
+            if (inc >= 0)
+            {
+                P.Click(outgoing[2]); yield return P.Frames(2);
+                P.Click(incoming[inc]); yield return P.Frames(2);
+                P.Click(B("_submit"));
+                pendingSub = P.Changes.Records.Last();
+                yield return P.Frames(2);
+            }
+            else { P.ClickText("Cancel"); yield return P.Frames(2); }
+        }
+        if (V.IsPaused) { P.Click(B("_pause")); yield return P.Frames(3); }
+        yield return Until(() => pendingSub == null || pendingSub.Status != ClientChangeStatus.Pending || V.IsFullTime || P.Session.CurrentTick > 323000);
+        P.LogFeedback("live near whistle");
+        // Leave a Mentality chooser open over the whistle with a staged draft.
+        Button[] choices = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        if (V.CanChangeMentality)
+        {
+            P.Click(B("_mentality"));
+            yield return P.Frames(3);
+            P.Click(choices[(S0ScreenPresenter.Mentalities.IndexOf(V.CurrentMentality) + 2) % 7]);
+            yield return P.Frames(2);
+        }
+        P.Check(V.Dialog != S0ScreenPresenter.DialogKind.None, "a chooser is open on the whistle approach (" + V.Dialog + ")");
+        P.Shot("iq10-before-whistle");
+        yield return null;
+        int pausedBefore = V.IsPaused ? 1 : 0;
+        P.Click(P.Get<Button>(P.Screens, "_pause")); // background click is delivered directly; the binding must ignore it while modal
+        yield return P.Frames(2);
+        P.Log("direct ExecuteEvents click on background Pause while modal: paused " + pausedBefore + " -> " + (V.IsPaused ? 1 : 0) + " (raycast blocking verified separately in I-Q05)");
+        if (V.IsPaused) { V.TogglePause(); P.Log("restored playback after the direct background click"); }
+        yield return Until(() => V.IsFullTime);
+        yield return P.Frames(5);
+        P.LogState("full time");
+        P.LogFeedback("full time");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.None && !P.Get<GameObject>(P.Screens, "_dialog").activeSelf, "draft closed at full time");
+        P.Check(P.Selected == B("_report"), "focus on View match report");
+        P.Check(P.Changes.Records.All(r => r.Status != ClientChangeStatus.Pending), "every request settled at the end barrier");
+        if (pendingSub != null) P.Check(pendingSub.Status == ClientChangeStatus.Applied || pendingSub.Status == ClientChangeStatus.NotApplied, "pending sub settled: " + pendingSub.Status);
+        P.Check(!P.Changes.Records.Any(r => r.Status == ClientChangeStatus.Pending), "no record left Pending");
+        ulong endTick = P.Session.CurrentTick; string digest = BitConverter.ToString(P.Session.CurrentSnapshotDigest);
+        yield return 2.0f;
+        P.Check(P.Session.CurrentTick == endTick && BitConverter.ToString(P.Session.CurrentSnapshotDigest) == digest, "no sim mutation after end (tick " + endTick + ")");
+        P.Check(!B("_statisticsToggle").gameObject.activeInHierarchy, "statistics toggle not reopenable at full time");
+        P.Check(V.IsStatisticsOpen == statisticsOpenAtEnd, "statistics disclosure retained as before end (open=" + V.IsStatisticsOpen + ")");
+        P.Check(V.CanReport && B("_report").gameObject.activeInHierarchy, "report available only from end");
+        P.LogText("full time frozen");
+        P.Shot("iq13-fulltime-" + (statisticsOpenAtEnd ? "open" : "closed"));
+        yield return null;
+        P.Click(B("_report"));
+        yield return P.Frames(5);
+        P.LogState("report");
+        P.Check(V.Screen == ClientScreens.PostMatchReport, "report acknowledgement moves to Post-Match Report");
+        P.Check(V.Result.Length > 0 && V.Score.Length > 0, "result/score shown: " + V.Result + " / " + V.Score);
+        P.Log("partial toggle active=" + B("_partialToggle").gameObject.activeInHierarchy + " partialOpen=" + V.IsPartialReportOpen);
+        if (V.IsStatisticsIncomplete) P.Check(!V.IsPartialReportOpen, "report partials initially hidden after fault");
+        P.LogFeedback("report");
+        P.LogText("report");
+        P.Shot("iq13-report");
+        yield return null;
+    }
+
+    // ---------------- I-Q14 : Return and second match ----------------
+    public static IEnumerator IQ14()
+    {
+        object oldContext = P.Context;
+        MatchSession oldSession = P.Session;
+        long oldAttachment = P.Coordinator.AttachmentId;
+        P.ClickText("Return");
+        yield return P.Frames(5);
+        P.LogState("after return");
+        P.Check(V.Screen == ClientScreens.MainMenu && !P.Coordinator.HasMatch, "Return clears the match and lands on Main Menu");
+        P.Check(V.Feedback.Count == 0 && !V.IsStatisticsOpen && !V.IsEarlierFeedbackOpen && !V.IsPartialReportOpen, "feedback/disclosures cleared");
+        P.Check(P.Screens.LoadedContentSha256 != null, "shell content still loaded");
+        yield return StartMatch(3);
+        P.LogState("second match");
+        P.Check(P.Coordinator.AttachmentId == oldAttachment + 1 && !ReferenceEquals(P.Context, oldContext) && !ReferenceEquals(P.Session, oldSession), "fresh session/context/attachment");
+        P.Check(V.Feedback.Count == 0 && V.CurrentMentality == Mentality.Balanced && V.Dialog == S0ScreenPresenter.DialogKind.None, "fresh feedback/draft/dialog");
+        P.Check(!V.IsStatisticsIncomplete, "fresh observer (no inherited fault)");
+        ulong t = oldSession.CurrentTick;
+        yield return 2.0f;
+        P.Check(oldSession.CurrentTick == t, "old session stays stopped");
+        var labels = P.Get<List<Text>>(P.Screens, "_pitchLabels");
+        P.Check(labels.Where(l => l.gameObject.activeInHierarchy).All(l => l.text.Length > 0), "no blank repeat-match markers");
+        P.Shot("iq14-second-match");
+        yield return null;
+    }
+
+    public static IEnumerator Report()
+    {
+        P.LogState("report");
+        yield return null;
+    }
+}

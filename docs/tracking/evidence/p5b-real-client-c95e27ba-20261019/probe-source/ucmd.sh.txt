@@ -1,0 +1,11 @@
+#!/bin/bash
+# Send one command to the S0HostChannel and wait for its reply line.
+C=/c/Users/azymi/Desktop/S0-host-acceptance-20261018/cmd
+n=$(wc -l < $C/channel.log 2>/dev/null || echo 0)
+printf '%s' "$*" > "$C/$(date +%s%N).cmd"
+for i in $(seq 1 ${UCMD_WAIT:-240}); do
+  if [ $(wc -l < $C/channel.log) -gt $n ] && tail -n +$((n+1)) $C/channel.log | grep -qF "<< $* >>"; then
+    tail -n +$((n+1)) $C/channel.log; exit 0; fi
+  sleep 0.5
+done
+echo "TIMEOUT waiting for reply to: $*"; tail -3 $C/channel.log; exit 1

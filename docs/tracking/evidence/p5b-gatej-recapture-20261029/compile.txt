@@ -1,0 +1,24 @@
+Compile and build excerpts, PR #518 head aa858e97, Unity 6000.4.9f1, pinned host (October 29, 2026 UTC)
+The probe harness was present in Assets/HostProbes/Editor during these runs and was removed afterwards.
+
+Editor session 1 (00:36-02:40 UTC; I-Q16, I-Q15, first two player builds, 100% captures):
+  error CS lines: 0
+  *** Tundra build success (3.86 seconds), 15 items updated, 1218 evaluated
+  warnings outside the harness: Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34) and (154,17)
+    warning CS0618 'Object.GetInstanceID()' is obsolete (the two known warnings)
+  other warnings: CS0618/CS0219 in the untracked harness only
+
+Editor session 2 (02:47-03:00 UTC; restarted after session 1 stopped polling its command channel; 200% build and captures):
+  error CS lines: 0
+  *** Tundra build success (31.90 seconds), 909 items updated, 1218 evaluated
+  warnings outside the harness: the same two GetInstanceID warnings, plus
+    Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19) warning CS0219 (existing, full re-import)
+
+Player builds (S0HostBuild.Build: Windows x64, Mono, Development + ConnectWithProfiler, runInBackground off):
+  00:42:45 text scale 1 -> HostBuilds\s0-aa858e97-s100  backend=Mono2x runInBackground=False Succeeded errors=0 size=156173540
+  00:43:17 text scale 2 -> HostBuilds\s0-aa858e97-s200  backend=Mono2x runInBackground=False Succeeded errors=0 size=156173540 (not used; see README)
+  02:53:58 text scale 2 -> HostBuilds\s0-aa858e97-s100  backend=Mono2x runInBackground=False Succeeded errors=0 size=156173541
+           (rebuilt into the folder the owner's firewall answer covers; the 200% captures used this build)
+
+Each build saved the scene with the condition's text scale and then restored 1 and saved again; the resulting
+Scene.unity reorder and a UnityConnectSettings m_Enabled flip were reverted with git before the commit.

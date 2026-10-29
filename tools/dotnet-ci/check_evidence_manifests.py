@@ -43,6 +43,14 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-w8b-e58577de-20261017": ("manifest", FULL_MANIFEST),
     "host-d07-a7800579-20261018": ("manifest", FULL_MANIFEST),
     "d07-six-seed-census-20261018": ("manifest", FULL_MANIFEST),
+    "p5b-real-client-c95e27ba-20261019": ("manifest", FULL_MANIFEST),
+    "p5b-gate-j-fixes-20261021": ("manifest", FULL_MANIFEST),
+    "host-963f48ee-20261028": ("manifest", FULL_MANIFEST),
+    "p5b-j04-statsfix-20261028": ("manifest", FULL_MANIFEST),
+    "p5b-gatej-recapture-20261029": ("manifest", FULL_MANIFEST),
+    "host-fbcc3c2f-20261029": ("manifest", FULL_MANIFEST),
+    "host-c4b65334-20261029": ("manifest", FULL_MANIFEST),
+    "host-4ff45ee8-20261029": ("manifest", FULL_MANIFEST),
     "host-01a5fcdc-20261028": ("manifest", FULL_MANIFEST),
 }
 

@@ -1,0 +1,96 @@
+// Owner decision (October 28, 2026): in-place disclosures keep one title with a ▸/▾ glyph; the
+// "Match statistics" title is the statistics toggle. Captures each control closed and open at 1920x1080.
+// Untracked probe source, archived with the evidence.
+
+using System.Collections;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
+using P = S0HostProbe;
+using C = S0HostCases;
+
+public static class S0HostDisclosure
+{
+    public static IEnumerator Shots()
+    {
+        P.SetGameViewSize(1920, 1080);
+        yield return P.Frames(10);
+        yield return S0HostRuns.Boot();
+        yield return C.StartMatch(3);
+        yield return P.Frames(30);
+
+        P.Begin("statistics");
+        Button stats = P.ButtonField("_statisticsToggle");
+        Label(stats, "closed", "▸", "Match statistics");
+        P.Check(!P.Get<Selectable>(P.Screens, "_statisticsHeading").gameObject.activeInHierarchy, "no separate statistics heading while the toggle is shown");
+        P.Check(P.FindButton("Open statistics") == null && P.FindButton("Close statistics") == null, "no Open/Close statistics button");
+        P.Shot("d-statistics-closed");
+        yield return null;
+        P.Click(stats);
+        yield return P.Frames(5);
+        Label(stats, "open", "▾", "Match statistics");
+        P.Check(P.View.IsStatisticsOpen && P.Get<RectTransform>(P.Screens, "_matchStatistics").gameObject.activeInHierarchy, "clicking the title opens the table");
+        Fit();
+        P.Shot("d-statistics-open");
+        yield return null;
+        P.Click(stats);
+        yield return P.Frames(3);
+        P.Check(!P.View.IsStatisticsOpen && !P.Get<RectTransform>(P.Screens, "_matchStatistics").gameObject.activeInHierarchy, "clicking the title again closes the table");
+        Label(stats, "closed again", "▸", "Match statistics");
+
+        P.Begin("compare");
+        P.Click(P.ButtonField("_mentality"));
+        yield return P.Frames(5);
+        Button compare = P.Get<Button>(P.Screens, "_compareToggle");
+        Label(compare, "closed", "▸", "Compare all seven Mentalities");
+        P.Click(compare);
+        yield return P.Frames(3);
+        Label(compare, "open", "▾", "Compare all seven Mentalities");
+        P.Check(P.Get<GameObject>(P.Screens, "_compare").activeInHierarchy, "comparison shown");
+        P.Shot("d-compare-open");
+        yield return null;
+        P.Click(compare);
+        yield return P.Frames(3);
+        Label(compare, "closed again", "▸", "Compare all seven Mentalities");
+        P.ClickText(P.View.Text.Label("action.cancel"));
+        yield return P.Frames(3);
+
+        P.Begin("earlier");
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        P.Click(P.ButtonField("_faster")); yield return P.Frames(2);
+        yield return C.SubsToCap();
+        Button earlier = P.ButtonField("_earlierToggle");
+        P.Log("feedback rows=" + P.View.Feedback.Count + " earlierActive=" + earlier.gameObject.activeInHierarchy);
+        if (!earlier.gameObject.activeInHierarchy) { P.Log("earlier toggle not shown (fewer than four feedback rows); skipped"); yield break; }
+        Label(earlier, "closed", "▸", "Earlier change feedback");
+        P.Shot("d-earlier-closed");
+        yield return null;
+        P.Click(earlier);
+        yield return P.Frames(3);
+        Label(earlier, "open", "▾", "Earlier change feedback");
+        P.Check(P.View.IsEarlierFeedbackOpen, "earlier feedback opened");
+        P.Shot("d-earlier-open");
+        yield return null;
+    }
+
+    static void Label(Button b, string state, string glyph, string title)
+    {
+        string text = P.LabelOf(b);
+        P.Log("LABEL " + state + " '" + text + "'");
+        P.Check(text.StartsWith(glyph + " ") && text.Contains(title), state + ": label is '" + glyph + " " + title + "…'");
+    }
+
+    static void Fit()
+    {
+        ScrollRect scroll = P.Get<ScrollRect>(P.Screens, "_matchScroll");
+        Canvas.ForceUpdateCanvases();
+        RectTransform panel = P.Get<RectTransform>(P.Screens, "_statisticsPanel");
+        Rect view = scroll.viewport.rect;
+        Bounds p = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, panel);
+        int titles = panel.GetComponentsInChildren<Text>(false).Count(x => x.text.Contains(P.View.Text.Label("heading.statistics")));
+        P.Log("STATSFIT viewport=" + view.height.ToString("F0") + " panelTop=" + (view.yMax - p.max.y).ToString("F0") +
+              " panelBottom=" + (view.yMax - p.min.y).ToString("F0") + " scrolled=" + scroll.content.anchoredPosition.y.ToString("F0"));
+        P.Check(p.min.y >= view.yMin - 0.5f && p.max.y <= view.yMax + 0.5f, "whole statistics panel inside the viewport");
+        P.Check(titles == 1, "\"Match statistics\" shown once in the panel");
+    }
+}

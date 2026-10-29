@@ -1,0 +1,12 @@
+Pinned-host Unity compile of the J-04 statistics-rail fix (batch mode, before the probe harness was added)
+Unity 6000.4.9f1 (f7258d6eebbe), Mono; Unity.exe -batchmode -quit -projectPath <worktree> -logFile compile.log
+Base commit: 239eae85 (PR #518 head) plus the working-tree change to src/match-client-unity/S0ScreensBehaviour.cs
+S0ScreensBehaviour.cs blob: 708bd2cb56e3cfcbd2b6013e89bb69318e8f8dab (was f6b98e46f3cde997032149ce62b3eb5c55851d3e at 239eae85)
+Incremental compile: the worktree Library was last built at 01a5fcdc (PR #520), so this build recompiled the switch to 239eae85 plus the change (159 of 1,203 items)
+
+Lines matching 'Tundra build', 'error CS' and 'warning CS', verbatim:
+*** Tundra build success (12.24 seconds), 159 items updated, 1203 evaluated
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+
+error CS count: 0

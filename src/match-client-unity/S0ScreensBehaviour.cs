@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-10-29 (PR #518 owner report: one fixed-height playback reason, so Faster never resizes the pitch)
+// Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -53,19 +54,35 @@ namespace TacticalDirector.MatchClientUnity
         private readonly Dictionary<Selectable, Text> _feedbackText = new Dictionary<Selectable, Text>();
         private readonly Dictionary<Button, Text> _selectionText = new Dictionary<Button, Text>();
         private readonly List<Text> _pitchLabels = new List<Text>();
+        private readonly RectTransform[] _pitchChips = new RectTransform[MatchEngineConstants.SQUAD_SIZE];
+        private readonly Image[] _chipFill = new Image[MatchEngineConstants.SQUAD_SIZE];
+        private readonly Image[] _chipBorder = new Image[MatchEngineConstants.SQUAD_SIZE];
+        private readonly Text[] _incomingReason = new Text[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+        private readonly Dictionary<Selectable, Image> _feedbackBar = new Dictionary<Selectable, Image>();
+        private readonly Dictionary<Selectable, Image> _feedbackBadge = new Dictionary<Selectable, Image>();
+        private readonly Dictionary<Selectable, Text> _feedbackGlyph = new Dictionary<Selectable, Text>();
+        private RectTransform _dialogFrame, _dialogCanvas;
+        private Text _scoreMentality, _matchLooseBall, _reportLooseBall;
         private ScrollRect _menuScroll, _setupScroll, _matchScroll, _reportScroll, _dialogScroll;
         private Selectable _menuHeading, _setupHeading, _matchHeading, _reportHeading, _dialogHeading;
         private Button _pause, _slower, _faster, _mentality, _substitution, _statisticsToggle, _report, _partialToggle, _earlierToggle;
-        private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _controlReason, _slowerReason, _fasterReason, _mentalityReason, _substitutionReason;
+        private Text _setupReady, _matchScore, _matchClock, _matchPeriod, _speed, _current, _used, _mentalityReason, _substitutionReason;
         private Text _notice, _caption, _reportScore, _reportResult, _reportNotice, _reportCaption, _dialogCurrent, _choiceNotice;
         private RectTransform _reportFeedback, _matchFeedback;
-        private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot;
+        private RectTransform _matchStatistics, _reportStatistics, _feedbackRoot, _earlierRoot, _statisticsPanel;
+        private bool _revealStatistics;
+        private Selectable _statisticsHeading;
+        private Button _compareToggle;
+        private string _statisticsOpenLabel, _statisticsClosedLabel, _compareOpenLabel, _compareClosedLabel, _partialOpenLabel, _partialClosedLabel, _earlierLabel;
+        private int _earlierLabelCount = -1;
+        private bool _earlierLabelOpen;
         private GameObject _dialog, _mentalityDraft, _substitutionDraft, _compare;
         private Button _submit, _cancel;
         private Selectable _invoker;
         private RawImage _pitch;
         private RectTransform _pitchBounds;
         private S0PitchLayout _pitchLayout;
+        private S0ReservedReason _playbackReason;
         private bool _pitchLayoutDirty = true;
         private int _screenWidth, _screenHeight;
         private float _measuredWidth;
@@ -76,6 +93,7 @@ namespace TacticalDirector.MatchClientUnity
         private ScreenId _lastScreen;
         private bool _wasFullTime;
         private bool _keyboardFocus;
+        private int _keyboardFrame = -1;
         private readonly Vector2[] _markerPoints = new Vector2[MatchEngineConstants.SQUAD_SIZE];
         private readonly Vector2[] _labelSizes = new Vector2[MatchEngineConstants.SQUAD_SIZE];
         private readonly Vector2[] _labelCentres = new Vector2[MatchEngineConstants.SQUAD_SIZE];
@@ -107,14 +125,16 @@ namespace TacticalDirector.MatchClientUnity
             _isAllowed = IsAllowed;
             _isTabStop = IsTabStop;
             _ui = new S0UiFactory(_font, _view.Configuration.TextScale);
-            RectTransform m = Page(menu, out _menuScroll);
+            // The S0 pitch image promises the whole pitch with both goals (I-C08), not the follow view.
+            _renderer.WholePitchView = true;
+            RectTransform m = _ui.Panel("Menu entry", Page(menu, out _menuScroll, S0UiConstants.ENTRY_MAX_WIDTH), true);
             _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
             _ui.Label(m, L("context.menu"));
-            Control(m, L("action.demo"), _view.OpenSetup, _menuScroll);
-            RectTransform s = Page(setup, out _setupScroll);
+            Control(m, L("action.demo"), _view.OpenSetup, _menuScroll, S0UiFactory.ControlKind.Primary);
+            RectTransform s = _ui.Panel("Setup entry", Page(setup, out _setupScroll, S0UiConstants.ENTRY_MAX_WIDTH));
             _setupHeading = Heading(s, L("heading.setup"), _setupScroll);
             _ui.Label(s, L("context.setup"));
-            _ui.Label(s, L("context.mentality_choice"));
+            _ui.Label(s, L("context.mentality_choice"), S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
             {
                 Mentality value = S0ScreenPresenter.Mentalities[i];
@@ -122,10 +142,11 @@ namespace TacticalDirector.MatchClientUnity
             }
 
             _setupReady = _ui.Label(s, "");
-            Control(s, L("action.start"), _view.StartMatch, _setupScroll);
-            Control(s, L("action.back"), _view.CancelSetup, _setupScroll);
+            RectTransform setupActions = _ui.Row("Setup actions", s);
+            Control(setupActions, L("action.start"), _view.StartMatch, _setupScroll, S0UiFactory.ControlKind.Primary);
+            Control(setupActions, L("action.back"), _view.CancelSetup, _setupScroll);
             BuildMatch(Page(match, out _matchScroll));
-            BuildReport(Page(report, out _reportScroll));
+            BuildReport(Page(report, out _reportScroll, S0UiConstants.ENTRY_MAX_WIDTH));
             _matchTabOrder = new Selectable[8 + _pitchControls.Length];
             _matchTabOrder[0] = _slower;
             _matchTabOrder[1] = _pause;
@@ -146,16 +167,16 @@ namespace TacticalDirector.MatchClientUnity
         }
 
         private string L(string role) => _view.Text.Label(role);
-        private RectTransform Page(GameObject root, out ScrollRect scroll)
+        private RectTransform Page(GameObject root, out ScrollRect scroll, int maxWidth = S0UiConstants.MATCH_MAX_WIDTH)
         {
-            RectTransform content = _ui.Page(root.transform, out scroll);
+            RectTransform content = _ui.Page(root.transform, out scroll, maxWidth);
             _owned.Add(scroll.gameObject);
             return content;
         }
 
-        private Selectable Heading(Transform parent, string text, ScrollRect scroll, bool heading = true)
+        private Selectable Heading(Transform parent, string text, ScrollRect scroll, S0UiFactory.TextStyle style = S0UiFactory.TextStyle.Heading)
         {
-            Text label = _ui.Label(parent, text, heading);
+            Text label = _ui.Label(parent, text, style);
             Selectable anchor = label.gameObject.AddComponent<Selectable>();
             anchor.navigation = new Navigation
             {
@@ -166,7 +187,7 @@ namespace TacticalDirector.MatchClientUnity
             return anchor;
         }
 
-        private Button Control(Transform parent, string text, Action action, ScrollRect scroll)
+        private Button Control(Transform parent, string text, Action action, ScrollRect scroll, S0UiFactory.ControlKind kind = S0UiFactory.ControlKind.Secondary)
         {
             Button button = _ui.Button(parent, text, () =>
             {
@@ -180,7 +201,7 @@ namespace TacticalDirector.MatchClientUnity
                 {
                     _renderer.RejectPresentation(exception);
                 }
-            });
+            }, kind);
             Register(button, scroll, S0FocusNavigation.Role.Action);
             return button;
         }
@@ -198,7 +219,7 @@ namespace TacticalDirector.MatchClientUnity
             {
                 RectTransform edge = _ui.Node("Edge", ring);
                 var image = edge.gameObject.AddComponent<Image>();
-                image.color = S0UiConstants.TEXT_COLOR;
+                image.color = S0UiConstants.FOCUS_COLOR;
                 image.raycastTarget = false;
                 if (i < 2)
                 {
@@ -223,23 +244,33 @@ namespace TacticalDirector.MatchClientUnity
         private void BuildMatch(RectTransform parent)
         {
             _matchHeading = Heading(parent, L("heading.match"), _matchScroll);
-            _matchScore = _ui.Label(parent, "", true);
-            _matchPeriod = _ui.Label(parent, "");
-            _matchClock = _ui.Label(parent, "");
-            _speed = _ui.Label(parent, "");
-            RectTransform playback = _ui.Node("Playback", parent);
-            var playbackLayout = playback.gameObject.AddComponent<HorizontalLayoutGroup>();
-            playbackLayout.spacing = S0UiConstants.GAP;
-            playbackLayout.childControlWidth = playbackLayout.childControlHeight = true;
-            playbackLayout.childForceExpandWidth = true;
-            playbackLayout.childForceExpandHeight = false;
+            // Scoreboard (H v0.2): Home | score, period and minute, speed and Mentality | Away.
+            RectTransform board = _ui.Panel("Scoreboard", parent);
+            RectTransform sides = _ui.Row("Scoreboard row", board, TextAnchor.MiddleCenter);
+            sides.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = true;
+            Text home = _ui.Label(sides, L("team.home"), S0UiFactory.TextStyle.Subheading);
+            home.alignment = TextAnchor.MiddleLeft;
+            Flexible(home, 1);
+            RectTransform centre = _ui.Column("Score block", sides, 0);
+            Flexible(centre, 2);
+            Text away = _ui.Label(sides, L("team.away"), S0UiFactory.TextStyle.Subheading);
+            away.alignment = TextAnchor.MiddleRight;
+            Flexible(away, 1);
+            // A team identity never breaks mid-word: its column keeps at least its own width (narrow, 200%).
+            home.GetComponent<LayoutElement>().minWidth = home.preferredWidth;
+            away.GetComponent<LayoutElement>().minWidth = away.preferredWidth;
+            _matchScore = _ui.Label(centre, "", S0UiFactory.TextStyle.Score);
+            _matchScore.alignment = TextAnchor.UpperCenter;
+            Pair(centre, out _matchPeriod, out _matchClock, S0UiFactory.TextStyle.Subheading);
+            Pair(centre, out _speed, out _scoreMentality, S0UiFactory.TextStyle.Secondary);
+            _speed.fontStyle = _scoreMentality.fontStyle = FontStyle.Bold;
+            RectTransform playback = _ui.Row("Playback", parent);
             _slower = Control(playback, L("action.slower"), () =>
             {
                 _view.Slower();
                 if (!_view.CanSlower)
                     Focus(_pause);
             }, _matchScroll);
-            _slowerReason = _ui.Label(parent, "");
             _pause = Control(playback, L("action.pause"), _view.TogglePause, _matchScroll);
             _faster = Control(playback, L("action.faster"), () =>
             {
@@ -247,15 +278,19 @@ namespace TacticalDirector.MatchClientUnity
                 if (!_view.CanFaster)
                     Focus(_pause);
             }, _matchScroll);
-            _fasterReason = _ui.Label(parent, "");
-            _controlReason = _ui.Label(parent, "");
-            _ui.Label(parent, L("context.speed_steps"));
+            // One box for the four playback reasons, which never apply together. It keeps the tallest one's height
+            // even while empty: the pitch is sized from the height left on the page, so a reason appearing at
+            // real time or top speed must not move it.
+            _playbackReason = _ui.ReservedReason(parent, L("reason.waiting"), L("reason.ended"), L("reason.slowest"), L("reason.fastest"));
+            _ui.Label(parent, L("context.speed_steps"), S0UiFactory.TextStyle.Secondary);
             RectTransform body = _ui.Node("Match body", parent);
             var bodyLayout = body.gameObject.AddComponent<S0BodyLayout>();
             bodyLayout.PageScroll = _matchScroll;
-            RectTransform pitchColumn = _ui.Column("Pitch column", body);
-            RectTransform rail = _ui.Column("Changes rail", body);
-            Text direction = _ui.Label(pitchColumn, L("pitch.direction"));
+            RectTransform pitchColumn = _ui.Column("Pitch column", body, 0);
+            RectTransform rail = _ui.Column("Changes rail", body, 0);
+            Text direction = _ui.Label(pitchColumn, L("pitch.direction"), S0UiFactory.TextStyle.Secondary);
+            direction.fontStyle = FontStyle.Bold;
+            direction.alignment = TextAnchor.UpperRight;
             bodyLayout.PitchMeasure = direction;
             RectTransform pitch = _ui.Node("Pitch", pitchColumn);
             _pitchBounds = pitch;
@@ -268,34 +303,43 @@ namespace TacticalDirector.MatchClientUnity
             _pitch = imageRect.gameObject.AddComponent<RawImage>();
             _pitch.color = Color.white;
             _pitch.raycastTarget = false;
-            _pitchWaiting = _ui.Label(pitchColumn, L("pitch.waiting"));
-            _ui.Label(pitchColumn, L("pitch.legend"));
-            _pitchDescription = _ui.Label(pitchColumn, L("pitch.description"));
+            _ui.Border(imageRect, S0UiConstants.LINE_COLOR, false);
+            _pitchWaiting = _ui.Reason(pitchColumn);
+            S0UiFactory.SetBoxed(_pitchWaiting, L("pitch.waiting"));
+            _ui.Label(pitchColumn, L("pitch.legend"), S0UiFactory.TextStyle.Secondary);
+            _pitchDescription = _ui.Label(pitchColumn, L("pitch.description"), S0UiFactory.TextStyle.Secondary);
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                Text label = _ui.Label(pitch, "");
+                // A shirt chip (H v0.2 .agent): filled tag, legible text, tethered to its marker.
+                RectTransform chip = _ui.Node("Shirt chip", pitch);
+                chip.sizeDelta = new Vector2(S0UiConstants.CHIP_SIZE * _textScale * 4, S0UiConstants.CHIP_SIZE * _textScale * 2);
+                _pitchChips[i] = chip;
+                _chipFill[i] = chip.gameObject.AddComponent<Image>();
+                _chipFill[i].raycastTarget = true;
+                _chipBorder[i] = _ui.Border(chip, S0UiConstants.FOCUS_COLOR, false);
+                Text label = _ui.Label(chip, "", S0UiFactory.TextStyle.Chip);
                 label.alignment = TextAnchor.MiddleCenter;
-                RectTransform rect = label.rectTransform;
-                rect.sizeDelta = new Vector2(S0UiConstants.TEXT_SIZE * _textScale * 4, S0UiConstants.TEXT_SIZE * _textScale * 2);
+                S0UiFactory.Stretch(label.rectTransform);
+                label.rectTransform.offsetMin = new Vector2(S0UiConstants.GAP / 2, 0);
+                label.rectTransform.offsetMax = new Vector2(-S0UiConstants.GAP / 2, 0);
                 _pitchLabels.Add(label);
                 _labelReserved[i] = true;
                 RectTransform line = _ui.Node("Marker tether", pitch);
                 var image = line.gameObject.AddComponent<Image>();
-                image.color = S0UiConstants.TEXT_COLOR;
+                image.color = S0UiConstants.SECONDARY_COLOR;
                 image.raycastTarget = false;
                 line.pivot = new Vector2(0, 0.5f);
                 _leaderLines[i] = line;
-                label.raycastTarget = true;
                 int index = i;
-                var hover = label.gameObject.AddComponent<EventTrigger>();
+                var hover = chip.gameObject.AddComponent<EventTrigger>();
                 var entry = new EventTrigger.Entry
                 {
                     eventID = EventTriggerType.PointerEnter
                 };
                 entry.callback.AddListener(_ => S0UiFactory.Set(_pitchDescription, _view.PitchPlayerDescription(index)));
                 hover.triggers.Add(entry);
-                Selectable markerControl = label.gameObject.AddComponent<Selectable>();
-                markerControl.targetGraphic = label;
+                Selectable markerControl = chip.gameObject.AddComponent<Selectable>();
+                markerControl.targetGraphic = _chipFill[i];
                 markerControl.transition = Selectable.Transition.None;
                 markerControl.navigation = new Navigation
                 {
@@ -318,43 +362,85 @@ namespace TacticalDirector.MatchClientUnity
             }
 
             for (int i = 0; i < _leaderLines.Length; i++)
-                _leaderLines[i].SetSiblingIndex(i + 1); // image, tethers, labels: tethers remain visible over the pitch.
+                _leaderLines[i].SetSiblingIndex(i + 1); // image, tethers, chips: tethers remain visible over the pitch.
 
-            Heading(rail, L("heading.changes"), _matchScroll);
-            _current = _ui.Label(rail, "");
+            RectTransform changes = _ui.Panel("Home team changes", rail);
+            Heading(changes, L("heading.changes"), _matchScroll, S0UiFactory.TextStyle.Subheading);
+            _current = _ui.Label(changes, "");
             bodyLayout.RailMeasure = _current;
-            _mentality = Control(rail, L("action.mentality"), () => OpenDialog(_mentality, _view.OpenMentality), _matchScroll);
-            _mentalityReason = _ui.Label(rail, "");
-            _substitution = Control(rail, L("action.substitution"), () => OpenDialog(_substitution, _view.OpenSubstitution), _matchScroll);
-            _used = _ui.Label(rail, "");
-            _substitutionReason = _ui.Label(rail, "");
-            _matchFeedback = _ui.Column("Feedback region", rail);
-            Heading(_matchFeedback, L("heading.feedback"), _matchScroll);
-            _feedbackRoot = _ui.Column("Latest feedback", parent);
+            _mentality = Control(changes, L("action.mentality"), () => OpenDialog(_mentality, _view.OpenMentality), _matchScroll);
+            _mentalityReason = _ui.Reason(changes);
+            _substitution = Control(changes, L("action.substitution"), () => OpenDialog(_substitution, _view.OpenSubstitution), _matchScroll);
+            _used = _ui.Label(changes, "");
+            _substitutionReason = _ui.Reason(changes);
+            _matchFeedback = _ui.Column("Feedback region", changes, 0);
+            Heading(_matchFeedback, L("heading.feedback"), _matchScroll, S0UiFactory.TextStyle.Subheading);
+            _feedbackRoot = _ui.Column("Latest feedback", parent, 0);
             _earlierToggle = Control(_matchFeedback, "", _view.ToggleEarlierFeedback, _matchScroll);
-            _earlierRoot = _ui.Column("Earlier feedback", parent);
-            _notice = _ui.Label(rail, "");
-            _statisticsToggle = Control(rail, L("action.statistics_open"), _view.ToggleStatistics, _matchScroll);
-            _matchStatistics = _ui.Column("Statistics", parent);
-            _caption = _ui.Label(_matchStatistics, "");
-            _ui.Label(_matchStatistics, L("statistics.loose_ball"));
-            _report = Control(rail, L("action.report"), _view.ShowReport, _matchScroll);
+            _earlierRoot = _ui.Column("Earlier feedback", parent, 0);
+            _notice = _ui.Reason(rail, true);
+            _statisticsPanel = _ui.Panel("Match statistics", rail);
+            // Owner decision (October 28): the panel title is itself the open/close control; the plain
+            // heading remains only at full time, when the toggle is gone.
+            _statisticsHeading = Heading(_statisticsPanel, L("heading.statistics"), _matchScroll, S0UiFactory.TextStyle.Subheading);
+            _statisticsOpenLabel = Disclosure(true, L("heading.statistics"));
+            _statisticsClosedLabel = Disclosure(false, L("heading.statistics"));
+            _statisticsToggle = Control(_statisticsPanel, _statisticsClosedLabel, () =>
+            {
+                _view.ToggleStatistics();
+                _revealStatistics = _view.IsStatisticsOpen;
+            }, _matchScroll);
+            _matchStatistics = _ui.Column("Statistics", _statisticsPanel, 0);
+            // Rail rows abut, separated by their rules, so the table fits beside the pitch at 1920×1080.
+            _matchStatistics.GetComponent<VerticalLayoutGroup>().spacing = 0;
+            _caption = _ui.Label(_matchStatistics, "", S0UiFactory.TextStyle.Secondary);
+            _caption.fontStyle = FontStyle.Bold;
+            _matchLooseBall = _ui.Label(_matchStatistics, L("statistics.loose_ball"));
+            _report = Control(rail, L("action.report"), _view.ShowReport, _matchScroll, S0UiFactory.ControlKind.Primary);
         }
 
-        private void BuildReport(RectTransform parent)
+        private static void Flexible(Component item, float weight)
         {
+            var size = item.gameObject.GetComponent<LayoutElement>();
+            if (size == null)
+                size = item.gameObject.AddComponent<LayoutElement>();
+            size.flexibleWidth = weight;
+            size.minWidth = 0;
+        }
+
+        // Two centred values sharing one line where width allows; each wraps within its half.
+        private void Pair(Transform parent, out Text first, out Text second, S0UiFactory.TextStyle style)
+        {
+            RectTransform row = _ui.Row("Pair", parent, TextAnchor.UpperCenter);
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.childForceExpandWidth = true;
+            layout.spacing = S0UiConstants.PADDING + S0UiConstants.GAP / 2;
+            first = _ui.Label(row, "", style);
+            first.alignment = TextAnchor.UpperRight;
+            Flexible(first, 1);
+            second = _ui.Label(row, "", style);
+            second.alignment = TextAnchor.UpperLeft;
+            Flexible(second, 1);
+        }
+
+        private void BuildReport(RectTransform page)
+        {
+            RectTransform parent = _ui.Panel("Report entry", page, true);
             _reportHeading = Heading(parent, L("heading.report"), _reportScroll);
-            _reportResult = _ui.Label(parent, "", true);
-            _reportScore = _ui.Label(parent, "", true);
-            _reportNotice = _ui.Label(parent, "");
-            _partialToggle = Control(parent, L("action.partial"), _view.TogglePartialReport, _reportScroll);
-            _reportStatistics = _ui.Column("Report statistics", parent);
-            _reportCaption = _ui.Label(_reportStatistics, "");
-            _ui.Label(_reportStatistics, L("statistics.loose_ball"));
-            _reportFeedback = _ui.Column("Report feedback region", parent);
-            Heading(_reportFeedback, L("heading.feedback"), _reportScroll);
+            _reportResult = _ui.Label(parent, "", S0UiFactory.TextStyle.Subheading);
+            _reportScore = _ui.Label(parent, "", S0UiFactory.TextStyle.Score);
+            _reportNotice = _ui.Reason(parent, true);
+            _partialOpenLabel = Disclosure(true, L("action.partial"));
+            _partialClosedLabel = Disclosure(false, L("action.partial"));
+            _partialToggle = Control(parent, _partialClosedLabel, _view.TogglePartialReport, _reportScroll);
+            _reportStatistics = _ui.Column("Report statistics", parent, 0);
+            _reportCaption = _ui.Label(_reportStatistics, "", S0UiFactory.TextStyle.Secondary);
+            _reportCaption.fontStyle = FontStyle.Bold;
+            _reportLooseBall = _ui.Label(_reportStatistics, L("statistics.loose_ball"));
+            _reportFeedback = _ui.Column("Report feedback region", parent, 0);
+            Heading(_reportFeedback, L("heading.feedback"), _reportScroll, S0UiFactory.TextStyle.Subheading);
             // Navigation is outside the partial disclosure and remains available through observer failure.
-            Control(parent, L("action.return"), _view.ReturnToMenu, _reportScroll);
+            Control(parent, L("action.return"), _view.ReturnToMenu, _reportScroll, S0UiFactory.ControlKind.Primary);
         }
 
         private void BuildDialog()
@@ -362,50 +448,111 @@ namespace TacticalDirector.MatchClientUnity
             var root = new GameObject("S0 dialog", typeof(RectTransform));
             root.transform.SetParent(transform, false);
             _owned.Add(root);
-            RectTransform content = _ui.Page(root.transform, out _dialogScroll);
-            _dialogScroll.GetComponent<Canvas>().sortingOrder = 1;
+            // Modal staging (H v0.2 dialog): dimmed backdrop over the match, centred bordered frame.
+            _dialogCanvas = _ui.Canvas(root.transform, 1);
+            // Owner decision (October 28): a click outside the frame closes the pop-up as Cancel does. The
+            // backdrop is the frame's sibling, not its parent, so a click inside the frame never reaches it.
+            RectTransform backdrop = _ui.Node("Backdrop", _dialogCanvas);
+            S0UiFactory.Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Image>().color = S0UiConstants.BACKDROP_COLOR;
+            var outside = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            outside.callback.AddListener(data =>
+            {
+                if (((PointerEventData)data).button == PointerEventData.InputButton.Left)
+                    CancelDialog();
+            });
+            backdrop.gameObject.AddComponent<EventTrigger>().triggers.Add(outside);
+            _dialogFrame = _ui.Node("Dialog frame", _dialogCanvas);
+            _dialogFrame.anchorMin = _dialogFrame.anchorMax = _dialogFrame.pivot = new Vector2(0.5f, 0.5f);
+            var frameFill = _dialogFrame.gameObject.AddComponent<Image>();
+            frameFill.color = S0UiConstants.SURFACE_COLOR;
+            _ui.Border(_dialogFrame, S0UiConstants.FOCUS_COLOR, false);
+            RectTransform rule = _ui.Overlay("Top rule", _dialogFrame);
+            rule.anchorMin = new Vector2(0, 1);
+            rule.anchorMax = Vector2.one;
+            rule.pivot = new Vector2(0.5f, 1);
+            rule.sizeDelta = new Vector2(0, S0UiConstants.ACCENT_BAR_WIDTH);
+            rule.anchoredPosition = Vector2.zero;
+            var ruleImage = rule.gameObject.AddComponent<Image>();
+            ruleImage.color = S0UiConstants.RULE_COLOR;
+            ruleImage.raycastTarget = false;
+            RectTransform content = _ui.ScrollColumn(_dialogFrame, _dialogFrame, out _dialogScroll);
             _dialog = root;
-            _dialogHeading = Heading(content, "", _dialogScroll);
+            // Owner decision (October 28): a pop-up has a Close control beside its title.
+            RectTransform header = _ui.Row("Dialog header", content, TextAnchor.UpperLeft);
+            _dialogHeading = Heading(header, "", _dialogScroll, S0UiFactory.TextStyle.Subheading);
+            Flexible(_dialogHeading, 1);
+            string close = Glyph('✕', '×');
+            Control(header, close.Length == 0 ? L("action.close") : close + " " + L("action.close"), CancelDialog, _dialogScroll);
             _dialogCurrent = _ui.Label(content, "");
-            _ui.Label(content, L("context.submit"));
-            _mentalityDraft = _ui.Column("Mentality draft", content).gameObject;
-            _ui.Label(_mentalityDraft.transform, L("field.requested_mentality"));
+            _ui.Label(content, L("context.submit"), S0UiFactory.TextStyle.Secondary);
+            _mentalityDraft = _ui.Column("Mentality draft", content, 0).gameObject;
+            _ui.Label(_mentalityDraft.transform, L("field.requested_mentality"), S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
             {
                 Mentality value = S0ScreenPresenter.Mentalities[i];
                 _mentalityChoices[i] = Control(_mentalityDraft.transform, _view.MentalityChoice(value), () => _view.SelectRequestedMentality(value), _dialogScroll);
             }
 
-            Control(_mentalityDraft.transform, L("action.compare"), () => _compare.SetActive(!_compare.activeSelf), _dialogScroll);
-            _compare = _ui.Column("Comparison", _mentalityDraft.transform).gameObject;
+            _compareOpenLabel = Disclosure(true, L("action.compare"));
+            _compareClosedLabel = Disclosure(false, L("action.compare"));
+            _compareToggle = Control(_mentalityDraft.transform, _compareClosedLabel, () => ShowComparison(!_compare.activeSelf), _dialogScroll);
+            _compare = _ui.Column("Comparison", _mentalityDraft.transform, 0).gameObject;
             for (int i = 0; i < S0ScreenPresenter.Mentalities.Count; i++)
             {
-                RectTransform row = _ui.Column("Comparison row", _compare.transform);
+                RectTransform row = _ui.Column("Comparison row", _compare.transform, S0UiConstants.GAP);
                 _ui.Label(row, _view.MentalityChoice(S0ScreenPresenter.Mentalities[i]));
-                _comparisonCurrent[i] = _ui.Label(row, L("tag.current"));
-                _comparisonRequested[i] = _ui.Label(row, L("tag.requested"));
+                _comparisonCurrent[i] = _ui.Label(row, L("tag.current"), S0UiFactory.TextStyle.Strong);
+                _comparisonCurrent[i].color = S0UiConstants.SECONDARY_COLOR;
+                _comparisonRequested[i] = _ui.Label(row, L("tag.requested"), S0UiFactory.TextStyle.Strong);
+                _comparisonRequested[i].color = S0UiConstants.ACCENT_COLOR;
             }
             _compare.SetActive(false);
-            _substitutionDraft = _ui.Column("Substitution draft", content).gameObject;
+            _substitutionDraft = _ui.Column("Substitution draft", content, 0).gameObject;
             _ui.Label(_substitutionDraft.transform, L("context.substitution"));
-            _ui.Label(_substitutionDraft.transform, L("field.outgoing"));
+            _ui.Label(_substitutionDraft.transform, L("field.outgoing"), S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < MatchEngineConstants.PLAYERS_PER_TEAM; i++)
             {
                 int index = i;
                 _outgoing.Add(Control(_substitutionDraft.transform, "", () => _view.SelectOutgoing(_view.Outgoing[index].Index), _dialogScroll));
             }
 
-            _ui.Label(_substitutionDraft.transform, L("field.incoming"));
+            _ui.Label(_substitutionDraft.transform, L("field.incoming"), S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < MatchEngineConstants.SUBSTITUTES_PER_TEAM; i++)
             {
                 int index = i;
-                _incoming.Add(Control(_substitutionDraft.transform, "", () => _view.SelectIncoming(_view.Incoming[index].Index), _dialogScroll));
+                Button choice = Control(_substitutionDraft.transform, "", () => _view.SelectIncoming(_view.Incoming[index].Index), _dialogScroll);
+                // Gate J J-01: an unavailable bench choice stays listed with its reason in words.
+                _incomingReason[i] = _ui.Label(choice.transform, "", S0UiFactory.TextStyle.Secondary);
+                _incomingReason[i].gameObject.SetActive(false);
+                _incoming.Add(choice);
             }
 
-            _choiceNotice = _ui.Label(content, "");
-            _submit = Control(content, L("action.submit"), SubmitDialog, _dialogScroll);
-            _cancel = Control(content, L("action.cancel"), CancelDialog, _dialogScroll);
+            _choiceNotice = _ui.Reason(content, true);
+            RectTransform actions = _ui.Row("Dialog actions", content);
+            _submit = Control(actions, L("action.submit"), SubmitDialog, _dialogScroll, S0UiFactory.ControlKind.Primary);
+            _cancel = Control(actions, L("action.cancel"), CancelDialog, _dialogScroll);
             _dialog.SetActive(false);
+        }
+
+        // Frame width min(46rem, 95vw) and height min(content, 90vh), as in H v0.2.
+        private void LayoutDialogFrame()
+        {
+            if (!_dialog.activeSelf)
+                return;
+            Vector2 screen = _dialogCanvas.rect.size;
+            float width = Mathf.Min(S0UiConstants.DIALOG_MAX_WIDTH * _ui.Scale, screen.x * S0UiConstants.DIALOG_WIDTH_SHARE);
+            float height = Mathf.Min(LayoutUtility.GetPreferredHeight(_dialogScroll.content), screen.y * S0UiConstants.DIALOG_HEIGHT_SHARE);
+            Vector2 size = new Vector2(Mathf.Round(width), Mathf.Round(height));
+            if (_dialogFrame.sizeDelta != size)
+                _dialogFrame.sizeDelta = size;
+        }
+
+        // The comparison is binding-local state, so its label cannot wait for a presenter revision.
+        private void ShowComparison(bool open)
+        {
+            _compare.SetActive(open);
+            _ui.SetButton(_compareToggle, open ? _compareOpenLabel : _compareClosedLabel);
         }
 
         private void OpenDialog(Selectable invoker, Action open)
@@ -413,8 +560,10 @@ namespace TacticalDirector.MatchClientUnity
             open();
             _invoker = invoker;
             _dialog.SetActive(true);
-            _compare.SetActive(false);
+            ShowComparison(false);
             Refresh();
+            Canvas.ForceUpdateCanvases();
+            LayoutDialogFrame();
             Focus(DialogInitialFocus());
         }
 
@@ -491,13 +640,13 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.Set(_matchClock, _view.Clock);
             S0UiFactory.Set(_matchPeriod, _view.Period);
             S0UiFactory.Set(_speed, _view.Speed);
-            S0UiFactory.Set(_current, _view.Text.Format("current", "mentality.current", _view.MentalityLabel(_view.CurrentMentality)));
+            string current = _view.Text.Format("current", "mentality.current", _view.MentalityLabel(_view.CurrentMentality));
+            S0UiFactory.Set(_current, current);
+            S0UiFactory.Set(_scoreMentality, _view.Frame.IsEmpty ? "" : current);
             S0UiFactory.Set(_used, _view.SubstitutionsUsed);
-            S0UiFactory.Set(_controlReason, _view.ControlReason);
-            S0UiFactory.Set(_slowerReason, _view.SlowerReason);
-            S0UiFactory.Set(_fasterReason, _view.FasterReason);
-            S0UiFactory.Set(_mentalityReason, _view.MentalityReason);
-            S0UiFactory.Set(_substitutionReason, _view.SubstitutionReasonText);
+            _playbackReason.Set(_view.ControlReason.Length > 0 ? _view.ControlReason : _view.SlowerReason.Length > 0 ? _view.SlowerReason : _view.FasterReason);
+            S0UiFactory.SetBoxed(_mentalityReason, _view.MentalityReason);
+            S0UiFactory.SetBoxed(_substitutionReason, _view.SubstitutionReasonText);
             _slower.interactable = _view.CanSlower;
             _faster.interactable = _view.CanFaster;
             _pause.interactable = _view.CanPause;
@@ -507,22 +656,25 @@ namespace TacticalDirector.MatchClientUnity
             _report.gameObject.SetActive(_view.CanReport);
             _statisticsToggle.gameObject.SetActive(!_view.IsFullTime);
             _statisticsToggle.interactable = !_view.Frame.IsEmpty;
-            _ui.SetButton(_statisticsToggle, L(_view.IsStatisticsOpen ? "action.statistics_close" : "action.statistics_open"));
+            _statisticsHeading.gameObject.SetActive(_view.IsFullTime);
+            _ui.SetButton(_statisticsToggle, _view.IsStatisticsOpen ? _statisticsOpenLabel : _statisticsClosedLabel);
             _matchStatistics.gameObject.SetActive(_view.IsStatisticsOpen && _view.HasStatistics);
-            S0UiFactory.Set(_notice, _view.StatisticsNotice);
+            S0UiFactory.SetBoxed(_notice, _view.StatisticsNotice);
+            // The panel heading already names complete statistics; only a partial cutoff caption adds to it.
+            _caption.gameObject.SetActive(_view.IsStatisticsIncomplete);
             S0UiFactory.Set(_caption, _view.StatisticsCaption);
             S0UiFactory.Set(_reportScore, _view.Score);
             S0UiFactory.Set(_reportResult, _view.Result);
-            S0UiFactory.Set(_reportNotice, _view.StatisticsNotice);
+            S0UiFactory.SetBoxed(_reportNotice, _view.StatisticsNotice);
             S0UiFactory.Set(_reportCaption, _view.StatisticsCaption);
             _partialToggle.gameObject.SetActive(_view.IsStatisticsIncomplete && _view.HasStatistics);
-            _ui.SetButton(_partialToggle, L(_view.IsPartialReportOpen ? "action.statistics_close" : "action.partial"));
+            _ui.SetButton(_partialToggle, _view.IsPartialReportOpen ? _partialOpenLabel : _partialClosedLabel);
             _reportStatistics.gameObject.SetActive(_view.HasStatistics && (!_view.IsStatisticsIncomplete || _view.IsPartialReportOpen));
             BindStatistics();
             BindFeedback();
             BindDialog();
             _matchCamera.enabled = _view.Screen == ClientScreens.MatchView && !_view.Frame.IsEmpty;
-            _pitchWaiting.gameObject.SetActive(_view.Frame.IsEmpty);
+            _pitchWaiting.transform.parent.gameObject.SetActive(_view.Frame.IsEmpty);
             _pitchBounds.gameObject.SetActive(!_view.Frame.IsEmpty);
             if (_view.Screen == ClientScreens.MainMenu)
             {
@@ -539,6 +691,14 @@ namespace TacticalDirector.MatchClientUnity
                 S0UiFactory.Set(_pitchDescription, L("pitch.description"));
             }
 
+            if (_revealStatistics)
+            {
+                // Opening statistics scrolls just far enough to show the whole table, never past its toggle.
+                _revealStatistics = false;
+                Reveal(_matchScroll, _statisticsPanel);
+                Reveal(_matchScroll, (RectTransform)_statisticsToggle.transform);
+            }
+
             RecoverFocus();
         }
 
@@ -546,11 +706,13 @@ namespace TacticalDirector.MatchClientUnity
         {
             if (!_selectionText.TryGetValue(button, out Text label))
             {
-                label = _ui.Label(button.transform, tag);
+                label = _ui.Label(button.transform, tag, S0UiFactory.TextStyle.Chip);
+                label.color = S0UiConstants.ACCENT_COLOR;
                 label.gameObject.name = "Selection";
                 _selectionText.Add(button, label);
             }
             label.gameObject.SetActive(selected);
+            _ui.SetSelected(button, selected);
         }
 
         private void BindDialog()
@@ -574,7 +736,7 @@ namespace TacticalDirector.MatchClientUnity
                     _comparisonRequested[i].gameObject.SetActive(value == _view.RequestedMentality);
                 }
             }
-            S0UiFactory.Set(_choiceNotice, _view.ChoiceNotice);
+            S0UiFactory.SetBoxed(_choiceNotice, _view.ChoiceNotice);
             _submit.interactable = mentality ? _view.CanChangeMentality : _view.CanSubmitSubstitution;
             for (int i = 0; i < _outgoing.Count; i++)
             {
@@ -593,8 +755,12 @@ namespace TacticalDirector.MatchClientUnity
                 _incoming[i].gameObject.SetActive(exists);
                 if (exists)
                 {
-                    _ui.SetButton(_incoming[i], _view.Incoming[i].Label);
-                    MarkChoice(_incoming[i], _view.Incoming[i].Index == _view.SelectedIncoming, L("tag.requested"));
+                    S0ScreenPresenter.PlayerChoice choice = _view.Incoming[i];
+                    _ui.SetButton(_incoming[i], choice.Label);
+                    _incoming[i].interactable = choice.IsAvailable;
+                    S0UiFactory.Set(_incomingReason[i], choice.UnavailableReason);
+                    _incomingReason[i].gameObject.SetActive(!choice.IsAvailable);
+                    MarkChoice(_incoming[i], choice.Index == _view.SelectedIncoming, L("tag.requested"));
                 }
             }
         }
@@ -616,11 +782,7 @@ namespace TacticalDirector.MatchClientUnity
             _feedbackRoot.SetSiblingIndex(3);
             _scrolls[_earlierToggle] = scroll;
             while (_feedbackRows.Count < _view.Feedback.Count)
-            {
-                Selectable row = Heading(_feedbackRoot, "", _matchScroll, false);
-                _feedbackRows.Add(row);
-                _feedbackText.Add(row, row.GetComponent<Text>());
-            }
+                AddFeedbackRow();
             int earlier = Mathf.Max(0, _view.Feedback.Count - S0UiConstants.EXPANDED_FEEDBACK);
             for (int i = 0; i < _feedbackRows.Count; i++)
             {
@@ -639,11 +801,102 @@ namespace TacticalDirector.MatchClientUnity
                     row.transform.SetParent(parent, false);
                 row.transform.SetSiblingIndex(i < earlier ? i : i - earlier);
                 S0UiFactory.Set(_feedbackText[row], _view.Feedback[i]);
+                StyleOutcome(row, _view.FeedbackStatus[i]);
             }
 
             _earlierToggle.gameObject.SetActive(earlier > 0);
             _earlierRoot.gameObject.SetActive(_view.IsEarlierFeedbackOpen);
-            _ui.SetButton(_earlierToggle, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+            if (earlier != _earlierLabelCount || _view.IsEarlierFeedbackOpen != _earlierLabelOpen)
+            {
+                _earlierLabelCount = earlier;
+                _earlierLabelOpen = _view.IsEarlierFeedbackOpen;
+                _earlierLabel = Disclosure(_earlierLabelOpen, _view.Text.Format("feedback.earlier", "feedback.earlier", earlier));
+            }
+
+            _ui.SetButton(_earlierToggle, _earlierLabel);
+        }
+
+        // H v0.2 outcome row: sunken surface, status-coloured left bar and a glyph badge. The row's words
+        // carry the outcome; colour and glyph only reinforce it (I-C11).
+        private void AddFeedbackRow()
+        {
+            RectTransform row = _ui.Row("Feedback row", _feedbackRoot, TextAnchor.UpperLeft);
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(0, S0UiConstants.GAP + S0UiConstants.GAP / 2, S0UiConstants.GAP, S0UiConstants.GAP);
+            var fill = row.gameObject.AddComponent<Image>();
+            fill.color = S0UiConstants.SUNKEN_COLOR;
+            fill.raycastTarget = false;
+            Image bar = _ui.Bar(row, S0UiConstants.FOCUS_COLOR);
+            // The cell takes the row's height; the badge keeps its own, at the top (H v0.2 .outcome).
+            RectTransform cell = _ui.Column("Outcome cell", row, 0);
+            cell.GetComponent<VerticalLayoutGroup>().childForceExpandWidth = false;
+            RectTransform badge = _ui.Row("Outcome badge", cell, TextAnchor.MiddleCenter);
+            badge.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(S0UiConstants.GAP / 2 + 2, S0UiConstants.GAP / 2 + 2, 1, 1);
+            var badgeFill = badge.gameObject.AddComponent<Image>();
+            badgeFill.raycastTarget = false;
+            Text glyph = _ui.Label(badge, "", S0UiFactory.TextStyle.Strong);
+            glyph.alignment = TextAnchor.MiddleCenter;
+            Text body = _ui.Label(row, "");
+            body.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+            Selectable anchor = row.gameObject.AddComponent<Selectable>();
+            anchor.navigation = new Navigation
+            {
+                mode = Navigation.Mode.None
+            };
+            anchor.transition = Selectable.Transition.None;
+            Register(anchor, _matchScroll);
+            _feedbackRows.Add(anchor);
+            _feedbackText.Add(anchor, body);
+            _feedbackBar.Add(anchor, bar);
+            _feedbackBadge.Add(anchor, badgeFill);
+            _feedbackGlyph.Add(anchor, glyph);
+        }
+
+        private void StyleOutcome(Selectable row, ClientChangeStatus status)
+        {
+            Color accent, badge, ink;
+            string glyph;
+            switch (status)
+            {
+                case ClientChangeStatus.Applied:
+                    accent = badge = S0UiConstants.SUCCESS_COLOR;
+                    ink = S0UiConstants.INK_COLOR;
+                    glyph = Glyph('✓', '√');
+                    break;
+                case ClientChangeStatus.Refused:
+                case ClientChangeStatus.SendFailure:
+                    accent = badge = S0UiConstants.FAILURE_COLOR;
+                    ink = S0UiConstants.INK_COLOR;
+                    glyph = Glyph('✕', '×');
+                    break;
+                case ClientChangeStatus.NotApplied:
+                    accent = ink = S0UiConstants.SECONDARY_COLOR;
+                    badge = S0UiConstants.SUNKEN_COLOR;
+                    glyph = Glyph('–', '-');
+                    break;
+                default:
+                    accent = ink = S0UiConstants.FOCUS_COLOR;
+                    badge = S0UiConstants.RAISED_COLOR;
+                    glyph = Glyph('…', '.');
+                    break;
+            }
+
+            _feedbackBar[row].color = accent;
+            _feedbackBadge[row].color = badge;
+            _feedbackGlyph[row].color = ink;
+            S0UiFactory.Set(_feedbackGlyph[row], glyph);
+        }
+
+        // The packaged font decides: the H v0.2 glyph when it has one, else a covered substitute.
+        private string Glyph(char preferred, char substitute) =>
+            _font.HasCharacter(preferred) ? preferred.ToString() : _font.HasCharacter(substitute) ? substitute.ToString() : "";
+
+        // Owner decision (October 28): a control that opens or closes content in place keeps one title and
+        // shows its state with a ▸/▾ glyph (a covered substitute, or none, when the font lacks it).
+        private string Disclosure(bool open, string label)
+        {
+            string glyph = open ? Glyph('▾', '▼') : Glyph('▸', '►');
+            return glyph.Length == 0 ? label : glyph + " " + label;
         }
 
         private void BindStatistics()
@@ -652,7 +905,19 @@ namespace TacticalDirector.MatchClientUnity
             while (_statRows.Count < _view.Statistics.Count + 1)
             {
                 RectTransform row = _ui.Node("Statistic row", parent);
+                var fill = row.gameObject.AddComponent<Image>();
+                fill.raycastTarget = false;
+                RectTransform rule = _ui.Overlay("Rule", row);
+                rule.anchorMin = Vector2.zero;
+                rule.anchorMax = new Vector2(1, 0);
+                rule.pivot = new Vector2(0.5f, 0);
+                rule.sizeDelta = new Vector2(0, 1);
+                rule.anchoredPosition = Vector2.zero;
+                var ruleImage = rule.gameObject.AddComponent<Image>();
+                ruleImage.color = S0UiConstants.LINE_COLOR;
+                ruleImage.raycastTarget = false;
                 var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+                layout.padding = new RectOffset(S0UiConstants.GAP, S0UiConstants.GAP, S0UiConstants.GAP, S0UiConstants.GAP);
                 layout.spacing = S0UiConstants.GAP;
                 layout.childControlWidth = layout.childControlHeight = true;
                 layout.childForceExpandWidth = true;
@@ -697,7 +962,13 @@ namespace TacticalDirector.MatchClientUnity
                 S0UiFactory.Set(_statText[row][0], label);
                 S0UiFactory.Set(_statText[row][1], home);
                 S0UiFactory.Set(_statText[row][2], away);
+                Color ink = i == 0 ? S0UiConstants.SECONDARY_COLOR : S0UiConstants.TEXT_COLOR;
+                foreach (Text cell in _statText[row])
+                    cell.color = ink;
+                row.GetComponent<Image>().color = i > 0 && i % 2 == 1 ? S0UiConstants.ZEBRA_COLOR : Color.clear;
             }
+
+            (_view.Screen == ClientScreens.PostMatchReport ? _reportLooseBall : _matchLooseBall).transform.SetAsLastSibling();
         }
 
         private void BindPitch()
@@ -749,12 +1020,12 @@ namespace TacticalDirector.MatchClientUnity
             _layoutFailureReported = false;
             for (int i = 0; i < _pitchLabels.Count; i++)
             {
-                Text label = _pitchLabels[i];
-                label.gameObject.SetActive(_labelVisible[i]);
+                RectTransform rect = _pitchChips[i];
+                rect.gameObject.SetActive(_labelVisible[i]);
                 _leaderLines[i].gameObject.SetActive(_labelVisible[i]);
                 if (!_labelVisible[i])
                     continue;
-                RectTransform rect = label.rectTransform;
+                StyleChip(i, frame.AgentCues[i].IsSubstitute);
                 rect.anchorMin = rect.anchorMax = Vector2.zero;
                 rect.sizeDelta = _labelSizes[i];
                 rect.anchoredPosition = _labelCentres[i];
@@ -765,6 +1036,16 @@ namespace TacticalDirector.MatchClientUnity
                 line.sizeDelta = new Vector2(delta.magnitude, 1);
                 line.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
             }
+        }
+
+        // H v0.2 .agent: home navy chip with white text, away gold chip with dark ink; an applied
+        // substitute keeps a white outline.
+        private void StyleChip(int agent, bool substitute)
+        {
+            bool home = _view.PitchMarkerIsHome(agent);
+            _chipFill[agent].color = home ? S0UiConstants.PRIMARY_HOVER_COLOR : S0UiConstants.ACCENT_COLOR;
+            _pitchLabels[agent].color = home ? Color.white : S0UiConstants.INK_COLOR;
+            _chipBorder[agent].color = substitute ? Color.white : home ? S0UiConstants.FOCUS_COLOR : S0UiConstants.ACCENT_COLOR;
         }
 
         private bool PreparePitchLayout()
@@ -791,9 +1072,10 @@ namespace TacticalDirector.MatchClientUnity
                     continue;
                 S0UiFactory.Set(label, text);
                 // Constrain the wrapping rectangle, never the string; then measure full text at that width.
-                float textWidth = Mathf.Min(width - S0UiConstants.GAP, label.preferredWidth);
-                label.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, textWidth);
-                _labelSizes[i] = new Vector2(textWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP);
+                // The text is inset by GAP/2 on each side of its chip.
+                float textWidth = Mathf.Min(width - S0UiConstants.GAP * 2, label.preferredWidth);
+                _pitchChips[i].SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, textWidth + S0UiConstants.GAP);
+                _labelSizes[i] = new Vector2(textWidth + S0UiConstants.GAP, label.preferredHeight + S0UiConstants.GAP / 2);
                 _measuredText[i] = text;
                 changed = true;
             }
@@ -831,6 +1113,7 @@ namespace TacticalDirector.MatchClientUnity
                     return;
                 try
                 {
+                    LayoutDialogFrame();
                     BindPitch();
                     // Marker visibility is applied in LateUpdate, after structural binding/focus recovery.
                     RecoverFocus();
@@ -894,6 +1177,11 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Keyboard()
         {
+            // A choice arrow invokes a Control, whose Refresh re-enters here in the same frame while
+            // GetKeyDown is still true; without this guard that recursion overflowed the stack.
+            if (_keyboardFrame == Time.frameCount)
+                return;
+            _keyboardFrame = Time.frameCount;
             if (!_dialog.activeSelf && _view.Screen == ClientScreens.MatchView &&
                 (_pitchEntryIndex < 0 || !IsAllowed(_pitchControls[_pitchEntryIndex])))
                 _pitchEntryIndex = S0FocusNavigation.FirstAvailable(_pitchControls, _isAllowed);
@@ -1035,4 +1323,10 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.4     | 2026-10-08 | —      | Consume tested focus policy; retain one roving pitch Tab entry with read-only arrow inspection and visibility recovery. |
 // | 1.5     | 2026-10-08 | —      | Exclude focus overlays from layout and retain/rebind both comparison tags to current and requested Mentality. |
 // | 1.6     | 2026-10-08 | —      | Match View Tab follows journey §9.3 explicitly: statistics before earlier feedback, then report and pitch entry. |
+// | 1.7     | 2026-10-19 | —      | Pinned-host I-Q15: process keyboard input once per frame; a choice arrow's Control refresh re-entered Keyboard() and overflowed the stack. |
+// | 1.8     | 2026-10-21 | —      | Gate J J-01: a goalkeeper-mismatched bench choice is unavailable and shows its reason. J-04 (H v0.2): scoreboard, changes and statistics panels (statistics now in the rail, so opening them no longer shrinks the pitch), primary/secondary control chrome with dashed unavailable borders and gold selection, reason/warning boxes, outcome rows with status bar and ✓ ✕ – … badge, zebra statistics table, navy/gold shirt chips with leaders, whole-pitch top-down view, centred modal staging dialog over a dimmed backdrop, centred entry pages. Scoreboard team labels keep their own width so narrow 200% never breaks them mid-word. |
+// | 1.9     | 2026-10-28 | —      | J-04 owner review: the rail statistics caption shows only for a partial cutoff (the panel heading already says "Match statistics"); rail table rows abut with no extra spacing; opening statistics scrolls the page just enough to show the whole panel, keeping its toggle in view. |
+// | 1.10    | 2026-10-28 | —      | Owner decision (October 28): a control that opens or closes content in place keeps one title with a ▸/▾ glyph (covered substitute when the font lacks it). The "Match statistics" title is the statistics toggle, replacing the separate Open/Close statistics button and its heading; the plain heading returns only at full time, when the toggle is hidden. "Earlier change feedback (N)" and "Compare all seven Mentalities" show the same glyph. Labels are composed at build, or when the earlier count or state changes. |
+// | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
+// | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 #endregion

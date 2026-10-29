@@ -1,0 +1,102 @@
+// File-based command channel for the pinned-host probe harness (untracked; archived with the evidence).
+// Polls <OutDir>/../cmd for *.cmd files (one command per file, processed in name order) and appends
+// results to <OutDir>/../cmd/channel.log. Lets the host run be driven without an MCP bridge.
+
+using System;
+using System.Collections;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
+
+[InitializeOnLoad]
+public static class S0HostChannel
+{
+    public static readonly string Dir = Path.GetFullPath(Path.Combine(S0HostProbe.OutDir, "..", "cmd"));
+    static double _next;
+
+    static S0HostChannel()
+    {
+        Directory.CreateDirectory(Dir);
+        EditorApplication.update -= Poll;
+        EditorApplication.update += Poll;
+        Reply("ready playing=" + EditorApplication.isPlaying + " compiling=" + EditorApplication.isCompiling);
+    }
+
+    static void Reply(string line) =>
+        File.AppendAllText(Path.Combine(Dir, "channel.log"), DateTime.UtcNow.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) + " " + line + "\n");
+
+    static void Poll()
+    {
+        if (EditorApplication.timeSinceStartup < _next || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        _next = EditorApplication.timeSinceStartup + 0.5;
+        string file = Directory.GetFiles(Dir, "*.cmd").OrderBy(f => f, StringComparer.Ordinal).FirstOrDefault();
+        if (file == null) return;
+        string text;
+        try { text = File.ReadAllText(file).Trim(); File.Delete(file); }
+        catch (IOException) { return; }
+        try { Reply("<< " + text + " >> " + Execute(text)); }
+        catch (Exception e) { Reply("<< " + text + " >> ERROR " + (e.InnerException ?? e)); }
+    }
+
+    static string Execute(string text)
+    {
+        string[] parts = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        switch (parts[0])
+        {
+            case "play":
+                // runInBackground is set at runtime by S0HostProbe.Run; setting it in edit mode would
+                // write PlayerSettings.runInBackground and leak into player builds.
+                EditorApplication.isPlaying = true;
+                return "entering play";
+            case "stop":
+                EditorApplication.isPlaying = false;
+                return "leaving play";
+            case "refresh":
+                AssetDatabase.ImportAsset("Assets/HostProbes", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
+                return "refreshed";
+            case "importscripts":
+                AssetDatabase.ImportAsset("Assets/Scripts", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+                UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+                return "forced recursive import of Assets/Scripts";
+            case "open":
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(parts[1]);
+                return "opened " + UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
+            case "set":
+                SessionState.SetBool(parts[1], bool.Parse(parts[2]));
+                return parts[1] + "=" + parts[2];
+            case "state":
+                return "playing=" + EditorApplication.isPlaying + " busy=" + S0HostProbe.Busy + (EditorApplication.isPlaying && S0HostProbe.View != null ? " " + S0HostProbe.State() : "");
+            case "run":
+            case "call":
+                return Invoke(parts);
+            case "quit":
+                EditorApplication.delayCall += () => EditorApplication.Exit(0);
+                return "quitting";
+            default:
+                return "unknown command";
+        }
+    }
+
+    static string Invoke(string[] parts)
+    {
+        int dot = parts[1].LastIndexOf('.');
+        Type type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(parts[1].Substring(0, dot))).First(t => t != null);
+        string name = parts[1].Substring(dot + 1);
+        MethodInfo method = type.GetMethods(BindingFlags.Static | BindingFlags.Public).First(m => m.Name == name && m.GetParameters().Length == parts.Length - 2);
+        ParameterInfo[] ps = method.GetParameters();
+        var args = new object[ps.Length];
+        for (int i = 0; i < ps.Length; i++)
+            args[i] = Convert.ChangeType(parts[i + 2], ps[i].ParameterType, CultureInfo.InvariantCulture);
+        object result = method.Invoke(null, args);
+        if (result is IEnumerator routine)
+        {
+            S0HostProbe.Run(name + (parts.Length > 2 ? " " + string.Join(" ", parts.Skip(2)) : ""), routine, 5400);
+            return "started routine";
+        }
+        return "returned " + (result ?? "void");
+    }
+}

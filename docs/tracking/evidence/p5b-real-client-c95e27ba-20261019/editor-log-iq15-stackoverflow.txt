@@ -1,0 +1,152 @@
+# Editor.log excerpts, keyboard run at 10:03 UTC, main c95e27ba (pre-fix)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Keyboard () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:937)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Refresh () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:475)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour/<>c__DisplayClass114_0:<Control>b__0 () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:177)
+UnityEngine.Events.InvokableCall:Invoke ()
+UnityEngine.Events.UnityEvent:Invoke ()
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:ChoiceArrow (int) (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:982)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Keyboard () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:937)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Refresh () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:475)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour/<>c__DisplayClass114_0:<Control>b__0 () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:177)
+UnityEngine.Events.InvokableCall:Invoke ()
+UnityEngine.Events.UnityEvent:Invoke ()
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:ChoiceArrow (int) (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:982)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Keyboard () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:937)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Refresh () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:475)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour/<>c__DisplayClass114_0:<Control>b__0 () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:177)
+UnityEngine.Events.InvokableCall:Invoke ()
+UnityEngine.Events.UnityEvent:Invoke ()
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:ChoiceArrow (int) (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:982)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Keyboard () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:937)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour:Refresh () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:475)
+TacticalDirector.MatchClientUnity.S0ScreensBehaviour/<>c__DisplayClass114_0:<Control>b__0 () (at Assets/Scripts/match-client-unity/S0ScreensBehaviour.cs:177)
+UnityEngine.Events.InvokableCall:Invoke ()
+UnityEngine.Events.UnityEvent:Invoke ()
+TacticalDirector.MatchClientUnity.S0ScreensBehavio
+
+StackOverflowException: The requested operation caused a stack overflow.
+  at (wrapper managed-to-native) UnityEngine.GameObject.SetActive_Injected(intptr,bool)
+  at UnityEngine.GameObject.SetActive (System.Boolean value) [0x0000f] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Bind () [0x0029c] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:508 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x00055] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:459 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+  at UnityEngine.Events.InvokableCall.Invoke () [0x0000d] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x0001b] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.ChoiceArrow (System.Int32 step) [0x0019b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:982 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Keyboard () [0x00187] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:935 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x0012b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:475 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+  at UnityEngine.Events.InvokableCall.Invoke () [0x0000d] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x0001b] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.ChoiceArrow (System.Int32 step) [0x0019b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:982 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Keyboard () [0x00187] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:935 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x0012b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:475 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+  at UnityEngine.Events.InvokableCall.Invoke () [0x0000d] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x0001b] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.ChoiceArrow (System.Int32 step) [0x0019b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:982 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Keyboard () [0x00187] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:935 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x0012b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:475 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+  at UnityEngine.Events.InvokableCall.Invoke () [0x0000d] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x0001b] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.ChoiceArrow (System.Int32 step) [0x0019b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:982 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Keyboard () [0x00187] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:935 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x0012b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:475 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+  at UnityEngine.Events.InvokableCall.Invoke () [0x0000d] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at UnityEngine.Events.UnityEvent.Invoke () [0x0001b] in <82d1d45c517f4141b90705b5d74c5160>:0 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.ChoiceArrow (System.Int32 step) [0x0019b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:982 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Keyboard () [0x00187] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:935 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour.Refresh () [0x0012b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:475 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x0001b] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:177 
+... (repeating ChoiceArrow -> UnityEvent.Invoke -> Control -> Refresh -> Keyboard frames elided)
+43 3a 2f 55 73 65 72 73 2f 61 7a 79 6d 69 2f 44  C:/Users/azymi/D
+65 73 6b 74 6f 70 2f 53 4d 50 2d 70 35 62 2d 68  esktop/SMP-p5b-h
+6f 73 74 2f 00 .. .. .. .. .. .. .. .. .. .. ..  ost/.
+Allocation of 63 bytes at 000001FA20600010
+43 3a 5c 62 75 69 6c 64 5c 6f 75 74 70 75 74 5c  C:\build\output\
+75 6e 69 74 79 5c 75 6e 69 74 79 5c 52 75 6e 74  unity\unity\Runt
+69 6d 65 5c 42 61 73 65 43 6c 61 73 73 65 73 5c  ime\BaseClasses\
+47 61 6d 65 4f 62 6a 65 63 74 2e 63 70 70 00 ..  GameObject.cpp.
+InvalidOperationException: Pitch renderer wiring was rejected.
+  at TacticalDirector.MatchClientUnity.MatchClientBehaviour.Attach (TacticalDirector.MatchClientCore.MatchSession session, TacticalDirector.MatchClientCore.MatchIdentityContext identity, TacticalDirector.UiFramework.ILiveFrameSource frames, System.Action onFailure) [0x0010c] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\MatchClientBehaviour.cs:167 
+  at TacticalDirector.ClientApp.ClientMatchCoordinator.StartMatchCore (System.Boolean startPlayback) [0x00138] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\client-app\ClientMatchCoordinator.cs:120 
+  at TacticalDirector.ClientApp.ClientMatchCoordinator.StartMatch () [0x00000] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\client-app\ClientMatchCoordinator.cs:85 
+  at TacticalDirector.ClientApp.S0ScreenPresenter.StartMatch () [0x00000] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\client-app\S0ScreenPresenter.cs:255 
+  at TacticalDirector.MatchClientUnity.S0ScreensBehaviour+<>c__DisplayClass114_0.<Control>b__0 () [0x00000] in C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:175 
+UnityEngine.DebugLogHandler:Internal_LogException_Injected(Exception, IntPtr)
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception, Object)
+TacticalDirector.MatchClientUnity.MatchClientBehaviour:RejectPresentation(Exception) (at Assets\Scripts\match-client-unity\MatchClientBehaviour.cs:180)
+TacticalDirector.MatchClientUnity.<>c__DisplayClass114_0:<Control>b__0() (at Assets\Scripts\match-client-unity\S0ScreensBehaviour.cs:181)
+UnityEngine.Events.InvokableCall:Invoke()
+UnityEngine.Events.UnityEvent:Invoke()
+UnityEngine.UI.Button:Press() (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\UI\Core\Button.cs:71)
+UnityEngine.UI.Button:OnSubmit(BaseEventData) (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\UI\Core\Button.cs:151)
+UnityEngine.EventSystems.ExecuteEvents:Execute(ISubmitHandler, BaseEventData) (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\EventSystem\ExecuteEvents.cs:134)
+UnityEngine.EventSystems.ExecuteEvents:Execute(GameObject, BaseEventData, EventFunction`1) (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\EventSystem\ExecuteEvents.cs:272)
+UnityEngine.EventSystems.StandaloneInputModule:SendSubmitEventToSelectedObject() (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\EventSystem\InputModules\StandaloneInputModule.cs:477)
+UnityEngine.EventSystems.StandaloneInputModule:Process() (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\EventSystem\InputModules\StandaloneInputModule.cs:314)
+UnityEngine.EventSystems.EventSystem:Update() (at .\Library\PackageCache\com.unity.ugui@1f2d1ab0d950\Runtime\UGUI\EventSystem\EventSystem.cs:515)
+
+(Filename: Assets/Scripts/match-client-unity/MatchClientBehaviour.cs Line: 167)
+
+ClientShellBehaviour rejected wiring: required pitch renderer was lost.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object,UnityEngine.Object)
+UnityEngine.Debug:LogError (object,UnityEngine.Object)
+TacticalDirector.MatchClientUnity.ClientShellBehaviour:RejectWiring (string) (at Assets/Scripts/match-client-unity/ClientShellBehaviour.cs:204)
+TacticalDirector.MatchClientUnity.ClientShellBehaviour:Update () (at Assets/Scripts/match-client-unity/ClientShellBehaviour.cs:108)
+
+(Filename: Assets/Scripts/match-client-unity/ClientShellBehaviour.cs Line: 204)
+
+Cannot destroy GameObject while it is being activated or deactivated.
+Assertion failed on expression: 'gameObject.IsDestroying()'
+Assertion failed on expression: 'gameObject.IsDestroying()'
+--- tail
+C:\Windows\System32\Windows.ApplicationModel.dll:Windows.ApplicationModel.dll (00007FFA73300000), size: 880640 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\Windows\System32\Windows.StateRepositoryPS.dll:Windows.StateRepositoryPS.dll (00007FFA66CF0000), size: 802816 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\Windows\System32\AppXDeploymentClient.dll:AppXDeploymentClient.dll (00007FFA87550000), size: 1515520 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\System32\MMDevApi.dll:MMDevApi.dll (00007FFA85B10000), size: 679936 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\System32\DEVOBJ.dll:DEVOBJ.dll (00007FFA93E20000), size: 192512 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\SYSTEM32\AUDIOSES.DLL:AUDIOSES.DLL (00007FFA783F0000), size: 1810432 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\SYSTEM32\resourcepolicyclient.dll:resourcepolicyclient.dll (00007FFA916A0000), size: 81920 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.8115
+C:\WINDOWS\SYSTEM32\directxdatabasehelper.dll:directxdatabasehelper.dll (00007FFA8DD50000), size: 389120 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\nvldumdx.dll:nvldumdx.dll (00007FFA5E270000), size: 843776 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 32.0.16.1742
+C:\WINDOWS\SYSTEM32\wldp.dll:wldp.dll (00007FFA93960000), size: 528384 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\SYSTEM32\drvstore.dll:drvstore.dll (00007FFA8D320000), size: 1548288 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\nvgpucomp64.dll:nvgpucomp64.dll (00007FFA41F30000), size: 110788608 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 32.0.16.1742
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\Display.NvContainer\NvMessageBus.dll:NvMessageBus.dll (00007FFA80150000), size: 3555328 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 3.22.3719.8856
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\NvMemMapStoragex.dll:NvMemMapStoragex.dll (00007FFA5DDA0000), size: 1421312 (result: 0), SymType: '-deferred-', PDB: ''
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\nvwgf2umx.dll:nvwgf2umx.dll (00007FFA3C910000), size: 90284032 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 32.0.16.1742
+C:\WINDOWS\system32\nvspcap64.dll:nvspcap64.dll (00007FFA7D450000), size: 1495040 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 11.0.9.251
+C:\WINDOWS\SYSTEM32\ntmarta.dll:ntmarta.dll (00007FFA930C0000), size: 221184 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.7019
+C:\WINDOWS\System32\DriverStore\FileRepository\nvaci.inf_amd64_0cb5df13bda15685\nvppex.dll:nvppex.dll (00007FFA52370000), size: 7499776 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 32.0.16.1742
+C:\WINDOWS\SYSTEM32\opencl.dll:opencl.dll (00007FF9F4E70000), size: 540672 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 3.0.6.0
+C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\radeonrays.dll:radeonrays.dll (00007FF9F4E10000), size: 344064 (result: 0), SymType: '-deferred-', PDB: ''
+C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Data\MonoBleedingEdge\EmbedRuntime\mono-2.0-bdwgc.dll:mono-2.0-bdwgc.dll (00007FF99C720000), size: 10756096 (result: 0), SymType: '-deferred-', PDB: ''
+C:\WINDOWS\SYSTEM32\PROPSYS.dll:PROPSYS.dll (00007FFA8ED80000), size: 1003520 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 7.0.26100.9549
+C:\Windows\System32\Windows.System.Launcher.dll:Windows.System.Launcher.dll (00007FFA5DAC0000), size: 1572864 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\SYSTEM32\windows.staterepositorycore.dll:windows.staterepositorycore.dll (00007FFA74FE0000), size: 122880 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\Windows\System32\thumbcache.dll:thumbcache.dll (00007FFA4D490000), size: 503808 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\SYSTEM32\policymanager.dll:policymanager.dll (00007FFA904D0000), size: 745472 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\system32\apphelp.dll:apphelp.dll (00007FFA90DF0000), size: 651264 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\system32\dataexchange.dll:dataexchange.dll (00007FFA5E130000), size: 376832 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+C:\WINDOWS\system32\twinapi.appcore.dll:twinapi.appcore.dll (00007FFA86C40000), size: 2428928 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\SYSTEM32\xinput1_3.dll:xinput1_3.dll (0000000000400000), size: 122880 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 9.18.944.0
+C:\WINDOWS\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_7d6ad0397c5dc3fd\igd10iumd64.dll:igd10iumd64.dll (00007FFA8AFE0000), size: 15716352 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 26.20.100.6911
+C:\WINDOWS\SYSTEM32\ncrypt.dll:ncrypt.dll (00007FFA93AC0000), size: 196608 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9711
+C:\WINDOWS\SYSTEM32\NTASN1.dll:NTASN1.dll (00007FFA93A70000), size: 258048 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.1882
+C:\WINDOWS\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_7d6ad0397c5dc3fd\igdgmm64.dll:igdgmm64.dll (00007FFA8AD10000), size: 1179648 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 26.20.100.6911
+C:\WINDOWS\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_7d6ad0397c5dc3fd\igc64.dll:igc64.dll (00007FFA88590000), size: 37093376 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 26.20.100.6911
+C:\Users\azymi\Desktop\SMP-p5b-host\Assets\Scripts\deterministic-sim\native\td_mxcsr.dll:td_mxcsr.dll (00007FF9F5E50000), size: 118784 (result: 0), SymType: '-deferred-', PDB: ''
+C:\WINDOWS\SYSTEM32\dbghelp.dll:dbghelp.dll (00007FFA91940000), size: 2408448 (result: 0), SymType: '-deferred-', PDB: '', fileVersion: 10.0.26100.9549
+
+========== OUTPUTTING STACK TRACE ==================
+

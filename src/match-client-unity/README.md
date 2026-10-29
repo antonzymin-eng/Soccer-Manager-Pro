@@ -312,8 +312,29 @@ logs copy only on count changes. Explicit feedback sibling order keeps earlier r
 before latest records on both screens and on repeat entry. These changes still require
 actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match checks.
 
+## 9. Gate J skin and whole-pitch view — October 21, 2026
+
+After the owner's Gate-J decisions (record `docs/tracking/p5b-real-client-acceptance.md` v0.2), the
+S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
+- `S0UiConstants` holds the palette and widths.
+- `S0UiFactory` builds panels, control chrome, reason boxes and runtime-generated 1 px border sprites. Solid borders are sliced; dashed borders are tiled.
+- `S0ControlSkin` switches a control to a dashed border and secondary text while it is unavailable, and to a gold outline when it is selected.
+- `S0MaxWidth` centres each page column.
+- Statistics live in the rail, so opening them never shrinks the pitch.
+  After the owner's October 28 screenshot review (record v0.5 §9), the rail table rows abut, its caption shows only for a partial cutoff (the panel heading already says "Match statistics"), and opening statistics scrolls the page just far enough to show the whole panel.
+- Owner decision (October 28, record v0.6 §10): a control that opens content in place keeps one title and shows ▸ closed / ▾ open. The "Match statistics" title is the statistics toggle; "Earlier change feedback (N)" and "Compare all seven Mentalities" use the same glyph.
+- Owner decisions (October 28, record v0.7 §11): the report's partial-statistics toggle is the one-title disclosure "Partial statistics — incomplete". A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop; both discard the draft, as Cancel and Escape do. The backdrop is a sibling behind the frame, so clicks inside the frame never reach it.
+- `S0ScreensBehaviour` sets `MatchClientBehaviour.WholePitchView`: the camera then frames the whole pitch straight down, orthographically (`PitchCameraRig.WholePitchOrthographicSize`), instead of the tilted follow rig.
+- Shirt labels are navy (home) and gold (away) chips tethered to their markers.
+- Unavailable bench choices show their reason under the label (J-01).
+- Outcome rows carry a status bar and a ✓ ✕ – … badge. The badge falls back to a covered character when the font lacks the glyph.
+
 | Documentation revision | Date | Notes |
 |---|---|---|
+| Pop-up closing | October 28, 2026 | §9: partial-statistics disclosure title; pop-up Close control and outside-click close. Host verification in the acceptance record v0.7 §11. |
+| Disclosure titles | October 28, 2026 | §9: statistics, earlier-feedback and comparison toggles keep one title with a ▸/▾ glyph; the "Match statistics" title is the statistics toggle. Host verification in the acceptance record v0.6 §10. |
+| J-04 statistics-rail fix | October 28, 2026 | §9: rail table caption only for a partial cutoff, abutting rows, whole panel revealed on open. Host verification in the acceptance record v0.5 §9. |
+| Gate J skin and whole-pitch view | October 21, 2026 | §9: H v0.2 skin components, statistics in the rail, unavailable-choice reasons and the whole-pitch top-down camera. Host verification in the acceptance record v0.2. |
 | PR #489 Tab order and contract parity | October 8, 2026 | Match View Tab follows journey §9.3 explicitly, then report and pitch entry; permanent 141-role contract parity test. Native input/compile proof remains due. |
 | PR #489 Codex layout/copy corrections | October 8, 2026 | Ignore focus overlays in layout; retain/rebind Current/Requested comparison tags; restore complete substitution/pitch/loose-ball context and audit all 141 base patterns. Native geometry/input proof remains due. |
 | PR #489 approved legend correction | October 8, 2026 | Restore binding-contract v0.4 legend and original content hash; retain keyboard inspection. Key instructions remain in implementation/QA documentation. |
