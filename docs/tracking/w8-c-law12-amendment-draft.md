@@ -1,14 +1,14 @@
-# W8 C — Proposed Law 12 amendment to Goalkeeper Mechanics #11
+# W8 C — Law 12 amendment to Goalkeeper Mechanics #11 (approved wording)
 
-**Status:** PROPOSED — owner approval required; not an approved specification or implementation authority
+**Status:** APPROVED WORDING — the owner, Anton Zymin, approved the C wording on October 29, 2026 (UTC) with the recommended §2.4 predicate 4 ("go with the recommended option, approve C wording"). This file is still not the normative spec: the approved text takes effect when it is applied to #11 and the related documents (§5 item 4). Implementation is not authorized until that spec-application landing.
 
-**Date:** October 29, 2026 UTC (v0.4 D-07 synchronization; v0.3 main synchronization October 18; v0.2 review correction October 17; original v0.1 October 16)
+**Date:** October 29, 2026 UTC (v0.5 owner approval; v0.4 D-07 synchronization October 29; v0.3 main synchronization October 18; v0.2 review correction October 17; original v0.1 October 16)
 
-**Scope:** Documentation proposal only. No source, runtime, test-code, tuning, or schema changes in this draft.
+**Scope:** Documentation only. No source, runtime, test-code, tuning, or schema changes in this file.
 
 **B prerequisite MET:** PR #511 merged as `c0ffd0d2` after final-head CI and governing host validation; its one-commit docs closeout #514 landed as `533564ef`. This proposal is reconciled with merged #11 §3.8 and §3.1.3. The [post-law B digests](w8-b-implementation-results.md) are the adopted Linux comparator. No new normative version-history row is allocated by this proposal.
 
-**D-07 DECIDED and LANDED:** the owner chose option A on October 18, 2026 (general outside-area handling before C). PR #515 merged as `1a3b4271` and implements [#11 §3.1.4](../specs/goalkeeper-mechanics/section-3.md#314-outside-area-handling-d-07-option-a): an actual hand contact outside the own area, or a carry that moves the held ball out of the area or farther from it, gives the opponents a DFK. The [six-seed census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and all six post-law B digests byte-identical, so the adopted B comparator stands. **The only owner approval this proposal still needs is the C wording**, including the §2.4 eligibility predicate and the outside-hold bound in §3.
+**D-07 DECIDED and LANDED:** the owner chose option A on October 18, 2026 (general outside-area handling before C). PR #515 merged as `1a3b4271` and implements [#11 §3.1.4](../specs/goalkeeper-mechanics/section-3.md#314-outside-area-handling-d-07-option-a): an actual hand contact outside the own area, or a carry that moves the held ball out of the area or farther from it, gives the opponents a DFK. The [six-seed census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and all six post-law B digests byte-identical, so the adopted B comparator stands. **C wording APPROVED October 29, 2026**, with the recommended §2.4 predicate 4 and §3 outside-hold bound.
 
 ## 1. Governing rule and boundaries
 
@@ -18,9 +18,9 @@ Hand control includes holding the ball between hands/arms or against another sur
 
 **Official 2026/27 authority:** [IFAB Laws of the Game 2026/27, Law 12.3](https://www.theifab.com/laws/latest/fouls-and-misconduct/) and [Law 17.1](https://www.theifab.com/laws/latest/the-corner-kick/) (the current IFAB pages identify the selected edition as 2026/27); corroborated by [The FA's 2026/27 Law 17 publication](https://www.thefa.com/-/media/files/thefaportal/governance-docs/laws-of-the-game/2026-27/law-17---the-corner-kick.ashx). The [IFAB 2025/26 change record](https://www.theifab.com/law-changes/2025-26/) explains its introduction; it is not the sole source for the 2026/27 claim.
 
-## 2. Proposed normative edits to #11
+## 2. Approved normative edits to #11
 
-The following wording is proposed for insertion into the owning spec on approval; this draft file alone does not change its normative requirements.
+The owner approved the following wording on October 29, 2026 for insertion into the owning spec; this file alone does not change its normative requirements. The spec-application landing (§5 item 4) inserts it.
 
 ### 2.1 Section 2 — functional requirements
 
@@ -48,7 +48,7 @@ Replace the old law constant row:
 |---|---|---|---|---|---|
 | GK_HAND_CONTROL_MAX_FRAMES | [FIXED] | physics frames @ 60 Hz | 480 (= 8 × 60) | n/a — current Law 12 | #11 §3.1, §3.8; IFAB Law 12.3; FR-GK-028 |
 
-Retire GK_HOLD_MAX_TICKS = 60 as a six-second **law** constant and every associated law-labelled C branch. **Current-code fact, not a completed C behavior:** on current `main` (after #511 and #515), Match Engine's `EnforceGoalkeeperReleaseRule` still increments `_gkHoldTicks` for **any** keeper possession (feet *and* hands) and forces a ground drop at the inherited 360-physics-frame limit, invoking `RecordHandRelease`; the D-07 handling restart resets `_gkHoldTicks`. It is not yet a feet-only guard. **Required C code change:** make the legacy backstop explicitly feet-only via `!HasGoalkeeperHandControl(holder)` (subject to the outside-hold bound in §3), reset/segregate its elapsed state at the hand-to-feet transition, and ensure its post-executor placement cannot override an active hand WINDUP. The eight-second check is separate and runs earlier. C must remove the old Law-12 interpretation from `MatchEngineConstants.GK_MAX_HOLD_SECONDS`, `GkMaxHoldTicks`, `EnforceGoalkeeperReleaseRule`, §5.Z.15 and relevant telemetry/guard comments. **Source-tag correction:** the inherited 6-second feet-stall number is not a Law-derived `[FIXED]` value; if temporarily retained, tag the base `GK_MAX_HOLD_SECONDS` `[EST]` as a provisional legacy engine anti-stall duration (unchanged 6 s, pending B-episode measurement and explicit owner review). `GkMaxHoldTicks` may remain `[DERIVED]` from that `[EST]` duration × fixed 60 Hz; replace its false Law-12 rationale. This is tag/rationale correction, not permission to calibrate or change the value. Confirm after B whether a feet guard is still necessary; separately measure feet-possession durations, guard firings and stall recurrence, then retire/ratify it through a later decision. No **new or calibrated** `[GT]`, RNG draw, domain or tuning change is authorized. Any change to saved guard fields follows snapshot/schema migration.
+Retire GK_HOLD_MAX_TICKS = 60 as a six-second **law** constant and every associated law-labelled C branch. **Current-code fact, not a completed C behavior:** on current `main` (after #511 and #515), Match Engine's `EnforceGoalkeeperReleaseRule` still increments `_gkHoldTicks` for **any** keeper possession (feet *and* hands) and forces a ground drop at the inherited 360-physics-frame limit, invoking `RecordHandRelease`; the D-07 handling restart resets `_gkHoldTicks`. It is not yet a feet-only guard. **Required C code change:** make the legacy backstop explicitly feet-only via `!HasGoalkeeperHandControl(holder)` (no hand exception: §3 bounds every hand episode with the eight-second corner), reset/segregate its elapsed state at the hand-to-feet transition, and ensure its post-executor placement cannot override an active hand WINDUP. The eight-second check is separate and runs earlier. C must remove the old Law-12 interpretation from `MatchEngineConstants.GK_MAX_HOLD_SECONDS`, `GkMaxHoldTicks`, `EnforceGoalkeeperReleaseRule`, §5.Z.15 and relevant telemetry/guard comments. **Source-tag correction:** the inherited 6-second feet-stall number is not a Law-derived `[FIXED]` value; if temporarily retained, tag the base `GK_MAX_HOLD_SECONDS` `[EST]` as a provisional legacy engine anti-stall duration (unchanged 6 s, pending B-episode measurement and explicit owner review). `GkMaxHoldTicks` may remain `[DERIVED]` from that `[EST]` duration × fixed 60 Hz; replace its false Law-12 rationale. This is tag/rationale correction, not permission to calibrate or change the value. Confirm after B whether a feet guard is still necessary; separately measure feet-possession durations, guard firings and stall recurrence, then retire/ratify it through a later decision. No **new or calibrated** `[GT]`, RNG draw, domain or tuning change is authorized. Any change to saved guard fields follows snapshot/schema migration.
 
 ### 2.4 Section 3.8 — precise adjudication and Resolve order
 
@@ -57,7 +57,7 @@ A hand-control offence is eligible only if **all** of these are true at adjudica
 1. The relevant #11 keeper state is HandsOnBall or still-controlled Distributing.
 2. The Match Engine's authoritative possessing agent is that keeper.
 3. BallStateType is Controlled and the original lawful hand episode is still live.
-4. **Own-area hand control (recommended wording, new in v0.4):** no #11 §3.1.4 handling offence is pending or has been whistled for this episode. §3.1.4 sanctions every outside hand contact and every carry that moves the held ball out of the area or farther from it, so a live hand episode that survives it is lawful own-area hand control. That includes the §3.1.4 "body outside" hold: a legal catch inside, with the keeper's body (and, in Stage 0, the attached ball) outside, held still or moved back toward the area. **Alternative (owner choice):** a geometric test, the held ball inside the own area by §3.1.4's `distanceOutside = 0` (ball centre, inclusive lines, goal-line overhang up to `r`), plus the §3 outside-hold bound for the episodes this excludes. Either way C reuses §3.1.4's geometry and team orientation; it adds no second area test. The open owner decision on the whole-ball rule for the front and side lines would then move both offences together.
+4. **Own-area hand control (approved October 29, 2026):** no #11 §3.1.4 handling offence is pending or has been whistled for this episode. §3.1.4 sanctions every outside hand contact and every carry that moves the held ball out of the area or farther from it, so a live hand episode that survives it is lawful own-area hand control. That includes the §3.1.4 "body outside" hold: a legal catch inside, with the keeper's body (and, in Stage 0, the attached ball) outside, held still or moved back toward the area. C adds no second area test: §3.1.4's geometry and team orientation decide which hand episodes survive, so the open owner decision on the whole-ball rule for the front and side lines moves both offences together. (Not chosen: a geometric `distanceOutside = 0` test plus a non-law outside drop; see §3.)
 
 At each 60 Hz Resolve frame, place **one** offence check **after** the §3.1.4 handling adjudication (including its re-check after collision reattachment) and **before** the C3 #5 pass-executor update loop and its CONTACT processing. A §3.1.4 whistle tears the episode down, so the two offences cannot both fire on one frame. Compute elapsedFrames = currentFrame - handControlStartFrame in the physics-frame domain; no rounded seconds or tactical-tick comparison is admissible.
 
@@ -80,7 +80,7 @@ At each 60 Hz Resolve frame, place **one** offence check **after** the §3.1.4 h
 
 Serialize the exact 60 Hz claim frame and validity/lifecycle state in the next **available** snapshot schema at the C implementation landing; do not reserve a schema version in this proposal. Read/write order, ResetSlot, restore, mid-WINDUP pending #5 state, terminal feedback and restart state must deterministically reproduce the next release or corner. Review older saved keeper hold/cooldown/release fields for retention or retirement, and document migration/rebaseline instead of silently changing their meaning. No RNG draws or distribution policy/trajectory tuning are added. Digest differences caused solely by new serialized bytes are reported separately from gameplay events/ball trajectories.
 
-## 3. D-07 — outside-own-area handling: decided and landed; remaining outside-hold bound
+## 3. D-07 — outside-own-area handling: decided and landed; outside-hold bound approved
 
 **Owner decision recorded October 18, 2026: option A.** General outside-area handling is
 implemented before C. PR #515 merged as `1a3b4271` with final-head CI green and governing Unity
@@ -97,21 +97,23 @@ indefinitely. D-07 closes direct outside contacts and outward carries, but §3.1
 one outside hold legal: a catch inside with the keeper's body outside. Stage 0 has no hand offset, so
 the held ball sits at the body, outside the area, and the keeper may hold still or move back toward
 the area without sanction. Today the all-keeper 360-frame guard bounds that hold. If C makes the
-guard feet-only, the hold needs another bound. Two ways to provide it:
+guard feet-only, the hold needs another bound. **Owner decision, October 29, 2026: the recommended
+option.**
 
-- **Recommended — the eight-second corner covers it.** Use the §2.4 predicate-4 wording: any live
+- **Approved — the eight-second corner covers it.** Use the §2.4 predicate-4 wording: any live
   hand episode that §3.1.4 has not sanctioned is lawful own-area control and is timed. Rationale: a
   legal catch inside followed by no outward carry is, in football terms, hands inside the area; the
   body position is a Stage-0 modelling artefact. Every hand episode is then bounded at 481 elapsed
   frames by a Law-12 sanction, and no non-law fallback remains. The corner is placed from the
   keeper's position at sanction under the §2.4 nearest-side rule, which needs no in-area position.
-- **Alternative — keep a narrow non-law drop.** Use the geometric predicate 4 (held ball inside by
-  `distanceOutside = 0`) and retain the existing 360-frame forced drop only for hand control with
+- **Not chosen — keep a narrow non-law drop.** It would have used a geometric predicate 4 (held ball inside by
+  `distanceOutside = 0`) and kept the existing 360-frame forced drop only for hand control with
   `distanceOutside > 0`, measuring elapsed 60 Hz hand possession; the legacy guard becomes
-  `!HasGoalkeeperHandControl(holder)` for feet. This drop is an interim safeguard, not an IFAB
-  sanction; it needs a named ERR/issue, an expiry decision and a measured closeout gate.
+  `!HasGoalkeeperHandControl(holder)` for feet. That drop would be an interim safeguard, not an IFAB
+  sanction; it would have needed a named ERR/issue, an expiry decision and a measured closeout gate.
+  C ships no such drop.
 
-Either way C locks a fixture for the body-outside hold on both defended ends, with teardown,
+C locks a fixture for the body-outside hold on both defended ends, with teardown,
 save/restore and no repeated free-claim loop. The six-seed census never produced a D-07 free kick,
 and keepers released at most 12.82 m from their own goal line, so this case is unmeasured on the
 standard corpus; the fixture, not the corpus, establishes the bound. Keeper hand avoidance outside
@@ -123,12 +125,12 @@ Retire the obsolete six-second tests T-5.1.1.4 and T-5.1.8.5, including their fo
 
 1. Hand claim frame recorded at each successful producer site; elapsed 0/479/480/481; claim late within a six-frame tactical cell.
 2. Exactly-on-480 CONTACT legal; 481 held hand control punished before same-frame CONTACT, with no kick/distribution event/late callback.
-3. Controlled feet possession past 480 does not become a corner; engine anti-stall guard becomes feet-only at C (non-law). Under the §3 alternative only, it keeps a narrow 360-frame drop for hand control with `distanceOutside > 0`.
+3. Controlled feet possession past 480 does not become a corner; engine anti-stall guard becomes feet-only at C (non-law), with no hand exception.
 4. Full hand-control predicate in both HandsOnBall and controlled Distributing, including retained-possession reject/cancel and in-progress windup.
 5. Bounce/toss does not reset the clock; actual hand release, real loss, restart, goal or foul tears down once; stale intent cannot cause a later restart. All current Roll/Throw/Kick variants end hand control at their atomic CONTACT; a separately modelled punt/drop must stop the clock at the earlier hand-release event and permit a later kick without a phantom corner.
-6. Predicate 4 as approved, on both defended ends: interior, exact boundary faces/corners and goal-line overhang (reusing §3.1.4 geometry), and the §3.1.4 body-outside hold after a legal inside catch.
+6. Approved predicate 4 on both defended ends: hand episodes held inside, on each boundary face/corner and with goal-line overhang (§3.1.4 geometry) all time out to a corner at 481; so does the §3.1.4 body-outside hold after a legal inside catch, held still or moved back toward the area.
 7. Corner recipient, selected goal line, nearest Y side, exact Y-centre high-Y tie, shared restart placement/taker/event, and one restart only.
-8. A §3.1.4 outside contact or outward carry gives its DFK, never an eight-second corner, including on frames 480/481; separately distinguish PR #511 re-handling. The §3 body-outside hold is bounded after the C guard split (by the corner under the recommended wording, or by the 360-frame drop under the alternative), with teardown and save/restore. The landed D-07 regression cases stay green.
+8. A §3.1.4 outside contact or outward carry gives its DFK, never an eight-second corner, including on frames 480/481; separately distinguish PR #511 re-handling. The §3 body-outside hold is bounded by the eight-second corner after the C guard split, with teardown and save/restore. The landed D-07 regression cases stay green.
 9. Save/restore at claim, before frame 480, at 480, before 481, and mid-WINDUP/cancellation with identical continuation, event ordering and restart outcome.
 10. No new RNG draw, default policy switch, duplicate CONTACT or bypass of the existing #5 completion/cancellation feedback.
 11. No first-offence automatic card; repeated offence handled by the separately approved foul/card policy.
@@ -138,12 +140,12 @@ Also update #11 §3.1.1, §3.4, §3.8.3–3.8.4, §§2/5 version histories and a
 
 ## 5. Implementation gate and comparison protocol (no work authorized yet)
 
-1. Owner explicitly approves the C wording, including the exact 480/481 boundary, Resolve-before-C3 ordering, corner placement/tie rule, claim-frame lifecycle, legacy retirement, and cross-spec test scope.
-2. **D-07 MET:** owner chose option A on October 18, 2026; PR #515 landed it as `1a3b4271` (#11 §3.1.4 v0.23). The owner still chooses how the §3 body-outside hold is bounded, as part of item 1.
-3. **B landing prerequisite MET:** #511 merged `c0ffd0d2`; closeout #514 merged `533564ef`. This proposal now incorporates post-closeout main, including merged #11 §3.8 and own-release §3.1.3 plus both changelog/manifest histories. B retains controlled hand possession through accepted WINDUP, atomic CONTACT release and exactly-once terminal feedback; retained-control retries preserve the old hand clock. C proposes only its separately approved clock/offence replacement and must preserve these B seams. Use the adopted six post-law fingerprints, not the older 348-contact pre-law arm; the [D-07 census](evidence/d07-six-seed-census-20261018/README.md) reproduces all six byte for byte on `1a3b4271`, so they remain the B arm's anchor. Re-confirm them on the main commit that C branches from. Neither the B merge, the D-07 landing nor this synchronization approves C.
+1. **MET October 29, 2026:** the owner approved the C wording, including the exact 480/481 boundary, Resolve ordering (after §3.1.4, before C3), corner placement/tie rule, claim-frame lifecycle, legacy retirement, cross-spec test scope and the recommended predicate 4.
+2. **D-07 MET:** owner chose option A on October 18, 2026; PR #515 landed it as `1a3b4271` (#11 §3.1.4 v0.23). The §3 body-outside hold is bounded by the approved predicate 4 (item 1).
+3. **B landing prerequisite MET:** #511 merged `c0ffd0d2`; closeout #514 merged `533564ef`. This proposal now incorporates post-closeout main, including merged #11 §3.8 and own-release §3.1.3 plus both changelog/manifest histories. B retains controlled hand possession through accepted WINDUP, atomic CONTACT release and exactly-once terminal feedback; retained-control retries preserve the old hand clock. C proposes only its separately approved clock/offence replacement and must preserve these B seams. Use the adopted six post-law fingerprints, not the older 348-contact pre-law arm; the [D-07 census](evidence/d07-six-seed-census-20261018/README.md) reproduces all six byte for byte on `1a3b4271`, so they remain the B arm's anchor. Re-confirm them on the main commit that C branches from. C approval is item 1; it is not implied by the B merge or the D-07 landing.
 4. Apply the approved normative #11/Match Engine/restart/test spec edits and ERR entries; then and only then implement C in an isolated code landing with the next available save schema version.
 5. Run exact-boundary and mirrored restart fixtures, save/restore/replay, final-PR-head Linux checks and a **pinned Unity 6000.4.9f1 compile** before merge. Record six-seed B→C comparisons: for ordinary no-offence episodes, gameplay event and ball-trajectory streams must be exactly equal; report first divergence and cause otherwise. Record snapshot digests separately. Forced timeout fixtures, not six ordinary matches, establish rare sanction behavior.
-6. Keep [GT] values frozen per KD-W1; relabel the **non-law 6 s legacy stall estimate** as `[EST]` and keep derived tick arithmetic `[DERIVED]` until the separate measurement/retirement decision. Verify the actual B Kick/Throw/Roll hand-release representation before code and refuse any unapproved two-stage punt model. No code changes, tests executed, Unity claims, or implementation approval are part of this document-only proposal.
+6. Keep [GT] values frozen per KD-W1; relabel the **non-law 6 s legacy stall estimate** as `[EST]` and keep derived tick arithmetic `[DERIVED]` until the separate measurement/retirement decision. Verify the actual B Kick/Throw/Roll hand-release representation before code and refuse any unapproved two-stage punt model. No code changes, tests executed, Unity claims, or implementation approval are part of this document.
 
 ### 5.1 Required B→C keeper-release follow-up
 
@@ -167,7 +169,7 @@ the comparison with exact timing in both arms and investigate any excess opponen
 keeper-passivity defect before C closeout. A separately approved production invalidator must be
 isolated and rebaselined explicitly; never silently relabel the adopted B fingerprints.
 
-**Requested owner decision:** approve or amend the C specification text, including the Stage-0 **atomic hand release at CONTACT** and the §2.4 predicate 4 / §3 outside-hold bound (recommended: the eight-second corner times every live hand episode that §3.1.4 has not sanctioned; alternative: geometric predicate plus a narrow non-law drop). D-07 is already decided and landed. Until the C wording is approved, C implementation remains blocked.
+**Owner decision recorded October 29, 2026 (UTC):** the C specification text is approved as written, including the Stage-0 **atomic hand release at CONTACT** and the recommended §2.4 predicate 4 / §3 outside-hold bound: the eight-second corner times every live hand episode that §3.1.4 has not sanctioned ("go with the recommended option, approve C wording"). D-07 was already decided and landed. **Next:** the spec-application landing (§5 item 4) applies this text to #11, Match Engine, the restart contract and the test contracts, with its ERR entries; C implementation stays blocked until that lands.
 
 ## Review history
 
@@ -177,3 +179,5 @@ isolated and rebaselined explicitly; never silently relabel the adopted B finger
 - **v0.3 — October 18 UTC:** incorporate post-closeout main (B merge c0ffd0d2, closeout 533564ef), reconcile §3.8/own-release and both tracking histories, adopt the post-law B comparator and require exact touch/team keeper-release follow-up in both B→C arms. B prerequisite met; C and D-07 remain unapproved. No code or match reruns.
 
 - **v0.4 — October 29 UTC:** record D-07 as decided (option A, October 18) and landed (PR #515, `1a3b4271`); withdraw the deferral alternative. Identify the one outside hold §3.1.4 leaves legal (catch inside, body outside) and propose how C bounds it once the legacy guard is feet-only: recommended, predicate 4 times every live hand episode §3.1.4 has not sanctioned; alternative, geometric predicate plus a narrow non-law drop. Order the C check after §3.1.4 adjudication. Note the D-07 census leaves the six B fingerprints unchanged. C wording remains unapproved. No code or match reruns.
+
+- **v0.5 — October 29 UTC:** owner approval recorded: C wording approved with the recommended predicate 4 (every live hand episode not sanctioned by §3.1.4 is timed and ends in a corner at 481), so the non-law outside drop is not chosen and the legacy guard becomes feet-only with no hand exception. Gate item 1 met. The normative spec application (§5 item 4) and implementation remain. No code or match reruns.

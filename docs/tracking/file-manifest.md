@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 29, 2026 — **Docs-only: per-PR pinned-host evidence scope (roadmap v0.79).** No files added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.79 (§5.1 D-01a host-evidence scope paragraph, register row, header note), `docs/tracking/CHANGELOG.md`, and this file.
+**Last Updated:** October 29, 2026 — **PR #513 W8 C wording approved (contract v0.5).** **Modified:** `docs/tracking/w8-c-law12-amendment-draft.md` v0.4 → v0.5, `docs/tracking/path-to-playable-roadmap.md` v0.79 → v0.80, `docs/tracking/CHANGELOG.md` and this manifest. No path added or removed; no source, normative spec, test or evidence change.
+
+**Last Updated (prior):** October 29, 2026 — **Docs-only: per-PR pinned-host evidence scope (roadmap v0.79).** No files added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.79 (§5.1 D-01a host-evidence scope paragraph, register row, header note), `docs/tracking/CHANGELOG.md`, and this file.
 
 **Last Updated (prior):** October 29, 2026 — **PR #513 W8 C draft v0.4 (D-07 synchronization).** **Modified:** `docs/tracking/w8-c-law12-amendment-draft.md` v0.3 → v0.4, `docs/tracking/CHANGELOG.md` and this manifest. No path added or removed; no source, spec, test or evidence change. C is not approved.
 
