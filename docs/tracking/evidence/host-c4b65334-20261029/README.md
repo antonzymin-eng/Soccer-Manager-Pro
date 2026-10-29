@@ -24,8 +24,10 @@ before the compile and after the run. To check: `git rev-parse c4b65334:src` mus
 | `editmode-results.xml.xz` | NUnit 3.5 XML for the EditMode run of `TacticalDirector.ClientApp.Tests`, `TacticalDirector.UiFramework.Tests` and `TacticalDirector.MatchClientCore.Tests`: 424 passed, 0 failed, 0 skipped, 0 inconclusive. |
 | `editmode-summary.txt` | Command, times, per-assembly counts (182 / 52 / 190) and the pre-run build line (0 items updated). |
 | `captures/pitch-sizes-before.txt`, `captures/pitch-sizes-after.txt` | The pitch rectangle and selected speed logged at every step, before (`3061fcd9`) and after (`c4b65334`). |
-| `captures/compare-1920x1080.png`, `captures/compare-1366x768.png` | Side-by-side sheets, before on the left and after on the right, at 40% scale, labelled with each step's measured pitch size. |
+| `captures/compare.tar` | `compare-1920x1080.png` and `compare-1366x768.png`: side-by-side sheets, before on the left and after on the right, at 40% scale, labelled with each step's measured pitch size. |
 | `captures/shots-before.tar`, `captures/shots-after.tar` | The full-resolution PNG frames behind the sheets (14 each). |
+
+All images are in plain `.tar` files because `*.png` is LFS-tracked and the evidence job checks out without LFS.
 | `captures/S0SpeedCapture.cs.txt`, `captures/S0CaptureBuild.cs.txt`, `captures/capture_run.ps1.txt`, `captures/runs.txt` | Capture harness source, archived verbatim, and each run's commit and exit codes. |
 
 **Measured.** In each player the demo match was started through the real buttons, Faster was stepped from 1× to 10×
