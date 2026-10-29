@@ -1,0 +1,195 @@
+// I-Q15 keyboard-only journey through real OS keystrokes (keybd_event) into the focused Game view.
+// Untracked probe source, archived with the evidence. No pointer event is sent in this routine.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using P = S0HostProbe;
+
+public static class S0HostKeyboard
+{
+    static S0ScreenPresenter V => P.View;
+    static Selectable F(string field) => P.Get<Selectable>(P.Screens, field);
+    static string Sel() => P.Selected == null ? "null" : P.Selected.name + ":" + P.LabelOf(P.Selected);
+
+    static bool RingVisibleOnSelected()
+    {
+        var rings = P.Get<Dictionary<Selectable, GameObject>>(P.Screens, "_focusRings");
+        Selectable s = P.Selected;
+        return s != null && rings.TryGetValue(s, out GameObject ring) && ring.activeInHierarchy;
+    }
+
+    static IEnumerator Press(byte vk, string label, bool shift = false)
+    {
+        yield return P.Key(vk, shift);
+        yield return P.Frames(2);
+        P.Log("KEY " + label + " -> selected=" + Sel() + " ring=" + RingVisibleOnSelected() + " screen=" + V.Screen + " dialog=" + V.Dialog + " tick=" + (P.Session != null ? P.Session.CurrentTick.ToString() : "-"));
+    }
+
+    static IEnumerator TabUntil(Func<bool> done, string label, int max = 30, bool shift = false)
+    {
+        for (int i = 0; i < max && !done(); i++)
+            yield return Press(P.VK_TAB, (shift ? "Shift-Tab" : "Tab") + " (" + label + ")", shift);
+        P.Check(done(), "reached " + label + " by keyboard");
+    }
+
+    public static IEnumerator IQ15()
+    {
+        P.FocusGameView();
+        yield return 1.0f;
+        P.Log("foreground=" + P.UnityIsForeground());
+        // ---- Main Menu
+        P.Check(P.Selected == F("_menuHeading"), "menu heading focused at boot");
+        yield return Press(P.VK_TAB, "Tab");
+        P.Check(P.LabelOf(P.Selected).Contains("demo"), "Tab from heading reaches the demo action, not a heading");
+        P.Check(RingVisibleOnSelected(), "focus ring visible on keyboard focus");
+        P.Shot("iq15-01-menu-focus");
+        yield return null;
+        yield return Press(P.VK_RETURN, "Enter");
+        P.Check(V.Screen == ClientScreens.TacticsSetup && P.Selected == F("_setupHeading"), "Enter opens setup; heading focused");
+        // ---- Tactics Setup: arrows stage, Tab order, Shift-Tab
+        yield return Press(P.VK_TAB, "Tab");
+        Button[] setup = P.Get<Button[]>(P.Screens, "_setupChoices");
+        P.Check(P.Selected == setup[0], "Tab reaches first Mentality choice");
+        yield return Press(P.VK_DOWN, "Down");
+        yield return Press(P.VK_DOWN, "Down");
+        P.Check(P.Selected == setup[2] && V.CurrentMentality == S0ScreenPresenter.Mentalities[2], "arrows move and stage the draft (" + V.CurrentMentality + ")");
+        yield return Press(P.VK_UP, "Up");
+        P.Check(P.Selected == setup[1], "Up moves back");
+        P.Shot("iq15-02-setup-arrows");
+        yield return null;
+        yield return TabUntil(() => P.LabelOf(P.Selected).Contains("Start"), "Start");
+        yield return Press(P.VK_TAB, "Shift-Tab", true);
+        P.Check(P.Selected == setup[6], "Shift-Tab from Start returns to the last choice");
+        yield return Press(P.VK_TAB, "Tab");
+        yield return Press(P.VK_RETURN, "Enter on Start");
+        yield return S0HostCases_WaitFrame();
+        P.Check(V.Screen == ClientScreens.MatchView && P.Selected == F("_matchHeading"), "Start by keyboard; Match View heading focused");
+        // ---- Match View Tab order (journey §9.3 MV-L/P + pitch entry)
+        var order = new List<string>();
+        for (int i = 0; i < 9; i++)
+        {
+            yield return Press(P.VK_TAB, "Tab");
+            order.Add(P.Selected == null ? "null" : P.Selected.name + ":" + P.LabelOf(P.Selected));
+        }
+        P.Log("MV Tab order: " + string.Join(" > ", order));
+        P.Shot("iq15-03-mv-tab");
+        yield return null;
+        ulong t0 = P.Session.CurrentTick;
+        yield return Press(P.VK_TAB, "Shift-Tab", true);
+        yield return Press(P.VK_TAB, "Shift-Tab", true);
+        P.Check(P.Session.CurrentTick > t0, "live ticks continue during traversal (no tick reset)");
+        // ---- Mentality dialog by keyboard
+        yield return TabUntil(() => P.Selected == F("_mentality"), "Change Mentality");
+        int queued = P.Session.Commands.Count, records = P.Changes.Records.Count;
+        yield return Press(P.VK_RETURN, "Enter on Change Mentality");
+        Button[] ment = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.Mentality && P.Selected == ment[0], "dialog opens with first selector focused");
+        yield return Press(P.VK_DOWN, "Down");
+        yield return Press(P.VK_DOWN, "Down");
+        P.Check(V.RequestedMentality == S0ScreenPresenter.Mentalities[2], "arrows stage Requested only (" + V.RequestedMentality + ")");
+        GameObject dialog = P.Get<GameObject>(P.Screens, "_dialog");
+        bool inside = true;
+        for (int i = 0; i < 14; i++)
+        {
+            yield return Press(P.VK_TAB, "Tab in dialog");
+            inside &= P.Selected != null && P.Selected.transform.IsChildOf(dialog.transform);
+        }
+        P.Check(inside, "Tab wraps inside the modal dialog");
+        for (int i = 0; i < 3; i++)
+        {
+            yield return Press(P.VK_TAB, "Shift-Tab in dialog", true);
+            inside &= P.Selected != null && P.Selected.transform.IsChildOf(dialog.transform);
+        }
+        P.Check(inside, "Shift-Tab wraps inside the modal dialog");
+        P.Shot("iq15-04-dialog-focus");
+        yield return null;
+        yield return Press(P.VK_ESCAPE, "Escape");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.None && P.Selected == F("_mentality"), "Escape cancels and restores the invoker");
+        P.Check(P.Session.Commands.Count == queued && P.Changes.Records.Count == records, "Escape sends nothing");
+        // ---- Submit by keyboard
+        yield return Press(P.VK_RETURN, "Enter on Change Mentality");
+        for (int i = 0; i < 5; i++) yield return Press(P.VK_DOWN, "Down");
+        yield return TabUntil(() => P.Selected == F("_submit"), "Submit");
+        yield return Press(P.VK_RETURN, "Enter on Submit");
+        yield return P.Frames(10);
+        P.LogFeedback("after keyboard submit");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.None && P.LabelOf(P.Selected).Contains("Mentality"), "focus lands on the request's feedback row: " + Sel());
+        yield return Press(P.VK_TAB, "Tab after feedback");
+        P.Check(P.Selected == F("_statisticsToggle"), "Tab after feedback row reaches statistics (v0.9 anchor rule)");
+        // ---- Substitution by keyboard
+        yield return TabUntil(() => P.Selected == F("_substitution"), "Make substitution", 30, true);
+        yield return Press(P.VK_RETURN, "Enter on Make substitution");
+        var outgoing = P.Get<List<Button>>(P.Screens, "_outgoing");
+        P.Check(V.Dialog == S0ScreenPresenter.DialogKind.Substitution && P.Selected == outgoing[0], "substitution dialog focuses first outgoing selector");
+        for (int i = 0; i < 4; i++) yield return Press(P.VK_DOWN, "Down");
+        P.Log("selected outgoing=" + V.SelectedOutgoing);
+        var incoming = P.Get<List<Button>>(P.Screens, "_incoming");
+        yield return TabUntil(() => incoming.Contains(P.Selected as Button), "first incoming selector");
+        yield return Press(P.VK_DOWN, "Down");
+        P.Log("selected incoming=" + V.SelectedIncoming + " canSubmit=" + V.CanSubmitSubstitution);
+        P.Shot("iq15-05-sub-dialog");
+        yield return null;
+        yield return TabUntil(() => P.Selected == F("_submit"), "Submit");
+        yield return Press(P.VK_RETURN, "Enter on Submit");
+        yield return P.Frames(10);
+        P.LogFeedback("after keyboard substitution");
+        // ---- Statistics and earlier feedback disclosure
+        yield return TabUntil(() => P.Selected == F("_statisticsToggle"), "statistics");
+        yield return Press(P.VK_RETURN, "Enter on statistics");
+        P.Check(V.IsStatisticsOpen && P.Selected == F("_statisticsToggle"), "statistics open, focus retained");
+        // One more request so the earlier-feedback disclosure exists (>= 4 records).
+        yield return TabUntil(() => P.Selected == F("_mentality"), "Change Mentality", 30, true);
+        yield return Press(P.VK_RETURN, "Enter on Change Mentality");
+        yield return Press(P.VK_UP, "Up");
+        yield return TabUntil(() => P.Selected == F("_submit"), "Submit");
+        yield return Press(P.VK_RETURN, "Enter on Submit");
+        yield return P.Frames(10);
+        yield return Press(P.VK_TAB, "Tab");
+        yield return Press(P.VK_TAB, "Tab");
+        P.Log("after feedback: " + Sel() + " records=" + V.Feedback.Count + " earlierActive=" + F("_earlierToggle").gameObject.activeInHierarchy);
+        if (F("_earlierToggle").gameObject.activeInHierarchy)
+        {
+            yield return TabUntil(() => P.Selected == F("_earlierToggle"), "earlier feedback");
+            yield return Press(P.VK_RETURN, "Enter on earlier feedback");
+            P.Check(V.IsEarlierFeedbackOpen, "earlier feedback disclosed by keyboard");
+        }
+        P.Shot("iq15-06-stats-history");
+        yield return null;
+        // ---- Pitch inspection: single entry, arrows, read-only
+        yield return TabUntil(() => P.Get<Selectable[]>(P.Screens, "_pitchControls").Contains(P.Selected), "pitch entry");
+        var pitchControls = P.Get<Selectable[]>(P.Screens, "_pitchControls");
+        Text description = P.Get<Text>(P.Screens, "_pitchDescription");
+        int cmd = P.Session.Commands.Count + P.Session.Driver.Log.Count;
+        int rec = P.Changes.Records.Count;
+        var seen = new HashSet<string>();
+        int entry = Array.IndexOf(pitchControls, P.Selected);
+        for (int i = 0; i < 24; i++)
+        {
+            yield return Press(i < 20 ? P.VK_RIGHT : P.VK_LEFT, i < 20 ? "Right" : "Left");
+            seen.Add(description.text);
+            P.Log("pitch " + Array.IndexOf(pitchControls, P.Selected) + " desc='" + description.text + "'");
+        }
+        P.Check(seen.Count >= 15, "arrow inspection reaches many distinct player descriptions (" + seen.Count + ")");
+        P.Check(P.Session.Commands.Count + P.Session.Driver.Log.Count == cmd && P.Changes.Records.Count == rec, "inspection dispatches nothing");
+        P.Shot("iq15-07-pitch-inspect");
+        yield return null;
+        int inspected = Array.IndexOf(pitchControls, P.Selected);
+        yield return Press(P.VK_TAB, "Tab out of pitch");
+        P.Check(!pitchControls.Contains(P.Selected), "Tab leaves the pitch group");
+        yield return Press(P.VK_TAB, "Shift-Tab back", true);
+        P.Check(Array.IndexOf(pitchControls, P.Selected) == inspected, "Shift-Tab re-enters at the inspected player (" + inspected + ")");
+        P.Log("I-Q15 keyboard lane complete; full-time report focus precedence covered by I-Q10/13.");
+    }
+
+    static IEnumerator S0HostCases_WaitFrame()
+    {
+        yield return (Func<bool>)(() => !V.Frame.IsEmpty);
+        yield return P.Frames(3);
+    }
+}

@@ -1,0 +1,39 @@
+diff --git a/src/match-client-unity/S0ScreensBehaviour.cs b/src/match-client-unity/S0ScreensBehaviour.cs
+index 071cd888..df2d79cd 100644
+--- a/src/match-client-unity/S0ScreensBehaviour.cs
++++ b/src/match-client-unity/S0ScreensBehaviour.cs
+@@ -1,6 +1,7 @@
+ // File:     src/match-client-unity/S0ScreensBehaviour.cs
+ // Created:  2026-10-08
+-// Modified: 2026-10-08
++// Modified: 2026-10-19 (pinned-host I-Q15: keyboard input processed once per frame)
++// Modified (prior): 2026-10-08
+ // Author:   —
+ // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
+ // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
+@@ -76,6 +77,7 @@ public sealed class S0ScreensBehaviour : MonoBehaviour
+         private ScreenId _lastScreen;
+         private bool _wasFullTime;
+         private bool _keyboardFocus;
++        private int _keyboardFrame = -1;
+         private readonly Vector2[] _markerPoints = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+         private readonly Vector2[] _labelSizes = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+         private readonly Vector2[] _labelCentres = new Vector2[MatchEngineConstants.SQUAD_SIZE];
+@@ -894,6 +896,11 @@ private void RecoverFocus()
+ 
+         private void Keyboard()
+         {
++            // A choice arrow invokes a Control, whose Refresh re-enters here in the same frame while
++            // GetKeyDown is still true; without this guard that recursion overflowed the stack.
++            if (_keyboardFrame == Time.frameCount)
++                return;
++            _keyboardFrame = Time.frameCount;
+             if (!_dialog.activeSelf && _view.Screen == ClientScreens.MatchView &&
+                 (_pitchEntryIndex < 0 || !IsAllowed(_pitchControls[_pitchEntryIndex])))
+                 _pitchEntryIndex = S0FocusNavigation.FirstAvailable(_pitchControls, _isAllowed);
+@@ -1035,4 +1042,5 @@ public void DisposeViews()
+ // | 1.4     | 2026-10-08 | —      | Consume tested focus policy; retain one roving pitch Tab entry with read-only arrow inspection and visibility recovery. |
+ // | 1.5     | 2026-10-08 | —      | Exclude focus overlays from layout and retain/rebind both comparison tags to current and requested Mentality. |
+ // | 1.6     | 2026-10-08 | —      | Match View Tab follows journey §9.3 explicitly: statistics before earlier feedback, then report and pitch entry. |
++// | 1.7     | 2026-10-19 | —      | Pinned-host I-Q15: process keyboard input once per frame; a choice arrow's Control refresh re-entered Keyboard() and overflowed the stack. |
+ #endregion

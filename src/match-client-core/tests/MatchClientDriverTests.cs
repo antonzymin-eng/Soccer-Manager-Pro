@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/MatchClientDriverTests.cs
 // Created:  2026-07-24
-// Modified: 2026-10-08
+// Modified: 2026-10-21 (Gate J J-02: typed refusal on the failed record)
+// Modified (prior): 2026-10-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6), Code Standards #20
 // Purpose:  Head-less locks for the deterministic command drain (§5-P2's "core new work"): FIFO apply
@@ -92,6 +93,23 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(1, driver.FailedCommands.Count, "the refused command is recorded, not vanished");
             Assert.AreEqual(ManagerCommandKind.SetPlayerTactic, driver.FailedCommands[0].Command.Kind);
             Assert.AreEqual(8UL, driver.FailedCommands[0].AppliedTick);
+            Assert.AreEqual(SubstitutionRequestStatus.Accepted, driver.FailedCommands[0].SubstitutionRefusal,
+                "a refusal that threw carries no typed reason");
+        }
+
+        [Test]
+        public void Service_TypedSubstitutionRefusal_RecordsTheEngineReason()
+        {
+            // Gate J J-02: the engine's typed rule outcome survives onto the failed record, so the
+            // client can name the reason instead of a generic refusal. The applied log is unchanged.
+            MatchClientDriver driver = NewDriver();
+            driver.Commands.Enqueue(ManagerCommand.Substitute(0, 4, 3, SubstitutionReason.Tactical));
+            var m = new RecordingMutations { CurrentTickValue = 12UL, RefuseSubstitutionsWith = SubstitutionRequestStatus.NoWindowsLeft };
+            driver.Service(m);
+            Assert.AreEqual(0, driver.Log.Count);
+            Assert.AreEqual(1, driver.FailedCommands.Count);
+            Assert.AreEqual(SubstitutionRequestStatus.NoWindowsLeft, driver.FailedCommands[0].SubstitutionRefusal);
+            Assert.AreEqual(12UL, driver.FailedCommands[0].AppliedTick);
         }
 
         [Test]
@@ -228,4 +246,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.2     | 2026-10-08 | —      | Conditional atomic outcome snapshots, immutable retained evidence and zero-byte unchanged polling. |
 // | 1.3     | 2026-10-08 | —      | Known-allocation control rejects an always-zero runtime counter before measuring the unchanged path. |
 // | 1.4     | 2026-10-08 | —      | Editor uses native allocation constraint with a positive control; Linux retains the checked byte counter. |
+// | 1.5     | 2026-10-21 | —      | Gate J J-02: a typed substitution refusal is kept on the failed record; a thrown refusal has none. |
 #endregion
