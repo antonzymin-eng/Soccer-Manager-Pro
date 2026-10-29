@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 29, 2026\
-**Version:** 0.12\
+**Version:** 0.13\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -10,7 +10,7 @@
 - **J-04 FIXED and ACCEPTED:** H v0.2 skin, whole-pitch view, statistics in the rail; the owner accepted the visuals on October 28 (§12, v0.8).
 - **J-05:** separate PR #520.
 
-Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. Still due: J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
+Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. §14's I-Q15 pass did not reach the earlier-outcome disclosure; v0.13 (§17) reruns I-Q15 with it, PASS. Still due: J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
 **S0 Gate J technical verdict: CONDITIONAL PASS** (§7; the v0.1 FAIL is kept in §5).\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
@@ -21,7 +21,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11);
 [`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14);
 [`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md) (v0.11 Unity compile and EditMode for the §13 fix, §15);
-[`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md) (v0.12 fixed-height playback reason, Unity compile, EditMode and before/after captures, §16).
+[`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md) (v0.12 fixed-height playback reason, Unity compile, EditMode and before/after captures, §16);
+[`evidence/host-4ff45ee8-20261029/`](evidence/host-4ff45ee8-20261029/README.md) (v0.13 I-Q15 rerun with the earlier-outcome disclosure; 200% and narrow reason-box captures, §17).
 
 ## 1. Identity, host and method
 
@@ -396,10 +397,44 @@ assemblies and the three known warnings. EditMode ClientApp/UiFramework/MatchCli
 
 At 3× and 5× the reason line is now blank but keeps its space. The owner compared the before/after sheets remotely and
 replied "looks right now". Evidence: [`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md).
-**Not captured:** 200% text and the narrow layout; the reserved height follows the label's own width and text scale.
+**Not captured:** 200% text and the narrow layout; the reserved height follows the label's own width and text scale. (Captured since: §17.)
 The §14 B8/B10 and I-Q16 captures predate this change, which touches only the reason boxes above the pitch.
 
 Gate J stays **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance remains the owner's separate decision.
+
+## 17. External review: I-Q15 earlier-outcome disclosure; 200% and narrow reason-box captures (v0.13)
+
+An October 29 external review of `4ff45ee8` found no code defect and one evidence gap: §14 records I-Q15 as PASS, but
+its pass never reached the earlier-outcome disclosure, which the I-Q15 contract (journey §14.8: "latest/earlier outcome
+disclosure … no … disclosure collapse") includes. The disclosure appears only with four or more change records. The
+October 19 and §14 passes made three requests, and the harness logged the toggle's absence instead of failing. The
+review also noted that §16 had no 200% or narrow-layout capture.
+
+**I-Q15 rerun — PASS, uninterrupted, 59/59** (3 boot, 56 keyboard; pinned host, `4ff45ee8`, real keystrokes, Unity in
+the foreground throughout). The October harness was changed only in its statistics-and-history step: it makes
+Mentality requests by keyboard until four records exist and requires the disclosure. Everything §14 recorded holds,
+and in addition:
+
+- four records (Mentality, substitution, Mentality, Mentality) show "▸ Earlier change feedback (1)";
+- Tab reaches it after "▾ Match statistics" with the focus ring visible, and Shift-Tab returns to it from H1;
+- Enter expands it with focus retained; later Enter collapses and re-expands it, focus retained each time;
+- expanded through 60 s of live play (3,600 ticks), it stays expanded with focus and ring on it. No record changed state
+  in that window, because all four were already Applied;
+- with it expanded, a fifth request by keyboard: it stays expanded behind the modal dialog, the fifth record arrives,
+  the label follows to "▾ Earlier change feedback (2)", and Tab reaches it again, still expanded. The new record was
+  Applied within 10 frames, so no later Pending → Applied change was observed.
+
+An earlier pass of the same session without the fifth-request steps gave 50/50.
+
+**Reason box at 200% and narrow width.** Release players from `4ff45ee8` (same `src` as `c4b65334`) stepped
+1× → 10× → 1×. The pitch held one size at every step: 697.0 × 451.4 at 200% on 1920×1080 and on 1366×768 (its measured
+minimum, with the page scrolling), 768.0 × 497.4 at 200% on narrow 800×1000 (stacked), and 357.0 × 231.2 at 100% on
+800×1000. At 200% and 800×1000 the reserved line is two text lines tall, because the longest playback reason wraps
+there; one-line reasons leave the second line empty.
+
+Evidence: [`evidence/host-4ff45ee8-20261029/`](evidence/host-4ff45ee8-20261029/README.md). The I-Q15 condition of §7
+is met with the disclosure covered. Gate J stays **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance
+remains the owner's separate decision.
 
 ## Version History
 
@@ -417,3 +452,4 @@ Gate J stays **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptan
 | 0.10 | October 29, 2026 | §14: B8/B10 re-captured on the H v0.2 skin (8/8 within budget, worst p99 10.41 ms), one uninterrupted I-Q15 pass (37/37) and the I-Q16 matrix (95 samples, 0 problems) at `aa858e97`. Evidence `p5b-gatej-recapture-20261029/`. The §7 B8/B10 and I-Q15 conditions are met; Gate-J verdict CONDITIONAL PASS with J-05 remaining. |
 | 0.11 | October 29, 2026 | §15: pinned-host Unity compile and EditMode for the §13 fix at head `fbcc3c2f` (same `src` tree as `9139701c`). Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 424/424 passed, including the §13 regression test. Evidence `host-fbcc3c2f-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.12 | October 29, 2026 | §16: owner report that Faster resized the pitch on the first and last click. Fixed in `c4b65334`: the four playback reasons share one `S0ReservedReason` box that keeps the tallest one's height. Unity compile clean (75 assemblies), EditMode 424/424, before/after captures at 1920×1080 and 1366×768 show the pitch holding one size; owner replied "looks right now". Evidence `host-c4b65334-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
+| 0.13 | October 29, 2026 | §17: external review of `4ff45ee8` — §14's I-Q15 pass never reached the earlier-outcome disclosure (three records; the disclosure needs four). I-Q15 rerun on the pinned host with four and then five records: disclosure reached by Tab and Shift-Tab, toggled by Enter, expanded state and focus kept through 3,600 live ticks and through a new record; 59/59, uninterrupted. Reason box captured at 200% (1920×1080, 1366×768, 800×1000) and 100% narrow: pitch holds one size at every speed step. Evidence `host-4ff45ee8-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |

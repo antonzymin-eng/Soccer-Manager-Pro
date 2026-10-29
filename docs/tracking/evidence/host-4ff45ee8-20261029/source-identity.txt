@@ -1,0 +1,20 @@
+# Source identity — pinned-host I-Q15 rerun and reason-box captures at 4ff45ee8
+# Both worktrees were checked out with 'git worktree add --detach' (or checked out detached) at this
+# commit; nothing tracked was edited. The only additions were untracked harness files, listed below.
+commit: 4ff45ee89ffee2792155e7cda6c81d5fcb2306a3 (PR #518 head, client/p5b-host-acceptance)
+tree repo: b4dd51be24f8cf31f8a9798c264481f71f18580e
+tree src: ef305bd8a1be9917c4df43bfb8773aca9de4304e
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+src identical to the fix commit c4b65334: yes
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+
+I-Q15 worktree: .claude/worktrees/unity-iq15 (fresh; first import in batch mode, then an interactive Editor)
+  untracked additions: Assets/HostProbes/ (the October host-probe harness, copied from the owner's SMP-p5b-host
+  checkout; changes are in iq15/harness.diff.txt) and the ignored Assets/Scripts junction to its own src
+  git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings: (empty after the runs)
+
+Reason-box capture worktree: .claude/worktrees/unity-capture (detached at this commit)
+  untracked additions: Assets/_Capture/ (reasonbox/S0SpeedCapture.cs.txt and its build entry); for the 200% player
+  only, Assets/Scenes/Scene.unity had _textScale set to 2 for the build and was restored with git checkout after it

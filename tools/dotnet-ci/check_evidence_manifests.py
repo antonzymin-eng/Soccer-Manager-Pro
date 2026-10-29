@@ -50,6 +50,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "p5b-gatej-recapture-20261029": ("manifest", FULL_MANIFEST),
     "host-fbcc3c2f-20261029": ("manifest", FULL_MANIFEST),
     "host-c4b65334-20261029": ("manifest", FULL_MANIFEST),
+    "host-4ff45ee8-20261029": ("manifest", FULL_MANIFEST),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be

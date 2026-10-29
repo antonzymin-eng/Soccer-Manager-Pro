@@ -1,0 +1,146 @@
+// Throwaway capture driver for the PR #518 "Faster resizes the pitch" before/after comparison.
+// Never committed: copied into a scratch worktree's Assets/_Capture only for a player build.
+// Starts the demo match through the real UGUI buttons, then steps Faster to the top and Slower
+// back to real time, capturing the composed frame and logging the pitch rectangle at each step.
+
+using System.Collections;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.MatchClientUnity;
+
+public sealed class S0SpeedCapture : MonoBehaviour
+{
+    const BindingFlags F = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+    // -captureRes "1920x1080f,800x1000w": f = borderless full screen, w = window.
+    static readonly string DefaultResolutions = "1920x1080f,1366x768w";
+    string _out, _res;
+    readonly StringBuilder _log = new StringBuilder();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Boot()
+    {
+        string[] args = System.Environment.GetCommandLineArgs();
+        int i = System.Array.IndexOf(args, "-captureOut");
+        if (i < 0 || i + 1 >= args.Length) return;
+        var go = new GameObject("S0SpeedCapture");
+        DontDestroyOnLoad(go);
+        var capture = go.AddComponent<S0SpeedCapture>();
+        capture._out = args[i + 1];
+        int r = System.Array.IndexOf(args, "-captureRes");
+        capture._res = r >= 0 && r + 1 < args.Length ? args[r + 1] : DefaultResolutions;
+    }
+
+    IEnumerator Start()
+    {
+        Application.runInBackground = true;
+        Directory.CreateDirectory(_out);
+        S0ScreensBehaviour screens = null;
+        while (screens == null) { screens = FindFirstObjectByType<S0ScreensBehaviour>(FindObjectsInactive.Include); yield return null; }
+        string[] sizes = _res.Split(',');
+        for (int r = 0; r < sizes.Length; r++)
+        {
+            string spec = sizes[r].Trim();
+            string[] wh = spec.Substring(0, spec.Length - 1).Split('x');
+            int w = int.Parse(wh[0]), h = int.Parse(wh[1]);
+            // The host display is 1920x1080: borderless full screen there ('f'), an ordinary window below it ('w').
+            Screen.SetResolution(w, h, spec.EndsWith("f") ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+            yield return Frames(30);
+            Log($"== resolution requested {w}x{h}, screen {Screen.width}x{Screen.height}");
+            if (r == 0)
+            {
+                Click(FindButton("Play a demo match"));
+                yield return Frames(5);
+                var choices = (Button[])typeof(S0ScreensBehaviour).GetField("_setupChoices", F).GetValue(screens);
+                Click(choices[3]);
+                yield return Frames(3);
+                Click(FindButton("Start match"));
+            }
+            var faster = (Button)typeof(S0ScreensBehaviour).GetField("_faster", F).GetValue(screens);
+            var slower = (Button)typeof(S0ScreensBehaviour).GetField("_slower", F).GetValue(screens);
+            var pitch = (RectTransform)typeof(S0ScreensBehaviour).GetField("_pitchBounds", F).GetValue(screens);
+            var speed = (Text)typeof(S0ScreensBehaviour).GetField("_speed", F).GetValue(screens);
+            float t0 = Time.realtimeSinceStartup;
+            while (!faster.IsInteractable() && !slower.IsInteractable() && Time.realtimeSinceStartup - t0 < 60) yield return null;
+            // Start each resolution from real time.
+            while (slower.IsInteractable()) { Click(slower); yield return Frames(3); }
+            yield return Frames(20);
+            string tag = $"{w}x{h}";
+            int step = 0;
+            yield return Shot(tag, step++, "start", speed, pitch);
+            while (faster.IsInteractable())
+            {
+                Click(faster);
+                yield return Frames(20);
+                yield return Shot(tag, step++, "faster", speed, pitch);
+            }
+            while (slower.IsInteractable())
+            {
+                Click(slower);
+                yield return Frames(20);
+                yield return Shot(tag, step++, "slower", speed, pitch);
+            }
+        }
+        Log("textScale=" + typeof(S0ScreensBehaviour).GetField("_textScale", F).GetValue(screens));
+        File.WriteAllText(Path.Combine(_out, "pitch-sizes.txt"), _log.ToString());
+        Application.Quit();
+    }
+
+    IEnumerator Shot(string tag, int step, string action, Text speed, RectTransform pitch)
+    {
+        yield return new WaitForEndOfFrame();
+        // The project ships without the ScreenCapture and ImageConversion modules, so read the back
+        // buffer with core ReadPixels and write a 24-bit BMP (bottom-up rows, as ReadPixels returns them).
+        int w = Screen.width, h = Screen.height;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+        byte[] rgb = tex.GetRawTextureData();
+        Destroy(tex);
+        string file = $"{tag}-{step:00}-{action}.bmp";
+        WriteBmp(Path.Combine(_out, file), rgb, w, h);
+        Rect rect = pitch.rect;
+        Log($"{tag} step {step:00} {action,-6} speed=\"{speed.text}\" pitch={rect.width:0.0}x{rect.height:0.0} file={file}");
+    }
+
+    static void WriteBmp(string path, byte[] rgb, int w, int h)
+    {
+        int stride = (w * 3 + 3) & ~3;
+        using var bw = new BinaryWriter(File.Create(path));
+        bw.Write((byte)'B'); bw.Write((byte)'M');
+        bw.Write(54 + stride * h); bw.Write(0); bw.Write(54);
+        bw.Write(40); bw.Write(w); bw.Write(h); bw.Write((short)1); bw.Write((short)24);
+        bw.Write(0); bw.Write(stride * h); bw.Write(2835); bw.Write(2835); bw.Write(0); bw.Write(0);
+        var row = new byte[stride];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int s = (y * w + x) * 3;
+                row[x * 3] = rgb[s + 2]; row[x * 3 + 1] = rgb[s + 1]; row[x * 3 + 2] = rgb[s];
+            }
+            bw.Write(row);
+        }
+    }
+
+    void Log(string line) { _log.AppendLine(line); Debug.Log("[S0SpeedCapture] " + line); }
+
+    static IEnumerator Frames(int n) { for (int i = 0; i < n; i++) yield return null; }
+
+    static Button FindButton(string contains) =>
+        FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            .FirstOrDefault(b => b.GetComponentsInChildren<Text>(false).Any(t => t.text.Contains(contains)));
+
+    static void Click(Selectable s)
+    {
+        if (s == null || !s.IsInteractable()) { Debug.Log("[S0SpeedCapture] click skipped"); return; }
+        var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+        ExecuteEvents.Execute(s.gameObject, data, ExecuteEvents.pointerEnterHandler);
+        ExecuteEvents.Execute(s.gameObject, data, ExecuteEvents.pointerDownHandler);
+        ExecuteEvents.Execute(s.gameObject, data, ExecuteEvents.pointerUpHandler);
+        ExecuteEvents.Execute(s.gameObject, data, ExecuteEvents.pointerClickHandler);
+    }
+}
