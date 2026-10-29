@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** September 26, 2026 (v0.7 — W8 B amendment approved by owner; 35 m fallback accepted as an uncalibrated B default)
-**Version:** 0.7
+**Last Updated:** October 29, 2026 (v0.8 — ERR-021-008: §3.4.1 timing safety re-cited to #11 §3.8.4's 480-frame hand-control budget, back-prop of ERR-011-021)
+**Version:** 0.8
 **Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 > Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until B code lands. Owner approval was recorded September 26, 2026; their stated values and shapes are therefore normative B inputs. `[GT]` means uncalibrated, not illustrative or optional.
@@ -106,7 +106,7 @@ status, not a source tag: every numeric constant carries exactly one project sou
 |---|---|---:|---:|---|
 | `GK_DIST_LOCAL_RECEIVER_RADIUS_M` | `[GT]` | m | 25.0 | [5, 40]; local release option rather than a whole-pitch search |
 | `GK_DIST_FALLBACK_ADVANCE_M` | `[GT]` | m | 35.0 | [20, 60]; deterministic receiverless B target, subject to owner realism approval below |
-| `GK_DIST_QUICK_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 5 | [1, 35]; voluntary release must remain inside §11 §3.8.4's inherited-guard budget |
+| `GK_DIST_QUICK_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 5 | [1, 35]; voluntary release must keep CONTACT inside #11 §3.8.4's hand-control budget (elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` = 480 frames; W8 B code: both inherited guards until C lands) |
 | `GK_DIST_STANDARD_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 10 | [1, 35]; same safety envelope |
 | `GK_DIST_SLOW_DELAY_TICKS` | `[GT]` | tactical ticks @10 Hz | 35 | [1, 35]; latest permitted voluntary commit |
 | `GK_DIST_SLOW_POWER` | `[GT]` | dimensionless | 0.50 | [0, 1] request domain |
@@ -167,7 +167,14 @@ within 25.0 m, team 0 uses `0 + (+1)*35 = 35 m` and the centreline `68/2 = 34 m`
 
 **Timing safety.** Delays are in #11's 10 Hz tactical-tick domain.
 `GK_DIST_MAX_POLICY_DELAY_TICKS = 35` is the derived ceiling; any change to a policy delay that
-raises the maximum requires revisiting #11 §3.8.4's CONTACT-before-inherited-guard proof.
+raises the maximum requires revisiting #11 §3.8.4's deadline-budget proof: first-attempt
+claim-to-CONTACT `35 × 6 + 84 + 1 = 295` frames must stay ≤ `GK_HAND_CONTROL_MAX_FRAMES` = 480
+(`[CROSS]` #11 §3.8.5; 185-frame margin), and retained-possession retries use #11 §3.8.4's
+`candidateContactFrame ≤ handControlStartFrame + 480` predicate (ERR-021-008, ERR-011-021). The
+retired six-second no-intent condition and the feet-only 360-frame ground drop no longer bound a hand
+distribution. *Specified, not implemented: until the W8 C implementation lands, W8 B code still
+requires CONTACT strictly before both inherited guards (the #11 no-intent boundary and the 360-frame
+ground drop).*
 
 **LongKick realism / owner approval.** On September 26, 2026 the owner explicitly accepted the
 current `GK_DIST_FALLBACK_ADVANCE_M = 35 m` receiverless target as an **uncalibrated B default**. It is
@@ -221,4 +228,5 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.5 | 2026-09-26 | — | W8 B review closure: gives every new numeric exactly one source tag and valid range, makes the 35-tick ceiling derived, routes fallback geometry through own-goal/attack-direction helpers instead of fixed-end literals, pins CONTACT to live receiver position with committed-position fallback, adds a selector worked example, preserves zero RNG, and records the 35 m LongKick fallback as an explicit owner-approval realism choice. |
 | 0.7 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Accepts `GK_DIST_FALLBACK_ADVANCE_M = 35 m` as the uncalibrated B default while explicitly leaving realistic punt length open against #5's Lofted trajectory; B landing-point evidence is the closing input. B wiring is authorized only after PR #461 merges. |
 | 0.6 | 2026-09-26 | — | W8 B final consistency: corrects the inherited section preamble so spec-first W8 constants are not falsely claimed to already exist in `TacticalInstructionsConstants.cs` and `[GT]` is not mistaken for an optional illustrative value. Source implementation remains blocked on owner approval. |
+| 0.8 | 2026-10-29 | — | ERR-021-008 (back-prop of ERR-011-021): §3.4.1 `GK_DIST_QUICK_DELAY_TICKS` range note and the timing-safety paragraph now cite #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) budget (first attempt 295 frames, retry predicate `candidateContactFrame ≤ handControlStartFrame + 480`) instead of the retired CONTACT-before-inherited-guard proof; corrects the `§11` → `#11` citation typo in that row. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Delay values unchanged. |
 #endregion

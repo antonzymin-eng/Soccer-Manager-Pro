@@ -9,7 +9,7 @@ through Ball.ApplyKick() to completion. §3.9 defines the events published at st
 transitions. Together these subsections complete the Section 3 Technical Specifications.
 
 **Created:** March 7, 2026, 2:00 PM PST
-**Version:** 1.6
+**Version:** 1.7
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -739,8 +739,15 @@ No `DeterministicRngService` stream/domain/draw site or draw order is added.
 For `Rejected` or `Cancelled` while the same keeper still owns controlled possession, the host
 clears only the distribution intent and returns/keeps #11 in `HandsOnBall` with the original claim
 clock; retry is allowed only on a later tactical heartbeat **and only if #11 §3.8.4's live retry-budget
-predicate proves candidate CONTACT remains strictly before both inherited guards**. If possession is
-lost, the hand episode ends and #11 transitions to `Recovering`. Neither path publishes
+predicate passes: `candidateContactFrame = currentFrame + WindupFrames + 1 ≤ handControlStartFrame +
+GK_HAND_CONTROL_MAX_FRAMES` (480 frames @ 60 Hz, `[CROSS]` #11 §3.8.5), i.e. candidate CONTACT at
+elapsed ≤ 480** (ERR-005-003, ERR-011-021). The retired six-second no-intent condition and the Match
+Engine's feet-only 360-frame ground drop no longer budget a hand retry. Worked example (#11 §3.8.4):
+claim at frame 1,000, retry heartbeat at frame 1,398 — an 84-frame Kick gives
+`1,398 + 84 + 1 = 1,483 > 1,480` (refused), an 81-frame windup gives `1,480` (elapsed 480, accepted).
+*Specified, not implemented: until the W8 C implementation lands, W8 B code still requires candidate
+CONTACT strictly before both inherited guards (the #11 no-intent boundary and the 360-frame ground
+drop).* If possession is lost, the hand episode ends and #11 transitions to `Recovering`. Neither path publishes
 `DistributionExecutedEvent`.
 Successful CONTACT uses the typed normal-completion possession-change cause and cannot be
 misclassified as cancellation.
@@ -919,6 +926,7 @@ only. Only a tackle interrupt — a real game event — produces a cancellation 
 | 1.5 | September 26, 2026 | — | Owner approval: W8 B amendment approved September 26, 2026 as part of the #5/#11/#21 bundle. #5 remains overall DRAFT; B wiring is authorized only after PR #461 merges. The current Lofted trajectory is not approved as a realistic punt solution; target-vs-first-ground-contact evidence closes the follow-up decision. |
 | 1.4 | September 26, 2026 | — | W8 B review closure follow-up: corrects the LongKick worked example to apply #11's kicking-accuracy coefficient, explicitly makes target arrival an empirical landing measurement, adds that B evidence field, makes retries deadline-gated through #11 §3.8.4, and adds the owner-approval gate. |
 | 1.3 | September 26, 2026 | — | W8 B review closure: pins the exact Roll/Throw/Kick launch-angle rule, CONTACT-time live receiver versus committed fallback semantics, fixed error-hash discriminator `0x47`, Rejected/Cancelled/Completed state consequences, and worked Roll/LongKick calculations. No ordinary `PassType` ordinal or RNG draw site is changed. |
+| 1.7 | October 29, 2026 | — | ERR-005-003 (back-prop of ERR-011-021): §3.8.13 retained-possession retry is now gated by #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) predicate, `candidateContactFrame ≤ handControlStartFrame + 480`, with #11's accepted/refused worked example, instead of CONTACT strictly before both retired inherited guards. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Feet-possession text unchanged. |
 
 ---
 
