@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 7: Future Extensions & Stage 1+ Deferrals
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Last Updated:** October 29, 2026 (v0.2 — ERR-011-021: §7.3 discipline deferral updated for D-07 and the eight-second rule)
+**Version:** 0.2
 **Status:** DRAFT
 **Purpose:** Enumerate the Stage 1+ deferrals and future-extension
 candidates that #11 carves out of Stage 0 scope. Each deferral
@@ -32,9 +33,12 @@ the replacement agent role assignment is out of scope.
 
 ## 7.3 Yellow / red card discipline
 
-**Statement.** GK fouls outside the box, deliberate handball
-outside the box, and time-wasting bookings (related to the 6-second
-rule per `GK_HOLD_MAX_TICKS`) are not modelled at Stage 0.
+**Statement.** GK fouls outside the box, cards for outside-area
+handling (the DFK itself is modelled by §3.1.4), and time-wasting
+bookings for repeated eight-second hand-control offences (§3.8.5; a
+single offence carries no card) are not modelled at Stage 0. *(Updated
+October 29, 2026, ERR-011-021: the former text cited the retired
+six-second rule and `GK_HOLD_MAX_TICKS`.)*
 
 **Candidate Stage.** Stage 1+ Discipline spec.
 
@@ -137,3 +141,4 @@ dedicated branch.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 10 deferrals catalogued with rationale and candidate Stage | self-pass-1 in `adversarial-review-section-files-v1.md` |
+| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | §7.3 no longer cites the retired six-second rule; outside-area handling is modelled (D-07, §3.1.4) and only its cards remain deferred; repeated eight-second offences' bookings deferred. | W8 C contract v0.5 |

@@ -1,7 +1,9 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 21, 2026 (v1.11 — §6 UX copy decided: Gate J J-01/J-02.)
+> **Last Updated:** October 29, 2026 (v1.12 — §5.3 W8 C eight-second hand-control corner specified (ERR-011-021; not implemented).)
+
+> **Last Updated (prior):** October 21, 2026 (v1.11 — §6 UX copy decided: Gate J J-01/J-02.)
 
 > **Last Updated (prior):** October 18, 2026 (v1.10 — §5.2 landed: PR #515 merge `1a3b4271`.)
 
@@ -353,7 +355,7 @@ lines, ordinary feet possession, smother rejection, carried exits, collision cor
 distribution cancellation, direct goals, boundary precedence and deterministic pending-offence restore.
 The review fixes add the real catch composition with the keeper's body outside (hold and move back
 legal, farther out sanctioned) and goal-line overhang (on the line inside; outside DFK placed on the line).
-W8 C's hand timeout/corner and feet-only stall-guard amendment remain a separate change.
+W8 C's hand timeout/corner and feet-only stall-guard amendment is a separate change, specified in §5.3.
 
 **Local validation (October 18, 2026):** the Linux .NET gate compiles the changed engine; 252 selected
 engine cases pass, including 46 new D-07 cases. Adjacent rebuilt suites pass 107 keeper cases
@@ -374,6 +376,41 @@ Linux functional gate. On the pinned Unity 6000.4.9f1 host the same head compile
 and every full-match scenario; GoalkeeperMechanics gives 107 passed / 27 existing skips. Record:
 [host-d07-a7800579-20261018](evidence/host-d07-a7800579-20261018/README.md). Landed in PR #515, merge `1a3b4271`. On the six standard W8 seeds the post-merge
 [census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and unchanged final digests.
+
+### 5.3 Goalkeeper hand control over eight seconds — W8 C
+
+**Status:** owner-approved October 29, 2026 (ERR-011-021); **specified, not implemented.** #11
+[§3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
+owns the clock, eligibility and adjudication frame; this section owns the restart.
+
+When #11 §3.8.5 sanctions a hand episode at elapsed 481 frames, Resolve applies one corner to the
+opponents of the sanctioned keeper's team. The check runs after §5.2's handling adjudication and
+before the C3 executors, so a §5.2 DFK and this corner cannot both apply on one frame; a goal or
+boundary restart already applied earlier in the frame has ended the episode. Before `ApplyRestart`,
+the accepted #5 goalkeeper request is cancelled through its terminal-feedback path, so no CONTACT,
+`DistributionExecutedEvent` or late completion follows. The captured foul candidate and its decided
+flag are cleared as in §5.1, so no second whistle or delayed card occurs next frame. The offence
+itself carries no card.
+
+**Placement.** Do not route this through `RestartResolver` with an invented boundary-exit point.
+The corner is on the sanctioned keeper's defended goal line, `x = OwnGoalX(team)` (0 m for team 0,
+105 m for team 1). The side comes from the keeper's position at sanction: `y < 34` → `y = 0`;
+`y > 34` → `y = 68` m; exactly `y = 34` → `y = 68` (deterministic project tie rule, not IFAB). The
+spot is then inset by `BallPhysicsConstants.Ball.RADIUS` exactly as the boundary corner in §5, so the
+ball stays in bounds. Examples: a team-0 keeper sanctioned at `(8.0, 30.0)` m gives team 1 the corner
+at `(0, 0)` inset to `(0.11, 0.11)` m; a team-1 keeper at `(97.0, 30.0)` m gives team 0 the corner at
+`(105, 0)` inset to `(104.89, 0.11)` m; a keeper at `y = 34.0` takes the `y = 68` corner.
+
+**Application.** Use `ApplyRestart` and §5.1's taker selection (nearest eligible, non-sent-off player
+of the awarded team by squared XY distance, ascending slot index on ties). It tears down possession
+and the hand episode exactly once and executes eligible queued substitutions. Publish one
+`RestartAwardedEvent` with the existing boundary `Corner` kind and unchanged payload layout. If the
+implementation needs to separate this corner from boundary corners in the event stream, it appends
+an event-only code after `DIRECT_FREE_KICK = 6`, as §5.1 did, and records that choice at its landing.
+
+**Determinism.** No RNG draw is added. The claim frame is serialized under #11 §3.8.5's durable-state
+rule in the next available snapshot schema; restore at any frame from the claim through 481 must
+reproduce the same corner or release. Tests are #11 T-5.1.10.1–13.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
@@ -813,6 +850,7 @@ project's established pattern for this environment.
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
 | 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |
+| 1.12 | 2026-10-29 | §5.3 added: owner-approved W8 C eight-second hand-control corner (ERR-011-021) — Resolve position after §5.2, #5 cancellation, keeper-position corner side with high-Y tie and ball-radius inset, shared `ApplyRestart`/taker, existing `Corner` event kind. Specified, not implemented. |
 | 1.11 | 2026-10-21 | §6 open-items UX copy decided by the owner (Gate J J-01/J-02): goalkeeper-mismatched pairs greyed out with a reason; typed refusal rows; no windows projection. |
 | 1.10 | 2026-10-18 | §5.2 landed: PR #515 merge 1a3b4271; six-seed census 0 D-07 free kicks, digests unchanged. |
 | 1.9 | 2026-10-18 | §5.2: PR #515 CI green and pinned-host Unity validation met at `a7800579` (evidence `host-d07-a7800579-20261018`). |

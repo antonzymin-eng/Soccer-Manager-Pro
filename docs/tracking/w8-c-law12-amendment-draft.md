@@ -171,6 +171,8 @@ isolated and rebaselined explicitly; never silently relabel the adopted B finger
 
 **Owner decision recorded October 29, 2026 (UTC):** the C specification text is approved as written, including the Stage-0 **atomic hand release at CONTACT** and the recommended §2.4 predicate 4 / §3 outside-hold bound: the eight-second corner times every live hand episode that §3.1.4 has not sanctioned ("go with the recommended option, approve C wording"). D-07 was already decided and landed. **Next:** the spec-application landing (§5 item 4) applies this text to #11, Match Engine, the restart contract and the test contracts, with its ERR entries; C implementation stays blocked until that lands.
 
+**Applied October 29, 2026 (ERR-011-021):** the normative home is now [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021) with FR-GK-028/043 in section 2 and tests T-5.1.10.1–13 in section 5, plus [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c) and Match Engine design item 19. Where this record and those documents differ, the owning spec wins.
+
 ## Review history
 
 - **v0.1 — October 16:** standalone contract proposal for approval, without normative edits.

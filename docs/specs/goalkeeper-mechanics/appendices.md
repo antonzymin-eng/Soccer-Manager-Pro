@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Appendices
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Last Updated:** October 29, 2026 (v0.2 — ERR-011-021: glossary `HandsOnBall` entry)
+**Version:** 0.2
 **Status:** DRAFT
 
 ---
@@ -260,7 +261,7 @@ Tuning bias: uniform 0.75 spread.
 | `Anticipate` | State; pre-shot anticipation engaged (`gkAnticipationScore > ANTICIPATE_THRESHOLD`) |
 | `Diving` | State; dive launch impulse applied; pre-airborne single-frame |
 | `Airborne` | State; in the air during dive |
-| `HandsOnBall` | State; ball caught and held; `releaseTickEarliest` countdown active; `GK_HOLD_MAX_TICKS` enforces 6-second rule |
+| `HandsOnBall` | State; ball caught and held; `releaseTickEarliest` countdown active (policy scheduling only); the §3.8.5 hand-control clock (`GK_HAND_CONTROL_MAX_FRAMES` = 480 frames) bounds the episode with the eight-second Law-12 offence (ERR-011-021; formerly the retired six-second `GK_HOLD_MAX_TICKS`) |
 | `Recovering` | State; post-attempt recovery to set line |
 | `Distributing` | State; distribution windup in progress |
 | `Rushing` | State; sweep launched per KD-15 |
@@ -335,3 +336,4 @@ adversarial-review appendix) → resolution location in this spec
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; Appendices A–G + glossary | self-pass-1 in `adversarial-review-section-files-v1.md` |
+| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | Glossary `HandsOnBall` entry cites the §3.8.5 eight-second clock instead of the retired six-second rule. Historical review-finding row L-4 left as recorded. | W8 C contract v0.5 |

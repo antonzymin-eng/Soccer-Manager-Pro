@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 2: Functional Requirements, Data Structures & Failure Modes
 
 **Created:** May 16, 2026
-**Last Updated:** October 16, 2026 (v0.6 — ERR-011-020: own-release restriction, feet-only avoidance and law backstop)
-**Version:** 0.6
+**Last Updated:** October 29, 2026 (v0.7 — ERR-011-021: W8 C eight-second Law-12 hand-control offence replaces the six-second rule; FR-GK-028 replaced, FR-GK-043 retired)
+**Version:** 0.7
 **Status:** DRAFT
 **Purpose:** Enumerate the functional requirements (FRs), publish the
 data structures, catalogue the failure modes, and declare the
@@ -46,8 +46,8 @@ Source KDs are declared in §1.3.
 | FR-GK-025 | MUST | Iteration over multi-attacker cross-claim duels follows #16 §3.2 entity order. | KD-7 | §3.6 |
 | FR-GK-026 | MUST | `DOMAIN_TAG_GOALKEEPER = 0x1D` `[CROSS: #16 §3.4]` — ERR-011-001 resolved May 18, 2026. Positioning AI #12 reached `APPROVED` first and claimed `0x17`; #11 was reallocated to `0x1D` in #16 §3.4 v1.0.5 per KD-7 first-to-`APPROVED` precedent. | KD-7 | §3.4 / §4.4 / §9.4 |
 | FR-GK-027 | MUST | State-machine transitions are deterministic; no `System.Random` or `DateTime.Now` paths exist in any GK code path. | KD-7, CLAUDE.md | §3.1 |
-| FR-GK-028 | MUST | The `GK_HOLD_MAX_TICKS` constant enforces the 6-second hand-hold rule (60 ticks at 10 Hz); tagged `[FIXED]` as a Laws-of-the-Game constant, not a designer tuning. | KD-9, §3.4 | §3.4 / §3.8 |
-| FR-GK-029 | MUST | `Ball.SetPossessor(gkId)` invocation parks the ball at the GK's hand position with zero velocity until `releaseTickEarliest` and a subsequent `DistributeIntent` are received. | KD-21 | §3.5 / §3.8 |
+| FR-GK-028 | MUST | The goalkeeper hand-control episode MUST record the exact 60 Hz frame on which lawful hand control is established. When the keeper remains in live controlled own-area hand possession (§3.8.5 eligibility predicate) for **more than 480 elapsed physics frames** (`GK_HAND_CONTROL_MAX_FRAMES`) after that frame, the engine MUST stop play before any same-frame pass-executor CONTACT and award the opponents a corner using the keeper's position at the sanction. A genuine release at elapsed frame 480 is legal. The clock MUST survive keeper distribution WINDUP, retained-control cancellation, bouncing, and save/restore; ordinary feet possession does not count. The eight-second limit is a `[FIXED]` Laws-of-the-Game value, not gameplay tuning. *(Replaced October 29, 2026, ERR-011-021; the former text enforced a six-second rule through `GK_HOLD_MAX_TICKS` = 60 tactical ticks. Implementation lands with W8 C.)* | KD-9, IFAB Law 12.3 / Law 17, ERR-011-021 | §3.1.1 / §3.4.2 / §3.8.5 |
+| FR-GK-029 | MUST | `Ball.SetPossessor(gkId)` invocation parks the ball at the GK's hand position with zero velocity until `releaseTickEarliest` and a subsequent `DistributeIntent` are received. The same claim frame starts the FR-GK-028 hand-control clock (§3.8.5); the hand release that ends it is the #5 CONTACT of §3.8.3. | KD-21, ERR-011-021 | §3.5 / §3.8 |
 | FR-GK-030 | MUST | A non-eligible state (e.g. `Distributing` windup; `Recovering` from a missed dive) when a shot arrives produces NO `SaveAttemptedEvent`; ball-vs-GK contact (if any) is resolved by Collision System #3 standard rebound physics. | KD-11, F-07 | §3.5 / §3.9 |
 | FR-GK-031 | MUST | `clutchFirmness` and other `[0, 1]` intent fields are clamped on consumption; out-of-range values emit a telemetry warning but do NOT crash the pipeline. | F-10 | §2.3 / §3.5 |
 | FR-GK-032 | MUST | Distribution targeting outside pitch bounds is clamped to the nearest in-bounds point; telemetry warning emitted; NOT a hard failure. | F-09 | §3.8 |
@@ -61,7 +61,7 @@ Source KDs are declared in §1.3.
 | FR-GK-040 | MUST | Near-tie tiebreak Gaussian noise (`CROSS_CLAIM_TIEBREAK_NOISE_AMPLITUDE` `[GT]`) is applied only when `|scoreA − scoreB| < CROSS_CLAIM_TIEBREAK_EPSILON` `[GT]`. | KD-7, KD-14 | §3.6 |
 | FR-GK-041 | MUST | The dive timing jitter Gaussian (`DIVE_TIMING_JITTER_SIGMA_MS` `[GT]`) modulates `peakHandZ_m` linearly via `DIVE_JITTER_PEAK_Z_COEFF` `[GT]`; no other dive-kinematics term is randomly perturbed. | KD-7 | §3.3 |
 | FR-GK-042 | MUST | Every constant in §3.4 has a row in §3.4's Master Physical Profile Table with source tag, unit, valid-range, and citation columns populated. | KD-9 | §3.4 / §9.1 |
-| FR-GK-043 | MUST | After `GK_HOLD_MAX_TICKS` (6-second rule; 60 ticks at 10 Hz) elapsed without a `DistributeIntent`, the GK forces a default ROLL distribution to the nearest own-team agent within the penalty area. | KD-9 / Laws of the Game | §3.1 / §3.8 |
+| FR-GK-043 | RETIRED | **Retired October 29, 2026 (ERR-011-021).** Former text: "After `GK_HOLD_MAX_TICKS` (6-second rule; 60 ticks at 10 Hz) elapsed without a `DistributeIntent`, the GK forces a default ROLL distribution to the nearest own-team agent within the penalty area." The six-second rule is not current law. Reaching a hand-control deadline MUST NOT create a default Roll intent, enter `Distributing` without #5 acceptance, simulate a no-kick release, or force a keeper-specific ground drop; it creates the FR-GK-028 offence and corner when §3.8.5's predicate holds. The identifier is kept and not reused. | ERR-011-021 | §3.8.5 |
 | FR-GK-044 | MUST | Distribution `powerIntent` is multiplied by `THROW_ACCURACY_COEFF · Throwing_norm` for Throw delivery and by `KICK_ACCURACY_COEFF · Kicking_norm` for Kick delivery; Roll delivery does NOT consume `Throwing` or `Kicking` (low-skill action). | KD-9 / §3.8.1 | §3.8 |
 | FR-GK-045 | MUST | After releasing hand control, the keeper MUST form no hand save, aerial claim or smother until another player physically touches the ball. Ordinary feet collection and body rebounds remain available. The host owns canonical restriction history and adjudicates any actual prohibited hand contact in Resolve under §3.1.3. | ERR-011-020 / IFAB Law 12.2 | §3.1.3 / §4.2 |
 
@@ -184,7 +184,7 @@ struct BallClaimedEvent {
     long         matchTime;
     ClaimType    claimType;             // Cross / Aerial / OneOnOne / ShotCatch — telemetry label
     int?         contestedDuelId;
-    int          releaseTickEarliest;   // 10 Hz tick at which distribution may begin (honours GK_HOLD_MAX_TICKS)
+    int          releaseTickEarliest;   // 10 Hz tick at which distribution may begin; policy scheduling only, no legal-deadline authority (§3.8.5)
 }
 
 struct DistributionExecutedEvent {
@@ -299,3 +299,4 @@ Stage 0+1 deliverable schedule.
 | 0.4 | September 22, 2026 | W3 / ERR-011-012 | `ClaimIntent` gains locked `reachDirectionLateral`; its real Stage-0 composition producer and v23 authoritative snapshot ownership are stated. Target is tactical aim, never hand geometry; §3.6.1 owns the bounded live episode. No new `[GT]` or RNG surface. | implementation/spec back-prop |
 | 0.5 | September 27, 2026 | ERR-011-018 | FR-GK-005 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real #12 surface and its world-frame mapping (§3.3.0.1); rules out the keeper's own position as a stand-in. | spec + code, same commit |
 | 0.6 | October 16, 2026 | — | ERR-011-020: own-release restriction, feet-only avoidance and law backstop | PR #511 |
+| 0.7 | October 29, 2026 | W8 C spec application | ERR-011-021: FR-GK-028 replaced by the owner-approved eight-second hand-control offence (480/481 frames, corner, claim-frame clock); FR-GK-043 six-second forced ROLL retired with its text preserved; FR-GK-029 cross-references the clock; `BallClaimedEvent.releaseTickEarliest` comment no longer claims hold-rule authority. Specified, not yet implemented. | W8 C contract v0.5 |
