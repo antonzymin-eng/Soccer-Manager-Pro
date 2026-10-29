@@ -423,11 +423,19 @@ requires adding read/restore seams — parallel to
     end Resolve for that frame after the event and possession publication. Cancel the accepted #5
     request through its terminal-feedback path and use the shared restart seam
     ([restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
-    Never reuse the post-executor drop slot. `EnforceGoalkeeperReleaseRule` becomes feet-only via
+    The sanction produces no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`;
+    `ApplyRestart` leaves one `Cancelled` terminal, drained on the following frame's Resolve with no #11
+    state change (the keeper is already `Recovering`). Never reuse the post-executor drop slot.
+    `CancelExpiredGoalkeeperDistributions` is **removed for hand episodes** (the elapsed-481 corner is
+    the only hand deadline and already cancels), and `DistributionContactFits` is replaced by the #11
+    §3.8.4 admission predicate, which gates the first commit and every retry. #11 also keeps the
+    live-iff invariant: `HandsOnBall` or still-controlled `Distributing` if and only if the clock is
+    active and `≤ currentFrame`; the snapshot reader rejects a violation. `EnforceGoalkeeperReleaseRule` becomes feet-only via
     `!HasGoalkeeperHandControl(holder)` with no hand exception; reset or segregate its elapsed state
     at the hand-to-feet transition. Retag `GK_MAX_HOLD_SECONDS` `[EST]` (provisional non-law
-    anti-stall duration, 6 s unchanged); `GkMaxHoldTicks` stays `[DERIVED]`; remove the Law-12
-    rationale from both, from the guard, from §5.Z.16 and from telemetry comments. No RNG, `[GT]` or
+    anti-stall duration, 6 s unchanged); `GkMaxHoldTicks` stays `[DERIVED]`. C changes only code
+    comments, constants and telemetry comments to drop the Law-12 rationale; §5.Z.16 keeps its history
+    with the appended Correction. No RNG, `[GT]` or
     tuning change. Ordinary no-offence B→C play must match B exactly in gameplay events and ball
     trajectories.
 
@@ -2034,7 +2042,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
-| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. |
+| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. Review round 2: item 19 removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate, states the one drained `Cancelled` terminal and the live-iff invariant, and limits C's Law-12 cleanup to code comments, constants and telemetry comments (§5.Z.16 keeps its Correction). |
 | 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |

@@ -25,7 +25,7 @@ Source KDs are declared in §1.3.
 | FR-GK-004 | MUST | GK head contacts route to Heading Mechanics #10 §3.7; no #11-local head-physics path exists. | KD-4 | §3.6 / §3.10 |
 | FR-GK-005 | MUST | GK resting baseline position is consumed read-only from Positioning AI #12 §3.3.3 via #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot), mapped to world space by the composition root per §3.3.0.1 (ERR-011-018). The keeper's own position is not a valid stand-in. | KD-3 | §3.3.0 / §4.2 |
 | FR-GK-006 | MUST | GK reactive position (set / shuffle / narrow / cross-claim / sweep / recovery) is owned by Spec #11. Reactive radius is bounded by `GK_REACTIVE_RADIUS_M = 1.5 m` `[GT]` around the #12-supplied baseline while in `Resting` / `Set`. | KD-3, KD-13 | §3.3.0 |
-| FR-GK-007 | MUST | Distribution emits a Pass Mechanics #5 `PassIntent`-equivalent payload via the existing #5 intent surface; no #5 amendment is required. | KD-6 | §3.8 |
+| FR-GK-007 | MUST | Distribution is executed through Pass Mechanics #5's dedicated `GoalkeeperDistributionRequest` / `GoalkeeperDeliveryVariant` seam (§3.8.3; #5 §2.4.4 / §3.8.13). *Corrected October 29, 2026 under ERR-011-021 as residue of ERR-011-015: the former text named a `PassIntent`-equivalent payload on an existing #5 intent surface and said no #5 amendment was required; neither is true.* | KD-6, ERR-011-015, ERR-011-021 | §3.8 |
 | FR-GK-008 | MUST | Distribution release-point geometry (release height, launch angle range, windup duration) is owned by Spec #11 §3.8. | KD-16 | §3.8 |
 | FR-GK-009 | MUST | A failed save (`failureCause ∈ {MissedContact, MistimedDive, WrongDirection, OutOfReach, DisturbedInDuel}`) produces NO `Ball.ApplyKick` and NO `Ball.SetPossessor`; ball trajectory is unchanged; `SaveAttemptedEvent` is emitted with `failureCause` populated. | KD-11 | §3.9 |
 | FR-GK-010 | MUST | All randomness routes through `DeterministicRngService` with registered draw-site IDs (`DRAW_SITE_HANDLING_NOISE`, `DRAW_SITE_HANDLING_POINT_NOISE`, `DRAW_SITE_DIVE_TIMING_JITTER`, `DRAW_SITE_CROSS_CLAIM_TIEBREAK`). | KD-7 | §3.3 / §3.5 / §3.6 / §4.4 |
@@ -187,15 +187,17 @@ struct BallClaimedEvent {
     int          releaseTickEarliest;   // 10 Hz tick at which distribution may begin; policy scheduling only, no legal-deadline authority (§3.8.5)
 }
 
+// Matches src/goalkeeper-mechanics/DistributionExecutedEvent.cs (the 12-byte event header is set by
+// EventBus.Publish). Published by the Match Engine in Resolve after the #5 CONTACT kick (§3.8.3).
 struct DistributionExecutedEvent {
-    int                agentId;
-    long               matchTime;
-    DeliveryKindEnum   deliveryKind;
-    int?               targetReceiverId;
-    Vector3            targetPoint;
-    PassIntent         passIntent;        // payload emitted to Pass Mechanics #5
-    Vector3            releasePoint;
-    int                windupDurationMs;
+    int                AgentId;
+    float              MatchTimeMs;           // ms at the release (CONTACT) frame
+    DeliveryKind       DeliveryKind;          // Throw / Roll / Kick (§2.2.1 DeliveryKindEnum); telemetry label only
+    Vector3            ReleasePoint;          // actual world-space release point (§3.8.1)
+    int                TargetReceiverId;      // -1 for a zone / receiverless target (§3.8.2)
+    Vector3            TargetPoint;           // effective CONTACT-frame target after revalidation
+    float              EmittedPowerIntent;    // after accuracy-coeff scaling (§3.8.1)
+    float              WindupMs;              // windup duration that elapsed
 }
 
 struct GoalkeeperRushEvent {
@@ -299,4 +301,4 @@ Stage 0+1 deliverable schedule.
 | 0.4 | September 22, 2026 | W3 / ERR-011-012 | `ClaimIntent` gains locked `reachDirectionLateral`; its real Stage-0 composition producer and v23 authoritative snapshot ownership are stated. Target is tactical aim, never hand geometry; §3.6.1 owns the bounded live episode. No new `[GT]` or RNG surface. | implementation/spec back-prop |
 | 0.5 | September 27, 2026 | ERR-011-018 | FR-GK-005 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real #12 surface and its world-frame mapping (§3.3.0.1); rules out the keeper's own position as a stand-in. | spec + code, same commit |
 | 0.6 | October 16, 2026 | — | ERR-011-020: own-release restriction, feet-only avoidance and law backstop | PR #511 |
-| 0.7 | October 29, 2026 | W8 C spec application | ERR-011-021: FR-GK-028 replaced by the owner-approved eight-second hand-control offence (480/481 frames, corner, claim-frame clock); FR-GK-043 six-second forced ROLL retired with its text preserved; FR-GK-029 cross-references the clock; `BallClaimedEvent.releaseTickEarliest` comment no longer claims hold-rule authority. Specified, not yet implemented. | W8 C contract v0.5 |
+| 0.7 | October 29, 2026 | W8 C spec application | ERR-011-021: FR-GK-028 replaced by the owner-approved eight-second hand-control offence (480/481 frames, corner, claim-frame clock); FR-GK-043 six-second forced ROLL retired with its text preserved; FR-GK-029 cross-references the clock; `BallClaimedEvent.releaseTickEarliest` comment no longer claims hold-rule authority. Specified, not yet implemented. Review round 2: FR-GK-007 and the §2.2.4 `DistributionExecutedEvent` struct corrected to the landed #5 request seam and the real event fields (ERR-011-015 residue). | W8 C contract v0.5 |

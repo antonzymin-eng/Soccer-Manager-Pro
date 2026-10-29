@@ -1404,7 +1404,7 @@ windupFrames       = ceil(windupMs · 60 / 1000)
 **Worked windup example.** A Kick with the default `KICK_WINDUP_MS = 900 ms` gives
 `ceil(900*60/1000) = 54 frames`. At the permitted live-config maximum 1400 ms the same formula gives
 84 frames. The formula is dimensionally `ms * frames/s / ms/s = frames`; valid input bounds are the
-delivery-kind `[GT]` ranges in §3.4.6.
+delivery-kind `[GT]` ranges in §3.4.7.
 
 The release point is sampled from the keeper's **live CONTACT-frame position**, not the
 position at intent commit. #5 receives the release-height offset and recomputes the source point
@@ -1573,7 +1573,7 @@ candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES
 ```
 
 Valid inputs: `currentFrame ≥ handControlStartFrame`, `WindupFrames` from the live configured
-delivery windups (§3.4.6, 1–84 frames at the current Kick maximum), integers in physics frames.
+delivery windups (§3.4.7, 1–84 frames at the current Kick maximum), integers in physics frames.
 The executor's first windup decrement runs in Resolve of `currentFrame`, so CONTACT lands exactly on
 `candidateContactFrame` (#5 §3.8.13 item 4).
 
@@ -1606,10 +1606,14 @@ This subsection is the normative home of that wording. **Implementation status:*
 implemented. Until the C implementation landing, code still runs the W8 B backstops: the six-second
 tactical no-intent signal and the Match Engine's 360-frame ground drop for any keeper possession.
 The B hand-distribution budget lives at two further sites in
-`src/match-engine/MatchEngine.GoalkeeperDistribution.cs`, which C must replace with the §3.8.4
-elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` predicate: `DistributionContactFits` (commit/retry admission:
-CONTACT strictly before both the `GK_HOLD_MAX_TICKS` boundary and the ground-drop boundary) and
-`CancelExpiredGoalkeeperDistributions` (cancels a pending distribution at either boundary).
+`src/match-engine/MatchEngine.GoalkeeperDistribution.cs`, handled at C as follows. `DistributionContactFits`
+(commit/retry admission: CONTACT strictly before both the `GK_HOLD_MAX_TICKS` boundary and the
+ground-drop boundary) is replaced by the §3.8.4 admission predicate
+`currentFrame + WindupFrames ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`, which gates the first
+commit and every retry. `CancelExpiredGoalkeeperDistributions` (cancels a pending distribution at either
+B boundary) is **removed for hand episodes**: this subsection's elapsed-481 corner is the only hand
+deadline and it already cancels the accepted request, so a pre-executor guard would only cancel a
+distribution that is still legal at elapsed 480.
 
 **Governing rule.** IFAB Laws of the Game 2026/27, Law 12.3 and Law 17.1: a goalkeeper who controls
 the ball with the hands/arms inside their own penalty area for more than eight seconds concedes a
@@ -1627,11 +1631,19 @@ established, is #11 per-slot hand-episode state in `GoalkeeperMechanics`, held b
 sets it at **each of the three** live successful hand-claim sites (the aerial/cross claim
 (`ResolveClaimHandContact`), the dive-save catch branch and the smother) from the 60 Hz frame it is
 given there. It is one 64-bit signed (`long`) absolute frame value with an explicit inactive sentinel;
-#11's existing `int` frame parameters are widened on store, never narrowed. The clock is live only while
-a hand episode is live. #11 exposes it read-only to the Match Engine composition root, which runs the
+#11's existing `int` frame parameters are widened on store, never narrowed. The frame domain feeding it
+is the engine's existing `int` frame (`(int)_clock.CurrentTick`), which holds about
+2^31 / 60 ≈ 35.8 million s ≈ 414 days of continuous play: an accepted Stage-0 limit, not a defect. The
+clock is live only while a hand episode is live. #11 exposes it read-only to the Match Engine composition root, which runs the
 Resolve check and neither records nor owns it. It is never inferred from the 10 Hz `claimTick`. `claimTick` and `releaseTickEarliest` stay in the tactical domain for policy scheduling
 (§3.8) and have **no legal-deadline authority**.
 
+- **Live-iff invariant (normative).** For each slot, the #11 state is `HandsOnBall` or still-controlled
+  `Distributing` if and only if `handControlStartFrame` is active (not the sentinel) and
+  `≤ currentFrame`. Every write into `HandsOnBall` sets the clock, except the retained-cancel return
+  (`Distributing → HandsOnBall`), which keeps the original start. The snapshot reader rejects a body
+  that violates the invariant with `InvalidOperationException`, as the handling-law state reader does for
+  its own corrupt state.
 - A continuing episode keeps its original start: bounce/toss, `Distributing` WINDUP, and a
   retained-possession #5 reject or cancel (`Distributing → HandsOnBall`) all preserve it.
 - The single possession-change / hand-episode teardown seam (§3.8.3) clears the start frame together
@@ -1698,8 +1710,9 @@ if eligible(keeper) AND elapsedFrames > GK_HAND_CONTROL_MAX_FRAMES:   // 480 [FI
 atomic-model #5 CONTACT at frame 1,480 (elapsed 480) ends the episode lawfully. If the keeper still
 holds the ball when Resolve begins on frame 1,481 (elapsed 481), the offence is adjudicated first,
 even when an accepted #5 request would otherwise reach CONTACT on that frame: one team-1 corner,
-zero new ball kicks, zero `DistributionExecutedEvent`, and no later callback from the cancelled
-request. Team 1's mirror claims at `(97.0, 30.0)` m with the same frames and gives team 0 the corner.
+zero new ball kicks and zero `DistributionExecutedEvent`. The sanction produces no CONTACT and no
+`Completed` terminal; `ApplyRestart` leaves exactly one `Cancelled` terminal, which Resolve drains on
+frame 1,482 with no #11 state change (the keeper is already `Recovering`). Team 1's mirror claims at `(97.0, 30.0)` m with the same frames and gives team 0 the corner.
 
 **Worked boundary precedence:** same claim at frame 1,000, and on frame 1,481 (elapsed 481) the held
 team-0 ball is wholly over its own goal line, at `(−0.30, 34.0)` m (beyond `−r = −0.11` m).
@@ -1710,7 +1723,7 @@ play) predicate 5 holds and the corner is awarded.
 
 **Sanction.** Resolve exactly one offence/stoppage: cancel the accepted #5 request through its
 explicit cancellation/terminal-feedback path; suppress any in-flight ordinary pass, later CONTACT,
-distribution event and stale completion; end the hand episode; then use the shared restart, taker,
+distribution event and `Completed` terminal; end the hand episode; then use the shared restart, taker,
 placement, cue and event machinery ([restart contract §5.3](../../tracking/match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
 Goal, foul, §3.1.4 handling, own-release re-handling, boundary, possession-loss and restart ownership
 are reconciled so no same-frame competing restart or delayed second whistle can occur. When the
@@ -1718,7 +1731,10 @@ corner fires it discards the captured foul candidate and its decided flag with n
 (the Stage-0 single-offence precedence rule of §3.1.3/§3.1.4 and restart contract §5.1), and Resolve
 ends for that frame after the sanction's `RestartAwardedEvent` and possession publication, exactly as
 §3.1.4's adjudication returns early. The offence is not implemented by reusing the post-executor
-keeper-drop slot.
+keeper-drop slot. The sanction produces no CONTACT, no `Completed` terminal and no
+`DistributionExecutedEvent`. `ApplyRestart` leaves exactly one `Cancelled` terminal on the executor,
+which the following frame's Resolve drains through `FinishDistribution` with no #11 state change (the
+keeper is already `Recovering`), the same as the landed §3.1.4 path.
 
 **Corner side.** The recipient is the opposing team. The corner is on the **sanctioned keeper's
 defended goal line** (`x = 0` for team 0, `x = 105` m for team 1); only X flips between teams. The
@@ -1832,4 +1848,4 @@ standard rebound physics.
 | 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |
 | 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |
 | 0.23 | October 18, 2026 | — | D-07 review fixes: §3.1.4 `distanceOutside` formula; acquisition snap of a legal catch is not a carry, carries sanction only an outward move; a ball overhanging its own goal line (≤ r) is on the line; restart spot clamped onto the pitch; worked examples | PR #515 review |
-| 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. Review fix: §3.8.3/§3.8.4 candidate CONTACT is `currentFrame + WindupFrames` (no `+ 1`; the executor's first decrement runs in Resolve of the commit frame, #5 §3.8.13 item 4 and the W8 B test pin), the predicate gates the first commit and retries; first-attempt 294 frames (186 margin), alignment example CONTACT at 390, late-cancel (a) 384, (b) `1,398 + 84 = 1,482` refused and `WindupFrames ≤ 82` fits; W8 B `+ 1` kept as a B-code description. | W8 C contract v0.5 |
+| 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility (five after review round 1) with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. Review fix: §3.8.3/§3.8.4 candidate CONTACT is `currentFrame + WindupFrames` (no `+ 1`; the executor's first decrement runs in Resolve of the commit frame, #5 §3.8.13 item 4 and the W8 B test pin), the predicate gates the first commit and retries; first-attempt 294 frames (186 margin), alignment example CONTACT at 390, late-cancel (a) 384, (b) `1,398 + 84 = 1,482` refused and `WindupFrames ≤ 82` fits; W8 B `+ 1` kept as a B-code description. Review round 2: C removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate; the sanction leaves one `Cancelled` terminal drained next frame (no CONTACT, `Completed` or `DistributionExecutedEvent`); normative live-iff invariant between `handControlStartFrame` and the hand states, with snapshot-reader rejection; `int` frame-domain limit (~414 days) stated; windup constants cited as §3.4.7. | W8 C contract v0.5 |

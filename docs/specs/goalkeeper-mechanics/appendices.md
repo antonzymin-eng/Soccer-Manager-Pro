@@ -247,7 +247,7 @@ Tuning bias: uniform 0.75 spread.
 | `GK_SAVE_VOLUME` | XYZ envelope around the GK within which the §3.1 eligibility predicate considers ball contacts |
 | `SaveIntent` | Decision Tree #8 GK-branch output payload consumed by §3.5 |
 | `ClaimIntent` | #8 GK-branch payload for cross / aerial claim |
-| `DistributeIntent` | #8 GK-branch payload for throw / roll / kick |
+| `DistributeIntent` | Payload for throw / roll / kick, produced by the Match Engine and #21 `GkDistributionPolicy` (§3.8, ERR-011-016), not by Decision Tree #8 |
 | `RushIntent` | #8 GK-branch payload for sweep / 1v1 close-down |
 | `HandlingQualityScalar` | Continuous `[0, 1]` quality emitted by §3.5; physics does not branch on its label |
 | `ReactionWindowAchieved` | Continuous `[0, 1]` reaction quality emitted by §3.2; asymmetric tolerances per KD-18 |
@@ -336,4 +336,4 @@ adversarial-review appendix) → resolution location in this spec
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; Appendices A–G + glossary | self-pass-1 in `adversarial-review-section-files-v1.md` |
-| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | Glossary `HandsOnBall` entry cites the §3.8.5 eight-second clock instead of the retired six-second rule. Historical review-finding row L-4 left as recorded. | W8 C contract v0.5 |
+| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | Glossary `HandsOnBall` entry cites the §3.8.5 eight-second clock instead of the retired six-second rule. Historical review-finding row L-4 left as recorded. Review round 2: `DistributeIntent` glossary entry no longer says "#8 GK-branch payload" (ERR-011-016). | W8 C contract v0.5 |
