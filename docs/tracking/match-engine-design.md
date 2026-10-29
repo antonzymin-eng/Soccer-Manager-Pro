@@ -405,11 +405,17 @@ requires adding read/restore seams — parallel to
 18. PR #460's exact-digest evidence proves only the assignment-only pre-B helper. Once B attaches
     teardown/cause logic, B must prove those semantics directly; the old neutrality citation does not
     extend across this change.
-19. **W8 C (approved October 29, 2026; ERR-011-021; specified, not implemented).** Record the exact
-    60 Hz hand-claim frame at the three #11 claim sites and serialize it in the next available
-    snapshot schema. In Resolve, after the #11 §3.1.4 handling adjudication (including its
-    post-reattachment re-check) and **before** the C3 #5 executor loop, award the opponents a corner
-    when an eligible hand episode reaches elapsed 481 frames (480 is legal); cancel the accepted #5
+19. **W8 C (approved October 29, 2026; ERR-011-021; specified, not implemented).** #11 records the
+    exact 60 Hz hand-claim frame (`handControlStartFrame`, a `long` held beside `_claimTick`) at its
+    three claim sites and serializes it with its tick-state capture in the next available snapshot
+    schema; the engine only reads it. In Resolve, immediately after the post-collision-reattachment
+    `ApplyPendingKeeperHandlingOffence` (#11 §3.1.4's re-check) and **before** `ApplyFoulIfCaptured`
+    and the C3 #5 executor loop, award the opponents a corner when an eligible hand episode reaches
+    elapsed 481 frames (480 is legal). Eligibility has five predicates; the fifth (ball not wholly out
+    of play, `BallCollision.CheckBoundaries(...).isOut` false) keeps a completed boundary crossing
+    ahead of the corner, because `CheckRestartAndApply` runs after the executors. When the corner
+    fires, discard the captured foul candidate and its decided flag with no card-severity draw and
+    end Resolve for that frame after the event and possession publication. Cancel the accepted #5
     request through its terminal-feedback path and use the shared restart seam
     ([restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
     Never reuse the post-executor drop slot. `EnforceGoalkeeperReleaseRule` becomes feet-only via
@@ -2023,7 +2029,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
-| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. |
+| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. |
 | 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |

@@ -17,7 +17,7 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 
 ### 5.1.1 State machine (§3.1)
 
-- T-5.1.1.1 Every transition exercised (every row of §3.1.1; 28 rows at section 3 v0.24).
+- T-5.1.1.1 Every transition exercised (every row of §3.1.1; 29 rows at section 3 v0.24, including the `HandsOnBall → Recovering` teardown row).
 - T-5.1.1.2 Cycle detection: `Resting → Set → Anticipate → Diving
   → Airborne → Recovering → Set → ...` round-trip.
 - T-5.1.1.3 Deterministic ordering under sequential `ShotExecutedEvent`
@@ -166,12 +166,21 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
 
 - T-5.1.10.1 The 60 Hz claim frame is recorded at each of the three hand-claim sites (aerial/cross
   claim, dive-save catch, smother); elapsed 0 / 479 / 480 / 481; a claim landing late within its
-  six-frame tactical cell is still timed from its exact frame.
+  six-frame tactical cell is still timed from its exact frame. The stored start frame is a 64-bit
+  `long` set by #11 and read-only to the engine; a frame above `int.MaxValue` is stored and compared
+  without narrowing.
 - T-5.1.10.2 A CONTACT at elapsed 480 is legal; hand control held into elapsed 481 is sanctioned
   before a same-frame CONTACT, with no kick, no `DistributionExecutedEvent` and no late callback.
-- T-5.1.10.3 Controlled feet possession past 480 frames never becomes a corner. The engine stall
-  guard is feet-only at C, with no hand exception; it is a non-law guard.
-- T-5.1.10.4 The full four-part predicate in both `HandsOnBall` and controlled `Distributing`,
+- T-5.1.10.3 Controlled feet possession never becomes a corner, and the feet guard neither inherits
+  nor leaks the hand clock. The engine stall guard is feet-only at C, with no hand exception; it is a
+  non-law guard. (a) A hand episode ends at CONTACT; more than 481 frames after the original claim the
+  same keeper holds the ball at its feet: no corner, and `handControlStartFrame` reads the inactive
+  sentinel. (b) With the feet guard suppressed through a `TestOnly_` seam, feet possession run to
+  elapsed ≥ 481 (measured from the original hand claim and from the hand-to-feet transition): no
+  corner. (c) With the guard enabled, it fires at 360 frames of feet possession and publishes no
+  `RestartAwardedEvent`; its elapsed state resets at the hand-to-feet transition (a 300-frame hand
+  hold followed by feet possession does not fire 60 frames into the feet possession).
+- T-5.1.10.4 The full five-part predicate (one case failing each predicate in turn) in both `HandsOnBall` and controlled `Distributing`,
   including retained-possession reject/cancel and an in-progress WINDUP.
 - T-5.1.10.5 Bounce/toss does not reset the clock. Actual release, real loss, restart, goal or foul
   tears the episode down once; stale intent cannot cause a later restart. All current Roll/Throw/Kick
@@ -184,20 +193,32 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
   `y = 34` high-Y tie, shared restart placement/taker/event, and exactly one restart.
 - T-5.1.10.8 A §3.1.4 outside contact or outward carry gives its DFK, never an eight-second corner,
   including on frames 480/481; own-release re-handling (§3.1.3) stays distinct. The body-outside hold
-  is bounded by the corner after the guard split, with teardown and save/restore. The landed D-07
-  regression cases stay green.
+  is bounded by the corner after the guard split, with teardown and save/restore, and shows no
+  repeated free-claim loop (a released or sanctioned keeper cannot re-claim the same ball to start a
+  fresh clock without an intervening other-player touch, §3.1.3, or a restart). The landed D-07 regression cases stay green.
 - T-5.1.10.9 Save/restore at the claim frame, before 480, at 480, before 481, and mid-WINDUP or
-  cancellation gives identical continuation, event ordering and restart outcome.
+  cancellation gives identical continuation, event ordering and restart outcome. `ResetSlot` on a slot
+  with a live episode (substitute keeper) clears the start frame to the inactive sentinel and produces
+  no corner or kick; a slot refresh that does not call it preserves the episode and its clock.
 - T-5.1.10.10 No new RNG draw, default-policy switch, duplicate CONTACT or bypass of the existing #5
   completion/cancellation feedback.
-- T-5.1.10.11 A first offence produces no card; repeated offences follow the separately approved
-  foul/card policy.
+- T-5.1.10.11 A first or repeated offence produces no card and no card event at Stage 0; repeated-offence
+  bookings are deferred (§7.3).
 - T-5.1.10.12 Adversarial same-frame ordering against a prior whistle, §3.1.4 handling (including its
   post-reattachment re-check), a ball boundary crossing, possession loss, a successful #5 CONTACT, and
-  replay/restore.
+  replay/restore. Expected results, each mirrored for both ends: (a) a same-frame captured
+  tackle/collision foul candidate at elapsed 481 gives the corner only; the foul, its decided flag and
+  any card are dropped with no card-severity draw, and Resolve ends that frame after the event and
+  possession publication. (b) The held ball wholly out of play at elapsed 481 (for example team 0 at
+  `(−0.30, 34.0)` m, team 1 at `(105.30, 34.0)` m) gives the boundary/goal restart and no §3.8.5 corner;
+  an overhang inside `r` still gives the corner. (c) A §3.1.4 DFK on the frame gives the DFK and no
+  corner. (d) A successful #5 CONTACT at elapsed 480 is legal and gives no corner; a possession loss
+  earlier in the frame gives no corner. (e) Replay and restore of each case reproduce the same outcome.
 - T-5.1.10.13 §3.8.4 retry budget: live configured windups and all six #21 policy delays satisfy the
   first-attempt bound; a retry reaching CONTACT at elapsed 480 is accepted and one at 481 refused;
-  repeated rejection until the budget closes.
+  repeated rejection until the budget closes; and §3.8.4 case (a), a late retained cancellation about
+  294 frames after the claim with the heartbeat at most 6 frames later and an 84-frame windup plus one
+  CONTACT frame, which reaches CONTACT at about elapsed 385 ≤ 480 and is accepted.
 
 ---
 
@@ -290,4 +311,4 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 9 unit-test families, 11 integration tests, 4 validation scenarios, 7 cross-spec conformance gates | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | September 27, 2026 | ERR-011-018 | T-5.2.11 names the real #12 surface and records what is now locked (baseline read, cooldown) versus still unconsumed (reactive-radius clamp). | spec + code, same commit |
-| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. | W8 C contract v0.5 |
+| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. | W8 C contract v0.5 |

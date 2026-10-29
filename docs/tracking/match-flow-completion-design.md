@@ -384,13 +384,18 @@ and every full-match scenario; GoalkeeperMechanics gives 107 passed / 27 existin
 owns the clock, eligibility and adjudication frame; this section owns the restart.
 
 When #11 §3.8.5 sanctions a hand episode at elapsed 481 frames, Resolve applies one corner to the
-opponents of the sanctioned keeper's team. The check runs after §5.2's handling adjudication and
-before the C3 executors, so a §5.2 DFK and this corner cannot both apply on one frame; a goal or
-boundary restart already applied earlier in the frame has ended the episode. Before `ApplyRestart`,
-the accepted #5 goalkeeper request is cancelled through its terminal-feedback path, so no CONTACT,
-`DistributionExecutedEvent` or late completion follows. The captured foul candidate and its decided
-flag are cleared as in §5.1, so no second whistle or delayed card occurs next frame. The offence
-itself carries no card.
+opponents of the sanctioned keeper's team. The check runs immediately after §5.2's post-collision
+re-check (the second `ApplyPendingKeeperHandlingOffence`) and before `ApplyFoulIfCaptured`, hence
+before the C3 executors, so a §5.2 DFK and this corner cannot both apply on one frame. `CheckRestartAndApply`
+runs after the executors, so a goal or boundary restart is **not** yet applied at that point; a completed
+boundary crossing keeps its priority (§5.2) through #11 §3.8.5's predicate 5 instead: the check does not
+fire while the ball is wholly out of play (`BallCollision.CheckBoundaries(...).isOut`), and the boundary
+or goal restart then applies as usual. Before `ApplyRestart`, the accepted #5 goalkeeper request is
+cancelled through its terminal-feedback path, so no CONTACT, `DistributionExecutedEvent` or late
+completion follows. The captured foul candidate and its decided flag are cleared as in §5.1, with no
+card-severity draw (the Stage-0 single-offence precedence rule), so no second whistle or delayed card
+occurs next frame. Resolve then ends for that frame after the event and possession publication, as
+§5.2's adjudication does. The offence itself carries no card.
 
 **Placement.** Do not route this through `RestartResolver` with an invented boundary-exit point.
 The corner is on the sanctioned keeper's defended goal line, `x = OwnGoalX(team)` (0 m for team 0,
@@ -403,13 +408,14 @@ at `(0, 0)` inset to `(0.11, 0.11)` m; a team-1 keeper at `(97.0, 30.0)` m gives
 
 **Application.** Use `ApplyRestart` and §5.1's taker selection (nearest eligible, non-sent-off player
 of the awarded team by squared XY distance, ascending slot index on ties). It tears down possession
-and the hand episode exactly once and executes eligible queued substitutions. Publish one
-`RestartAwardedEvent` with the existing boundary `Corner` kind and unchanged payload layout. If the
+and the hand episode exactly once and executes eligible queued substitutions. Apply
+`cue: RestartCue.Corner` and publish one `RestartAwardedEvent` with the existing boundary `Corner` kind
+and unchanged payload layout. If the
 implementation needs to separate this corner from boundary corners in the event stream, it appends
 an event-only code after `DIRECT_FREE_KICK = 6`, as §5.1 did, and records that choice at its landing.
 
-**Determinism.** No RNG draw is added. The claim frame is serialized under #11 §3.8.5's durable-state
-rule in the next available snapshot schema; restore at any frame from the claim through 481 must
+**Determinism.** No RNG draw is added. The claim frame is #11-owned state (read-only to the engine),
+serialized under #11 §3.8.5's durable-state rule in the next available snapshot schema; restore at any frame from the claim through 481 must
 reproduce the same corner or release. Tests are #11 T-5.1.10.1–13.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
@@ -850,7 +856,7 @@ project's established pattern for this environment.
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
 | 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |
-| 1.12 | 2026-10-29 | §5.3 added: owner-approved W8 C eight-second hand-control corner (ERR-011-021) — Resolve position after §5.2, #5 cancellation, keeper-position corner side with high-Y tie and ball-radius inset, shared `ApplyRestart`/taker, existing `Corner` event kind. Specified, not implemented. |
+| 1.12 | 2026-10-29 | §5.3 added: owner-approved W8 C eight-second hand-control corner (ERR-011-021) — Resolve position after §5.2, #5 cancellation, keeper-position corner side with high-Y tie and ball-radius inset, shared `ApplyRestart`/taker, existing `Corner` event kind. Specified, not implemented. Adversarial review round 1: §5.3 states the exact Resolve slot (after the post-reattachment re-check, before `ApplyFoulIfCaptured`, frame ends), replaces the false "boundary restart already applied earlier" sentence with the predicate-5 precedence, and names `cue: RestartCue.Corner`. |
 | 1.11 | 2026-10-21 | §6 open-items UX copy decided by the owner (Gate J J-01/J-02): goalkeeper-mismatched pairs greyed out with a reason; typed refusal rows; no windows projection. |
 | 1.10 | 2026-10-18 | §5.2 landed: PR #515 merge 1a3b4271; six-seed census 0 D-07 free kicks, digests unchanged. |
 | 1.9 | 2026-10-18 | §5.2: PR #515 CI green and pinned-host Unity validation met at `a7800579` (evidence `host-d07-a7800579-20261018`). |
