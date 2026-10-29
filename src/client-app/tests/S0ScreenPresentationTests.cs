@@ -1,7 +1,7 @@
 // File:     src/client-app/tests/S0ScreenPresentationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-01 goalkeeper pairs; J-02 typed refusal copy)
-// Modified (prior): 2026-10-15
+// Modified: 2026-10-29 (cancel/reopen substitution availability regression)
+// Modified (prior): 2026-10-21
 // Author:   —
 // Spec:     S0 I-Q01–14/16/18, Code Standards #20
 // Purpose:  Exercise real coordinator/session/driver and admitted content through the shipping presenter path.
@@ -491,6 +491,25 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void ReopeningSubstitutionAfterCancelGreysNothingBeforeAnOutgoingPick()
+        {
+            // A cancelled keeper draft must not leave its keeper-specific reasons on the bench:
+            // the reopened dialog has no outgoing player, so every bench choice is available.
+            Start();
+            Tick();
+            _view.OpenSubstitution();
+            _view.SelectOutgoing(HomeKeeperSlot());
+            _view.CancelDialog();
+            _view.OpenSubstitution();
+            Assert.AreEqual(-1, _view.SelectedOutgoing);
+            foreach (S0ScreenPresenter.PlayerChoice c in _view.Incoming)
+            {
+                Assert.IsTrue(c.IsAvailable, "nothing is greyed out before an outgoing player is chosen");
+                Assert.AreEqual("", c.UnavailableReason);
+            }
+        }
+
+        [Test]
         public void BenchKeeperMayReplaceAnOutfieldPlayerAfterTheKeeperIsSentOff()
         {
             // The engine's keeper fallback: with no keeper on the pitch, a bench keeper may come on
@@ -563,4 +582,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.5     | 2026-10-15 | —      | Match Flow §6 (PR #505): the substitution stays Pending after acceptance and settles only after a restart executes it. |
 // | 1.6     | 2026-10-15 | —      | PR #505 review: after an accepted, unexecuted substitution, a second dialog offers neither the reserved outgoing player nor the reserved bench player, through the presenter. Failed before the fix. |
 // | 1.7     | 2026-10-21 | —      | Gate J J-01: goalkeeper-mismatched bench choices are listed but unavailable with a reason, and the keeper fallback after a sent-off keeper is offered and accepted. J-02: a real-drain refusal names its engine-typed reason. |
+// | 1.8     | 2026-10-29 | —      | PR #518 review (P2): after a goalkeeper outgoing pick is cancelled, the reopened dialog greys out no bench choice. Failed before the fix. |
 #endregion

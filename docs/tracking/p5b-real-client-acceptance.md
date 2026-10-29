@@ -1,8 +1,8 @@
 # P5b real-client acceptance, B8/B10 render-loop capture and S0 Gate J — pinned host
 
 **Created:** October 19, 2026\
-**Last Updated:** October 28, 2026\
-**Version:** 0.8\
+**Last Updated:** October 29, 2026\
+**Version:** 0.9\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -300,6 +300,20 @@ stays **CONDITIONAL PASS** until the remaining conditions hold: the B8/B10 re-ca
 I-Q15 pass, and J-05 (PR #520) landing or its re-measure being accepted. Gate-J acceptance itself remains the owner's
 separate decision. Not re-run since the last visual changes: the I-Q16 text-scale and resolution matrix.
 
+## 13. Review fix: reopened substitution keeps no stale availability (v0.9)
+
+A review of PR #518 at `aa858e97` found a J-01 defect in the presenter. `OpenSubstitution()` cleared the outgoing and
+incoming selections but did not re-derive bench availability. Choosing the goalkeeper as the outgoing player, cancelling
+and reopening therefore showed no outgoing player selected while six bench players stayed unavailable with "…can only
+be replaced by a goalkeeper."; choosing an outgoing player cleared it. The engine was never at risk, because the presenter
+only greys choices out, but the reopened dialog contradicted §6's "nothing greys before an outgoing pick".
+
+`S0ScreenPresenter` v1.5 re-derives availability when the dialog opens. `S0ScreenPresentationTests` v1.8 adds
+`ReopeningSubstitutionAfterCancelGreysNothingBeforeAnOutgoingPick`, which failed before the fix (Linux shim; the other
+22 presentation tests passed). With the fix, the Linux shim passes ClientApp 182/182. **Not re-run:** the pinned-host
+Unity compile and EditMode suite for this change. It touches only `client-app`, which the Unity binding reads
+through the presenter, so the J-04 visuals accepted in §12 are unchanged.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -312,3 +326,4 @@ separate decision. Not re-run since the last visual changes: the I-Q16 text-scal
 | 0.6 | October 28, 2026 | §10: owner decision that a control opening content keeps one title. The statistics, earlier-feedback and Compare toggles now show ▸/▾ on one title (`S0ScreensBehaviour` v1.10); the separate Open/Close statistics button is gone. Unity compile clean; host rerun 19/19 PASS after a Compare-label fix. The report partial-statistics toggle and the two dialog buttons await the owner's answer. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.7 | October 28, 2026 | §11: owner decisions on the two §10 questions. The report toggle is the one-title disclosure "Partial statistics — incomplete" with ▸/▾; pop-ups get a "✕ Close" control and close on an outside click (`S0ScreensBehaviour` v1.11, `S0ScreenContent` v1.6, 151 roles). Host probe 27/27 PASS. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.8 | October 28, 2026 | §12: the owner accepted the J-04 visuals (“Accept J-04”) as shipped at `2887ec10`; the §7 visual-acceptance condition is met. No code, copy or evidence change. Gate-J verdict unchanged (CONDITIONAL PASS): B8/B10 re-capture, one clean I-Q15 pass and J-05 remain. |
+| 0.9 | October 29, 2026 | §13: PR #518 review fix. `S0ScreenPresenter` v1.5 re-derives bench availability when the substitution dialog opens, so a cancelled goalkeeper pick no longer leaves bench choices greyed out on reopen; regression test added (failed before the fix). Linux shim ClientApp 182/182; the pinned-host Unity run is not repeated. Verdict unchanged. |

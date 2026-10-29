@@ -1,7 +1,7 @@
 // File:     src/client-app/S0ScreenPresenter.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-01 goalkeeper pairs; J-02 typed refusal copy)
-// Modified (prior): 2026-10-15
+// Modified: 2026-10-29 (reopened substitution re-derives bench availability)
+// Modified (prior): 2026-10-21
 // Author:   —
 // Spec:     S0 journey §§14.3–14.8, binding contracts §§2–4, Code Standards #20
 // Purpose:  Consumed four-screen presentation, staging, enablement, copy, statistics and disclosure state.
@@ -316,6 +316,8 @@ namespace TacticalDirector.ClientApp
             Dialog = DialogKind.Substitution;
             SelectedOutgoing = SelectedIncoming = -1;
             _outgoingPlayerId = _incomingPlayerId = -1;
+            // A cancelled draft's outgoing pick must not keep greying bench choices out.
+            UpdateIncomingAvailability();
             CanSubmitSubstitution = false;
             ChoiceNotice = "";
             Revision++;
@@ -981,4 +983,5 @@ namespace TacticalDirector.ClientApp
 // | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): outgoing, bench and cap selectors reserve players named by the frame pending queue and by in-flight commands, each counted once. Last-frame roster evidence settles executed orders before the end barrier marks the rest NotApplied. |
 // | 1.3     | 2026-10-15 | —      | PR #505 review (Medium): choice lists also rebuild when the set of players reserved by pending engine or client requests changes (bitmask), including on a request-state change without a new frame. An accepted request changes no roster cue, so a second dialog could offer the same outgoing or bench player. |
 // | 1.4     | 2026-10-21 | —      | Gate J J-01: bench choices the engine's goalkeeper role check would refuse for the selected outgoing player stay listed but unavailable, with a reason (the keeper fallback after a sent-off keeper is admitted once); entry needs a role-legal pair. J-02: a Refused substitution row names the engine's typed reason. J-04: FeedbackStatus and PitchMarkerIsHome feed glyph/colour reinforcement only. |
+// | 1.5     | 2026-10-29 | —      | PR #518 review (P2): OpenSubstitution re-derives bench availability after clearing the draft, so a cancelled goalkeeper pick no longer leaves bench choices greyed out with its reason on reopen. |
 #endregion
