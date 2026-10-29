@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 29, 2026\
-**Version:** 0.11\
+**Version:** 0.12\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -20,7 +20,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 [`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
 [`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11);
 [`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14);
-[`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md) (v0.11 Unity compile and EditMode for the §13 fix, §15).
+[`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md) (v0.11 Unity compile and EditMode for the §13 fix, §15);
+[`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md) (v0.12 fixed-height playback reason, Unity compile, EditMode and before/after captures, §16).
 
 ## 1. Identity, host and method
 
@@ -369,6 +370,37 @@ NUnit 3.5. Evidence: [`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f
 This closes §13's "not re-run" note. It does not touch the render loop or the §14 captures. Gate J stays
 **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance remains the owner's separate decision.
 
+## 16. Owner report: Faster resized the pitch; fixed-height playback reason (v0.12)
+
+On October 29 the owner reported that the pitch changed size on the first and the last Faster click. The pitch is sized
+from the page height left after the content above it (`S0BodyLayout`), and two reason boxes sat above it: "Already at
+real time — slower is unavailable." showed at 1×, and "Already at the fastest speed — faster is unavailable." at 10×.
+The first Faster click removed one and the last added the other. The waiting and ended reasons did the same at kick-off
+and full time.
+
+The four playback reasons never apply together, so `c4b65334` puts them in one box. `S0ReservedReason` v1.0 lays it out
+at the tallest reason's height, measured at the label's current width and text scale, and blanks its chrome while
+empty instead of deactivating it (`S0UiFactory` v1.3, `S0ScreensBehaviour` v1.12). The copy is unchanged.
+
+On the pinned host, a full import of `c4b65334` from a fresh worktree gave `Tundra build success`, 0 `error CS`, all 75
+assemblies and the three known warnings. EditMode ClientApp/UiFramework/MatchClientCore passed 424/424 (182 / 52 / 190).
+`match-client-unity` is excluded from the Linux shim, so this is the change's only compile. Release players built from
+`3061fcd9` (before) and `c4b65334` (after) stepped 1× → 10× → 1× through the real buttons, capturing every step:
+
+| Build | Resolution | Pitch at 1× and 10× | Pitch at 3× and 5× |
+| --- | --- | --- | --- |
+| Before | 1920×1080 | 1054.6 × 683.0 | 1117.9 × 724.0 |
+| After | 1920×1080 | 1054.6 × 683.0 | 1054.6 × 683.0 |
+| Before | 1366×768 | 542.0 × 351.0 | 605.3 × 392.0 |
+| After | 1366×768 | 542.0 × 351.0 | 542.0 × 351.0 |
+
+At 3× and 5× the reason line is now blank but keeps its space. The owner compared the before/after sheets remotely and
+replied "looks right now". Evidence: [`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md).
+**Not captured:** 200% text and the narrow layout; the reserved height follows the label's own width and text scale.
+The §14 B8/B10 and I-Q16 captures predate this change, which touches only the reason boxes above the pitch.
+
+Gate J stays **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance remains the owner's separate decision.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -384,3 +416,4 @@ This closes §13's "not re-run" note. It does not touch the render loop or the �
 | 0.9 | October 29, 2026 | §13: PR #518 review fix. `S0ScreenPresenter` v1.5 re-derives bench availability when the substitution dialog opens, so a cancelled goalkeeper pick no longer leaves bench choices greyed out on reopen; regression test added (failed before the fix). Linux shim ClientApp 182/182; the pinned-host Unity run is not repeated. Verdict unchanged. |
 | 0.10 | October 29, 2026 | §14: B8/B10 re-captured on the H v0.2 skin (8/8 within budget, worst p99 10.41 ms), one uninterrupted I-Q15 pass (37/37) and the I-Q16 matrix (95 samples, 0 problems) at `aa858e97`. Evidence `p5b-gatej-recapture-20261029/`. The §7 B8/B10 and I-Q15 conditions are met; Gate-J verdict CONDITIONAL PASS with J-05 remaining. |
 | 0.11 | October 29, 2026 | §15: pinned-host Unity compile and EditMode for the §13 fix at head `fbcc3c2f` (same `src` tree as `9139701c`). Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 424/424 passed, including the §13 regression test. Evidence `host-fbcc3c2f-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
+| 0.12 | October 29, 2026 | §16: owner report that Faster resized the pitch on the first and last click. Fixed in `c4b65334`: the four playback reasons share one `S0ReservedReason` box that keeps the tallest one's height. Unity compile clean (75 assemblies), EditMode 424/424, before/after captures at 1920×1080 and 1366×768 show the pitch holding one size; owner replied "looks right now". Evidence `host-c4b65334-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
