@@ -2,15 +2,15 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 29, 2026\
-**Version:** 0.9\
+**Version:** 0.10\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
-(v0.1 skin). The owner's October 20 decisions are implemented and verified on the host (§6):
+(v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
 - **J-02 FIXED:** a refusal names its engine-typed reason; the button is kept.
 - **J-04 FIXED and ACCEPTED:** H v0.2 skin, whole-pitch view, statistics in the rail; the owner accepted the visuals on October 28 (§12, v0.8).
 - **J-05:** separate PR #520.
 
-Still due: the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
+Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. Still due: J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
 **S0 Gate J technical verdict: CONDITIONAL PASS** (§7; the v0.1 FAIL is kept in §5).\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
@@ -18,7 +18,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 **Evidence:** [`evidence/p5b-real-client-c95e27ba-20261019/`](evidence/p5b-real-client-c95e27ba-20261019/README.md) (v0.1);
 [`evidence/p5b-gate-j-fixes-20261021/`](evidence/p5b-gate-j-fixes-20261021/README.md) (v0.2 fixes);
 [`evidence/host-963f48ee-20261028/`](evidence/host-963f48ee-20261028/README.md) (v0.3 merge-readiness compile, §8);
-[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11).
+[`evidence/p5b-j04-statsfix-20261028/`](evidence/p5b-j04-statsfix-20261028/README.md) (v0.5 statistics-rail fix, §9; v0.6 disclosure titles, §10; v0.7 report disclosure and pop-up closing, §11);
+[`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14).
 
 ## 1. Identity, host and method
 
@@ -161,8 +162,8 @@ The new copy is drafted in the binding-contract register (`ux-s0-binding-contrac
 J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q09/I-Q18 cases pass on the host. J-04's visual set is implemented against H v0.2.
 
 **Verdict: CONDITIONAL PASS.** Gate J can pass when all of these hold:
-- B8/B10 are re-captured on this skin within the 16.7 ms p99 budget;
-- one uninterrupted I-Q15 run passes;
+- ~~B8/B10 are re-captured on this skin within the 16.7 ms p99 budget~~ — **done October 29** (worst p99 10.41 ms, §14, v0.10);
+- ~~one uninterrupted I-Q15 run passes~~ — **done October 29** (37/37, §14, v0.10);
 - ~~the owner accepts the visuals~~ — **done October 28** (J-04 visuals accepted, §12, v0.8; the new wording was approved the same day, v0.4);
 - J-05 lands, or its re-measure is accepted.
 
@@ -314,6 +315,45 @@ only greys choices out, but the reopened dialog contradicted §6's "nothing grey
 Unity compile and EditMode suite for this change. It touches only `client-app`, which the Unity binding reads
 through the presenter, so the J-04 visuals accepted in §12 are unchanged.
 
+## 14. B8/B10, I-Q15 and I-Q16 re-captured on the H v0.2 skin (v0.10)
+
+On October 29 (00:36–03:00 UTC; October 28 evening on the host clock) the owner left the PC idle and the three
+remaining host runs were made at `aa858e97` (the PR #518 head when they began), unmodified (`S0ScreensBehaviour` v1.11, 151 roles). Both Editor
+sessions compiled with 0 `error CS`. Evidence: [`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md).
+The §13 presenter fix (`9139701c`, `S0ScreenPresenter` v1.5) landed on the branch during these runs and is not in the
+measured build; it re-derives bench availability when the substitution dialog opens and does not touch the render loop.
+
+| Check | Result |
+| --- | --- |
+| I-Q16 matrix | **PASS.** Five passes (100%, 150%, 200%, 200% pseudo, 200% long names) at 1366×768, 1920×1080 and 2560×1440 plus narrow 800×1000: 95 layout samples, 0 clipped texts, 0 unreachable actions, 0 pitch-label overlaps or clipped labels, `PitchLayoutFailureCount` 0, every pitch 105:68, no void sample. The live Match View fits without scrolling at 1920 and 2560 at 100% and 150%, and at 2560 at 200%. |
+| I-Q15 keyboard | **PASS, uninterrupted.** 37/37 (3 boot, 34 keyboard), no aborted key. Tab order Pause → Faster → Change Mentality → Make substitution → "▸ Match statistics" → pitch entry; the modal Tab cycle includes "✕ Close" and stays in the dialog. The earlier-feedback disclosure was again not reached by keyboard (three records). |
+| B8/B10 | **PASS.** Same method as §4 (Mono development player, keyboard only, 30 s holds, last 1,989 frames from the player's own profiler log). Every condition inside the 16.7 ms p99 budget with no frame over 16.7 ms. |
+
+| Text | Condition | mean FPS | p50 | p99 | max | > 16.7 ms | sim ticks/s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 100% | 1×, stats closed | 260 | 3.79 | 5.48 | 7.93 | 0 | 60 |
+| 100% | 1×, stats open | 245 | 3.92 | 6.05 | 9.24 | 0 | 60 |
+| 100% | 10×, stats open | 205 | 4.55 | 10.41 | 12.74 | 0 | 565 |
+| 100% | 10×, stats closed | 220 | 4.41 | 6.65 | 9.48 | 0 | 551 |
+| 200% | 1×, stats closed | 296 | 3.29 | 4.79 | 6.01 | 0 | 60 |
+| 200% | 1×, stats open | 272 | 3.56 | 5.38 | 8.05 | 0 | 60 |
+| 200% | 10×, stats open | 229 | 4.03 | 9.05 | 11.63 | 0 | 586 |
+| 200% | 10×, stats closed | 244 | 3.93 | 5.78 | 12.35 | 0 | 579 |
+
+The worst p99 is 10.41 ms (100%, 10×, statistics open), against 11.44 ms on the v0.1 skin. The 10× rung delivered
+551–586 sim ticks/s here against 315–340 on October 19, without PR #520's throughput work; the cause was not
+investigated, and J-05 (600 ticks/s) stays open.
+
+**Harness incidents, not results.** The new player's first launch raised a Windows Firewall prompt; the key guard
+sent nothing while it had focus, and the owner answered it. The trial that hit the prompt left the player profiling
+until its log filled the disk (64 GB); it was stopped and the file deleted, and the driver now always stops the
+player and caps the log. A first 1×-closed capture recorded only 2 frames because the Editor was not recording; the
+driver now starts Editor recording for each condition, and that condition was re-captured.
+
+**Verdict.** The B8/B10 and I-Q15 conditions of §7 are met, and the I-Q16 matrix is clean after the October 28 visual
+changes. Gate J stays **CONDITIONAL PASS** with one condition left: J-05 (PR #520) lands or its re-measure is
+accepted. Gate-J acceptance remains the owner's separate decision.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -327,3 +367,4 @@ through the presenter, so the J-04 visuals accepted in §12 are unchanged.
 | 0.7 | October 28, 2026 | §11: owner decisions on the two §10 questions. The report toggle is the one-title disclosure "Partial statistics — incomplete" with ▸/▾; pop-ups get a "✕ Close" control and close on an outside click (`S0ScreensBehaviour` v1.11, `S0ScreenContent` v1.6, 151 roles). Host probe 27/27 PASS. Gate-J verdict unchanged (CONDITIONAL PASS). |
 | 0.8 | October 28, 2026 | §12: the owner accepted the J-04 visuals (“Accept J-04”) as shipped at `2887ec10`; the §7 visual-acceptance condition is met. No code, copy or evidence change. Gate-J verdict unchanged (CONDITIONAL PASS): B8/B10 re-capture, one clean I-Q15 pass and J-05 remain. |
 | 0.9 | October 29, 2026 | §13: PR #518 review fix. `S0ScreenPresenter` v1.5 re-derives bench availability when the substitution dialog opens, so a cancelled goalkeeper pick no longer leaves bench choices greyed out on reopen; regression test added (failed before the fix). Linux shim ClientApp 182/182; the pinned-host Unity run is not repeated. Verdict unchanged. |
+| 0.10 | October 29, 2026 | §14: B8/B10 re-captured on the H v0.2 skin (8/8 within budget, worst p99 10.41 ms), one uninterrupted I-Q15 pass (37/37) and the I-Q16 matrix (95 samples, 0 problems) at `aa858e97`. Evidence `p5b-gatej-recapture-20261029/`. The §7 B8/B10 and I-Q15 conditions are met; Gate-J verdict CONDITIONAL PASS with J-05 remaining. |
