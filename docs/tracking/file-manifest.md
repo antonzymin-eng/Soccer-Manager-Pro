@@ -1,6 +1,28 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** October 18, 2026 — **Docs-only: `ERR-003-010`.** No files added or removed. **Modified:** `docs/specs/collision-system/section-4-1-to-4-4.md` v1.2, `section-8-part-1.md` v1.3, `section-4-5-to-4-7.md` (no version header; inline ERR note); `docs/tracking/spec-error-log.md` v2.80; `docs/tracking/path-to-playable-roadmap.md` v0.75; `docs/tracking/CHANGELOG.md`; this manifest's three maintained `spec-error-log.md` pointers are advanced from v2.79 to v2.80. No `src/` change and no assembly added or removed.
+**Last Updated:** October 22, 2026 — **UNLANDED #441 header-reachability development evidence.** New `docs/tracking/evidence/header441-reachability-20261020/` has 17 files; `SHA256SUMS` covers the other 16:
+
+- `README.md`
+- `SHA256SUMS`
+- `original-source.patch`
+- `classification/Program.cs`
+- `classification/Probe.csproj`
+- `classification/original-probe.csproj.txt`
+- `classification/classification.txt.xz`
+- `sanity/Program.cs`
+- `sanity/Probe.csproj`
+- `raw/header441-arrival-final.trx.xz`
+- `raw/header441-focused-final.trx.xz`
+- `raw/header441-sanity-failed-console-20261021.log.xz`
+- `raw/header441-sanity-failed-partial-20261021.txt.xz`
+- `raw/header441-sanity-failed-source-66D8AD89-20261021.cs.xz`
+- `raw/header441-sanity-selftest-20261022.txt.xz`
+- `raw/header441-sanity-corrected-20261022.txt.xz`
+- `raw/header441-sanity-corrected-console-20261022.log.xz`
+
+Modified: `.gitignore` (root-only generated-output ignores and scoped probe-project exceptions), `docs/tracking/header-reachability-441-counters.md` v0.14, `match-engine-wiring-backlog.md` v1.40, `path-to-playable-roadmap.md` v0.76, `src/match-engine/MatchEngine.cs` v2.14 and `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`, `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract) and `tools/tests/test_evidence_manifests.py` (22 registered directories), and this manifest. No assembly, gameplay, `[GT]`, or snapshot-schema change. #441/W9 remain open. #441 develops independently of W8 C, but #441 lands only after the C measurement. #434/#440 D05 remain unchanged. No changelog or `AGENTS.md` version bump is claimed before a post-C landing.
+
+**Last Updated (prior):** October 18, 2026 — **Docs-only: `ERR-003-010`.** No files added or removed. **Modified:** `docs/specs/collision-system/section-4-1-to-4-4.md` v1.2, `section-8-part-1.md` v1.3, `section-4-5-to-4-7.md` (no version header; inline ERR note); `docs/tracking/spec-error-log.md` v2.80; `docs/tracking/path-to-playable-roadmap.md` v0.75; `docs/tracking/CHANGELOG.md`; this manifest's three maintained `spec-error-log.md` pointers are advanced from v2.79 to v2.80. No `src/` change and no assembly added or removed.
 
 **Last Updated (prior):** October 18, 2026 — **PR #515 post-merge close-out (merge `1a3b4271`) and six-seed D-07 census.** Added 4 files under `docs/tracking/evidence/d07-six-seed-census-20261018/` (the SHA manifest covers the other 3): `README.md`, `SHA256SUMS`, `census-rows.txt.xz`, `w8b-diagnostic-results.trx.xz`; registered in `tools/dotnet-ci/check_evidence_manifests.py`, with `tools/tests/test_evidence_manifests.py` at 21 registered directories. Modified both changelogs (`CHANGELOG-src.md` v2.204), `open-issues.md` (new D-07 keeper-avoidance entry), `docs/agent-guides/project-reference.md` (index bullet; 32 active / 72 archived), `match-engine-wiring-backlog.md` v1.39, `w8-goalkeeper-distribution-decision.md` v0.36, `path-to-playable-roadmap.md` v0.74, `match-flow-completion-design.md` v1.10 and this manifest.
 
