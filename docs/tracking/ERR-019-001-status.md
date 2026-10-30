@@ -1,8 +1,40 @@
 # ERR-019-001 / ERR-019-003 — Current Candidate Status
 
-**Date:** September 11, 2026  
+**Date:** October 30, 2026 (September 11 implementation record retained below)
+
 **Issues:** Testing Strategy #19 FR-TS-075 / FR-TS-079 pipeline gap (`ERR-019-001`) and missing automated checklist/schema auditor deliverables (`ERR-019-003`)  
 **Status:** OPEN — implementation candidate present; operational acceptance and A3.4 normative/reapproval decisions remain outstanding
+
+## October 30 reconciliation update
+
+Current implementation was checked at main `068851a2c9d8a2c68d186b8fa223c1ca251a4f9e`.
+The runner/auditors/nightly topology are present. The retained A3.4 branch is now
+integrated with that main and its current decision/evidence is recorded in
+[`a3.4-reapproval-review.md`](a3.4-reapproval-review.md) and the matching design.
+No normative patch, ERR closure or reapproval is claimed.
+
+The current survey measured **1,018 checklist notes + 331 schema notes = 1,349**,
+including **43 in #19/#20**. These are survey findings, not blocking-pass evidence;
+no explicit checklist invocation was executed by that survey. Historical 548 and
+947/956 source counts below must not be reused. Current source measurement is
+1,220 `.cs` files, to be rederived again for final landing.
+
+The implemented checklist auditor is structural: artifact/row/checkbox presence,
+resolving paths/sections and successful captured execution of explicit invocations.
+**Semantic entailment and check sufficiency remain Stage 0 manual review.** Any older
+candidate wording below implying automatic judgment of claim-bearing prose, numeric
+literal entailment or natural-language meaning is superseded by this contract.
+
+Current-main PR #521's changelog records a pre-commit attempt exceeding 60 seconds;
+it is not successful certified-host acceptance. A full certified Spec #16 nightly
+success also remains unproven in the inspected records. Live Actions history was
+unreadable (Forbidden), so this pass makes no claim that scheduled runs do not exist.
+FR-TS-011/012 merge semantics, non-circular FR-TS-062 activation/cadence, KD-4 and
+Appendix E remain part of the coordinated normative/reapproval work. Both ERRs stay open.
+
+The following September record is retained for provenance. This update and the
+October 30 A3.4 review supersede its stale implementation-contract/count details;
+its successful-host-execution and aggregate-landing closure requirements still apply.
 
 ## September 11 live-tracking correction
 
