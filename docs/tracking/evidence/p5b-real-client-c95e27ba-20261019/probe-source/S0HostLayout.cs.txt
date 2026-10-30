@@ -1,0 +1,197 @@
+// I-Q16–18 layout matrix and stress fixtures (pinned host). Untracked probe source, archived with the evidence.
+// Stress content is injected only when a SessionState flag is set before entering Play; the shipped
+// shell has no pseudo-locale, long-name fixture or published-artifact loader path (journey §14.8:
+// "TO BUILD Gate-J proof"), so these runs are harness substitutions and are labelled as such.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchClientCore;
+using TacticalDirector.PlayerDatabase;
+using P = S0HostProbe;
+
+[InitializeOnLoad]
+public static class S0HostLayout
+{
+    public const string PSEUDO = "S0Probe.Pseudo";
+    public const string LONGNAMES = "S0Probe.LongNames";
+    static readonly int[,] Sizes = { { 1366, 768 }, { 1920, 1080 }, { 2560, 1440 } };
+    const BindingFlags NF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+    const BindingFlags SF = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
+
+    static S0HostLayout()
+    {
+        // Runs after the Play-mode domain reload and before scene Awake.
+        if (!EditorApplication.isPlayingOrWillChangePlaymode) return;
+        if (SessionState.GetBool(PSEUDO, false)) ApplyPseudo();
+    }
+
+    /// <summary>Pseudo-expand every base pattern outside placeholders: accented letters, ~40% padding, brackets.</summary>
+    static void ApplyPseudo()
+    {
+        FieldInfo backing = typeof(S0TextRole).GetField("<BasePattern>k__BackingField", NF);
+        int n = 0;
+        foreach (S0TextRole role in S0ScreenContent.All)
+        {
+            string p = role.BasePattern;
+            if (role.ArgumentTypes.Length > 0 && p.Replace("{0}", "").Replace("{1}", "").Trim().Length == 0) continue; // pure placeholder roles
+            if (p.StartsWith("{0:")) continue; // numeric value formats
+            backing.SetValue(role, Expand(p));
+            n++;
+        }
+        Debug.Log("[S0HostProbe] pseudo content applied to " + n + " roles");
+    }
+
+    static string Expand(string pattern)
+    {
+        const string from = "aceinorsuyAEIOU";
+        const string to = "àçéîñöŕšûýÀÉÎÖÛ";
+        var sb = new StringBuilder("[");
+        int depth = 0, letters = 0;
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            char c = pattern[i];
+            if (c == '{' && i + 1 < pattern.Length && pattern[i + 1] == '{') { sb.Append("{{"); i++; continue; }
+            if (c == '}' && i + 1 < pattern.Length && pattern[i + 1] == '}' && depth == 0) { sb.Append("}}"); i++; continue; }
+            if (c == '{') depth++;
+            if (depth > 0) { sb.Append(c); if (c == '}') depth--; continue; }
+            int k = from.IndexOf(c);
+            sb.Append(k >= 0 ? to[k] : c);
+            if (char.IsLetter(c)) letters++;
+        }
+        int pad = Math.Max(2, letters * 2 / 5);
+        sb.Append(' ');
+        for (int i = 0; i < pad; i++) sb.Append(i % 5 == 4 ? ' ' : 'ŵ');
+        sb.Append(']');
+        return sb.ToString();
+    }
+
+    /// <summary>Replace the coordinator's fixture with long authored names, before Start (harness substitution).</summary>
+    public static void ApplyLongNames()
+    {
+        S0DemoFixture approved = S0DemoFixture.CreateApproved();
+        Squad h = (Squad)P.GetField(approved, "_home"), a = (Squad)P.GetField(approved, "_away");
+        var ids = new MatchPlayerIdentity[h.Count + a.Count];
+        Squad Long(Squad src, int team, string first, string last)
+        {
+            var players = new PlayerRecord[src.Count];
+            for (int i = 0; i < players.Length; i++)
+            {
+                PlayerRecord r = src.GetPlayer(i);
+                r.FirstName = first + (char)('A' + i);
+                r.LastName = last + (i + 1);
+                players[i] = r;
+                ids[team * src.Count + i] = new MatchPlayerIdentity(team, r.PlayerId, r.FirstName, r.LastName, i + 1);
+            }
+            return new Squad(src.ClubId, players);
+        }
+        Squad hl = Long(h, 0, "Maximilian-Alexander", "Featherstonehaugh-Oyelaran");
+        Squad al = Long(a, 1, "Bartholomew-Christopher", "Vanderbijl-Okonkwo-Smythe");
+        P.SetField(P.Coordinator, "_fixture", new S0DemoFixture(hl, al, ids));
+        P.Log("long-name fixture installed (e.g. " + ids[0].FirstName + " " + ids[0].LastName + ")");
+    }
+
+    static Type FindType(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).FirstOrDefault(t => t != null);
+
+    public static void SetTextScale(float scale)
+    {
+        var screens = UnityEngine.Object.FindFirstObjectByType<TacticalDirector.MatchClientUnity.S0ScreensBehaviour>(FindObjectsInactive.Include);
+        var so = new SerializedObject(screens);
+        so.FindProperty("_textScale").floatValue = scale;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[S0HostProbe] text scale preset " + scale + " (scene NOT saved)");
+    }
+
+    // ---------------- matrix ----------------
+    static IEnumerator AtEachSize(string state, Func<string, IEnumerator> extra = null)
+    {
+        for (int i = 0; i < Sizes.GetLength(0); i++)
+        {
+            int w = Sizes[i, 0], h = Sizes[i, 1];
+            P.SetGameViewSize(w, h);
+            yield return P.Frames(6);
+            string tag = state + "-" + w + "x" + h + "-s" + Mathf.RoundToInt(P.View.Configuration.TextScale * 100) + (SessionState.GetBool(PSEUDO, false) ? "-pseudo" : "") + (SessionState.GetBool(LONGNAMES, false) ? "-long" : "");
+            P.Log("LAYOUT " + tag + " screen=" + Screen.width + "x" + Screen.height + " layoutFailures=" + P.Screens.PitchLayoutFailureCount + " " + (P.View.Screen == ClientScreens.MatchView ? P.PitchGeometry() : ""));
+            P.ClippingAudit(tag);
+            P.ReachabilityAudit(tag);
+            if (P.View.Screen == ClientScreens.MatchView)
+                P.Log("PAGEFIT " + tag + " match page fits without scroll=" + P.PageFits("_matchScroll"));
+            if (extra != null) yield return extra(tag);
+            P.Shot("iq16-" + tag);
+            yield return null;
+        }
+    }
+
+    public static IEnumerator Matrix()
+    {
+        yield return P.Frames(10);
+        P.Log("loadedHash=" + P.Screens.LoadedContentSha256 + " scale=" + P.View.Configuration.TextScale);
+        if (SessionState.GetBool(LONGNAMES, false)) ApplyLongNames();
+        yield return AtEachSize("mm");
+        P.ClickText(P.View.Text.Label("action.demo"));
+        yield return P.Frames(4);
+        yield return AtEachSize("ts");
+        P.Click(P.FindButton(P.View.Text.Label("action.start")));
+        yield return (Func<bool>)(() => !P.View.Frame.IsEmpty);
+        yield return P.Frames(30);
+        P.Click(P.ButtonField("_pause"));
+        yield return P.Frames(3);
+        // Dense chronological history: Mentality requests while paused, then resume to drain.
+        Button[] ment = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        for (int r = 0; r < 4; r++)
+        {
+            P.Click(P.ButtonField("_pause")); yield return P.Frames(2);
+            P.Click(P.ButtonField("_mentality")); yield return P.Frames(3);
+            P.Click(ment[(r * 2 + 1) % 7]); yield return P.Frames(2);
+            P.Click(P.ButtonField("_submit")); yield return P.Frames(30);
+            P.Click(P.ButtonField("_pause")); yield return P.Frames(2);
+        }
+        P.LogFeedback("dense");
+        yield return AtEachSize("mv-live", PitchLabelCheck);
+        P.Click(P.ButtonField("_statisticsToggle")); yield return P.Frames(3);
+        P.Click(P.ButtonField("_earlierToggle")); yield return P.Frames(3);
+        yield return AtEachSize("mv-stats-history", PitchLabelCheck);
+        P.Click(P.ButtonField("_mentality")); yield return P.Frames(3);
+        P.ClickText(P.View.Text.Label("action.compare")); yield return P.Frames(3);
+        yield return AtEachSize("dlg-mentality-compare");
+        P.ClickText(P.View.Text.Label("action.cancel")); yield return P.Frames(3);
+        P.Click(P.ButtonField("_substitution")); yield return P.Frames(3);
+        yield return AtEachSize("dlg-substitution");
+        P.ClickText(P.View.Text.Label("action.cancel")); yield return P.Frames(3);
+        // Deliberately narrow the pitch: small, tall viewport.
+        P.SetGameViewSize(800, 1000);
+        yield return P.Frames(8);
+        string ntag = "narrow-800x1000-s" + Mathf.RoundToInt(P.View.Configuration.TextScale * 100);
+        P.Log("LAYOUT " + ntag + " " + P.PitchGeometry() + " layoutFailures=" + P.Screens.PitchLayoutFailureCount);
+        yield return PitchLabelCheck(ntag);
+        P.ClippingAudit(ntag);
+        P.Shot("iq16-" + ntag);
+        yield return null;
+        P.SetGameViewSize(1920, 1080);
+        P.Log("matrix done; layoutFailures=" + P.Screens.PitchLayoutFailureCount);
+    }
+
+    /// <summary>Every visible pitch label shows its whole string, wraps rather than shrinks, and does not overlap another.</summary>
+    static IEnumerator PitchLabelCheck(string tag)
+    {
+        yield return P.Frames(2);
+        var labels = P.Get<List<Text>>(P.Screens, "_pitchLabels");
+        var visible = labels.Where(l => l.gameObject.activeInHierarchy).ToList();
+        int overlaps = 0, short_ = 0;
+        var rects = visible.Select(l => { var c = new Vector3[4]; l.rectTransform.GetWorldCorners(c); return new Rect(c[0], c[2] - c[0]); }).ToList();
+        for (int i = 0; i < rects.Count; i++)
+        {
+            for (int j = i + 1; j < rects.Count; j++) if (rects[i].Overlaps(rects[j])) overlaps++;
+            Text t = visible[i];
+            if (t.preferredHeight > t.rectTransform.rect.height + 1 || t.resizeTextForBestFit) short_++;
+        }
+        P.Log("PITCHLABELS " + tag + " visible=" + visible.Count + " overlaps=" + overlaps + " clipped=" + short_ + " sample='" + (visible.Count > 0 ? visible[0].text : "") + "' layoutFailures=" + P.Screens.PitchLayoutFailureCount);
+    }
+}

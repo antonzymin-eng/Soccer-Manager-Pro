@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperConversionTests.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-07-28
-// Modified: 2026-08-03
+// Modified: 2026-09-11 (W4: explicit deflection reaction-reset lock)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.2 / §3.5 / §4.6, Code Standards #20
 // Purpose:  Unit locks for the gk-catch-parry-conversion pass (ERR-011-005 / ERR-011-006):
@@ -33,6 +34,10 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         private sealed class SilentBallSystem : IGoalkeeperBallSystem
         {
+            public bool CanUseHands(int teamId) => true;
+
+            public bool TryHandContact(int agentId, Vector3 contactPosition) => true;
+
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs) { }
             public void SetPossessor(int agentId) { }
             public void ParkBall() { }
@@ -178,6 +183,25 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             float expected = GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(1400f, MidAttrs());
             Assert.AreEqual(expected, gk.CaptureState().ShotDetectedTickMs[Gk0], 1e-3f,
                 "A true shot CONTACT is the newest live threat and must overwrite the arming stamp.");
+        }
+
+        [Test]
+        public void OnThreatDeflected_OverwritesArmingStamp_WithoutShotPending()
+        {
+            GoalkeeperMechanics gk = NewGk();
+
+            gk.OnThreatArmed(Gk0, 1000f, 20f, MidAttrs());
+            float first = gk.CaptureState().ShotDetectedTickMs[Gk0];
+            gk.OnThreatDeflected(Gk0, 1400f, 18f, MidAttrs());
+
+            GoalkeeperTickState state = gk.CaptureState();
+            float expected = GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(1400f, MidAttrs());
+            Assert.AreEqual(expected, state.ShotDetectedTickMs[Gk0], 1e-3f,
+                "W4: a real deflection must overwrite the live reaction stamp.");
+            Assert.AreNotEqual(first, state.ShotDetectedTickMs[Gk0],
+                "W4: the changed flight must not inherit the pre-deflection timing episode.");
+            Assert.IsFalse(state.ShotEventPending[Gk0],
+                "W4: a body deflection is not a newly struck shot.");
         }
 
         [Test]
@@ -369,4 +393,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | SaveIntent.AttemptCommittedTick (KD-CR5) with commits retimed so  |
 // |         |            |        | elapsed-at-commit brackets requiredReactionMs. Intent preserved.  |
 // | 1.2     | 2026-08-03 | —      | ERR-011-008: SilentBallSystem implements the new ParkBall seam. |
+// | 1.3     | 2026-09-11 | —      | W4: real deflection overwrites the reaction stamp while preserving    |
+// |         |            |        | ShotEventPending=false; locks the dedicated new-threat seam.          |
+// | 1.4 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.5 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 #endregion

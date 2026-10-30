@@ -1,0 +1,145 @@
+// B8/B10 render-loop capture helpers: dump profiler frames (player connected to this Editor) to CSV
+// and summarize frame-time distribution, GC allocation and named-marker cadence. Untracked probe
+// source, archived with the evidence.
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEditor;
+using UnityEditor.Profiling;
+using UnityEditorInternal;
+using UnityEngine;
+
+public static class S0HostPerf
+{
+    static readonly string[] Markers =
+    {
+        "ClientShellBehaviour.Update", "S0ScreensBehaviour.Refresh", "S0ScreenPresenter.Refresh",
+        "Canvas.SendWillRenderCanvases", "Canvas.BuildBatch", "Layout.PerformLayoutCalculation", "Layout.PerformLayoutControl",
+        "MatchClientBehaviour.Update", "GC.Alloc", "Gfx.WaitForPresentOnGfxThread", "WaitForTargetFPS"
+    };
+
+    public static void Start()
+    {
+        // Profiler history defaults to ~300 frames; raise to the 2000 maximum so a window is not a tail sample.
+        var settings = typeof(EditorWindow).Assembly.GetType("UnityEditor.Profiling.ProfilerUserSettings") ?? AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("UnityEditor.Profiling.ProfilerUserSettings")).FirstOrDefault(t => t != null);
+        var prop = settings?.GetProperty("frameCount", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+        if (prop != null) prop.SetValue(null, 2000);
+        Debug.Log("[S0HostPerf] profiler frame history=" + (prop != null ? prop.GetValue(null) : "unknown"));
+        ConnectPlayer();
+        ProfilerDriver.ClearAllFrames();
+        ProfilerDriver.profileEditor = false;
+        ProfilerDriver.enabled = true;
+        Debug.Log("[S0HostPerf] recording; connected=" + ProfilerDriver.connectedProfiler + " " + ProfilerDriver.GetConnectionIdentifier(ProfilerDriver.connectedProfiler));
+    }
+
+    public static void Stop() => ProfilerDriver.enabled = false;
+
+    /// <summary>Attach the profiler to the running development player (the link drops on domain reload).</summary>
+    public static string ConnectPlayer()
+    {
+        string found = "none";
+        foreach (int id in ProfilerDriver.GetAvailableProfilers())
+        {
+            string name = ProfilerDriver.GetConnectionIdentifier(id);
+            Debug.Log("[S0HostPerf] available profiler " + id + " " + name);
+            if (name.IndexOf("Player", StringComparison.OrdinalIgnoreCase) >= 0 && name.IndexOf("Editor", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                ProfilerDriver.connectedProfiler = id;
+                found = id + " " + name;
+            }
+        }
+        Debug.Log("[S0HostPerf] connected to " + found + " (now " + ProfilerDriver.GetConnectionIdentifier(ProfilerDriver.connectedProfiler) + ")");
+        return found;
+    }
+
+    /// <summary>Loads a player-written .raw profile and summarizes its last `tailSeconds` of frames.</summary>
+    public static string DumpFile(string rawPath, string label, float tailSeconds)
+    {
+        ProfilerDriver.ClearAllFrames();
+        if (!ProfilerDriver.LoadProfile(rawPath, false)) return label + ": could not load " + rawPath;
+        // Drop the final frames: they contain playerQuit/Analytics shutdown, not gameplay.
+        int last = ProfilerDriver.lastFrameIndex - 10, first = last;
+        double acc = 0;
+        while (first > ProfilerDriver.firstFrameIndex && acc < tailSeconds * 1000.0)
+        {
+            using (RawFrameDataView v = ProfilerDriver.GetRawFrameDataView(first, 0))
+                if (v != null && v.valid) acc += v.frameTimeMs;
+            first--;
+        }
+        string dir = Path.Combine(S0HostProbe.OutDir, "..", "perf");
+        string line = Dump(label, dir, 0, first + 1, last) + " | loadedFrames=" + ProfilerDriver.firstFrameIndex + ".." + last;
+        File.AppendAllText(Path.Combine(dir, "capture.log"), DateTime.UtcNow.ToString("HH:mm:ss") + " " + line + Environment.NewLine);
+        return line;
+    }
+
+    /// <summary>Writes per-frame CSV for [first,last] and returns a one-line summary.</summary>
+    public static string Dump(string label, string outDir, int skipFirst = 30, int firstFrame = -1, int lastFrame = -1)
+    {
+        int first = firstFrame >= 0 ? firstFrame : ProfilerDriver.firstFrameIndex + skipFirst, last = lastFrame >= 0 ? lastFrame : ProfilerDriver.lastFrameIndex;
+        if (last <= first) return label + ": no frames (first=" + ProfilerDriver.firstFrameIndex + " last=" + last + ")";
+        Directory.CreateDirectory(outDir);
+        var csv = new StringBuilder("frame,cpuMs,gcBytes," + string.Join(",", Markers.Select(m => m.Replace(',', '_') + "_count," + m.Replace(',', '_') + "_ms")) + "\n");
+        var cpu = new List<double>();
+        long gcTotal = 0, simTicks = 0;
+        var counts = new double[Markers.Length];
+        var times = new double[Markers.Length];
+        for (int f = first; f <= last; f++)
+        {
+            using (RawFrameDataView v = ProfilerDriver.GetRawFrameDataView(f, 0))
+            {
+                if (v == null || !v.valid) continue;
+                double ms = v.frameTimeMs;
+                cpu.Add(ms);
+                var ids = Markers.Select(m => v.GetMarkerId(m)).ToArray();
+                var c = new int[Markers.Length];
+                var t = new double[Markers.Length];
+                long gc = 0;
+                int gcCounter = v.GetMarkerId("GC Allocated In Frame");
+                if (gcCounter != FrameDataView.invalidMarkerId) gc = v.GetCounterValueAsLong(gcCounter);
+                int gcId = FrameDataView.invalidMarkerId;
+                for (int s = 0; s < v.sampleCount; s++)
+                {
+                    int id = v.GetSampleMarkerId(s);
+                    for (int k = 0; k < ids.Length; k++)
+                        if (id == ids[k] && id != FrameDataView.invalidMarkerId)
+                        {
+                            c[k]++;
+                            t[k] += v.GetSampleTimeMs(s);
+                        }
+                    if (id == gcId && gcId != FrameDataView.invalidMarkerId && v.GetSampleMetadataCount(s) > 0)
+                        gc += v.GetSampleMetadataAsLong(s, 0);
+                }
+                gcTotal += gc;
+                for (int th = 1; th < 64; th++)
+                    using (RawFrameDataView tv = ProfilerDriver.GetRawFrameDataView(f, th))
+                    {
+                        if (tv == null || !tv.valid) break;
+                        int obs = tv.GetMarkerId("SessionMatchAnalytics.ObserveTick");
+                        if (obs == FrameDataView.invalidMarkerId) continue;
+                        for (int s2 = 0; s2 < tv.sampleCount; s2++) if (tv.GetSampleMarkerId(s2) == obs) simTicks++;
+                    }
+                for (int k = 0; k < Markers.Length; k++) { counts[k] += c[k]; times[k] += t[k]; }
+                csv.Append(f).Append(',').Append(ms.ToString("F3", CultureInfo.InvariantCulture)).Append(',').Append(gc);
+                for (int k = 0; k < Markers.Length; k++) csv.Append(',').Append(c[k]).Append(',').Append(t[k].ToString("F3", CultureInfo.InvariantCulture));
+                csv.Append('\n');
+            }
+        }
+        File.WriteAllText(Path.Combine(outDir, label + ".csv"), csv.ToString());
+        if (cpu.Count == 0) return label + ": no valid frames";
+        var sorted = cpu.OrderBy(x => x).ToArray();
+        double P(double q) => sorted[Math.Min(sorted.Length - 1, (int)Math.Ceiling(q * sorted.Length) - 1)];
+        double seconds = cpu.Sum() / 1000.0;
+        var sb = new StringBuilder();
+        sb.AppendFormat(CultureInfo.InvariantCulture, "{0}: frames={1} span={2:F1}s meanFps={3:F1} p50={4:F2}ms p95={5:F2}ms p99={6:F2}ms max={7:F2}ms over16.7={8} ({9:F2}%) gcBytes={10} gcBytesPerFrame={11:F0} simTicks={12} simTicksPerSec={13:F0}",
+            label, cpu.Count, seconds, cpu.Count / seconds, P(0.50), P(0.95), P(0.99), sorted[sorted.Length - 1], cpu.Count(x => x > 16.67), 100.0 * cpu.Count(x => x > 16.67) / cpu.Count, gcTotal, (double)gcTotal / cpu.Count, simTicks, simTicks / seconds);
+        for (int k = 0; k < Markers.Length; k++)
+            if (counts[k] > 0)
+                sb.AppendFormat(CultureInfo.InvariantCulture, " | {0}: {1:F2}/s {2:F3}ms/frame", Markers[k], counts[k] / seconds, times[k] / cpu.Count);
+        File.AppendAllText(Path.Combine(outDir, "perf-summary.txt"), sb + "\n");
+        return sb.ToString();
+    }
+}

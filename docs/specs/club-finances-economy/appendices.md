@@ -1,9 +1,14 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
+**Last Updated:** October 13, 2026 (v0.10 — live config keys and pending capacity mapped to the implementation)
+**Last Updated (prior):** October 11, 2026 (v0.9 — PR #497 review: sponsorship is in-season only)
+**Last Updated (prior):** October 10, 2026 (v0.8 — T3b2 revenue constants; the T3b1 `[FIXED]` gate becomes the `[GT]` config-owned `DeepRevenueEnabled`)
+**Last Updated (prior):** October 8, 2026 (v0.7 — sole disabled T3b1 gate added to catalogue)
+**Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051: season-boundary worked example corrected to synchronous atomic RollToNextSeason semantics)
+**Last Updated (prior):** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
 **Last Updated (prior):** September 4, 2026 (v0.4 — T1 self-identifying save framing back-prop)
-**Version:** 0.5
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -19,6 +24,12 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `FINANCE_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #40 T1a sub-blob generation (KD-7), independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / sibling management sub-blob versions. |
 | `FINANCE_SAVE_HEADER_BYTES` | 12 | [FIXED] | `u32` magic + `u32` version + `u32` club-record count (§4.4). |
 | `FINANCE_SAVE_RECORD_BYTES` | 52 | [FIXED] | Exact T1a record width: `i32 ClubId` + six `i64` `ClubFinances` fields (§4.4). Used by the overflow-safe count bound. |
+| `DeepRevenueEnabled` | false | [GT] | T3b2 sole producer of `deepRevenueEnabled` (§3.7.1), config key `[club-finances] DeepRevenueEnabled`. Default keeps Stage-2 identity; enabling is a balance-pass/owner decision. |
+| `DAILY_SPONSORSHIP_REVENUE` | 1,000 | [GT] | Sponsorship accrued by every club on every completed **in-season** day while the gate is on; break and pre-season days accrue nothing (§3.7.2–§3.7.3). |
+| `MATCHDAY_FILL_TOP_PERMILLE` | 950 | [GT] | Stadium fill for league position 1 (§3.7.2). MUST be `≤ 1000` and `≥ MATCHDAY_FILL_BOTTOM_PERMILLE`. |
+| `MATCHDAY_FILL_BOTTOM_PERMILLE` | 600 | [GT] | Stadium fill for last place (§3.7.2). MUST be `≥ 0`. |
+| `MATCHDAY_REVENUE_PER_SPECTATOR` | 2 | [GT] | Currency units per spectator per completed home fixture (§3.7.2). |
+| `MATCHDAY_STADIUM_CAPACITY` | 20,000 | [CROSS-PENDING] | #53 `STADIUM_BASE_CAPACITY`; replaced per club by #53 FR-IN-025 `StadiumCapacity(clubId)` when #53's T0 lands (§3.7.2). |
 | `PERMILLE_DENOM` | 1000 | [FIXED] | Shared per-mille denominator for `BoardModifier` and the prize-money-share weights (§3.1) — keeps every ratio integer, no float. |
 | `BOARD_MODIFIER_IDENTITY_PERMILLE` | 1000 | [FIXED] | Per-mille identity for `BoardModifier.BudgetMultiplierMillPermille` (= ×1.0). `BoardModifier.Identity` sets this; `default(BoardModifier)` (all-zero) is NOT valid (FR-FN-018 / F4). |
 | `STARTING_CLUB_BALANCE` | 500,000 | [GT] | `ClubFinances.CreateInitial`'s default starting `Balance` at league/game bootstrap. |
@@ -29,6 +40,11 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `BASE_WAGE_BUDGET` | 50,000 | [GT] | Flat per-season wage-budget allocation before the prize-money share is added (§3.1). |
 | `WAGE_BUDGET_PRIZE_SHARE_PERMILLE` | 150 | [GT] | Per-mille share of `prizeMoney` folded into `WageBudget` (§3.1). |
 | `CLUB_FINANCES_BUDGET_CEILING_MAX` | 50,000,000 | [GT] | A generous sanity ceiling on `TransferBudget`/`WageBudget` after the `BoardModifier` multiply. |
+
+**Code/config mapping (T3b2).** `DailySponsorshipRevenue`, `MatchdayFillTopPermille`,
+`MatchdayFillBottomPermille` and `MatchdayRevenuePerSpectator` are the PascalCase code names and
+`[club-finances]` config keys for the corresponding uppercase catalogue rows. The capacity stays a
+compile-time `[CROSS-PENDING]` constant, with no #53 interface or assembly reference.
 
 **Current config-loader range.** The currency-bearing `[GT]` declarations are `long` in #40 so all finance
 state/arithmetic remains 64-bit integer, but the shared `GameplayConfig` API currently exposes `GetInt` for
@@ -44,7 +60,7 @@ promoted** at this spec's approval (ERR-040-001 adds only a `_RESERVED_0x29_` pl
 `[GT]`/`[FIXED]` project constants declared in this catalogue — they are #16's tag-namespace reservation,
 to be cross-cited `[CROSS: #16 §3.4]` once genuinely promoted at #40 T3's first stochastic draw.
 
-## Appendix B — Worked example: save/restore across a mid-season AND a mid-boundary-roll boundary
+## Appendix B — Worked example: save/restore mid-season AND across the atomic season boundary
 
 **Mid-season boundary.** Seed (from §3.5): club 12, season 8, after the transfer + wage-sign transactions:
 `ClubFinances { Balance: 2,315,790, TransferBudget: 786,316, WageBudget: 307,368, WageBillAggregate:
@@ -55,11 +71,13 @@ field-identical. Continuing to apply the wage-release `Credit` transaction
 identical to an uninterrupted run that never saved (T-FN-DET-001), because `ApplyTransaction` is a pure
 function of its inputs with no cursor to diverge.
 
-**Mid-`RollToNextSeason()` boundary.** This acceptance case belongs to **T1b/T2 integration**, not standalone
-T1a. A save is taken between step (b') `SettleFinances` and step (c) regenerate. Restoring resumes
-`RollToNextSeason()` at (c) with every club's `ClubFinances` already committed and field-identical —
-`SettleFinances` is not re-run. This extends FR-SN-029 through #40's inserted step once the #30 composition
-and season-boundary wiring phases land.
+**Atomic `RollToNextSeason()` boundary.** `RollToNextSeason()` is synchronous; callers cannot save
+between its internal steps. At step (b') #30 computes every club's settled finance value from the final
+table and holds those values staged. If the later season commit refuses, the live finance array remains
+unchanged and a save still contains the pre-roll values. After a successful return the staged values are
+installed exactly once; a save taken then restores those six fields identically. Restoring that completed
+save does not re-run settlement merely because a restore occurred. This is T-FN-DET-002 after the
+ERR-030-051 atomicity correction.
 
 ## Appendix C — Worked example: behaviour-neutral identity (KD-8)
 
@@ -78,4 +96,9 @@ reserving `_RESERVED_0x29_`/91 leaves every existing stream cursor byte-identica
 | 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop:** Appendix C comparator corrected after #41's RNG-shape correction. |
 | 0.4 | 2026-09-04 | Codex | **T1 implementation back-prop.** Adds self-identifying finance magic and fixed framing widths. |
 | 0.5 | 2026-09-06 | — | **PR #363 critique correction.** Uses T1a terminology for the standalone codec and discloses that shared `GameplayConfig.GetInt` currently caps config-sourced currency tuning at signed Int32 range while #40 accounting remains `long`. |
+| 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b correction.** Replaces the impossible mid-`RollToNextSeason()` save example with the supported synchronous contract: stage finance settlement at (b'), leave live values untouched on refusal, install once after a successful season commit, and round-trip before/after-call saves field-identically. |
+| 0.7 | 2026-10-08 | — | **T3b1 / ERR-030-052.** sole disabled T3b1 gate added to catalogue. |
+| 0.8 | 2026-10-10 | — | **T3b2 formula half.** Adds `DeepRevenueEnabled` [GT] (default false), `DAILY_SPONSORSHIP_REVENUE`, the two fill per-mille endpoints, `MATCHDAY_REVENUE_PER_SPECTATOR` and the `[CROSS-PENDING]` `MATCHDAY_STADIUM_CAPACITY`. `DEEP_REVENUE_ENABLED` stays until the code slice replaces it. |
+| 0.9 | 2026-10-11 | — | **PR #497 review.** `DAILY_SPONSORSHIP_REVENUE` accrues on in-season days only (§3.7 v0.14), so roll timing cannot move break-day sponsorship between seasons. |
+| 0.10 | 2026-10-13 | — | **T3b2 implementation.** live config keys and pending capacity mapped to the implementation. Default remains off; pinned Unity compilation pending. |
 #endregion

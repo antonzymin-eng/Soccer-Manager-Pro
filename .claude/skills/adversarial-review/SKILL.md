@@ -277,8 +277,8 @@ at authoring.
 proposes work does not perform it.
 
 **On convergence:** this skill terminates when a full pass returns only Low findings or none, which
-is the same bar as this repo's "an L-only round closes the cycle" convention used across 61 design
-supplements (re-derived August 18, 2026: `ls docs/tracking/*-design.md | wc -l`). Report the round count as `AR-N` so it matches the surrounding documents.
+is the same bar as this repo's "an L-only round closes the cycle" convention used across 63 design
+supplements (re-derived October 15, 2026: `ls docs/tracking/*-design.md | wc -l`). Report the round count as `AR-N` so it matches the surrounding documents.
 
 ## Staying honest
 

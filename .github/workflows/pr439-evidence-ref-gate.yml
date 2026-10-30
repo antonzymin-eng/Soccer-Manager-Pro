@@ -1,0 +1,76 @@
+name: PR439 evidence-ref archive gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - 'tools/tests/test_pr439_evidence_refs.py'
+      - '.github/workflows/pr439-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr439-ref-archive/**'
+      - 'docs/tracking/evidence/pr439-w3/**'
+      - 'docs/tracking/w3-agent-ball-fanout-design.md'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dotnet-ci/check_pr439_evidence_refs.py'
+      - 'tools/tests/test_pr439_evidence_refs.py'
+      - '.github/workflows/pr439-evidence-ref-gate.yml'
+      - 'docs/tracking/evidence/pr439-ref-archive/**'
+      - 'docs/tracking/evidence/pr439-w3/**'
+      - 'docs/tracking/w3-agent-ball-fanout-design.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  committed-archive-integrity:
+    name: PR439 committed archive integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify committed archive and frozen citation snapshot
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
+            --repo . \
+            --mode archive
+
+      - name: Run PR439 verifier unit tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest tools.tests.test_pr439_evidence_refs
+
+  live-post-delete-audit:
+    name: PR439 live post-delete audit (manual)
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      issues: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch live PR439 evidence refs
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin \
+            '+refs/heads/evidence/pr439-*:refs/remotes/origin/evidence/pr439-*'
+
+      - name: Audit zero-ref state and compare GitHub discussion to frozen snapshot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/dotnet-ci/check_pr439_evidence_refs.py \
+            --repo . \
+            --mode live \
+            --verify-actions-api

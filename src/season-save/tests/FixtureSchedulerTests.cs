@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/FixtureSchedulerTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.2 (T-SN-FIX-001..007), §3.1, Appendix C; Testing Strategy #19
 // Purpose:  Unit + determinism locks for deterministic double round-robin fixture generation.
@@ -362,6 +362,19 @@ namespace TacticalDirector.SeasonSave.Tests
                 () => FixtureScheduler.Generate(new[] { 1, 2, 2, 3 }, 0UL));
         }
 
+        [Test]
+        public void Generate_NegativeClubId_Throws()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => FixtureScheduler.Generate(new[] { 1, -2, 3 }, 0UL));
+        }
+
+        [Test]
+        public void RoundCount_Overflow_ThrowsInsteadOfWrappingNegative()
+        {
+            Assert.Throws<System.OverflowException>(() => FixtureScheduler.RoundCount(int.MaxValue));
+        }
+
         /// <summary>Round count matches the schedule's actual round span.</summary>
         [TestCase(4)]
         [TestCase(5)]
@@ -400,4 +413,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                     |
 // | 1.0     | 2026-07-25 | —      | Initial suite (#30 T0): T-SN-FIX-001..007 + aliasing,     |
 // |         |            |        | duplicate-id, identity-seed and RoundCount locks.         |
+// | 1.1     | 2026-09-08 | —      | Regression coverage for negative ids and round-count overflow. |
 #endregion

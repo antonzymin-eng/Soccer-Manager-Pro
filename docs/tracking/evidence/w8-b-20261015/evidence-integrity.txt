@@ -1,0 +1,1 @@
+Evidence integrity contracts: PASS (15 SHA-256 manifests; 13 full-coverage, 2 artifact-scoped; 18 registered directories)

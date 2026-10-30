@@ -1,0 +1,9 @@
+Host: owner Windows 11, Unity 6000.4.9f1 editor (Mono). Source: main 93de60f629dd4d948debb96aa594b53f8fdeefd0, Assets/Scripts junction -> src, Editor-regenerated Packages/packages-lock.json.
+Filter: EditMode, assemblies Localization.Tests, ClubFinances.Tests, SeasonSave.Tests, ClientApp.Tests, MatchClientCore.Tests (the intended S0DemoFixtureComparisonTests exclusion regex did not take effect; that test ran and passed).
+STARTED 2026-10-09T03:51:57.9455544Z tests=4033
+FAIL TacticalDirector.ClubFinances.Tests.ClubFinancesCritiqueTests.AssemblyReferences_AreExactlyCurrentPhaseDependencies :: could not locate repository root; dependency lock must fail loud
+FAIL TacticalDirector.ClubFinances.Tests.ClubFinancesCritiqueTests.MinimalFinanceSaveShape_HasNoRngCursorOrActionOrdinal :: could not locate repository root; RNG-shape lock must fail loud
+FAIL TacticalDirector.SeasonSave.Tests.SeasonLoopDisciplineTests.ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse :: Timeout value of 180000 ms was exceeded. If this is intended, increase the timeout value using a TimeoutAttribute.
+FAIL TacticalDirector.SeasonSave.Tests.SeasonLoopScenarioTests.sim_season_multi_fixture :: Timeout value of 180000 ms was exceeded. If this is intended, increase the timeout value using a TimeoutAttribute.
+FINISHED 2026-10-09T04:46:21.5703324Z passed=918 failed=4 skipped=3 inconclusive=0 status=Failed
+Per assembly: ClientApp 125 passed (incl. full-match comparison, 1534 s); MatchClientCore 183 passed; Localization 67 passed; ClubFinances 52 passed / 2 failed; SeasonSave 491 passed / 2 failed / 3 skipped (env-gated harnesses).

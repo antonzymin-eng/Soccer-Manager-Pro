@@ -1,0 +1,87 @@
+{
+  "before": {
+    "totals": {
+      "commits": 348,
+      "pending": 0,
+      "completed": 348,
+      "cancelled": 0,
+      "rejected": 0,
+      "events": 348,
+      "releases": 348,
+      "w5Receiver": 348,
+      "zones": 0,
+      "missing": 0,
+      "drops": 0,
+      "dtRaces": 0,
+      "fouls": 46,
+      "yellows": 6,
+      "reds": 1,
+      "secondYellows": 0
+    },
+    "outcomes": {
+      "same-keeper-hand-reclaim": 155,
+      "other-agent-controlled": 14,
+      "receiver-controlled": 89,
+      "interrupted-by-kick": 90
+    },
+    "digests": {
+      "0F1E2D3C4B5A6978": "1082c2c92bb12556901b6c9f707f08e9fe866cd98f675ed6038eb31dd1d94ec7",
+      "00000000D1A6D05E": "3dad87fd4557d50f417dc5bc2cca8ebda2efe08a12d2257f1657a380ac72ab5e",
+      "0000000000000001": "cd88730a541d7442088706295d2057bc15e7dd3b2c19fcb8a4e6225bb0636aad",
+      "00000000ABCDEF12": "0b57ad59274ae593f81f1ec021418346d2caa084dc8507257b4956f991db1394",
+      "0000000099887766": "3b1ff4c46b37195aeb6d5b6147ac055fc373a9ee11eb7a4285543eb771f57a87",
+      "000000005A5A5A5A": "6934c86a8b27d26ac4b4cc2218660897f4cdad542d2707388c772e6b462dd983"
+    },
+    "durationSeconds": "779.055075",
+    "start": "2026-10-16T22:27:19.4468742Z",
+    "end": "2026-10-16T22:40:18.5019820Z"
+  },
+  "controlMatchesArchivedCorrectedB": true,
+  "after": {
+    "totals": {
+      "commits": 126,
+      "pending": 0,
+      "completed": 126,
+      "cancelled": 0,
+      "rejected": 0,
+      "events": 126,
+      "releases": 126,
+      "w5Receiver": 126,
+      "zones": 0,
+      "missing": 0,
+      "drops": 0,
+      "dtRaces": 0,
+      "fouls": 48,
+      "yellows": 8,
+      "reds": 1,
+      "secondYellows": 0
+    },
+    "outcomes": {
+      "receiver-controlled": 114,
+      "other-agent-controlled": 12
+    },
+    "digests": {
+      "0F1E2D3C4B5A6978": "6ef1e77f9dcf86c4bce5e1f66a989a64b42f26c268ead53340b9c57d282b4072",
+      "00000000D1A6D05E": "06e3daf03f1c45a112f958c4bfac980c30956971e175b35b7d815d685b4caf93",
+      "0000000000000001": "25ceac27f7d4e87fb1166227f683eaff87336efd301fa5500b6d212a28deba59",
+      "00000000ABCDEF12": "77b4e0cc08a4ac903fbb364f2bb28612eaa39b380955111c58fe040ebf474a80",
+      "0000000099887766": "ccc99ba78dce889ed07d18609c568486920ffd97c45cb283f15d7f5c203f6e4f",
+      "000000005A5A5A5A": "6961b03ff4cb1512967c01c46158274b3516bb4c632d921f75e5f6baad936eb3"
+    },
+    "durationSeconds": "783.095842",
+    "start": "2026-10-16T22:28:56.3933205Z",
+    "end": "2026-10-16T22:41:59.4892092Z",
+    "restrictedAttempts": 0,
+    "sanctions": 0,
+    "restartLocations": {
+      "goal-area-line": 0,
+      "penalty-area": 0,
+      "outside-penalty-area": 0
+    },
+    "shotsWithin10s": 0,
+    "goalsWithin10s": 0,
+    "sanctionsPerMatch": 0.0,
+    "restartFollowupPopulation": 0
+  },
+  "fingerprintsChanged": 6
+}

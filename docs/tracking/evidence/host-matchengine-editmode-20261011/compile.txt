@@ -1,0 +1,38 @@
+# Unity 6000.4.9f1 Editor.log excerpt — refresh + forced recursive reimport at commit fce91e53 (see source-identity.txt)
+
+1:PR497-FCE91E53-MARKER begin reimport
+35:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+36:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+715:*** Tundra build success (50.03 seconds), 75 items updated, 1203 evaluated
+719:Reloading assemblies after finishing script compilation.
+720:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+references to shim build output (bin/Debug): 0
+unique warnings:
+BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but it
+ClientShellBehaviour.cs(146,34): warning CS0618: 'Object
+ClientShellBehaviour.cs(154,17): warning CS0618: 'Object
+
+# Baseline compile at 2a396d56 (pre-PR main)
+1:PRE497-2A396D56-MARKER begin reimport
+50:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+51:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+829:*** Tundra build success (69.71 seconds - 0:01:09), 75 items updated, 1203 evaluated
+833:Reloading assemblies after finishing script compilation.
+834:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+references to shim build output (bin/Debug): 0
+
+# Timeout-rerun compile at e6b71350
+1:TIMEOUT-E6B71350-MARKER begin reimport
+51:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+52:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+730:*** Tundra build success (64.80 seconds - 0:01:04), 75 items updated, 1203 evaluated
+734:Reloading assemblies after finishing script compilation.
+735:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+references to shim build output (bin/Debug): 0
+unique warnings:
+BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but it
+ClientShellBehaviour.cs(146,34): warning CS0618: 'Object
+ClientShellBehaviour.cs(154,17): warning CS0618: 'Object

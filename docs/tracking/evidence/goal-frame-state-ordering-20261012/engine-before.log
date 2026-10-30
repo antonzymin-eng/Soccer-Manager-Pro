@@ -1,0 +1,99 @@
+NUnitLite 3.14.0 (.NET Standard 2.0)
+Copyright (c) 2023 Charlie Poole, Rob Prouse
+
+Runtime Environment
+   OS Version: Ubuntu 24.04.3 LTS
+  CLR Version: 8.0.21
+
+Test Files
+    /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+
+Test Discovery
+  Start time: 2026-10-12 16:33:44Z
+    End time: 2026-10-12 16:33:44Z
+    Duration: 0.069 seconds
+
+Test Filters
+    Where: method =~ int_OutsidePostRebound or method =~ int_FullCrossingBeforeRearPostContact
+
+Errors, Failures and Warnings
+
+1) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,False)
+  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+
+2) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,False)
+  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+
+3) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,True)
+  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+
+4) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,True)
+  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+
+5) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,False)
+  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+
+6) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,False)
+  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+
+7) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,True)
+  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+
+8) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,True)
+  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+
+9) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(False)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+
+10) Failed : TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(True)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Object, Span`1)
+
+Run Settings
+    Number of Test Workers: 0
+    Work Directory: /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro
+    Internal Trace: Off
+
+Test Run Summary
+  Overall result: Failed
+  Test Count: 10, Passed: 0, Failed: 10, Warnings: 0, Inconclusive: 0, Skipped: 0
+    Failed Tests - Failures: 10, Errors: 0, Invalid: 0
+  Start time: 2026-10-12 16:33:44Z
+    End time: 2026-10-12 16:33:44Z
+    Duration: 0.146 seconds
+
+Results (nunit3) saved as /tmp/smp-nunit/engine-before.xml

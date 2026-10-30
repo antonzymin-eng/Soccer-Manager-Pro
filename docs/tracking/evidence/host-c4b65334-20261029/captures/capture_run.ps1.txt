@@ -1,0 +1,25 @@
+param([string]$Commit, [string]$Label)
+$repo = 'C:\Users\azymi\Desktop\Soccer-Manager-Pro'
+$wt = "$repo\.claude\worktrees\unity-capture"
+$out = "$env:TEMP\u518\cap"
+$unity = 'C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Unity.exe'
+New-Item -ItemType Directory -Force "$out\$Label" | Out-Null
+if (-not (Test-Path $wt)) {
+  git -C $repo worktree add --detach $wt $Commit 2>&1 | Select-Object -Last 1
+  cmd /c mklink /J "$wt\Assets\Scripts" "$wt\src" | Out-Null
+} else {
+  git -C $wt checkout -q --detach $Commit
+}
+New-Item -ItemType Directory -Force "$wt\Assets\_Capture\Editor" | Out-Null
+Copy-Item "$env:TEMP\u518\capture\S0SpeedCapture.cs" "$wt\Assets\_Capture\" -Force
+Copy-Item "$env:TEMP\u518\capture\Editor\S0CaptureBuild.cs" "$wt\Assets\_Capture\Editor\" -Force
+"$Label commit: $(git -C $wt rev-parse HEAD)" | Out-File -Encoding utf8 "$out\$Label\run.txt"
+$exe = "$out\build-$Label\SystemXI.exe"
+$p = Start-Process -FilePath $unity -ArgumentList @('-batchmode','-projectPath',"`"$wt`"",'-executeMethod','S0CaptureBuild.Build','-captureExe',"`"$exe`"",'-logFile',"`"$out\build-$Label.log`"") -Wait -PassThru -NoNewWindow
+"build exit: $($p.ExitCode)" | Out-File -Append -Encoding utf8 "$out\$Label\run.txt"
+if ($p.ExitCode -ne 0) { Get-Content "$out\$Label\run.txt"; Select-String -Path "$out\build-$Label.log" -Pattern 'error CS|S0CaptureBuild' | Select-Object -Last 10; exit 1 }
+$p = Start-Process -FilePath $exe -ArgumentList @('-captureOut',"`"$out\$Label`"",'-logFile',"`"$out\player-$Label.log`"") -PassThru
+if (-not $p.WaitForExit(600000)) { $p.Kill(); "player timed out" | Out-File -Append -Encoding utf8 "$out\$Label\run.txt" }
+"player exit: $($p.ExitCode)" | Out-File -Append -Encoding utf8 "$out\$Label\run.txt"
+Get-Content "$out\$Label\run.txt"
+if (Test-Path "$out\$Label\pitch-sizes.txt") { Get-Content "$out\$Label\pitch-sizes.txt" } else { Select-String -Path "$out\player-$Label.log" -Pattern 'S0SpeedCapture|Exception' | Select-Object -Last 15 }

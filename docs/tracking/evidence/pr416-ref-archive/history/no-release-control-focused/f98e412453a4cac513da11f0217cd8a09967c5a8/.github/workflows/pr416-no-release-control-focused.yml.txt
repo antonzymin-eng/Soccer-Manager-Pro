@@ -1,0 +1,94 @@
+name: PR416 no-ReleaseBallControl focused
+
+on:
+  push:
+    branches:
+      - evidence/pr416-no-release-control-focused
+    paths:
+      - .github/workflows/pr416-no-release-control-focused.yml
+
+permissions:
+  contents: read
+
+jobs:
+  focused-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - AControlledCarrierIsActuallyDispossessed
+          - BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose
+          - TacklesHappenInComposedPlay
+          - ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice
+          - sim_match_engine_shot_outcomes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Ablate only elevated ReleaseBallControl promotion
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/ball-physics/BallCollision.cs')
+          s = p.read_text()
+          old = '''            // ERR-001-006: Stationary is a ground-rest state. An elevated controlled ball
+            // released without a kick must fall under gravity rather than freeze in mid-air.
+            ball.State = ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold
+                ? BallStateType.Airborne
+                : BallStateType.Stationary;
+          '''
+          new = '''            // Evidence arm: ablate only ERR-001-006 elevated non-kick release promotion.
+            ball.State = BallStateType.Stationary;
+          '''
+          if old not in s:
+              raise SystemExit('ReleaseBallControl target block not found exactly once')
+          if s.count(old) != 1:
+              raise SystemExit(f'ReleaseBallControl target block count={s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          git diff --check
+          git diff -- src/ball-physics/BallCollision.cs
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run focused MatchEngine target
+        shell: bash
+        run: |
+          set +e
+          out="artifacts/pr416-no-release-${{ matrix.test_name }}"
+          mkdir -p "$out"
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=${{ matrix.test_name }}" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=${{ matrix.test_name }}.trx" \
+            --results-directory "$out" \
+            2>&1 | tee "$out/console.log"
+          dotnet_status=${PIPESTATUS[0]}
+          python3 - "$out/${{ matrix.test_name }}.trx" "${{ matrix.test_name }}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          path, name = sys.argv[1:]
+          root = ET.parse(path).getroot()
+          rows = [e for e in root.iter() if e.tag.endswith('UnitTestResult') and e.attrib.get('testName', '').endswith(name)]
+          if len(rows) != 1:
+              print(f'TARGET_RESULT {name} AMBIGUOUS count={len(rows)}')
+              sys.exit(2)
+          outcome = rows[0].attrib.get('outcome', '<missing>')
+          print(f'TARGET_RESULT {name} {outcome}')
+          if outcome != 'Passed':
+              sys.exit(1)
+          PY
+          trx_status=$?
+          if [ "$dotnet_status" -ne 0 ] || [ "$trx_status" -ne 0 ]; then
+            exit 1
+          fi
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-no-release-${{ matrix.test_name }}-${{ github.run_id }}
+          path: artifacts/pr416-no-release-${{ matrix.test_name }}/
+          if-no-files-found: error

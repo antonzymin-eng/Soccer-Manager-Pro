@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/MatchViewCueProjectionTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-03 (P4a: cue constructions carry the new IsGoalkeeper argument)
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-08-03 (P4a: cue constructions carry the new IsGoalkeeper argument)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4/F5) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
@@ -47,12 +48,12 @@ namespace TacticalDirector.UiFramework.Tests
         public void MutatingTheProducerCueArray_DoesNotChangeAProjectedView()
         {
             var cues = Cues();
-            cues[3] = new LiveAgentCue(1, false, -1, false);
+            cues[3] = new LiveAgentCue(1, false, -1, false, MatchEngineConstants.NO_PLAYER_ID);
             var frame = Frame(cues: cues);
             var view = new MatchFrameView(in frame);
 
             int before = view.AgentCues[3].YellowCards;
-            cues[3] = new LiveAgentCue(99, true, 7, true);     // the producer scribbles on its own array
+            cues[3] = new LiveAgentCue(99, true, 7, true, MatchEngineConstants.NO_PLAYER_ID);     // the producer scribbles on its own array
 
             Assert.AreEqual(before, view.AgentCues[3].YellowCards,
                 "the view copied the cue array; it must not alias the producer's buffer (F4)");
@@ -178,9 +179,9 @@ namespace TacticalDirector.UiFramework.Tests
         public void CueValues_SurviveTheProjection()
         {
             var cues = Cues();
-            cues[0] = new LiveAgentCue(1, false, -1, false);   // booked, still on, original starter
-            cues[1] = new LiveAgentCue(1, true, -1, false);    // sent off
-            cues[2] = new LiveAgentCue(0, false, 3, false);    // substitute from bench slot 3
+            cues[0] = new LiveAgentCue(1, false, -1, false, MatchEngineConstants.NO_PLAYER_ID);   // booked, still on, original starter
+            cues[1] = new LiveAgentCue(1, true, -1, false, MatchEngineConstants.NO_PLAYER_ID);    // sent off
+            cues[2] = new LiveAgentCue(0, false, 3, false, MatchEngineConstants.NO_PLAYER_ID);    // substitute from bench slot 3
             var frame = Frame(cues: cues);
 
             var view = new MatchFrameView(in frame);
@@ -223,4 +224,5 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | IsGoalkeeper argument (KD-P4a-1). The scribble-on-the-         |
 // |         |            |        | producer-array case flips it too, so the copy lock covers the  |
 // |         |            |        | new field rather than only the ones it already had.            |
+// | 1.3     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
 #endregion

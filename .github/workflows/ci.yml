@@ -244,6 +244,18 @@ jobs:
           # only to make actual non-approved -> APPROVED transitions blocking.
           TD_APPROVAL_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bash tools/run-tests-local.sh --pr
+      - name: Upload executed-test topology
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-functional-executed-tests
+          path: |
+            artifacts/coverage/**/*.trx
+            artifacts/owner-held-red/**/*.trx
+          # The verifier is the fail-closed authority for required topology evidence.
+          # A build/restore failure before TRX creation is already a real gate failure;
+          # artifact retention must not stack a second, misleading failure on top.
+          if-no-files-found: warn
 
   unity-meta-integrity:
     name: Unity .meta integrity
@@ -301,6 +313,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      # Unity compiles only what lives under Assets/. src/ reaches it through Assets/Scripts, a link
+      # that is deliberately untracked (Assets/README.md), so a fresh checkout has none. Without this
+      # step the runner imports no project assembly at all. nightly.yml creates the equivalent Windows junction.
+      - name: Link src/ into Assets/Scripts
+        run: |
+          if [ -e Assets/Scripts ] || [ -L Assets/Scripts ]; then
+            echo "::error::Assets/Scripts already exists; expected a clean checkout because this link is deliberately untracked."
+            exit 1
+          fi
+          ln -s ../src Assets/Scripts
       - uses: actions/cache@v4
         with:
           path: Library
@@ -316,6 +338,15 @@ jobs:
         with:
           testMode: ${{ matrix.testMode }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+      # A run that imported none of src/ still passes with zero tests, so require one project test in
+      # the results. EditMode only: every project test assembly is Editor-platform.
+      - name: Assert project tests were discovered
+        if: matrix.testMode == 'editmode'
+        run: |
+          if ! grep -rqs 'TacticalDirector\.' artifacts; then
+            echo "::error::No TacticalDirector test in the EditMode results; Unity did not import src/ through Assets/Scripts."
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

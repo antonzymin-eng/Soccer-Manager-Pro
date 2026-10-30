@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 5: Test Plan
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** September 11, 2026 (v0.3 — ERR-013-011: positive/negative pass-window and event-debounce coverage.)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -52,8 +52,13 @@ This verification is captured as a §9.3 precondition (see §9.3 (h)).
 
 ### 5.2.2 Debounce (§3.2)
 
-- **T-U-010** Each trigger holds for `TRIGGER_DWELL_TICKS = 2`
-  ticks before firing.
+- **T-U-010** Continuous triggers hold for `TRIGGER_DWELL_TICKS = 2` tactical heartbeats
+  before firing. For discrete `BACKWARD_PASS`, one qualifying pass starts dwell and the bounded event
+  latch completes that same dwell on the next tactical heartbeat; the stale retained event cannot
+  start a later dwell.
+- **T-U-010a** `BACKWARD_PASS` accepts the inclusive lower-bound EventBus tick
+  `N-AI_PHASE_STRIDE`, rejects ticks outside `[N-AI_PHASE_STRIDE,N)`, and never compares the 60 Hz
+  event tick to the 10 Hz tactical `TickIndex`.
 - **T-U-011** Release: `TRIGGER_RELEASE_TICKS = 3` ticks of cleared
   raw condition before the committed flag clears.
 - **T-U-012** Asymmetric release: a single tick of cleared raw
@@ -150,6 +155,10 @@ This verification is captured as a §9.3 precondition (see §9.3 (h)).
   `(perception, passEvents, pos12, attackingDir, prevHyst,
   prevTrigger)` produces bit-identical output across two
   invocations.
+- **T-I-011** Publish a qualifying opposing `PassAttemptEvent` through #17 after an AI read, advance
+  to the next tactical stride and assert it starts dwell; advance one further stride with no second
+  pass and assert that same discrete event completes the configured dwell. Rejection-only tests do
+  not prove W5 is live.
 
 ## 5.4 Determinism Regression (Binding to #16 §5)
 
@@ -223,3 +232,4 @@ This verification is captured as a §9.3 precondition (see §9.3 (h)).
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude/draft-ai-specification-5tvwH) | Initial draft from `outline-detailed.md` v1.0. Unit target ≥40; integration ≥10; KD-16 ≥6; KD-17 corpus ≥4. Total ≥69. |
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H3: T-U-051 extended with directional assertions (fully-rested eligible; fully-fatigued excluded). AR-S1-M6: T-C-007 added for backline-floor breach + F5 path. AR-S1-L4: §5 preamble note added for #19 prefix conformance grep (pending). |
+| 0.3 | September 11, 2026 | OpenAI | ERR-013-011: positive EventBus-to-next-stride acceptance, window boundaries, and bounded discrete-event dwell completion. |

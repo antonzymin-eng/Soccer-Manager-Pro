@@ -4,6 +4,8 @@
 // Modified: 2026-07-27 (P1 AR-1 M-6: score reads follow LiveMatchFrame onto the Scoreline carrier; /frame JSON keys unchanged)
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
+// Modified: 2026-09-09 (strict request-line grammar and origin-form validation)
+// Modified: 2026-10-14 (graceful close: FIN plus a bounded drain, so Windows never resets a response away)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -159,15 +161,20 @@ namespace TacticalDirector.MatchViewer
                 using (NetworkStream stream = client.GetStream())
                 {
                     string requestLine = ReadRequestLine(stream);
-                    if (requestLine == null) { return; }
-
-                    if (!TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+                    if (requestLine != null)
                     {
-                        WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
-                        return;
+                        if (TryParseRequestLine(requestLine, out string method, out string pathAndQuery))
+                        {
+                            Route(stream, method, pathAndQuery);
+                        }
+                        else
+                        {
+                            WriteHttp(stream, 400, "text/plain; charset=utf-8", "Bad Request");
+                        }
                     }
 
-                    Route(stream, method, pathAndQuery);
+                    // The rest of the request is still unread; see HttpGracefulClose for why that matters.
+                    HttpGracefulClose.ShutdownAndDrain(client.Client);
                 }
             }
             catch (Exception)
@@ -191,6 +198,9 @@ namespace TacticalDirector.MatchViewer
             {
                 int b = stream.ReadByte();
                 if (b < 0) { return null; }
+                // Reject high-bit wire bytes before ASCII decoding can replace them with '?'. A
+                // replacement '?' could otherwise become a query delimiter and change the route.
+                if (b > 0x7F) { return string.Empty; }
                 if (b == '\n')
                 {
                     int end = bytes.Count;
@@ -208,10 +218,53 @@ namespace TacticalDirector.MatchViewer
         {
             method = null;
             pathAndQuery = null;
-            string[] parts = requestLine.Split(' ');
-            if (parts.Length < 2) { return false; }
-            method = parts[0];
-            pathAndQuery = parts[1];
+            if (requestLine == null) { return false; }
+
+            int firstSpace = requestLine.IndexOf(' ');
+            int secondSpace = firstSpace < 0 ? -1 : requestLine.IndexOf(' ', firstSpace + 1);
+            if (firstSpace <= 0 || secondSpace <= firstSpace + 1 ||
+                secondSpace == requestLine.Length - 1 ||
+                requestLine.IndexOf(' ', secondSpace + 1) >= 0)
+            {
+                return false;
+            }
+
+            string candidateMethod = requestLine.Substring(0, firstSpace);
+            string candidateTarget = requestLine.Substring(firstSpace + 1, secondSpace - firstSpace - 1);
+            string version = requestLine.Substring(secondSpace + 1);
+            if (version != "HTTP/1.1" || !IsHttpToken(candidateMethod) || !IsOriginFormTarget(candidateTarget))
+            {
+                return false;
+            }
+
+            method = candidateMethod;
+            pathAndQuery = candidateTarget;
+            return true;
+        }
+
+        private static bool IsHttpToken(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                bool isAlphaNumeric = (c >= '0' && c <= '9') ||
+                    (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+                bool isTokenPunctuation = c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
+                    c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' || c == '^' ||
+                    c == '_' || c == '`' || c == '|' || c == '~';
+                if (!isAlphaNumeric && !isTokenPunctuation) { return false; }
+            }
+            return value.Length > 0;
+        }
+
+        private static bool IsOriginFormTarget(string value)
+        {
+            if (value.Length == 0 || value[0] != '/') { return false; }
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (c <= 0x20 || c == 0x7F || c > 0x7E || c == '#' || c == '\\') { return false; }
+            }
             return true;
         }
 
@@ -652,4 +705,14 @@ poll();
 // |         |            |        | had MOVED into the latter. One rule (RosterShirtNumbers), one  |
 // |         |            |        | implementation, served to both Views. Unlike the v1.3 gk fix   |
 // |         |            |        | this IS a JSON key addition and a viewer-script change.        |
+// | 1.5     | 2026-09-09 | —      | Request parsing now requires exact HTTP/1.1 grammar, a valid   |
+// |         |            |        | method token, raw ASCII octets, and an origin-form target      |
+// |         |            |        | before routing.                                                |
+// | 1.6     | 2026-10-14 | —      | Graceful close. Every connection now ends with                 |
+// |         |            |        | HttpGracefulClose.ShutdownAndDrain (FIN, then a bounded drain)  |
+// |         |            |        | before Close. The server reads only the request line, so closing|
+// |         |            |        | with the rest unread made Windows send RST and the client lost  |
+// |         |            |        | the response (two Unity EditMode failures; also every real      |
+// |         |            |        | browser request, whose headers were never read). Linux returned |
+// |         |            |        | the queued data first, so the Linux gate passed.                |
 #endregion

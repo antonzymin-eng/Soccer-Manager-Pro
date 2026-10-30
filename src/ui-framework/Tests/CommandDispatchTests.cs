@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/CommandDispatchTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-18 (§5-P7: season intent routing)
+// Modified (prior): 2026-10-15 (Match Flow §6.4: RequestSubstitution)
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.3 / §5.1 (T-UI-DISPATCH-001..004, FR-UI-003/012/013/014/023,
 //           failure modes F3/F6), Code Standards #20
@@ -57,7 +58,7 @@ namespace TacticalDirector.UiFramework.Tests
 
             dispatcher.Dispatch(ManagerIntent.Substitute(0, 5, 3, SubstitutionReason.Tactical));
 
-            CollectionAssert.AreEqual(new[] { "SubstitutePlayer(0,5,3,Tactical)" }, mutations.Calls);
+            CollectionAssert.AreEqual(new[] { "RequestSubstitution(0,5,3,Tactical)" }, mutations.Calls);
         }
 
         [Test]
@@ -108,16 +109,61 @@ namespace TacticalDirector.UiFramework.Tests
         [Test]
         public void EveryMatchIntentKind_MapsToACommandKind()
         {
+            int matchKinds = 0;
             foreach (IntentKind kind in Enum.GetValues(typeof(IntentKind)))
             {
-                if (kind == IntentKind.None) { continue; }
+                if (kind == IntentKind.None || IntentRouting.IsSeasonIntent(kind)) { continue; }
+
+                Assert.IsTrue(IntentRouting.IsMatchIntent(kind),
+                    "IntentKind." + kind + " is neither a match nor a season intent — IntentRouting " +
+                    "has not been told which dispatcher owns it.");
 
                 ManagerCommand command = MatchTacticsDispatcher.ToCommand(MakeIntentWithKind(kind));
 
                 Assert.AreNotEqual(ManagerCommandKind.None, command.Kind,
                     "IntentKind." + kind + " has no ManagerCommand mapping — the intent and command " +
                     "vocabularies have drifted apart.");
+                matchKinds++;
             }
+
+            Assert.AreEqual(3, matchKinds, "the match channel carries exactly the three live-match kinds.");
+        }
+
+        [Test]
+        public void EverySeasonIntentKind_IsRefusedByTheMatchDispatcher()
+        {
+            // #38 Appendix C: season intents belong to the season dispatcher. The match channel must
+            // refuse them rather than inventing a ManagerCommand for them.
+            int seasonKinds = 0;
+            foreach (IntentKind kind in Enum.GetValues(typeof(IntentKind)))
+            {
+                if (!IntentRouting.IsSeasonIntent(kind)) { continue; }
+
+                Assert.IsFalse(IntentRouting.IsMatchIntent(kind), kind + " is classified as both.");
+                IntentKind captured = kind;
+                Assert.Throws<InvalidOperationException>(
+                    () => MatchTacticsDispatcher.ToCommand(MakeIntentWithKind(captured)),
+                    "IntentKind." + kind + " reached the live-match channel.");
+                seasonKinds++;
+            }
+
+            Assert.AreEqual(3, seasonKinds, "AdvanceRound, AdvanceDay and StartNextSeason.");
+        }
+
+        [Test]
+        public void SeasonIntentFactories_CarryTheirKindAndNoPayload()
+        {
+            ManagerIntent round = ManagerIntent.AdvanceRound();
+            ManagerIntent day = ManagerIntent.AdvanceDay();
+            ManagerIntent roll = ManagerIntent.StartNextSeason();
+
+            Assert.AreEqual(IntentKind.AdvanceRound, round.Kind);
+            Assert.AreEqual(IntentKind.AdvanceDay, day.Kind);
+            Assert.AreEqual(IntentKind.StartNextSeason, roll.Kind);
+            Assert.AreEqual(0, round.TeamId + round.AgentId + round.OutSlotIndex + round.BenchIndex);
+            Assert.AreEqual(4, (int)IntentKind.AdvanceRound, "ordinals are append-only.");
+            Assert.AreEqual(5, (int)IntentKind.AdvanceDay, "ordinals are append-only.");
+            Assert.AreEqual(6, (int)IntentKind.StartNextSeason, "ordinals are append-only.");
         }
 
         // ── T-UI-DISPATCH-004 — FR-UI-023 marshaling ─────────────────────────────────────────────
@@ -227,8 +273,11 @@ namespace TacticalDirector.UiFramework.Tests
             public void SetPlayerTactic(int agentId, in PlayerTactic tactic) =>
                 Calls.Add("SetPlayerTactic(" + agentId + ")");
 
-            public void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason) =>
-                Calls.Add("SubstitutePlayer(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+            public SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason)
+            {
+                Calls.Add("RequestSubstitution(" + teamId + "," + outSlotIndex + "," + benchIndex + "," + reason + ")");
+                return SubstitutionRequestResult.Accept(1u);
+            }
         }
     }
 }
@@ -239,4 +288,8 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | F3 fail-loud (default + unmapped kind), the intent/command     |
 // |         |            |        | correspondence drift guard, and the FR-UI-023 marshaling lock  |
 // |         |            |        | (enqueue now, apply only on the sim-thread drain).             |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.4: the dispatcher test double records RequestSubstitution. |
+// | 1.2     | 2026-10-18 | —      | §5-P7: drift guard skips season kinds via IntentRouting and    |
+// |         |            |        | counts the three match kinds; season kinds refused by the match |
+// |         |            |        | dispatcher; season factories + append-only ordinals locked.   |
 #endregion

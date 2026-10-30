@@ -8,8 +8,8 @@ does not restate them. Appendix D is the single source of truth for banned/requi
 API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
-**Modified:** September 7, 2026
-**Version:** 1.13
+**Modified:** October 10, 2026
+**Version:** 1.19
 **Status:** AMENDMENT DRAFT (A3.1a; approved v1.8 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -115,17 +115,39 @@ generated artefacts or when the Unity editor requires it.
 
 ### 3.1.3 Language Version and Feature Gating
 
-**Language version pin** (FR-CS-008): The project targets the C# version shipped by
-the Unity LTS revision recorded in `docs/tracking/certification-platform.md`. This FR
-is currently inactive (the platform document is a placeholder — see root `CLAUDE.md`
-open issue "Stage 0 host platform pin"). Once the platform is pinned, the language
-version becomes a hard constraint enforced by the `.csproj` `<LangVersion>` element.
+**Language version pin** (FR-CS-008; `ERR-020-008`): The project targets the C# version
+shipped by the Unity LTS revision recorded in `docs/tracking/certification-platform.md`:
+Unity 6000.4.9f1, certified July 19, 2026. That pin resolved the placeholder this FR
+waited on, so FR-CS-008 is **active**.
+
+The project's **working ceiling is C# 9.0**. The Linux gate, which runs on every push
+to `main` and every PR targeting `main`, compiles every assembly with
+`<LangVersion>9.0</LangVersion>` (`tools/dotnet-ci/generate_projects.py`, which records
+that value as its own toolchain choice, not one inferred from the Unity revision), and
+the pinned Unity editor compiles the same tree. **The one exception:** the Unity-only
+`TacticalDirector.MatchClientUnity` (`src/match-client-unity/`) is excluded from the
+Linux gate (`SHIM_EXCLUDED_ASMDEFS`). Unity's own ceiling is unrecorded, so no compiler
+is known to reject C# 10+ syntax there. For that assembly the ceiling is enforced by
+review alone, through §5.4.1 item 8, until a check covers it. Source therefore **MUST NOT** use syntax
+newer than C# 9.0, for example file-scoped namespaces (C# 10), `required` members
+(C# 11) or primary constructors (C# 12). A compiler that accepts newer syntax does not
+change the target. Whether Unity 6000.4.9f1's compiler would accept a later language
+version is not recorded in this repository. Raising the ceiling therefore requires
+first reading the value from the pinned host's compiler arguments and recording it in
+`certification-platform.md`.
+
+C# 9.0 is a ceiling, not a promise that every C# 9.0 feature works under Unity: the
+pinned editor compile decides. One known prerequisite: `init` accessors, including the
+properties a positional record generates, need a
+`System.Runtime.CompilerServices.IsExternalInit` definition, and no assembly in this
+repository defines one. Positional records and `init` accessors are therefore not usable
+yet, even though FR-CS-009 permits records for DTOs.
 
 **Allowed features** (FR-CS-009):
 
 | Feature | Condition |
 |---|---|
-| Records | DTOs only (data-transfer structs with no behaviour). |
+| Records | DTOs only (data-transfer structs with no behaviour). Positional records (and any `init` accessor) only once an `IsExternalInit` definition exists (see above). |
 | Pattern matching (`is`, `switch` expressions) | No restriction. |
 | Expression-bodied members (`=>`) | Simple single-expression members only; not for multi-step logic. |
 | `readonly struct` | Strongly preferred for all immutable value types. |
@@ -620,14 +642,14 @@ order:
 |---|---|---|
 | 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
 | 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
-| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web`, `ui-framework`, `client-app` and `match-client-unity` (P5b setup/choice binding) — no Data or Management or Presentation assembly references it. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
-| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the seven Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world` or `club-finances`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, seven of the eight Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save`, `club-finances`, `transfers` — not `living-world`) and Client's `match-client-core` and `client-app` (P5b admitted fixture) — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
-| 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30), `club-finances` (#40) | Long-horizon state above a single match. |
+| 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30), `club-finances` (#40), `transfers` (#31) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
-| 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web` | Screens, shells and hosts. |
+| 9 **Client** | `match-client-core`, `ui-framework` (#38), `client-app`, `match-client-unity`, `match-client-web`, `localization` (#49) | Screens, shells and hosts, including client-facing localization infrastructure. |
 | — **Infrastructure** | `performance-optimization` (#18), `testing-strategy` (#19) | Out of band: not members of the order, and no tier may reference them at runtime. |
 
 ```
@@ -645,6 +667,27 @@ order, never above. The two notations are the same rule; `──►` above point
 provider to the consumer, the root `CLAUDE.md` arrow points from the consumer to the
 provider. Both files label their arrow so the reader never has to reconstruct which
 convention is in force.
+
+**P5b consumed dependency update (October 6, 2026).** `match-client-core` now
+references Presentation's `match-analytics` for its synchronized session observer
+and immutable publication. `client-app` consumes that lifecycle/publication plus
+`match-viewer`, `match-engine`, `player-database` and `tactical-instructions` for
+its concrete S0 setup and report. Direct test references follow their consumed
+contracts. #37's sanctioned-consumer lock names these clients; simulation has no
+reference to analytics or client/UI assemblies. This records downward/intra-tier
+references without approving the pending #20 governance amendment.
+
+**P5b localized screens dependency update (October 8, 2026).** `client-app` and
+`match-client-unity` consume `localization` through `S0TextFormatter` and composition.
+The #49 reverse-reference lock admits only those two exact production paths; no
+simulation consumer is admitted. `client-app` references `deterministic-sim` directly
+for the physics-clock conversion. The Unity skin names `tactical-instructions`
+directly for Mentality choices and built-in UGUI's `UnityEngine.UI` assembly. The
+tier checker resolves that external assembly only for the exact Unity skin asmdef,
+against manifest/lock pin `com.unity.ugui` 2.0.0 and both built-in module dependencies;
+resolved package metadata participates in graph evidence. Unknown references and
+all existing project direction/cycle rules still fail. Package resolution and
+Editor regeneration of the candidate lock remain pinned-host checks.
 
 **A tier is a ceiling, not a licence.** An individual spec may forbid a reference the
 tier order permits — #44 Discipline sits in Management but its FR-DC set forbids it to
@@ -1327,6 +1370,13 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.11 | September 2, 2026 | Codex | **A3.1a automated-review correction.** Defines the exact binding vocabulary and resolution targets for every ownership/path string, and states the frozen schema-v1/reference-semantics-v2.1 boundary honestly: shape acceptance is not cross-registry resolution and cannot support a Machine blocker before A4. Defines `not-applicable` plus the exact `na_fields` pairing rules so absent lifecycle/testhost phases are representable without using prose placeholders. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.12 | September 2, 2026 | Codex | **A3.1a lifecycle-binding clarification.** Removes the undefined “lifecycle `surface_id`” and “lifecycle-owner `surface_id`” qualifiers. A non-N/A activation/update/teardown value now resolves first as an exact runtime-surface `surface_id`, then as the same dependency-graph identifier with `kind: lifecycle`; the two registries' roles are explicit and mechanically testable. No schema, executable semantics, or enforcement changed; the draft remains unapproved pending A3.4. | PENDING — A3.4 |
 | 1.13 | September 7, 2026 | Codex | **D4/#40 T0/T1a seating, review-corrected in place before merge.** Adds `club-finances` (#40) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note remains five consumers while the denominator moves six→seven because `club-finances` deliberately defers its #27 edge to T2; current non-consumers are `living-world` and `club-finances`. No dependency-direction rule or A3.1a governance semantics change. | — |
+| 1.14 | September 12, 2026 | Codex | **D5/#31 T0 seating.** Adds `transfers` (#31) to Tier 7 Management in the same landing as its production `.asmdef`. The `player-database` current Management-consumer note moves five-of-seven → six-of-eight because `transfers` has a live #27 read edge; current non-consumers remain `living-world` and `club-finances`. The new assembly's #40 reference is intra-tier and its ProjectConstants reference is downward to Foundation; no dependency-direction rule or A3.1a governance semantics change. | — |
+| 1.15 | September 21, 2026 | OpenAI | **PR #407 current-main reconciliation.** Corrects the maintained Data-tier consumer note after #40 T2a had already activated `club-finances` → `player-database` on September 11: seven of eight Management assemblies now consume #27, with only `living-world` not doing so. Tier-7 seating is unchanged; no dependency-direction or A3.1a governance semantics change. | — |
+| 1.16 | September 28, 2026 | OpenAI | **Localization #49 L1 seating.** Adds `localization` (#49) to Tier 9 Client in the same commit that adds `src/localization/localization.asmdef`. The production assembly is dependency-free, so this adds no upward edge; the L1 reverse-reference lock rejects unauthorized production consumers until L3B deliberately narrows it for the approved sibling boundary adapter. No other tier membership changes. | — |
+| 1.17 | 2026-10-06 | — | Record consumed P5b client fixture/tactic and session analytics dependencies; ordered taxonomy and simulation boundary unchanged. | — |
+
+| 1.18 | October 8, 2026 | — | Record consumed P5b localization/clock/choice edges and exact built-in UGUI package evidence; simulation bans and tier rules unchanged. | — |
+| 1.19 | October 10, 2026 | — | **`ERR-020-008` — language-version mechanics activated.** §3.1.3 no longer treats the certified platform as a placeholder. FR-CS-008 is active, and the working ceiling is C# 9.0: the value the Linux gate already compiles with, on the same tree the pinned Unity editor compiles. Post-C# 9.0 syntax is excluded. The Linux gate does not compile the Unity-only `TacticalDirector.MatchClientUnity`, so for that assembly the ceiling is recorded as review-enforced (PR #495 Codex review). The exact Unity 6000.4.9f1 ceiling is recorded as unknown, so raising the ceiling needs host evidence first. The FR-CS-009 Records row gains the `IsExternalInit` prerequisite for positional records and `init` accessors; no assembly in the repository defines that type. Header correction: the header still read v1.17 / October 6 although a v1.18 row existed; both header fields now match this row. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
 
 ---
 

@@ -56,8 +56,9 @@ namespace TacticalDirector.Discipline
     /// precedent): the reviewed contract is the SHAPE — threshold-and-residual accumulation, additive
     /// stacking, one decrement per played club fixture — not the numbers. They are deliberately NOT
     /// calibrated at this landing: <b>KD-W1</b> forbids fitting a <c>[GT]</c> against an incompletely
-    /// wired engine, and the foul population #44 reads is pre-tackle (<c>defensive-ai</c>'s challenge
-    /// ships at <c>TackleContactRadiusM = 0</c>, W2) and 4× football on red cards.
+    /// wired engine. The #44 calibration quoted here was measured pre-tackle, when W2 still shipped
+    /// at <c>TackleContactRadiusM = 0</c>; W2 activation intentionally does not retune these values, so the
+    /// post-W2 foul/card calibration remains a separate required pass. The measured red-card rate was 4× football.
     /// </para>
     /// <para>
     /// <b>Config keys are guarded at their consuming sites, not here</b> (ERR-041-003, and AR pass
@@ -291,4 +292,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | including a test file, on the identical rule. All 11 src/ files   |
 // |         |            |        | referencing the old name updated. #44 Appendix A's own ALL_CAPS   |
 // |         |            |        | row is unchanged (docs/ is not this pass's tree) and is reported. |
+// | 1.6     | 2026-09-16 | —      | W2 is active; the cited foul/card calibration remains pre-tackle and must be re-measured before any separate retuning pass. |
 #endregion

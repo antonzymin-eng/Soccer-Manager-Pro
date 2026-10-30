@@ -1,0 +1,21 @@
+#!/bin/bash
+# Reproduction TEMPLATE (added October 13, 2026 after PR #504 review), not the as-run script.
+# Differs from run-lane-equivalent.sh.txt only in taking the scratch directory as an argument
+# instead of a <scratch> placeholder, and in returning dotnet test's exit status.
+# usage: run-lane-template.sh <scratch-dir> <worktree-subdir> <label> <ENVVAR=VALUE> <filter>
+set -u
+SCRATCH="$1"; WT="$2"; LABEL="$3"; ENVKV="$4"; FILTER="$5"
+cd "$SCRATCH/$WT" || exit 9
+OUT="$SCRATCH/out/$LABEL"; mkdir -p "$OUT"
+cat > "$OUT/no-tests.runsettings" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings><RunConfiguration><TreatNoTestsAsError>true</TreatNoTestsAsError></RunConfiguration></RunSettings>
+XML
+{ echo "# worktree $WT HEAD $(git rev-parse HEAD) src-tree $(git rev-parse HEAD:src)"; echo "# instrument blob $(git hash-object src/match-engine/tests/W8StageADiagnosticTests.cs)"; echo "# env $ENVKV filter $FILTER"; echo "# start $(date -u +%FT%TZ)"; } > "$OUT/meta.txt"
+env "$ENVKV" dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore \
+  --filter "$FILTER" --settings "$OUT/no-tests.runsettings" \
+  --logger "console;verbosity=detailed" --logger "trx;LogFileName=measurement.trx" \
+  --results-directory "$OUT/trx" > "$OUT/output.txt" 2>&1
+status=$?
+echo "# exit $status end $(date -u +%FT%TZ)" >> "$OUT/meta.txt"
+exit "$status"

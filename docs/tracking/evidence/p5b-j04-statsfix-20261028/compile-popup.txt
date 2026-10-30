@@ -1,0 +1,38 @@
+# Compile excerpts, October 28, 2026 (pinned host, Unity 6000.4.9f1). Licensing lines omitted.
+
+## 1. Interactive Editor import of the changed tree (probe harness present in Assets/HostProbes) — editor.log lines 420-463
+[1202/1218  0s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.Localization.dll (+2 others)
+[1209/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.dll
+[1210/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.pdb
+[1211/1218  0s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.ClientApp.Tests.dll (+2 others)
+[1212/1218  0s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.MatchClientUnity.dll (+2 others)
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+[1213/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.Tests.pdb
+[1214/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.MatchClientUnity.pdb
+[1215/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.Tests.dll
+[1216/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.MatchClientUnity.dll
+[1217/1218  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+*** Tundra build success (2.99 seconds), 240 items updated, 1218 evaluated
+Probe-harness warnings (Assets/HostProbes) omitted. 'error CS' lines in editor.log: 0
+
+## 2. Batch EditMode run after the harness was removed — editmode.log lines 201-222
+ExitCode: 4 Duration: 1s862ms
+[1162/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.dll
+[1163/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.MatchClientUnity.pdb
+[1164/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.MatchClientUnity.dll
+[1166/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.pdb
+[1167/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.Tests.pdb
+[1181/1218  0s] CopyFiles Library/ScriptAssemblies/TacticalDirector.ClientApp.Tests.dll
+*** Tundra requires additional run (1.81 seconds), 7 items updated, 1214 evaluated
+ExitCode: 0 Duration: 1s53ms
+ExitCode: 0 Duration: 0s420ms
+[           0s] Delete 12 artifact files that are no longer in use. (like Library\Bee\artifacts\1900b0aE.dag\Assembly-CSharp-Editor.rsp)
+*** Tundra build success (0.38 seconds), 0 items updated, 1203 evaluated
+'error CS' lines in editmode.log: 0
+The batch run reused the client assemblies built in section 1 from the same source (CopyFiles, no Csc) and removed the 12 probe-harness artifacts.
+
+## 3. EditMode results (TacticalDirector.ClientApp.Tests; UiFramework.Tests; MatchClientCore.Tests)
+<test-run id="2" testcasecount="423" result="Passed" total="423" passed="423" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-28 21:55:13Z" end-time="2026-10-28 22:14:53Z" duration=
+TacticalDirector.ClientApp.Tests.S0ContentContractTests.EveryCompiledBasePatternMatchesTheApprovedContractVerbatim result="Passed"
+TacticalDirector.ClientApp.Tests.S0TextFormatterTests.LoadedCompiledCatalogueHasStableManifestAndEveryRoleIsCovered result="Passed"

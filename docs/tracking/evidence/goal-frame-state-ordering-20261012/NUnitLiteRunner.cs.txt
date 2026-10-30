@@ -1,0 +1,20 @@
+using System;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Loader;
+using NUnitLite;
+internal static class Runner
+{
+    public static int Main(string[] args)
+    {
+        string path = Path.GetFullPath(args[0]);
+        string dir = Path.GetDirectoryName(path);
+        AssemblyLoadContext.Default.Resolving += (ctx, name) =>
+        {
+            string dependency = Path.Combine(dir, name.Name + ".dll");
+            return File.Exists(dependency) ? ctx.LoadFromAssemblyPath(dependency) : null;
+        };
+        var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+        return new AutoRun(assembly).Execute(args[1..]);
+    }
+}

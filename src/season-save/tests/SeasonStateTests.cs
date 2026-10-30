@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonStateTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.3, §5.4/§5.6, FR-SN-009/011/013b/033, KD-4/KD-7;
 //           Testing Strategy #19
@@ -138,10 +138,25 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void Constructor_RejectsDefaultBoardObjective()
+        {
+            Assert.Throws<System.ArgumentException>(() => new BoardState(default, 500));
+            Assert.Throws<System.ArgumentException>(() => BoardState.Fresh(default));
+        }
+
+        [Test]
         public void BoardObjective_RejectsNonPositiveTarget()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new BoardObjective(0));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new BoardObjective(-3));
+        }
+
+        [Test]
+        public void BoardObjective_RejectsNonPositiveObservedPosition()
+        {
+            var objective = new BoardObjective(4);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => objective.IsMetBy(0));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => objective.IsMetBy(-1));
         }
     }
 
@@ -170,6 +185,8 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchResult(10, 11, -1, 0, 0, 0u));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchResult(10, 11, 0, -1, 0, 0u));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchResult(10, 11, 0, 0, -1, 0u));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchResult(-1, 11, 0, 0, 0, 0u));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchResult(10, -1, 0, 0, 0, 0u));
         }
     }
 
@@ -195,6 +212,8 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             Assert.Throws<System.ArgumentException>(() => new Fixture(0, 10, 10));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new Fixture(-1, 10, 11));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new Fixture(0, -1, 11));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new Fixture(0, 10, -1));
         }
 
         [Test]
@@ -635,4 +654,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.3     | 2026-07-25 | —      | #30 T1 AR pass 1: + BeginNextSeason_RejectsCalendarMapping|
 // |         |            |        | NoRounds — the roll's coverage check is vacuous on an     |
 // |         |            |        | empty schedule, so the zero-round guard is mirrored there.|
+// | 1.4     | 2026-09-08 | —      | Regression coverage for invalid club ids and observed board positions. |
+// | 1.5     | 2026-09-08 | —      | Regression coverage for default board-objective rejection. |
 #endregion

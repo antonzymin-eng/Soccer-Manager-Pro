@@ -1,10 +1,13 @@
 // File:     src/heading-mechanics/HeadingDuelResolution.cs
 // Created:  2026-05-28
+// Modified: 2026-09-22 (W3: AGENT_BALL contact buffer fails closed on overflow; ClearDuelBuffer/ContactCount)
 // Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.7, §4.2.1, KD-8, KD-10, FR-HE-010, FR-HE-017, FR-HE-023,
 //           FR-HE-026, FR-HE-027, Code Standards #20
 // Purpose:  ICollisionEventConsumer implementation, per-frame buffer, and duel-score resolution.
+
+using System;
 
 using UnityEngine;
 using Unity.Profiling;
@@ -76,10 +79,13 @@ namespace TacticalDirector.HeadingMechanics
                 return;
             }
 
-            if (_contactBufferCount < _contactBuffer.Length)
+            if (_contactBufferCount >= _contactBuffer.Length)
             {
-                _contactBuffer[_contactBufferCount++] = evt;
+                throw new InvalidOperationException(
+                    $"Heading AGENT_BALL contact buffer overflow: capacity={_contactBuffer.Length}.");
             }
+
+            _contactBuffer[_contactBufferCount++] = evt;
         }
 
         // ── Frame lifecycle ──────────────────────────────────────────────────────────
@@ -89,6 +95,16 @@ namespace TacticalDirector.HeadingMechanics
         {
             _contactBufferCount = 0;
             _duelCount          = 0;
+        }
+
+        /// <summary>
+        /// Clears only duel-registration state while preserving the AGENT_BALL contacts already
+        /// published for this physics frame. W3 uses this after the read-only feed and before
+        /// Heading registers geometry-qualified duel candidates.
+        /// </summary>
+        public void ClearDuelBuffer()
+        {
+            _duelCount = 0;
         }
 
         // ── Duel API ─────────────────────────────────────────────────────────────────
@@ -153,6 +169,9 @@ namespace TacticalDirector.HeadingMechanics
 
         /// <summary>Returns the number of duels registered for the current frame.</summary>
         public int DuelCount => _duelCount;
+
+        /// <summary>Number of AGENT_BALL contacts received from Collision System #3 this frame.</summary>
+        public int ContactCount => _contactBufferCount;
 
         /// <summary>
         /// Returns the disturbance factor for a given duel and participant slot offset.
@@ -320,4 +339,8 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246  |
 // |         |            |        | under Unity and the Linux compile gate alike, so this assembly could not have   |
 // |         |            |        | compiled in-engine. No functional change.                                       |
+// | 1.5     | 2026-09-22 | —      | Wiring backlog W3 (PR #439): the AGENT_BALL contact buffer now throws           |
+// |         |            |        | InvalidOperationException on overflow instead of silently dropping contacts.    |
+// |         |            |        | Adds ClearDuelBuffer() (clears duel registrations, keeps same-frame contacts)   |
+// |         |            |        | and ContactCount. Row added at the #439 close-out.                              |
 #endregion

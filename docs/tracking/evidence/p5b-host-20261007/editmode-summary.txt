@@ -1,0 +1,5 @@
+STARTED 2026-10-07T09:56:02.7252461-07:00
+FAIL TacticalDirector.ClientApp.Tests.S0DemoFixtureComparisonTests.sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral :: Timeout value of 180000 ms was exceeded. If this is intended, increase the timeout value using a TimeoutAttribute.
+FAIL TacticalDirector.MatchAnalytics.Tests.MatchAnalyticsValueTypeTests.NoOtherAssemblyReferencesMatchAnalytics ::   could not locate the repo root from C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor — this lock must fail loud rather than scan nothing and pass.   Expected: not null   But was:  null
+FAIL TacticalDirector.UiFramework.Tests.MatchViewObserverNeutralityTests.NoOtherAssemblyReferencesTheUiFramework ::   could not locate the repo root from C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor — this lock must fail loud rather than scan nothing and pass.   Expected: not null   But was:  null
+FINISHED 2026-10-07T11:08:35.7921738-07:00 status=Failed passed=335 failed=3 skipped=0 inconclusive=0

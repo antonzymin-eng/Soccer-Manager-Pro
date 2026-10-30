@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopScenarios.cs
 // Created:  2026-07-26
+// Modified: 2026-09-11 (#40 T2b — canonical finance bootstrap for roll-capable fixtures)
 // Modified: 2026-08-16, latest (L-3, adversarial review — v1.5: the ten-plus identical "Oracle = the
 //           composed seam..." comments across this file, PlayerCareerStatesTests, SeasonLoopCareerTests,
 //           AppearanceRecordTests and SeasonSaveCareerRestoreTests were documented, not enforced — this
@@ -26,6 +27,7 @@
 
 using System;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerDatabase;
@@ -59,6 +61,26 @@ namespace TacticalDirector.SeasonSave.Tests
         internal static Squad ComposedOracle(
             Squad squad, PlayerCareerStates career, DisciplineState discipline, int competitionId) =>
             AvailabilityComposition.Compose(squad, career, discipline, competitionId);
+
+        /// <summary>
+        /// Builds canonical #40 starting state for a test league through the same T2a transform
+        /// production uses. Roll-capable fixtures use this rather than the pre-T2 empty sentinel.
+        /// </summary>
+        internal static ClubFinanceEntry[] InitialFinances(League league)
+        {
+            if (league == null)
+            {
+                throw new ArgumentNullException(nameof(league));
+            }
+
+            var squads = new Squad[league.ClubCount];
+            for (int clubId = 0; clubId < squads.Length; clubId++)
+            {
+                squads[clubId] = league.ResolveByClubId(clubId);
+            }
+
+            return ClubFinanceEntry.CreateInitialForSquads(squads);
+        }
 
         public const string MultiFixturePath =
             TestingStrategyConstants.SCENARIO_PATH_CROSS_SPEC_PREFIX + "season-multi-fixture";
@@ -467,4 +489,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | "Oracle = ..." comments across this file and the four sibling     |
 // |         |            |        | career/appearance/restore suites. This file's own call site       |
 // |         |            |        | updated to call it. No behaviour change.                           |
+// | 1.6     | 2026-09-11 | —      | #40 T2b: InitialFinances keeps roll-capable fixtures on T2a.      |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/ui-framework/Tests/MatchViewProjectionTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27 (P1: gate probes routed through a local Frame helper; CaptureFrom samples the
+// Modified: 2026-10-06 (P5b scalar frame identity)
+// Modified (prior): 2026-07-27 (P1: gate probes routed through a local Frame helper; CaptureFrom samples the
 //           P1 surface, now via the Scoreline / RestartBanner carriers. The P1 gates get their own
 //           fixture — MatchViewCueProjectionTests.)
 // Modified: 2026-08-03 (P4a: the CaptureFrom cue sample carries the engine's live AgentIsGoalkeeper)
@@ -223,7 +224,7 @@ namespace TacticalDirector.UiFramework.Tests
                 positions[i] = engine.AgentView(i).Position;
                 cues[i]      = new LiveAgentCue(
                     engine.AgentYellowCards(i), engine.AgentIsSentOff(i), engine.AgentBenchSlot(i),
-                    engine.AgentIsGoalkeeper(i));
+                    engine.AgentIsGoalkeeper(i), engine.AgentPlayerId(i));
             }
 
             var subs = new int[MatchEngineConstants.TEAM_COUNT];
@@ -285,4 +286,5 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | gate moved there, so a negative score cannot reach a frame.    |
 // | 1.2     | 2026-08-03 | —      | P4a: the CaptureFrom cue sample carries the engine's live       |
 // |         |            |        | AgentIsGoalkeeper into the new LiveAgentCue field (KD-P4a-1).   |
+// | 1.3     | 2026-10-06 | —      | Capture scalar player identity in engine-derived test frames. |
 #endregion

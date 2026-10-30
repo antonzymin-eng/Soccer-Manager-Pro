@@ -1,0 +1,18 @@
+# Source identity — pinned-host Unity run at fbcc3c2f
+# Captured before the compile (clean porcelain, empty Library) and again after the EditMode run,
+# before this evidence directory was written. The worktree was created with
+# 'git worktree add --detach' at this commit minutes before the compile, and nothing in it
+# was edited before or during the compile and test runs.
+worktree: .claude/worktrees/unity-fbcc3c2 (detached HEAD; fresh, empty Library)
+branch head on origin: client/p5b-host-acceptance = fbcc3c2f8e3c6f2195e2f2345263eebf91ab6900
+commit: fbcc3c2f8e3c6f2195e2f2345263eebf91ab6900
+tree repo: ac5edf814f30a7f47dd738742dc31cba29919887
+tree src: 3b7981ef054ca6106a6ff4474493113f73c7bb78
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src
+git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings:
+  (empty, before the compile and after the run)
+Assets: only the ignored Assets/Scripts junction (and its .meta files) beyond tracked content.

@@ -1,0 +1,32 @@
+using System;
+using System.Reflection;
+using System.Text;
+using NUnit.Framework;
+using TacticalDirector.EventSystem;
+using TacticalDirector.GoalkeeperMechanics;
+using TacticalDirector.ShotMechanics;
+namespace TacticalDirector.MatchEngine {
+[TestFixture] public class MeasurementTests {
+[Test] public void PairedFrozenCorpus() {
+ UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+ var report = new StringBuilder();
+ foreach (ulong seed in new ulong[]{0x0F1E2D3C4B5A6978UL,0xD1A6D05EUL,1UL,0xABCDEF12UL,0x99887766UL,0x5A5A5A5AUL}) {
+  if (Environment.GetEnvironmentVariable("TD_MEASURE_SEED") is string selected && selected != seed.ToString("X16")) continue;
+  Console.WriteLine($"SEED,start,{seed:X16}");
+  var engine=new MatchEngine(seed);engine.EnableGkHeading();
+  var t=typeof(W8StageADiagnosticTests).GetNestedType("Census",BindingFlags.NonPublic);
+  var census=Activator.CreateInstance(t,BindingFlags.Instance|BindingFlags.NonPublic,null,new object[]{engine,seed,report},null);
+  Action<W8StageAEvent> observe=(Action<W8StageAEvent>)Delegate.CreateDelegate(typeof(Action<W8StageAEvent>),census,t.GetMethod("Observe",BindingFlags.Instance|BindingFlags.NonPublic));
+  Action after=(Action)Delegate.CreateDelegate(typeof(Action),census,t.GetMethod("AfterTick",BindingFlags.Instance|BindingFlags.NonPublic));
+  Action finish=(Action)Delegate.CreateDelegate(typeof(Action),census,t.GetMethod("Finish",BindingFlags.Instance|BindingFlags.NonPublic));
+  int claims=0,contacts=0;
+  engine.TestOnly_W8StageAObserver=e=>{observe(e); if(e.Kind==W8StageAKind.HandClaim){claims++;Console.WriteLine($"CLAIM,{e.Frame},{e.Agent}");}};
+  byte shot=EventRegistry.GetOrdinal<ShotExecutedEvent>(),goal=EventRegistry.GetOrdinal<GoalAwardedEvent>(),dist=EventRegistry.GetOrdinal<DistributionExecutedEvent>();
+  Assert.AreNotEqual(0,shot);Assert.AreNotEqual(0,goal);Assert.AreNotEqual(0,dist);
+  for(int i=0;i<324000;i++) { engine.RunTick();after();for(int n=0;n<engine.TickLedgerCount;n++) {var ordinal=engine.TickLedgerOrdinal(n);if(ordinal==dist)contacts++;if(ordinal==shot||ordinal==goal)Console.WriteLine($"DANGER,{engine.CurrentTick},{(ordinal==shot?"shot":"goal")}");} }
+  finish();Console.WriteLine($"SEED,end,{seed:X16},{claims},{contacts},{BitConverter.ToString(engine.CurrentSnapshotDigest).Replace("-", "").ToLowerInvariant()}");
+  Console.WriteLine(report.ToString());report.Clear();
+ }
+ UnityEngine.TestTools.LogAssert.ignoreFailingMessages=false;
+}
+}}

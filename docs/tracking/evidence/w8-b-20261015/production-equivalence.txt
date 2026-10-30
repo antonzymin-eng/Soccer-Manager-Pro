@@ -1,0 +1,20 @@
+Production-source equivalence checks (test overlays excluded). Created October 15, 2026.
+
+first-arm common/foul vs detailed census
+Command: git diff --exit-code ed0570cf db7c866e -- src :(exclude)src/**/tests/** :(exclude)src/**/Tests/**
+Exit: 0; no production-source difference.
+
+A supplement vs pre-wire bridge
+Command: git diff --exit-code b60cc532 08d104f5 -- src :(exclude)src/**/tests/** :(exclude)src/**/Tests/**
+Exit: 0; no production-source difference.
+
+B supplement vs corrected B
+Command: git diff --exit-code e54335b0 5f32e253 -- src :(exclude)src/**/tests/** :(exclude)src/**/Tests/**
+Exit: 0; no production-source difference.
+
+Corrected gameplay measurement source: e54335b051ed51a0c3c394ccdaa016cb8ae28245
+Source tree: 4a9061afbf7dd43cef5451294a2857ae902d739b
+First arm differs from corrected B only by the hand-control cancellation integration and its tests / design record. No policy, physics, recovery, claim-eligibility or numeric tuning change.
+
+Final source: 86a9496e3ced2c71d143b353b64d86c02fbed15b, src 74b215f71809d50f483e4ab2cb254692e3c53c75.
+After e54335b0, production edits are comments or identical declarations whose trailing comments changed; see final-production-comments.diff.xz and final-production-comment-proof.json. Test changes correct explicit restart observation and add two mirrored negative controls. No production statement, field or constant value changed.

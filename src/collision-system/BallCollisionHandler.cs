@@ -1,6 +1,7 @@
 // File:     src/collision-system/BallCollisionHandler.cs
 // Created:  2026-05-25
 // Modified: 2026-07-27 (shot-outcome pass)
+// Modified: 2026-09-11 (W4: return whether Ball Physics actually applied an agent deflection)
 // Author:   —
 // Spec:     Collision System #3 §3.4.3, FR-03, Code Standards #20
 // Purpose:  Stub routing agent-ball contact to Ball Physics deflection logic.
@@ -26,21 +27,24 @@ namespace TacticalDirector.CollisionSystem
         /// (#4) so pass receptions keep routing through control while shots deflect. The
         /// response-side gates (separating contact, degenerate normal) live in Ball Physics.
         /// </summary>
-        public static void OnAgentCollision(ref BallState ball, in AgentBallCollisionData data)
+        /// <returns>True only when Ball Physics actually changed the ball's flight through an
+        /// agent deflection. W4 consumes this as the explicit new-threat signal; a mere overlap,
+        /// controlled-ball contact, slow reception, separating contact, or degenerate normal is false.</returns>
+        public static bool OnAgentCollision(ref BallState ball, in AgentBallCollisionData data)
         {
             if (ball.State == BallStateType.Controlled)
             {
-                return;
+                return false;
             }
 
             if (ball.Velocity.sqrMagnitude
                 < BallPhysicsConstants.AgentDeflection.MinBallSpeedMps
                   * BallPhysicsConstants.AgentDeflection.MinBallSpeedMps)
             {
-                return;
+                return false;
             }
 
-            BallCollision.ApplyAgentDeflection(ref ball, data.AgentPosition, data.BodyPart);
+            return BallCollision.ApplyAgentDeflection(ref ball, data.AgentPosition, data.BodyPart);
         }
     }
 }
@@ -55,4 +59,5 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | delegates to BallCollision.ApplyAgentDeflection, with the detection-side    |
 // |         |            |        | gates here (Controlled ball = possession; sub-MinBallSpeedMps contact =     |
 // |         |            |        | first-touch territory, so reception is untouched).                          |
+// | 1.3     | 2026-09-11 | —      | W4: return true only when ApplyAgentDeflection actually applies response.   |
 #endregion

@@ -1,0 +1,21 @@
+import sys, struct
+def load(p):
+    rows={}
+    for l in open(p,encoding='utf-8'):
+        if l.startswith('tick'): continue
+        t,ball,ag=l.rstrip('\n').split('\t'); rows[int(t)]=(ball,ag.split(','))
+    return rows
+def f(h): return struct.unpack('>f',bytes.fromhex(h))[0]
+a=load(sys.argv[1]); b=load(sys.argv[2])
+names=['px','py','pz','vx','vy','vz']
+for t in sorted(set(a)&set(b)):
+    (ba,aa),(bb,ab)=a[t],b[t]
+    if ba!=bb or aa!=ab:
+        print('first differing tick',t)
+        for i,n in enumerate(names):
+            x,y=ba[8*i:8*i+8],bb[8*i:8*i+8]
+            if x!=y: print('  ball',n,f(x),f(y))
+        if ba[48:]!=bb[48:]: print('  ball state',ba[48:],bb[48:])
+        print('  agents differing:',[i for i in range(len(aa)) if aa[i]!=ab[i]])
+        break
+else: print('identical over',len(set(a)&set(b)),'fingerprints')

@@ -1,0 +1,43 @@
+12:04:17.845 f9928 SMOKE hostEnabled=True roots=1 activeRoots=1 generatedChildren=47
+12:04:19.212 f10108 SMOKE ballMoved=True
+12:04:19.225 f10110 SMOKE hostRemoved activeRoots=0 roots=0 (quit/destroy cleanup)
+12:04:19.248 f10110 A start=True secondStart=False roots=1 goActive=False attachment=1
+12:04:19.250 f10110 A activated roots=1 activeRoots=1 rejected=False
+12:04:20.688 f10290 A playing viewTick=86 roots=1 rejected=False
+12:04:20.712 f10292 A disposed roots=0
+12:04:20.731 f10292 B thrown=InvalidOperationException rejected=True hasMatch=False activeRoots=0 rendererEnabled=False reuse=InvalidOperationException
+12:04:20.751 f10294 B nextFrame roots=0
+12:04:20.768 f10294 C start=True
+12:04:21.639 f10414 C beforeDestroy viewTick=52 hasMatch=True
+12:04:21.663 f10416 C afterDestroy rejected=True hasMatch=False viewEmpty=True
+12:04:21.680 f10416 D start=True
+12:04:22.639 f10536 D beforeCameraDestroy viewTick=57 hasMatch=True
+12:04:22.675 f10539 D afterCameraDestroy rejected=True hasMatch=False rendererEnabled=False roots=0
+12:04:23.128 f10599 E unattached roots=0 enabled=True
+12:04:23.145 f10599 F start=True
+12:04:24.078 f10719 F sameFrame oldHidden=True oldExists=True started=True roots=2 activeRoots=1
+12:04:24.090 f10721 F nextFrame oldDestroyed=True roots=1 activeRoots=1
+12:04:24.995 f10841 F disabled rootVisible=False rootActiveSelf=True hasMatch=True viewTick=55
+12:04:25.282 f10871 F reenabled sameRoot=True rootVisible=True roots=1 hasMatch=True rejected=False viewTick=72
+12:04:25.299 f10873 F disposed roots=0
+12:04:25.318 f10873 L start=True renderer=scene attachment=1 activeRoots=1
+12:04:25.323 f10874 L progress viewTick=0 rejected=False
+12:11:55.310 f65638 L progress viewTick=27000 rejected=False
+12:19:25.347 f120639 L progress viewTick=54000 rejected=False
+12:26:55.348 f158866 L progress viewTick=81002 rejected=False
+12:34:25.321 f196624 L progress viewTick=108000 rejected=False
+12:41:55.330 f233523 L progress viewTick=135001 rejected=False
+12:49:25.317 f271720 L progress viewTick=162000 rejected=False
+12:56:55.316 f308937 L progress viewTick=189000 rejected=False
+13:04:25.320 f347070 L progress viewTick=216000 rejected=False
+13:11:55.307 f381482 L progress viewTick=243000 rejected=False
+13:19:25.317 f414976 L progress viewTick=270000 rejected=False
+13:26:55.314 f451755 L progress viewTick=297000 rejected=False
+13:34:25.436 f490311 L progress viewTick=324000 rejected=False
+13:34:25.438 f490311 L FULLTIME finalTick=324000 viewTick=324000 ended=True score=14-13 flow=Screen#3 analyticsIncomplete=False analyticsThrough=324000 applied=0 refused=0
+13:34:26.459 f490431 L FREEZE viewTickStable=True flow=Screen#3 activeRoots=1
+13:34:26.461 f490431 L REPORT flow=Screen#4
+13:34:26.465 f490431 L RETURN flow=Screen#1 hasMatch=False activeRoots=0 viewTick=0 reportAvailable=False
+13:34:26.513 f490431 L SECOND start=True attachment=2 flow=Screen#3 activeRoots=1 roots=2 reportAvailable=False
+13:34:31.401 f490731 L SECOND playing viewTick=293 roots=1 activeRoots=1 rejected=False
+13:34:31.416 f490731 DONE

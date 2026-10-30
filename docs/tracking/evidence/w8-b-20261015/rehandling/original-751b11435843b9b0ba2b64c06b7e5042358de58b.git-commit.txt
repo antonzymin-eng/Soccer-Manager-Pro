@@ -1,0 +1,6 @@
+tree a24a4855b6daddd13fac128b0d9aa049438ac487
+parent fff7cf5bac854f52d6e1124df75ea10c5e0947ed
+author Codex <codex@openai.com> 1792190003 +0100
+committer Codex <codex@openai.com> 1792190003 +0100
+
+fix(keeper): avoid own-release hand attempts and discard stale fouls

@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-07-27  [v1.10]
+// Modified: 2026-10-15 (W8 B hand-control takeover)
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -92,6 +92,17 @@ namespace TacticalDirector.ShotMechanics
         /// Only meaningful after IsIdle returns true following a shot that was started.
         /// </summary>
         public ShotResult LastResult => _lastResult;
+
+        /// <summary>W8 B host handover before Resolve executor updates. A hand claim supersedes
+        /// an unstruck foot shot. No ShotCancelledEvent: that event remains tackle-interrupt-only.</summary>
+        public bool CancelForHandControl()
+        {
+            if (_state != ShotExecutionState.Windup && _state != ShotExecutionState.Contact)
+                return false;
+            _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
+            _state = ShotExecutionState.Idle;
+            return true;
+        }
 
         // ── Constructor ──────────────────────────────────────────────────────────────
 
@@ -495,9 +506,14 @@ namespace TacticalDirector.ShotMechanics
             // §4.7.1 permanently restricts ShotCancelledEvent to WINDUP tackle interrupts only.
             // FM-03 is CONTACT-phase possession loss; ShotCancelReason must NOT get PossessionLost.
             // Stage 1: if notification is needed, add a separate PossessionLostEvent channel.
+            // W2 makes CONTACT-time possession loss an ordinary football event: a challenge can land
+            // after the final WINDUP poll but before this tick's CONTACT executes. The shot still
+            // cancels because the agent no longer owns the ball; only the diagnostic severity changes.
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
-                Debug.LogError($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT.");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[ShotExecutor] FM-03: Agent {_request.AgentId} lost possession before CONTACT — shot cancelled.");
+#endif
                 _lastResult = new ShotResult { Outcome = ShotOutcome.Cancelled, ContactFrame = -1 };
                 _state = ShotExecutionState.Idle;
                 return;
@@ -566,6 +582,7 @@ namespace TacticalDirector.ShotMechanics
 }
 
 #region VersionHistory
+// | 1.12    | 2026-10-15 | —      | W8 B host can interrupt a pending foot shot when a genuine hand claim takes control; no tackle event. |
 // | Version | Date       | Author | Notes                                                                            |
 // | 1.0     | 2026-05-27 | —      | Initial implementation.                                                          |
 // | 1.1     | 2026-05-28 | —      | M-1: Removed unused matchTime param from AdvanceWindup. L-1: var→Vector3 explicit. |
@@ -618,4 +635,7 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        | and CONTACT assembles finalVelocity = finalDirection × kickSpeed per §3.5.7/§3.9    |
 // |         |            |        | step 9 — the former cos/sin re-derivation discarded finalDirection.z, leaving the   |
 // |         |            |        | vertical half of the placement/error model inert. FM-04a/FM-04 guards unchanged.    |
+// | 1.11    | 2026-09-28 | —      | FM-03 closeout: CONTACT-time possession loss is an ordinary active-W2 cancellation. |
+// |         |            |        | Diagnostic severity LogError → development-only LogWarning; Cancelled outcome,      |
+// |         |            |        | event semantics are unchanged.                                                      |
 #endregion

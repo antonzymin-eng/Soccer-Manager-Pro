@@ -1,6 +1,6 @@
 // File:     src/season-save/BoardObjective.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, Appendix B row 11, FR-SN-014, KD-6;
 //           Code Standards #20
@@ -39,11 +39,21 @@ namespace TacticalDirector.SeasonSave
         /// Whether <paramref name="position"/> satisfies this objective (a lower position number is
         /// better). A pure predicate — evaluating it never mutates the objective (FR-SN-015).
         /// </summary>
-        public bool IsMetBy(int position) => position <= TargetPositionOrBetter;
+        public bool IsMetBy(int position)
+        {
+            if (position <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(position), position, "League positions are 1-based and must be positive.");
+            }
+
+            return position <= TargetPositionOrBetter;
+        }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0).                                   |
+// | 1.1     | 2026-09-08 | —      | Refuse non-positive positions at objective evaluation.             |
 #endregion

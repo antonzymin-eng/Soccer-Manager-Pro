@@ -1,6 +1,6 @@
 // File:     src/season-save/BoardState.cs
 // Created:  2026-07-25
-// Modified: 2026-07-27
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.5 step (b), Appendix B row 11, FR-SN-014/015, KD-6;
 //           Code Standards #20
@@ -41,6 +41,12 @@ namespace TacticalDirector.SeasonSave
         /// is outside <c>[0, JobSecurityScale]</c>.</exception>
         public BoardState(BoardObjective objective, int jobSecurityPerMille)
         {
+            if (objective.TargetPositionOrBetter <= 0)
+            {
+                throw new System.ArgumentException(
+                    "Board objective must be constructed and carry a positive target.", nameof(objective));
+            }
+
             if (jobSecurityPerMille < 0 || jobSecurityPerMille > SeasonLoopConstants.JobSecurityScale)
             {
                 throw new System.ArgumentOutOfRangeException(
@@ -132,4 +138,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | model would have moved the reported verdict and IsOnTrack while    |
 // |         |            |        | leaving the job-security consequence on the old rule — silently.   |
 // |         |            |        | One predicate now drives verdict, running read, and penalty.       |
+// | 1.3     | 2026-09-08 | —      | Reject default/unconstructed board objectives at composition.      |
 #endregion

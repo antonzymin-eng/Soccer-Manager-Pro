@@ -1,5 +1,14 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-10-16 (owner-approved re-handling fix)
+// Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
+// Modified: 2026-10-15 (Match Flow §6.3: schema v25, save format v3, Law 3 windows)
+// Modified (prior): 2026-09-26 (W8 B — SNAPSHOT_SCHEMA_VERSION 23 -> 24 for #5 goalkeeper-distribution execution state)
+// Modified: 2026-09-22 (wiring backlog W3 — SNAPSHOT_SCHEMA_VERSION 22 -> 23 for the per-GK ClaimIntent payload + active latch)
+// Modified: 2026-09-21 (foul/card preregistration review — FoulCooldownTicks documentation corrected for post-W2 asymmetry: collision candidates obey the gate; decided tackle fouls bypass it but re-arm it; value unchanged)
+// Modified: 2026-09-21 (foul/card preregistration review — RedCardProbability documentation corrected: the ~0.25/90 target is total dismissals, not a direct straight-red-band 0.25/22 ratio; value unchanged)
+// Modified: 2026-09-16 (W2 production activation — TackleContactRadiusM now defaults to LooseBallPickupRadiusM after paired post-W6 evidence; the durable <= reclaim-radius invariant is unchanged)
+// Modified: 2026-09-11 (wiring backlog W5 — SNAPSHOT_SCHEMA_VERSION 21 -> 22 for the per-team latest opposing-pass trigger event)
 // Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
 //           MatchEngine.cs's card-issuing call site (MatchEngine.cs:5286) WAS repointed onto
 //           FoulOrdinalNone, by the SAME DAY's later "#44 AR round 5, L3" pass on MatchEngine.cs — so
@@ -290,7 +299,29 @@ namespace TacticalDirector.MatchEngine
         /// that a challenge was made. Dropping the cooldown would let every defender re-challenge
         /// immediately after a restore, diverging on the very next stride and in the direction of MORE
         /// tackles. The eight W2 diagnostic counters are excluded; the proof is at the write site.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 21;
+        /// <para>v22 (wiring backlog W5 — pressing triggers) appends one optional latest
+        /// <c>PassAttemptEvent</c> per pressing team. #13's production consumer reads only
+        /// <c>PassEventRing.TryGetLatest</c>; the engine-owned rings are private, so older
+        /// overwritten/history entries cannot affect future production behaviour. The full latest event
+        /// is retained exactly. Without this block, a save
+        /// between pass CONTACT and the next 10 Hz pressing stride would restore an empty ring and
+        /// silently suppress the BACKWARD_PASS trigger.</para>
+        /// <para>v23 (wiring backlog W3 — goalkeeper cross claims) appends the per-GK
+        /// <c>ClaimIntent</c> payload plus its active latch to the existing goalkeeper block. The claim
+        /// is committed at 10 Hz but its reach envelope remains authoritative across intervening 60 Hz
+        /// frames; serializing the latch + locked target is therefore required for mid-episode restore
+        /// determinism.</para>
+        /// <para>v24 (W8 B — goalkeeper distribution) appends the dedicated #5 executor mode, request,
+        /// effective target, pending-feedback latch and terminal feedback to every serialized
+        /// <c>PassExecutorState</c>. These values persist across windup and between terminal execution and
+        /// host feedback consumption, so omitting them would either restart an ordinary pass mode or lose
+        /// the terminal outcome after restore. This bump adds no RNG stream, domain tag, draw site or
+        /// draw-order change; matches exercising the new block intentionally move the world-state digest.</para>
+        /// <para>v26 (live W8 B) adds the per-keeper accepted #5 distribution wait latch. The v24
+        /// request/feedback state is reused; schema mismatch remains a fail-loud load refusal.</para>
+        /// <para>v27 adds own-release handling history, a queued offence/contact point and the
+        /// indirect-restart taker. No save-file format change.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 27;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -311,7 +342,7 @@ namespace TacticalDirector.MatchEngine
         /// <c>buildHash</c> string between <c>Cursor.PhaseOrdinal</c> and the fingerprint-present flag.
         /// KD-1 stands — a v1 blob is refused, not migrated.
         /// </para></summary>
-        public const uint MATCH_SAVE_FORMAT_VERSION = 2;
+        public const uint MATCH_SAVE_FORMAT_VERSION = 3;
 
         /// <summary>[FIXED] Regulation match length, minutes (Laws of the Game — two 45-minute
         /// halves). Stage 0 models no stoppage time and no extra time; the engine's match-length
@@ -320,8 +351,8 @@ namespace TacticalDirector.MatchEngine
         /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
         public const int MATCH_LENGTH_MINUTES = 90;
 
-        /// <summary>[FIXED] Seconds a goalkeeper may control the ball before releasing it (Laws of the
-        /// Game, Law 12). A rule of the sport, not a tunable — see <see cref="GkMaxHoldTicks"/>.</summary>
+        /// <summary>[FIXED] Inherited keeper-possession backstop retained at six seconds by W8 B.
+        /// This is not current Law 12; C owns the hand-offence / feet-safeguard split.</summary>
         public const float GK_MAX_HOLD_SECONDS = 6f;
 
         /// <summary>[FIXED] Six-yard-box depth from the goal line (Laws of the Game §1 — the goal
@@ -334,6 +365,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Maximum substitutions permitted per team per match (current IFAB
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
+
+        /// <summary>[FIXED] Law 3, maximum substitution windows during play for each team.
+        /// Before kickoff and at the second-half kickoff, substitutions are free windows.</summary>
+        public const int MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3;
 
         /// <summary>
         /// [FIXED] Sentinel for "no player identity is known for this agent id"
@@ -626,11 +661,8 @@ namespace TacticalDirector.MatchEngine
                   * TacticalDirector.DeterministicSim.DeterministicSimConstants.PHYSICS_TICK_HZ);
 
         /// <summary>
-        /// [GT] Ticks after a forced goalkeeper release during which THAT keeper may not be selected as the
-        /// loose-ball collector. Without it the keeper re-collects the ball it has just put down on the very
-        /// next tick and the stall re-arms; with it the ball falls to the nearest outfielder, which is the
-        /// shape of a throw-out. Long enough for a covering defender to close, short enough that the ball is
-        /// not abandoned. Config key [match-engine] GkReleaseCooldownTicks.
+        /// [GT] Legacy forced-release cooldown bookkeeping. B preserves this value and existing
+        /// collection eligibility; activating or retiring an exclusion requires a later measured change.
         /// </summary>
         public static readonly int GkReleaseCooldownTicks =
             Config.GetInt("match-engine", "GkReleaseCooldownTicks", 120);
@@ -658,32 +690,30 @@ namespace TacticalDirector.MatchEngine
         /// — "close enough to think about tackling him" — where this is a CONTACT distance: close
         /// enough to get a foot on the ball.
         ///
-        /// <para>Measured to the ball rather than to the carrier because possession at Stage 0 is a flag
-        /// and not a kinematic constraint (backlog W6): the W2 census found carrier and ball more than a
-        /// metre apart in 12% of defending episodes.</para>
+        /// <para>Measured to the ball rather than to the carrier because contact is with the ball.
+        /// Before W6, the W2 census also found carrier and ball more than a metre apart in 12% of
+        /// defending episodes; W6 subsequently made controlled possession a kinematic constraint.</para>
         ///
-        /// <para><b>It MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and that is a correctness
+        /// <para><b>It MUST be greater than zero and MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and those are correctness
         /// constraint rather than a taste.</b> A <c>BALL_LOOSE</c> outcome leaves the ball where it lies
         /// and expects the ordinary loose-ball paths to contest it — but <c>RunLooseBallPickup</c> needs
         /// someone within <c>LooseBallPickupRadiusM</c> and <c>RunFirstTouch</c> needs the ball MOVING
         /// and approaching a receiver. A stationary ball with nobody inside the pickup radius satisfies
         /// neither, so it simply sits there.</para>
         ///
-        /// <para><b>SHIPPED AT 0 — THE CHALLENGE IS DISABLED BY DEFAULT</b>, pending backlog W6. Not
-        /// caution and not a tuning choice: with the challenge live, <c>sim_match_engine_inposs_gate</c>
-        /// collapses on one scenario seed (0.501 pooled against a 0.70 bound) after as few as THREE
-        /// decisive tackles — a stall, not a rate effect. The wedge is not isolated; the leading
-        /// candidate is W6, where possession is a flag and the ball is unattached, so the two reclaim
-        /// paths are mutually exclusive and a ball between them is reclaimed by nobody. A tackle is the
-        /// first mechanic that deliberately creates a contested loose ball, so it is the first thing to
-        /// fall into that gap.
+        /// <para><b>ACTIVATED 2026-09-16 AFTER THE POST-W6 PAIRED CONTROL.</b> The prior
+        /// zero default was a correctness quarantine for the pre-W6 possession stall, not a tuning
+        /// choice. On exact production head <c>e4335f7f</c>, the governed same-head/same-seed run
+        /// <c>35096793576</c> measured the armed leg at 0.983/0.983 and 0.985/0.985, while the
+        /// disarmed control reproduced the blocker on one seed at 0.530/0.530. The historical wedge
+        /// is therefore closed at the intended current reach. This activates the mechanism; it does
+        /// not calibrate its outcome probabilities or cooldown.</para>
         ///
-        /// <para>Disabled rather than held red because this predicate is the ONLY detector of the
-        /// 0.24-class possession collapse, and W4/W12 land on top of this branch: a predicate held red
-        /// on an un-isolated cause can no longer catch a NEW regression of the same class, which is the
-        /// ERR-030-014 failure mode. Arming is this one constant, or
-        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> for a test. Everything downstream of the
-        /// challenge is live and locked — the #41 FR-MD-027 posture exactly.</para>
+        /// <para>The default inherits <see cref="LooseBallPickupRadiusM"/> rather than embedding the
+        /// current 1.0 m value as a second literal. Config may still override the contact radius, and
+        /// the consuming path continues to fail loudly if it exceeds the reclaim radius.
+        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> remains a measurement/test seam, not the
+        /// production activation path.</para>
         ///
         /// <para><b>This shipped wrong once and the gate caught it.</b> The value was briefly 2.5 m,
         /// re-derived from #14 §3.6.1 defining COMMIT as a *lunge*. That reasoning conflated how far a
@@ -698,7 +728,7 @@ namespace TacticalDirector.MatchEngine
         /// Config key [match-engine] TackleContactRadiusM. UN-CALIBRATED.
         /// </summary>
         public static readonly float TackleContactRadiusM =
-            Config.GetFloat("match-engine", "TackleContactRadiusM", 0.0f);
+            Config.GetFloat("match-engine", "TackleContactRadiusM", LooseBallPickupRadiusM);
 
         /// <summary>
         /// [GT] AI strides (10 Hz) a player waits after making a challenge before he can make another.
@@ -750,7 +780,10 @@ namespace TacticalDirector.MatchEngine
         /// [GT] Probability band width [0,1) for a straight red card on a WHISTLED foul (design note §3).
         /// Read from the rescaled remainder of the single <c>match-flow.card-severity</c> draw that also
         /// decided the call (KD-F2): <c>[0, Red)</c> = straight red, <c>[Red, Red+Yellow)</c> = yellow,
-        /// else no card. Set from the real-football ratio ~0.25 reds per ~22 fouls (KD-F5).
+        /// else no card. The football ~0.25-per-90 target governs TOTAL dismissals, which also include
+        /// second-yellow promotions; it is therefore not a direct `0.25 / 22` derivation for this
+        /// straight-red-only band. The current 0.011 value is retained pending the source-complete
+        /// foul/card recalibration (foul-card-w3-w9-preregistration.md §3.1 / KD-F5 v1.3).
         /// Config key [match-engine] RedCardProbability.
         /// </summary>
         public static readonly float RedCardProbability = Config.GetFloat("match-engine", "RedCardProbability", 0.011f);
@@ -763,11 +796,13 @@ namespace TacticalDirector.MatchEngine
         public static readonly float YellowCardProbability = Config.GetFloat("match-engine", "YellowCardProbability", 0.16f);
 
         /// <summary>
-        /// [GT] Ticks a WHISTLED foul suppresses further foul detection (design note §3) — a global
-        /// debounce so one sustained tangle cannot be given twice. 180 ticks = 3 s at 60 Hz, which is
-        /// about how long the restart itself takes with the players still gathered; the previous 1 s was
-        /// thin. A waved-on candidate arms nothing (KD-F3), so this never suppresses a genuine foul that
-        /// follows a no-call. Config key [match-engine] FoulCooldownTicks.
+        /// [GT] Collision/referee-source foul debounce in ticks (design note §3). Any APPLIED foul
+        /// arms/re-arms the 180-tick value, but post-W2 production is asymmetric: the collision
+        /// <c>FROM_BEHIND</c> consumer checks the remaining cooldown while an already-decided tackle
+        /// foul does not, so this is not a global foul suppressor. It prevents repeated collision-source
+        /// calls from one sustained tangle; decided W2 tackle fouls may still be applied during the
+        /// interval and then re-arm it. A waved-on collision candidate arms nothing (KD-F3).
+        /// Config key [match-engine] FoulCooldownTicks.
         /// </summary>
         public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 180);
 
@@ -1067,4 +1102,26 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | FoulOrdinalNone XML doc, both of which still claimed the call     |
 // |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
 // |         |            |        | change in this file.                                              |
+// | 1.36     | 2026-09-11 | —      | W5: SNAPSHOT_SCHEMA_VERSION 21 -> 22; append latest opposing PassAttemptEvent per pressing team so the newly-live backward-pass trigger survives save/restore. |
+// | 1.37    | 2026-09-16 | —      | W2 production activation: TackleContactRadiusM fallback now inherits LooseBallPickupRadiusM; durable contract is > 0 and <= reclaim radius; outcome/cooldown GTs unchanged. |
+// | 1.38    | 2026-09-21 | —      | Foul/card preregistration review, documentation only: corrected   |
+// |         |            |        | RedCardProbability's stale 0.25/22 rationale. The football 0.25/90|
+// |         |            |        | target is total dismissals; this constant is the straight-red-only |
+// |         |            |        | band and second-yellow promotions contribute separately. Value     |
+// |         |            |        | remains 0.011; no runtime/schema/RNG/GT behavior change.            |
+// | 1.39    | 2026-09-21 | —      | Foul/card preregistration review, documentation only: corrected   |
+// |         |            |        | FoulCooldownTicks' stale "global debounce" description for W2.    |
+// |         |            |        | Collision FROM_BEHIND candidates obey the cooldown; decided tackle |
+// |         |            |        | fouls bypass the gate but re-arm it. Value remains 180; no runtime, |
+// |         |            |        | schema, RNG, or gameplay-[GT] behavior change.                      |
+// | 1.40    | 2026-09-22 | —      | Wiring backlog W3 (PR #439): SNAPSHOT_SCHEMA_VERSION 22 -> 23.     |
+// |         |            |        | v23 appends the per-GK ClaimIntent payload plus its active latch   |
+// |         |            |        | to the goalkeeper block for mid-episode restore determinism. No    |
+// |         |            |        | [GT] value changes. Row added at the #439 close-out (omitted when  |
+// |         |            |        | the bump landed).                                                  |
+// | 1.41    | 2026-09-26 | —      | W8 B dormant #5 state: SNAPSHOT_SCHEMA_VERSION 23 -> 24. v24 appends per-agent goalkeeper-distribution mode/request/effective-target/pending-feedback/terminal-feedback state. No RNG stream/domain/draw-site/order or gameplay [GT] change. |
+// | 1.42    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION 24 → 25 (pending queue, next sequence, window counts); MATCH_SAVE_FORMAT_VERSION 2 → 3 (off-tick overlay); new [FIXED] MAX_SUBSTITUTION_WINDOWS_PER_TEAM = 3 (Laws of the Game, Law 3). |
+// | 1.43 | 2026-10-15 | — | W8 B accepted-distribution wait latch: snapshot schema 25 → 26. |
+// | 1.44 | 2026-10-15 | — | Comment-only: distinguish retained B stall bookkeeping from current Law 12; values and tags unchanged. |
+// | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 #endregion

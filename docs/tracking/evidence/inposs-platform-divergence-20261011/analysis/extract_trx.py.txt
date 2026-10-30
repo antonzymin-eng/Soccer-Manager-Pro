@@ -1,0 +1,10 @@
+import sys, xml.etree.ElementTree as ET
+ns={'t':'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+path, name, out = sys.argv[1], sys.argv[2], sys.argv[3]
+r=ET.parse(path).getroot()
+for u in r.iter('{%s}UnitTestResult'%ns['t']):
+    if u.get('testName','').endswith(name):
+        so=u.find('.//t:StdOut',ns)
+        txt=so.text if so is not None else ''
+        open(out,'w',encoding='utf-8',newline='\n').write(txt)
+        print(u.get('outcome'), u.get('duration'), len(txt.splitlines()))

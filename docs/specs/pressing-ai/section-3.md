@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** June 15, 2026 (v0.4 — AR-3 implementation-review frame correction. ERR-013-009: §3.1.2 `BACKWARD_PASS` dotted against `attackingDirection` (the pressing team's) instead of the possessing team's `-attackingDirection`, firing on the possessing team's forward pass (home/away inversion class); pseudocode + worked example corrected, own-team-passer guard added. ERR-013-010: §3.4 `receiverProgressionGain` had the same inversion; formula + worked example corrected to `-attackingDirection`. Zone/third frames (§3.8/§3.9) unchanged — those correctly use the pressing team's `attackingDirection`.)
-**Version:** 0.4
+**Last Updated:** September 11, 2026 (v0.5 — ERR-013-011: disambiguates BACKWARD_PASS recency across the 60 Hz EventBus and 10 Hz tactical loop, including AI-before-Resolve/Events order and discrete-event debounce.)
+**Version:** 0.5
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -58,7 +58,8 @@ The `PassAttemptEvent` payload (FR-10) contains `AgentID`,
 position to the event's `TargetPosition`:
 
 ```
-e = mostRecentPassAttemptEventThisTick
+e = mostRecentOpposingPassAttemptEventPublishedSincePreviousTacticalEvaluation
+# At AI physics tick N: require N-AI_PHASE_STRIDE <= e.Tick < N
 passerPosition = perception.agents[e.AgentID].position
 passDir = normalize((e.TargetPosition - passerPosition).xy)
 ballCarrierForward = -attackingDirection          // possessing team attacks the opposite goal
@@ -85,6 +86,19 @@ in pitch X), consistent with the §3.8/§3.9 zone frame.
 > negates accordingly and guards out own-team passers.
 
 **Trigger origin:** the passer `AgentID` from the event.
+
+> **ERR-013-011 (clock-domain / event-pulse correction, 2026-09-11).** `PassAttemptEvent.Tick`
+> is the authoritative 60 Hz physics tick stamped by #17, while #13 executes at 10 Hz. AI runs
+> before Resolve/Events, so at an AI evaluation on physics tick `N`, the eligible pass interval is
+> `[N-AI_PHASE_STRIDE, N)`. The lower bound is inclusive because an event published on the prior
+> stride-boundary tick occurred after that tick's AI read; the upper bound is exclusive because
+> current-tick Resolve/Events has not happened yet. Implementations MUST carry these 60 Hz bounds
+> separately from the 10 Hz tactical `TickIndex`; the two clocks MUST NOT be compared directly.
+>
+> `BACKWARD_PASS` is a discrete event but §3.2 requires `TRIGGER_DWELL_TICKS` tactical heartbeats.
+> A qualifying event starts dwell on first observation and remains logically raw-true only until
+> that already-started dwell reaches the threshold; it does not require a second pass. After commit,
+> ordinary release applies. The same retained ring event cannot start another dwell later.
 
 **Worked example (corrected).** Pressing team attacks `+X`;
 `attackingDirection = (+1, 0)`, so the possessing team's forward is
@@ -147,13 +161,12 @@ press target.
 **Trigger origin:** the weakest qualifying receiver (lowest
 `FirstTouch`); EntityId ascending as terminal tie-break.
 
-### 3.1.5 One-Tick Latency by Design
+### 3.1.5 One-Tactical-Evaluation Latency by Design
 
-Triggers fire on the tick **after** the originating event is
-visible in the #7 perception snapshot. Perception filtering
-already enforces this for opponent-side events per #7 §3.7
-snapshot semantics; #13 inherits the latency without adding its
-own.
+For `BACKWARD_PASS`, #5 publishes at CONTACT in Resolve and #17 dispatches in Events, both after
+that physics tick's AI phase. The first legal #13 consumer is therefore the next 10 Hz tactical
+heartbeat under the `[N-AI_PHASE_STRIDE, N)` rule in §3.1.2. Perception-derived triggers may also
+inherit #7 snapshot latency; #13 does not conflate that with the EventBus physics-tick clock.
 
 ## 3.2 Trigger Debounce (Hysteresis)
 
@@ -177,6 +190,12 @@ foreach (flag in TriggerFlags) {
 }
 committedFlag[flag] = (dwellCounter[flag] >= TRIGGER_DWELL_TICKS)
 ```
+
+**Discrete-event rule (`BACKWARD_PASS`).** When a qualifying pass from §3.1.2 starts dwell, that
+already-started dwell is carried raw-true only until it reaches `TRIGGER_DWELL_TICKS`; the ring
+event itself does not need to remain in the next stride window. The latch MUST NOT restart after
+commit from the same retained event. Once committed, `TRIGGER_RELEASE_TICKS` controls release unless
+a new qualifying pass enters a later window.
 
 `TRIGGER_DWELL_TICKS = 2 [GT]` (200 ms) — long enough to filter
 single-tick noise; short enough to feel responsive.
@@ -635,3 +654,4 @@ effects and are themselves authoritative simulation state under
 | 0.2 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | PASS-1 adversarial fix pass. AR-S1-H1: `#5 §2 FR-08` → `FR-10`. AR-S1-H2: §3.1.2 `BACKWARD_PASS` rewritten to use `TargetPosition - passerPosition` direction; worked example updated. AR-S1-H3: §3.0 preamble added (fatigue/stamina boundary); §3.3 eligibility constraint 2 corrected from `Stamina ≤ PRESS_FATIGUE_CEILING` → `Fatigue < PRESS_FATIGUE_CEILING`; §3.7 removed erroneous "stamina is complement of fatigue" sentence. AR-S1-H5: §3.4 cover-shadow tie-break tolerance added (`SPACING_EPSILON_M2`). AR-S1-H6: §3.4 `r.perceivedPressure` replaced with `geometricPressureOn(r)` (locally computed from own-team positions); `receiverProgressionGain` formula and worked example added; `THREAT_PRESSURE_NORMALIZER = 3.0 [GT]` introduced. AR-S1-M1: §3.8 `PRESS_ZONE_X_MAX` dead-code noted; "high-press default" label corrected. AR-S1-M4: §3.1.4 reviewer aside removed; clean statement added. AR-S1-M6: §3.9 invariant (2) F5-immediate path documented; backline-floor breach no longer mischaracterised as cover-shadow demotion. L1: §3.1.5 #7 §3.7 snapshot citation added. |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | APPROVED gate: all `[EST]` occurrences for `TRIGGER_DWELL_TICKS`, `TRIGGER_RELEASE_TICKS`, `ROLE_DWELL_TICKS`, `INTERCEPT_LOOKAHEAD_TICKS` promoted to `[GT]` (Appendix A.1–A.4 derivations complete; §9.3 (d) precondition DONE). |
 | 0.4 | June 15, 2026 | — | AR-3 implementation-review frame correction. ERR-013-009: §3.1.2 `BACKWARD_PASS` dotted against `attackingDirection` (the pressing team's) instead of the possessing team's `-attackingDirection`, firing on the possessing team's forward pass (home/away inversion class); pseudocode + worked example corrected, own-team-passer guard added. ERR-013-010: §3.4 `receiverProgressionGain` had the same inversion; formula + worked example corrected to `-attackingDirection`. Zone/third frames (§3.8/§3.9) unchanged — those correctly use the pressing team's `attackingDirection`. |
+| 0.5 | September 11, 2026 | OpenAI | ERR-013-011: separate 60 Hz EventBus recency from 10 Hz heartbeat; define `[N-AI_PHASE_STRIDE,N)` acceptance and bounded discrete-event dwell. |

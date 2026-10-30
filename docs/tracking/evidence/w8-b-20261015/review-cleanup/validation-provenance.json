@@ -1,0 +1,73 @@
+{
+  "parentCommit": "353b2138224a39280d55269bcb4cf2248735b670",
+  "testedSrcTree": "5a2be769f3986c9a38fe75707f99c55d2ac9e5fe",
+  "sourceStatus": "Uncommitted review cleanup; exact tested source tree and file hashes recorded. Only evidence/docs follow the tests.",
+  "sourceSha256": {
+    "src/goalkeeper-mechanics/GoalkeeperMechanics.cs": "dd229286ec53db6770472f1c8fd51399a9672de836501e59f4bea6966b3443e0",
+    "src/goalkeeper-mechanics/GoalkeeperStateMachine.cs": "1fbf9dd44aa357a2d2a41994bddb033ab5bf29b3f67a69cb686f7c46793bfc11",
+    "src/goalkeeper-mechanics/GoalkeeperTelemetry.cs": "fe30120a886752c89aaf2d5884a864731cdc13e7b521c90cf0fb1cdd83b40b0d",
+    "src/match-engine/MatchEngine.cs": "8965d90c3f95296559d5311f6de5fa9d669d228e4cc40e8728f798501b447654"
+  },
+  "sdk": "8.0.426",
+  "configuration": "Debug",
+  "runs": [
+    {
+      "file": "review-goalkeeper.trx",
+      "counters": {
+        "total": "126",
+        "executed": "99",
+        "passed": "99",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-10-16T21:34:33.1755095+00:00",
+        "queuing": "2026-10-16T21:34:33.1755096+00:00",
+        "start": "2026-10-16T21:34:32.0602950+00:00",
+        "finish": "2026-10-16T21:34:33.2822506+00:00"
+      }
+    },
+    {
+      "file": "review-match-engine.trx",
+      "counters": {
+        "total": "165",
+        "executed": "164",
+        "passed": "164",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "times": {
+        "creation": "2026-10-16T21:35:27.3241972+00:00",
+        "queuing": "2026-10-16T21:35:27.3241972+00:00",
+        "start": "2026-10-16T21:35:26.3949812+00:00",
+        "finish": "2026-10-16T21:35:31.3285302+00:00"
+      }
+    }
+  ],
+  "analysis": "Both arms use one root analyzer each; 25 derived arm CSV/JSON files remain byte-identical. Root keeper reconciliation also passes.",
+  "scope": "No new gameplay measurement. Law enforcement deferred and remains open. Final-head full CI and pinned Unity are required.",
+  "evidenceChecks": "17 tests pass after regenerating the manifest; the preliminary stale-manifest failure is retained separately.",
+  "precommitAttempt": "Initial normal hook exited 1 during Restore; retry with local socket access progressed to tests but exceeded the fixed 60-second wall-clock budget. Neither is a passing pre-commit/full-policy invocation. Local commit uses a per-command hooksPath override after 99 goalkeeper + 164 W8 checks pass; fresh final-head CI is required."
+}

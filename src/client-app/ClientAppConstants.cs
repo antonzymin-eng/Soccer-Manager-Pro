@@ -1,9 +1,10 @@
 // File:     src/client-app/ClientAppConstants.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-10-27
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen-catalogue home, owner
-//           decision 2026-08-07), UI / Client Framework #38 §3.2 (FR-UI-010), Code Standards #20
+//           decision 2026-08-07), §5-P7 (career screens, save slots), UI / Client Framework #38
+//           §3.2 (FR-UI-010), Code Standards #20
 // Purpose:  Constant catalogue for the client-app assembly: the four screens' [FIXED] identity values.
 //           Presentation-only — nothing here reaches the simulation, the snapshot digest, or any
 //           determinism surface.
@@ -41,6 +42,34 @@ namespace TacticalDirector.ClientApp
         /// <summary>[FIXED] Post-Match Report screen identity (final score + stats).</summary>
         public const int SCREEN_ID_POST_MATCH_REPORT = 4;
 
+        /// <summary>[FIXED] Career Home / Season screen identity — the career context root (§5-P7).</summary>
+        public const int SCREEN_ID_CAREER_HOME = 5;
+
+        /// <summary>[FIXED] New Career screen identity — club choice over a generated league (§5-P7 D-P7-1).</summary>
+        public const int SCREEN_ID_NEW_CAREER = 6;
+
+        /// <summary>[FIXED] Load Career screen identity — the save-slot picker (§5-P7 D-P7-2).</summary>
+        public const int SCREEN_ID_LOAD_CAREER = 7;
+
+        /// <summary>
+        /// [FIXED] Number of manual career save slots, beside the one autosave slot (owner product
+        /// decision D-P7-2, October 18, 2026). A product promise, not a balance dial.
+        /// </summary>
+        public const int CAREER_MANUAL_SLOT_COUNT = 3;
+
+        /// <summary>
+        /// [FIXED] The <c>WorldStore</c> manager id a client-started career is created with. Early
+        /// Access has exactly one human manager per career (§5-P7); the value only needs to be stable,
+        /// because it is persisted inside the world blob and a resumed career carries its own.
+        /// </summary>
+        public const int CAREER_MANAGER_ID = 1;
+
+        /// <summary>
+        /// [FIXED] Version of the client-owned career slot sidecar (<c>.slot</c>) text format. v2 adds the
+        /// nested sub-blob format stamp; a v1 sidecar reads as Incompatible (D-10).
+        /// </summary>
+        public const int CAREER_SLOT_META_FORMAT_VERSION = 2;
+
         #endregion
     }
 }
@@ -49,4 +78,8 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-07 | —      | Initial creation: the four [FIXED] screen ids, 0 deliberately  |
 // |         |            |        | unallocated (zero-value safety).                               |
+// | 1.1     | 2026-10-18 | —      | §5-P7: career screen ids 5–7, manual slot count, career        |
+// |         |            |        | manager id, slot sidecar format version.                       |
+// | 1.2     | 2026-10-27 | —      | PR 519 review: CAREER_SLOT_META_FORMAT_VERSION 1 → 2 (sidecar  |
+// |         |            |        | records the nested sub-blob format stamp).                     |
 #endregion

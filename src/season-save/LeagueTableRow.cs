@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueTableRow.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2 (data structures), §3.2 (table update / tie-break),
 //           Appendix B row 10 (byte layout), Appendix D (tie-break worked example), FR-SN-005/007;
@@ -66,8 +66,11 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>An empty row for <paramref name="clubId"/> — a club that has played nothing yet.</summary>
-        public static LeagueTableRow Empty(int clubId) =>
-            new LeagueTableRow(clubId, 0, 0, 0, 0, 0, 0, 0);
+        public static LeagueTableRow Empty(int clubId)
+        {
+            RequireNonNegative(clubId, nameof(clubId));
+            return new LeagueTableRow(clubId, 0, 0, 0, 0, 0, 0, 0);
+        }
 
         /// <summary>
         /// Builds a row from explicit column values, deriving <see cref="GoalDifference"/>. Used by the
@@ -91,6 +94,7 @@ namespace TacticalDirector.SeasonSave
             int clubId, int played, int won, int drawn, int lost,
             int goalsFor, int goalsAgainst, int points)
         {
+            RequireNonNegative(clubId, nameof(clubId));
             RequireNonNegative(played, nameof(played));
             RequireNonNegative(won, nameof(won));
             RequireNonNegative(drawn, nameof(drawn));
@@ -99,11 +103,12 @@ namespace TacticalDirector.SeasonSave
             RequireNonNegative(goalsAgainst, nameof(goalsAgainst));
             RequireNonNegative(points, nameof(points));
 
-            if (won + drawn + lost != played)
+            long outcomeCount = (long)won + drawn + lost;
+            if (outcomeCount != played)
             {
                 throw new System.ArgumentException(
                     $"Incoherent row for club {clubId}: won({won}) + drawn({drawn}) + lost({lost}) = " +
-                    $"{won + drawn + lost}, but played = {played}.",
+                    $"{outcomeCount}, but played = {played}.",
                     nameof(played));
             }
 
@@ -126,36 +131,42 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         public LeagueTableRow WithResult(int scored, int conceded)
         {
-            int won = Won;
-            int drawn = Drawn;
-            int lost = Lost;
-            int points = Points;
+            RequireNonNegative(scored, nameof(scored));
+            RequireNonNegative(conceded, nameof(conceded));
 
-            if (scored > conceded)
+            checked
             {
-                won++;
-                points += SeasonLoopConstants.WinPoints;
-            }
-            else if (scored < conceded)
-            {
-                lost++;
-                points += SeasonLoopConstants.LossPoints;
-            }
-            else
-            {
-                drawn++;
-                points += SeasonLoopConstants.DrawPoints;
-            }
+                int won = Won;
+                int drawn = Drawn;
+                int lost = Lost;
+                int points = Points;
 
-            return new LeagueTableRow(
-                ClubId,
-                Played + 1,
-                won,
-                drawn,
-                lost,
-                GoalsFor + scored,
-                GoalsAgainst + conceded,
-                points);
+                if (scored > conceded)
+                {
+                    won++;
+                    points += SeasonLoopConstants.WinPoints;
+                }
+                else if (scored < conceded)
+                {
+                    lost++;
+                    points += SeasonLoopConstants.LossPoints;
+                }
+                else
+                {
+                    drawn++;
+                    points += SeasonLoopConstants.DrawPoints;
+                }
+
+                return new LeagueTableRow(
+                    ClubId,
+                    Played + 1,
+                    won,
+                    drawn,
+                    lost,
+                    GoalsFor + scored,
+                    GoalsAgainst + conceded,
+                    points);
+            }
         }
 
         /// <summary>
@@ -194,4 +205,6 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): readonly row, derived-on-build    |
 // |         |            |        | GoalDifference, WithResult update, CompareByTieBreak total order.  |
+// | 1.1     | 2026-09-08 | —      | Reject negative club ids and negative per-match goal inputs.       |
+// | 1.2     | 2026-09-08 | —      | Validate outcome totals without overflowing int arithmetic.        |
 #endregion

@@ -309,7 +309,7 @@ body {
 /* ---------- KIT NUMBER ---------- */
 .kit-num {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--display-weight);
   font-size: var(--t-14);
   color: var(--ink-3);
   min-width: 22px;

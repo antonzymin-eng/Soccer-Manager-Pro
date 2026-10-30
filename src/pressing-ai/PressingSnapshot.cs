@@ -1,5 +1,6 @@
 // File:     src/pressing-ai/PressingSnapshot.cs
 // Created:  2026-05-29
+// Modified: 2026-09-11 (ERR-013-011: separate the 10 Hz tactical heartbeat from the 60 Hz EventBus pass window)
 // Modified: 2026-06-28
 // Author:   —
 // Spec:     Pressing AI #13 §4.2, Tactical Instructions #21 §3.4, Code Standards #20
@@ -23,8 +24,20 @@ namespace TacticalDirector.PressingAI
     /// </summary>
     public sealed class PressingSnapshot
     {
-        /// <summary>Monotonically increasing tick index. Used for F1 stale-detection.</summary>
+        /// <summary>Monotonically increasing 10 Hz tactical heartbeat index. Used for F1 stale-detection.</summary>
         public int TickIndex;
+
+        /// <summary>
+        /// Current 60 Hz physics tick at this tactical evaluation, in the same clock domain as
+        /// EventBus-stamped PassAttemptEvent.Tick. Current-tick Resolve/Events has not run yet.
+        /// </summary>
+        public uint PhysicsTick;
+
+        /// <summary>
+        /// Inclusive start of the completed 60 Hz pass-event interval visible at this tactical
+        /// heartbeat. The eligible interval is [PassEventWindowStartTick, PhysicsTick).
+        /// </summary>
+        public uint PassEventWindowStartTick;
 
         /// <summary>World-space ball position (X, Y, Z). Only X and Y are used at Stage 0.</summary>
         public Vector3 BallPosition;
@@ -88,4 +101,5 @@ namespace TacticalDirector.PressingAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                            |
 // | 1.1     | 2026-06-28 | —      | #21 T2 seam: LineOfEngagement routing field (ctor-seeded Standard  |
 // |         |            |        |   = identity; zero-value is VeryLow, hence the explicit seed).     |
+// | 1.2     | 2026-09-11 | —      | ERR-013-011: carry 60 Hz PhysicsTick + inclusive pass-window start separately from 10 Hz TickIndex. |
 #endregion

@@ -24,7 +24,7 @@ Usage: bash tools/dotnet-ci/run-gate.sh [options]
 Options:
   --test-filter <vstest-filter>    Restrict the blocking test set with an explicit VSTest filter.
   --settings <runsettings>         Apply an explicit .runsettings file (used by pre-commit for anchored NUnit selection).
-  --owner-held-red report-only     Exclude the owner-held RED from the blocking pass, then execute and value-verify it separately.
+  --owner-held-red report-only     Exclude configured owner-held REDs from the blocking pass, then execute and value-verify them separately. An empty ledger means there are no held REDs.
   --coverage                       Collect XPlat Code Coverage.
   --coverage-settings <runsettings>  Override the coverage runsettings file for an explicit policy caller.
   --fast                           Skip the separate whole-tree meta/build pass. `dotnet test` still builds the generated solution once, incrementally.
@@ -110,6 +110,10 @@ if [ "$COLLECT_COVERAGE" -eq 1 ] && [ ! -f "$COVERAGE_SETTINGS" ]; then
     echo "ERROR: coverage runsettings file does not exist: $COVERAGE_SETTINGS" >&2
     exit 2
 fi
+if [ "$OWNER_MODE" = "report-only" ] && [ ! -f "$OWNER_HELD_RED" ]; then
+    echo "ERROR: owner-held RED ledger file does not exist: $OWNER_HELD_RED" >&2
+    exit 2
+fi
 
 ledger_names() {
     local ledger="$1"
@@ -141,7 +145,9 @@ append_filter() {
     if [ -z "$FILTER" ]; then
         FILTER="$part"
     else
-        FILTER="$FILTER&$part"
+        # Group both sides before AND-composition so a caller-supplied OR cannot
+        # escape the exclusions that follow it.
+        FILTER="($FILTER)&($part)"
     fi
 }
 
@@ -151,6 +157,12 @@ OWNER_INCLUDE=""
 if [ "$OWNER_MODE" = "report-only" ]; then
     OWNER_EXCLUSION="$(owner_exclusion_filter "$OWNER_HELD_RED")"
     OWNER_INCLUDE="$(owner_include_filter "$OWNER_HELD_RED")"
+    if [ -z "$OWNER_EXCLUSION" ] && [ -z "$OWNER_INCLUDE" ]; then
+        echo "Owner-held RED ledger empty; ordinary sweep runs without owner-held exclusions."
+    elif [ -z "$OWNER_EXCLUSION" ] || [ -z "$OWNER_INCLUDE" ]; then
+        echo "ERROR: owner-held RED ledger produced an inconsistent executable selection." >&2
+        exit 2
+    fi
 fi
 
 FILTER=""
@@ -195,10 +207,25 @@ fi
 if [ -n "$SETTINGS_FILE" ]; then
     TEST_ARGS+=(--settings "$SETTINGS_FILE")
 fi
+COVERAGE_DIR=""
+ORDINARY_RESULTS=""
 if [ "$COLLECT_COVERAGE" -eq 1 ]; then
     COVERAGE_DIR="$ROOT/artifacts/coverage"
+    rm -rf "$COVERAGE_DIR"
     mkdir -p "$COVERAGE_DIR"
-    TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS" --results-directory "$COVERAGE_DIR")
+    TEST_ARGS+=(--collect "XPlat Code Coverage" --settings "$COVERAGE_SETTINGS")
+fi
+if [ "$OWNER_MODE" = "report-only" ]; then
+    if [ "$COLLECT_COVERAGE" -eq 1 ]; then
+        ORDINARY_RESULTS="$COVERAGE_DIR"
+    else
+        ORDINARY_RESULTS="$ROOT/artifacts/ordinary-sweep"
+        rm -rf "$ORDINARY_RESULTS"
+        mkdir -p "$ORDINARY_RESULTS"
+    fi
+    TEST_ARGS+=(--logger trx --results-directory "$ORDINARY_RESULTS")
+elif [ "$COLLECT_COVERAGE" -eq 1 ]; then
+    TEST_ARGS+=(--results-directory "$COVERAGE_DIR")
 fi
 
 echo "── Test (blocking; explicit policy selection applied) ────────────────"
@@ -220,6 +247,7 @@ dotnet test "$SLN" "${TEST_ARGS[@]}"
 QUARANTINE_INCLUDE="$(quarantine_include_filter "$QUARANTINE")"
 if [ -n "$QUARANTINE_INCLUDE" ] && [ "$FAST_MODE" -eq 0 ] && [ -z "$REQUESTED_FILTER" ] && [ -z "$SETTINGS_FILE" ]; then
     echo "── Quarantined tests (report-only; flake ledger only) ────────────────"
+    printf 'VSTest quarantine filter: %s\n' "$QUARANTINE_INCLUDE"
     dotnet test "$SLN" --no-build --no-restore --filter "$QUARANTINE_INCLUDE" || true
 elif [ -n "$QUARANTINE_INCLUDE" ]; then
     echo "── Quarantined report-only run skipped for bounded/selected caller ──"
@@ -232,6 +260,7 @@ if [ "$OWNER_MODE" = "report-only" ] && [ -n "$OWNER_INCLUDE" ]; then
     rm -rf "$OWNER_RESULTS"
     mkdir -p "$OWNER_RESULTS"
     echo "── Owner-held RED (execute separately; exact diagnostics verified) ──"
+    printf 'VSTest owner-held filter: %s\n' "$OWNER_INCLUDE"
     set +e
     dotnet test "$SLN" --no-build --no-restore --filter "$OWNER_INCLUDE" \
         --logger trx --results-directory "$OWNER_RESULTS"
@@ -239,8 +268,9 @@ if [ "$OWNER_MODE" = "report-only" ] && [ -n "$OWNER_INCLUDE" ]; then
     set -e
     python3 "$ROOT/tools/dotnet-ci/verify-owner-held-red.py" \
         --ledger "$OWNER_HELD_RED" \
+        --ordinary-results "$ORDINARY_RESULTS" \
         --results "$OWNER_RESULTS" \
-        --dotnet-exit "$owner_dotnet_exit"
+        --dotnet-exit "$owner_dotnet_exit" 2>&1
 fi
 
 echo "── Gate PASSED ──────────────────────────────────────────────────────"

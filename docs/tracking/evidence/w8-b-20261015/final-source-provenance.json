@@ -1,0 +1,16 @@
+{
+  "sourceCommit": "86a9496e3ced2c71d143b353b64d86c02fbed15b",
+  "srcTree": "74b215f71809d50f483e4ab2cb254692e3c53c75",
+  "sdk": "8.0.426",
+  "runtime": "8.0.32",
+  "configuration": "Debug",
+  "exit": 0,
+  "passed": 164,
+  "times": {
+    "creation": "2026-10-16T01:57:15.6344216+00:00",
+    "queuing": "2026-10-16T01:57:15.6344216+00:00",
+    "start": "2026-10-16T01:57:14.7063754+00:00",
+    "finish": "2026-10-16T01:57:19.4783500+00:00"
+  },
+  "scope": "Final-source W8 policy/handover/observer/schema/clock/possession cases; original full two-seed scenario separately passes in final-focused.trx."
+}

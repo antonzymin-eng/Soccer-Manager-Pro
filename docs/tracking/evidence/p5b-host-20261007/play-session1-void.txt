@@ -1,0 +1,37 @@
+11:53:39.074 f10611 SMOKE hostEnabled=True rendererEnabled=True visualRoots=1 activeRoots=1 generatedChildren=47
+11:53:39.076 f10611 SMOKE ball=Ball(Clone) pos0=(-5.594, 0.432, -27.096)
+11:53:39.094 f10611 A attachBeforeAwake start=True secondStart=False hasMatch=True attachment=1 roots=1 goActive=False
+11:53:39.096 f10611 A afterActivate roots=1 activeRoots=1 rejected=False flow=Screen#3
+11:53:39.122 f10611 B partialFailure thrown=InvalidOperationException: Pitch renderer rejected generated prefab wiring. rejected=True hasMatch=False activeRoots=0 rootsPendingDestroy=1 flow=Screen#2 rendererEnabled=False
+11:53:39.125 f10611 B terminal reuseAttempt=InvalidOperationException
+11:53:39.192 f10611 C start=True hasMatch=True
+11:53:39.263 f10611 D start=True hasMatch=True
+11:53:39.266 f10611 E unattached roots=0 enabled=True
+11:53:39.342 f10611 F start=True roots=1
+11:53:39.343 f10611 PROBE1 done
+11:54:20.972 f11863 SMOKE ballPosNow=(4.179, 0.432, 14.934) moved=True
+11:54:20.974 f11863 B laterFrame roots=0
+11:54:20.974 f11863 A running viewTick=369 hasMatch=True rejected=False
+11:54:20.975 f11863 C beforeDestroy viewTick=505 hasMatch=True
+11:54:20.975 f11863 D beforeCameraDestroy viewTick=2429 hasMatch=True
+11:54:20.976 f11863 E unattached roots=0 enabled=True
+11:54:20.992 f11863 F sameFrame oldHidden=True oldStillExists=True started=True roots=2 activeRoots=1 oldDisposedRejected=True
+11:54:20.993 f11863 PROBE2 done
+11:54:42.910 f11863 C afterDestroy rejected=False hasMatch=True viewEmpty=False
+11:54:42.912 f11863 D afterCameraDestroy rejected=False hasMatch=True rendererEnabled=True roots=1
+11:54:42.912 f11863 F nextFrame oldDestroyed=False roots=2 activeRoots=1 hasMatch=True viewTick=1225
+11:54:42.914 f11863 AUTHORED sceneFieldsIntact=9/9 probeFFieldsIntact=9/9 pitch=True mainCamera=True markerMaterial=AgentMarker
+11:54:42.914 f11863 F disabled rootVisible=False hasMatch=True rejected=False
+11:54:42.915 f11863 F reenabled sameRoot=True rootVisible=False roots=2 hasMatch=True rejected=False
+11:54:42.915 f11863 PROBE3 done
+11:55:13.753 f11863 RUNTIME runInBackground=True playerSettingsRunInBackground=True
+11:55:44.530 f13657 TICKCHECK paused=False aViewTick=369
+11:56:05.309 f14763 C3b afterDestroy goDestroyed=True rejected=True hasMatch=False viewEmpty=True
+11:56:05.311 f14763 D3b afterCameraDestroy camDestroyed=True rejected=True hasMatch=False rendererEnabled=False roots=0
+11:56:05.312 f14763 F3b oldDestroyed=True roots=1 activeRoots=1 hasMatch=True viewTick=6196
+11:56:05.313 f14763 F3b disabled rootVisible=False rootActiveSelf=True hasMatch=True rejected=False
+11:56:05.314 f14763 F3b reenabled sameRoot=True rootVisible=True roots=1 hasMatch=True rejected=False
+11:56:05.314 f14763 PROBE3b done
+11:56:33.686 f16304 ADIAG viewTick=369 ended=False period=FirstHalf hasMatch=True rejected=False inLive=True liveCount=4 rAenabled=True rAactive=True children=1 reportAvailable=False flow=Screen#3
+11:56:33.687 f16304 ADIAG sceneHostEnabled=True
+12:00:54.744 f28612 SESSION1 END (concurrent engines violated #17 §3.2.1 process-static EventBus; A full-time void)

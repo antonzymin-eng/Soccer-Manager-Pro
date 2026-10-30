@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 5: Test Plan
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
+**Last Updated:** October 29, 2026 (v0.3 — ERR-011-021: W8 C hand-control tests; six-second tests retired)
 **Status:** DRAFT
 **Purpose:** Specify unit tests, integration tests, validation
 scenarios, and cross-spec conformance tests for Goalkeeper
@@ -16,13 +17,15 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 
 ### 5.1.1 State machine (§3.1)
 
-- T-5.1.1.1 Every transition exercised (24 transitions from §3.1.1).
+- T-5.1.1.1 Every transition exercised (every row of §3.1.1; 29 rows at section 3 v0.24, including the `HandsOnBall → Recovering` teardown row).
 - T-5.1.1.2 Cycle detection: `Resting → Set → Anticipate → Diving
   → Airborne → Recovering → Set → ...` round-trip.
 - T-5.1.1.3 Deterministic ordering under sequential `ShotExecutedEvent`
   + `RushIntent` arrival in the same tick.
-- T-5.1.1.4 `HandsOnBall → HandsOnBall` (forced release at
-  `GK_HOLD_MAX_TICKS = 60` ticks) verified.
+- T-5.1.1.4 **Retired October 29, 2026 (ERR-011-021).** Former test:
+  `HandsOnBall → HandsOnBall` forced release at `GK_HOLD_MAX_TICKS = 60`
+  ticks. The six-second row no longer exists; the hand-control timeout is
+  covered by §5.1.10.
 - T-5.1.1.5 Invalid transition rejection (e.g. `Resting → Diving`
   blocked).
 - T-5.1.1.6 State invariants: `Airborne` implies `handPathZ > 0`;
@@ -130,16 +133,19 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 
 - T-5.1.8.1 Each `deliveryKind` (Throw / Roll / Kick): release
   height + windup match §3.4.7 anchors.
-- T-5.1.8.2 `PassIntent` mapping correctness (§3.8.4): one-to-one
-  Throw → LowDriven, Roll → GroundRoll, Kick → Lofted.
+- T-5.1.8.2 `GoalkeeperDistributionRequest` mapping correctness (§3.8.3):
+  Throw / Roll / Kick map one-to-one to #5 `GoalkeeperDeliveryVariant`
+  Throw / Roll / Kick. *(Corrected October 29, 2026: the former text named the
+  phantom `PassIntent` LowDriven/GroundRoll/Lofted mapping removed by ERR-011-015.)*
 - T-5.1.8.3 F-05 missing-receiver fallback: `targetReceiverId`
   cleared; `targetPoint` retained; warning telemetry emitted.
 - T-5.1.8.4 F-09 out-of-bounds clamp: `targetPoint` clamped to
   `[0, PITCH_LENGTH_M] × [0, PITCH_WIDTH_M]`.
-- T-5.1.8.5 6-second-rule forced release: `HandsOnBall`
-  duration `≥ GK_HOLD_MAX_TICKS` triggers `Distributing` entry
-  even without `DistributeIntent` (default distribution: ROLL
-  to nearest defender).
+- T-5.1.8.5 **Retired October 29, 2026 (ERR-011-021).** Former test: a
+  `HandsOnBall` duration `≥ GK_HOLD_MAX_TICKS` triggers `Distributing` without
+  `DistributeIntent` (default ROLL to the nearest defender). FR-GK-043 is
+  retired; a hand-control deadline never manufactures a distribution
+  (§3.8.3, T-5.1.10.2).
 
 ### 5.1.9 Failed-save emission (§3.9)
 
@@ -153,6 +159,138 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
   emitted; #3 standard rebound physics resolves contact.
 - T-5.1.9.5 F-10 (range-clamp): `clutchFirmness = 1.5` clamped to
   1.0 with warning telemetry.
+
+### 5.1.10 Hand-control clock and Law-12 offence (§3.8.5; ERR-011-021)
+
+Deterministic contract tests, each mirrored for both defended ends where geometry is involved:
+
+- T-5.1.10.1 The 60 Hz claim frame is recorded at each of the three hand-claim sites (aerial/cross
+  claim, dive-save catch, smother); elapsed 0 / 479 / 480 / 481; a claim landing late within its
+  six-frame tactical cell is still timed from its exact frame. Oracle: no corner at elapsed 0, 479 or
+  480; a corner at 481 when all five predicates hold. The stored start frame is a 64-bit
+  `long` set by #11 and read-only to the engine; the frame domain feeding it is the engine's `int`
+  frame (about 414 days of play, an accepted Stage-0 limit), and storing the frame never narrows.
+- T-5.1.10.2 A CONTACT at elapsed 480 is legal; hand control held into elapsed 481 is sanctioned
+  with no kick, no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`. (a) Production
+  case: a sanction with no pending #5 request produces zero terminals and zero feedback. (b) Defensive
+  case: if a #5 request is still in flight, the sanction cancels it, `ApplyRestart` leaves exactly one
+  `Cancelled` terminal, and the following frame's Resolve drains it with no #11 state change (the keeper
+  is already `Recovering`). In a live match the §3.8.4 admission predicate makes a request in flight at
+  elapsed ≥ 481 unreachable in production, and a snapshot-body restore cannot build it (the restore check rejects it,
+  T-5.1.10.9); (b) builds it only through `TestOnly_` seams (`TestOnly_StartGoalkeeperDistribution`,
+  `TestOnly_SetPassExecutorState`, `TestOnly_SetPhysicsFrame`).
+  A pending distribution reaching CONTACT at elapsed 480 is not cancelled by any pre-executor guard.
+- T-5.1.10.3 Controlled feet possession never becomes a corner, and the feet guard neither inherits
+  nor leaks the hand clock. The engine stall guard is feet-only at C, with no hand exception; it is a
+  non-law guard. (a) A hand episode ends at CONTACT; more than 481 frames after the original claim the
+  same keeper holds the ball at its feet: no corner, and `handControlStartFrame` reads the inactive
+  sentinel. (b) With the feet guard suppressed through a `TestOnly_` seam, feet possession run to
+  elapsed ≥ 481 (measured from the original hand claim and from the hand-to-feet transition): no
+  corner. (c) With the guard enabled, it fires at 360 frames of feet possession and publishes no
+  `RestartAwardedEvent`; its elapsed state resets at the hand-to-feet transition (a 300-frame hand
+  hold followed by feet possession does not fire 60 frames into the feet possession). The hand-to-feet
+  reset has no production path under C (a hand episode ends through teardown); it is a defensive rule
+  tested only through a named `TestOnly_` seam. The existing seams fit: `TestOnly_RestoreGoalkeeperState`
+  stages the hand state and then a non-hand state with the keeper still the possessor, and
+  `TestOnly_GkHoldTicks` with `TestOnly_RunGoalkeeperReleaseRule` observe and drive the guard.
+- T-5.1.10.4 The five-part predicate (§3.8.5), in both `HandsOnBall` and controlled `Distributing`,
+  including retained-possession reject/cancel and an in-progress WINDUP. (a) A unit test of the eligibility
+  function: a positive control with all five predicates true is eligible, in both `HandsOnBall` and
+  controlled `Distributing`; then each of the five predicates false in turn: no corner (for predicate 5,
+  ball at `(−0.30, 34.0)` m not eligible, at `(−0.05, 34.0)` m eligible, and the team 1 mirror).
+  (b) Composed defensive cases. Predicates 2, 3 and 5 can fail at the Resolve slot only through `TestOnly_`
+  state; predicate 5 is structurally implied at Stage 0 (the held ball is clamped to the own goal line
+  before the slot), so its composed form needs a `TestOnly_` ball setter that writes after the
+  reattachment, and none exists (`TestOnly_SetBall` writes before the tick and is overwritten), so one is
+  required. Two composed cases need no new seam. (i) #11 in `Distributing`: build a real accepted request
+  through the producer's accept path, `TestOnly_RunGoalkeeperDistributionProducer` (it runs
+  `CommitDistributeIntent`, `StartGoalkeeperDistributionAtHost` and `AcceptDistribution`), early enough
+  that §3.8.4 admits it; then advance the clock with `TestOnly_SetPhysicsFrame` (it sets the clock without
+  running the executor) past the admitted CONTACT to elapsed 481. Assert one corner at 481, one drained
+  `Cancelled` terminal and no CONTACT. (ii) Retained reject: claim, reject a #5 request through
+  `TestOnly_StartGoalkeeperDistribution` (the reject path of `StartGoalkeeperDistributionAtHost`), keep
+  holding; the corner fires at exactly elapsed 481 from the original claim frame. (c) Predicate 4 is
+  guaranteed by the §3.1.4 early return and is locked by T-5.1.10.8 and T-5.1.10.12(c), not by an isolated
+  composed case.
+- T-5.1.10.5 Only a successful claim sets `handControlStartFrame`. Oracle: across N tactical ticks of
+  holding (`HandsOnBall → HandsOnBall` at 10 Hz), and across a retained #5 reject or a retained cancel
+  (`Distributing → HandsOnBall`), `handControlStartFrame` is unchanged. Bounce/toss has no Stage-0
+  producer and is not a Stage-0 test; the future punt/drop (stop the clock at its earlier hand release,
+  permit a later kick without a phantom corner) is deferred to its own specification and is not a
+  Stage-0 test either. Actual release, real loss, restart, goal or foul tears the episode down once;
+  stale intent cannot cause a later restart. All current Roll/Throw/Kick variants end hand control at
+  their atomic CONTACT. Oracle: after CONTACT for each of Roll, Throw and Kick, and after loss, restart,
+  goal and foul, `handControlStartFrame` is the inactive sentinel (−1), no further `RestartAwardedEvent`
+  occurs through elapsed 481 and beyond, and at most one terminal exists.
+- T-5.1.10.6 Predicate 4: hand episodes held inside the area, on each boundary face/corner and with
+  goal-line overhang (§3.1.4 geometry) all time out to a corner at 481; so does §3.1.4's body-outside
+  hold after a legal inside catch, held still or moved back toward the area.
+- T-5.1.10.7 Corner recipient, the sanctioned keeper's goal line, the nearest Y side, the exact
+  `y = 34` high-Y tie, shared restart placement/taker/event, and exactly one restart. The published
+  `RestartAwardedEvent` has `RestartKind = Corner (3)` (the `RestartType` ordinal, not the `RestartCue`
+  value 4). The corner and the §3.1.4 whistle both call the one §3.8.5 whistle-finish helper. Observable
+  assertions: the event order (`RestartAwardedEvent` before the possession-change publication), the legacy
+  guard state reset as the landed §3.1.4 path resets it (`_gkHoldTicks = 0`,
+  `_gkReleasedAgentId = NO_POSSESSION` (−1), `_gkReleaseCooldownRemaining = 0`), the collision
+  output buffers clear, Resolve ending that frame, and a `TestOnly_` call counter (a seam this test requires; none exists) showing both
+  paths went through the one helper.
+- T-5.1.10.8 A §3.1.4 outside contact or outward carry gives its DFK, never an eight-second corner,
+  including on frames 480/481; own-release re-handling (§3.1.3) stays distinct. The body-outside hold
+  is bounded by the corner after the guard split, with teardown and save/restore, and shows no
+  repeated free-claim loop (a released or sanctioned keeper cannot re-claim the same ball to start a
+  fresh clock without an intervening other-player touch, §3.1.3, or a restart). The landed D-07 regression cases stay green.
+- T-5.1.10.9 Save/restore at the claim frame, before 480, at 480, before 481, and mid-WINDUP or
+  cancellation gives identical continuation, event ordering and restart outcome. `ResetSlot` on a slot
+  with a live episode (substitute keeper) clears the start frame to the inactive sentinel and produces
+  no corner or kick; a slot refresh that does not call it preserves the episode and its clock.
+  Corrupt restore: a body with `HandsOnBall` or `Distributing` and an inactive (−1) or future
+  `handControlStartFrame`, or with an active clock (`0 ≤ handControlStartFrame ≤ currentFrame`) and any
+  other state, is rejected with `InvalidOperationException`; so is a hand state with
+  `currentFrame − handControlStartFrame > GK_HAND_CONTROL_MAX_FRAMES` in a live match (a live match never
+  holds elapsed > 480, because the corner fires at 481 within Resolve). The checks run in the engine snapshot reader,
+  which passes the restored frame (#11 `RestoreState` has no frame parameter). These checks are on #11
+  state alone; the engine separately rejects a #11 hand state whose possessor is not that keeper or whose
+  ball is not `Controlled`. A body is also rejected where a #5
+  request is in flight (WINDUP not yet at CONTACT) and either (a) #11 has no active clock, or (b) the
+  request's remaining windup (`PassExecutorState.WindupFramesRemaining`) would put CONTACT after
+  `handControlStartFrame + 480` in a live match. A body whose #5 request is only terminal-pending (a `Cancelled` terminal
+  awaiting its drain) with a sentinel clock restores and drains normally.
+  **Full time (§3.8.5 Full time).** Mirrored for both ends: (i) a claim at frame `MATCH_TICKS_TOTAL − 481`
+  held to full time: on the final-whistle tick (elapsed 481) no corner fires, the hand state and its clock
+  are unchanged, and a body captured then, and again after `n ≥ 1` further ticks (elapsed `481 + n`),
+  restores without an exception and gives an identical continuation and snapshot digest; (ii) the same
+  with a #5 request in WINDUP at full time whose remaining windup puts CONTACT after
+  `handControlStartFrame + 480` once the frame has advanced: it restores, stays frozen with no CONTACT,
+  terminal or corner, and gives an identical continuation. Structural checks still apply after full time:
+  a full-time body with a hand state and the −1 sentinel, a future `handControlStartFrame`, or an
+  in-flight request with no active clock is still rejected.
+- T-5.1.10.10 No new RNG draw, default-policy switch, duplicate CONTACT or bypass of the existing #5
+  completion/cancellation feedback. Oracle: on a no-offence episode the RNG draw count and cursor equal
+  the B arm's, there is exactly one `PassAttemptEvent` and one `DistributionExecutedEvent` per `Completed`
+  terminal, and every terminal passes through `ConsumeGoalkeeperDistributionFeedbackAtResolve`.
+- T-5.1.10.11 A first or repeated offence produces no card and no card event at Stage 0; repeated-offence
+  bookings are deferred (§7.3).
+- T-5.1.10.12 Adversarial same-frame ordering against a prior whistle, §3.1.4 handling (including its
+  post-reattachment re-check), a ball boundary crossing, possession loss, a successful #5 CONTACT, and
+  replay/restore. Expected results, each mirrored for both ends: (a) a same-frame captured
+  tackle/collision foul candidate at elapsed 481 gives the corner only; the foul, its decided flag and
+  any card are dropped with no card-severity draw, and Resolve ends that frame after the event and
+  possession publication. (b) The held ball wholly out of play at elapsed 481 (for example team 0 at
+  `(−0.30, 34.0)` m, team 1 at `(105.30, 34.0)` m) gives the boundary/goal restart and no §3.8.5 corner;
+  an overhang inside `r` still gives the corner. The held ball is clamped to the goal line before the
+  slot, so (b) is built only with the post-reattachment `TestOnly_` ball setter that T-5.1.10.4(b)
+  requires. (c) A §3.1.4 DFK on the frame gives the DFK and no
+  corner. (d) A successful #5 CONTACT at elapsed 480 is legal and gives no corner; a possession loss
+  earlier in the frame gives no corner. (e) Replay and restore of each case reproduce the same outcome.
+- T-5.1.10.13 §3.8.4 admission/retry budget (`candidateContactFrame = currentFrame + WindupFrames`,
+  CONTACT asserted on exactly that frame): live configured windups and all six #21 policy delays
+  satisfy the first-attempt bound (`210 + 84 = 294 ≤ 480`), and the test fails if any configured policy has
+  `6·D + W > GK_HAND_CONTROL_MAX_FRAMES` (such a first attempt would be refused and concede a corner); a retry reaching CONTACT at elapsed 480
+  is accepted and one at 481 refused (claim 1,000, heartbeat 1,398: `WindupFrames` 82 accepted, 83
+  and the 84-frame Kick refused); repeated rejection until the budget closes; and §3.8.4 case (a), a
+  retained cancellation at CONTACT about 294 frames after the claim with the heartbeat at most 6 frames
+  later and an 84-frame windup, which reaches CONTACT at about elapsed `294 + 6 + 84 = 384 ≤ 480` and
+  is accepted.
 
 ---
 
@@ -175,14 +313,19 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 - T-5.2.8 GK rush + abort on interception (KD-15).
 - T-5.2.9 Save + distribution: full cycle from `ShotExecutedEvent`
   to `DistributionExecutedEvent`; verify Pass Mechanics #5
-  receives a valid `PassIntent` via `ConsumePassIntent`.
+  accepts a valid `GoalkeeperDistributionRequest` and executes one
+  CONTACT (§3.8.3). *(Corrected October 29, 2026: the former text named
+  the phantom `PassIntent` / `ConsumePassIntent` API removed by ERR-011-015.)*
 - T-5.2.10 Deterministic replay: a 1000-tick scenario producing
   identical `SaveAttemptedEvent` and `DistributionExecutedEvent`
   sequences across 10 runs with the same RNG seed.
 - T-5.2.11 #12 baseline-slot ratification: with the #12 v1.0.x
   patch applied (post-`IN REVIEW` transition), GK reads baseline
-  from `PositioningAI.GetGKBaselineSlot` and applies KD-13
-  reactive radius correctly.
+  from #12's `GetFormationSlot(keeperEntityId)` via §3.3.0.1 and
+  applies KD-13 reactive radius correctly. The baseline read and the
+  `Recovering → Set` cooldown are locked at composition level by
+  `GoalkeeperBaselineSlotTests` (ERR-011-018); the reactive-radius
+  micro-adjustment still has no production consumer.
 
 ---
 
@@ -239,3 +382,5 @@ One sub-section per §3 algorithm; ~6–10 test cases each.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 9 unit-test families, 11 integration tests, 4 validation scenarios, 7 cross-spec conformance gates | self-pass-1 in `adversarial-review-section-files-v1.md` |
+| 0.2 | September 27, 2026 | ERR-011-018 | T-5.2.11 names the real #12 surface and records what is now locked (baseline read, cooldown) versus still unconsumed (reactive-radius clamp). | spec + code, same commit |
+| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. Review fix: T-5.1.10.13 uses CONTACT = commit frame + `WindupFrames` (no `+ 1`, #11 §3.8.4): first attempt 294, case (a) about 384, boundary pair `WindupFrames` 82 accepted / 83 refused at heartbeat 1,398. Review round 2: T-5.1.10.1 int frame domain; T-5.1.10.2 one drained `Cancelled` terminal and no pre-executor guard cancel at elapsed 480; T-5.1.10.9 corrupt-restore case for the live-iff invariant. Review round 3: T-5.1.10.1 elapsed oracle; T-5.1.10.2 production case (no pending request, zero terminals) and the `TestOnly_`/crafted-restore defensive case; T-5.1.10.5 tactical-tick and retained reject/cancel oracle, bounce/toss and punt/drop not Stage-0 tests; T-5.1.10.9 pending-request frame corrupt-restore case; T-5.1.10.13 `6·D + W` failure condition and case (a) reworded. Review round 4: T-5.1.10.4 rebuilt as (a) eligibility-function unit test, (b) composed cases for predicates 5, 2 and 3, (c) predicate 4 locked by T-5.1.10.8 / T-5.1.10.12(c); T-5.1.10.2(b) builds the state only through `TestOnly_` seams (the crafted-restore route is withdrawn); T-5.1.10.7 asserts `RestartKind = Corner (3)` and the whistle-finish helper order; T-5.1.10.9 restore rejection rewritten on the in-flight request / remaining-windup rule. Review round 5: T-5.1.10.4 gains a positive control, the predicate 5 composed case moves to the `TestOnly_` group (a post-reattachment ball setter is required), and composed `Distributing` and retained-reject cases; T-5.1.10.5, .10 and .3(c) gain oracles; T-5.1.10.7 asserts observable helper behaviour instead of step count; T-5.1.10.9 names the −1 sentinel and the elapsed ≤ 480 range check; the in-flight-at-481 state is built only through `TestOnly_` seams. Review round 6 (October 30, 2026): T-5.1.10.7 expects the landed reset values `_gkHoldTicks = 0`, `_gkReleasedAgentId = NO_POSSESSION` (−1), `_gkReleaseCooldownRemaining = 0` (it had required all three at 0); T-5.1.10.9 adds mirrored full-time round trips during holding and WINDUP, including elapsed 481 on the final-whistle tick, and keeps structural rejections after full time; T-5.1.10.12(b) names the post-reattachment ball seam that T-5.1.10.4(b) requires; T-5.1.10.2's unreachability is scoped to a live match. | W8 C contract v0.5 |

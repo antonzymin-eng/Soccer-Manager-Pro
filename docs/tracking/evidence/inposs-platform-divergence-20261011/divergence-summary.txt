@@ -1,0 +1,22 @@
+# First bitwise divergence, Unity 6000.4.9f1 Mono vs .NET 8 shim (Windows), per seed (analysis/cmp_fp.py on the FULL traces)
+0x0F1E2D3C4B5A6978: first differing tick 5   agents differing: [1, 4, 6, 9, 10, 13, 15, 17, 20, 21]
+0x00000000D1A6D05E: first differing tick 5   agents differing: [4, 6, 10, 13, 14, 15, 16, 17, 20, 21]
+0x5EED000000000003: first differing tick 5   agents differing: [2, 4, 6, 9, 10, 13, 14, 15, 17, 21]
+0x5EED000000000004: first differing tick 5   agents differing: [2, 3, 4, 6, 10, 13, 14, 15, 17, 21]
+0x00000000D1A6D05F: first differing tick 5   agents differing: [1, 4, 6, 10, 12, 13, 15, 17, 20, 21]
+0x1A2B3C4D5E6F7081: first differing tick 5   agents differing: [2, 4, 6, 10, 13, 15, 16, 17, 21]
+
+# Longest stretch with the ball static between consecutive 10 s checkpoints, ticks >= 3600 (analysis/ballrun.py on the FULL traces)
+# ball state codes: 0 Stationary, 1 Rolling, 2 Airborne, 3 Bouncing, 4 Controlled, 5 OutOfPlay
+unity 0x00000000D1A6D05E checkpoints 534 final-third 191 longest static run 10 s from tick 255600 ball (49.93408203125, 41.29928970336914) state 4
+unity 0x00000000D1A6D05F checkpoints 534 final-third 174 longest static run 10 s from tick 274200 ball (54.39548110961914, 30.03725814819336) state 4
+unity 0x0F1E2D3C4B5A6978 checkpoints 534 final-third 285 longest static run 1740 s from tick 57000 ball (0.027292519807815552, 30.112205505371094) state 5
+unity 0x1A2B3C4D5E6F7081 checkpoints 534 final-third 188 longest static run 10 s from tick 255000 ball (61.26126480102539, 31.07098960876465) state 3
+unity 0x5EED000000000003 checkpoints 534 final-third 154 longest static run 10 s from tick 10200 ball (32.636226654052734, 43.160484313964844) state 1
+unity 0x5EED000000000004 checkpoints 534 final-third 146 longest static run 10 s from tick 99000 ball (44.62031555175781, 23.357837677001953) state 1
+net8  0x00000000D1A6D05E checkpoints 534 final-third 176 longest static run 10 s from tick 53400 ball (44.826019287109375, 35.283653259277344) state 1
+net8  0x00000000D1A6D05F checkpoints 534 final-third 161 longest static run 0 s from tick 0 ball None state None
+net8  0x0F1E2D3C4B5A6978 checkpoints 534 final-third 158 longest static run 10 s from tick 86400 ball (43.21495819091797, 28.359682083129883) state 2
+net8  0x1A2B3C4D5E6F7081 checkpoints 534 final-third 157 longest static run 10 s from tick 216000 ball (53.07528305053711, 32.60116195678711) state 1
+net8  0x5EED000000000003 checkpoints 534 final-third 167 longest static run 0 s from tick 0 ball None state None
+net8  0x5EED000000000004 checkpoints 534 final-third 137 longest static run 10 s from tick 64200 ball (65.56474304199219, 27.385961532592773) state 0

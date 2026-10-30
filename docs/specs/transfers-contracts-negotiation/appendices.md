@@ -1,8 +1,16 @@
 # Transfers, Contracts & Negotiation #31 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-3 fix pass; prior v0.2 AR-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** October 21, 2026 (v0.13 — AR round 5, ERR-031-015: Appendix A bounds CLUB_NEED_PER_PLAYER_PERMILLE to ≥ 1)
+**Last Updated (prior):** October 20, 2026 (v0.12 — AR round 4, ERR-031-014: Appendix A regains the TRANSFERS_STAFF_MULT_IDENTITY row #34 cites)
+**Last Updated (prior):** October 20, 2026 (v0.11 — AR round 3, ERR-031-013: Appendix A matches TransfersConstants.cs exactly)
+**Last Updated (prior):** October 20, 2026 (v0.10 — ERR-031-011: `SUMMER_WINDOW_IN_SEASON_DAYS` replaces `SUMMER_WINDOW_LENGTH_DAYS`)
+**Last Updated (prior):** October 20, 2026 (v0.9 — T2: ERR-031-008 window constants)
+**Last Updated (prior):** October 19, 2026 (v0.8 — ERR-031-005: contract membership is a roster check)
+**Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: Appendix B gains the leading `XFER` magic and pins `clubCount ∈ {0,1}` as a wiring fact; Appendix A gains `TRANSFERS_SAVE_MAGIC`; T1 live)
+**Last Updated (prior):** September 14, 2026 (v0.6 — require a non-empty young-age band)
+**Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review correction; prior v0.4 T0 football-judgment constants, v0.3 AR-3, v0.2 AR-1, v0.1 initial)
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -11,63 +19,105 @@
 
 | Constant | Tag | Value | Notes |
 |---|---|---|---|
-| `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the transfers sub-blob's own version gate (KD-4). |
-| `PERMILLE_DENOM` | `[FIXED]` | 1000 | integer per-mille denominator (the #33/#40 posture). |
-| `VALUE_PER_RATING_POINT` | `[GT]` | illustrative | integer currency per mean-attribute point (§3.1); pinned at the Stage-2/3 balance pass (#21 G2). |
-| `AgeCurvePermille[age]` | `[GT]` | illustrative | age→value multiplier table: neutral peak band (`1000‰`), decline past ~30, young-unproven discount (master plan §4.3 shape); balance-pass-pinned. |
-| `SUMMER_WINDOW_LENGTH_DAYS` | `[GT]` | illustrative | length of the single minimal transfer window (KD-6); balance-pass-pinned. |
-| `DEFAULT_CONTRACT_SEASONS` | `[GT]` | illustrative | length of a career-start seeded contract (§3.8); `> 0` (F7-valid); balance-pass-pinned. |
-| `DEFAULT_WAGE_*` (`DefaultWageFor`) | `[GT]` | illustrative | the career-start seeded wage, a `[GT]` function of the seeded player's #27 record (§3.8); `≥ 0` (F6-valid); balance-pass-pinned. |
-| `SEASON_START_WORLD_DAY` | `[CROSS]` | #30 | the season-start world day the window opens on; sourced from #30's `SeasonCalendar` (read-only, KD-6). |
-| `TRANSFERS_STAFF_MULT_IDENTITY` | `[FIXED]` | 1000 | the `staffMult` identity (`×1000‰`) until #34 produces a value (KD-3). |
-| `TRANSFERS_PERSONALITY_MULT_IDENTITY` | `[FIXED]` | 1000 | the `personalityMult` identity until #33 is read (deep, KD-1). |
-| `TRANSFERS_NEED_MULT_IDENTITY` | `[FIXED]` | 1000 | the `needMult` identity (`×1000‰`) at minimal; the deep tier's club-need bias (KD-1). |
+| `TRANSFERS_SAVE_MAGIC` | `[FIXED]` | `"XFER"` (`0x58464552`) | transfers sub-blob self-identifying tag, written BEFORE the version (ERR-031-003). Live at T1. |
+| `TRANSFERS_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | transfers sub-blob version gate; live at T1. |
+| `TRANSFERS_SAVE_HEADER_BYTES` | `[DERIVED]` | 12 | fixed header: magic + version + clubCount (three u32). |
+| `TRANSFERS_SAVE_CLUB_RECORD_BYTES` | `[DERIVED]` | 20 | one club record: ClubId i32 + CommittedSpendThisWindow i64 + Open u32 + Close u32. |
+| `TRANSFERS_SAVE_CONTRACT_RECORD_BYTES` | `[DERIVED]` | 16 | one contract record: PlayerId i32 + WagePerPeriod i64 + LengthSeasons i32. |
+| `TRANSFERS_SAVE_MAX_CLUBS` | `[FIXED]` | 1 | most club records the block may carry: `TransfersState` is scoped to the ONE managed club (§2.2), so a block carries 0 (not wired) or 1. |
+| `PERMILLE_DENOM` | `[FIXED]` | 1000 | shared integer per-mille denominator. |
+| `IDENTITY_MULTIPLIER_PERMILLE` | `[FIXED]` | 1000 | the identity multiplier for the deferred #34 staff and #33 personality modulation (one constant: the two deep-tier multipliers share the same identity). #34 cites it by the name in the `TRANSFERS_STAFF_MULT_IDENTITY` row below; a separate `TRANSFERS_PERSONALITY_MULT_IDENTITY` was never declared in code and nothing cites it (AR round 3, ERR-031-013). |
+| `TRANSFERS_STAFF_MULT_IDENTITY` | `[DERIVED]` | `IDENTITY_MULTIPLIER_PERMILLE` (1000) | the `staffMult` identity #34 produces by default and cites as `[CROSS]` from this appendix (#34 `appendices.md`, FR-TX-011). A spec-level name for the one shared constant above: the code declares only `IDENTITY_MULTIPLIER_PERMILLE`, so there is no second symbol to drift (AR round 4, ERR-031-014 — AR round 3 had dropped this row, leaving #34's citation dangling). |
+| `VALUE_PER_RATING_POINT` | `[GT]` | illustrative | integer currency per one full canonical mean-attribute point; base computation keeps `sum/ATTRIBUTE_COUNT` exact until final division. |
+| `PEAK_AGE_MIN` / `PEAK_AGE_MAX` | `[GT]` | illustrative | inclusive neutral-age band; `PEAK_AGE_MIN > 0` and `PEAK_AGE_MAX >= PEAK_AGE_MIN`, preserving a non-empty young-discount region. |
+| `YOUNG_DISCOUNT_PERMILLE` | `[GT]` | illustrative | `[0,1000)`; must be a real discount below the peak. |
+| `DECLINE_PER_YEAR_PERMILLE` | `[GT]` | illustrative | positive annual decline after `PEAK_AGE_MAX`. |
+| `MINIMUM_AGE_MULTIPLIER_PERMILLE` | `[GT]` | illustrative | `[0,1000)` floor for old-age decline. |
+| `NEGOTIATION_COUNTER_BAND_PERMILLE` | `[GT]` | illustrative | strict `(0,1000)` synchronous counter-offer half-band; positive valuation retains both counter and reject regions. |
+| `CLUB_NEED_PER_PLAYER_PERMILLE` | `[GT]` | illustrative (fallback 20) | **`≥ 1`** (AR round 5, ERR-031-015: at `0` the multiplier is the identity for every stock count, which silently disables FR-TX-002's always-on scarcity MUST — the loader refuses it) and the upper bound is **derived** as `floor((PERMILLE_DENOM-1)/(CLUB_SQUAD_SIZE-neutralCount))`, keeping the multiplier positive for every legal stock count even if #27 cardinalities change. |
+| `SUMMER_WINDOW_IN_SEASON_DAYS` | `[GT]` | illustrative (fallback 38) | world days, `≥ 1`: how long the single minimal window stays open from the season's opening fixture day on, counting that day — `Close = openingFixtureDay + IN_SEASON_DAYS − 1` (§3.5, ERR-031-011). Config key `[transfers] SummerWindowInSeasonDays`. With `FirstRoundDay` 7 the genesis window is `[0, 44]`. |
+| ~~`SUMMER_WINDOW_LENGTH_DAYS`~~ | ~~`[GT]`~~ | ~~45~~ | **Withdrawn at AR round 2 (ERR-031-011):** a length counted from the roll day made the close depend on when the client rolled (with prompt rolls it shut 11 days before the first match). Replaced by `SUMMER_WINDOW_IN_SEASON_DAYS`. |
+| `DEFAULT_CONTRACT_SEASONS` | `[GT]` | illustrative (fallback 3) | genesis contract length, also the terms of a regen joining the managed club at the boundary (§3.7); `> 0`. Config key `[transfers] DefaultContractSeasons`. |
+| `DEFAULT_WAGE_PER_PERIOD` | `[GT]` | illustrative (fallback 1000) | flat genesis wage — every seeded contract, genesis and boundary regen alike; there is no per-player wage model and no `DefaultWageFor` (§3.8); `≥ 0`. Config key `[transfers] DefaultWagePerPeriod`. |
+| ~~`SEASON_START_WORLD_DAY`~~ | ~~`[CROSS]`~~ | ~~#30~~ | **Withdrawn at T2 (ERR-031-008):** #30 never defined it, and one constant cannot place season N > 1. The window starts on the world day #30 begins the season (genesis day / roll day), passed to `TransferWindow.SummerWindowFor` (as its open day) and persisted as `ActiveWindow`. |
 
-**Tag note:** the `[GT]` valuation/window magnitudes are **illustrative pending a Stage-2/3 balance pass** —
-the reviewed contract is the shapes/directions (monotone age curve, ceiling-gated affordability, one-window
-minimal), not the numbers (the #21 G2 / #40 / #41 / #33 precedent). `SEASON_START_WORLD_DAY` is `[CROSS]` from
-#30 (copied verbatim, read-only) — the window is derived, not independently set.
+**Tag note:** `[GT]` values are loaded through Code Standards #20 `GameplayConfig.Get*` from `[transfers]`; in
+`TransfersConstants.cs` they are PascalCase (`ValuePerRatingPoint`, `PeakAgeMin`, `PeakAgeMax`,
+`YoungDiscountPermille`, `DeclinePerYearPermille`, `MinimumAgeMultiplierPermille`, `NegotiationCounterBandPermille`,
+`ClubNeedPerPlayerPermille`, `SummerWindowInSeasonDays`, `DefaultContractSeasons`, `DefaultWagePerPeriod`), the
+config key being the code name. Fallback magnitudes are
+not architectural constants. The normative safety/shape bounds above are architectural.
 
 ## Appendix B — Transfers sub-blob layout (KD-4)
 
-Composed into #30's `SeasonSaveCodec` frame as an opaque, independently version-gated block (mirrors the
-`SeasonSaveCodec` / `MatchSaveCodec` posture; every length-prefixed read preceded by an overflow-safe
-`Require(offset, need, total)` bound against `total − offset`):
+Composed into #30's `SeasonSaveCodec` frame as an opaque, independently version-gated block (T1):
 
 | Field | Type | Notes |
 |---|---|---|
-| version | u32 | `TRANSFERS_SAVE_FORMAT_VERSION`; **gate first** (F3) |
-| clubCount | u32 | `Require`-bounded count |
+| magic | u32 | `TRANSFERS_SAVE_MAGIC` (`"XFER"`); gate FIRST (F3, ERR-031-003) |
+| version | u32 | `TRANSFERS_SAVE_FORMAT_VERSION`; gate second (F3) |
+| clubCount | u32 | `0` (no #31 subsystem wired) or `1` (the managed club); `> 1` fails loud — `TransfersState` is managed-club scoped (§2.2) |
 | per club: ClubId | i32 | |
-| per club: CommittedSpendThisWindow | i64 | resets at the season boundary (season-scoped) |
+| per club: CommittedSpendThisWindow | i64 | season-scoped |
 | per club: ActiveWindow.OpenWorldDay / CloseWorldDay | u32 / u32 | season-scoped |
-| contractCount | u32 | `Require`-bounded count (managed-club contracts only, §2.2) |
-| per contract: PlayerId | i32 | |
+| contractCount | u32 | managed-club contracts only; MUST be `0` when `clubCount = 0`; `≤ CLUB_SQUAD_SIZE` |
+| per contract: PlayerId | i32 | strictly ascending; membership in the managed club is a ROSTER fact the season root checks (ERR-031-005), never derived from the id |
 | per contract: WagePerPeriod | i64 | `≥ 0` |
-| per contract: LengthSeasons | i32 | `> 0` (F7) — the sole contract-end field |
-| (trailing-byte guard) | — | `if (o != len) throw` (F3) |
+| per contract: LengthSeasons | i32 | `> 0` (F7) |
+| trailing-byte guard | — | `if (o != len) throw` |
 
-**No `RngCursor`/`actionOrdinal` field** — minimal is draw-free (FR-TX-018); deep draws are keyed
-(position-independent), so no cursor is ever serialized. Deep clause/loan/wage-structure + precise-expiry
-fields **append** after `LengthSeasons` behind `deepTransfersEnabled` (FR-TX-015), guarded by the same
-version bump — the minimal layout above is never reordered.
+No RNG cursor/action ordinal is serialized. Deep clause/loan/wage-structure fields append after the minimal
+contract fields behind the appropriate version bump.
 
-## Appendix C — Worked valuation example
+**Corrected at T1 (ERR-031-003).** This table originally began with `version` and carried no magic — the
+exact defect ERR-029-005 / ERR-041-009 / ERR-028-004 / ERR-044-001 filed against every sibling block. Every
+sub-blob in the season frame sits at version 1, so a version gate separates generations of ONE format and
+cannot tell this block from another: an empty `FNCE` finance block (magic, version 1, count 0) is
+byte-shape-compatible with a transfers header, and a transposed frame slot would have decoded cleanly. The
+shipped block leads with the magic, checked before the version.
 
-A 24-year-old outfielder, #27 attribute mean `14`:
-- `base = 14 * VALUE_PER_RATING_POINT`.
-- `ageMult = AgeCurvePermille[24]` — inside the peak band ⇒ `1000‰` (neutral).
-- `value = base * 1000/1000 = base` (integer) — **attributes + age only** at minimal (FR-TX-001).
+**`clubCount` is a wiring fact.** A wired career always writes its one club record, including after every
+contract has expired or been sold; `0` therefore means only "no #31 subsystem behind this save" and decodes
+to an absent state, never to a request to seed (FR-TX-028: a load never seeds). This is what lets #30's
+destination guard key on the count without repeating ERR-030-038 (#30 Appendix B.1). Every decoded value
+passes the same validation a live state applies (window `Close ≥ Open`, spend `≥ 0`, F6/F7 contracts);
+any refusal is a corrupt-file `InvalidOperationException`.
 
-A manager buy at `fee = value` is **accepted** (`fee ≥ cv`); a buy at `fee = value − 1` is **rejected**. With
-`deepTransfersEnabled` on, the deep tier multiplies `needMult` (the valuing club's scarcity) and
-`personalityMult`: a low-loyalty seller (`personalityMult > 1000`) raises `cv`, so the same `fee = value` now
-**rejects** — the deep tier *scales* the identity, never replaces it (KD-1). All integer; two runs identical.
+## Appendix C — Worked valuation / negotiation example
+
+With the default T0 fallback tuning, a 25-year-old player whose 31 canonical attributes are all `10` has:
+
+- attribute sum `310`;
+- `ageMult = 1000‰` in the peak band;
+- `ValuePlayer = 310 × 10000 × 1000 / (31 × 1000) = 100000` currency units.
+
+Raising exactly one canonical attribute from `10` to `11` changes the sum to `311` and the value to
+`floor(311 × 10000 / 31) = 100322`; the minimal model therefore does **not** collapse players to 20 integer-
+mean price buckets.
+
+The counterparty then applies positional stock **excluding the negotiated player**. At the #27-derived neutral
+count the multiplier is `1000‰`; below-neutral stock raises value, overstock lowers it. A selling club subtracts
+the negotiated player from its raw current count; a buying club does not, because he is not yet on that roster.
+
+For `cv = 100000` and an illustrative `5%` counter band: a buy at `100000` is `Accepted`; `99999` through
+`95000` is `CounterOffered`; `94999` is `Rejected`. If an accepted bid exceeds remaining manager budget,
+`SubmitBid` returns `InsufficientBudget`; if the destination has no slot it returns `SquadFull`. Neither is a
+`NegotiationOutcome`, and neither mutates local finance/transfer state.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-07-23 | — | Initial appendices (constant catalogue, sub-blob layout, worked valuation example). Status IN REVIEW. |
-| 0.2 | 2026-07-23 | — | AR-1: dropped `CONTRACT_NO_EXPIRY` + `ExpiryWorldDay` from the layout (single contract-end truth `LengthSeasons`, M3); contract count noted managed-club-only (M2). |
-| 0.3 | 2026-07-23 | — | AR-3: Appendix C worked example is attributes+age only at minimal (needMult moved to the deep tier); added `TRANSFERS_NEED_MULT_IDENTITY` constant. AR-4: added `DEFAULT_CONTRACT_SEASONS` / `DEFAULT_WAGE_*` for §3.8 career-start seeding. |
+| 0.1 | 2026-07-23 | — | Initial appendices; status IN REVIEW. |
+| 0.2 | 2026-07-23 | — | AR-1 contract-layout corrections. |
+| 0.3 | 2026-07-23 | — | AR-3/AR-4 attributes+age minimal baseline and genesis constants. |
+| 0.4 | 2026-09-14 | — | T0 football-judgment close-out: always-on positional need + deterministic counter band. |
+| 0.5 | 2026-09-14 | — | PR #407 review correction: precise rational-mean valuation example, prospective exclude-player stock, derived club-need safety bound, sub-1000 age/counter bounds, and typed submission outcomes. |
+| 0.6 | 2026-09-14 | — | Require `PEAK_AGE_MIN > 0` so the young-discount region and strict boundary regression are well-defined. |
+| 0.7 | 2026-10-18 | — | **ERR-031-003** (#31 T1): Appendix B gains the leading `TRANSFERS_SAVE_MAGIC` (`"XFER"`) before the version — the table had specified the ERR-029-005-class version-first, magic-less layout — and pins `clubCount ∈ {0,1}` as a wiring fact, `contractCount = 0` without a club, ascending contract ids and `≤ CLUB_SQUAD_SIZE`; Appendix A gains the magic row and marks both rows live. |
+| 0.8 | 2026-10-19 | — | ERR-031-005: Appendix B — contract membership is checked by #30 against the roster, not derived from the id. |
+| 0.9 | 2026-10-20 | — | #31 T2 (ERR-031-008): `SUMMER_WINDOW_LENGTH_DAYS` is an inclusive length; `SEASON_START_WORLD_DAY` withdrawn (never defined by #30; the start is the season-begin day). |
+| 0.10 | 2026-10-20 | — | ERR-031-011 (AR round 2): `SUMMER_WINDOW_IN_SEASON_DAYS` (`[GT]`, fallback 38) replaces the roll-day-anchored `SUMMER_WINDOW_LENGTH_DAYS` (withdrawn row kept); the `SEASON_START_WORLD_DAY` withdrawal row names `SummerWindowFor`. |
+| 0.11 | 2026-10-20 | — | ERR-031-013 (AR round 3): Appendix A brought to `TransfersConstants.cs`: gains `TRANSFERS_SAVE_HEADER_BYTES` (12), `_CLUB_RECORD_BYTES` (20), `_CONTRACT_RECORD_BYTES` (16) and `_MAX_CLUBS` (1), which the T1 codec declares; `DEFAULT_WAGE_*` (`DefaultWageFor`) becomes the flat `DEFAULT_WAGE_PER_PERIOD`; the never-declared `TRANSFERS_STAFF_MULT_IDENTITY` / `TRANSFERS_PERSONALITY_MULT_IDENTITY` rows are replaced by the single shipped `IDENTITY_MULTIPLIER_PERMILLE` (#34's cited name recorded as an alias); the tag note maps the PascalCase code names and config keys. |
+| 0.12 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L6): AR round 3 removed `TRANSFERS_STAFF_MULT_IDENTITY` from Appendix A while #34 `appendices.md` (and its §3/§7/§8) still cite it as a `[CROSS]` constant sourced here. Re-added as a `[DERIVED]` alias of `IDENTITY_MULTIPLIER_PERMILLE` (one source tag; no second code symbol), so #34 stays correct untouched. |
+| 0.13 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-C): Appendix A gave `CLUB_NEED_PER_PLAYER_PERMILLE` only an upper bound while `TransfersConstants` loaded it with a non-negative loader, so a configured `0` made the positional multiplier the identity and disabled FR-TX-002's MUST. The row now states `≥ 1`; code back-prop: `ClubNeedPerPlayerPermille` loads through a positive-bounded loader. |
 #endregion

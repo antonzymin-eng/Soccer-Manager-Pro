@@ -1,0 +1,105 @@
+diff -ru --strip-trailing-cr -x '*.meta' SMP-p5b-host/Assets/HostProbes/Editor/S0HostKeyboard.cs Soccer-Manager-Pro/.claude/worktrees/unity-iq15/Assets/HostProbes/Editor/S0HostKeyboard.cs
+--- SMP-p5b-host/Assets/HostProbes/Editor/S0HostKeyboard.cs	2026-10-21 21:09:46.002000000 -0700
++++ Soccer-Manager-Pro/.claude/worktrees/unity-iq15/Assets/HostProbes/Editor/S0HostKeyboard.cs	2026-10-29 10:30:26.374000000 -0700
+@@ -143,23 +143,77 @@
+         yield return TabUntil(() => P.Selected == F("_statisticsToggle"), "statistics");
+         yield return Press(P.VK_RETURN, "Enter on statistics");
+         P.Check(V.IsStatisticsOpen && P.Selected == F("_statisticsToggle"), "statistics open, focus retained");
+-        // One more request so the earlier-feedback disclosure exists (>= 4 records).
++        // PR #518 review (October 29): I-Q15 covers the earlier-outcome disclosure, which needs four records.
++        // The October passes made three (Mentality, substitution, Mentality) and only logged the toggle's
++        // absence. Make Mentality requests by keyboard until four records exist, then require the disclosure.
++        for (int attempt = 0; attempt < 3 && V.Feedback.Count < 4; attempt++)
++        {
++            yield return (Func<bool>)(() => !P.Changes.IsMentalityPending);
++            yield return TabUntil(() => P.Selected == F("_mentality"), "Change Mentality", 30, true);
++            yield return Press(P.VK_RETURN, "Enter on Change Mentality");
++            yield return Press(P.VK_DOWN, "Down");
++            if (V.RequestedMentality == V.CurrentMentality)
++                yield return Press(P.VK_DOWN, "Down");
++            yield return TabUntil(() => P.Selected == F("_submit"), "Submit");
++            yield return Press(P.VK_RETURN, "Enter on Submit");
++            yield return P.Frames(10);
++            P.LogFeedback("after request " + (attempt + 3));
++        }
++        P.Check(V.Feedback.Count >= 4, "four or more change records exist (" + V.Feedback.Count + ")");
++        Selectable earlier = F("_earlierToggle");
++        P.Check(earlier.gameObject.activeInHierarchy, "earlier-feedback disclosure is shown: " + P.LabelOf(earlier));
++        yield return TabUntil(() => P.Selected == earlier, "earlier feedback (Tab)");
++        P.Check(RingVisibleOnSelected(), "focus ring visible on the earlier-feedback disclosure");
++        // Reverse traversal: leave and come back with Shift-Tab.
++        yield return Press(P.VK_TAB, "Tab past earlier feedback");
++        Selectable after = P.Selected;
++        yield return Press(P.VK_TAB, "Shift-Tab back", true);
++        P.Check(P.Selected == earlier, "Shift-Tab returns to the earlier-feedback disclosure from " + (after == null ? "null" : P.LabelOf(after)));
++        yield return Press(P.VK_RETURN, "Enter on earlier feedback");
++        P.Check(V.IsEarlierFeedbackOpen && P.Selected == earlier, "earlier feedback disclosed by keyboard; focus retained: " + P.LabelOf(earlier));
++        P.Shot("iq15-06-stats-history");
++        yield return null;
++        // Live updates with the disclosure open: ticks keep running and any Pending record may resolve.
++        string before = string.Join(" || ", V.Feedback.Select(f => f.ToString()));
++        ulong tickOpen = P.Session.CurrentTick;
++        double until = Time.realtimeSinceStartupAsDouble + 60;
++        yield return (Func<bool>)(() => Time.realtimeSinceStartupAsDouble > until || V.IsFullTime);
++        string afterLive = string.Join(" || ", V.Feedback.Select(f => f.ToString()));
++        P.Log("live window: ticks " + tickOpen + " -> " + P.Session.CurrentTick + "; feedback changed=" + (before != afterLive));
++        P.LogFeedback("after live window");
++        P.Check(P.Session.CurrentTick > tickOpen + 300, "live ticks ran with the disclosure open (" + (P.Session.CurrentTick - tickOpen) + " ticks)");
++        P.Check(V.IsEarlierFeedbackOpen, "disclosure stays expanded through live updates (no collapse)");
++        P.Check(P.Selected == earlier && RingVisibleOnSelected(), "focus and ring stay on the disclosure through live updates: " + Sel());
++        P.Shot("iq15-06b-earlier-open-after-live");
++        yield return null;
++        yield return Press(P.VK_RETURN, "Enter on earlier feedback (close)");
++        P.Check(!V.IsEarlierFeedbackOpen && P.Selected == earlier, "Enter collapses the disclosure; focus retained");
++        yield return Press(P.VK_RETURN, "Enter on earlier feedback (reopen)");
++        P.Check(V.IsEarlierFeedbackOpen && P.Selected == earlier, "Enter re-expands the disclosure; focus retained");
++        // A feedback update while the disclosure is open: a fifth request pushes one more record into the earlier list.
++        int countBefore = V.Feedback.Count;
++        yield return (Func<bool>)(() => !P.Changes.IsMentalityPending);
+         yield return TabUntil(() => P.Selected == F("_mentality"), "Change Mentality", 30, true);
+         yield return Press(P.VK_RETURN, "Enter on Change Mentality");
+-        yield return Press(P.VK_UP, "Up");
++        P.Check(V.IsEarlierFeedbackOpen, "disclosure stays expanded behind the open dialog");
++        yield return Press(P.VK_DOWN, "Down");
++        if (V.RequestedMentality == V.CurrentMentality)
++            yield return Press(P.VK_DOWN, "Down");
+         yield return TabUntil(() => P.Selected == F("_submit"), "Submit");
+         yield return Press(P.VK_RETURN, "Enter on Submit");
+         yield return P.Frames(10);
+-        yield return Press(P.VK_TAB, "Tab");
+-        yield return Press(P.VK_TAB, "Tab");
+-        P.Log("after feedback: " + Sel() + " records=" + V.Feedback.Count + " earlierActive=" + F("_earlierToggle").gameObject.activeInHierarchy);
+-        if (F("_earlierToggle").gameObject.activeInHierarchy)
+-        {
+-            yield return TabUntil(() => P.Selected == F("_earlierToggle"), "earlier feedback");
+-            yield return Press(P.VK_RETURN, "Enter on earlier feedback");
+-            P.Check(V.IsEarlierFeedbackOpen, "earlier feedback disclosed by keyboard");
+-        }
+-        P.Shot("iq15-06-stats-history");
++        P.LogFeedback("after request 5 with the disclosure open");
++        P.Check(V.Feedback.Count == countBefore + 1, "a new record arrived while the disclosure was open (" + V.Feedback.Count + ")");
++        P.Check(V.IsEarlierFeedbackOpen, "disclosure stays expanded when a record is added");
++        P.Check(P.LabelOf(earlier).Contains("(2)"), "earlier count follows the new record: " + P.LabelOf(earlier));
++        string pending = string.Join(" || ", V.Feedback.Select(f => f.ToString()));
++        double resolveBy = Time.realtimeSinceStartupAsDouble + 30;
++        yield return (Func<bool>)(() => string.Join(" || ", V.Feedback.Select(f => f.ToString())) != pending || Time.realtimeSinceStartupAsDouble > resolveBy);
++        P.LogFeedback("after the new record's next live update");
++        P.Check(V.IsEarlierFeedbackOpen, "disclosure stays expanded through the record's live update (changed=" + (string.Join(" || ", V.Feedback.Select(f => f.ToString())) != pending) + ")");
++        yield return TabUntil(() => P.Selected == earlier, "earlier feedback after the update");
++        P.Check(RingVisibleOnSelected() && V.IsEarlierFeedbackOpen, "disclosure reachable again by keyboard, still expanded, ring visible");
++        P.Shot("iq15-06c-earlier-after-new-record");
+         yield return null;
+         // ---- Pitch inspection: single entry, arrows, read-only
+         yield return TabUntil(() => P.Get<Selectable[]>(P.Screens, "_pitchControls").Contains(P.Selected), "pitch entry");
+diff -ru --strip-trailing-cr -x '*.meta' SMP-p5b-host/Assets/HostProbes/Editor/S0HostProbe.cs Soccer-Manager-Pro/.claude/worktrees/unity-iq15/Assets/HostProbes/Editor/S0HostProbe.cs
+--- SMP-p5b-host/Assets/HostProbes/Editor/S0HostProbe.cs	2026-10-21 21:09:46.004000000 -0700
++++ Soccer-Manager-Pro/.claude/worktrees/unity-iq15/Assets/HostProbes/Editor/S0HostProbe.cs	2026-10-29 10:30:26.374000000 -0700
+@@ -19,7 +19,7 @@
+
+ public static class S0HostProbe
+ {
+-    public static string OutDir = "C:/Users/azymi/Desktop/S0-host-acceptance-20261018/run4";
++    public static string OutDir = "C:/Users/azymi/AppData/Local/Temp/u518/iq15/run";
+     const BindingFlags F = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+     static IEnumerator _routine;

@@ -1,0 +1,130 @@
+// Disposable evidence only: PR #439 / issue #441 header reachability localization.
+using System;
+using System.Globalization;
+
+using NUnit.Framework;
+
+namespace TacticalDirector.MatchEngine
+{
+    [TestFixture]
+    internal sealed class W3HeaderReachabilityEvidenceTests
+    {
+        private const int TicksPerSeed = 324000;
+
+        private static readonly ulong[] Seeds =
+        {
+            0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+            0x0000000000000001UL,
+            0x00000000ABCDEF12UL,
+            0x0000000099887766UL,
+            0x000000005A5A5A5AUL,
+        };
+
+        [Test]
+        public void HeaderReachability_LocalizesFirstZeroOnFrozenCorpus()
+        {
+            bool priorIgnore = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+
+            int commits = 0;
+            int overwrites = 0;
+            int jumpStarts = 0;
+            int everPredicted = 0;
+            int prepared = 0;
+            int executed = 0;
+            int landingDrops = 0;
+            int cancels = 0;
+            int failedEarly = 0;
+            int failedLate = 0;
+            int failedPoorly = 0;
+            int failedDisturbed = 0;
+            int w3Participants = 0;
+            int w3HandDuels = 0;
+            int w3KeeperClaims = 0;
+
+            try
+            {
+                foreach (ulong seed in Seeds)
+                {
+                    var engine = new MatchEngine(seed);
+                    for (int t = 0; t < TicksPerSeed; t++)
+                    {
+                        engine.RunTick();
+                    }
+
+                    int terminalFailures =
+                        engine.TestOnly_HeaderFailedEarlyCount
+                        + engine.TestOnly_HeaderFailedLateCount
+                        + engine.TestOnly_HeaderFailedPositionedPoorlyCount
+                        + engine.TestOnly_HeaderFailedDisturbedCount;
+
+                    TestContext.Out.WriteLine(
+                        "HEADER441 seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                        + " commits=" + engine.TestOnly_HeaderCommitCount
+                        + " overwrites=" + engine.TestOnly_HeaderOverwriteCount
+                        + " jumpStarts=" + engine.TestOnly_HeaderJumpStartCount
+                        + " everPredicted=" + engine.TestOnly_HeaderEverPredictedContactCount
+                        + " preparedContacts=" + engine.TestOnly_HeaderPreparedContactCount
+                        + " executed=" + engine.TestOnly_HeaderExecutedCount
+                        + " failedEarly=" + engine.TestOnly_HeaderFailedEarlyCount
+                        + " failedLate=" + engine.TestOnly_HeaderFailedLateCount
+                        + " failedPositionedPoorly=" + engine.TestOnly_HeaderFailedPositionedPoorlyCount
+                        + " failedDisturbed=" + engine.TestOnly_HeaderFailedDisturbedCount
+                        + " terminalFailures=" + terminalFailures
+                        + " landingDrops=" + engine.TestOnly_HeaderLandingDropCount
+                        + " cancels=" + engine.TestOnly_HeaderCancelCount
+                        + " w3Participants=" + engine.TestOnly_W3RegisteredDuelParticipants
+                        + " w3HandDuels=" + engine.TestOnly_W3ResolvedHandContactDuels
+                        + " w3KeeperClaims=" + engine.TestOnly_W3SuccessfulKeeperClaims);
+
+                    commits += engine.TestOnly_HeaderCommitCount;
+                    overwrites += engine.TestOnly_HeaderOverwriteCount;
+                    jumpStarts += engine.TestOnly_HeaderJumpStartCount;
+                    everPredicted += engine.TestOnly_HeaderEverPredictedContactCount;
+                    prepared += engine.TestOnly_HeaderPreparedContactCount;
+                    executed += engine.TestOnly_HeaderExecutedCount;
+                    landingDrops += engine.TestOnly_HeaderLandingDropCount;
+                    cancels += engine.TestOnly_HeaderCancelCount;
+                    failedEarly += engine.TestOnly_HeaderFailedEarlyCount;
+                    failedLate += engine.TestOnly_HeaderFailedLateCount;
+                    failedPoorly += engine.TestOnly_HeaderFailedPositionedPoorlyCount;
+                    failedDisturbed += engine.TestOnly_HeaderFailedDisturbedCount;
+                    w3Participants += engine.TestOnly_W3RegisteredDuelParticipants;
+                    w3HandDuels += engine.TestOnly_W3ResolvedHandContactDuels;
+                    w3KeeperClaims += engine.TestOnly_W3SuccessfulKeeperClaims;
+                }
+
+                int failures = failedEarly + failedLate + failedPoorly + failedDisturbed;
+                TestContext.Out.WriteLine(
+                    "HEADER441 AGGREGATE"
+                    + " commits=" + commits
+                    + " overwrites=" + overwrites
+                    + " jumpStarts=" + jumpStarts
+                    + " everPredicted=" + everPredicted
+                    + " preparedContacts=" + prepared
+                    + " executed=" + executed
+                    + " failedEarly=" + failedEarly
+                    + " failedLate=" + failedLate
+                    + " failedPositionedPoorly=" + failedPoorly
+                    + " failedDisturbed=" + failedDisturbed
+                    + " terminalFailures=" + failures
+                    + " landingDrops=" + landingDrops
+                    + " cancels=" + cancels
+                    + " w3Participants=" + w3Participants
+                    + " w3HandDuels=" + w3HandDuels
+                    + " w3KeeperClaims=" + w3KeeperClaims);
+
+                Assert.That(commits, Is.GreaterThan(0), "frozen corpus produced no header commits");
+                Assert.That(jumpStarts, Is.LessThanOrEqualTo(commits), "jump starts exceed commits");
+                Assert.That(everPredicted, Is.LessThanOrEqualTo(jumpStarts), "predicted-contact episodes exceed jump starts");
+                Assert.That(prepared, Is.LessThanOrEqualTo(everPredicted), "prepared contacts exceed predicted-contact episodes");
+                Assert.That(executed, Is.LessThanOrEqualTo(prepared), "executed headers exceed prepared contacts");
+            }
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = priorIgnore;
+            }
+        }
+    }
+}

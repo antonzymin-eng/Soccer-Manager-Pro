@@ -1,5 +1,6 @@
 // File:     src/match-engine/PlayerAttributeProjection.cs
 // Created:  2026-07-17
+// Modified: 2026-09-22 (W3: ToCrossClaim narrow Balance/Strength/Aerial projection; no outfielder ToGoalkeeper misuse)
 // Modified: 2026-07-22 (GK/Heading engine integration — ToGoalkeeper/ToHeading added, KD-P8 phantom bar lifted)
 // Author:   —
 // Spec:     Player-attribute projection design supplement (docs/tracking/player-attribute-projection-design.md)
@@ -183,6 +184,20 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// W3 narrow projection for the shared goalkeeper/head cross-claim duel. Only the three
+        /// normalized score inputs defined by #11 §3.6 are carried; outfield players must not be
+        /// projected through <see cref="GoalkeeperAgentAttributes"/>.
+        /// </summary>
+        public static CrossClaimParticipantAttributes ToCrossClaim(
+            in TacticalDirector.PlayerDatabase.PlayerAttributes c)
+        {
+            return new CrossClaimParticipantAttributes(
+                ToNormalized(c.Balance),
+                ToNormalized(c.Strength),
+                ToNormalized(c.Aerial));
+        }
+
+        /// <summary>
         /// Projection into Goalkeeper Mechanics #11 attributes (projection design §3.7). Lossless
         /// <c>int → float</c> widening of the ten identically-named canonical <c>[1,20]</c> fields
         /// (<c>Reflexes</c> / <c>Handling</c> / <c>Composure</c> / <c>Strength</c> / <c>Aerial</c> /
@@ -239,4 +254,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | Heading/Strength/Balance) + ToGoalkeeper (#11, int→float widen |
 // |         |            |        | of the ten GK fields) added; KD-P8 "deliberately ABSENT" note  |
 // |         |            |        | removed now that MatchEngine gives both a live consumer.       |
+// | 1.3     | 2026-09-22 | —      | W3 (PR #439): ToCrossClaim — narrow Balance/Strength/Aerial    |
+// |         |            |        | projection for the shared cross-claim duel; outfielders are    |
+// |         |            |        | never projected through GoalkeeperAgentAttributes. Row added   |
+// |         |            |        | at the #439 close-out.                                         |
 #endregion

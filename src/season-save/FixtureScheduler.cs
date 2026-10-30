@@ -1,6 +1,6 @@
 // File:     src/season-save/FixtureScheduler.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.1 (circle method), §3.1.1 (where the seed enters),
 //           §3.1.2 (serialize don't regenerate), §4.5 (pure static), Appendix C (worked 4-club
@@ -175,8 +175,11 @@ namespace TacticalDirector.SeasonSave
                     $"A competition needs at least 2 clubs; got {clubCount}.", nameof(clubCount));
             }
 
-            int m = (clubCount % 2) != 0 ? clubCount + 1 : clubCount;
-            return 2 * (m - 1);
+            checked
+            {
+                int m = (clubCount % 2) != 0 ? clubCount + 1 : clubCount;
+                return 2 * (m - 1);
+            }
         }
 
         /// <summary>
@@ -280,6 +283,12 @@ namespace TacticalDirector.SeasonSave
             var seen = new HashSet<int>(clubIds.Length);
             for (int i = 0; i < clubIds.Length; i++)
             {
+                if (clubIds[i] < 0)
+                {
+                    throw new System.ArgumentOutOfRangeException(
+                        nameof(clubIds), clubIds[i], "Club ids must be non-negative.");
+                }
+
                 if (clubIds[i] == ByeClubId)
                 {
                     throw new System.ArgumentException(
@@ -307,4 +316,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.1     | 2026-07-25 | —      | AR pass 3: wrapped the SplitMix64 step in unchecked { } with the   |
 // |         |            |        | Spec #16 §3.4.4 citation (FR-CS-044 — the four sibling SplitMix64  |
 // |         |            |        | copies in-tree all comply; this one did not).                      |
+// | 1.2     | 2026-09-08 | —      | Reject negative real-club identities before schedule generation.  |
 #endregion

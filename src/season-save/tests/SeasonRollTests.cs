@@ -1,6 +1,10 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
+// Modified: 2026-10-18 (#31 T1 — call sites carry the transfers block)
+//           Prior: 2026-10-09 (ERR-030-053 — complete final fixture day before settlement)
+// Prior-Modified: 2026-09-11 (#40 T2b — roll fixtures use League.CreateLoop, persist live finance
+//           entries, and restore them rather than carrying the retired pre-T2 empty sentinel — v1.9)
+// Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
 //           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
 //           companion fix — v1.7)
 //           Prior: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call sites updated for the required
@@ -22,6 +26,7 @@ using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
@@ -41,16 +46,20 @@ namespace TacticalDirector.SeasonSave.Tests
         private static SeasonLoop NewLoop(League league, out WorldStore world, int managedClubId = 0)
         {
             world = new WorldStore(ManagerId, WorldSeed);
-            return new SeasonLoop(
-                world, league.CreateSeason(managedClubId), RoundResolutionMode.QuickSimAll);
+            return league.CreateLoop(
+                world, managedClubId, RoundResolutionMode.QuickSimAll);
         }
 
-        private static void PlayWholeSeason(SeasonLoop loop, League league)
+        private static void PlayWholeSeason(SeasonLoop loop, League league, bool completeFinalDay = true)
         {
             while (!loop.IsSeasonComplete)
             {
                 loop.AdvanceToNextFixtureDay();
                 loop.AdvanceAndPlayNextRound(league);
+            }
+            if (completeFinalDay)
+            {
+                loop.AdvanceDays(1);
             }
         }
 
@@ -348,10 +357,12 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
+                    interrupted.FinanceEntriesForSave(), transfersOrNull: null);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
-                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
+                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                    financesOrNull: contents.Finances);
 
                 resumed.RollToNextSeason();
 
@@ -385,14 +396,16 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false,
+                    loop.FinanceEntriesForSave(), transfersOrNull: null);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
                     "A season saved just after the roll must decode field-identical.");
 
                 var resumed = new SeasonLoop(
-                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
+                    contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                    financesOrNull: contents.Finances);
 
                 // And it must still be playable — the ERR-030-015 property, across a file this time.
                 resumed.AdvanceToNextFixtureDay();
@@ -419,7 +432,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // stuck state saves and reloads perfectly happily. AdvanceDays has to refuse the step.
             League league = FourClubLeague();
             SeasonLoop loop = NewLoop(league, out WorldStore world);
-            PlayWholeSeason(loop, league);
+            PlayWholeSeason(loop, league, completeFinalDay: false);
 
             uint before = world.CurrentWorldTick;
             int overshoot = (int)SeasonLoopConstants.SeasonBreakDays + 1;
@@ -538,14 +551,14 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayWholeSeason(loop, league);
 
             uint lastRoundDay = loop.State.Calendar.DayOfRound(loop.State.Calendar.RoundCount - 1);
-            Assert.AreEqual(lastRoundDay, world.CurrentWorldTick,
-                "Precondition: the clock sits on the day the final round was played.");
+            Assert.AreEqual(lastRoundDay + 1, world.CurrentWorldTick,
+                "Precondition: the final fixture day has completed before settlement.");
 
             SeasonRollOutcome outcome = loop.RollToNextSeason();
             int advanced = loop.AdvanceToNextFixtureDay();
 
-            Assert.AreEqual((int)SeasonLoopConstants.SeasonBreakDays, advanced,
-                "The close season is exactly SeasonBreakDays long.");
+            Assert.AreEqual((int)SeasonLoopConstants.SeasonBreakDays, advanced + 1,
+                "The completed final day plus remaining advances span exactly SeasonBreakDays.");
             Assert.AreEqual(outcome.NextFirstFixtureDay, world.CurrentWorldTick);
             Assert.DoesNotThrow(() => loop.AdvanceAndPlayNextRound(league));
         }
@@ -614,4 +627,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | tally to a fresh temp path and drive no #44 subsystem —             |
 // |         |            |        | disciplineWired: true flipped to false to match the parameter's     |
 // |         |            |        | own contract. No assertion or intent change; suite still green.     |
+// | 1.8     | 2026-09-10 | —      | #40 T1b (ERR-030-049): both Save call sites pass the required     |
+// |         |            |        | empty finance set, and a NoFinances helper says so explicitly     |
+// |         |            |        | rather than inlining Array.Empty at each site. A season roll      |
+// |         |            |        | touches no finance state until #40 T2. No assertion or intent     |
+// |         |            |        | change.                                                           |
+// | 1.9     | 2026-09-11 | —      | #40 T2b: production bootstrap plus live finance save/restore.     |
+// | 1.10 | 2026-10-09 | — | ERR-030-053: boundary fixtures complete their final day; break duration is unchanged. |
+// | 1.11 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call sites pass transfersOrNull: null. |
 #endregion

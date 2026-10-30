@@ -1,0 +1,41 @@
+NUnitLite 3.14.0 (.NET Standard 2.0)
+Copyright (c) 2023 Charlie Poole, Rob Prouse
+
+Runtime Environment
+   OS Version: Ubuntu 24.04.3 LTS
+  CLR Version: 8.0.21
+
+Test Files
+    /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll
+
+Test Discovery
+  Start time: 2026-10-12 16:43:18Z
+    End time: 2026-10-12 16:43:18Z
+    Duration: 0.053 seconds
+
+=> TacticalDirector.BallPhysics.Tests.BallIntegrationTests.FullUpdate_NaNInput_RecoversWithoutException
+[Error] [BallPhysics] NaN/Infinity detected — recovering to last valid state.
+=> TacticalDirector.BallPhysics.Tests.BallIntegrationTests.Possession_NaNKick_RejectedWithFeedback_BallStateUnchanged
+[Error] [BallPhysics] ApplyKick: Invalid velocity (NaN, 0.00, 0.00) from agent 2. Kick rejected.
+=> TacticalDirector.BallPhysics.Tests.BallPhysicsCoreTests.Validation_ClampsExcessiveSpin
+[Warning] [BallPhysics] Spin clamped from 100.0 rad/s
+=> TacticalDirector.BallPhysics.Tests.BallPhysicsCoreTests.Validation_ClampsExcessiveVelocity
+[Warning] [BallPhysics] Velocity clamped from 100.0 m/s
+=> TacticalDirector.BallPhysics.Tests.BallPhysicsCoreTests.Validation_DetectsInfinity_AndRecovers
+[Error] [BallPhysics] NaN/Infinity detected — recovering to last valid state.
+=> TacticalDirector.BallPhysics.Tests.BallPhysicsCoreTests.Validation_DetectsNaN_AndRecovers
+[Error] [BallPhysics] NaN/Infinity detected — recovering to last valid state.
+
+Run Settings
+    Number of Test Workers: 0
+    Work Directory: /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro
+    Internal Trace: Off
+
+Test Run Summary
+  Overall result: Passed
+  Test Count: 120, Passed: 120, Failed: 0, Warnings: 0, Inconclusive: 0, Skipped: 0
+  Start time: 2026-10-12 16:43:18Z
+    End time: 2026-10-12 16:43:18Z
+    Duration: 0.089 seconds
+
+Results (nunit3) saved as /tmp/smp-nunit/ball-after.xml

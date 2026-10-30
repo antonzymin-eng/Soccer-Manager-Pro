@@ -80,6 +80,18 @@ Run the narrowest relevant tests first, then the repository gate described under
 COMMANDS** in the expanded reference. Do not claim certification from the Linux shim gate: certified
 performance capture requires the pinned Unity host and `docs/tracking/cert-run-runbook.md`.
 
+**Unity governs the build (owner decision, September 12, 2026).** Code is not done until it compiles in
+the Unity 6000.4.9f1 editor on the pinned host. The Linux `tools/dotnet-ci` gate is **kept** and still
+runs on every push, but a green Linux gate is not sufficient on its own. It uses NUnit 3.14 and MSBuild's
+transitive project references, while Unity bundles NUnit 3.5 and requires every referenced assembly to be
+listed directly. So:
+
+- list every assembly whose types a file names in that assembly's own `.asmdef`;
+- do not use `Assert.Multiple`;
+- use `Has.No.Member(x)` rather than `Does.Not.Contain(x)` for non-string `x`.
+
+The editor procedure is under **BUILD AND TEST COMMANDS** in the expanded reference.
+
 **CI provider — GitHub Actions, at `.github/workflows/ci.yml`.** Recorded here because Testing
 Strategy #19 FR-TS-078 requires the final provider pin to land in this file. This line records the
 provider choice and nothing else: the workflow is the authoritative definition of jobs, triggers and

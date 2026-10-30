@@ -1,6 +1,7 @@
 // File:     src/pressing-ai/TriggerEvaluator.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15
+// Modified: 2026-09-14 (W5/W7 reconciliation: ERR-013-011 60 Hz pass-window + bounded discrete-event dwell; W12 raw-trigger observation seam preserved)
+// Modified: 2026-09-13 (W12: observation-only raw-trigger output for gate-firing census)
 // Author:   —
 // Spec:     Pressing AI #13 §3.1–§3.2, Code Standards #20
 // Purpose:  Pure static class: evaluates all four raw press-trigger conditions and
@@ -35,12 +36,54 @@ namespace TacticalDirector.PressingAI
             bool hasLatestPass,
             ref PressTrigger state)
         {
-            bool rawBadTouch     = EvaluateBadTouch(snapshot);
-            bool rawBackwardPass = hasLatestPass && EvaluateBackwardPass(snapshot, latestPass);
+            return Evaluate(snapshot, latestPass, hasLatestPass, ref state, out _);
+        }
+
+        /// <summary>
+        /// W12 observation overload. <paramref name="raw"/> is the exact four-condition result used
+        /// to update debounce state on this call; exposing it avoids re-evaluating trigger geometry in
+        /// the diagnostic path. The original overload delegates here, so production semantics have one
+        /// implementation and remain unchanged.
+        /// </summary>
+        internal static TriggerFlags Evaluate(
+            PressingSnapshot snapshot,
+            PassAttemptEvent latestPass,
+            bool hasLatestPass,
+            ref PressTrigger state,
+            out TriggerFlags raw)
+        {
+            bool rawBadTouch = EvaluateBadTouch(snapshot);
+
+            // ERR-013-011: the retained ring event is stamped in the 60 Hz EventBus clock,
+            // while snapshot.TickIndex is a 10 Hz tactical heartbeat. AI runs before Resolve/Events,
+            // so only the previous completed physics interval [windowStart, PhysicsTick) may START
+            // BACKWARD_PASS dwell.
+            bool freshBackwardPass = hasLatestPass
+                && latestPass.Tick >= snapshot.PassEventWindowStartTick
+                && latestPass.Tick < snapshot.PhysicsTick
+                && EvaluateBackwardPass(snapshot, latestPass);
+
+            // BACKWARD_PASS is a one-shot event but §3.2 requires two tactical heartbeats of dwell.
+            // Once a qualifying event starts dwell, keep that already-started dwell raw-true only
+            // until it reaches the threshold. A stale retained ring entry cannot start another dwell.
+            bool pendingBackwardPassDwell = state.BackwardPassDwell > 0
+                && state.BackwardPassDwell < PressingAIConstants.TriggerDwellTicks;
+            bool rawBackwardPass = freshBackwardPass || pendingBackwardPassDwell;
+
             bool rawSidelineTrap = EvaluateSidelineTrap(snapshot);
             bool rawWeakReceiver = EvaluateWeakReceiver(snapshot);
 
-            UpdateCounter(rawBadTouch,     ref state.BadTouchDwell,     ref state.BadTouchRelease);
+            raw = TriggerFlags.None;
+            if (rawBadTouch)
+                raw |= TriggerFlags.BadTouch;
+            if (rawBackwardPass)
+                raw |= TriggerFlags.BackwardPass;
+            if (rawSidelineTrap)
+                raw |= TriggerFlags.SidelineTrap;
+            if (rawWeakReceiver)
+                raw |= TriggerFlags.WeakReceiver;
+
+            UpdateCounter(rawBadTouch,     ref state.BadTouchDwell,      ref state.BadTouchRelease);
             UpdateCounter(rawBackwardPass, ref state.BackwardPassDwell,  ref state.BackwardPassRelease);
             UpdateCounter(rawSidelineTrap, ref state.SidelineTrapDwell,  ref state.SidelineTrapRelease);
             UpdateCounter(rawWeakReceiver, ref state.WeakReceiverDwell,  ref state.WeakReceiverRelease);
@@ -94,9 +137,9 @@ namespace TacticalDirector.PressingAI
 
         internal static bool EvaluateBackwardPass(PressingSnapshot snapshot, PassAttemptEvent evt)
         {
-            // Resolve passer position. The trigger evaluates the POSSESSING team's pass;
-            // a pass by the pressing team itself must never fire it (AR-3 L: passer-team
-            // guard — the ring buffer is team-agnostic).
+            // Resolve passer position. W5 routes only OPPONENT passes into this team's ring,
+            // matching #13 §4.4.2. Keep the passer-team check as a fail-safe against a malformed/manual
+            // ring write: an own-team pass must never become a press trigger.
             Vector2 passerPos = Vector2.zero;
             bool found = false;
             for (int i = 0; i < snapshot.Agents.Length; i++)
@@ -117,14 +160,26 @@ namespace TacticalDirector.PressingAI
             if (!found)
                 return false;
 
+            // The EventBus/ring retains the authoritative WORLD-FRAME event. Pressing snapshots are
+            // canonicalized so the acting pressing team attacks +X; normalize only the point consumed
+            // by this geometric comparison. Keeping the stored struct homogeneous avoids a serialized
+            // hybrid where TargetPosition is canonical but FinalVelocity/FinalSpin remain world-frame.
+            float targetX = evt.TargetPosition.x;
+            float targetY = evt.TargetPosition.y;
+            if (snapshot.PressingTeamId == 1)
+            {
+                targetX = PressingAIConstants.PITCH_LENGTH_M - targetX;
+                targetY = PressingAIConstants.PITCH_WIDTH_M - targetY;
+            }
+
             // §3.1.2 F2: suppress on non-finite passer/target coordinates.
             if (float.IsNaN(passerPos.x) || float.IsNaN(passerPos.y)
-                || float.IsNaN(evt.TargetPosition.x) || float.IsNaN(evt.TargetPosition.y))
+                || float.IsNaN(targetX) || float.IsNaN(targetY))
                 return false;
 
             Vector2 toTarget = new Vector2(
-                evt.TargetPosition.x - passerPos.x,
-                evt.TargetPosition.y - passerPos.y);
+                targetX - passerPos.x,
+                targetY - passerPos.y);
 
             float len = toTarget.magnitude;
             if (len * len < PressingAIConstants.SpacingEpsilonM2)
@@ -301,4 +356,8 @@ namespace TacticalDirector.PressingAI
 // | 1.1     | 2026-05-29 | —      | AR-1 H-2: fixed unit mismatch in EvaluateBackwardPass (len*len vs len). AR-1 H-1: added IsActive guards in BadTouch, BackwardPass, SidelineTrap, WeakReceiver, ComputeGeometricPressure. |
 // | 1.2     | 2026-06-15 | —      | AR-2 L-1: explicit §3.1.2 F2 NaN suppression — BadTouch (touch/speed), BackwardPass (positions), SidelineTrap (ballY, which previously could fall through to a spurious fire), WeakReceiver (first-touch attribute, likewise). |
 // | 1.3     | 2026-06-15 | —      | AR-3 H (ERR-013-009): BackwardPass now evaluates the possessing team's frame (negated AttackingDirection); a pressing-team passer is ignored. Corrects the home/away inversion class. |
+// | 1.4     | 2026-09-13 | —      | W12: one implementation now also exposes the exact raw trigger flags used by debounce to the runtime diagnostic surface; original public signature remains unchanged. |
+// | 1.5     | 2026-09-11 | —      | W5: production ring is opponent-routed; retained own-team passer guard as defensive validation. |
+// | 1.6     | 2026-09-11 | —      | ERR-013-011 review: normalize the retained world-frame target only at BackwardPass evaluation, keeping serialized event state frame-homogeneous. |
+// | 1.7     | 2026-09-11 | —      | ERR-013-011 second review: accept only [windowStart,physicsTick) to start dwell and carry a qualifying discrete event only through its required two-heartbeat dwell. |
 #endregion

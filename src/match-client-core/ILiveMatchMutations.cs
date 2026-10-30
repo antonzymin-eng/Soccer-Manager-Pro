@@ -1,6 +1,7 @@
 // File:     src/match-client-core/ILiveMatchMutations.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-10-15 (Match Flow §6.4: RequestSubstitution)
+// Modified (prior): 2026-07-24
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §3-2/§4/§6),
 //           Code Standards #20
@@ -37,8 +38,8 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>Live, stride-committed: stages a per-agent tactic change (FR-TI-027).</summary>
         void SetPlayerTactic(int agentId, in PlayerTactic tactic);
 
-        /// <summary>Live: swaps a bench player onto the pitch (guarded against a finished match inside the engine).</summary>
-        void SubstitutePlayer(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason);
+        /// <summary>Live: queues a substitution for its next eligible stoppage; rule refusals return typed outcomes.</summary>
+        SubstitutionRequestResult RequestSubstitution(int teamId, int outSlotIndex, int benchIndex, SubstitutionReason reason);
     }
 }
 
@@ -46,4 +47,5 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0/P2): closed live-mutator surface for the  |
 // |         |            |        | deterministic command channel + tick/match-ended read signals. |
+// | 1.1     | 2026-10-15 | —      | Match Flow §6.4: SubstitutePlayer replaced by RequestSubstitution, which returns SubstitutionRequestResult. |
 #endregion

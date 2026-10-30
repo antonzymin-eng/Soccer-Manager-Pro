@@ -1,0 +1,148 @@
+name: Match measurement lane
+
+# Manually dispatched host for the env-gated §5.Z match-engine instruments.
+#
+# A green compile/test gate is necessary but NOT sufficient evidence that a measurement happened.
+# This lane therefore resolves a named instrument to one canonical env/filter/project/sentinel tuple,
+# executes the diagnostic in its owning generated test project, requires VSTest to treat zero matches
+# as an error, records TRX, and verifies that at least one test passed AND the expected report sentinel
+# reached the instrument-only captured output. The artifact is evidence; the workflow itself never
+# writes to the repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      instrument:
+        description: 'Canonical instrument id (invalid ids fail and print the available list)'
+        required: true
+        type: string
+      reason:
+        description: 'Single-line reason for taking this measurement; recorded in the artifact'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: match-measurement-lane
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Run one env-gated instrument and prove its report was captured
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve canonical instrument
+        env:
+          INSTRUMENT: ${{ inputs.instrument }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if [[ "$REASON" == *$'\n'* || "$REASON" == *$'\r'* ]]; then
+            echo "ERROR: reason must be a single line." >&2
+            exit 2
+          fi
+          python3 tools/dotnet-ci/measurement_catalog.py validate --repo .
+          python3 tools/dotnet-ci/measurement_catalog.py resolve \
+            "$INSTRUMENT" --repo . --github-env "$GITHUB_ENV"
+
+      - name: Build gate and run instrument
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/measurements/trx
+          OUT="artifacts/measurements/measurement.txt"
+          MEASURE_OUT="artifacts/measurements/instrument-output.txt"
+          RESULTS="artifacts/measurements/trx"
+          RUNSETTINGS="artifacts/measurements/measurement.runsettings"
+
+          cat > "$RUNSETTINGS" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RunSettings>
+            <RunConfiguration>
+              <TreatNoTestsAsError>true</TreatNoTestsAsError>
+            </RunConfiguration>
+          </RunSettings>
+          XML
+
+          {
+            echo "# System XI measurement run"
+            echo "# commit:     $GITHUB_SHA"
+            echo "# ref:        $GITHUB_REF"
+            echo "# run:        $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+            echo "# instrument: $MEASUREMENT_INSTRUMENT"
+            echo "# env:        $MEASUREMENT_ENV"
+            echo "# filter:     $MEASUREMENT_FILTER"
+            echo "# project:    $MEASUREMENT_PROJECT"
+            echo "# reason:     $REASON"
+            echo "# taken:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "#"
+            echo "# A green build gate is not measurement evidence. The lane succeeds only after"
+            echo "# TRX proves a test passed and the catalogued report sentinel is present in the"
+            echo "# instrument-only output, which intentionally excludes this operator preamble."
+            echo
+          } > "$OUT"
+
+          # First run the repository's normal whole-tree build/meta gate. Explicitly remove the
+          # selected diagnostic env name from this child process: the gate is structural evidence,
+          # not the measurement, and must not execute the expensive diagnostic once here and again
+          # in the proved run below.
+          set +e
+          env -u "$MEASUREMENT_ENV" bash tools/dotnet-ci/run-gate.sh \
+            --test-filter "$MEASUREMENT_FILTER" 2>&1 | tee -a "$OUT"
+          gate_status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$gate_status" -ne 0 ]; then
+            echo "# build gate exit status: $gate_status" >> "$OUT"
+            exit "$gate_status"
+          fi
+
+          echo >> "$OUT"
+          echo "── Proved measurement run ───────────────────────────────────────────" | tee -a "$OUT"
+
+          # The no-tests policy is deliberately scoped to THIS project invocation. Applying it to
+          # run-gate.sh's whole solution would make unrelated generated test projects with zero
+          # filter matches fail. Two loggers are intentional: detailed console carries TestContext
+          # output into the artifact, while TRX is the machine-readable execution proof.
+          # MEASURE_OUT contains ONLY this dotnet-test stream; free-form metadata such as REASON is
+          # kept in OUT so operator text cannot satisfy the report-sentinel postcondition.
+          set +e
+          env "$MEASUREMENT_ENV=1" dotnet test "$MEASUREMENT_PROJECT" \
+            --no-build --no-restore \
+            --filter "$MEASUREMENT_FILTER" \
+            --settings "$RUNSETTINGS" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=measurement.trx" \
+            --results-directory "$RESULTS" 2>&1 | tee "$MEASURE_OUT" | tee -a "$OUT"
+          measurement_status="${PIPESTATUS[0]}"
+          set -e
+
+          echo >> "$OUT"
+          echo "# dotnet measurement exit status: $measurement_status" >> "$OUT"
+          if [ "$measurement_status" -ne 0 ]; then
+            exit "$measurement_status"
+          fi
+
+          python3 tools/dotnet-ci/measurement_catalog.py verify-run \
+            "$MEASUREMENT_INSTRUMENT" --trx-dir "$RESULTS" --output "$MEASURE_OUT" | tee -a "$OUT"
+          echo "# measurement verification: PASS" >> "$OUT"
+
+      - name: Upload measurement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: measurement-${{ github.run_id }}
+          path: artifacts/measurements/
+          if-no-files-found: warn
+          retention-days: 90

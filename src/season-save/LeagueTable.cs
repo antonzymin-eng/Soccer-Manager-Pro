@@ -1,6 +1,6 @@
 // File:     src/season-save/LeagueTable.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2 (data structures), §3.2 (ApplyResult / tie-break),
 //           Appendix B row 10, Appendix D, FR-SN-005..008 / FR-SN-033; Code Standards #20
@@ -162,8 +162,10 @@ namespace TacticalDirector.SeasonSave
                     $"Club {awayClubId} is not in this league table.", nameof(awayClubId));
             }
 
-            _rows[homeIndex] = _rows[homeIndex].WithResult(homeGoals, awayGoals);
-            _rows[awayIndex] = _rows[awayIndex].WithResult(awayGoals, homeGoals);
+            LeagueTableRow updatedHome = _rows[homeIndex].WithResult(homeGoals, awayGoals);
+            LeagueTableRow updatedAway = _rows[awayIndex].WithResult(awayGoals, homeGoals);
+            _rows[homeIndex] = updatedHome;
+            _rows[awayIndex] = updatedAway;
         }
 
         /// <summary>Applies one <see cref="MatchResult"/> to the table (the §3.4 call shape).</summary>
@@ -295,4 +297,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0): ascending-ClubId canonical row    |
 // |         |            |        | storage, ApplyResult with resolve-both-before-write F2 gating,     |
 // |         |            |        | OrderedView read-only copy, PositionOf, Clone, FieldsEqual.        |
+// | 1.1     | 2026-09-08 | —      | Compute both row updates before either write, preserving atomicity on overflow. |
 #endregion

@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonLoopScenarioTests.cs
 // Created:  2026-07-26
+// Modified: 2026-10-09 ([Timeout(7200000)] for Unity's 180 s default — v1.2)
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-26
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7; Testing Strategy & Framework #19 §3.1.4 (sim_<scenario>
@@ -17,26 +19,18 @@ namespace TacticalDirector.SeasonSave.Tests
     internal class SeasonLoopScenarioTests
     {
         [Test]
+        [Timeout(7200000)]
         public void sim_season_multi_fixture()
         {
+            // Unity applies a 180 s default per-test timeout that NUnit on the Linux shim does not; on the
+            // pinned 6000.4.9f1 host (Mono) this test ran 560 s on October 9, 2026 and was failed for the
+            // timeout alone. 2 h matches S0DemoFixtureComparisonTests and leaves headroom for a loaded host.
             // Boots one real MatchEngine match (~2 min): the FR-SN-013b routing proof. The rest of the
             // scenario — two full head-less seasons plus the per-day KD-8 floor — costs milliseconds.
-            //
-            // §5.Z Phase H: that real match now actually PLAYS, which reaches Pass Mechanics #5's FM-08
-            // possession-recheck cancel — a pass whose passer loses the ball before CONTACT (a restart is
-            // awarded against them mid-windup). That is the documented cancel path doing its job, and it
-            // is expected several times per 90 minutes; #5 emits it at Error level, so the run must
-            // declare it. (Whether "lost possession before CONTACT. Race condition." should be a Warning
-            // now that it is an ordinary match event is a Pass Mechanics question, recorded as a
-            // follow-up in the design note rather than changed from here.)
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(SeasonLoopScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 SeasonLoopScenarios.MultiFixturePath, SeasonLoopScenarios.MultiFixtureSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }
@@ -47,4 +41,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-26 | —      | Initial implementation (#30 §5.7): runs the season-multi-fixture     |
 // |         |            |        | capstone through the ScenarioRunner.                                |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.2     | 2026-10-09 | —      | [Timeout(7200000)]: 560 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion

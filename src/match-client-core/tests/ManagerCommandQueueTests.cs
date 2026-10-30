@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/ManagerCommandQueueTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-08
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P2/§6.4), Code Standards #20
 // Purpose:  Head-less locks for the manager command queue: FIFO drain, thread-safe enqueue, and the
@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 
 using NUnit.Framework;
@@ -55,6 +56,24 @@ namespace TacticalDirector.MatchClientCore.Tests
             var queue = new ManagerCommandQueue();
             Assert.Throws<ArgumentException>(() => queue.Enqueue(default));
             Assert.AreEqual(0, queue.Count, "a refused command never enters the queue");
+        }
+
+        [Test]
+        public void Enqueue_UnknownKind_ThrowsBeforeCrossingThreadBoundary()
+        {
+            ConstructorInfo[] constructors = typeof(ManagerCommand).GetConstructors(
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.AreEqual(1, constructors.Length, "test must exercise the real command representation");
+
+            var invalid = (ManagerCommand)constructors[0].Invoke(new object[]
+            {
+                (ManagerCommandKind)99, 0, 0, default(TeamTactic), default(PlayerTactic), 0, 0,
+                default(SubstitutionReason)
+            });
+            var queue = new ManagerCommandQueue();
+
+            Assert.Throws<ArgumentException>(() => queue.Enqueue(in invalid));
+            Assert.AreEqual(0, queue.Count, "an invalid command must never reach the simulation thread");
         }
 
         [Test]
@@ -106,4 +125,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | Version | Date       | Author       | Notes                                                     |
 // | 1.0     | 2026-07-24 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+// | 1.2     | 2026-09-08 | —            | Regression coverage for rejecting undefined command kinds at enqueue. |
 #endregion

@@ -1,12 +1,12 @@
 // File:     src/match-client-core/tests/LiveFrameLatchTests.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b,
 //           §12 rule 1), Testing Strategy #19, Code Standards #20
 // Purpose:  Locks the previous/current frame latch AR pass M-6 extracted out of
 //           MatchClientBehaviour.AdvanceFrame: the first-frame seed, a new-tick shift (including a
-//           multi-tick jump), and the same-tick no-op.
+//           multi-tick jump), and the same-/older-tick no-op.
 
 using NUnit.Framework;
 
@@ -98,6 +98,23 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.AreEqual(0.4f, latch.SecondsSinceCurrent(1.9f), 1e-6f,
                 "the arrival clock must NOT reset — a same-tick republish is not a new interval");
         }
+
+        [Test]
+        public void OlderTickArrivingLate_IsANoOp()
+        {
+            var latch = new LiveFrameLatch();
+            latch.TryAccept(Frame(10UL), 1.0f);
+            latch.TryAccept(Frame(12UL), 1.5f);
+
+            LiveMatchFrame delayed = Frame(11UL);
+            bool changed = latch.TryAccept(in delayed, 1.9f);
+
+            Assert.IsFalse(changed, "a delayed frame must not rewind the render timeline");
+            Assert.AreEqual(10UL, latch.Previous.Tick, "the interpolation source remains unchanged");
+            Assert.AreEqual(12UL, latch.Current.Tick, "the newest accepted tick remains current");
+            Assert.AreEqual(0.4f, latch.SecondsSinceCurrent(1.9f), 1e-6f,
+                "rejecting a delayed frame must not reset the arrival clock");
+        }
     }
 }
 
@@ -106,4 +123,6 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-08-15 | —      | Initial creation (AR pass M-6): first-frame seed, new-tick      |
 // |         |            |        | shift, multi-tick jump, and same-tick no-op — the four cases    |
 // |         |            |        | LiveFrameLatch.TryAccept resolves.                               |
+// | 1.1     | 2026-09-08 | —      | Regression coverage: delayed older frames cannot rewind the     |
+// |         |            |        | interpolation pair or reset its arrival clock.                   |
 #endregion

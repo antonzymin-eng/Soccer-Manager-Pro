@@ -1,6 +1,13 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
+**Last Updated:** October 20, 2026 (v2.26 — ERR-030-057: §3.5 (d″) pseudocode guards a null #28 boundary and derives #31's window from the next calendar's opening fixture day; the (c′) note records that the window's close does not follow roll timing)
+**Last Updated (prior):** October 20, 2026 (v2.25 — ERR-030-056: §3.5 gains step (d″), #31's staged boundary, and names `SubmitTransferBid` as ERR-030-005's mid-season roster commit)
+**Last Updated (prior):** October 19, 2026 (v2.24 — ERR-028-025: step (d) LIVE — the staged #28 season boundary)
+**Last Updated (prior):** October 9, 2026 (v2.23 — ERR-030-053: complete the final fixture day before settlement; preserve refused-roll atomicity)
+**Last Updated (prior):** October 8, 2026 (v2.22 — finance slot 11a publishes only after every club succeeds)
+**Last Updated (prior):** October 8, 2026 (v2.21 — finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged)
+**Last Updated (prior):** September 11, 2026 (v2.20 — ERR-030-051: #40 T2b makes (b') live while preserving refused-roll atomicity by staging settlement until the fallible season commit succeeds)
 **Last Updated:** August 18, 2026, even later still (v2.19 — **adversarial-review round-7 finding M7**,
 spec-text only — no code change; the code was already correct): `PlayThroughEngine`'s pseudocode body
 derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null —
@@ -228,7 +235,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.19
+**Version:** 2.26
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -373,7 +380,13 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     # 11. tenure       (#54)  — NULL SEAM today (ERR-030-021 — EvaluateTenure. Positioned after board
     #                           (step 8) because it READS the day's board confidence; the terminating
     #                           decision itself is #54's, not #30's)
-    # 12. world day:    WorldStore.AdvanceDay()   <-- the only LIVE tick
+    # 11a. finance (#40 T3b1) — LIVE only at day completion, outside pre-round replay:
+    if initialized finance entries exist:
+        staged := PrepareDailyRevenue(finance entries, ClubFinancesConstants.DEEP_REVENUE_ENABLED)
+        # PrepareDailyRevenue calls AccrueDailyRevenue(entry, 0L, 0L, gate) for each club;
+        # no live entry changes if any club fails.
+        finance entries := staged
+    # 12. world day — advances only after daily accounting succeeds
     WorldStore.AdvanceDay()
 ```
 
@@ -400,6 +413,11 @@ managed club only). A no-fixture day's advance is **byte-identical to the world*
 a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8) — since #29/#41 T2 the career day-steps also run
 (slots 2/4), but their state lives in the career sub-blobs, not the world blob, so the world-digest
 identity FR-SN-026 pins is unchanged.
+
+**Finance publication (slot 11a):** #30 installs the detached result returned by
+`SeasonFinanceRuntime.PrepareDailyRevenue` only after every club succeeds, before advancing the
+world clock. A finance refusal preserves the live finance array and day for retry; all-club staging
+remains mandatory when T3b2 supplies non-zero amounts (#40 §3.6).
 
 ### 3.3.1 Tick-order reconciliation (ERR-030-022, July 27, 2026)
 
@@ -944,24 +962,37 @@ final table results regardless of the order fixtures within a round are resolved
 
 ```
 RollToNextSeason():
+    RequireEveryFixturePlayed()
+    require World.CurrentWorldTick > Calendar.DayOfRound(Calendar.RoundCount - 1)
+    # Refuse before all boundary writes; AdvanceDays(1) completes a pending final fixture day.
     finalTable := Table.OrderedView()                 # (a) finalize
     Board.Evaluate(finalTable)                         # (b) board pass/fail + job-security
     # (b'') <-- #54 EvaluateTenure inserts HERE (ERR-030-021) — after the board's verdict, which it
     #           reads. #30 supplies the seam and the ordering; the TERMINATION DECISION IS #54's.
     #           FR-BD-012 previously named #30 as deciding it; #30 contains no such rule and never did.
     # (a')  <-- #43 promotion/relegation transform inserts HERE (FR-SN-031), not built now
-    # (b')  <-- #40 finance settlement inserts HERE (ERR-030-003) — after (a') so budgets reflect the
-    #           post-promotion division; SettleFinances(financeState[club], position, clubCount, board)
-    #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
+    # (b')  #40 finance settlement — LIVE at T2b (ERR-030-051), after (a') so budgets reflect the
+    #           post-promotion division. Compute/stage SettleFinances(financeState[club], position,
+    #           clubCount, board) for every club HERE; do not install into live finance state yet.
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
     Calendar := ShiftForwardOneSeason(Calendar)        # (c′) rebuild — see the correction note
-    AdvanceAges()                                       # (d) #28's RunSeasonBoundary — RESERVED still
-                                                          #     (the daily step is LIVE at slot 1 since
-                                                          #     T2a, §3.3; this boundary call is not)
+    boundary := Progression?.PrepareSeasonBoundary(worldSeed, SeasonNumber, clock − 1)   # (d) #28 — LIVE
+                                                          #     (ERR-028-025): STAGED here, writes nothing
+    rosterSync := Career?.PrepareRosterSync(boundary ? PlannedSquads : provider)          # (d′) staged
+    nextTransfers := Transfers?.PrepareSeasonBoundary(                                  # (d″) staged (ERR-030-056)
+                         boundary ? boundary.RetiredPlayerIds : [],                     #   (ERR-030-057: no #28
+                         boundary ? boundary's regens at the managed club : [],         #    store ⇒ no boundary)
+                         SummerWindowFor(clock, Calendar.DayOfRound(0)))                #   #31 §3.5, ERR-031-011:
+                                                          #     Calendar is ALREADY the next season's (c′)
     Table := LeagueTable.Empty(ClubIds)                # (e) reset
     SeasonNumber++
     Seed := nextSeed
+    FinanceState := stagedFinanceState                 # commit b' only AFTER (e) succeeds; cannot throw
+    Progression?.CommitSeasonBoundary(boundary)        # commit (d) — cannot throw on a fresh plan
+    Career?.CommitRosterSync(rosterSync)               # commit (d′) against the installed roster
+    Transfers := nextTransfers                         # commit (d″) — a reference swap, cannot fail
+    for pid in (boundary ? boundary.RetiredPlayerIds : []): DisciplineRules?.DropPlayer(pid)   # FR-DC-013
     # (f) #44's season-boundary sweep (FR-DC-017) — LIVE since T2 (C1/C2, August 13, 2026):
     # DisciplineRules.RollToNextSeason() resets every yellow count to 0; UNSERVED BANS CARRY
     # UNCHANGED — a red card in the final round is still a ban in August, which is the whole reason
@@ -979,21 +1010,51 @@ RollToNextSeason():
     DisciplineRules?.RollToNextSeason()
 ```
 
-**Step (d) is only partly landed (ERR-030-030).** #28's daily step — derived age, the deterministic
-weighted growth spend, and hard retirement FLAGGING at `RETIREMENT_AGE` — has been LIVE since T2a at
-KD-2 slot 1 (§3.3), driven every world day, not at the season boundary. What (d) invokes is different:
-`RunSeasonBoundary`, the roster-MUTATION half — removing flagged retirees and inserting their 1:1
-regen replacements via `RetirementResult`/`RegenResult` (FR-PG-015). That call is deliberately **not**
-part of the T2a landing (#28 §3.4/§7) and stays reserved here until it lands; `AdvanceAges()` at (d)
-is a placeholder name for a step whose real shape #28 has not yet specified either.
+**Final-day precondition (ERR-030-053):** playing the last round closes its fixtures, not its world
+day. After every fixture is played, `RollToNextSeason` MUST refuse while
+`WorldStore.CurrentWorldTick <= Calendar.DayOfRound(Calendar.RoundCount - 1)`, before staging or
+committing boundary work. Callers use `AdvanceDays(1)` to complete a pending final fixture day through
+slot 11a, against the completed season, before settlement resets `SeasonRevenueAccrued`. The roll never
+implicitly advances the world. Its refusal preserves the whole save, and Save/Load/Restore preserves this
+precondition through the existing world clock. Already-completed final days require no additional step.
+The next opening date and `SeasonBreakDays` remain unchanged; completion consumes the first break advance.
+T-FN-DAY-008 in #40 §5.9 covers refusal, continuation and the boundary clock contract. T3b2 MUST also
+prove that non-zero final-fixture revenue belongs to the completed season before settlement.
 
-Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
-the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
-(restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(c′)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
-(ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
-post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
-transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
+**Step (d) is LIVE (ERR-028-025, October 19, 2026).** #28's daily step — derived age, the deterministic
+weighted growth spend, and retirement FLAGGING — has been live since T2a at KD-2 slot 1 (§3.3). What (d) adds is
+the roster-MUTATION half (#28 §3.4): retirees removed and replaced 1:1, in their own positions (ERR-028-024), by
+regens with fresh `NextPlayerId` ids. It is **staged** like (b′): `PrepareSeasonBoundary` writes nothing, (d′)
+reconciles the #29/#41/#30 rows against the plan's PLANNED rosters (the store is not yet mutated, so reading the
+live provider would reconcile against the pre-boundary roster), and both commit only after `BeginNextSeason`. The
+regen stream is boundary-scoped — seeded from the world seed and the completed season number, both persisted — so
+a save taken before the roll reproduces the same regens, and the KD-6 restartable-transform property extends to
+the roster. Each retiree's #44 row is dropped after the commits (FR-DC-013); nothing can inherit it, because a
+regen takes a fresh id and transfers keep ids (ERR-031-005).
+
+**Step (d″) — #31's boundary, and the mid-season roster commit (ERR-030-056, #31 T2, October 20, 2026).** The roll
+had no step for #31, so T1's carried contracts could not follow #28's retirements: a retired contracted player
+left a contract the save root's coherence rule then refused, and the career could no longer be saved. (d″) is
+#31's `PrepareSeasonBoundary` (#31 §3.7) — every managed contract ages one season, the retirees' contracts leave,
+each regen joining the managed club is contracted at the genesis terms, committed spend resets, and the next
+summer window opens on the roll day (#31 §3.5, ERR-031-008) and closes `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 days after
+the next calendar's opening fixture day (ERR-031-011). Without #28 there is no boundary plan, so (d″) passes no
+retirees and no arrivals (ERR-030-057). It is staged after (d)/(d′), whose plan it reads,
+and installed after (e) by a reference swap. **The mid-season roster commit ERR-030-005 reserved is
+`SeasonLoop.SubmitTransferBid`** — the only public writer of #31 state: it copies the managed club's exact live
+#40 value, lets #31 stage its fee through `FinanceLedger.ApplyTransaction` on that copy, re-homes the player
+through `SeasonTransferRoster` (the #28 record + lifecycle and the #29/#41/#30 rows, under the unchanged id), and
+publishes the #40 copy only on `Accepted`. Once #31 is wired, a raw `TransferFee` posting through
+`SeasonLoop.ApplyTransaction` is refused, so fees cannot bypass #31's window and spend gates. *(Superseded text: "Step (d) is only partly landed
+(ERR-030-030) … stays reserved here until it lands; `AdvanceAges()` at (d) is a placeholder name.")*
+
+Each boundary step is first **computed/staged** from the prior state. The supported public operation is the
+single synchronous `RollToNextSeason()` call; there is no externally observable save point between its
+internal steps. #43 remains a transform inserted at (a'). #40 T2b is live at (b'): its complete per-club
+settlement is computed from the final table before regeneration, but live finance entries are not replaced
+until after `BeginNextSeason` — the roll's final fallible season commit — succeeds. A refusal therefore
+leaves both `SeasonState` and `ClubFinances` untouched; a successful call installs the staged finance values
+exactly once. This resolves the prior #40 mid-call-save wording without weakening FR-SN-029 (ERR-030-051).
 
 **Correction note — step (c′) (ERR-030-015, filed at T3 implementation).** Versions of this block before
 v0.5 regenerated `Fixtures` but never touched `Calendar`, whose cursor sits at `RoundCount` (season
@@ -1007,15 +1068,19 @@ would notice, since schedule, table, seed and season number are all exactly righ
 one break after the old one's finale. Shifting the mapping rather than rebuilding a linear calendar is
 what keeps the transform pure (a clock-derived first day would make the roll depend on when the client
 happened to call it) and preserves a non-uniform schedule — a calendar with a mid-season gap keeps that
-gap next season instead of being flattened. The step sits after (c) so a future competition set that
+gap next season instead of being flattened. The same discipline holds downstream: #31's next transfer window
+CLOSES on the next calendar's opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 (#31 §3.5, ERR-031-011),
+not a fixed length from the roll day, so the window's close does not depend on roll timing. The roll's only
+clock-dependent outputs are the day the season BEGINS — which is, by definition, the window's open day — and #28's
+regen construction day (`clock − 1`, the last lived day, step (d)) (ERR-030-057). The step sits after (c) so a future competition set that
 changes the round count regenerates the schedule first; it does not disturb (a')/(b').
 
 **Boundary condition on (c′).** Because the derived calendar is a function of the old one alone, a
 client that advanced the world deep into the close season before rolling would install a schedule
 opening in the past — a KD-4 / FR-SN-011 cursor-invariant violation. The roll refuses that fail-loud
 rather than installing it, and performs no write until every step is computed and validated, so a
-refused roll leaves the season untouched rather than carrying a committed board verdict against a
-schedule that was then rejected.
+refused roll leaves the season **and staged #40 finance result** untouched rather than carrying a
+committed board verdict or next-season budget against a schedule that was then rejected.
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -1081,6 +1146,18 @@ and `SEASON_SAVE_FORMAT_VERSION` bumps 1 → 2 (§4). The codec never parses the
 and 11 both finish P=3 W=2 D=0 L=1 with GF/GA giving equal GD and equal GF, club 10 orders above 11
 by ascending `ClubId` (FR-SN-007 final key) — a total order.
 
+## 3.7 T3b1 finance day completion (ERR-030-052)
+
+The daily finance pass runs only in `RunWorldTickInFixedOrder`, after its career pass and before clock
+advance. Slots 0–11 still run pre-round under §3.3.2; slot **11a** does not. A fixture's finance day is
+completed by the following advance, after the round; zero-day/refused commands do not enter this slot.
+The world's existing clock distinguishes completed days after save/restore, so T3b1 adds no finance
+cursor or persisted gate. The season break uses the same path. Generic legacy/unwired empty loops skip
+11a without creating cash; canonical new games and restored saves have one finance entry per club.
+#40 owns the disabled gate and accounting; #30 forwards zero inputs and owns invocation only.
+T-FN-DAY-001–006 in #40 §5.9 cover the runtime and compiled ordering contracts. Revenue magnitudes,
+formula inputs and tuning remain T3b2; this back-prop grants no amount-production ownership to #30.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -1125,4 +1202,11 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.17 | 2026-08-18 | — | **ERR-030-047** (adversarial-review round 6, H1 — spec-text only, no code change; the code was already correct): §3.4's normative pseudocode was never updated when `ERR-044-014` (August 16, 2026) changed the call it specifies. The serve step still read the two-argument `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` (the v2.4 form) and the fallibility comment still said the method "has TWO guards" (the v2.5 count), while the real signature has been `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` with THREE guards — `clubId < 0` (F2), `clubPlayerIds == null` (ArgumentNullException, the ERR-044-014 addition) and `fieldedPlayerIds == null` (ArgumentNullException, ERR-044-003 stage 1) — since `src/discipline/DisciplineRules.cs` v1.7 / `src/season-save/SeasonLoop.cs` v1.29. Worse than the stale signature, **the unfiltered-roster precondition ERR-044-014 introduced appeared nowhere in this spec**: serving MUST read the UNFILTERED roster (every id whose ban is being served is precisely an id the availability filter has just removed), so an implementer wiring the serve step off the filtered squad — the only squad the pre-fix pseudocode ever bound — would make every suspension unservable: bans never decrement, every suspension is permanent, silently, no throw and no log. Fixed on BOTH resolution paths: `PlayThroughEngine`'s pseudocode resolves `homeRoster`/`awayRoster` explicitly, derives `homeRosterIds := RosterIds(homeRoster)` / `awayRosterIds := RosterIds(awayRoster)` off the UNFILTERED `squads.ResolveByClubId(...)` output — resolved one statement above the `SelectAvailable` filter that consumes the same instance — and returns the pair; `ResolveRound(f, squads)` outputs the same pair from its own resolve → filter site (ban serving runs on both paths, now also stated in §3.4.1); the serve step becomes `OnClubFixturePlayed(f.HomeClubId, homeRosterIds, homeXi)` / `(f.AwayClubId, awayRosterIds, awayXi)` with the precondition carried as a normative MUST comment; and the guard comment names all THREE guards with both structural null-exclusions (`FieldedXi`'s and `RosterIds`' gates). Verified against `DisciplineRules.cs:318-345` and `SeasonLoop.cs:984-985`/`1622-1638` before writing. Filed at `spec-error-log.md` v2.45. |
 | 2.18 | 2026-08-18 | — | **ERR-030-048** (adversarial-review round 7, H4 — spec-text only; the code was already correct). §3.4's `AdvanceAndPlayNextRound` pseudocode ran the `OnClubFixturePlayed` pair and `fold?.Commit` at the same indent as `f.Played := true`, i.e. UNGATED inside the fixture loop — while the comment block directly above justified their null-safety by appealing to "the same condition this whole block already runs under". No such condition existed in the block. The live code wraps both calls in `if (_disciplineDriver != null)` (`SeasonLoop.cs:982`) and `RosterIds` returns **null** when discipline is unwired (`SeasonLoop.cs:1751-1756`), so an implementer following the pseudocode literally passes null and takes the `clubPlayerIds` `ArgumentNullException` (`DisciplineRules.cs:329`) on the FIRST fixture of any career without discipline wired — the loud twin of the silently-permanent-ban defect `ERR-030-047` fixed one round earlier, in the same block, from the same omission. The `fold?.Commit` on the next line being `?.`-guarded made the gap read as deliberate. Pair and commit now sit under an explicit `if discipline is wired:`, and the null-safety comment cites that gate instead of a gate that was not there. Recorded in passing, because it is the reason the two defects are twins: what the block IS NOT gated on is a CAREER being wired — a ban is served by the club playing without him, on both resolution paths. | — |
 | 2.19 | 2026-08-18 | — | **Adversarial-review round-7 finding M7** (spec-text only; the code was already correct). `PlayThroughEngine`'s pseudocode body derived `homeXi`/`awayXi` via `StartingElevenPlayerIds(...)` directly — a call that never returns null — while the serve-step comment (§3.4, below the pseudocode) justified skipping a null check on those same variables by citing `FieldedXi`'s null-gating, a DISTINCT producer (`SeasonLoop.cs:1721-1724`: `_career == null && _disciplineDriver == null ? null : SquadRating.StartingElevenPlayerIds(squad)`). The pseudocode's own body therefore did not support the null-safety argument built on it two names later. Fixed: `PlayThroughEngine` now derives `homeXi := FieldedXi(home)` / `awayXi := FieldedXi(away)`, with `StartingElevenPlayerIds` named as `FieldedXi`'s inner walk once the gate has passed; §3.4.1's prose description of `ResolveRound` corrected the same way, so both resolution paths are stated to derive their XIs through the same producer. Verified against `src/season-save/SeasonLoop.cs:1721-1724` before writing. | — |
+| 2.20 | 2026-09-11 | — | **ERR-030-051 / #40 T2b.** Step (b') becomes live. The complete finance result is computed there from the final table before regeneration, then installed only after `BeginNextSeason` succeeds; refused rolls leave finance state untouched. The prior mid-roll-save wording is retired because `RollToNextSeason()` is synchronous and exposes no such save seam. |
+| 2.21 | 2026-10-08 | — | **T3b1 / ERR-030-052.** finance slot 11a completes a day after fixture resolution; existing pre-round slots unchanged. |
+| 2.22 | 2026-10-08 | — | **PR #491 review.** finance slot 11a publishes only after every club succeeds. |
+| 2.23 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** complete the final fixture day before settlement; preserve refused-roll atomicity. |
+| 2.24 | 2026-10-19 | — | **ERR-028-025** (#28 boundary landing): §3.5 pseudocode replaces the reserved `AdvanceAges()` with the staged `PrepareSeasonBoundary` / `CommitSeasonBoundary`, (d′) reconciles against the planned rosters, commits after (e), and the FR-DC-013 retirement drop follows; the "only partly landed" paragraph is superseded. |
+| 2.25 | 2026-10-20 | — | **ERR-030-056** (#31 T2): §3.5 pseudocode gains step (d″) — #31's `PrepareSeasonBoundary` staged after (d)/(d′), installed after (e); the new paragraph names `SeasonLoop.SubmitTransferBid` as ERR-030-005's mid-season roster commit (exact-value #40 staging, `SeasonTransferRoster` re-home, publish on Accepted) and records the `TransferFee` refusal once #31 is wired. |
+| 2.26 | 2026-10-20 | — | **ERR-030-057** (#31 T2 AR round 2): §3.5 (d″) pseudocode read `boundary.RetiredPlayerIds` unconditionally although `boundary` is null without #28 — now `boundary ? … : []` for the retirees, the arrivals and the FR-DC-013 drop, matching `SeasonLoop.RollToNextSeason`; (d″) derives the window as `SummerWindowFor(clock, Calendar.DayOfRound(0))` against the already-rolled calendar (ERR-031-011, was `SummerWindowFrom(clock)`); the (d″) paragraph and the (c′) correction note record that the window's close no longer follows roll timing — only its open day (the season-begin day) and #28's regen construction day do. |
 #endregion

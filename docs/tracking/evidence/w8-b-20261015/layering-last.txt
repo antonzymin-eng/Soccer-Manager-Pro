@@ -1,0 +1,10 @@
+assembly-tier-check: §3.5.2 table vs production .asmdef graph
+  production assembly folders under src/ : 38
+  folders placed in the tier table       : 38  (36 in ordered tiers + 2 out-of-band Infrastructure)
+  production->production references      : 169
+    downward                             : 119
+    intra-tier                           : 45
+    upward                               : 0
+    sourced by out-of-band Infrastructure: 5
+  test assemblies enumerated (outside the order): 37
+PASS — every folder placed, no upward reference, graph acyclic.

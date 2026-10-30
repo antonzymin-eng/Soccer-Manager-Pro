@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/AvailabilityCompositionExtremisTests.cs
 // Created:  2026-08-16
+// Modified: 2026-09-12 (Unity editor compile — Does.Not.Contain(int) → Has.No.Member: Unity's bundled
+//           NUnit 3.5 only has the string overload; same assertion, compiles under both NUnits)
 // Modified: 2026-08-16, round 5 (a reviewed-findings pass over the round-4 landing — CapFallbackExtremis's
 //           own comment still carried the exact sentence round 4 proved false ("it self-heals ... the
 //           exact search resumes for every later pass"), even though that SAME commit reworded the
@@ -117,10 +119,10 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "best forward — the pre-fix behaviour. A benchable candidate existed.");
 
             int[] xi = SquadRating.StartingElevenPlayerIds(composed);
-            Assert.That(xi, Does.Not.Contain(IdOf(StartingCandidateLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(StartingCandidateLocal)),
                 "A suspended player is in the starting eleven of a club that can field a legal one "
                 + "without him — which is the defect, whatever the reinstatement count.");
-            Assert.That(xi, Does.Not.Contain(IdOf(BenchCandidateLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(BenchCandidateLocal)),
                 "The reinstated suspended player must be on the BENCH. If he starts, the ERR-044-003 "
                 + "stage-1 exemption stalls his ban and the extremis appearance is free again.");
         }
@@ -316,16 +318,16 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "back and this really is the k >= 2 case.");
 
             int[] xi = SquadRating.StartingElevenPlayerIds(composed);
-            Assert.That(xi, Does.Not.Contain(IdOf(BestBannedLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(BestBannedLocal)),
                 "A banned player is in the starting eleven of a club that could have completed its "
                 + "squad without him — {WeakBanned, WeakestBanned} is fieldable and benches both. "
                 + "A multi-reinstatement shortfall is not a licence to start a suspended man "
                 + "(ERR-030-045).");
-            Assert.That(xi, Does.Not.Contain(IdOf(WeakBannedLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(WeakBannedLocal)),
                 "A reinstated banned player is starting. Both of the two players the back-fill "
                 + "pressed back must sit on the bench here, or the ERR-044-003 stage-1 exemption "
                 + "stalls a ban this club never needed to stall.");
-            Assert.That(xi, Does.Not.Contain(IdOf(WeakestBannedLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(WeakestBannedLocal)),
                 "A reinstated banned player is starting. Both of the two players the back-fill "
                 + "pressed back must sit on the bench here, or the ERR-044-003 stage-1 exemption "
                 + "stalls a ban this club never needed to stall.");
@@ -360,15 +362,15 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "eighteen the selection walk requires, so this really is the k >= 2 case.");
 
             int[] xi = SquadRating.StartingElevenPlayerIds(composed);
-            Assert.That(xi, Does.Not.Contain(IdOf(WeakMidBannedLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(WeakMidBannedLocal)),
                 "A banned midfielder is in the starting eleven of a club that could have completed its "
                 + "squad without him — {D9a, D9b} is fieldable and benches both. Selection is per "
                 + "POSITION, so 'the globally weakest banned player' is not the same question as 'the "
                 + "banned player this squad can absorb' (ERR-030-046).");
-            Assert.That(xi, Does.Not.Contain(IdOf(StrongDefBannedALocal)),
+            Assert.That(xi, Has.No.Member(IdOf(StrongDefBannedALocal)),
                 "A reinstated banned defender is starting; five fit defenders outrank him and the XI "
                 + "needs four, so a clean completion exists and the search must have found it.");
-            Assert.That(xi, Does.Not.Contain(IdOf(StrongDefBannedBLocal)),
+            Assert.That(xi, Has.No.Member(IdOf(StrongDefBannedBLocal)),
                 "A reinstated banned defender is starting; five fit defenders outrank him and the XI "
                 + "needs four, so a clean completion exists and the search must have found it.");
 
@@ -427,7 +429,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(xi, Does.Contain(keeper),
                 "The forced start must be the goalkeeper — he is the one the formation cannot do "
                 + "without. If it is not, this fixture no longer exercises the forced-start case.");
-            Assert.That(xi, Does.Not.Contain(benchable),
+            Assert.That(xi, Has.No.Member(benchable),
                 "The absorbable banned forward is starting. Four fit forwards outrank him and the XI "
                 + "needs two, so benching him costs nothing — and benching him is what lets his ban "
                 + "advance.");

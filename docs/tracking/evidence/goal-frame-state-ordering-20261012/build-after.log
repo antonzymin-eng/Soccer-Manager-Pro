@@ -1,0 +1,29 @@
+MSBuild version 17.11.48+02bf66295 for .NET
+  UnityShim -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  deterministic-sim.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  event-system.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  ball-physics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  agent-movement.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  collision-system.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  first-touch.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  pass-mechanics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  shot-mechanics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  perception-system.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  heading-mechanics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  tactical-instructions.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  positioning-ai.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+  decision-tree.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  pressing-ai.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  defensive-ai.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  attacking-ai.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  player-database.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  match-engine.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  performance-optimization.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  testing-strategy.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  UnityShim.TestTools -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  match-engine-tests.gen -> /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll

@@ -1,6 +1,8 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
+// Modified: 2026-10-20 (AR round 1 L1: DOMAIN_TAG_SEASON_LOOP doc annotated — 0x20 is allocated; doc-only — v1.12)
+//           Prior: 2026-10-19 (DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 — #28 regen, ERR-028-025)
+//           Prior: 2026-08-22 (ERR-016-011: ERR_DS_SNAPSHOT_DIGEST_MISMATCH 0x160F, replay step 4b — v1.10;
 //           prior same day ERR-016-010 SNAPSHOT_FILE_MAGIC / _FORMAT_VERSION v1.9;
 //           ERR-016-009 DOMAIN_TAG_BUILD_IDENTITY 0x2E + BUILD_IDENTITY_VERSION +
 //           ERR_DS_REPLAY_BUILD_MISMATCH 0x160E for the §2.3.2 buildHash v1.8)
@@ -152,6 +154,17 @@ namespace TacticalDirector.DeterministicSim
         public const byte DOMAIN_TAG_PLAYER_DATABASE = 0x1F;
 
         /// <summary>
+        /// [FIXED] Domain tag for Player Progression &amp; Lifecycle #28 (FR-PG-020 — the per-club
+        /// <c>player-progression.regen</c> stream). §3.4; back-prop ERR-028-001, which promoted the number
+        /// spec-text-first at #28's approval and pinned the code const to land at #28's first draw site.
+        /// This is that site: the season-boundary regen (ERR-028-025). The tag is folded into the
+        /// boundary-scoped stream's seed; <see cref="SubsystemOrdinals.PlayerProgression"/> keys the
+        /// per-club registration. No <c>DETERMINISM_DIGEST_VERSION</c> bump — a namespace allocation,
+        /// like every off-pitch tag before it.
+        /// </summary>
+        public const byte DOMAIN_TAG_PLAYER_PROGRESSION = 0x20;
+
+        /// <summary>
         /// [FIXED] Domain tag allocated for the Season &amp; Competition Loop #30 (FR-SN-027 — the season
         /// RNG sub-stream). §3.4; back-prop ERR-030-001, landing at #30 T2's first draw site (the
         /// round-resolution model's key derivation) exactly as that entry pins it.
@@ -160,6 +173,9 @@ namespace TacticalDirector.DeterministicSim
         /// #29 respectively (#30 KD-5's honesty note); #28 T0 recorded the same reservation from its own
         /// side (KD-B) and will claim 0x20 when its production regen stream lands. Allocating 0x22 here
         /// rather than compacting to 0x20 keeps the spec-pinned numbers stable across the three specs.
+        /// <b>Annotation (ERR-028-025, AR round 1 L1):</b> 0x20 is no longer a gap — it is allocated, as
+        /// <see cref="DOMAIN_TAG_PLAYER_PROGRESSION"/>, with #28's season-boundary regen. Only 0x21 remains
+        /// a reserved gap (Training #29, which registers no stream).
         /// </para>
         /// </summary>
         public const byte DOMAIN_TAG_SEASON_LOOP = 0x22;
@@ -411,4 +427,6 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | Distinct from ERR_DS_DIGEST_CHAIN_BREAK (0x1608), which is the    |
 // |         |            |        | chain LINK: 4a asks whether this record follows the last one, 4b  |
 // |         |            |        | asks whether these bytes are the record they claim to be.         |
+// | 1.11    | 2026-10-19 | —      | ERR-028-001 code half / ERR-028-025: DOMAIN_TAG_PLAYER_PROGRESSION = 0x20 lands at #28's first draw site (the season-boundary regen). |
+// | 1.12    | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025), doc-only: DOMAIN_TAG_SEASON_LOOP's "0x20 and 0x21 are deliberate gaps ... will claim 0x20" note annotated — 0x20 is now allocated (DOMAIN_TAG_PLAYER_PROGRESSION); 0x21 stays reserved. No value or behavior change. |
 #endregion

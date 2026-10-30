@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/MarkingPressureEvaluator.cs
 // Created:  2026-07-10
-// Modified: 2026-07-10
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Dismarking AI #23 §3.1–§3.3 (FM-DM-01/02), FR-DM-001..009, Code Standards #20
 // Purpose:  Pure static dismarking math: marker search, dwell update, MarkingPressure, and the
@@ -95,18 +95,20 @@ namespace TacticalDirector.PositioningAI
             in MarkingDwellState state, Phase phase, bool markerExists, int markerId)
         {
             MarkingDwellState next = state;
+            next.DwellTicks = Math.Max(0, Math.Min(
+                PositioningAIConstants.MARKING_DWELL_FULL_TICKS, state.DwellTicks));
             if (phase != Phase.InPoss)
             {
-                next.DwellTicks = Math.Max(0, state.DwellTicks - PositioningAIConstants.MARKING_DWELL_DECAY_PER_TICK);
+                next.DwellTicks = Math.Max(0, next.DwellTicks - PositioningAIConstants.MARKING_DWELL_DECAY_PER_TICK);
                 return next; // LastMarkerId stays — cheap resume (#23 §3.2).
             }
             if (markerExists)
             {
-                next.DwellTicks = Math.Min(PositioningAIConstants.MARKING_DWELL_FULL_TICKS, state.DwellTicks + 1);
+                next.DwellTicks = Math.Min(PositioningAIConstants.MARKING_DWELL_FULL_TICKS, next.DwellTicks + 1);
                 next.LastMarkerId = markerId;
                 return next;
             }
-            next.DwellTicks = Math.Max(0, state.DwellTicks - PositioningAIConstants.MARKING_DWELL_DECAY_PER_TICK);
+            next.DwellTicks = Math.Max(0, next.DwellTicks - PositioningAIConstants.MARKING_DWELL_DECAY_PER_TICK);
             if (next.DwellTicks == 0)
             {
                 next.LastMarkerId = MarkingDwellState.NoMarker;
@@ -135,7 +137,7 @@ namespace TacticalDirector.PositioningAI
             {
                 return 0f;
             }
-            float dwell01 = Mathf.Min(1f, dwellTicks / (float)PositioningAIConstants.MARKING_DWELL_FULL_TICKS);
+            float dwell01 = Mathf.Clamp01(dwellTicks / (float)PositioningAIConstants.MARKING_DWELL_FULL_TICKS);
             return proximity01 * dwell01;
         }
 
@@ -202,4 +204,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   span signatures per the layering note (Mechanics cannot import  |
 // |         |            |        |   the AI-layer FilteredView type; provenance enforced at the      |
 // |         |            |        |   match-engine call seam per #23 §4.4).                           |
+// | 1.1     | 2026-09-08 | —      | Clamp malformed dwell values before update and projection.       |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/Fixture.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2 (data structures); §3.1 (generation); §3.4 (play);
 //           Appendix B row 7 (byte layout); Code Standards #20
@@ -59,6 +59,14 @@ namespace TacticalDirector.SeasonSave
                     nameof(roundIndex), roundIndex, "roundIndex must be non-negative.");
             }
 
+            if (homeClubId < 0 || awayClubId < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    homeClubId < 0 ? nameof(homeClubId) : nameof(awayClubId),
+                    homeClubId < 0 ? homeClubId : awayClubId,
+                    "Fixture club ids must be non-negative.");
+            }
+
             if (homeClubId == awayClubId)
             {
                 throw new System.ArgumentException(
@@ -89,4 +97,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (#30 T0). Readonly struct + MarkPlayed()    |
 // |         |            |        | slot-replacement resolving the §2.2 readonly/mutable-Played        |
 // |         |            |        | tension; ctor fail-loud on negative round / self-fixture.          |
+// | 1.1     | 2026-09-08 | —      | Reject negative home and away club identities.                     |
 #endregion

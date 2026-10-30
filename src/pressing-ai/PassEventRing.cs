@@ -1,10 +1,12 @@
 // File:     src/pressing-ai/PassEventRing.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-09-08
 // Author:   —
 // Spec:     Pressing AI #13 §3.1.2, §4.2, Code Standards #20
 // Purpose:  Fixed-capacity ring buffer that retains the most recent pass-attempt events
 //           for backward-pass trigger evaluation. Zero allocation after construction.
+
+using System;
 
 using TacticalDirector.PassMechanics;
 
@@ -33,8 +35,15 @@ namespace TacticalDirector.PressingAI
 
         /// <summary>Allocates a ring buffer with the given capacity.</summary>
         /// <param name="capacity">Maximum events retained. Must be ≥ 1.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is less than one.</exception>
         public PassEventRing(int capacity)
         {
+            if (capacity < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(capacity), capacity, "PassEventRing capacity must be at least one.");
+            }
+
             _buffer = new PassAttemptEvent[capacity];
             _head   = 0;
             _count  = 0;
@@ -80,4 +89,5 @@ namespace TacticalDirector.PressingAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-09-08 | —      | Enforce the documented positive-capacity precondition at construction. |
 #endregion

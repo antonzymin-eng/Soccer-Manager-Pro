@@ -1,22 +1,30 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 T1, roadmap C1 — gains the restored DisciplineState)
+// Modified: 2026-10-20 (L2 doc drift — the class summary now lists Transfers)
+//           Prior: 2026-10-18 (#31 T1 — gains the restored #31 transfers state, null when unwired)
+//           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — gains the restored per-club finance entries)
+//           Prior: 2026-08-13 (#44 T1, roadmap C1 — gains the restored DisciplineState)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / G4 / KD-3;
 //           Season & Competition Loop #30 FR-SN-021; Training System #29 FR-TR-019;
-//           Injuries & Medical #41 FR-MD-018; Discipline & Suspensions #44 Appendix B; Code Standards #20
+//           Injuries & Medical #41 FR-MD-018; Discipline & Suspensions #44 Appendix B;
+//           Club Finances & Economy #40 FR-FN-021/025, §7.1 T1b; Transfers #31 FR-TX-012/027/028;
+//           Code Standards #20
 // Purpose:  The reconstructed contents of a season save: the living-world WorldStore (always), the
 //           season state (always), the per-club #29 training, #41 medical and #30 appearance states
-//           (always, possibly empty), the #28 career store and the #44 discipline state, and the
-//           in-progress MatchEngine (null when the season carried
+//           (always, possibly empty), the #28 career store, the #44 discipline state and the #40
+//           per-club finance entries, the #31 transfers state (null when no #31 subsystem is wired),
+//           and the in-progress MatchEngine (null when the season carried
 //           no match). SeasonSaveManager.Load returns this.
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -25,7 +33,10 @@ namespace TacticalDirector.SeasonSave
     /// living-world <see cref="World"/> and the <see cref="Season"/> (never null — a season save always
     /// carries both), the per-club <see cref="TrainingClubs"/> / <see cref="MedicalClubs"/> /
     /// <see cref="AppearanceClubs"/> (never null, possibly empty), the restored <see cref="Progression"/> /
-    /// <see cref="Discipline"/> state (never null), and the in-progress <see cref="Match"/> (<c>null</c> when
+    /// <see cref="Discipline"/> state (never null), the restored per-club <see cref="Finances"/> (never
+    /// null, possibly empty), the restored #31 <see cref="Transfers"/> state (<c>null</c> when the save
+    /// carried a zero-club block, i.e. no #31 subsystem was wired), and the in-progress
+    /// <see cref="Match"/> (<c>null</c> when
     /// the save carried no match, KD-3). Returned by <see cref="SeasonSaveManager.Load"/>; the caller
     /// checks <see cref="Match"/> for null before using it.
     /// </summary>
@@ -63,6 +74,21 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         public readonly DisciplineState Discipline;
 
+        /// <summary>
+        /// The reconstructed #40 per-club finance entries, ascending by <c>ClubId</c>. Never null;
+        /// empty when the save tracked no finances, which is every save written before #40 T2 wires
+        /// the <c>CreateInitial</c> bootstrap (#40 §7.1 / FR-FN-025).
+        /// </summary>
+        public readonly ClubFinanceEntry[] Finances;
+
+        /// <summary>
+        /// The reconstructed #31 transfers state — the managed club's contracts, window and committed
+        /// spend — or <c>null</c> when the save carried a zero-club block, i.e. no #31 subsystem was wired.
+        /// A resumed career must thread this back into its loop: genesis seeding never runs on load
+        /// (FR-TX-028), so a null here is "not wired", never "seed me".
+        /// </summary>
+        public readonly TransfersState Transfers;
+
         /// <summary>The reconstructed in-progress match, or <c>null</c> if the season had no match.</summary>
         public readonly MatchEngine.MatchEngine Match;
 
@@ -75,6 +101,8 @@ namespace TacticalDirector.SeasonSave
             ClubAppearanceStates[] appearanceClubs,
             ProgressionEngine progression,
             DisciplineState discipline,
+            ClubFinanceEntry[] finances,
+            TransfersState transfers,
             MatchEngine.MatchEngine match)
         {
             World = world;
@@ -84,6 +112,8 @@ namespace TacticalDirector.SeasonSave
             AppearanceClubs = appearanceClubs;
             Progression = progression;
             Discipline = discipline;
+            Finances = finances;
+            Transfers = transfers;
             Match = match;
         }
     }
@@ -105,4 +135,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | caller must resume against (#28 KD-4), not merely an overlay.   |
 // | 1.6     | 2026-08-13 | —      | #44 T1 (roadmap C1): gains the restored DisciplineState (never  |
 // |         |            |        | null; empty when the save tracked no cards).                    |
+// | 1.7     | 2026-09-10 | —      | #40 T1b (ERR-030-049): gains the restored per-club finance      |
+// |         |            |        | entries (never null; empty until #40 T2 bootstraps them).       |
+// | 1.8     | 2026-10-18 | —      | #31 T1: gains the restored TransfersState (null = no #31 wired; |
+// |         |            |        | never a request to seed — FR-TX-028).                            |
+// | 1.9     | 2026-10-20 | —      | L2 doc drift (comments only): the class summary listed every      |
+// |         |            |        | member except Transfers.                                          |
 #endregion

@@ -1,0 +1,31 @@
+NUnitLite 3.14.0 (.NET Standard 2.0)
+Copyright (c) 2023 Charlie Poole, Rob Prouse
+
+Runtime Environment
+   OS Version: Ubuntu 24.04.3 LTS
+  CLR Version: 8.0.21
+
+Test Files
+    /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+
+Test Discovery
+  Start time: 2026-10-12 16:32:37Z
+    End time: 2026-10-12 16:32:37Z
+    Duration: 0.062 seconds
+
+Test Filters
+    Where: class == TacticalDirector.MatchEngine.MatchEngineRestartTests
+
+Run Settings
+    Number of Test Workers: 0
+    Work Directory: /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro
+    Internal Trace: Off
+
+Test Run Summary
+  Overall result: Passed
+  Test Count: 19, Passed: 19, Failed: 0, Warnings: 0, Inconclusive: 0, Skipped: 0
+  Start time: 2026-10-12 16:32:37Z
+    End time: 2026-10-12 16:32:37Z
+    Duration: 0.207 seconds
+
+Results (nunit3) saved as /tmp/smp-nunit/engine-after.xml

@@ -1,0 +1,15 @@
+#!/bin/bash
+# usage: run.sh <worktree> <label> <ENVVAR=VALUE> <filter>
+W=<scratch>
+cd "$W/$1" || exit 9
+mkdir -p "$W/out/$2"
+cat > "$W/out/$2/no-tests.runsettings" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings><RunConfiguration><TreatNoTestsAsError>true</TreatNoTestsAsError></RunConfiguration></RunSettings>
+XML
+{ echo "# worktree $1 HEAD $(git rev-parse HEAD) src-tree $(git rev-parse HEAD:src)"; echo "# instrument blob $(git hash-object src/match-engine/tests/W8StageADiagnosticTests.cs)"; echo "# env $3 filter $4"; echo "# start $(date -u +%FT%TZ)"; } > "$W/out/$2/meta.txt"
+env "$3" dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore \
+  --filter "$4" --settings "$W/out/$2/no-tests.runsettings" \
+  --logger "console;verbosity=detailed" --logger "trx;LogFileName=measurement.trx" \
+  --results-directory "$W/out/$2/trx" > "$W/out/$2/output.txt" 2>&1
+echo "# exit $? end $(date -u +%FT%TZ)" >> "$W/out/$2/meta.txt"

@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchSaveManagerTests.cs
 // Created:  2026-07-21
-// Modified: 2026-07-21
+// Modified: 2026-10-14
 // Author:   —
 // Spec:     On-disk match save file (docs/tracking/match-save-file-design.md) §5 acceptance;
 //           Match Engine design note §5 Phase G-Phase 3; Code Standards #20
@@ -117,6 +117,46 @@ namespace TacticalDirector.MatchEngine
                 setup: e => e.ConfigureSquads(home, away),
                 n: 150, k: 60,
                 squads: Provider(home, away));
+        }
+
+        [Test]
+        public void SaveAtAcceptedSubstitutionTick_PreservesPendingAndDigestContinuation()
+        {
+            var e = new MatchEngine(MatchSeed);
+            for (int i = 0; i < 5; i++) e.RunTick();
+            Assert.IsTrue(e.RequestSubstitution(0, 1, 0, SubstitutionReason.Tactical).IsAccepted);
+            Assert.AreEqual(1, e.PendingSubstitutionCount);
+            byte[] save = MatchSaveManager.Encode(e);
+            Assert.AreEqual(5UL, e.CurrentTick, "Save cannot advance the clock.");
+            const int continuation = 10;
+            var reference = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                e.RunTick();
+                reference[i] = (byte[])e.CurrentSnapshotDigest.Clone();
+            }
+            MatchEngine restored = MatchSaveManager.Restore(save);
+            Assert.AreEqual(1, restored.PendingSubstitutionCount);
+            Assert.AreEqual(5UL, restored.CurrentTick);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.RunTick();
+                CollectionAssert.AreEqual(reference[i], restored.CurrentSnapshotDigest,
+                    "Saved off-tick request diverged at continuation tick " + i);
+            }
+        }
+
+        [Test]
+        public void PostSnapshotOverlayTampering_IsDetectedBeforeRestore()
+        {
+            var e = new MatchEngine(MatchSeed);
+            e.RunTick();
+            Assert.IsTrue(e.RequestSubstitution(0, 1, 0, SubstitutionReason.Tactical).IsAccepted);
+            byte[] blob = MatchSaveManager.Encode(e);
+            blob[blob.Length - 1] ^= 0x01;
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => MatchSaveManager.Restore(blob));
+            StringAssert.Contains("overlay digest", error.Message);
         }
 
         // ── MatchSaveManager fail-loud ─────────────────────────────────────────────
@@ -281,13 +321,18 @@ namespace TacticalDirector.MatchEngine
             (SnapshotHeader header, SnapshotPayload payload) = CaptureAt(10);
             byte[] blob = MatchSaveCodec.Encode(MatchSeed, header, payload);
 
-            // The payload-length u32 sits at (blob.Length - payloadBytes - 4). Overwrite it with a huge
+            // With no overlay, v3 ends with its zero-length u32. The payload-length u32 therefore
+            // sits at (blob.Length - payloadBytes - 8). Overwrite it with a huge
             // value: the codec must refuse it (capacity check / overflow-safe bound), never allocate/read.
-            int lenPos = blob.Length - payload.BytesWritten - 4;
+            int lenPos = blob.Length - payload.BytesWritten - 8;
+            int lengthReadPos = lenPos;
+            Assert.AreEqual((uint)payload.BytesWritten, CanonicalSerializer.ReadU32(blob, ref lengthReadPos),
+                "The corruption offset must point at the payload-length field before it is overwritten.");
             blob[lenPos] = 0xFF; blob[lenPos + 1] = 0xFF; blob[lenPos + 2] = 0xFF; blob[lenPos + 3] = 0xFF;
 
-            Assert.Throws<InvalidOperationException>(() => MatchSaveCodec.Decode(blob),
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => MatchSaveCodec.Decode(blob),
                 "A payload length exceeding capacity must fail loud, not over-read (KD-6).");
+            StringAssert.Contains("exceeds SnapshotPayload capacity", error.Message);
         }
 
         [Test]
@@ -374,4 +419,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | determinism (neutral / booking-cursor / distinct-squad),      |
 // |         |            |        | MatchSaveCodec round-trip + fail-loud guards, MatchSaveManager |
 // |         |            |        | missing-file / corrupt-file / no-provider / overwrite paths.   |
+// | 1.1     | 2026-10-14 | —      | Correct oversize payload-length corruption offset for the v3   |
+// |         |            |        | trailing overlay-length field when no overlay is present.     |
+// | 1.2     | 2026-10-14 | —      | Verify the corruption offset and capacity-guard diagnostic so |
+// |         |            |        | another framing failure cannot satisfy the oversize test.     |
 #endregion
