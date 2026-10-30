@@ -1,8 +1,8 @@
 # Manager Career, Reputation & Job Market #54 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -88,8 +88,40 @@ overselling it is how a tier gets called finished.
   that default-constructed a `BoardConfidence` or inherited the predecessor's standing would be invisible
   to #54's own tests. T-MC-I-002/003/004 assert the appointment path behaviourally for that reason.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Tag `0x2E` is taken (ERR-054-001).** KD-6, FR-MC-025, Appendix A and §7.1 T3 / R-5 reserve `0x2E` / 96
+  for the S3 job-market draw. The FR-MC-025 placeholder never landed in #16 §3.4, and ERR-016-009 has since
+  allocated `0x2E` to `DOMAIN_TAG_BUILD_IDENTITY`. Ordinal 96 is unaffected. Reconcile at #54's T0, before
+  any draw: choose a free tag and land its placeholder in #16 §3.4 in the same commit. The build-identity tag
+  does not move.
+
+- **Skip tenure evaluation when no tenure is open.** After `Terminate`, `CurrentTenure = MC_UNEMPLOYED` and
+  `EvaluateTenure`'s `RequireOpenTenure` (F2) throws. Slot 11 runs every day, and twice for the same day on
+  fixture days (ERR-030-027). The T2 slot driver MUST skip evaluation whenever no tenure is open — on every
+  later day, not only the second same-day call — with a test.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: the tenure list is append-only and never empties after the first
+  appointment, which suggests the emptiness key. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2 identified as the phase that carries **two** #30-side format bumps and the recommendation to combine them with `ERR-030-009`'s; the honest statement of what T2 delivers — *"survives a sacking"*, not *"continues after one"*; deep-tier extensions incl. the #36 national-team tenure and the #22 reputation-persistence read; the not-planned list; risks R-1..R-6, with R-6 scoping the foreign-write risk to the command-layer join since #54's own graph proves the rest). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (0x2E tag, unemployed tenure evaluation, save-block integration). No normative text changed. |
 #endregion

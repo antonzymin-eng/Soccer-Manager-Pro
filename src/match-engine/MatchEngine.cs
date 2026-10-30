@@ -170,6 +170,9 @@ namespace TacticalDirector.MatchEngine
     {
         // W8 Stage A: optional, per-instance observation only. Never consumed by simulation or snapshot.
         internal Action<W8StageAEvent> TestOnly_W8StageAObserver;
+        // #441: samples the same world read by Heading.Update, before Resolve pickup/deflection.
+        // Observation only; null by default and never restored or consumed by gameplay.
+        internal Action TestOnly_HeaderArrivalObserver;
         // Observation-only W8 B prerequisite. Never consumed by simulation or serialized.
         internal Action<int, GoalkeeperDistributionFeedback, bool> TestOnly_W8BTerminalFeedbackObserver;
 
@@ -5241,6 +5244,7 @@ namespace TacticalDirector.MatchEngine
             int frameNumber = (int)_clock.CurrentTick;
             float matchTimeS = _clock.CurrentMatchTimeSeconds;
             float matchTimeMs = _clock.CurrentMatchTimeMs;
+            TestOnly_HeaderArrivalObserver?.Invoke();
             _heading.Update(_agents, _ball, frameNumber, matchTimeS, _w3CrossClaimArbiter);
             _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
         }
@@ -6897,6 +6901,8 @@ namespace TacticalDirector.MatchEngine
             // that would consume it is future work, unblocked on the data side. The
             // Phase-A observation counters (_aiPhaseRanThisTick/_aiPhaseRunCount) are likewise
             // excluded — instrumentation derivable from the tick number, not gameplay state.
+            // TestOnly_HeaderArrivalObserver is an optional diagnostic callback. Simulation never
+            // consumes its output; it has no serialized state and is reattached by the test driver.
             // PHASE-D FLAG: the AI phase still does NOT write per-agent form/fatigue context into
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
@@ -11189,4 +11195,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.11 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 // | 2.12 | 2026-10-18 | — | D-07: penalise outside-area hand carries after attachment and collision correction, before executor CONTACT. |
 // | 2.13 | 2026-10-18 | — | D-07 review: hand acquisition snap is not a carry; carries whistle only when the held ball moves out or farther out. |
+// | 2.14 | 2026-10-20 | — | #441: null-by-default diagnostic callback immediately before Heading.Update samples its actual world before Resolve can collect or deflect it. No gameplay/schema/RNG change; digest-neutrality locked. |
 #endregion

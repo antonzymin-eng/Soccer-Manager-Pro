@@ -1,8 +1,8 @@
 # Staff & Backroom #34 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.4 records implementation-time findings under roadmap C6; prior: July 23, 2026 (v0.1 — initial))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -78,8 +78,41 @@
 - **#38 (UI, future):** drives the staff command APIs (`HireStaff` etc.); MUST NOT mutate #34 state directly
   (the `SetTeamTactic` command discipline).
 
+## 7.4 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Per-club modifier routing.** #30's career layer passes one modifier to every club:
+  `PlayerCareerStates.AdvanceTrainingDay` and `GatherTrainingInputs` take one `CoachingModifier`, and
+  `AdvanceMedicalDay` one `MedicalModifier` (`src/season-save/PlayerCareerStates.cs`). The identity-only scaffold
+  (T0–T2) is unaffected. Before T3's first non-identity projection (or #53's per-club terms) reaches those calls, `season-save` needs a per-club
+  routing change (and #30 text, if it pins the signature); otherwise one club's effect would apply to all.
+
+- **Projection names disagree.** #53 §4 composes `staff.ProjectMedicalModifier(clubId)` and
+  `staff.ProjectAcademyTerm(clubId)`; #34 §3 defines `ToMedicalModifier(in StaffRecord physio)` and no
+  academy-term projection. Reconcile the root adapter with #34's actual surface when the first of #34 / #53
+  lands.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T1**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: once `SeedInitialStaff` has run the managed club always holds
+  neutral house staff, which suggests the emptiness key; confirm that no #54 manager change can leave the
+  store legitimately empty. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §7 (T-phase plan T0–T3 + deferred extensions + downstream seam contracts), promoted from design supplement v0.4. Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (per-club modifier routing, projection names, save-block integration). No normative text changed. |
 #endregion

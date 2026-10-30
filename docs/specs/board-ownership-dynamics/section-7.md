@@ -1,8 +1,8 @@
 # Board & Ownership Dynamics #45 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 25, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -60,8 +60,37 @@ save-format work and the money-balance work fail independently rather than toget
   balance pass (the #21 G2 / #22 / #26 §9.2 precedent). §5 asserts identity and direction, never
   magnitude, so the balance pass cannot invalidate a passing test suite.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Tick-step citation.** §8 and §9 say the world-day tick becomes step 9; since ERR-030-022 (#30 §3.3.1) it
+  is step 12. #45's own slot, step 8, is unchanged. Correct at T2.
+
+- **`JobSecurity` premise.** KD-5 justifies ERR-030-009 as removing the season block's last float, but
+  `BoardState` already stores `JobSecurityPerMille` as an integer (`src/season-save/BoardState.cs`). The
+  change itself stands: job security must become a band derived from #45 confidence rather than independent
+  #30 state, with its `SEASON_STATE_FORMAT_VERSION` bump. Correct the rationale at T2.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: a modelled club's entry is inserted at appointment (FR-BD-005a) and
+  not removed, which suggests the #40-style emptiness key. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-25 | — | Initial §7 (T0–T3 with T2 as the first non-inert phase and its deliberate budget-neutrality, deep-tier extensions incl. #45 as producer of #33's existing board-delta field, the not-planned list with the objective-direction note, risks R-1..R-4). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (tick-step citation, JobSecurity premise, save-block integration). No normative text changed. |
 #endregion

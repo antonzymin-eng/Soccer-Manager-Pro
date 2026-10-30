@@ -1,10 +1,11 @@
 # Training System #29 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.4 — the lint sweep: the §9 preamble tensed to since-landed)
+**Last Updated:** October 30, 2026 (v0.5 — §9.2 currency refresh: T0–T2 recorded LANDED with source anchors; T3 stays NOT STARTED)
+**Last Updated (prior):** August 8, 2026 (v0.4 — the lint sweep: the §9 preamble tensed to since-landed)
 **Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 hostile re-review 1H+6M+2L recorded in §9.3.1, all fixed →
 re-converged; FR set 24 → 26; re-affirmed APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/training-system-design.md` v0.4
 
@@ -28,15 +29,29 @@ review gates track the pipeline.
 - [x] KD-2 single-owner attribute mutation (pure `ComputeTrainingInput` feeds #28; no second writer) +
       KD-6 no-stream determinism stated.
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status *(as-approved: forward design, nothing built; currency corrected October 30, 2026)*
+
+> **Currency refresh, October 30, 2026 (cross-document consistency review at `38395f8`).** The rows below
+> had published NOT STARTED against shipped code. A row is ticked only where (a) its source anchor exists at
+> `38395f8` and (b) an executed gate result for the landing is already recorded in the cited tracking
+> document. No gate was re-run for this refresh. The as-approved wording is kept in each row as an annotation.
+> Gate record for T0–T2: `docs/tracking/open-issues-resolved.md`, entry "#29 Training / #41 Injuries &
+> Medical — RESOLVED August 8, 2026" (T0 August 5, T1 August 6, T2 the same day; the balance-pass loop ran
+> 13 consecutive whole-tree gate passes).
 
 - [x] FR set complete + stable: FR-TR-001..026 (grep-verified: 26 unique, contiguous, in §2; +FR-TR-025/026 from PASS-2).
-- [ ] `TacticalDirector.TrainingSystem` assembly (value types + deterministic Stage-2 step) — **NOT
-      STARTED** (T0).
-- [ ] `TrainingSaveCodec` + season-save composition (a #30 change) — NOT STARTED (T1).
-- [ ] `AdvanceTrainingDay` / `ComputeTrainingInput` wired at #30's reserved slots — NOT STARTED (T2, gated
-      on #30 implemented first).
-- [ ] Deep per-attribute growth input + #34 coaching consumption — NOT STARTED (T3).
+- [x] TacticalDirector.TrainingSystem assembly (value types + deterministic Stage-2 step) — **LANDED** (T0).
+      Anchors: `src/training-system/training-system.asmdef`, `src/training-system/TrainingStep.cs`;
+      `src/training-system/tests/TrainingStepTests.cs`, `src/training-system/tests/TrainingScheduleTests.cs`. *(As-approved: NOT STARTED.)*
+- [x] `TrainingSaveCodec` + season-save composition (a #30 change) — **LANDED** (T1). Anchors:
+      `src/training-system/TrainingSaveCodec.cs` + `src/training-system/tests/TrainingSaveCodecTests.cs`; the
+      training blob in `src/season-save/SeasonSaveBlobs.cs` and `src/season-save/PlayerCareerStates.cs`. *(As-approved: NOT STARTED.)*
+- [x] `AdvanceTrainingDay` / `ComputeTrainingInput` wired at #30's reserved slots — **LANDED** (T2; slot 2
+      live). Anchors: AdvanceTrainingDay and ComputeTrainingInput in
+      `src/training-system/TrainingStep.cs`, driven from `src/season-save/SeasonLoop.cs`
+      (its GatherTrainingInputs and AdvanceTrainingDay calls). *(As-approved: NOT STARTED.)*
+- [ ] Deep per-attribute growth input + #34 coaching consumption — NOT STARTED (T3). Evidence: both
+      `src/season-save/SeasonLoop.cs` call sites still pass the identity CoachingModifier.
 
 ## 9.3 Review gates
 
@@ -157,4 +172,5 @@ post-APPROVED sequence.
 | 0.2 | 2026-07-23 | — | Design-AR (1H+1M+2L) + PASS-1 (1M) → AR-2 → AR-3 recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2 hostile re-review (1H regen/retire lifecycle + 6M + 2L) → PASS-2 convergence; FR set 24 → 26 (FR-TR-025/026); R-02/R-03 + §9.6 updated; re-affirmed APPROVED. |
 | 0.4 | 2026-08-08 | — | **Lint sweep**: the §9 preamble still read "nothing is built yet" of a subsystem live at #30's slot 2 (the pass-13-L4 class, in the approval checklist). |
+| 0.5 | 2026-10-30 | — | **§9.2 currency refresh** (cross-document consistency review at `38395f8`): the assembly, `TrainingSaveCodec` + season-save composition and #30 slot wiring rows still read NOT STARTED against code live since August 2026. Ticked with per-row source anchors and the recorded landing gates; T3 row unchanged and now evidenced (`CoachingModifier.Identity` at both #30 call sites). No FR, review gate or approval decision touched. |
 #endregion

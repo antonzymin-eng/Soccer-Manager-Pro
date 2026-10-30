@@ -1,0 +1,15 @@
+<!-- Created 2026-10-20. Local, non-certifying #441 witness classification; not a production project. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Reuse the existing diagnostic friend grant; output stays under this ignored Temp folder. -->
+    <AssemblyName>TacticalDirector.MatchEngine.Tests</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <ProjectReference Include="../../src/match-engine/match-engine.gen.csproj" />
+  </ItemGroup>
+</Project>

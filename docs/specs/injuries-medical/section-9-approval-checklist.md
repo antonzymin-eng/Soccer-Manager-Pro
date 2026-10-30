@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** August 23, 2026 (v0.7 — Group-B AR findings, `fr-md-count-claims-stale`: §9.2's FR-count
+**Last Updated:** October 30, 2026 (v0.8 — §9.2 currency refresh: T0–T2 recorded LANDED with source anchors; T3 stays NOT STARTED)
+**Last Updated (prior):** August 23, 2026 (v0.7 — Group-B AR findings, `fr-md-count-claims-stale`: §9.2's FR-count
 gate still said "FR-MD-001..027 … 27 unique, contiguous" after ERR-041-020 appended FR-MD-025a on
 August 22 — a grep of §2 now returns 28 ids, non-contiguous by construction (the id is suffixed to sit
 beside FR-MD-015 rather than appended at the end — §2 v0.11's own stated reason). Corrected to "28
@@ -11,7 +12,7 @@ unique; deliberately non-contiguous". Prior entry below.)
 **Last Updated (prior):** August 8, 2026 (v0.4, as-published v0.3 — balance-pass AR pass 9 M2: the §9.1 KD-1 gate and the §9.6 Decision's T-phase list stop ordering the registration the spec forbids)
 **Last Updated (prior):** August 8, 2026 (v0.3, as-published v0.2 — balance-pass AR pass 7 M1: R-02's evidence phrase no longer signs off the phantom stream as verified)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/injuries-medical-design.md` v0.2
 
@@ -40,17 +41,33 @@ spec with the implementation gates open by construction; **since landed** — T0
 - [x] KD-7 persistence as a season-save sub-blob (not `WORLD_STORE_FORMAT_VERSION`) with the rationale
       recorded.
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status *(as-approved: forward design, nothing built; currency corrected October 30, 2026)*
+
+> **Currency refresh, October 30, 2026 (cross-document consistency review at `38395f8`).** The rows below
+> had published NOT STARTED against shipped code. A row is ticked only where (a) its source anchor exists at
+> `38395f8` and (b) an executed gate result for the landing is already recorded in the cited tracking
+> document. No gate was re-run for this refresh. The as-approved wording is kept in each row as an annotation.
+> Gate record for T0–T2: `docs/tracking/open-issues-resolved.md`, entry "#29 Training / #41 Injuries &
+> Medical — RESOLVED August 8, 2026" (occurrence dial ARMED, FR-MD-027; 13 consecutive whole-tree gate passes).
 
 - [x] FR set complete + stable: FR-MD-001..027 + FR-MD-025a (28 unique; deliberately non-contiguous —
       see section 2 v0.11).
-- [ ] `TacticalDirector.InjuriesMedical` assembly (value types + deterministic Stage-2 step) — **NOT
-      STARTED** (T0).
-- [ ] `MedicalSaveCodec` + season-save composition (a #30 change) — NOT STARTED (T1).
-- [ ] `AdvanceMedicalDay` wired at #30's new reserved slot — NOT STARTED (T2, gated on the ERR-030-002
-      back-prop landing in #30 first).
+- [x] TacticalDirector.InjuriesMedical assembly (value types + deterministic Stage-2 step) — **LANDED** (T0).
+      Anchors: `src/injuries-medical/injuries-medical.asmdef`, `src/injuries-medical/MedicalStep.cs`,
+      `src/injuries-medical/InjuryState.cs`, `src/injuries-medical/InjurySeverity.cs`;
+      `src/injuries-medical/tests/MedicalStepTests.cs`. *(As-approved: NOT STARTED.)*
+- [x] `MedicalSaveCodec` + season-save composition (a #30 change) — **LANDED** (T1). Anchors:
+      `src/injuries-medical/MedicalSaveCodec.cs` + `src/injuries-medical/tests/MedicalSaveCodecTests.cs`;
+      `src/season-save/MedicalBlock.cs`. *(As-approved: NOT STARTED.)*
+- [x] `AdvanceMedicalDay` wired at #30's new reserved slot — **LANDED** (T2; slot 4 live). Anchors:
+      AdvanceMedicalDay in `src/injuries-medical/MedicalStep.cs`, driven from
+      `src/season-save/SeasonLoop.cs` (its AdvanceMedicalDay call). *(As-approved: NOT STARTED, gated on
+      ERR-030-002.)*
 - [ ] Deep-tier severity distribution / recurrence / ledger-load input / staff modulation — NOT STARTED
-      (T3).
+      (T3). Evidence: `src/season-save/SeasonLoop.cs` passes the identity MedicalModifier;
+      `src/injuries-medical/InjuryState.cs` carries no recurrence fields; `src/injuries-medical/InjurySeverity.cs`
+      ends at Serious. The owner-signed injury/aging changes that overlap this row
+      are tracked at `docs/tracking/open-issues.md#injury-aging-remainder`.
 
 ## 9.3 Review gates
 
@@ -114,4 +131,5 @@ spec with the implementation gates open by construction; **since landed** — T0
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L5)**: rows renumbered 0.2 → 0.3 / 0.3 → 0.4 (the pass-7 edit had collided with the July 23 row, leaving it unaddressable by version) and the header chain relabelled. Recorded as its own version at pass 11 (L1) — the renumber had reused v0.4 in the header while the table's 0.4 described pass 9, relocating the duplicate-label defect from the table into the chain. |
 | 0.6 | 2026-08-08 | — | **Lint sweep**: the §9 preamble still read "nothing is built yet" of a subsystem whose dial is ARMED (the pass-13-L4 class, in the approval checklist). |
 | 0.7 | 2026-08-23 | — | **Group-B AR findings (`fr-md-count-claims-stale`)**: §9.2's FR-count gate corrected from "FR-MD-001..027 … 27 unique, contiguous" to "FR-MD-001..027 + FR-MD-025a (28 unique; deliberately non-contiguous)" — stale since ERR-041-020 appended FR-MD-025a on August 22, the exact "fabricated checklist values" trap the root `CLAUDE.md` names. |
+| 0.8 | 2026-10-30 | — | **§9.2 currency refresh** (cross-document consistency review at `38395f8`): the assembly, `MedicalSaveCodec` + season-save composition and slot-4 wiring rows still read NOT STARTED against code live since August 2026 (the v0.6 lint sweep tensed the preamble but not these rows). Ticked with per-row source anchors and the recorded landing gates; T3 row unchanged, now evidenced and cross-linked to the re-surfaced injury/aging remainder. No FR, review gate or approval decision touched. |
 #endregion
