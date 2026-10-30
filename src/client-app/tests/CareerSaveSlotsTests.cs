@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerSaveSlotsTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-27
+// Modified: 2026-10-29
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2, D-10), Code Standards #20
 // Purpose:  Locks the slot store: empty listing, write/describe round trip, sequence-based latest,
@@ -454,6 +454,121 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void ASetAsideSlot_IsNotRevivedOrRolledBack_ByStaleBackups()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            string sidecar1 = Path.Combine(temp.Directory, "manual-1.slot");
+            byte[] olderSave = File.ReadAllBytes(save1);
+            byte[] olderSidecar = File.ReadAllBytes(sidecar1);
+            session.Progress();
+            session.SaveTo(CareerSaveSlot.Manual1);
+            byte[] newerSave = File.ReadAllBytes(save1);
+
+            // A committed write whose backup cleanup failed, then a load failure set the slot aside.
+            File.WriteAllBytes(save1 + ".bak", olderSave);
+            File.WriteAllBytes(sidecar1 + ".bak", olderSidecar);
+            Assert.IsTrue(temp.Slots.MarkDamaged(CareerSaveSlot.Manual1));
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            Assert.AreEqual(CareerSlotState.Damaged, reopened.Describe(CareerSaveSlot.Manual1).State,
+                "the stale backup must not make the set-aside slot Ready again.");
+            CollectionAssert.AreEqual(newerSave, File.ReadAllBytes(save1), "the committed save is not rolled back.");
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+            Assert.IsTrue(reopened.RestoreDamaged(CareerSaveSlot.Manual1), "the slot can still be restored.");
+        }
+
+        [Test]
+        public void AnOverwriteOfASetAsideSlot_InterruptedInsideTheSaveSwap_KeepsItsSaveRestorable()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            CareerSlotSummary setAside = session.SaveTo(CareerSaveSlot.Manual1);
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            byte[] setAsideBytes = File.ReadAllBytes(save1);
+            temp.Slots.MarkDamaged(CareerSaveSlot.Manual1);
+            session.Progress();
+            session.SaveTo(CareerSaveSlot.Manual2);
+
+            // File.Replace moved the old save to its backup and stopped before the new one moved in.
+            File.Move(save1, save1 + ".bak");
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual2), save1 + ".tmp");
+            File.Copy(Path.Combine(temp.Directory, "manual-2.slot"), Path.Combine(temp.Directory, "manual-1.slot.tmp"));
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            Assert.AreEqual(CareerSlotState.Damaged, reopened.Describe(CareerSaveSlot.Manual1).State);
+            CollectionAssert.AreEqual(setAsideBytes, File.ReadAllBytes(save1), "the only copy of the save is put back.");
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.tmp"));
+            Assert.IsTrue(reopened.RestoreDamaged(CareerSaveSlot.Manual1));
+            Assert.AreEqual(setAside.Sequence, reopened.Describe(CareerSaveSlot.Manual1).Sequence);
+        }
+
+        [Test]
+        public void FinishingAnInterruptedOverwriteOfASetAsideSlot_ClearsTheSetAsideSidecar()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            temp.Slots.MarkDamaged(CareerSaveSlot.Manual1);
+            session.Progress();
+            CareerSlotSummary newer = session.SaveTo(CareerSaveSlot.Manual2);
+
+            // The overwrite's save swap landed; its sidecar is still staged.
+            string save1 = temp.Slots.SavePath(CareerSaveSlot.Manual1);
+            File.Move(save1, save1 + ".bak");
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual2), save1);
+            File.Copy(Path.Combine(temp.Directory, "manual-2.slot"), Path.Combine(temp.Directory, "manual-1.slot.tmp"));
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            CareerSlotSummary row = reopened.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(newer.WorldDay, row.WorldDay);
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.damaged"), "a finished write clears it, as Write does.");
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"));
+        }
+
+        [Test]
+        public void AWriteThatCannotClearALeftover_StillSucceeds()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            temp.Slots.MarkDamaged(CareerSaveSlot.Manual1);
+            string damaged = Path.Combine(temp.Directory, "manual-1.slot.damaged");
+
+            // Cleanup after the new pair is live is best effort: a held file must not fail the write.
+            CareerSlotSummary written;
+            using (new FileStream(damaged, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                written = session.SaveTo(CareerSaveSlot.Manual1);
+            }
+
+            CareerSlotSummary row = temp.Slots.Describe(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSlotState.Ready, row.State);
+            Assert.AreEqual(written.Sequence, row.Sequence);
+            Assert.IsFalse(temp.Slots.RestoreDamaged(CareerSaveSlot.Manual1), "a live sidecar is never replaced.");
+        }
+
+        [Test]
+        public void ASidecarBackupThatPairsWithNothing_IsDropped_SoLaterOpensSkipRecovery()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            string sidecar1 = Path.Combine(temp.Directory, "manual-1.slot");
+            File.Copy(sidecar1, sidecar1 + ".bak");
+            File.WriteAllBytes(temp.Slots.SavePath(CareerSaveSlot.Manual1), new byte[] { 1, 2, 3 });
+
+            var reopened = new CareerSaveSlots(temp.Directory);
+            Assert.AreEqual(CareerSlotState.Ready, reopened.Describe(CareerSaveSlot.Manual1).State,
+                "Describe reads the sidecar, not the save; a later load failure invalidates the slot.");
+            Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.slot.bak"));
+        }
+
+        [Test]
         public void Constructor_RefusesAnEmptyDirectory()
         {
             Assert.Throws<ArgumentException>(() => new CareerSaveSlots(""));
@@ -476,4 +591,9 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.5     | 2026-10-27 | —      | PR 519 review 4: +4 locks — RestoreDamaged undoes MarkDamaged, |
 // |         |            |        | refuses a save that no longer matches, never ties a sequence;  |
 // |         |            |        | a sidecar left only as its backup is recovered (22 locks).     |
+// | 1.6     | 2026-10-29 | —      | PR 522 review: +5 locks — stale backups never revive or roll   |
+// |         |            |        | back a set-aside slot; an overwrite interrupted inside the     |
+// |         |            |        | save swap keeps the set-aside save restorable; finishing a     |
+// |         |            |        | write clears .damaged; held cleanup never fails a committed    |
+// |         |            |        | write; an unpaired sidecar backup is dropped (27 locks).       |
 #endregion

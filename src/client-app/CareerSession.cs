@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-27
+// Modified: 2026-10-29
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -143,11 +143,10 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>
         /// Resumes the career saved in <paramref name="slot"/>. A <see cref="CareerSlotState.Ready"/>
-        /// slot whose save then fails #30's load (decode or coherence gates) or holds a mid-match save
-        /// is invalidated (<see cref="CareerSaveSlots.MarkDamaged"/>, reversible) before the failure
-        /// propagates, so it cannot keep winning Continue. A read that fails on IO is left alone, as it
-        /// may succeed on retry, and so is a failure rebuilding the career from contents that passed the
-        /// load, which points at this build rather than the file. Caller arguments are validated first,
+        /// slot whose save then fails #30's load (decode or coherence gates), holds a mid-match save,
+        /// or fails to rebuild into a career is invalidated (<see cref="CareerSaveSlots.MarkDamaged"/>,
+        /// reversible) before the failure propagates, so it cannot keep winning Continue. A read that
+        /// fails on IO is left alone, as it may succeed on retry. Caller arguments are validated first,
         /// so a caller error never invalidates a healthy slot.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="slots"/> is null.</exception>
@@ -180,15 +179,16 @@ namespace TacticalDirector.ClientApp
                     "Slot " + slot + " is " + summary.State + " and cannot be loaded.");
             }
 
-            SeasonSaveContents contents;
             try
             {
-                contents = slots.Load(slot);
+                SeasonSaveContents contents = slots.Load(slot);
                 if (contents.Match != null)
                 {
                     throw new InvalidOperationException(
                         "Slot " + slot + " holds a mid-match save; the career client cannot resume a match (§5-P7 D-P7-6).");
                 }
+
+                return Rebuild(slots, contents, mode);
             }
             catch (Exception e) when (e is InvalidDataException || e is InvalidOperationException
                 || e is ArgumentException || e is FormatException)
@@ -196,12 +196,10 @@ namespace TacticalDirector.ClientApp
                 slots.MarkDamaged(slot);
                 throw;
             }
-
-            return Rebuild(slots, contents, mode);
         }
 
-        // Past #30's load gates the contents are coherent, so a failure here is more likely this build's
-        // code than the file: it propagates without invalidating the slot.
+        // A failure here may be this build's code rather than the file, but left Ready the slot would
+        // keep winning Continue and failing the same way; invalidation is reversible, so it is cheap.
         private static CareerSession Rebuild(CareerSaveSlots slots, SeasonSaveContents contents, RoundResolutionMode mode)
         {
             ulong worldSeed = contents.World.WorldSeed;
@@ -377,4 +375,6 @@ namespace TacticalDirector.ClientApp
 // | 1.3     | 2026-10-27 | —      | PR 519 review 4: only #30's load (and a mid-match save)        |
 // |         |            |        | invalidates the slot; a failed rebuild from loaded contents    |
 // |         |            |        | propagates and leaves it alone.                                |
+// | 1.4     | 2026-10-29 | —      | PR 522 review: a failed rebuild invalidates the slot too, so   |
+// |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
 #endregion
