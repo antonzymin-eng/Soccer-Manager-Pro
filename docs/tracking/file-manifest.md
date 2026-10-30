@@ -20,7 +20,13 @@
 - `raw/header441-sanity-corrected-20261022.txt.xz`
 - `raw/header441-sanity-corrected-console-20261022.log.xz`
 
-Modified: `.gitignore` (root-only generated-output ignores and scoped probe-project exceptions), `docs/tracking/header-reachability-441-counters.md` v0.14, `match-engine-wiring-backlog.md` v1.40, `path-to-playable-roadmap.md` v0.76, `src/match-engine/MatchEngine.cs` v2.14 and `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`, `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract) and `tools/tests/test_evidence_manifests.py` (22 registered directories), and this manifest. No assembly, gameplay, `[GT]`, or snapshot-schema change. #441/W9 remain open. #441 develops independently of W8 C, but #441 lands only after the C measurement. #434/#440 D05 remain unchanged. No changelog or `AGENTS.md` version bump is claimed before a post-C landing.
+New `docs/tracking/evidence/header441-delivery-pilot-20261022/` has 3 files; `SHA256SUMS` covers the other 2:
+
+- `SHA256SUMS`
+- `Probe.csproj`
+- `Program.cs`
+
+Modified: `.gitignore` (root-only generated-output ignores and scoped probe-project exceptions), `docs/tracking/header-reachability-441-counters.md` v0.14, `match-engine-wiring-backlog.md` v1.40, `path-to-playable-roadmap.md` v0.76, `src/match-engine/MatchEngine.cs` v2.14 and `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`, `tools/dotnet-ci/check_evidence_manifests.py` (two new full-coverage contracts) and `tools/tests/test_evidence_manifests.py` (23 registered directories), and this manifest. No assembly, gameplay, `[GT]`, or snapshot-schema change. #441/W9 remain open. #441 develops independently of W8 C, but #441 lands only after the C measurement. #434/#440 D05 remain unchanged. No changelog or `AGENTS.md` version bump is claimed before a post-C landing.
 
 **Last Updated (prior):** October 18, 2026 — **Docs-only: `ERR-003-010`.** No files added or removed. **Modified:** `docs/specs/collision-system/section-4-1-to-4-4.md` v1.2, `section-8-part-1.md` v1.3, `section-4-5-to-4-7.md` (no version header; inline ERR note); `docs/tracking/spec-error-log.md` v2.80; `docs/tracking/path-to-playable-roadmap.md` v0.75; `docs/tracking/CHANGELOG.md`; this manifest's three maintained `spec-error-log.md` pointers are advanced from v2.79 to v2.80. No `src/` change and no assembly added or removed.
 
