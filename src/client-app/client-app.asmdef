@@ -17,7 +17,8 @@
         "TacticalDirector.Discipline",
         "TacticalDirector.ClubFinances",
         "TacticalDirector.TrainingSystem",
-        "TacticalDirector.InjuriesMedical"
+        "TacticalDirector.InjuriesMedical",
+        "TacticalDirector.Transfers"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

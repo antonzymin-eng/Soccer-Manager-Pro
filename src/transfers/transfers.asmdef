@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.Transfers",
     "references": [
         "TacticalDirector.ClubFinances",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.ProjectConstants"
     ],

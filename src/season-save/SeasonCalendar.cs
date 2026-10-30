@@ -1,5 +1,8 @@
 // File:     src/season-save/SeasonCalendar.cs
 // Created:  2026-07-25
+// Modified: 2026-10-20 (AR round 5 S-L3 — v1.5: doc comments only — the invariant's callers are listed truthfully and
+//           RequireCursorInvariant is scoped to the two constructor-time sites.)
+// Modified: 2026-10-20 (AR round 4 S4-L2 — v1.4: RequireCursorInvariant, the one KD-4 constructor refusal.)
 // Modified: 2026-09-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.3 (cursor + day advance), Appendix B row 8,
@@ -20,9 +23,14 @@ namespace TacticalDirector.SeasonSave
     /// <para>
     /// <b>KD-4 invariant (FR-SN-011).</b> The next fixture day is always <c>&gt;=</c> the current world
     /// day. It is checked with <see cref="SatisfiesCursorInvariant"/> — a pure predicate here, since this
-    /// type never sees the world clock. Its production caller is <c>SeasonSaveManager.Load</c> (#30 T1),
-    /// the only layer holding both the restored world and the decoded season; it fails loud on violation
-    /// (F4).
+    /// type never sees the world clock. The layers that hold both a world clock and a season check it, each
+    /// failing loud on violation (F4): <c>SeasonSaveManager.Load</c> (#30 T1, the restored pair) and
+    /// <c>SeasonSaveManager.Save</c> (never write what Load refuses), both throwing
+    /// <see cref="System.InvalidOperationException"/>; the two constructor-time sites, <c>SeasonLoop</c>'s
+    /// constructor and <c>League.CreateLoop</c>, through <see cref="RequireCursorInvariant"/>, which throws
+    /// <see cref="System.ArgumentException"/>; and <c>SeasonLoop.RollToNextSeason</c>, which tests the NEXT
+    /// season's calendar with the predicate and throws <see cref="System.InvalidOperationException"/> (AR
+    /// round 5 S-L3).
     /// </para>
     /// </summary>
     public readonly struct SeasonCalendar
@@ -172,6 +180,29 @@ namespace TacticalDirector.SeasonSave
             IsSeasonComplete || _roundToDay[NextRoundIndex] >= currentWorldDay;
 
         /// <summary>
+        /// The shared refusal of the TWO constructor-time sites (AR round 4 S4-L2: <c>League.CreateLoop</c> and
+        /// <c>SeasonLoop</c>'s constructor each carried a copy of this predicate and message). A no-op when
+        /// <see cref="SatisfiesCursorInvariant"/> holds. It is deliberately NOT the only refusal of the invariant
+        /// (AR round 5 S-L3): <c>SeasonSaveManager.Save</c> / <c>Load</c> and <c>RollToNextSeason</c> throw
+        /// <see cref="System.InvalidOperationException"/> with messages naming their own boundary, and routing them
+        /// through this <see cref="System.ArgumentException"/> helper would change a caller-visible exception type.
+        /// </summary>
+        /// <param name="currentWorldDay">The world day to check the cursor against.</param>
+        /// <param name="paramName">The argument the caller reports as the offender (<c>world</c> at
+        /// <c>League.CreateLoop</c>, <c>season</c> at <c>SeasonLoop</c>'s constructor).</param>
+        /// <exception cref="System.ArgumentException">The next fixture day is before <paramref name="currentWorldDay"/>.</exception>
+        internal void RequireCursorInvariant(uint currentWorldDay, string paramName)
+        {
+            if (!SatisfiesCursorInvariant(currentWorldDay))
+            {
+                throw new System.ArgumentException(
+                    $"KD-4 cursor invariant violated: the world is on day {currentWorldDay} but the "
+                    + $"season's next fixture is day {NextFixtureDay()} (round {NextRoundIndex}).",
+                    paramName);
+            }
+        }
+
+        /// <summary>
         /// This calendar's round spacing shifted forward into the next season (#30 §3.5 step (c′)): every
         /// round day moves by one season length plus <paramref name="breakDays"/>, and the cursor returns
         /// to round 0. The first round of the new season therefore lands exactly
@@ -301,4 +332,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | private constructor is reached directly. Plus a positive-breakDays |
 // |         |            |        | gate — at zero a single-round calendar reproduces itself.          |
 // | 1.3     | 2026-09-08 | —      | Snapshot the supplied day mapping before validating that snapshot. |
+// | 1.4     | 2026-10-20 | —      | AR round 4 S4-L2: RequireCursorInvariant — the single KD-4 constructor refusal that League.CreateLoop and SeasonLoop's constructor now share (was a duplicated predicate and message). |
+// | 1.5     | 2026-10-20 | —      | AR round 5 S-L3 (doc comments only): the class summary said the invariant's production caller is SeasonSaveManager.Load, "the only layer holding both" - it is also checked by SeasonSaveManager.Save, SeasonLoop's constructor, League.CreateLoop and RollToNextSeason. RequireCursorInvariant's summary no longer claims to be "the ONE" refusal: it is the shared refusal of the two constructor-time sites; Save/Load/Roll keep their InvalidOperationException (a type change would be caller-visible). |
 #endregion

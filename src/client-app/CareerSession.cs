@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-29
+// Modified: 2026-10-30
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -214,7 +214,8 @@ namespace TacticalDirector.ClientApp
                 null,
                 contents.Progression,
                 contents.Discipline,
-                contents.Finances);
+                contents.Finances,
+                contents.Transfers);
 
             return new CareerSession(
                 slots, league, loop, worldSeed, CareerChange.Plain(CareerChangeKind.Resumed, loop.CurrentWorldDay));
@@ -377,4 +378,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | propagates and leaves it alone.                                |
 // | 1.4     | 2026-10-29 | —      | PR 522 review: a failed rebuild invalidates the slot too, so   |
 // |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
+// | 1.5     | 2026-10-30 | —      | PR 521 merge: pass the saved #31 state into the resumed loop. |
 #endregion

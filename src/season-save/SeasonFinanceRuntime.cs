@@ -1,7 +1,8 @@
 // ============================================================================
 // File:     src/season-save/SeasonFinanceRuntime.cs
 // Created:  2026-09-11
-// Modified: 2026-10-13
+// Modified: 2026-10-20 (#31 T2: StageFor / ReplaceStaged for the transfer bid seam — v1.7)
+//           Prior: 2026-10-13
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-001/002/003/004/012/013/023/025/027,
 //           §3.4/§3.6/§3.7, §4.1-§4.3, §7.1 T2b/T3b2; Season Loop #30 §3.3/§3.5/§4.3;
@@ -189,6 +190,36 @@ namespace TacticalDirector.SeasonSave
             entries[index] = new ClubFinanceEntry(clubId, in finances);
         }
 
+        /// <summary>
+        /// #31 T2's staging read: the club's EXACT live value and its index, resolved before the bid so the
+        /// later <see cref="ReplaceStaged"/> cannot fail on a lookup. A value copy — #31 stages its
+        /// canonical #40 transaction on it, never on the live entry (§7.1 T2: no raw mutable
+        /// <c>ClubFinances</c> handed out, nothing rebuilt from <c>FinanceView</c>).
+        /// </summary>
+        internal static ClubFinanceState StageFor(ClubFinanceEntry[] entries, int clubId, out int index)
+        {
+            index = IndexOf(entries, clubId);
+            return entries[index].Finances;
+        }
+
+        /// <summary>
+        /// Publishes a value #31 staged through #40's own <c>FinanceLedger.ApplyTransaction</c>, after the
+        /// roster commit is confirmed (#31 §3.3). The value IS #40-validated — it is the output of
+        /// <c>FinanceLedger.ApplyTransaction</c>, the canonical mutation, which refuses an incoherent
+        /// result — so this replaces the keyed entry at the index <see cref="StageFor"/> resolved — the same "replace only a value #40 accepted" posture
+        /// <see cref="ApplyTransaction"/> takes.
+        /// </summary>
+        internal static void ReplaceStaged(ClubFinanceEntry[] entries, int index, int clubId, in ClubFinanceState staged)
+        {
+            if (entries[index].ClubId != clubId)
+            {
+                throw new InvalidOperationException(
+                    $"Finance entry {index} belongs to club {entries[index].ClubId}, not {clubId}.");
+            }
+
+            entries[index] = new ClubFinanceEntry(clubId, in staged);
+        }
+
         private static int IndexOf(ClubFinanceEntry[] entries, int clubId)
         {
             if (entries == null)
@@ -243,4 +274,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.4     | 2026-10-08 | —      | T3b1: allocation-free, per-club zero daily accounting invocation. |
 // | 1.5     | 2026-10-08 | —      | PR #491 review: publish daily state only after every club succeeds. |
 // | 1.6     | 2026-10-13 | —      | T3b2: compose settled day/fixture/table facts through #40 amounts, only when enabled. |
+// | 1.7     | 2026-10-20 | —      | #31 T2: StageFor (exact live value + pre-resolved index) and ReplaceStaged (publish a #40-validated staged value) for SeasonLoop.SubmitTransferBid. |
 #endregion

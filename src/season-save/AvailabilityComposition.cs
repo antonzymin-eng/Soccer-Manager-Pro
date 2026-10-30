@@ -1,6 +1,7 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, round 5 (docs-only annotation, a reviewed-findings pass over the v1.8 landing
+// Modified: 2026-10-19 (ERR-031-005 / ERR-031-004 doc note on the stage-3 blocker — v1.10)
+// Prior-Modified: 2026-08-16, round 5 (docs-only annotation, a reviewed-findings pass over the v1.8 landing
 //           below — M1: the "two sites" count v1.8 recorded for this file is WRONG. That diff corrected
 //           THREE sites here (the XML doc at ~152, the XML doc at ~421, and the inline comment inside
 //           ChooseSuspendedCandidate's Cap branch at ~528), not two, and the whole sweep's real
@@ -185,10 +186,12 @@ namespace TacticalDirector.SeasonSave
     /// call-ups ahead of any suspended player, then generated low-attribute cover ahead of that — the
     /// Football Manager posture, under which a banned man never takes the field at all and this type's
     /// suspended tier becomes unreachable rather than merely expensive. Neither is buildable yet:
-    /// <b>#42 Youth has no <c>src/</c> assembly</b>, and generated cover needs the <c>PlayerId =
-    /// clubId × CLUB_SQUAD_SIZE + local</c> id space widened, since it is fully packed at 25 and a
-    /// 26th player for club N collides with club N+1's first (#27 FR-SQ-010 as amended by
-    /// ERR-027-004). Until then the suspended tier stays, and stays costly.
+    /// <b>#42 Youth has no <c>src/</c> assembly</b>, and generated cover needs a club below its
+    /// <c>CLUB_SQUAD_SIZE</c> cap to put him in. <i>(Updated October 19, 2026, ERR-031-005: the id
+    /// half of this blocker is gone — ids are no longer packed by club; a generated player would take
+    /// an id from <c>ProgressionEngine.NextPlayerId</c>, the career's single allocator. ERR-031-004's
+    /// 23-player bootstrap leaves the capacity headroom too, so stage 3 is now a design task, not a
+    /// blocked one.)</i> Until then the suspended tier stays, and stays costly.
     /// </para>
     /// </summary>
     internal static class AvailabilityComposition
@@ -1043,4 +1046,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | and at #30 section-3.md v2.10's row, #44 section-2.md v0.18's row,|
 // |         |            |        | section-7.md v0.11's row, and spec-error-log.md's ERR-030-046     |
 // |         |            |        | annotation. No behaviour, guarantee, or normative text changed.   |
+// | 1.10    | 2026-10-19 | —      | ERR-031-005 / ERR-031-004 (doc only): the stage-3 generated-cover blocker no longer cites a packed id space — ids come from #28's single monotonic allocator and bootstrap squads leave headroom below the cap. |
 #endregion

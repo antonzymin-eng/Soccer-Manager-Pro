@@ -20,6 +20,7 @@
         "TacticalDirector.ClubFinances",
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.InjuriesMedical",
+        "TacticalDirector.Transfers",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [

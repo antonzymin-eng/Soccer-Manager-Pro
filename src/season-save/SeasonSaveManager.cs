@@ -1,5 +1,12 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-10-20 (AR round 4 S4-L3 — v1.34: the guard summary's <see cref> names the real long-form Save signature; comments only.)
+// Modified: 2026-10-20 (L2 doc drift — v1.33: Load summary names the #31 transfers state and the FOUR
+//           cross-blob coherence rules; comments only.)
+// Modified: 2026-10-18 (#31 T1 — v1.32: Save takes the #31 transfers state (null = unwired) and writes the
+//           mandatory XFER sub-blob; Load restores it into SeasonSaveContents; SeasonTransfersCoherence
+//           checks managed club + contract membership at Save and Load; RequireDestinationCarriesNoTransfers
+//           is the fifth sibling overwrite guard, keyed on wiring.)
 // Modified: 2026-09-10 (ERR-030-050 — v1.31: T1b review restores the finance resume path and adds
 //           current-season ClubId coherence at Save/Load; Save(SeasonLoop, …) now forwards the loop's
 //           carried entries instead of unconditionally writing an empty finance block.)
@@ -33,7 +40,8 @@
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
 //           Discipline & Suspensions #44 Appendix B; Club Finances & Economy #40 FR-FN-020/021/025,
-//           §7.1 T1b; Season & Competition Loop #30 Appendix B.1 / ERR-030-050;
+//           §7.1 T1b; Transfers, Contracts & Negotiation #31 §4.4 / FR-TX-012/027/028, §7.1 T1;
+//           Season & Competition Loop #30 Appendix B.1 / ERR-030-050;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
@@ -61,6 +69,7 @@ using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -153,6 +162,18 @@ namespace TacticalDirector.SeasonSave
         /// state, which is the distinction ERR-030-038 turns on.
         /// <see cref="RequireDestinationCarriesNoFinances"/> therefore keys on emptiness.
         /// </para></param>
+        /// <param name="transfersOrNull">The #31 transfers state (the managed club's contracts, window and
+        /// committed spend), or <c>null</c> when no #31 subsystem is wired behind this save — which writes
+        /// a well-formed zero-club block (#31 FR-TX-012). Required positionally: no overload defaults it.
+        /// <para>
+        /// Null is a WIRING fact here, not an emptiness one, and that is what lets
+        /// <see cref="RequireDestinationCarriesNoTransfers"/> key on it without repeating ERR-030-038: a
+        /// wired state always encodes its managed-club record, even after every contract has expired, so
+        /// "zero clubs" can only mean "nothing was driving #31". When non-null it must belong to
+        /// <paramref name="season"/>'s managed club and, when <paramref name="progression"/> carries the
+        /// roster, every contract must name a player that club's roster carries
+        /// (<see cref="SeasonTransfersCoherence"/>).
+        /// </para></param>
         public static void Save(
             WorldStore world,
             SeasonState season,
@@ -164,7 +185,8 @@ namespace TacticalDirector.SeasonSave
             ProgressionEngine progression,
             DisciplineState discipline,
             bool disciplineWired,
-            ClubFinanceEntry[] finances)
+            ClubFinanceEntry[] finances,
+            TransfersState transfersOrNull)
         {
             if (world == null)
             {
@@ -245,6 +267,12 @@ namespace TacticalDirector.SeasonSave
                 SeasonFinanceCoherence.Normalize(season, finances, nameof(finances));
 
             RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs, progression);
+
+            // #31 T1: never write a transfers block Load would refuse against this file's own season and
+            // roster (the Encode-writes-what-Decode-refuses class, one family over).
+            SeasonTransfersCoherence.Require(
+                season, transfersOrNull, RosterOf(progression), nameof(transfersOrNull));
+
             RequireCareerCursorsWithinClock(
                 world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs, progression);
 
@@ -271,10 +299,11 @@ namespace TacticalDirector.SeasonSave
             var progressionBlock = new ProgressionBlock(progression.Snapshot());
             var disciplineBlock = new DisciplineBlock(DisciplineSaveCodec.Encode(discipline));
             var financeBlock = new FinanceBlock(ClubFinancesSaveCodec.Encode(canonicalFinances));
+            var transfersBlock = new TransfersBlock(TransfersSaveCodec.Encode(transfersOrNull));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
                 worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
-                in progressionBlock, in disciplineBlock, in financeBlock, matchBlob);
+                in progressionBlock, in disciplineBlock, in financeBlock, in transfersBlock, matchBlob);
 
             // ERR-028-008: refuse to overwrite a roster with an empty one. #28's block is the
             // serialized roster (KD-4), so writing a zero-club block over a file that carries one
@@ -356,6 +385,14 @@ namespace TacticalDirector.SeasonSave
             if (canonicalFinances.Length == 0)
             {
                 RequireDestinationCarriesNoFinances(path);
+            }
+
+            // The FIFTH instance, in the fifth block family (#31 T1). Keyed on wiring (null), which for
+            // #31 IS what the block's club count records — a wired career with zero contracts still
+            // writes its club record — so this cannot refuse a legitimately drained career (ERR-030-038).
+            if (transfersOrNull == null)
+            {
+                RequireDestinationCarriesNoTransfers(path);
             }
 
             string tempPath = path + ".tmp";
@@ -467,7 +504,10 @@ namespace TacticalDirector.SeasonSave
                 // ERR-030-050: T1b's persisted family must survive the documented resume path. The loop
                 // carries the restored entries even though T2 has not yet wired their producer, so a
                 // Save As cannot silently replace a populated finance block with the pre-T2 empty set.
-                loop.FinanceEntriesForSave());
+                loop.FinanceEntriesForSave(),
+                // #31 T1: the loop's carried state (a clone it owns), or null when #31 is not wired. The
+                // destination guard refuses the null over a file that carries one.
+                loop.TransfersForSave());
         }
 
         // Reads the destination's progression block, if the destination exists and is a well-formed
@@ -564,7 +604,7 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038) —
         /// and <c>disciplineWired</c> is a required parameter of the one public long-form
-        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool)"/>,
+        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool,ClubFinanceEntry[],TransfersState)"/>,
         /// never asserted on a caller's behalf by a forwarding overload (ERR-030-039). The
         /// two sibling guards may key on emptiness because their families have no legitimate empty
         /// state — a career roster never empties — but #44's does: FR-DC-017 drops a row the instant it
@@ -670,11 +710,56 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The FIFTH sibling (#31 T1), for the transfers block. A save with no #31 subsystem wired may
+        /// create a file and may overwrite a transfers-less one, never one that carries #31 state.
+        /// <para>
+        /// Keyed on the destination's club count, which is a wiring fact (a wired state always writes its
+        /// managed-club record), so a career whose every contract has expired or been sold is still
+        /// "wired" and saves over its own file freely — the ERR-030-038 distinction, by construction.
+        /// </para>
+        /// </summary>
+        private static void RequireDestinationCarriesNoTransfers(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            TransfersState existing;
+            try
+            {
+                SeasonSaveBlobs blobs = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+                existing = TransfersSaveCodec.Decode(blobs.TransfersBlob);
+            }
+            catch (Exception)
+            {
+                // Not a readable season save (corrupt, truncated, a different format, or a pre-v8 frame).
+                // Nothing to protect — all four sibling guards reason identically.
+                return;
+            }
+
+            if (existing != null)
+            {
+                throw new InvalidOperationException(
+                    "Refusing to overwrite " + path + ": it carries #31 transfers state for managed club " +
+                    existing.ManagedClubId + " (" + existing.ContractCount + " contract(s)) and this save " +
+                    "drives no #31 subsystem at all. The contracts, window and committed spend would be " +
+                    "deleted silently, and genesis seeding never runs on load (FR-TX-028), so nothing would " +
+                    "recreate them. Resume the loop with SeasonSaveContents.Transfers.");
+            }
+        }
+
+        // The roster authority a save's cross-blob rules check against: the #28 projection when the file
+        // carries one (KD-4), otherwise none — a careerless save has no roster in the file to check.
+        private static ISquadProvider RosterOf(ProgressionEngine progression) =>
+            progression != null && progression.ClubCount > 0 ? new ProgressionSquads(progression) : null;
+
+        /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the full
         /// <see cref="SeasonSaveContents"/> this method returns — see its own summary for the complete
         /// enumeration (the world, the season, the per-club #29 training / #41 medical / #30 appearance
-        /// states, the #28 progression store, the #44 discipline state, and the #40 per-club finance
-        /// entries) — plus the
+        /// states, the #28 progression store, the #44 discipline state, the #40 per-club finance
+        /// entries, and the #31 transfers state, null when no #31 subsystem was wired) — plus the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
@@ -682,8 +767,12 @@ namespace TacticalDirector.SeasonSave
         /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TrainingSaveCodec.Decode"/> / <see cref="MedicalSaveCodec.Decode"/> / the match
         /// restore path; a season whose next fixture day is already behind the restored world day throws
-        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the TWO cross-blob coherence rules
-        /// this root owns, beside the career cursor-vs-clock rule, both enforced at Save and Load); and a distinct-squad match save
+        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the FOUR cross-blob coherence rules
+        /// this root owns, all enforced at Save and Load: the KD-4 calendar cursor, the career
+        /// cursors-vs-clock rule, the finance club-universe rule, and the #31 transfers rule — managed
+        /// club always, contract-roster membership against the file's #28 projection when it carries
+        /// one); a #31 transfers block naming another managed club or a player that projection does not
+        /// carry throws here (<c>SeasonTransfersCoherence</c>); and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
@@ -724,12 +813,17 @@ namespace TacticalDirector.SeasonSave
             ProgressionEngine progression = ProgressionEngine.Restore(blobs.ProgressionBlob);
             DisciplineState discipline = DisciplineSaveCodec.Decode(blobs.DisciplineBlob);
             ClubFinanceEntry[] finances = ClubFinancesSaveCodec.Decode(blobs.FinanceBlob);
+            TransfersState transfers = TransfersSaveCodec.Decode(blobs.TransfersBlob);
 
             // ERR-030-050: the finance sub-blob and season sub-blob must describe the same current club
             // universe once finance state is populated. Empty remains legal for pre-T2 frames written
             // by this version. Load checks the same predicate as Save/composition so a hand-edited or
             // mispaired frame cannot escape as a coherent SeasonSaveContents.
             finances = SeasonFinanceCoherence.Normalize(season, finances, nameof(finances));
+
+            // #31 T1, load side: the same rule Save enforced, because a hand-edited or mispaired frame
+            // arrives HERE. The managed club must be this season's, and every contract a rostered player.
+            SeasonTransfersCoherence.Require(season, transfers, RosterOf(progression), nameof(path));
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -817,7 +911,7 @@ namespace TacticalDirector.SeasonSave
 
             return new SeasonSaveContents(
                 world, season, trainingClubs, medicalClubs, appearanceClubs, progression, discipline,
-                finances, match);
+                finances, transfers, match);
         }
 
         /// <summary>
@@ -1419,4 +1513,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | non-empty set must exactly match SeasonState.ClubIds. The        |
 // |         |            |        | destination N→0 guard remains complementary rather than becoming |
 // |         |            |        | a filename-bound old-career subset comparison.                   |
+// | 1.32    | 2026-10-18 | —      | #31 T1 (FR-TX-012): Save takes the required-positional        |
+// |         |            |        | transfersOrNull and writes the XFER sub-blob; Load restores   |
+// |         |            |        | it; SeasonTransfersCoherence at both; the fifth destination   |
+// |         |            |        | guard (RequireDestinationCarriesNoTransfers), keyed on wiring.|
+// | 1.33    | 2026-10-20 | —      | L2 doc drift (comments only): the Load summary now names the #31 |
+// |         |            |        | transfers state and counts FOUR cross-blob coherence rules (KD-4 |
+// |         |            |        | cursor, career cursors, finance, transfers), not "TWO".          |
+// | 1.34    | 2026-10-20 | —      | AR round 4 S4-L3 (comments only): the DisciplineState guard summary's <see cref> pointed at a Save overload that no longer exists (the long form gained ClubFinanceEntry[] and TransfersState); it names the real signature. |
 #endregion

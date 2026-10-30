@@ -1,12 +1,15 @@
 // File:     src/season-save/LeagueBootstrap.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-10-20 (AR round 4 L12 — BuildStrengthRanks doc: ordinal 84 is unallocated in code, not "pinned to a first draw site"; comment-only — v1.4)
+//           2026-10-20 (AR round 3 L9 — the persistence-equivalence note scoped to careerless saves and new games; comment-only — v1.3)
+//           (AR round 2 L5 — squad size 23 and the ordinal-84 note restated; comment-only — v1.2)
+//           (P-L2 — stale squad-size comment — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md)
 //           KD-1..KD-6, KD-9, §3 determinism, F1..F6; path-to-playable roadmap A3;
 //           Squad/Player Data #27 (RosterGenerator); Code Standards #20
-// Purpose:  Turn one world seed into a playable league — N clubs, one 25-player position-coherent
-//           Squad each, a per-club strength, and the derived season seed. The roadmap-C3 substitute
+// Purpose:  Turn one world seed into a playable league — N clubs, one 23-player (3/8/7/5, below the
+//           25-player cap, ERR-031-004) position-coherent Squad each, a per-club strength, and the derived season seed. The roadmap-C3 substitute
 //           for #47: playability needs a league to EXIST, not a database editor.
 //
 // Boot-time only (a new-game / new-season step, never the 10 Hz or 60 Hz loops), so the zero-alloc
@@ -21,20 +24,27 @@ namespace TacticalDirector.SeasonSave
     /// Deterministic league generation from a single <c>worldSeed</c> (design KD-4). Pure with respect
     /// to global state: it constructs its own <see cref="DeterministicRngService"/>, touches no
     /// <c>MatchEngine</c>, and registers nothing in the #16 domain-tag / subsystem-ordinal registry
-    /// (KD-4 — <c>DOMAIN_TAG_SEASON_LOOP</c> / ordinal 84 stay pinned to #30 T2's first draw site per
-    /// ERR-030-001).
+    /// (KD-4 — the bootstrap allocates no tag or ordinal of its own. <c>DOMAIN_TAG_SEASON_LOOP</c> (0x22)
+    /// landed with #30 T2's first draw site, <c>RoundResolutionModel.FixtureKey</c>; subsystem ordinal 84 is NOT
+    /// allocated in code — ERR-030-012: no registered stream backs it — and stays reserved in #16 §3.4 spec text).
     /// <para>
     /// <b>Determinism contract (§3).</b> The same <c>(worldSeed, clubCount)</c> yields byte-identical
     /// output: the same club ids, names, strength deltas, and every player's identity and all 31
     /// attributes. Different seeds change both the rosters and the strength ordering.
     /// </para>
     /// <para>
-    /// <b>This generation path is persistence-equivalent — treat it like a save format version.</b>
-    /// Rosters are NOT serialized: a save carries club IDs, and <see cref="League"/> re-derives every
-    /// squad here when it is handed to <c>SeasonSaveManager.Load</c> as the
+    /// <b>This generation path is persistence-equivalent for new games and careerless saves — treat it
+    /// like a save format version.</b> A CAREER save (one whose progression block carries clubs, #28 T2a)
+    /// does NOT depend on it: <c>SeasonSaveManager.Load</c> takes the roster from the file's progression
+    /// block whenever <c>ClubCount &gt; 0</c> (the ERR-028 roster-from-save rule), so a generation change
+    /// leaves an existing career's players untouched (AR round 3 L9 — the earlier text claimed every save).
+    /// The dependence that remains: <see cref="League"/> re-derives every squad here for a NEW game (it is
+    /// the day-0 roster <c>ProgressionEngine.SeedFrom</c> seeds the career from) and for a careerless
+    /// save, where it is handed to <c>SeasonSaveManager.Load</c> as the
     /// <see cref="TacticalDirector.MatchEngine.ISquadProvider"/>. That interface's contract requires the
     /// resolved squad to be the SAME roster the saved match loaded, so ANY change that moves this
-    /// function's output silently rewrites every club in every existing save — a draw-order change in
+    /// function's output silently rewrites every club of every new game (same seed, different players) and
+    /// of every careerless save — a draw-order change in
     /// <see cref="RosterGenerator"/>, a reorder of <c>NameCatalogue</c> or
     /// <see cref="ClubNameCatalogue"/>, an edit to
     /// <see cref="LeagueBootstrapConstants.SquadPositionCounts"/>, or a one-line tweak to a
@@ -45,7 +55,8 @@ namespace TacticalDirector.SeasonSave
     /// Every same-seed determinism test is self-referential and would stay green through all of these,
     /// so the guard is the pinned golden vector in <c>LeagueBootstrapGoldenVectorTests</c> — the same
     /// mechanism #16 uses for HKDF / SipHash / canonical serialization. If you change generation
-    /// deliberately, re-pin that vector in the same commit and treat it as a save-breaking change.
+    /// deliberately, re-pin that vector in the same commit and treat it as a save-breaking change for
+    /// new games and careerless saves.
     /// </para>
     /// </summary>
     public static class LeagueBootstrap
@@ -101,7 +112,8 @@ namespace TacticalDirector.SeasonSave
                     $"{DeterministicSimConstants.MaxRngStreams}; lower MaxClubCount or raise MaxRngStreams.");
             }
 
-            // F3 — template coherence (throws if the counts do not sum to CLUB_SQUAD_SIZE).
+            // F3 — template coherence (throws if the counts are incoherent: negative, a sum below a matchday
+            // squad, or a sum that reaches the CLUB_SQUAD_SIZE cap; the template sum is 23, not the cap — ERR-031-004).
             PlayerPosition[] template = LeagueBootstrapConstants.BuildSquadPositionTemplate();
 
             // KD-4: three domain-separated derivations from the one world seed.
@@ -197,8 +209,9 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// Uses a LOCAL SplitMix64 rather than a registered <see cref="DeterministicRngService"/> stream,
         /// exactly as <see cref="FixtureScheduler"/> does for its club-label permutation: registering a
-        /// stream would need a subsystem ordinal, and the only season-adjacent one is pinned to #30 T2's
-        /// first draw site (KD-4 / ERR-030-001).
+        /// stream would need a subsystem ordinal, and the only season-adjacent one (84) is NOT allocated in
+        /// code — ERR-030-012: no registered stream backs it — and stays reserved in #16 §3.4 spec text
+        /// (KD-4 / ERR-030-001).
         /// </para>
         /// </summary>
         internal static int[] BuildStrengthRanks(int clubCount, ulong strengthSeed)
@@ -308,4 +321,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-07-25 | —      | Initial implementation (roadmap A3): domain-separated seed         |
 // |         |            |        | derivation, seeded strength ramp, position-template roster         |
 // |         |            |        | generation, per-club strength application, F1..F3 gates.           |
+// | 1.1     | 2026-10-20 | —      | P-L2: F3 comment restated — the template sum is 23 (strictly below |
+// |         |            |        | CLUB_SQUAD_SIZE, ERR-031-004), not the cap. Comment-only change.   |
+// | 1.2     | 2026-10-20 | —      | AR round 2 L5 (comment-only): the header's "25-player" squad is 23 (3/8/7/5, ERR-031-004); the KD-4 note "tag/ordinal 84 stay pinned to #30 T2's first draw site" restated — the tag landed with T2's FixtureKey, ordinal 84 is deliberately unallocated in code (ERR-030-012). |
+// | 1.3     | 2026-10-20 | —      | AR round 3 L9 (comment-only): "Rosters are NOT serialized ... rewrites every club in every existing save" scoped to new games and careerless saves — a career save takes its roster from the progression block (SeasonSaveManager.Load, #28 T2a). |
+// | 1.4     | 2026-10-20 | —      | AR round 4 L12 (comment-only): BuildStrengthRanks' "pinned to #30 T2's first draw site" restated to the wording the file header already uses — ordinal 84 is unallocated in code (ERR-030-012). |
 #endregion

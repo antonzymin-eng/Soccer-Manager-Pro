@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerSessionTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-27
+// Modified: 2026-10-30
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1/2), roadmap C4,
 //           Season & Competition Loop #30 §4 (save/resume), Player Progression #28 KD-4, Code Standards #20
@@ -14,6 +14,7 @@ using System;
 using NUnit.Framework;
 
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.ClientApp.Tests
 {
@@ -30,6 +31,7 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsNotNull(session.Loop.Career, "#29/#41 career state is wired.");
             Assert.IsNotNull(session.Loop.Progression, "#28 is the roster authority (KD-4).");
             Assert.IsNotNull(session.Loop.Discipline, "#44 tally is wired.");
+            Assert.IsNotNull(session.Loop.TransfersSnapshot(), "#31 transfers are wired.");
             Assert.AreEqual(CareerChangeKind.Started, session.LastChange.Kind);
             Assert.IsNull(session.LastAutosaveError);
 
@@ -107,6 +109,11 @@ namespace TacticalDirector.ClientApp.Tests
             CareerSession resumed = CareerSession.Resume(tempB.Slots, CareerSaveSlot.Manual2, RoundResolutionMode.QuickSimAll);
             Assert.AreEqual(CareerChangeKind.Resumed, resumed.LastChange.Kind);
             Assert.AreEqual(interrupted.ManagedClubName, resumed.ManagedClubName);
+            Assert.IsNotNull(resumed.Loop.TransfersSnapshot(), "resume must retain #31 wiring.");
+            CollectionAssert.AreEqual(
+                TransfersSaveCodec.Encode(interrupted.Loop.TransfersSnapshot()),
+                TransfersSaveCodec.Encode(resumed.Loop.TransfersSnapshot()),
+                "resume must preserve the saved contracts, window and committed spend.");
 
             for (int r = 0; r < 3; r++)
             {
@@ -178,4 +185,5 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | uninterrupted (state + snapshot bytes).                        |
 // | 1.1     | 2026-10-27 | —      | PR 519 review 2: +1 lock — an undefined mode on Resume leaves  |
 // |         |            |        | the slot Ready (9 locks).                                      |
+// | 1.2     | 2026-10-30 | —      | PR 521 merge: new careers wire #31; resume preserves its blob. |
 #endregion

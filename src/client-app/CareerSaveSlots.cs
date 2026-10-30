@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSaveSlots.cs
 // Created:  2026-10-18
-// Modified: 2026-10-29
+// Modified: 2026-10-30
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7, Season & Competition Loop #30 §4
@@ -22,6 +22,7 @@ using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.SeasonSave;
 using TacticalDirector.TrainingSystem;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.ClientApp
 {
@@ -70,7 +71,7 @@ namespace TacticalDirector.ClientApp
         private const string DAMAGED_SUFFIX = ".damaged";
 
         // Every format gate a client-written save passes on load besides the outer
-        // SEASON_SAVE_FORMAT_VERSION: the eight mandatory sub-blobs and the world snapshot nested in the
+        // SEASON_SAVE_FORMAT_VERSION: the nine mandatory sub-blobs and the world snapshot nested in the
         // world blob. The match blob is absent: the client never writes one and Resume refuses one.
         // Recorded in each sidecar and compared whole, so a bump to any of them makes older saves
         // Incompatible rather than Ready-then-failing (D-10).
@@ -83,7 +84,8 @@ namespace TacticalDirector.ClientApp
             + ",appearance=" + SeasonSaveConstants.APPEARANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
             + ",progression=" + PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
             + ",discipline=" + DisciplineConstants.DISCIPLINE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
-            + ",finance=" + ClubFinancesConstants.FINANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture);
+            + ",finance=" + ClubFinancesConstants.FINANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
+            + ",transfers=" + TransfersConstants.TRANSFERS_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture);
 
         // No byte-order mark: a BOM would prefix the first key and the sidecar would never parse.
         private static readonly Encoding SidecarEncoding = new UTF8Encoding(false);
@@ -737,4 +739,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | clears .damaged; post-commit cleanup is best effort; one       |
 // |         |            |        | SwapIn(temp, dest, backup) and MoveBackIfMissing helper;       |
 // |         |            |        | RestoreDamaged documented as groundwork (no caller yet).       |
+// | 1.7     | 2026-10-30 | —      | PR 521 merge: include the #31 sub-blob in the D-10 stamp.      |
 #endregion

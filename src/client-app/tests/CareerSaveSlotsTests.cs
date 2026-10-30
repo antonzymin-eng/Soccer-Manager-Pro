@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerSaveSlotsTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-29
+// Modified: 2026-10-30
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2, D-10), Code Standards #20
 // Purpose:  Locks the slot store: empty listing, write/describe round trip, sequence-based latest,
@@ -18,6 +18,7 @@ using NUnit.Framework;
 
 using TacticalDirector.LivingWorld;
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.ClientApp.Tests
 {
@@ -182,20 +183,25 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsEmpty(Directory.GetFiles(temp.Directory, "*.bak"), "a restored backup is consumed.");
         }
 
-        [Test]
-        public void ASaveFromAnotherNestedFormat_IsIncompatible()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ASaveFromAnotherNestedFormat_IsIncompatible(bool transfers)
         {
             using var temp = new TempSlots();
             CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
             session.SaveTo(CareerSaveSlot.Manual2);
 
-            // What a build with another world-store format writes: the same outer version, another stamp.
+            // The same outer version, but another world-store or transfers sub-blob format.
             string sidecar = Path.Combine(temp.Directory, "manual-2.slot");
             string text = File.ReadAllText(sidecar);
             string stamp = "nestedFormats=" + CareerSaveSlots.NestedFormatStamp;
             Assert.IsTrue(text.Contains(stamp), "precondition: the sidecar records the nested stamp.");
-            string current = "world=" + LivingWorldConstants.WORLD_STORE_FORMAT_VERSION + ",";
-            string older = "world=" + (LivingWorldConstants.WORLD_STORE_FORMAT_VERSION - 1) + ",";
+            string key = transfers ? "transfers=" : "world=";
+            uint version = transfers ? TransfersConstants.TRANSFERS_SAVE_FORMAT_VERSION
+                : LivingWorldConstants.WORLD_STORE_FORMAT_VERSION;
+            string current = key + version;
+            string older = key + (version - 1);
+            Assert.IsTrue(stamp.Contains(current), "precondition: the sub-blob format is recorded.");
             File.WriteAllText(sidecar, text.Replace(stamp, stamp.Replace(current, older)));
 
             CareerSlotSummary row = temp.Slots.Describe(CareerSaveSlot.Manual2);
@@ -231,12 +237,12 @@ namespace TacticalDirector.ClientApp.Tests
         public void TheNestedStamp_CoversEverySubBlobTheClientWrites()
         {
             // Drift guard: a new season-save sub-blob must join CareerSaveSlots.NestedFormatStamp. The
-            // stamp is the eight mandatory blobs plus the world snapshot nested in the world blob; the
+            // stamp is the nine mandatory blobs plus the world snapshot nested in the world blob; the
             // optional match blob is the one the client never writes.
             int blobFields = typeof(SeasonSaveBlobs)
                 .GetFields(BindingFlags.Public | BindingFlags.Instance)
                 .Count(f => f.FieldType == typeof(byte[]));
-            Assert.AreEqual(9, blobFields, "SeasonSaveBlobs changed: update NestedFormatStamp and this pin.");
+            Assert.AreEqual(10, blobFields, "SeasonSaveBlobs changed: update NestedFormatStamp and this pin.");
             Assert.AreEqual(blobFields - 1 + 1, CareerSaveSlots.NestedFormatStamp.Split(',').Length);
         }
 
@@ -596,4 +602,5 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | save swap keeps the set-aside save restorable; finishing a     |
 // |         |            |        | write clears .damaged; held cleanup never fails a committed    |
 // |         |            |        | write; an unpaired sidecar backup is dropped (27 locks).       |
+// | 1.7     | 2026-10-30 | —      | PR 521 merge: #31 stamp drift and incompatibility locks.       |
 #endregion

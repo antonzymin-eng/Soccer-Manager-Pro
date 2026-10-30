@@ -8,6 +8,18 @@
 
 ---
 
+<a id="transfers-t2-capacity"></a>
+
+> **[RESOLVED and ARCHIVED October 20, 2026 — #31 T2 landed on `claude/career-season-save-086ae3`.]** The owner decision (Oct 19) landed as ERR-031-004/005; T2 then wired the production port, the bid seam, genesis seeding and the roll step (d″). The genesis contract-expiry throw was ERR-031-009 (an un-contracted player is sellable). The follow-ups that remain open are filed separately: [`regen-club-strength`](open-issues.md#regen-club-strength) and [`genesis-transfer-budget`](open-issues.md#genesis-transfer-budget).
+>
+
+- **#31 Transfers T2 is OWNER-BLOCKED: no production transfer can complete, because every bootstrapped club holds exactly the 25-player cap. The packed re-key id rule also conflicts with #28's monotonic regen ids.** *Opened October 18, 2026 (career-season-save lane; T1 landed).*
+  - **Capacity.** `LeagueBootstrapConstants` requires every squad to sum to `CLUB_SQUAD_SIZE` = 25, and 25 is also the hard maximum (`Squad`, `ProgressionSaveCodec.RequireClubSizeInRange`). The T2 preview must therefore return `SquadFull` for every buy (managed club full) and every sell (AI club full). Nothing opens a slot: regen is 1:1, and expired contracts keep the player on the roster.
+  - **Ids.** #31 §3.4 / T-TX-REKEY-001 re-key to `toClub*25+freeLocal`, and the T0 code derives club ownership from `id/25`. #28 FR-PG-011 allocates regen ids from the monotonic `NextPlayerId`. The advisor council recommends stable `PlayerId`s across a transfer (a re-home, with `ProgressionEngine.NextPlayerId` as the single allocator), which amends approved #31 KD-7.
+  - **Also found:** every genesis contract has the same 3-season length, so all managed contracts expire at the third boundary, and selling then throws.
+  - **Owner decisions needed:** separate bootstrap squad size from capacity (bootstrap below 25, or raise the cap); and choose stable ids or keep the re-key.
+  - **✅ OWNER DECISION, October 19, 2026:** *"Generate squads below the 25 cap (e.g. 23) and keep PlayerIds stable across transfers, with ProgressionEngine.NextPlayerId as the single allocator."* Landed as **ERR-031-004** (bootstrap template 3/8/8/4 = 23, strictly below the cap) and **ERR-031-005** (stable ids; the #31 port re-homes under the same id; nothing derives a club from an id). **What remains open here:** the T2 wiring itself and the genesis contract-expiry defect (every genesis contract shares one length), both in the T2 landing. This entry closes when T2 lands.
+
 <a id="gk-rehandling-law12"></a>
 
 > **[RESOLVED and ARCHIVED October 18, 2026 (UTC) — PR #511 merged `c0ffd0d2`.]** Final-head CI passed at `a43bbc1c` (run 39063246052), governing Unity `e58577de` is met, and the archived entry below is preserved verbatim. All B producer/feedback/identity/re-handling obligations landed. The owner accepts the incomplete historical team/touch attribution as a required B→C measurement follow-up, not a merge blocker or proof of football balance. D-07, recovery calibration, back-pass law and LongKick realism remain separate.

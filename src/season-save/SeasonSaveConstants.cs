@@ -1,6 +1,8 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — SEASON_SAVE_FORMAT_VERSION 6 -> 7 for the mandatory
+// Modified: 2026-10-18 (#31 T1 — SEASON_SAVE_FORMAT_VERSION 7 -> 8 for the mandatory #31 transfers
+//           sub-blob — v1.13)
+// Prior-Modified: 2026-09-10 (#40 T1b, ERR-030-049 — SEASON_SAVE_FORMAT_VERSION 6 -> 7 for the mandatory
 //           #40 finance sub-blob — v1.12)
 // Prior-Modified: 2026-08-16, round 5 (docs-only annotation, M1 round-5 reviewed-findings pass — the v1.10
 //           row's "one of four sites" / "AvailabilityComposition.cs (both sites)" undercounts: that
@@ -23,7 +25,8 @@
 //           distinct from every version the frame nests: WORLD_STORE_FORMAT_VERSION,
 //           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, MEDICAL_SAVE_FORMAT_VERSION,
 //           APPEARANCE_SAVE_FORMAT_VERSION, PROGRESSION_SAVE_FORMAT_VERSION,
-//           DISCIPLINE_SAVE_FORMAT_VERSION and FINANCE_SAVE_FORMAT_VERSION at the sub-blob level,
+//           DISCIPLINE_SAVE_FORMAT_VERSION, FINANCE_SAVE_FORMAT_VERSION and TRANSFERS_SAVE_FORMAT_VERSION
+//           at the sub-blob level,
 //           MATCH_SAVE_FORMAT_VERSION for the
 //           optional match block, and — a level deeper still — the two snapshot schema versions nested
 //           inside the world and match blobs. Also holds the one non-format constant this assembly
@@ -39,10 +42,10 @@ namespace TacticalDirector.SeasonSave
         #region Fixed
         /// <summary>
         /// [FIXED] The season save-file FRAMING version — the outermost format version in the save
-        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the nine
+        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the ten
         /// length-prefixed sub-blobs — the living-world composite, the season state, the #29 training
         /// block, the #41 medical block, the #30 appearance block, the #28 career-state block, the #44
-        /// discipline block, the #40 finance block, and the
+        /// discipline block, the #40 finance block, the #31 transfers block, and the
         /// optional match block); the
         /// inner versions ride inside
         /// their own sub-blobs and are re-checked by
@@ -54,8 +57,10 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="TacticalDirector.PlayerProgression.ProgressionSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.Discipline.DisciplineSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.ClubFinances.ClubFinancesSaveCodec.Decode"/> /
+        /// <see cref="TacticalDirector.Transfers.TransfersSaveCodec.Decode"/> /
         /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
-        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 6.
+        /// migration at Stage 0 (and none owed through PM-3: the owner declared saves breakable,
+        /// D-10 / #50, October 18, 2026). Bump only on a season-frame layout change. Value: 8.
         /// <para>
         /// <b>1 → 2 at #30 T1 (FR-SN-020).</b> The frame gained the season-state sub-blob between the
         /// world and match blocks (#30 Appendix B). The world blob
@@ -104,8 +109,15 @@ namespace TacticalDirector.SeasonSave
         /// byte-untouched by that change; only the frame around them moved. A v6 file is rejected
         /// fail-loud.
         /// </para>
+        /// <para>
+        /// <b>7 → 8 at #31 T1 (FR-TX-012).</b> The frame gained the mandatory #31 transfers sub-blob
+        /// (<c>TRANSFERS_SAVE_FORMAT_VERSION</c>, magic <c>TRANSFERS_SAVE_MAGIC</c> — ERR-031-003) between the
+        /// #40 finance block and the optional match block. An unwired career is a well-formed zero-club
+        /// block, so #31 T2's wiring needs no second frame bump. Every pre-existing blob is byte-untouched;
+        /// only the frame around them moved. A v7 file is rejected fail-loud.
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 7;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 8;
 
         /// <summary>
         /// [FIXED] The #30 appearance sub-blob's leading self-identifying tag — ASCII <c>"APPR"</c>,
@@ -213,4 +225,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | between the DISC block and the optional match block. The magic  |
 // |         |            |        | and inner version stay owned by ClubFinancesConstants — this    |
 // |         |            |        | catalogue mirrors no #40 value, it only frames the block.       |
+// | 1.13    | 2026-10-18 | —      | #31 T1 (FR-TX-012): SEASON_SAVE_FORMAT_VERSION 7 -> 8 for the    |
+// |         |            |        | mandatory XFER transfers sub-blob between the finance block and  |
+// |         |            |        | the optional match block. No migration (D-10 / #50).             |
 #endregion
