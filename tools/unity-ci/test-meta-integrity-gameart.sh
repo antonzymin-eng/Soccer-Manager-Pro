@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # tools/unity-ci/test-meta-integrity-gameart.sh
 #
-# AP-01 mutation proof for GameArt .meta enforcement and generator ownership.
+# AP-01 mutation proof for GameArt .meta enforcement and generator ownership,
+# plus the malformed-GUID check (added October 14, 2026 after PR #505).
 # Uses a temporary Git index so tracked-path mutations never touch the caller's
 # real staging area. Temporary GameArt working-tree fixtures are removed on exit.
 set -euo pipefail
@@ -224,4 +225,38 @@ echo "PASS mutation: GameArt GUID collision with other Assets/"
 cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
 run_clean "after restoring Assets duplicate mutation"
 
-echo "AP-01 GameArt meta proof PASS: generator boundary, committed meta/asset identity, src collision, and project Assets collision all proved and restored cleanly."
+# Mutations 5-8: malformed GUIDs. The duplicate scan extracts only well-formed
+# GUIDs, so each of these used to be silently excluded and pass CI while Unity
+# rejected the meta (PR #505 shipped a 33-character GUID). The staged probe meta
+# is rewritten in the working tree; the checker reads tracked paths from disk.
+original_guid=$(awk '/^guid: / {print $2; exit}' "$tmpdir/original-probe.meta")
+if ! [[ "$original_guid" =~ ^[0-9a-f]{32}$ ]]; then
+  echo "::error::Probe fixture GUID is not well formed: $original_guid"
+  exit 1
+fi
+
+set_probe_guid "${original_guid}a"
+expect_fail "33-character GUID" "MALFORMED GUID: $probe_asset_meta"
+cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
+run_clean "after restoring 33-character GUID mutation"
+
+set_probe_guid "${original_guid:0:31}"
+expect_fail "31-character GUID" "MALFORMED GUID: $probe_asset_meta"
+cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
+run_clean "after restoring 31-character GUID mutation"
+
+set_probe_guid "$(printf '%s' "$original_guid" | tr 'a-f' 'A-F')"
+if ! grep -Eq '^guid: .*[A-F]' "$probe_asset_meta"; then
+  echo "::error::Uppercase mutation produced no uppercase hex digit"
+  exit 1
+fi
+expect_fail "uppercase GUID" "MALFORMED GUID: $probe_asset_meta"
+cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
+run_clean "after restoring uppercase GUID mutation"
+
+grep -v '^guid:' "$tmpdir/original-probe.meta" > "$probe_asset_meta"
+expect_fail "missing guid line" "MALFORMED GUID: $probe_asset_meta"
+cp "$tmpdir/original-probe.meta" "$probe_asset_meta"
+run_clean "after restoring missing-guid mutation"
+
+echo "AP-01 GameArt meta proof PASS: generator boundary, committed meta/asset identity, src collision, project Assets collision, and malformed GUIDs (33/31 chars, uppercase, missing) all proved and restored cleanly."
