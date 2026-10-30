@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.5
-**Last Updated:** October 16, 2026 (v0.5 — ERR-011-020: host-owned CanUseHands query and actual-contact authorization port)
+**Version:** 0.6
+**Last Updated:** October 29, 2026 (v0.6 — ERR-011-021: read-only `handControlStartFrame` accessor row; `DistributeIntent` producer and `releaseTickEarliest` annotations)
 **Status:** DRAFT
 **Purpose:** Establish the architectural file layout, the input /
 output interface contracts, the determinism compliance surface,
@@ -44,7 +44,7 @@ source file per Spec #19 §3 convention.
 | `CollisionSystem` event subscription | #3 | §3.4.2 `ICollisionEventConsumer` | §3.5 / §3.6 |
 | `ShotExecutedEvent` subscription | #6 | §4.5 (via Event System #17 §3.2.1) | §3.2 |
 | `Perception.GetVisibilityLatency(agentId, target) → float ms` | #7 | §3 visibility-cone latency surface (anchor pinned during implementation) | §3.2 |
-| `DecisionTree.GetGKIntent(agentId, tick) → SaveIntent \| ClaimIntent \| RushIntent \| DistributeIntent \| None` | #8 | §1.7 GK-branch intent surface (anchor pinned during implementation) | §3.1 / §3.2 / §3.7 / §3.8 |
+| `DecisionTree.GetGKIntent(agentId, tick) → SaveIntent \| ClaimIntent \| RushIntent \| DistributeIntent \| None` (`DistributeIntent` is produced by the Match Engine with #21 `GkDistributionPolicy` since ERR-011-016, not by Decision Tree #8) | #8 | §1.7 GK-branch intent surface (anchor pinned during implementation) | §3.1 / §3.2 / §3.7 / §3.8 |
 | `PositioningAITick.GetFormationSlot(keeperEntityId) → Vector2` (canonical frame; composition root maps to world and calls `UpdateBaselineSlot`, ERR-011-018) | #12 | §3.3.3 (consumed per KD-3 / §3.3.0) | §3.3.0 |
 | `DeterministicRng.NextFloat(drawSiteId, domainTag) → float`, `DeterministicRng.NextGaussian(drawSiteId, domainTag) → float` | #16 | §4.1 / §4.5 | §3.3 / §3.5 / §3.6 |
 
@@ -61,6 +61,7 @@ source file per Spec #19 §3 convention.
 | `EventBus.Publish<BallClaimedEvent>(evt)` | #17 | §3.2.1 | §3.5 catch / §3.6 / §3.7 |
 | `EventBus.Publish<DistributionExecutedEvent>(evt)` | #17 | §3.2.1 | §3.8 |
 | `EventBus.Publish<GoalkeeperRushEvent>(evt)` | #17 | §3.2.1 | §3.7 |
+| Read-only accessor for a keeper slot's `handControlStartFrame` (`long` 60 Hz frame) and its validity (inactive sentinel); #11 owns and writes the value, the Match Engine only reads it (specified, not implemented; ERR-011-021) | Match Engine / #11 | §3.8.5 | Match Engine Resolve eight-second hand-control check |
 | `PassMechanics.ConsumePassIntent(passIntent)` | #5 | §3 (anchor pinned during implementation) | §3.8 |
 | `Heading.SubmitGKIntent(headerIntent)` | #10 | (used when a GK head save occurs; payload routed via Decision Tree #8 GK branches per KD-4) | §3.6 head-route |
 
@@ -179,7 +180,8 @@ hot-path allocations; the attribute deferral to Stage 0+1 per #18
 - Evaluate state-machine transitions (§3.1).
 - Apply reactive-position micro-update bounded by
   `GK_REACTIVE_RADIUS_M` (§3.3.0).
-- Update `releaseTickEarliest` countdown for `HandsOnBall` state.
+- Update `releaseTickEarliest` countdown for `HandsOnBall` state (policy scheduling only; the legal
+  hand-control clock is §3.8.5's 60 Hz `handControlStartFrame`, ERR-011-021).
 
 ### 4.6.2 60 Hz physics loop (every 16.667 ms)
 
@@ -225,3 +227,4 @@ t   0ms │            │ #3 hand-ball contact event fires
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.4.1 domain-tag allocation prose updated — `DOMAIN_TAG_GOALKEEPER = 0x1D [CROSS: #16 §3.4]`; ERR-011-001 resolved; final allocation outcome documented. |
 | 0.4 | September 27, 2026 | ERR-011-018 | §4 input table and §4.6.1 replace the phantom `PositioningAI.GetGKBaselineSlot` with the real #12 `GetFormationSlot(keeperEntityId)` surface delivered through `UpdateBaselineSlot` (§3.3.0.1). | spec + code, same commit |
 | 0.5 | October 16, 2026 | — | ERR-011-020: host-owned CanUseHands query and actual-contact authorization port | PR #511 |
+| 0.6 | October 29, 2026 | W8 C spec application / ERR-011-021 | §4.3 gains the read-only `handControlStartFrame` accessor row consumed by the Match Engine §3.8.5 Resolve check (specified, not implemented). The `DecisionTree.GetGKIntent` row notes that `DistributeIntent` is produced by the Match Engine + #21 (ERR-011-016). §4.6.1's `releaseTickEarliest` countdown is annotated as policy scheduling only. | W8 C contract v0.5 |

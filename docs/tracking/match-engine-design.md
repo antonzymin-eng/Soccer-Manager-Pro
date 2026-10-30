@@ -421,16 +421,29 @@ requires adding read/restore seams — parallel to
     of play, `BallCollision.CheckBoundaries(...).isOut` false) keeps a completed boundary crossing
     ahead of the corner, because `CheckRestartAndApply` runs after the executors. When the corner
     fires, discard the captured foul candidate and its decided flag with no card-severity draw and
-    end Resolve for that frame after the event and possession publication. Cancel the accepted #5
-    request through its terminal-feedback path and use the shared restart seam
+    end Resolve for that frame through the shared whistle-finish helper below. If a #5 request is in flight,
+    cancel the accepted #5 request through its terminal-feedback path and use the shared restart seam
     ([restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
     The sanction produces no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`. If a #5
     goalkeeper request is still in flight, the sanction cancels it and `ApplyRestart` leaves exactly one
     `Cancelled` terminal, drained on the following frame's Resolve with no #11 state change (the keeper is
     already `Recovering`); otherwise no terminal exists. Under the #11 §3.8.4 admission predicate an
     in-flight request at elapsed ≥ 481 is unreachable in production, so the production sanction has no
-    pending request, and the same-frame-CONTACT ordering is a defensive case tested through a `TestOnly_`
-    seam or a crafted restore. Never reuse the post-executor drop slot.
+    pending request, and the same-frame-CONTACT ordering is a defensive case tested through the
+    `TestOnly_StartGoalkeeperDistribution` seam (restore cannot build it). Never reuse the post-executor
+    drop slot.
+    The §3.1.4 handling whistle and the corner MUST end the frame through ONE shared whistle-finish helper,
+    so the two cannot drift. Its steps, in the order the landed `ApplyPendingKeeperHandlingOffence` performs
+    them: (1) discard the captured foul candidate and its decided flag; (2) `ApplyRestart` (cue
+    `RestartCue.Corner` for the corner); (3) reset `_gkHoldTicks`, `_gkReleasedAgentId` and
+    `_gkReleaseCooldownRemaining`; (4) publish the `RestartAwardedEvent` (`RestartKind = Corner (3)` for the
+    corner); (5) clear `_isCollisionKnockdown`, `_collisionForces` and `_stumbleScratch`; (6)
+    `UpdateMatchContext()`; (7) update `_lastHolderAgentId`; (8) `PublishPossessionChangeIfChanged()`; (9)
+    return from Resolve. The restore path rejects (`InvalidOperationException`) a body where a #5 request is
+    in flight and either #11 has no active clock or the request's remaining windup
+    (`PassExecutorState.WindupFramesRemaining`) would put CONTACT after
+    `handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`; a terminal-pending `Cancelled` request with a
+    sentinel clock is valid.
     `CancelExpiredGoalkeeperDistributions` is **removed for hand episodes** (the elapsed-481 corner is
     the only hand deadline and cancels any request still in flight), and `DistributionContactFits` is replaced by the #11
     §3.8.4 admission predicate, which gates the first commit and every retry. #11 also keeps the
@@ -2050,7 +2063,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
-| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. Review round 2: item 19 removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate, states the one drained `Cancelled` terminal and the live-iff invariant, and limits C's Law-12 cleanup to code comments, constants and telemetry comments (§5.Z.16 keeps its Correction). Review round 3: header `Last Updated` set to v2.22 (older bare lines relabelled prior); item 19 sets the clock only on a successful claim and makes the single `Cancelled` terminal conditional on a request in flight (unreachable at elapsed ≥ 481 in production). |
+| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. Review round 2: item 19 removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate, states the one drained `Cancelled` terminal and the live-iff invariant, and limits C's Law-12 cleanup to code comments, constants and telemetry comments (§5.Z.16 keeps its Correction). Review round 3: header `Last Updated` set to v2.22 (older bare lines relabelled prior); item 19 sets the clock only on a successful claim and makes the single `Cancelled` terminal conditional on a request in flight (unreachable at elapsed ≥ 481 in production). Review round 4: item 19 requires one shared whistle-finish helper (nine steps in the landed order), the restore-rejection rule for an in-flight #5 request, the defensive case through `TestOnly_StartGoalkeeperDistribution` only (crafted-restore route withdrawn), and prefixes the #5 cancellation with "If a #5 request is in flight". |
 | 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |

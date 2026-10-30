@@ -46,7 +46,7 @@ Source KDs are declared in §1.3.
 | FR-GK-025 | MUST | Iteration over multi-attacker cross-claim duels follows #16 §3.2 entity order. | KD-7 | §3.6 |
 | FR-GK-026 | MUST | `DOMAIN_TAG_GOALKEEPER = 0x1D` `[CROSS: #16 §3.4]` — ERR-011-001 resolved May 18, 2026. Positioning AI #12 reached `APPROVED` first and claimed `0x17`; #11 was reallocated to `0x1D` in #16 §3.4 v1.0.5 per KD-7 first-to-`APPROVED` precedent. | KD-7 | §3.4 / §4.4 / §9.4 |
 | FR-GK-027 | MUST | State-machine transitions are deterministic; no `System.Random` or `DateTime.Now` paths exist in any GK code path. | KD-7, CLAUDE.md | §3.1 |
-| FR-GK-028 | MUST | The goalkeeper hand-control episode MUST record the exact 60 Hz frame on which lawful hand control is established. When the keeper remains in live controlled own-area hand possession (§3.8.5 eligibility predicate) for **more than 480 elapsed physics frames** (`GK_HAND_CONTROL_MAX_FRAMES`) after that frame, the engine MUST stop play before any same-frame pass-executor CONTACT and award the opponents a corner using the keeper's position at the sanction. A genuine release at elapsed frame 480 is legal. The clock MUST survive keeper distribution WINDUP, retained-control cancellation, bouncing, and save/restore; ordinary feet possession does not count. The eight-second limit is a `[FIXED]` Laws-of-the-Game value, not gameplay tuning. *(Replaced October 29, 2026, ERR-011-021; the former text enforced a six-second rule through `GK_HOLD_MAX_TICKS` = 60 tactical ticks. Implementation lands with W8 C.)* | KD-9, IFAB Law 12.3 / Law 17, ERR-011-021 | §3.1.1 / §3.4.2 / §3.8.5 |
+| FR-GK-028 | MUST | The goalkeeper hand-control episode MUST record the exact 60 Hz frame on which lawful hand control is established. When the keeper remains in live controlled own-area hand possession (§3.8.5 eligibility predicate) for **more than 480 elapsed physics frames** (`GK_HAND_CONTROL_MAX_FRAMES`) after that frame, the engine MUST stop play before any same-frame pass-executor CONTACT and award the opponents a corner using the keeper's position at the sanction. A genuine release at elapsed frame 480 is legal. The clock MUST survive keeper distribution WINDUP, retained-control cancellation, bouncing (no Stage-0 producer; its test lands with the producer), and save/restore; ordinary feet possession does not count. The eight-second limit is a `[FIXED]` Laws-of-the-Game value, not gameplay tuning. *(Replaced October 29, 2026, ERR-011-021; the former text enforced a six-second rule through `GK_HOLD_MAX_TICKS` = 60 tactical ticks. Implementation lands with W8 C.)* | KD-9, IFAB Law 12.3 / Law 17, ERR-011-021 | §3.1.1 / §3.4.2 / §3.8.5 |
 | FR-GK-029 | MUST | `Ball.SetPossessor(gkId)` together with the §3.5.2 velocity park starts a hand episode: the ball stays `Controlled` and attached to the keeper through `HandsOnBall` and any accepted #5 WINDUP (§3.8.3). The claim frame starts the FR-GK-028 clock (§3.8.5). Hand control ends only at the #5 CONTACT, genuine possession loss or restart, or sanction. | KD-21, ERR-011-021 | §3.5 / §3.8 |
 | FR-GK-030 | MUST | A non-eligible state (e.g. `Distributing` windup; `Recovering` from a missed dive) when a shot arrives produces NO `SaveAttemptedEvent`; ball-vs-GK contact (if any) is resolved by Collision System #3 standard rebound physics. | KD-11, F-07 | §3.5 / §3.9 |
 | FR-GK-031 | MUST | `clutchFirmness` and other `[0, 1]` intent fields are clamped on consumption; out-of-range values emit a telemetry warning but do NOT crash the pipeline. | F-10 | §2.3 / §3.5 |
@@ -179,12 +179,16 @@ struct SaveAttemptedEvent {
     BodyPartEnum           contactBodyPart;       // KD-12 telemetry disambiguation
 }
 
+// Matches src/goalkeeper-mechanics/BallClaimedEvent.cs (Tier A, ordinal 0x15; the 12-byte event header is
+// set by EventBus.Publish). The claim publishes no release-tick field.
 struct BallClaimedEvent {
-    int          agentId;
-    long         matchTime;
-    ClaimType    claimType;             // Cross / Aerial / OneOnOne / ShotCatch — telemetry label
-    int?         contestedDuelId;
-    int          releaseTickEarliest;   // 10 Hz tick at which distribution may begin; policy scheduling only, no legal-deadline authority (§3.8.5)
+    int                AgentId;
+    float              MatchTimeMs;             // ms at the claim frame
+    float              HandlingQualityScalar;   // [0, 1] that triggered the catch band (§3.5)
+    ClaimType          ClaimType;               // Cross / Aerial / OneOnOne / ShotCatch; telemetry label only, not consumed by physics (KD-2)
+    Vector3            ClaimPosition;           // world-space hand position at the claim frame
+    BodyPartEnum       ContactBodyPart;         // normally Hand; Head routes through Heading #10 (§3.6.1)
+    int                ContestedDuelId;         // -1 for uncontested
 }
 
 // Matches src/goalkeeper-mechanics/DistributionExecutedEvent.cs (the 12-byte event header is set by
@@ -208,6 +212,10 @@ struct GoalkeeperRushEvent {
     AbortReason? abortReason;     // BallIntercepted / BallCleared / AttackerBeatGK
 }
 ```
+
+#11's `_releaseTickEarliest` state (the 10 Hz tick at which distribution may begin) is policy scheduling only
+and has no legal-deadline authority; the legal hand-control clock is §3.8.5's 60 Hz `handControlStartFrame`.
+It is not an event field.
 
 ### 2.2.5 Cross-claim duel context
 
@@ -301,4 +309,4 @@ Stage 0+1 deliverable schedule.
 | 0.4 | September 22, 2026 | W3 / ERR-011-012 | `ClaimIntent` gains locked `reachDirectionLateral`; its real Stage-0 composition producer and v23 authoritative snapshot ownership are stated. Target is tactical aim, never hand geometry; §3.6.1 owns the bounded live episode. No new `[GT]` or RNG surface. | implementation/spec back-prop |
 | 0.5 | September 27, 2026 | ERR-011-018 | FR-GK-005 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real #12 surface and its world-frame mapping (§3.3.0.1); rules out the keeper's own position as a stand-in. | spec + code, same commit |
 | 0.6 | October 16, 2026 | — | ERR-011-020: own-release restriction, feet-only avoidance and law backstop | PR #511 |
-| 0.7 | October 29, 2026 | W8 C spec application | ERR-011-021: FR-GK-028 replaced by the owner-approved eight-second hand-control offence (480/481 frames, corner, claim-frame clock); FR-GK-043 six-second forced ROLL retired with its text preserved; FR-GK-029 cross-references the clock; `BallClaimedEvent.releaseTickEarliest` comment no longer claims hold-rule authority. Specified, not yet implemented. Review round 2: FR-GK-007 and the §2.2.4 `DistributionExecutedEvent` struct corrected to the landed #5 request seam and the real event fields (ERR-011-015 residue). Review round 3: FR-GK-029 no longer says the hold ends on `DistributeIntent` receipt; it states the hand-episode start and the three ways it ends; the `DistributionExecutedEvent.WindupMs` comment says configured windup, not an elapsed sample. | W8 C contract v0.5 |
+| 0.7 | October 29, 2026 | W8 C spec application | ERR-011-021: FR-GK-028 replaced by the owner-approved eight-second hand-control offence (480/481 frames, corner, claim-frame clock); FR-GK-043 six-second forced ROLL retired with its text preserved; FR-GK-029 cross-references the clock; `BallClaimedEvent.releaseTickEarliest` comment no longer claims hold-rule authority. Specified, not yet implemented. Review round 2: FR-GK-007 and the §2.2.4 `DistributionExecutedEvent` struct corrected to the landed #5 request seam and the real event fields (ERR-011-015 residue). Review round 3: FR-GK-029 no longer says the hold ends on `DistributeIntent` receipt; it states the hand-episode start and the three ways it ends; the `DistributionExecutedEvent.WindupMs` comment says configured windup, not an elapsed sample. Review round 4: FR-GK-028 qualifies "bouncing" as having no Stage-0 producer (its test lands with the producer); the §2.2.4 `BallClaimedEvent` struct is replaced by the real fields and types of `BallClaimedEvent.cs` (the stale `releaseTickEarliest` field is gone) and the policy-scheduling-only note moves to a sentence about #11's `_releaseTickEarliest` state. | W8 C contract v0.5 |

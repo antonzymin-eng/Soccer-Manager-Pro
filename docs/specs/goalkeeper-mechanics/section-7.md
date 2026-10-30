@@ -113,14 +113,15 @@ support sweeper-keeper baselines.
 ## 7.9 Distribution-side risk model
 
 **Statement.** Short-pass-under-press vs. long-clear-to-channel
-distribution choices are decided by Decision Tree #8 GK branches
-at Stage 0; the *physics* of distribution remains owned here even
-when the risk model elaborates in #8.
+distribution choices at Stage 0 come from the #21 `GkDistributionPolicy`
+through the Match Engine producer (#11 §3.8, ERR-011-016); a risk
+model would be a later #21 / engine extension. The *physics* of
+distribution remains owned here.
 
-**Candidate Stage.** Stage 1+ Decision Tree #8 extension.
+**Candidate Stage.** Stage 1+ #21 / Match Engine extension.
 
-**Rationale.** KD-6: distribution-side weighting is a #8 concern;
-the geometry remains #11-owned (KD-16).
+**Rationale.** KD-6: distribution-side weighting is a policy concern
+outside #11; the geometry remains #11-owned (KD-16).
 
 ## 7.10 Multi-attacker 1v1 (2v1 break)
 
@@ -141,4 +142,4 @@ dedicated branch.
 | Version | Date | Author | Notes | Reviewer |
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 10 deferrals catalogued with rationale and candidate Stage | self-pass-1 in `adversarial-review-section-files-v1.md` |
-| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | §7.3 no longer cites the retired six-second rule; outside-area handling is modelled (D-07, §3.1.4) and only its cards remain deferred; repeated eight-second offences' bookings deferred. | W8 C contract v0.5 |
+| 0.2 | October 29, 2026 | W8 C spec application / ERR-011-021 | §7.3 no longer cites the retired six-second rule; outside-area handling is modelled (D-07, §3.1.4) and only its cards remain deferred; repeated eight-second offences' bookings deferred. Review round 4: §7.9 no longer says Decision Tree #8 decides distribution; at Stage 0 the choice comes from the #21 `GkDistributionPolicy` through the Match Engine producer (ERR-011-016). | W8 C contract v0.5 |
