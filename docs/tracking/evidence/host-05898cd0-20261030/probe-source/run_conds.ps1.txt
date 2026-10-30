@@ -1,0 +1,49 @@
+# PR #520 J-05 re-measure: the October B8/B10 method (pcond.ps1 v2, one player session per condition,
+# 30 s hold, last ~20 s of the player's own profiler log summarized by S0HostPerf.DumpFile), run on
+# #520's merged head and, interleaved, on main as a same-session control.
+# Usage: run_conds.ps1 [-Only "main-s100:10x-open,..."]
+param([string]$Only = '')
+$ErrorActionPreference = 'Stop'
+$root = 'C:\Users\azymi\AppData\Local\Temp\u520\pf'
+$builds = @{
+    'main-s100' = 'C:\Users\azymi\HostBuilds\j05-main-4ff45ee8-s100'
+    'j05-s100'  = 'C:\Users\azymi\HostBuilds\j05-05898cd0-s100'
+    'j05-s200'  = 'C:\Users\azymi\HostBuilds\j05-05898cd0-s200'
+}
+$keys = @{
+    '1x-closed'  = ''
+    '1x-open'    = 'TAB,TAB,TAB,TAB,TAB,ENTER'
+    '10x-open'   = 'TAB,TAB,TAB,TAB,TAB,ENTER,S-TAB,S-TAB,S-TAB,ENTER,ENTER,ENTER'
+    '10x-closed' = 'TAB,TAB,ENTER,ENTER,ENTER'
+}
+# main and #520 alternate on the 10x conditions so host drift hits both alike.
+$plan = @(
+    'main-s100:10x-open', 'j05-s100:10x-open', 'main-s100:10x-closed', 'j05-s100:10x-closed',
+    'j05-s100:1x-closed', 'j05-s100:1x-open',
+    'j05-s200:1x-closed', 'j05-s200:1x-open', 'j05-s200:10x-open', 'j05-s200:10x-closed',
+    'main-s100:10x-open', 'j05-s100:10x-open'
+)
+if ($Only) { $plan = $Only.Split(',') }
+$chan = Join-Path $root 'cmd'; $clog = Join-Path $chan 'channel.log'
+$run = @{}
+foreach ($item in $plan) {
+    $tag, $cond = $item.Split(':')
+    $run[$item] = 1 + [int]$run[$item]
+    $t = if ($run[$item] -gt 1) { "$tag-r$($run[$item])" } else { $tag }
+    "{0:HH:mm:ss} start {1} {2}" -f (Get-Date).ToUniversalTime(), $t, $cond
+    & (Join-Path $root 'tools\pcond.ps1') -Build $builds[$tag] -Tag $t -Cond $cond -Keys $keys[$cond] | Out-Null
+    $raw = (Join-Path $root "perf\$t-$cond.raw").Replace('\', '/')
+    $n0 = (Get-Content $clog).Count
+    $call = "call S0HostPerf.DumpFile $raw $t-$cond-final 20"
+    [IO.File]::WriteAllText((Join-Path $chan ("{0}.cmd" -f [DateTime]::UtcNow.Ticks)), $call)
+    $deadline = (Get-Date).AddSeconds(300)
+    $line = $null
+    while ((Get-Date) -lt $deadline -and -not $line) {
+        Start-Sleep -Seconds 2
+        $line = Get-Content $clog | Select-Object -Skip $n0 | Where-Object { $_ -like "*<< $call >>*" } | Select-Object -First 1
+    }
+    if (-not $line) { throw "TIMEOUT waiting for DumpFile of $t $cond" }
+    ($line -replace '^.*>> returned ', '') -replace ' \| ClientShell.*$', ''
+    Remove-Item "$raw*" -Force -ErrorAction SilentlyContinue
+}
+'done'

@@ -1,16 +1,16 @@
 # P5b real-client acceptance, B8/B10 render-loop capture and S0 Gate J — pinned host
 
 **Created:** October 19, 2026\
-**Last Updated:** October 29, 2026\
-**Version:** 0.13\
+**Last Updated:** October 30, 2026\
+**Version:** 0.14\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
 - **J-02 FIXED:** a refusal names its engine-typed reason; the button is kept.
 - **J-04 FIXED and ACCEPTED:** H v0.2 skin, whole-pitch view, statistics in the rail; the owner accepted the visuals on October 28 (§12, v0.8).
-- **J-05:** separate PR #520.
+- **J-05 RE-MEASURED, PASS on PR #520 (§18, v0.14):** 10× delivers 601–602 sim ticks/s in the development player; it closes when #520 merges.
 
-Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. §14's I-Q15 pass did not reach the earlier-outcome disclosure; v0.13 (§17) reruns I-Q15 with it, PASS. Still due: J-05 and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
+Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. §14's I-Q15 pass did not reach the earlier-outcome disclosure; v0.13 (§17) reruns I-Q15 with it, PASS. v0.14 (§18) re-measures J-05 on PR #520's merged head: PASS. Still due: #520's merge and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
 **S0 Gate J technical verdict: CONDITIONAL PASS** (§7; the v0.1 FAIL is kept in §5).\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
@@ -22,7 +22,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 [`evidence/p5b-gatej-recapture-20261029/`](evidence/p5b-gatej-recapture-20261029/README.md) (v0.10 B8/B10, I-Q15 and I-Q16 re-capture, §14);
 [`evidence/host-fbcc3c2f-20261029/`](evidence/host-fbcc3c2f-20261029/README.md) (v0.11 Unity compile and EditMode for the §13 fix, §15);
 [`evidence/host-c4b65334-20261029/`](evidence/host-c4b65334-20261029/README.md) (v0.12 fixed-height playback reason, Unity compile, EditMode and before/after captures, §16);
-[`evidence/host-4ff45ee8-20261029/`](evidence/host-4ff45ee8-20261029/README.md) (v0.13 I-Q15 rerun with the earlier-outcome disclosure; 200% and narrow reason-box captures, §17).
+[`evidence/host-4ff45ee8-20261029/`](evidence/host-4ff45ee8-20261029/README.md) (v0.13 I-Q15 rerun with the earlier-outcome disclosure; 200% and narrow reason-box captures, §17);
+[`evidence/host-05898cd0-20261030/`](evidence/host-05898cd0-20261030/README.md) (v0.14 J-05 re-measure on PR #520 with a `main` control; Unity compile and EditMode at the merged head, §18).
 
 ## 1. Identity, host and method
 
@@ -77,7 +78,7 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 | J-02 | Major — **fixed v0.2** | After three Law 3 windows, the engine refuses every second-half request (`NoWindowsLeft`) while Make substitution stays enabled at 4/5 with no reason; each submit is a generic Refused. `LiveMatchFrame` carries substitutions used but not windows used. | **Fixed v0.2** (§6): each typed refusal gets its own row (`NoWindowsLeft` → `feedback.substitution_refused_windows`); Make substitution stays available. The owner chose this over a windows-used projection, so `LiveMatchFrame` and the engine are unchanged. Host PASS (run 3). The owner approved the wording on October 28 (v0.4). |
 | J-03 | High | Keyboard arrows on any choice group re-entered `Keyboard()` through the Control's `Refresh()` in the same frame until the stack overflowed; the exception rejected the pitch renderer and the next Start failed. Gate-invisible (Unity binding only). | **Fixed on this branch**: `S0ScreensBehaviour.cs` v1.7 processes keyboard input once per frame. Verified by the I-Q15 rerun. |
 | J-04 | Minor — **fixed v0.2** | The skin is neutral: plain text buttons without chrome, dialogs as full pages, outcome words without the ✓ ✕ – glyphs of I-C11, shirt labels drawn on the marker discs in dark text, and the follow camera frames part of the pitch while `pitch.description` says goals are shown. Opening statistics at 1920×1080 shrinks the pitch to about 305 px wide. | **Fixed v0.2** (§6): H v0.2 skin, whole-pitch orthographic view, statistics in the rail (pitch 1055×683 with statistics open). The owner's visual acceptance and the B8/B10 re-capture on this skin are still due. |
-| J-05 | Minor — owner chose 10×; PR #520 | The 10× rung delivers about 5.5× on this host (315–340 ticks/s instead of 600). The sim thread is the limit; the engine's per-tick snapshot encode allocates about 35 KB per tick. 1× holds 60 ticks/s. | Owner chose a real 10× (§6); engine throughput work is in PR #520, which still needs a Unity compile and a 10× re-measure on this host. Rendering is unaffected (below). |
+| J-05 | Minor — owner chose 10×; PR #520 | The 10× rung delivers about 5.5× on this host (315–340 ticks/s instead of 600). The sim thread is the limit; the engine's per-tick snapshot encode allocates about 35 KB per tick. 1× holds 60 ticks/s. | Owner chose a real 10× (§6); engine throughput work is in PR #520, which still needs a Unity compile and a 10× re-measure on this host. Rendering is unaffected (below). **Re-measured v0.14 (§18): PASS, 601–602 ticks/s at 10× on #520.** |
 | J-06 | Info | Editor-only: an unfocused Editor runs the sim far slower (70–550 ticks/s); never use Editor timing as performance evidence. | Recorded. |
 
 ## 4. B8/B10 render-loop capture
@@ -135,7 +136,7 @@ On October 20, 2026 the owner, Anton Zymin, chose a fix for each open finding:
 | J-01 | Show goalkeeper-mismatched choices greyed out, with a reason. The owner approves the wording. | `S0ScreenPresenter` v1.4 mirrors the engine's request-time role check. When the outgoing player is chosen, each bench player the engine would refuse stays listed but is unavailable, with a reason in words: `reason.keeper_out`, `reason.keeper_in`, or `reason.keeper_on_way` (one keeper fallback already pending). The keeper fallback after a sent-off keeper stays available once. Entry needs a role-legal pair. The Unity binding disables the choice and shows the reason under its label. |
 | J-02 | Keep the button and show the refusal message more clearly. No engine change. | The engine already returns a typed `SubstitutionRequestStatus`. `ManagerCommand.Apply` now passes it to the driver, which keeps it on its refused record (`TickStampedCommand.SubstitutionRefusal`, not part of the replay identity). `ClientChangeRecord.RefusalReason` stores it. Each typed refusal gets its own row: `feedback.substitution_refused_{cap, ended, keeper, sent_off, unavailable, windows}`. A refusal that threw keeps the generic row. No reason is inferred. Make substitution stays available. |
 | J-04 | Fix the visual issues before acceptance. | The S0 skin is rebuilt to H v0.2:<br>• navy page with a centred column; bordered panels for the scoreboard, home changes and statistics, the entry pages under a blue rule;<br>• raised and primary control chrome; dashed borders and secondary text when a control is unavailable; gold outline and tag on a selected choice;<br>• reason and warning boxes;<br>• outcome rows with a status bar and ✓ ✕ – … badge;<br>• zebra statistics table;<br>• navy and gold shirt chips with leaders;<br>• the whole pitch framed top-down by an orthographic camera, so `pitch.description` ("goals … shown") is true;<br>• a centred modal staging dialog over a dimmed backdrop.<br>Statistics moved into the rail, so opening them no longer shrinks the pitch. |
-| J-05 | Make 10× really deliver 10×. | Separate session and [PR #520](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/520) (engine throughput, bit-identical). It still needs a Unity compile and a 10× re-measure on this host. |
+| J-05 | Make 10× really deliver 10×. | Separate session and [PR #520](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/520) (engine throughput, bit-identical). It still needs a Unity compile and a 10× re-measure on this host. **Both done October 29–30 (§18): compile clean, 10× PASS.** |
 
 The new copy is drafted in the binding-contract register (`ux-s0-binding-contracts.md` v0.7, 150 roles). **Wording approved (v0.4):** on October 28, 2026 the owner replied “approve all” to the list of the nine new strings (`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way` and the six `feedback.substitution_refused_*` rows). The copy is approved exactly as drafted and shipped at `e4a0dec9`; four optional rewordings offered with the list were not adopted, so no string, test or content hash changes. The record is in `ux-s0-binding-contracts.md` v0.8.
 
@@ -168,7 +169,7 @@ J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q
 - ~~B8/B10 are re-captured on this skin within the 16.7 ms p99 budget~~ — **done October 29** (worst p99 10.41 ms, §14, v0.10);
 - ~~one uninterrupted I-Q15 run passes~~ — **done October 29** (37/37, §14, v0.10);
 - ~~the owner accepts the visuals~~ — **done October 28** (J-04 visuals accepted, §12, v0.8; the new wording was approved the same day, v0.4);
-- J-05 lands, or its re-measure is accepted.
+- J-05 lands, or its re-measure is accepted — **re-measured PASS October 30** on PR #520's merged head (§18, v0.14); met when #520 merges.
 
 Owner acceptance stays a separate decision.
 
@@ -436,6 +437,40 @@ Evidence: [`evidence/host-4ff45ee8-20261029/`](evidence/host-4ff45ee8-20261029/R
 is met with the disclosure covered. Gate J stays **CONDITIONAL PASS** with J-05 (PR #520) remaining; Gate-J acceptance
 remains the owner's separate decision.
 
+## 18. J-05 re-measured on PR #520 (v0.14)
+
+PR #520 (design P1a + P1b, bit-identical) had its Unity compile and EditMode leg at `01a5fcdc`. Merging PR #518 into
+main made the merged head `05898cd0` a new `src` tree, so both legs were repeated there, then the development-player
+10× re-measure was run. Evidence: [`evidence/host-05898cd0-20261030/`](evidence/host-05898cd0-20261030/README.md).
+
+**Unity compile and EditMode at `05898cd0`.** Full import from an empty `Library`: 0 `error CS`, 75 assemblies, the three
+known warnings. EditMode over DeterministicSim, CollisionSystem, ClientApp, UiFramework and MatchClientCore: 554
+passed, 0 failed, 12 ignored by attribute; `SnapshotDigestBackendTests` 4/4, `SpatialHashGridQueryOrderTests` 2/2 and
+`MatchEngineSnapshotDigestReferenceTests` 1/1.
+
+**10× re-measure — PASS.** Same method as §4 and §14 (Mono development player, keyboard only, 30 s holds, last 1,989
+frames of the player's own profiler log), with `main` as a same-session control alternating with #520 on the 10×
+conditions.
+
+| Build | Text | Condition | p99 | max | > 16.7 ms | sim ticks/s |
+| --- | --- | --- | --- | --- | --- | --- |
+| main | 100% | 10×, stats open (two runs) | 11.29 / 12.85 | 14.46 / 14.11 | 0 | 557 / 468 |
+| main | 100% | 10×, stats closed | 6.85 | 8.29 | 0 | 516 |
+| #520 | 100% | 10×, stats open (two runs) | 10.88 / 9.73 | 13.72 / 12.45 | 0 | **601 / 601** |
+| #520 | 100% | 10×, stats closed | 6.47 | 7.70 | 0 | **602** |
+| #520 | 200% | 10×, stats open | 9.85 | 13.45 | 0 | **601** |
+| #520 | 200% | 10×, stats closed | 6.26 | 11.04 | 0 | **601** |
+| #520 | 100% / 200% | 1×, stats open and closed | 5.94–6.31 | 7.93–11.37 | 0 | 60 |
+
+Every #520 10× condition delivered the 600 ticks/s the rung asks for (601–602; the extra tick is the window's edge),
+so the pace, not the simulation, is now the limit. `main` delivered 468–557 in the same session and 551–586 in §14,
+varying with host load. The B8/B10 budget still holds: worst #520 p99 10.88 ms, no frame over 16.7 ms. End-state
+screenshots confirm each condition's speed and statistics state. Not covered: allocation (the player logs carried no
+per-frame GC counter; the Unity allocation leg is the EditMode test above) and the FR-PO-052 baseline (design E5).
+
+**Verdict.** The J-05 re-measure passes. The last §7 condition is met when PR #520 merges. Gate J stays **CONDITIONAL
+PASS** until then, and Gate-J acceptance remains the owner's separate decision.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -453,3 +488,4 @@ remains the owner's separate decision.
 | 0.11 | October 29, 2026 | §15: pinned-host Unity compile and EditMode for the §13 fix at head `fbcc3c2f` (same `src` tree as `9139701c`). Full import: 0 `error CS`, 75 assemblies. EditMode ClientApp/UiFramework/MatchClientCore: 424/424 passed, including the §13 regression test. Evidence `host-fbcc3c2f-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.12 | October 29, 2026 | §16: owner report that Faster resized the pitch on the first and last click. Fixed in `c4b65334`: the four playback reasons share one `S0ReservedReason` box that keeps the tallest one's height. Unity compile clean (75 assemblies), EditMode 424/424, before/after captures at 1920×1080 and 1366×768 show the pitch holding one size; owner replied "looks right now". Evidence `host-c4b65334-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.13 | October 29, 2026 | §17: external review of `4ff45ee8` — §14's I-Q15 pass never reached the earlier-outcome disclosure (three records; the disclosure needs four). I-Q15 rerun on the pinned host with four and then five records: disclosure reached by Tab and Shift-Tab, toggled by Enter, expanded state and focus kept through 3,600 live ticks and through a new record; 59/59, uninterrupted. Reason box captured at 200% (1920×1080, 1366×768, 800×1000) and 100% narrow: pitch holds one size at every speed step. Evidence `host-4ff45ee8-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
+| 0.14 | October 30, 2026 | §18: J-05 re-measured on PR #520's merged head `05898cd0` (main with #518 merged in). Unity compile clean (75 assemblies); EditMode 554 passed, 0 failed, 12 ignored. Development player at 10×: 601–602 sim ticks/s in all six #520 sessions (100% and 200% text, statistics open and closed) against 468–557 for a same-session `main` control; 1× holds 60; worst p99 10.88 ms, no frame over 16.7 ms. Evidence `host-05898cd0-20261030/`. The J-05 condition of §7 is met when #520 merges; Gate-J verdict CONDITIONAL PASS until then. |
