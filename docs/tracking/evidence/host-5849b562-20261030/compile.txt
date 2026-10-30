@@ -1,0 +1,20 @@
+# Unity compile — full import at 5849b562 (fresh worktree, no Library)
+# Excerpt of the batch-mode Editor log; licensing and machine-identifier lines omitted.
+command: Unity.exe -batchmode -quit -projectPath <worktree> -logFile <log>
+
+Built from '6000.4/staging' branch; Version is '6000.4.9f1 (f7258d6eebbe) revision 16197005'; Using compiler version '194234433'; Build Type 'Release'
+[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+*** Tundra build success (34.36 seconds), 1150 items updated, 1203 evaluated
+Asset Pipeline Refresh (id=28aca9356ac44ad479a906775cb4d00b): Total: 84.941 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0
+
+distinct warnings:
+Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+
+counts: error CS = 0; distinct warnings = 3; shim bin/Debug references = 0
+assemblies: 75 TacticalDirector.*.dll in Library/ScriptAssemblies for 75 src asmdefs
+compile window: 2026-10-30T21:55:42Z to 2026-10-30T21:57:23Z; process exit code: 0
