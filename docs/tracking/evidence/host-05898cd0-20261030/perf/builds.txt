@@ -1,0 +1,7 @@
+# Development-player builds (S0J05Batch.Build -> S0HostBuild.Build): Windows x64 Mono, Development | ConnectWithProfiler | CleanBuildCache, runInBackground off.
+# Line 1 is a first main build from a worktree that carried an unrelated UnityConnectSettings change; it was deleted and rebuilt (line 2) after restoring that file.
+# Every build flips ProjectSettings/UnityConnectSettings.asset m_Enabled 0 -> 1 and re-serializes Scene.unity while setting the text scale; both files were restored with git after each build.
+2026-10-29 20:03:06Z backend=Mono2x runInBackground=False build Succeeded errors=0 size=156172201 time=00:00:59.1231892 -> <HostBuilds>\j05-main-4ff45ee8-s100\SystemXI.exe
+2026-10-29 20:05:19Z backend=Mono2x runInBackground=False build Succeeded errors=0 size=156172200 time=00:00:44.1362193 -> <HostBuilds>\j05-main-4ff45ee8-s100\SystemXI.exe
+2026-10-29 20:15:04Z backend=Mono2x runInBackground=False build Succeeded errors=0 size=156175225 time=00:00:55.6673923 -> <HostBuilds>\j05-05898cd0-s100\SystemXI.exe
+2026-10-29 20:16:38Z backend=Mono2x runInBackground=False build Succeeded errors=0 size=156175225 time=00:00:39.1205765 -> <HostBuilds>\j05-05898cd0-s200\SystemXI.exe
