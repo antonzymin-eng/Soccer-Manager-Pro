@@ -1,0 +1,366 @@
+// Host QA probe harness for P5b real-client acceptance (pinned host, October 18, 2026).
+// Editor-only and untracked: archived verbatim into the evidence folder, never shipped.
+// Drives the real scene through UGUI pointer events and OS keystrokes; reads state only.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchClientCore;
+using TacticalDirector.MatchClientUnity;
+
+public static class S0HostProbe
+{
+    public static string OutDir = "C:/Users/azymi/Desktop/S0-host-acceptance-20261018/run2";
+    const BindingFlags F = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+    static IEnumerator _routine;
+    static readonly Stack<IEnumerator> _stack = new Stack<IEnumerator>();
+    static Func<bool> _waitUntil;
+    static double _waitUntilTime, _deadline;
+    static string _case = "-";
+    static int _holdUntilFrame = -1, _lastFrame = -1;
+    static string _holdUntilFile;
+    public static bool Busy => _routine != null;
+    public static string LastError;
+
+    // ---------- state access ----------
+    public static S0ScreensBehaviour Screens => UnityEngine.Object.FindFirstObjectByType<S0ScreensBehaviour>(FindObjectsInactive.Include);
+    public static S0ScreenPresenter View => Get<S0ScreenPresenter>(Screens, "_view");
+    public static ClientMatchCoordinator Coordinator => Get<ClientMatchCoordinator>(View, "_coordinator");
+    public static object Context => Prop(Coordinator, "Context");
+    public static MatchSession Session => Coordinator != null && Coordinator.HasMatch ? Prop(Coordinator, "Session") as MatchSession : null;
+    public static ClientChangeRequests Changes => Prop(Context, "Changes") as ClientChangeRequests;
+    public static SessionMatchAnalytics Analytics => Prop(Context, "Analytics") as SessionMatchAnalytics;
+
+    public static T Get<T>(object o, string field) where T : class
+    {
+        if (o == null) return null;
+        for (Type t = o.GetType(); t != null; t = t.BaseType)
+        {
+            FieldInfo fi = t.GetField(field, F);
+            if (fi != null) return fi.GetValue(o) as T;
+        }
+        return null;
+    }
+    public static object GetField(object o, string field) => Get<object>(o, field);
+    public static void SetField(object o, string field, object value)
+    {
+        for (Type t = o.GetType(); t != null; t = t.BaseType)
+        {
+            FieldInfo fi = t.GetField(field, F);
+            if (fi != null) { fi.SetValue(o, value); return; }
+        }
+        throw new MissingFieldException(o.GetType().Name, field);
+    }
+    public static object Prop(object o, string name) => o?.GetType().GetProperty(name, F)?.GetValue(o);
+
+    // ---------- UI helpers ----------
+    public static IEnumerable<Selectable> ActiveSelectables() =>
+        UnityEngine.Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None).Where(s => s.gameObject.activeInHierarchy);
+    public static string LabelOf(Selectable s)
+    {
+        var texts = s.GetComponentsInChildren<Text>(false);
+        return texts.Length == 0 ? "" : string.Join(" ", texts.Where(t => t.gameObject.name != "Selection").Select(t => t.text));
+    }
+    public static Button FindButton(string contains, bool requireInteractable = false)
+    {
+        Button b = ActiveSelectables().OfType<Button>().FirstOrDefault(x => LabelOf(x).Contains(contains) && (!requireInteractable || x.IsInteractable()));
+        return b;
+    }
+    public static Button ButtonField(string field) => Get<Button>(Screens, field);
+    public static Selectable Selected => EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
+
+    /// <summary>Real UGUI pointer path: enter/down/up/click through ExecuteEvents on the button object.</summary>
+    public static bool Click(Selectable s)
+    {
+        if (s == null) { Log("click on null"); return false; }
+        if (!s.IsInteractable() || !s.gameObject.activeInHierarchy) { Log("click refused (not interactable/active): " + LabelOf(s)); return false; }
+        var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+        GameObject go = s.gameObject;
+        ExecuteEvents.Execute(go, data, ExecuteEvents.pointerEnterHandler);
+        ExecuteEvents.Execute(go, data, ExecuteEvents.pointerDownHandler);
+        ExecuteEvents.Execute(go, data, ExecuteEvents.pointerUpHandler);
+        ExecuteEvents.Execute(go, data, ExecuteEvents.pointerClickHandler);
+        return true;
+    }
+    public static bool ClickText(string contains) => Click(FindButton(contains));
+
+    // ---------- evidence ----------
+    public static void Begin(string caseId) { _case = caseId; Log("BEGIN"); }
+    public static void Log(string message)
+    {
+        Directory.CreateDirectory(OutDir);
+        string line = DateTime.UtcNow.ToString("HH:mm:ss.fff") + " [" + _case + "] " + message;
+        File.AppendAllText(Path.Combine(OutDir, "probe-log.txt"), line + "\n", Encoding.UTF8);
+        Debug.Log("[S0HostProbe] " + line);
+    }
+    public static void Check(bool condition, string what) => Log((condition ? "PASS " : "FAIL ") + what);
+    public static string Shot(string name)
+    {
+        Directory.CreateDirectory(Path.Combine(OutDir, "shots"));
+        string path = Path.Combine(OutDir, "shots", name + ".png");
+        if (File.Exists(path)) File.Delete(path);
+        S0HostCapture.Request(path);
+        _holdUntilFrame = Time.frameCount + 1;
+        _holdUntilFile = path; // the Editor writes the capture asynchronously: no further action until it exists
+        Log("shot " + name + ".png " + Screen.width + "x" + Screen.height);
+        return path;
+    }
+
+    public static string State()
+    {
+        S0ScreenPresenter v = View;
+        if (v == null) return "no presenter";
+        MatchSession s = Session;
+        var sb = new StringBuilder();
+        sb.Append("screen=").Append(v.Screen).Append(" dialog=").Append(v.Dialog)
+          .Append(" score='").Append(v.Score).Append("' clock='").Append(v.Clock).Append("' period='").Append(v.Period)
+          .Append("' speed='").Append(v.Speed).Append("' tick=").Append(s != null ? s.CurrentTick.ToString() : "-")
+          .Append(" frameTick=").Append(v.Frame.IsEmpty ? "empty" : v.Frame.Tick.ToString())
+          .Append(" paused=").Append(v.IsPaused).Append(" fullTime=").Append(v.IsFullTime)
+          .Append(" current=").Append(v.CurrentMentality).Append(" requested=").Append(v.RequestedMentality)
+          .Append(" can[pause=").Append(v.CanPause).Append(" slower=").Append(v.CanSlower).Append(" faster=").Append(v.CanFaster)
+          .Append(" ment=").Append(v.CanChangeMentality).Append(" sub=").Append(v.CanSubstitute).Append(" report=").Append(v.CanReport)
+          .Append("] stats[open=").Append(v.IsStatisticsOpen).Append(" has=").Append(v.HasStatistics).Append(" incomplete=").Append(v.IsStatisticsIncomplete)
+          .Append("] subsUsed='").Append(v.SubstitutionsUsed).Append("' selected='").Append(Selected != null ? Selected.name + ":" + LabelOf(Selected) : "null")
+          .Append("' layoutFailures=").Append(Screens.PitchLayoutFailureCount).Append(" rev=").Append(v.Revision)
+          .Append(" attachment=").Append(Coordinator.AttachmentId).Append(" hasMatch=").Append(Coordinator.HasMatch);
+        return sb.ToString();
+    }
+    public static void LogState(string label) => Log("STATE " + label + ": " + State());
+    public static void LogFeedback(string label)
+    {
+        var v = View;
+        Log("FEEDBACK " + label + " (" + v.Feedback.Count + "): " + string.Join(" || ", v.Feedback));
+        if (Changes != null)
+            Log("RECORDS " + label + ": " + string.Join(" || ", Changes.Records.Select(r => r.Command.Kind + ":" + r.Status + "@" + r.OutcomeTick)));
+    }
+    /// <summary>Engine-owned Law 3 counters (read-only engine queries) for refusal diagnosis.</summary>
+    public static void LogWindows(string label)
+    {
+        object engine = Prop(Session, "TestOnly_Engine");
+        var t = engine.GetType();
+        Log("ENGINE " + label + " subsUsed=" + t.GetMethod("SubstitutionsUsed").Invoke(engine, new object[] { 0 }) +
+            " windowsUsed=" + t.GetMethod("SubstitutionWindowsUsed").Invoke(engine, new object[] { 0 }) +
+            " pending=" + t.GetProperty("PendingSubstitutionCount").GetValue(engine) + " tick=" + Session.CurrentTick);
+    }
+
+    public static void LogText(string label)
+    {
+        var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy && t.text.Length > 0);
+        Log("TEXT " + label + ": " + string.Join(" ¦ ", texts.Select(t => t.text.Replace("\n", "\\n"))));
+    }
+
+    // ---------- geometry checks (I-Q16–18) ----------
+    /// <summary>Counts active texts whose wrapped preferred height exceeds their rect, or that overflow horizontally.</summary>
+    public static int ClippingAudit(string label)
+    {
+        Canvas.ForceUpdateCanvases();
+        int bad = 0;
+        foreach (Text t in UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None))
+        {
+            if (!t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text)) continue;
+            Rect r = t.rectTransform.rect;
+            var settings = t.GetGenerationSettings(new Vector2(r.width, 0));
+            float needH = t.cachedTextGeneratorForLayout.GetPreferredHeight(t.text, settings) / t.pixelsPerUnit;
+            bool hClip = t.horizontalOverflow == HorizontalWrapMode.Overflow && t.preferredWidth > r.width + 1f;
+            bool vClip = t.verticalOverflow == VerticalWrapMode.Truncate && needH > r.height + 1f;
+            bool missing = t.font != null && t.text.Any(c => !char.IsWhiteSpace(c) && !t.font.HasCharacter(c));
+            if (hClip || vClip || missing || t.resizeTextForBestFit)
+            {
+                bad++;
+                Log("CLIP " + label + " '" + t.text.Replace("\n", "\\n") + "' rect=" + r.size + " need=" + needH + " h=" + hClip + " v=" + vClip + " missingGlyph=" + missing + " bestFit=" + t.resizeTextForBestFit);
+            }
+        }
+        Log("CLIPAUDIT " + label + " problems=" + bad);
+        return bad;
+    }
+
+    /// <summary>Selectables whose screen rect leaves the viewport of their scroll and cannot be reached by scrolling.</summary>
+    public static int ReachabilityAudit(string label)
+    {
+        Canvas.ForceUpdateCanvases();
+        int bad = 0;
+        foreach (var s in ActiveSelectables().OfType<Button>())
+        {
+            var rt = s.transform as RectTransform;
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            ScrollRect scroll = s.GetComponentInParent<ScrollRect>();
+            bool horizontalOut = corners[0].x < -1 || corners[2].x > Screen.width + 1;
+            bool zeroSize = rt.rect.width < 2 || rt.rect.height < 2;
+            bool vertOut = (corners[0].y < -1 || corners[2].y > Screen.height + 1) && (scroll == null || !scroll.vertical);
+            if (horizontalOut || zeroSize || vertOut)
+            {
+                bad++;
+                Log("UNREACHABLE " + label + " '" + LabelOf(s) + "' x=" + corners[0].x + ".." + corners[2].x + " y=" + corners[0].y + ".." + corners[2].y + " zero=" + zeroSize);
+            }
+        }
+        Log("REACHAUDIT " + label + " problems=" + bad);
+        return bad;
+    }
+
+    /// <summary>True when the whole page content fits the viewport (no vertical scroll needed).</summary>
+    public static bool PageFits(string field)
+    {
+        ScrollRect sr = Get<ScrollRect>(Screens, field);
+        Canvas.ForceUpdateCanvases();
+        return sr == null || sr.content.rect.height <= sr.viewport.rect.height + 1f;
+    }
+    public static string PitchGeometry()
+    {
+        RawImage img = Get<RawImage>(Screens, "_pitch");
+        RectTransform bounds = Get<RectTransform>(Screens, "_pitchBounds");
+        if (img == null) return "no pitch";
+        Rect r = img.rectTransform.rect;
+        var corners = new Vector3[4];
+        img.rectTransform.GetWorldCorners(corners);
+        return "image=" + r.size + " aspect=" + (r.width / Mathf.Max(1, r.height)).ToString("F4") + " (105:68=" + (105f / 68f).ToString("F4") + ") bounds=" + bounds.rect.size +
+               " screenY=" + corners[0].y.ToString("F0") + ".." + corners[1].y.ToString("F0") + " tex=" + (img.texture != null ? img.texture.width + "x" + img.texture.height : "null");
+    }
+
+    // ---------- Game view size ----------
+    public static void SetGameViewSize(int width, int height)
+    {
+        Assembly asm = typeof(EditorWindow).Assembly;
+        Type sizesType = asm.GetType("UnityEditor.GameViewSizes");
+        Type singleton = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
+        object instance = singleton.GetProperty("instance").GetValue(null);
+        object group = sizesType.GetMethod("GetGroup").Invoke(instance, new object[] { (int)GameViewSizeGroupTypeStandalone() });
+        Type sizeType = asm.GetType("UnityEditor.GameViewSize");
+        Type kindType = asm.GetType("UnityEditor.GameViewSizeType");
+        string name = "S0 " + width + "x" + height;
+        string[] texts = (string[])group.GetType().GetMethod("GetDisplayTexts").Invoke(group, null);
+        int index = Array.FindIndex(texts, t => t.StartsWith(name));
+        if (index < 0)
+        {
+            object size = Activator.CreateInstance(sizeType, Enum.Parse(kindType, "FixedResolution"), width, height, name);
+            group.GetType().GetMethod("AddCustomSize").Invoke(group, new[] { size });
+            texts = (string[])group.GetType().GetMethod("GetDisplayTexts").Invoke(group, null);
+            index = Array.FindIndex(texts, t => t.StartsWith(name));
+        }
+        Type gameView = asm.GetType("UnityEditor.GameView");
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        gameView.GetMethod("SizeSelectionCallback", F).Invoke(window, new object[] { index, null });
+        Log("gameview size -> " + name + " index=" + index);
+    }
+    static int GameViewSizeGroupTypeStandalone() => 0;
+
+    // ---------- OS keystrokes (I-Q15) ----------
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    public static bool UnityIsForeground()
+    {
+        GetWindowThreadProcessId(GetForegroundWindow(), out uint pid);
+        return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+    }
+    public static void FocusGameView()
+    {
+        Type gameView = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+        EditorWindow w = EditorWindow.GetWindow(gameView);
+        if (!UnityIsForeground())
+        {
+            // An Alt tap lifts the foreground lock so SetForegroundWindow is honoured.
+            keybd_event(0x12, 0, 0, UIntPtr.Zero);
+            keybd_event(0x12, 0, 2, UIntPtr.Zero);
+            SetForegroundWindow(System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle);
+        }
+        w.Focus();
+    }
+    public const byte VK_TAB = 0x09, VK_RETURN = 0x0D, VK_SHIFT = 0xA0, VK_ESCAPE = 0x1B, VK_SPACE = 0x20, VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27, VK_DOWN = 0x28;
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint MapVirtualKey(uint code, uint mapType);
+    static bool Extended(byte vk) => vk >= 0x21 && vk <= 0x2E; // arrows, Home/End, PgUp/PgDn, Ins/Del
+    // Real scan codes (and the extended flag for arrows) so the target sees physical-key messages.
+    public static void KeyDown(byte vk) => keybd_event(vk, (byte)MapVirtualKey(vk, 0), Extended(vk) ? 1u : 0u, UIntPtr.Zero);
+    public static void KeyUp(byte vk) => keybd_event(vk, (byte)MapVirtualKey(vk, 0), (Extended(vk) ? 1u : 0u) | 2u, UIntPtr.Zero);
+
+    // ---------- scheduler ----------
+    public static void Run(string caseId, IEnumerator routine, double timeoutSeconds = 600)
+    {
+        if (_routine != null) throw new InvalidOperationException("probe busy: " + _case);
+        if (EditorApplication.isPlaying) Application.runInBackground = true; // runtime only; never PlayerSettings
+        _stack.Clear();
+        _routine = routine;
+        _waitUntil = null;
+        _waitUntilTime = 0;
+        _deadline = EditorApplication.timeSinceStartup + timeoutSeconds;
+        LastError = null;
+        Begin(caseId);
+        EditorApplication.update -= Pump;
+        EditorApplication.update += Pump;
+    }
+    public static void Abort(string why) { Log("ABORT " + why); Finish(); }
+    static void Finish()
+    {
+        EditorApplication.update -= Pump;
+        _routine = null;
+        _stack.Clear();
+        Log("END");
+    }
+    static void Pump()
+    {
+        if (_routine == null) { EditorApplication.update -= Pump; return; }
+        if (!EditorApplication.isPlaying) { Abort("left play mode"); return; }
+        double now = EditorApplication.timeSinceStartup;
+        if (now > _deadline) { Abort("timeout"); return; }
+        if (Time.frameCount <= _holdUntilFrame) return;
+        if (_holdUntilFile != null) { if (S0HostCapture.Pending || !File.Exists(_holdUntilFile)) return; _holdUntilFile = null; _holdUntilFrame = Time.frameCount + 2; return; }
+        if (_lastFrame == Time.frameCount) return; // at most one routine step per player frame
+        if (_waitUntilTime > now) return;
+        if (_waitUntil != null)
+        {
+            bool done;
+            try { done = _waitUntil(); }
+            catch (Exception e) { LastError = e.ToString(); Abort("wait threw " + e); return; }
+            if (!done) return;
+            _waitUntil = null;
+        }
+        _lastFrame = Time.frameCount;
+        try
+        {
+            while (true)
+            {
+                bool more = _routine.MoveNext();
+                if (!more)
+                {
+                    if (_stack.Count == 0) { Finish(); return; }
+                    _routine = _stack.Pop();
+                    if (Time.frameCount <= _holdUntilFrame) return;
+                    continue;
+                }
+                object y = _routine.Current;
+                if (y is IEnumerator nested) { _stack.Push(_routine); _routine = nested; if (Time.frameCount <= _holdUntilFrame) return; continue; }
+                if (y is Func<bool> until) { _waitUntil = until; return; }
+                if (y is float seconds) { _waitUntilTime = now + seconds; return; }
+                if (y is double d) { _waitUntilTime = now + d; return; }
+                return; // null => next player frame
+            }
+        }
+        catch (Exception e) { LastError = e.ToString(); Log("EXCEPTION " + e); Finish(); }
+    }
+
+    public static IEnumerator Frames(int n) { for (int i = 0; i < n; i++) yield return null; }
+    public static IEnumerator Key(byte vk, bool shift = false)
+    {
+        FocusGameView();
+        yield return 0.15f;
+        if (shift) KeyDown(VK_SHIFT);
+        if (shift) yield return 0.05f;
+        KeyDown(vk);
+        yield return 0.12f;
+        KeyUp(vk);
+        if (shift) { yield return 0.05f; KeyUp(VK_SHIFT); }
+        yield return 0.2f;
+    }
+}

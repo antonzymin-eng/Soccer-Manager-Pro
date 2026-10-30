@@ -1,0 +1,156 @@
+// Owner decisions (October 28, 2026): the report's partial-statistics toggle keeps one title,
+// "Partial statistics — incomplete", with the ▸/▾ glyph; a pop-up has a Close control and closes on a
+// click outside its frame. 1920x1080. Untracked probe source, archived with the evidence.
+
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchClientCore;
+using P = S0HostProbe;
+using C = S0HostCases;
+
+public static class S0HostPopup
+{
+    public static IEnumerator Shots()
+    {
+        P.SetGameViewSize(1920, 1080);
+        yield return P.Frames(10);
+        yield return S0HostRuns.Boot();
+        yield return C.StartMatch(3);
+        yield return P.Frames(30);
+        GameObject dialog = P.Get<GameObject>(P.Screens, "_dialog");
+        Button mentality = P.ButtonField("_mentality"), substitution = P.ButtonField("_substitution");
+
+        P.Begin("close-button");
+        P.Click(mentality);
+        yield return P.Frames(5);
+        Button close = CloseButton(dialog);
+        P.Check(close != null, "the Mentality pop-up has a Close control");
+        if (close == null) yield break;
+        string label = P.LabelOf(close);
+        P.Log("LABEL close '" + label + "'");
+        P.Check(label == "✕ Close" || label == "× Close" || label == "Close", "Close label is '✕ Close' (or a covered substitute)");
+        HeaderPlacement(dialog, close);
+        P.Check(P.FindButton(P.View.Text.Label("action.cancel")) != null, "Cancel is still offered");
+        Button[] choices = P.Get<Button[]>(P.Screens, "_mentalityChoices");
+        Button other = choices.FirstOrDefault(b => b.IsInteractable() && !P.LabelOf(b).Contains(P.View.MentalityLabel(P.View.CurrentMentality)));
+        P.Click(other);
+        yield return P.Frames(3);
+        P.Log("draft requested=" + P.View.RequestedMentality + " current=" + P.View.CurrentMentality);
+        P.Shot("p-mentality-open");
+        yield return null;
+        int records = P.Changes.Records.Count;
+        P.Click(close);
+        yield return P.Frames(5);
+        Closed(dialog, records, mentality, "Close");
+
+        P.Begin("outside-click");
+        P.Click(substitution);
+        yield return P.Frames(5);
+        P.Check(dialog.activeInHierarchy && P.View.Dialog == S0ScreenPresenter.DialogKind.Substitution, "substitution pop-up open");
+        P.Shot("p-substitution-open");
+        yield return null;
+        RectTransform frame = P.Get<RectTransform>(P.Screens, "_dialogFrame");
+        Text context = frame.GetComponentsInChildren<Text>(false).First(t => t.text == P.View.Text.Label("context.substitution"));
+        records = P.Changes.Records.Count;
+        GameObject inside = PointerClick(Centre((RectTransform)context.transform), PointerEventData.InputButton.Left);
+        yield return P.Frames(3);
+        P.Check(inside != null && inside.transform.IsChildOf(frame), "a click on text inside the frame hits the frame (" + Name(inside) + ")");
+        P.Check(dialog.activeInHierarchy && P.View.Dialog == S0ScreenPresenter.DialogKind.Substitution, "a click inside the frame keeps the pop-up open");
+        Vector2 corner = new Vector2(40, 40);
+        GameObject right = PointerClick(corner, PointerEventData.InputButton.Right);
+        yield return P.Frames(3);
+        P.Check(dialog.activeInHierarchy, "a right click outside does not close the pop-up (" + Name(right) + ")");
+        GameObject outside = PointerClick(corner, PointerEventData.InputButton.Left);
+        yield return P.Frames(5);
+        P.Check(outside != null && outside.name == "Backdrop", "the click outside the frame hits the backdrop (" + Name(outside) + ")");
+        Closed(dialog, records, substitution, "outside click");
+
+        P.Begin("partial");
+        C.InjectObserverFault();
+        yield return (System.Func<bool>)(() => P.View.IsStatisticsIncomplete);
+        yield return C.RunToNearEnd(0);
+        yield return (System.Func<bool>)(() => P.View.CanReport);
+        yield return P.Frames(5);
+        P.Click(P.ButtonField("_report"));
+        yield return P.Frames(5);
+        P.Check(P.View.Screen == ClientScreens.PostMatchReport && P.View.IsStatisticsIncomplete, "report reached with incomplete statistics");
+        Button partial = P.ButtonField("_partialToggle");
+        RectTransform table = P.Get<RectTransform>(P.Screens, "_reportStatistics");
+        Label(partial, "closed", "▸");
+        P.Check(!table.gameObject.activeInHierarchy, "partial table closed initially");
+        P.Check(P.FindButton("Show partial statistics") == null && P.FindButton("Close statistics") == null, "no 'Show partial statistics' or 'Close statistics' label");
+        P.Shot("p-partial-closed");
+        yield return null;
+        P.Click(partial);
+        yield return P.Frames(5);
+        Label(partial, "open", "▾");
+        P.Check(P.View.IsPartialReportOpen && table.gameObject.activeInHierarchy, "clicking the title opens the partial table");
+        P.Shot("p-partial-open");
+        yield return null;
+        P.Click(partial);
+        yield return P.Frames(3);
+        Label(partial, "closed again", "▸");
+        P.Check(!P.View.IsPartialReportOpen && !table.gameObject.activeInHierarchy, "clicking the title again closes it");
+    }
+
+    static Button CloseButton(GameObject dialog) =>
+        dialog.GetComponentsInChildren<Button>(false).FirstOrDefault(b => P.LabelOf(b).EndsWith(P.View.Text.Label("action.close")));
+
+    static void HeaderPlacement(GameObject dialog, Button close)
+    {
+        Canvas.ForceUpdateCanvases();
+        RectTransform frame = P.Get<RectTransform>(P.Screens, "_dialogFrame");
+        RectTransform heading = (RectTransform)P.Get<Selectable>(P.Screens, "_dialogHeading").transform;
+        Bounds c = RectTransformUtility.CalculateRelativeRectTransformBounds(frame, close.transform);
+        Bounds h = RectTransformUtility.CalculateRelativeRectTransformBounds(frame, heading);
+        Rect f = frame.rect;
+        P.Log("HEADER frame=" + f.width.ToString("F0") + "x" + f.height.ToString("F0") + " closeRightGap=" + (f.xMax - c.max.x).ToString("F0") +
+              " closeTopGap=" + (f.yMax - c.max.y).ToString("F0") + " headingTopGap=" + (f.yMax - h.max.y).ToString("F0") + " headingRight=" + (h.max.x - f.xMin).ToString("F0") + " closeLeft=" + (c.min.x - f.xMin).ToString("F0"));
+        P.Check(c.min.x > h.max.x - 0.5f, "Close sits to the right of the title");
+        P.Check(f.xMax - c.max.x < 60 && f.yMax - c.max.y < 60, "Close is in the frame's top-right corner");
+    }
+
+    static void Closed(GameObject dialog, int records, Selectable invoker, string how)
+    {
+        P.Check(!dialog.activeInHierarchy && P.View.Dialog == S0ScreenPresenter.DialogKind.None, how + " closes the pop-up");
+        P.Check(P.Changes.Records.Count == records, how + " submits nothing (records " + records + "->" + P.Changes.Records.Count + ")");
+        P.Check(P.Selected == invoker, how + " returns focus to the opening button (" + (P.Selected == null ? "none" : P.LabelOf(P.Selected)) + ")");
+    }
+
+    static void Label(Button b, string state, string glyph)
+    {
+        string text = P.LabelOf(b);
+        P.Log("LABEL " + state + " '" + text + "'");
+        P.Check(text == glyph + " Partial statistics — incomplete", state + ": label is '" + glyph + " Partial statistics — incomplete'");
+    }
+
+    static Vector2 Centre(RectTransform rt) => RectTransformUtility.WorldToScreenPoint(null, rt.TransformPoint(rt.rect.center));
+
+    // The input module's path: raycast the point, then send press/release/click to the handler that owns the top hit.
+    static GameObject PointerClick(Vector2 screen, PointerEventData.InputButton button)
+    {
+        var data = new PointerEventData(EventSystem.current) { position = screen, button = button };
+        var hits = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(data, hits);
+        if (hits.Count == 0) { P.Log("POINTER " + screen + " hit nothing"); return null; }
+        GameObject top = hits[0].gameObject;
+        data.pointerCurrentRaycast = data.pointerPressRaycast = hits[0];
+        GameObject press = ExecuteEvents.ExecuteHierarchy(top, data, ExecuteEvents.pointerDownHandler);
+        GameObject click = ExecuteEvents.GetEventHandler<IPointerClickHandler>(top);
+        data.pointerPress = press ?? click;
+        data.rawPointerPress = top;
+        if (data.pointerPress != null)
+            ExecuteEvents.Execute(data.pointerPress, data, ExecuteEvents.pointerUpHandler);
+        if (click != null && data.pointerPress == click)
+            ExecuteEvents.Execute(click, data, ExecuteEvents.pointerClickHandler);
+        P.Log("POINTER " + button + " " + screen + " top=" + Name(top) + " clickHandler=" + Name(click));
+        return top;
+    }
+
+    static string Name(GameObject go) => go == null ? "none" : go.name + (go.transform.parent != null ? " < " + go.transform.parent.name : "");
+}

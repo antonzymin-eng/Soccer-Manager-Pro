@@ -1,7 +1,11 @@
 # Match Flow Completion — Design Note
 
 > **Created:** July 13, 2026
-> **Last Updated:** October 18, 2026 (v1.10 — §5.2 landed: PR #515 merge `1a3b4271`.)
+> **Last Updated:** October 29, 2026 (v1.12 — §5.3 W8 C eight-second hand-control corner specified (ERR-011-021; not implemented).)
+
+> **Last Updated (prior):** October 21, 2026 (v1.11 — §6 UX copy decided: Gate J J-01/J-02.)
+
+> **Last Updated (prior):** October 18, 2026 (v1.10 — §5.2 landed: PR #515 merge `1a3b4271`.)
 
 > **Last Updated (prior):** October 18, 2026 (v1.9 — §5.2 governing Unity host validation met at PR #515 head `a7800579`.)
 
@@ -351,7 +355,7 @@ lines, ordinary feet possession, smother rejection, carried exits, collision cor
 distribution cancellation, direct goals, boundary precedence and deterministic pending-offence restore.
 The review fixes add the real catch composition with the keeper's body outside (hold and move back
 legal, farther out sanctioned) and goal-line overhang (on the line inside; outside DFK placed on the line).
-W8 C's hand timeout/corner and feet-only stall-guard amendment remain a separate change.
+W8 C's hand timeout/corner and feet-only stall-guard amendment is a separate change, specified in §5.3.
 
 **Local validation (October 18, 2026):** the Linux .NET gate compiles the changed engine; 252 selected
 engine cases pass, including 46 new D-07 cases. Adjacent rebuilt suites pass 107 keeper cases
@@ -372,6 +376,80 @@ Linux functional gate. On the pinned Unity 6000.4.9f1 host the same head compile
 and every full-match scenario; GoalkeeperMechanics gives 107 passed / 27 existing skips. Record:
 [host-d07-a7800579-20261018](evidence/host-d07-a7800579-20261018/README.md). Landed in PR #515, merge `1a3b4271`. On the six standard W8 seeds the post-merge
 [census](evidence/d07-six-seed-census-20261018/README.md) records 0 D-07 free kicks and unchanged final digests.
+
+### 5.3 Goalkeeper hand control over eight seconds — W8 C
+
+**Status:** owner-approved October 29, 2026 (ERR-011-021); **specified, not implemented.** #11
+[§3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
+owns the clock, eligibility and adjudication frame; this section owns the restart.
+
+When #11 §3.8.5 sanctions a hand episode at elapsed 481 frames, Resolve applies one corner to the
+opponents of the sanctioned keeper's team. The check runs immediately after §5.2's post-collision
+re-check (the second `ApplyPendingKeeperHandlingOffence`) and before `ApplyFoulIfCaptured`, hence
+before the C3 executors, so a §5.2 DFK and this corner cannot both apply on one frame. `CheckRestartAndApply`
+runs after the executors, so a goal or boundary restart is **not** yet applied at that point; a completed
+boundary crossing keeps its priority (§5.2) through #11 §3.8.5's predicate 5 instead: the check does not
+fire while the ball is wholly out of play (`BallCollision.CheckBoundaries(...).isOut`), and the boundary
+or goal restart then applies as usual. If a #5 goalkeeper request is still in flight, `ApplyRestart` cancels
+it (inside `ApplyRestart`, through `EndGoalkeeperHandEpisode`, not before it), so no CONTACT, `Completed`
+terminal or `DistributionExecutedEvent` follows; `ApplyRestart` leaves exactly one `Cancelled` terminal, which the
+following frame's Resolve drains with no #11 state change (the keeper is already `Recovering`), the
+same as the landed §5.2 path. Otherwise no terminal exists. Under #11 §3.8.4's admission predicate an
+in-flight request at elapsed ≥ 481 is unreachable in production in a live match, and a snapshot-body restore cannot build
+it (the restore check rejects it); the in-flight case is a defensive ordering that tests build only through
+`TestOnly_` seams (`TestOnly_StartGoalkeeperDistribution`, `TestOnly_SetPassExecutorState`,
+`TestOnly_SetPhysicsFrame`). The captured foul candidate and its decided flag are cleared as in §5.1, with no
+card-severity draw (the Stage-0 single-offence precedence rule), so no second whistle or delayed card
+occurs next frame. Resolve then ends for that frame through the shared whistle-finish helper (see
+Application), as §5.2's adjudication does. The offence itself carries no card.
+
+**Placement.** Do not route this through `RestartResolver` with an invented boundary-exit point.
+The corner is on the sanctioned keeper's defended goal line, `x = OwnGoalX(team)` (0 m for team 0,
+105 m for team 1). The side comes from the keeper's position at sanction: `y < 34` → `y = 0`;
+`y > 34` → `y = 68` m; exactly `y = 34` → `y = 68` (deterministic project tie rule, not IFAB). The
+spot is then inset by `BallPhysicsConstants.Ball.RADIUS` exactly as the boundary corner in §5, so the
+ball stays in bounds. Examples: a team-0 keeper sanctioned at `(8.0, 30.0)` m gives team 1 the corner
+at `(0, 0)` inset to `(0.11, 0.11)` m; a team-1 keeper at `(97.0, 30.0)` m gives team 0 the corner at
+`(105, 0)` inset to `(104.89, 0.11)` m; a keeper at `y = 34.0` takes the `y = 68` corner.
+
+**Application.** Use `ApplyRestart` and §5.1's taker selection (nearest eligible, non-sent-off player
+of the awarded team by squared XY distance, ascending slot index on ties). It tears down possession
+and the hand episode exactly once and executes eligible queued substitutions. Apply
+`cue: RestartCue.Corner` and publish one `RestartAwardedEvent` with `RestartKind = Corner (3)` (the
+`BallPhysics.RestartType` ordinal; `RestartCue.Corner` is 4 and is not the event kind) and unchanged
+payload layout. No event-only code is appended.
+
+The §5.2 handling whistle and this corner end the frame through ONE shared whistle-finish helper
+(#11 §3.8.5, "Shared whistle-finish helper"), so the two cannot drift. The helper returns `bool` and each
+caller returns from Resolve on it. Its steps, in the order the landed §5.2 path
+(`ApplyPendingKeeperHandlingOffence`) performs them:
+
+1. discard the captured foul candidate and its decided flag;
+2. call `ApplyRestart` (cue `RestartCue.Corner` for the corner); the #5 request cancellation happens inside it;
+3. reset the legacy guard counters `_gkHoldTicks`, `_gkReleasedAgentId` and `_gkReleaseCooldownRemaining`;
+4. when the `recordIndirectTaker` flag is set (§5.2's inside-area free kick only), write `_indirectKickTaker`;
+5. publish the `RestartAwardedEvent`;
+6. clear the collision output buffers (`_isCollisionKnockdown`, `_collisionForces`, `_stumbleScratch`);
+7. call `UpdateMatchContext()`;
+8. update `_lastHolderAgentId` when a possessor exists;
+9. call `PublishPossessionChangeIfChanged()`;
+10. return `true`.
+
+The spot, awarded team, cue, event payload and `recordIndirectTaker` flag are the caller's inputs.
+
+**Determinism.** No RNG draw is added. The claim frame is #11-owned state (read-only to the engine),
+serialized under #11 §3.8.5's durable-state rule in the next available snapshot schema; restore at any frame from the claim through 481 must
+reproduce the same corner or release. Restore rejects (`InvalidOperationException`) a body where a #5
+request is in flight and either #11 has no active clock or the request's remaining windup
+(`PassExecutorState.WindupFramesRemaining`) would put CONTACT after `handControlStartFrame + 480`; a
+terminal-pending `Cancelled` request with a sentinel clock is valid (#11 §3.8.5, T-5.1.10.9). The live-iff
+and range checks (active clock `0 ≤ handControlStartFrame ≤ currentFrame`, sentinel −1, and
+`currentFrame − handControlStartFrame ≤ 480` for any hand state) run in the engine snapshot reader, which
+passes the restored frame. Full time is a freeze, not a teardown (#11 §3.8.5 Full time): the `_matchEnded`
+guards skip Resolve while the tick advances, so no corner is awarded after full time (including a hold at
+elapsed 481 on the final-whistle tick), and when the restored `_matchEnded` is true the reader skips the
+range check and the remaining-windup comparison while keeping the structural checks. Tests are
+#11 T-5.1.10.1–13; T-5.1.10.7 asserts `RestartKind = Corner (3)`.
 
 ## 6. Substitutions — request / restart execution (approved October 13, 2026)
 
@@ -639,7 +717,9 @@ use the match save format v3 off-tick overlay (`match-save-file-design.md` KD-8)
 - **UX copy.** `NotApplied(OutgoingSentOff)` has no feedback key and needs one before the landing that
   exposes it (§6.2.6). `NoWindowsLeft` and `GoalkeeperRoleMismatch` fall under the generic
   `feedback.substitution_refused` key; whether they get specific copy, and how windows left are shown, is a
-  UX-document decision.
+  UX-document decision. *Decided October 20, 2026 (Gate J J-01/J-02, journey v0.37 §§14.4–14.5):* the
+  chooser greys out goalkeeper-mismatched pairs with a reason, and every typed refusal gets its own
+  `feedback.substitution_refused_*` row; windows left are not projected, and Make substitution stays available.
 
 ## 7. Half-time break & full-time end
 
@@ -809,6 +889,8 @@ project's established pattern for this environment.
 | 1.5 | 2026-10-15 | PR #505 review: the implementation held the second of two requests at a team's third window (the first execution closed the gate), contrary to §6.1. Fixed in `MatchEngine.cs` v2.05; §6.5.1 lock 12 adds `TwoRequestsAtTheThirdWindowBothExecuteThere` and `SecondHalfThirdWindowExecutesEveryRequestQueuedForIt`. §6 text unchanged. |
 | 1.6 | 2026-10-16 | Own-release handling avoidance/law restart contract; event codes 5/6, mirrored placement, taker and direct-goal rules, same-frame foul precedence, v27 history; D-07 remains separate. |
 | 1.7 | 2026-10-18 | Owner-selected D-07 option A: general outside-area handling/carries, DFK at ball/contact, before executor release; existing v27 state and restart event reused. |
+| 1.12 | 2026-10-29 | §5.3 added: owner-approved W8 C eight-second hand-control corner (ERR-011-021) — Resolve position after §5.2, #5 cancellation, keeper-position corner side with high-Y tie and ball-radius inset, shared `ApplyRestart`/taker, existing `Corner` event kind. Specified, not implemented. Adversarial review round 1: §5.3 states the exact Resolve slot (after the post-reattachment re-check, before `ApplyFoulIfCaptured`, frame ends), replaces the false "boundary restart already applied earlier" sentence with the predicate-5 precedence, and names `cue: RestartCue.Corner`. Review round 2: §5.3 states that the sanction leaves one `Cancelled` terminal, drained next frame, instead of "no late callback". Review round 3: the `Cancelled` terminal is conditional on a request still in flight, which is unreachable at elapsed ≥ 481 in production. Review round 4: §5.3 requires one shared whistle-finish helper with its nine steps in the landed order, pins `RestartKind = Corner (3)` and drops the event-only-code option, builds the defensive in-flight case only through `TestOnly_` seams (the crafted-restore route is withdrawn), and records the restore-rejection rule for an in-flight request. Review round 5: the whistle-finish helper is described as returning `bool` with a `recordIndirectTaker` flag; #5 cancellation happens inside `ApplyRestart`; the in-flight-at-481 case is unreachable in production and built only through `TestOnly_` seams; the live-iff and range checks run in the snapshot reader. Review round 6 (October 30, 2026): §5.3 records that full time is a freeze (no corner after full time, including elapsed 481 on the final-whistle tick) and that the restore reader skips the range and remaining-windup checks when `_matchEnded` is true while keeping the structural checks; the in-flight unreachability is scoped to a live match. |
+| 1.11 | 2026-10-21 | §6 open-items UX copy decided by the owner (Gate J J-01/J-02): goalkeeper-mismatched pairs greyed out with a reason; typed refusal rows; no windows projection. |
 | 1.10 | 2026-10-18 | §5.2 landed: PR #515 merge 1a3b4271; six-seed census 0 D-07 free kicks, digests unchanged. |
 | 1.9 | 2026-10-18 | §5.2: PR #515 CI green and pinned-host Unity validation met at `a7800579` (evidence `host-d07-a7800579-20261018`). |
 | 1.8 | 2026-10-18 | PR #515 review: acquisition snap of a legal catch is not a carry; carries sanction only an outward move; goal-line overhang is on the line; handling restart spot clamped onto the pitch. |

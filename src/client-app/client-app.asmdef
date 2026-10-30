@@ -10,7 +10,15 @@
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.Localization",
-        "TacticalDirector.DeterministicSim"
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.SeasonSave",
+        "TacticalDirector.LivingWorld",
+        "TacticalDirector.PlayerProgression",
+        "TacticalDirector.Discipline",
+        "TacticalDirector.ClubFinances",
+        "TacticalDirector.TrainingSystem",
+        "TacticalDirector.InjuriesMedical",
+        "TacticalDirector.Transfers"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

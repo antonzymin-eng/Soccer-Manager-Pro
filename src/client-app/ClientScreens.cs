@@ -1,10 +1,11 @@
 // File:     src/client-app/ClientScreens.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-10-18
 // Author:   —
-// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b (the four screens),
+// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b (the four match screens),
+//           §5-P7 (the three career screens),
 //           UI / Client Framework #38 §3.2 (FR-UI-010), Code Standards #20
-// Purpose:  The client's screen catalogue: the four ScreenIds as typed, named values. This is the one
+// Purpose:  The client's screen catalogue: every ScreenId as a typed, named value. This is the one
 //           place a screen identity is minted; every registration and navigation site reads from here.
 
 using TacticalDirector.UiFramework;
@@ -33,10 +34,20 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>Post-Match Report — final score + stats once the match has ended.</summary>
         public static readonly ScreenId PostMatchReport = new ScreenId(ClientAppConstants.SCREEN_ID_POST_MATCH_REPORT);
+
+        /// <summary>Career Home / Season — the career context root: what changed, what is next, progress (§5-P7).</summary>
+        public static readonly ScreenId CareerHome = new ScreenId(ClientAppConstants.SCREEN_ID_CAREER_HOME);
+
+        /// <summary>New Career — choose a club in a freshly generated league (§5-P7).</summary>
+        public static readonly ScreenId NewCareer = new ScreenId(ClientAppConstants.SCREEN_ID_NEW_CAREER);
+
+        /// <summary>Load Career — pick a save slot to resume (§5-P7).</summary>
+        public static readonly ScreenId LoadCareer = new ScreenId(ClientAppConstants.SCREEN_ID_LOAD_CAREER);
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-07 | —      | Initial creation: the four screens as typed ScreenIds.         |
+// | 1.1     | 2026-10-18 | —      | §5-P7: CareerHome, NewCareer, LoadCareer.                      |
 #endregion

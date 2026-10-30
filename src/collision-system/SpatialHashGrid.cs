@@ -1,6 +1,8 @@
 // File:     src/collision-system/SpatialHashGrid.cs
 // Created:  2026-05-25
-// Modified: 2026-06-12
+// Modified: 2026-10-21 (J-05: Query clamps its cell square to the grid and walks the occupied-cell
+//           list for wide queries — identical result order, no longer O(range²) per query)
+// Modified (prior): 2026-06-12
 // Author:   —
 // Spec:     Collision System #3 §3.1.2, FR-01, Code Standards #20
 // Purpose:  Uniform grid spatial hash — O(N) insert, O(1) avg query. Broad phase only.
@@ -32,6 +34,9 @@ namespace TacticalDirector.CollisionSystem
         private readonly List<int> _queryBuffer;
         private readonly List<int> _occupiedCells;
 
+        // Scratch for Query's sparse path; sized to the grid so it can hold every occupied cell.
+        private readonly int[] _sortedCells;
+
         /// <summary>Allocates all cell lists at construction time. Call once per match.</summary>
         public SpatialHashGrid()
         {
@@ -43,6 +48,7 @@ namespace TacticalDirector.CollisionSystem
             }
             _queryBuffer = new List<int>(32);
             _occupiedCells = new List<int>(64);
+            _sortedCells = new int[total];
         }
 
         /// <summary>
@@ -108,6 +114,11 @@ namespace TacticalDirector.CollisionSystem
         /// Returns the internal reuse buffer — DO NOT MUTATE; copy if needed beyond the
         /// next Query call (the buffer is cleared at the next Query). O(E) where E =
         /// entities in queried cells.
+        /// <para>Result order is part of the contract (Perception #7 consumes it in order): cells in
+        /// ascending row-major index — y ascending, then x ascending — and insertion order within a
+        /// cell. A query whose square covers more cells than are occupied (Perception's 120 m range
+        /// covers the whole 7,314-cell grid) walks the occupied-cell list in that same order instead
+        /// of visiting every empty cell; both paths return the identical sequence.</para>
         /// </summary>
         public List<int> Query(Vector3 position, float radius)
         {
@@ -121,17 +132,27 @@ namespace TacticalDirector.CollisionSystem
             int gw = SpatialHashConstants.GridWidth;
             int gh = SpatialHashConstants.GridHeight;
 
-            for (int dy = -cr; dy <= cr; dy++)
+            // Clamp the square to the grid up front rather than skipping out-of-range cells one by
+            // one: a 120 m radius otherwise iterates 241 × 241 offsets to reach at most 106 × 69
+            // cells. Long arithmetic so a huge radius cannot overflow cy + cr.
+            int xMin = (int)System.Math.Max(0L, (long)cx - cr);
+            int xMax = (int)System.Math.Min(gw - 1L, (long)cx + cr);
+            int yMin = (int)System.Math.Max(0L, (long)cy - cr);
+            int yMax = (int)System.Math.Min(gh - 1L, (long)cy + cr);
+            int boxCells = (xMax - xMin + 1) * (yMax - yMin + 1);
+
+            if (_occupiedCells.Count < boxCells)
             {
-                int y = cy + dy;
-                if (y < 0 || y >= gh) continue;
+                AppendOccupiedCellsInBox(xMin, xMax, yMin, yMax);
+                return _queryBuffer;
+            }
 
-                for (int dx = -cr; dx <= cr; dx++)
+            for (int y = yMin; y <= yMax; y++)
+            {
+                int row = y * gw;
+                for (int x = xMin; x <= xMax; x++)
                 {
-                    int x = cx + dx;
-                    if (x < 0 || x >= gw) continue;
-
-                    List<int> cell = _cells[y * gw + x];
+                    List<int> cell = _cells[row + x];
                     for (int i = 0; i < cell.Count; i++)
                     {
                         _queryBuffer.Add(cell[i]);
@@ -140,6 +161,42 @@ namespace TacticalDirector.CollisionSystem
             }
 
             return _queryBuffer;
+        }
+
+        // Sparse path of Query: gathers the occupied cells inside the box, sorts their indices
+        // ascending (row-major index order IS the dense scan's y-then-x order), and appends each
+        // cell's entities in insertion order. Each occupied index appears once in _occupiedCells
+        // (InsertCell adds it only on the empty → occupied transition), so the sort sees unique
+        // keys and its result does not depend on the sort's stability.
+        private void AppendOccupiedCellsInBox(int xMin, int xMax, int yMin, int yMax)
+        {
+            int gw = SpatialHashConstants.GridWidth;
+            int count = 0;
+            for (int i = 0; i < _occupiedCells.Count; i++)
+            {
+                int idx = _occupiedCells[i];
+                int y = idx / gw;
+                int x = idx - y * gw;
+                if (x < xMin || x > xMax || y < yMin || y > yMax) continue;
+
+                // Insertion sort: the occupied list is tens of cells, and this stays allocation-free.
+                int j = count++;
+                while (j > 0 && _sortedCells[j - 1] > idx)
+                {
+                    _sortedCells[j] = _sortedCells[j - 1];
+                    j--;
+                }
+                _sortedCells[j] = idx;
+            }
+
+            for (int k = 0; k < count; k++)
+            {
+                List<int> cell = _cells[_sortedCells[k]];
+                for (int i = 0; i < cell.Count; i++)
+                {
+                    _queryBuffer.Add(cell[i]);
+                }
+            }
         }
 
         private void InsertCell(int entityId, int cx, int cy)
@@ -194,4 +251,9 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under    |
 // |         |            |        | Unity and the Linux compile gate alike, so this assembly could not have compiled        |
 // |         |            |        | in-engine. No functional change.                                                        |
+// | 1.6     | 2026-10-21 | —      | Gate-J J-05 (sim throughput). Query clamps its square to the grid before iterating, and |
+// |         |            |        | a query covering more cells than are occupied walks the occupied-cell list sorted into  |
+// |         |            |        | row-major order. Perception's 120 m query had iterated 241 × 241 offsets per call (the  |
+// |         |            |        | largest single cost in a match tick). Result sequence is unchanged on both paths and is |
+// |         |            |        | locked against the previous dense scan by SpatialHashGridQueryOrderTests.              |
 #endregion
