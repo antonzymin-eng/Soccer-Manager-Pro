@@ -166,14 +166,18 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
 
 - T-5.1.10.1 The 60 Hz claim frame is recorded at each of the three hand-claim sites (aerial/cross
   claim, dive-save catch, smother); elapsed 0 / 479 / 480 / 481; a claim landing late within its
-  six-frame tactical cell is still timed from its exact frame. The stored start frame is a 64-bit
+  six-frame tactical cell is still timed from its exact frame. Oracle: no corner at elapsed 0, 479 or
+  480; a corner at 481 when all five predicates hold. The stored start frame is a 64-bit
   `long` set by #11 and read-only to the engine; the frame domain feeding it is the engine's `int`
   frame (about 414 days of play, an accepted Stage-0 limit), and storing the frame never narrows.
 - T-5.1.10.2 A CONTACT at elapsed 480 is legal; hand control held into elapsed 481 is sanctioned
-  before a same-frame CONTACT, with no kick, no CONTACT, no `Completed` terminal and no
-  `DistributionExecutedEvent`. `ApplyRestart` leaves exactly one `Cancelled` terminal, drained on the
-  following frame's Resolve with no #11 state change (the keeper is already `Recovering`). A pending
-  distribution reaching CONTACT at elapsed 480 is not cancelled by any pre-executor guard.
+  with no kick, no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`. (a) Production
+  case: a sanction with no pending #5 request produces zero terminals and zero feedback. (b) Defensive
+  case: if a #5 request is still in flight, the sanction cancels it, `ApplyRestart` leaves exactly one
+  `Cancelled` terminal, and the following frame's Resolve drains it with no #11 state change (the keeper
+  is already `Recovering`). The §3.8.4 admission predicate makes a request in flight at elapsed ≥ 481
+  unreachable in production, so (b) builds that state through a `TestOnly_` seam or a crafted restore.
+  A pending distribution reaching CONTACT at elapsed 480 is not cancelled by any pre-executor guard.
 - T-5.1.10.3 Controlled feet possession never becomes a corner, and the feet guard neither inherits
   nor leaks the hand clock. The engine stall guard is feet-only at C, with no hand exception; it is a
   non-law guard. (a) A hand episode ends at CONTACT; more than 481 frames after the original claim the
@@ -185,10 +189,14 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
   hold followed by feet possession does not fire 60 frames into the feet possession).
 - T-5.1.10.4 The full five-part predicate (one case failing each predicate in turn) in both `HandsOnBall` and controlled `Distributing`,
   including retained-possession reject/cancel and an in-progress WINDUP.
-- T-5.1.10.5 Bounce/toss does not reset the clock. Actual release, real loss, restart, goal or foul
-  tears the episode down once; stale intent cannot cause a later restart. All current Roll/Throw/Kick
-  variants end hand control at their atomic CONTACT. A separately specified future punt/drop must
-  stop the clock at its earlier hand release and permit a later kick without a phantom corner.
+- T-5.1.10.5 Only a successful claim sets `handControlStartFrame`. Oracle: across N tactical ticks of
+  holding (`HandsOnBall → HandsOnBall` at 10 Hz), and across a retained #5 reject or a retained cancel
+  (`Distributing → HandsOnBall`), `handControlStartFrame` is unchanged. Bounce/toss has no Stage-0
+  producer and is not a Stage-0 test; the future punt/drop (stop the clock at its earlier hand release,
+  permit a later kick without a phantom corner) is deferred to its own specification and is not a
+  Stage-0 test either. Actual release, real loss, restart, goal or foul tears the episode down once;
+  stale intent cannot cause a later restart. All current Roll/Throw/Kick variants end hand control at
+  their atomic CONTACT.
 - T-5.1.10.6 Predicate 4: hand episodes held inside the area, on each boundary face/corner and with
   goal-line overhang (§3.1.4 geometry) all time out to a corner at 481; so does §3.1.4's body-outside
   hold after a legal inside catch, held still or moved back toward the area.
@@ -205,7 +213,8 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
   no corner or kick; a slot refresh that does not call it preserves the episode and its clock.
   Corrupt restore: a body with `HandsOnBall` or controlled `Distributing` and an inactive or future
   `handControlStartFrame`, or with an active clock and any other state, is rejected with
-  `InvalidOperationException`.
+  `InvalidOperationException`; so is a body whose pending #5 request has
+  `FrameNumber + WindupFrames > handControlStartFrame + 480`.
 - T-5.1.10.10 No new RNG draw, default-policy switch, duplicate CONTACT or bypass of the existing #5
   completion/cancellation feedback.
 - T-5.1.10.11 A first or repeated offence produces no card and no card event at Stage 0; repeated-offence
@@ -222,10 +231,11 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
   earlier in the frame gives no corner. (e) Replay and restore of each case reproduce the same outcome.
 - T-5.1.10.13 §3.8.4 admission/retry budget (`candidateContactFrame = currentFrame + WindupFrames`,
   CONTACT asserted on exactly that frame): live configured windups and all six #21 policy delays
-  satisfy the first-attempt bound (`210 + 84 = 294 ≤ 480`); a retry reaching CONTACT at elapsed 480
+  satisfy the first-attempt bound (`210 + 84 = 294 ≤ 480`), and the test fails if any configured policy has
+  `6·D + W > GK_HAND_CONTROL_MAX_FRAMES` (such a first attempt would be refused and concede a corner); a retry reaching CONTACT at elapsed 480
   is accepted and one at 481 refused (claim 1,000, heartbeat 1,398: `WindupFrames` 82 accepted, 83
   and the 84-frame Kick refused); repeated rejection until the budget closes; and §3.8.4 case (a), a
-  late retained cancellation about 294 frames after the claim with the heartbeat at most 6 frames
+  retained cancellation at CONTACT about 294 frames after the claim with the heartbeat at most 6 frames
   later and an 84-frame windup, which reaches CONTACT at about elapsed `294 + 6 + 84 = 384 ≤ 480` and
   is accepted.
 
@@ -320,4 +330,4 @@ Deterministic contract tests, each mirrored for both defended ends where geometr
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; 9 unit-test families, 11 integration tests, 4 validation scenarios, 7 cross-spec conformance gates | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | September 27, 2026 | ERR-011-018 | T-5.2.11 names the real #12 surface and records what is now locked (baseline read, cooldown) versus still unconsumed (reactive-radius clamp). | spec + code, same commit |
-| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. Review fix: T-5.1.10.13 uses CONTACT = commit frame + `WindupFrames` (no `+ 1`, #11 §3.8.4): first attempt 294, case (a) about 384, boundary pair `WindupFrames` 82 accepted / 83 refused at heartbeat 1,398. Review round 2: T-5.1.10.1 int frame domain; T-5.1.10.2 one drained `Cancelled` terminal and no pre-executor guard cancel at elapsed 480; T-5.1.10.9 corrupt-restore case for the live-iff invariant. | W8 C contract v0.5 |
+| 0.3 | October 29, 2026 | W8 C spec application / ERR-011-021 | T-5.1.1.4 and T-5.1.8.5 (six-second forced release) retired with their text preserved; new §5.1.10 (T-5.1.10.1–13) locks the §3.8.5 eight-second offence and the §3.8.4 retry budget. T-5.1.8.2 and T-5.2.9 reconciled with the approved W8 B #5 goalkeeper-request seam (stale phantom `PassIntent` text from before ERR-011-015). T-5.1.1.1's stale transition count corrected. Tests specified, not yet implemented. Adversarial review round 1: T-5.1.1.1 recounted to 29 rows (new `HandsOnBall → Recovering` row); T-5.1.10.3 split into stale-clock, suppressed-guard and 360-frame cases; T-5.1.10.4/.6 five-part predicate; T-5.1.10.8/.9/.13 extended; T-5.1.10.11 states the no-card Stage-0 behaviour; T-5.1.10.12 given expected outcomes. Review fix: T-5.1.10.13 uses CONTACT = commit frame + `WindupFrames` (no `+ 1`, #11 §3.8.4): first attempt 294, case (a) about 384, boundary pair `WindupFrames` 82 accepted / 83 refused at heartbeat 1,398. Review round 2: T-5.1.10.1 int frame domain; T-5.1.10.2 one drained `Cancelled` terminal and no pre-executor guard cancel at elapsed 480; T-5.1.10.9 corrupt-restore case for the live-iff invariant. Review round 3: T-5.1.10.1 elapsed oracle; T-5.1.10.2 production case (no pending request, zero terminals) and the `TestOnly_`/crafted-restore defensive case; T-5.1.10.5 tactical-tick and retained reject/cancel oracle, bounce/toss and punt/drop not Stage-0 tests; T-5.1.10.9 pending-request frame corrupt-restore case; T-5.1.10.13 `6·D + W` failure condition and case (a) reworded. | W8 C contract v0.5 |

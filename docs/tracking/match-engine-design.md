@@ -7,7 +7,8 @@
 
 > **Created:** June 15, 2026
 > **W8 B status:** **Approved six-policy wiring is implemented locally at `e54335b0`; the frozen comparison is complete and the full-sweep observer correction is validated. Final-head Unity 6000.4.9f1 validation remains pending.** See [implementation / evidence](w8-b-implementation-results.md). The historical #466 substrate compile does not validate this new source.
-> **Last Updated:** October 15, 2026 (v2.20 — live six-policy branch and measured e54335b0 comparison; final 86a9496e test/comment-only closeout; fresh full CI / Unity validation pending.)
+> **Last Updated:** October 29, 2026 (v2.22 — W8 C Law-12 contract applied, specified not implemented; see item 19.)
+> **Last Updated (prior):** October 15, 2026 (v2.20 — live six-policy branch and measured e54335b0 comparison; final 86a9496e test/comment-only closeout; fresh full CI / Unity validation pending.)
 > **Prior update:** September 28, 2026 (v2.19 — §5.Z.7 item 3 closed: FM-08 is Warning since W2 (Aug 12), so the 12 CI scenarios that declared it via blanket `ignoreFailingMessages` no longer suppress Error logs. Measured: only #6 FM-03 surfaced, downgraded by PR #467; 12/12 pass with it.)
 > **Prior W8 landing record:** September 27, 2026 (v2.18 — W8 B landing record: corrected head 795ca64 passed CI 36337174267 including the functional gate; Unity skipped normally. Codec proof test v1.22 now uses distinct non-default AgentId/TeamId/request-target/effective-target sentinels. Test/tracking only; no runtime/schema/RNG change. Landing-record head requires its own CI.)
 > **Prior W8 snapshot-proof update:** September 27, 2026 (v2.17 — W8 B snapshot-proof correction after CI 36328692042: three pre-Snapshot CaptureDurablePayload probes were empty/vacuous and are replaced by a >0-byte guarded direct PassExecutor writer/reader round-trip covering all v24 GK-distribution fields. MatchEngine v1.94 exposes only that codec internally for tests. No runtime/schema/RNG change; fresh CI required.)
@@ -37,7 +38,7 @@
 > Two findings are recorded but deliberately NOT fixed here: the process-static EventBus makes INTERLEAVED
 > engines diverge (latent since #17, invisible until a production event was finally published), and the foul
 > heuristic issues **7 red cards per 9 minutes** — see §5.Z.7. Prior entry below.)
-> **Last Updated:** July 26, 2026, later same day (v2.3 — **§5.Z.9 foul & discipline balance pass landed;
+> **Last Updated (prior):** July 26, 2026, later same day (v2.3 — **§5.Z.9 foul & discipline balance pass landed;
 > §5.Z.7 item 1 CLOSED.** A played match no longer sends seven players off every nine minutes: measured
 > **480 → 21 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 minutes**, against a football reference of
 > ~22 / ~3.5 / ~0.25. **The measurement refuted §5.Z.7's own diagnosis.** The qualifying-force distribution
@@ -400,8 +401,8 @@ requires adding read/restore seams — parallel to
     ERR-011-021) the hand budget becomes `currentFrame + WindupFrames ≤ handControlStartFrame + 480`,
     gating the first commit and every retry, with CONTACT counted on commit frame + `WindupFrames`
     (#5 §3.8.13 item 4; `W8BDistributionTests` pins `ContactFrame == FrameNumber + WindupFrames`):
-    first attempt `210 + 84 = 294` frames (186-frame margin), and the late-cancel retry reaches CONTACT
-    at about `294 + 6 + 84 = 384` and is then permitted. The B figures above (295, 385, `+ 1`) describe
+    first attempt `210 + 84 = 294` frames (186-frame margin), and the retry after a retained cancellation
+    at CONTACT (the only retained cancel under C) reaches CONTACT at about `294 + 6 + 84 = 384` and is then permitted. The B figures above (295, 385, `+ 1`) describe
     W8 B code, whose `DistributionContactFits` keeps `+ 1` as a harmless one-frame margin under its
     strict guards, until C lands.*
 17. The frozen Stage A six-seed corpus exercised **SlowDown only**. Its A→B rerun therefore measures
@@ -423,14 +424,21 @@ requires adding read/restore seams — parallel to
     end Resolve for that frame after the event and possession publication. Cancel the accepted #5
     request through its terminal-feedback path and use the shared restart seam
     ([restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
-    The sanction produces no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`;
-    `ApplyRestart` leaves one `Cancelled` terminal, drained on the following frame's Resolve with no #11
-    state change (the keeper is already `Recovering`). Never reuse the post-executor drop slot.
+    The sanction produces no CONTACT, no `Completed` terminal and no `DistributionExecutedEvent`. If a #5
+    goalkeeper request is still in flight, the sanction cancels it and `ApplyRestart` leaves exactly one
+    `Cancelled` terminal, drained on the following frame's Resolve with no #11 state change (the keeper is
+    already `Recovering`); otherwise no terminal exists. Under the #11 §3.8.4 admission predicate an
+    in-flight request at elapsed ≥ 481 is unreachable in production, so the production sanction has no
+    pending request, and the same-frame-CONTACT ordering is a defensive case tested through a `TestOnly_`
+    seam or a crafted restore. Never reuse the post-executor drop slot.
     `CancelExpiredGoalkeeperDistributions` is **removed for hand episodes** (the elapsed-481 corner is
-    the only hand deadline and already cancels), and `DistributionContactFits` is replaced by the #11
+    the only hand deadline and cancels any request still in flight), and `DistributionContactFits` is replaced by the #11
     §3.8.4 admission predicate, which gates the first commit and every retry. #11 also keeps the
     live-iff invariant: `HandsOnBall` or still-controlled `Distributing` if and only if the clock is
-    active and `≤ currentFrame`; the snapshot reader rejects a violation. `EnforceGoalkeeperReleaseRule` becomes feet-only via
+    active and `≤ currentFrame`; the snapshot reader rejects a violation. Only a successful claim sets
+    the clock (a transition into `HandsOnBall` from a non-hand state, at the three claim sites); same-state
+    writes (`HandsOnBall → HandsOnBall` at 10 Hz and 60 Hz, including the retained #5 reject) and the
+    retained-cancel return (`Distributing → HandsOnBall`) preserve it. `EnforceGoalkeeperReleaseRule` becomes feet-only via
     `!HasGoalkeeperHandControl(holder)` with no hand exception; reset or segregate its elapsed state
     at the hand-to-feet transition. Retag `GK_MAX_HOLD_SECONDS` `[EST]` (provisional non-law
     anti-stall duration, 6 s unchanged); `GkMaxHoldTicks` stays `[DERIVED]`. C changes only code
@@ -2042,7 +2050,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
-| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. Review round 2: item 19 removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate, states the one drained `Cancelled` terminal and the live-iff invariant, and limits C's Law-12 cleanup to code comments, constants and telemetry comments (§5.Z.16 keeps its Correction). |
+| 2.22 | 2026-10-29 | — | W8 C spec application / ERR-011-021: item 19 records the engine obligations of the owner-approved eight-second hand-control offence (claim-frame clock, Resolve check after §3.1.4 and before C3, corner via the restart contract §5.3, feet-only legacy guard, `[EST]` retag); items 14/16 point at the C replacement; §5.Z.16 corrected (the six-second guard is not law). Specified, not implemented. Adversarial review round 1: item 19 now has #11 own and the engine read the claim frame, names the exact Resolve slot and end-of-frame behaviour, and adds the fifth (boundary) predicate. Review fix: item 16's C note uses `currentFrame + WindupFrames ≤ handControlStartFrame + 480` (no `+ 1`; first attempt 294, late-cancel retry about 384), keeping 295/385/`+ 1` as W8 B code descriptions. Review round 2: item 19 removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate, states the one drained `Cancelled` terminal and the live-iff invariant, and limits C's Law-12 cleanup to code comments, constants and telemetry comments (§5.Z.16 keeps its Correction). Review round 3: header `Last Updated` set to v2.22 (older bare lines relabelled prior); item 19 sets the clock only on a successful claim and makes the single `Cancelled` terminal conditional on a request in flight (unreachable at elapsed ≥ 481 in production). |
 | 2.21 | 2026-10-16 | — | PR #511 / ERR-011-020: v27 canonical release/offence/IFK history, #11 avoidance query and single-whistle precedence; outer save format v3. |
 | 2.20 | 2026-10-15 | — | W8 B exclusive hand-control implementation detail: Resolve cancels pending ordinary foot PASS/SHOOT before CONTACT; the approved distribution windup is preserved. No new timing or recovery rule. |
 | 2.19    | 2026-09-28 | —      | **§5.Z.7 item 3 closed.** The FM-08 severity it records was fixed by W2 (`PassExecutor.cs` v1.16, Aug 12), but the composed scenarios kept blanket `LogAssert.ignoreFailingMessages`. Removed from all 12 CI-run tests. Measured on `main`: only #6 FM-03 surfaced (keeper_claim/contact/conversion, shot_speed); with PR #467's FM-03 Warning downgrade merged, 12/12 pass. |
