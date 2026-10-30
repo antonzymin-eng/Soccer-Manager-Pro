@@ -1,0 +1,27 @@
+// Batch-mode entry for the PR #520 J-05 re-measure: builds the same Windows x64 Mono development
+// player as S0HostBuild.Build (profiler autoconnect, runInBackground off) without an interactive Editor.
+// Usage: Unity -batchmode -quit -projectPath <wt> -executeMethod S0J05Batch.Build -j05Out <dir> -j05Scale <1|2>
+// Untracked probe source, archived with the evidence.
+
+using System;
+using System.IO;
+using UnityEditor;
+
+public static class S0J05Batch
+{
+    public static void Build()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string outDir = null;
+        float scale = 1f;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "-j05Out") outDir = args[i + 1];
+            if (args[i] == "-j05Scale") scale = float.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture);
+        }
+        if (outDir == null) throw new ArgumentException("-j05Out is required");
+        string result = S0HostBuild.Build(outDir, scale);
+        File.AppendAllText(Path.Combine(outDir, "..", "j05-builds.log"), DateTime.UtcNow.ToString("u") + " " + result + Environment.NewLine);
+        if (result.IndexOf("build Succeeded", StringComparison.Ordinal) < 0) EditorApplication.Exit(1);
+    }
+}
