@@ -2,16 +2,18 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 30, 2026\
-**Version:** 0.14\
+**Version:** 0.15\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
 - **J-02 FIXED:** a refusal names its engine-typed reason; the button is kept.
 - **J-04 FIXED and ACCEPTED:** H v0.2 skin, whole-pitch view, statistics in the rail; the owner accepted the visuals on October 28 (§12, v0.8).
-- **J-05 RE-MEASURED, PASS on PR #520 (§18, v0.14):** 10× delivers 601–602 sim ticks/s in the development player; it closes when #520 merges.
+- **J-05 FIXED:** 10× delivers 601–602 sim ticks/s in the development player (§18, v0.14); PR #520 merged as `642294d1` at 02:05 UTC on October 30.
+
+**S0 Gate J ACCEPTED by the owner on October 30, 2026 (§19, v0.15).**
 
 Since v0.10 (§14) the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass and the I-Q16 re-run have PASSED. §14's I-Q15 pass did not reach the earlier-outcome disclosure; v0.13 (§17) reruns I-Q15 with it, PASS. v0.14 (§18) re-measures J-05 on PR #520's merged head: PASS. Still due: #520's merge and Gate-J acceptance. The owner approved the new wording on October 28 (§6, v0.4).
-**S0 Gate J technical verdict: CONDITIONAL PASS** (§7; the v0.1 FAIL is kept in §5).\
+**S0 Gate J technical verdict: PASS** (§7, every condition met; §19). **Owner acceptance: GIVEN October 30** (§19). The v0.1 FAIL is kept in §5.\
 **Purpose:** The owning record for the first real-client run of the four S0 screens, the B8/B10 on-host performance capture
 and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT RUN" line of
 [p5b-screens-validation.md](p5b-screens-validation.md) §"Acceptance matrix" (v0.14) for everything recorded here.\
@@ -169,7 +171,7 @@ J-01 and J-02 no longer contradict the §14.4 substitution contract, and the I-Q
 - ~~B8/B10 are re-captured on this skin within the 16.7 ms p99 budget~~ — **done October 29** (worst p99 10.41 ms, §14, v0.10);
 - ~~one uninterrupted I-Q15 run passes~~ — **done October 29** (37/37, §14, v0.10);
 - ~~the owner accepts the visuals~~ — **done October 28** (J-04 visuals accepted, §12, v0.8; the new wording was approved the same day, v0.4);
-- J-05 lands, or its re-measure is accepted — **re-measured PASS October 30** on PR #520's merged head (§18, v0.14); met when #520 merges.
+- ~~J-05 lands, or its re-measure is accepted~~ — **done October 30**: re-measured PASS on PR #520's merged head (§18, v0.14) and PR #520 merged as `642294d1` at 02:05 UTC.
 
 Owner acceptance stays a separate decision.
 
@@ -471,6 +473,21 @@ per-frame GC counter; the Unity allocation leg is the EditMode test above) and t
 **Verdict.** The J-05 re-measure passes. The last §7 condition is met when PR #520 merges. Gate J stays **CONDITIONAL
 PASS** until then, and Gate-J acceptance remains the owner's separate decision.
 
+## 19. Gate J accepted (v0.15)
+
+PR #520 merged as `642294d1` at 02:05 UTC on October 30, 2026, after green CI on its head `1857b154`. That landed J-05, the last open
+condition of §7, so the Gate-J technical verdict is **PASS**: every §7 condition is met (B8/B10 re-captured on the
+H v0.2 skin, §14; uninterrupted I-Q15, §14 and §17; J-04 visuals and the new wording accepted, §12 and v0.4; J-05
+landed, §18).
+
+**Owner acceptance.** On October 30, 2026 (UTC; the evening of October 29 on the host's Pacific clock), the owner (Anton Zymin) wrote in the session that ran the J-05 re-measure:
+“I'll merge and I sign off on gate J”. **S0 Gate J is ACCEPTED.** The acceptance covers the Gate-J requirements of
+[ux-detailed-plan.md](../design/ux-detailed-plan.md) §6.9 as recorded here (§5 table, §7 conditions), with the limits
+this record already states: packaging identity proof is still to build and contrast is unmeasured (§5), and design E5,
+the FR-PO-052 re-baseline, is not run (§18).
+
+No code, copy or evidence changes with this section.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -489,3 +506,4 @@ PASS** until then, and Gate-J acceptance remains the owner's separate decision.
 | 0.12 | October 29, 2026 | §16: owner report that Faster resized the pitch on the first and last click. Fixed in `c4b65334`: the four playback reasons share one `S0ReservedReason` box that keeps the tallest one's height. Unity compile clean (75 assemblies), EditMode 424/424, before/after captures at 1920×1080 and 1366×768 show the pitch holding one size; owner replied "looks right now". Evidence `host-c4b65334-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.13 | October 29, 2026 | §17: external review of `4ff45ee8` — §14's I-Q15 pass never reached the earlier-outcome disclosure (three records; the disclosure needs four). I-Q15 rerun on the pinned host with four and then five records: disclosure reached by Tab and Shift-Tab, toggled by Enter, expanded state and focus kept through 3,600 live ticks and through a new record; 59/59, uninterrupted. Reason box captured at 200% (1920×1080, 1366×768, 800×1000) and 100% narrow: pitch holds one size at every speed step. Evidence `host-4ff45ee8-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.14 | October 30, 2026 | §18: J-05 re-measured on PR #520's merged head `05898cd0` (main with #518 merged in). Unity compile clean (75 assemblies); EditMode 554 passed, 0 failed, 12 ignored. Development player at 10×: 601–602 sim ticks/s in all six #520 sessions (100% and 200% text, statistics open and closed) against 468–557 for a same-session `main` control; 1× holds 60; worst p99 10.88 ms, no frame over 16.7 ms. Evidence `host-05898cd0-20261030/`. The J-05 condition of §7 is met when #520 merges; Gate-J verdict CONDITIONAL PASS until then. |
+| 0.15 | October 30, 2026 | §19: PR #520 merged as `642294d1` at 02:05 UTC, landing J-05, the last §7 condition; Gate-J technical verdict PASS. The owner signed off: “I'll merge and I sign off on gate J”. S0 Gate J ACCEPTED. No code, copy or evidence change. |
