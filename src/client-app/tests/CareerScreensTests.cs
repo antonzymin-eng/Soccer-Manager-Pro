@@ -215,6 +215,8 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsFalse(holder.HasCareer);
             Assert.AreEqual(CareerSlotState.Damaged, temp.Slots.Describe(CareerSaveSlot.Manual1).State);
             Assert.AreEqual(3, File.ReadAllBytes(savePath).Length, "invalidation keeps the save bytes.");
+            Assert.IsFalse(temp.Slots.RestoreDamaged(CareerSaveSlot.Manual1),
+                "a set-aside sidecar never comes back over a save it does not describe.");
             Assert.AreEqual(CareerSaveSlot.Autosave, load.Project().LatestSlot);
 
             Assert.IsTrue(load.TryContinue(), "Continue moves on to the older, loadable autosave.");
@@ -246,4 +248,6 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | dispatcher, New Career and Load Career.                        |
 // | 1.1     | 2026-10-27 | —      | PR 519 review: +2 locks — a corrupt newest slot is invalidated |
 // |         |            |        | so Continue falls back; a refused Incompatible slot is kept.   |
+// | 1.2     | 2026-10-27 | —      | PR 519 review 4: the corrupt slot's set-aside sidecar cannot   |
+// |         |            |        | be restored over the save it no longer describes.              |
 #endregion
