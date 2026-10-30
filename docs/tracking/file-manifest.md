@@ -3699,7 +3699,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSlotState.cs.meta` | Stable Unity asset identity |
 | `CareerSlotSummary.cs` | One Load Career picker row (sidecar facts) |
 | `CareerSlotSummary.cs.meta` | Stable Unity asset identity |
-| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, save digest and interrupted-write recovery at open (files kept when a sidecar is unreadable), temp cleanup, `MarkDamaged` |
+| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, save digest and interrupted-write recovery at open (files kept when a sidecar is unreadable), sidecar backup on swap, durable sidecar write, temp cleanup, best-effort post-commit cleanup, reversible `MarkDamaged` / `RestoreDamaged` (a set-aside slot is never revived from stale backups) |
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
@@ -3723,7 +3723,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `tests/CareerProgressTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerSessionTests.cs` | New-game composition, autosave cadence, resume ≡ uninterrupted, Continue, a caller error never invalidates a slot (9) |
 | `tests/CareerSessionTests.cs.meta` | Stable Unity asset identity |
-| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged`, interrupted-write recovery incl. a locked staged sidecar (18) |
+| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged` / `RestoreDamaged` incl. sequence ties, interrupted-write recovery incl. a locked staged sidecar, a sidecar or save left only as its backup, stale backups beside a set-aside slot and an unpaired sidecar backup, held post-commit cleanup (27) |
 | `tests/CareerSaveSlotsTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerScreensTests.cs` | Career Home, season dispatcher, New Career, Load Career incl. corrupt-newest fallback (9) |
 | `tests/CareerScreensTests.cs.meta` | Stable Unity asset identity |

@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-27
+// Modified: 2026-10-29
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -143,10 +143,11 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>
         /// Resumes the career saved in <paramref name="slot"/>. A <see cref="CareerSlotState.Ready"/>
-        /// slot whose save then fails to decode or rebuild is invalidated
-        /// (<see cref="CareerSaveSlots.MarkDamaged"/>) before the failure propagates, so it cannot keep
-        /// winning Continue; a read that fails on IO is left alone, as it may succeed on retry. Caller
-        /// arguments are validated first, so a caller error never invalidates a healthy slot.
+        /// slot whose save then fails #30's load (decode or coherence gates), holds a mid-match save,
+        /// or fails to rebuild into a career is invalidated (<see cref="CareerSaveSlots.MarkDamaged"/>,
+        /// reversible) before the failure propagates, so it cannot keep winning Continue. A read that
+        /// fails on IO is left alone, as it may succeed on retry. Caller arguments are validated first,
+        /// so a caller error never invalidates a healthy slot.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="slots"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="slot"/> or
@@ -180,7 +181,14 @@ namespace TacticalDirector.ClientApp
 
             try
             {
-                return ResumeLoadable(slots, slot, mode);
+                SeasonSaveContents contents = slots.Load(slot);
+                if (contents.Match != null)
+                {
+                    throw new InvalidOperationException(
+                        "Slot " + slot + " holds a mid-match save; the career client cannot resume a match (§5-P7 D-P7-6).");
+                }
+
+                return Rebuild(slots, contents, mode);
             }
             catch (Exception e) when (e is InvalidDataException || e is InvalidOperationException
                 || e is ArgumentException || e is FormatException)
@@ -190,15 +198,10 @@ namespace TacticalDirector.ClientApp
             }
         }
 
-        private static CareerSession ResumeLoadable(CareerSaveSlots slots, CareerSaveSlot slot, RoundResolutionMode mode)
+        // A failure here may be this build's code rather than the file, but left Ready the slot would
+        // keep winning Continue and failing the same way; invalidation is reversible, so it is cheap.
+        private static CareerSession Rebuild(CareerSaveSlots slots, SeasonSaveContents contents, RoundResolutionMode mode)
         {
-            SeasonSaveContents contents = slots.Load(slot);
-            if (contents.Match != null)
-            {
-                throw new InvalidOperationException(
-                    "Slot " + slot + " holds a mid-match save; the career client cannot resume a match (§5-P7 D-P7-6).");
-            }
-
             ulong worldSeed = contents.World.WorldSeed;
             League league = LeagueBootstrap.Generate(worldSeed, contents.Season.ClubCount);
             PlayerCareerStates career = PlayerCareerStates.FromBlocks(
@@ -369,4 +372,9 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | to decode or rebuild, so Continue stops choosing it.           |
 // | 1.2     | 2026-10-27 | —      | PR 519 review 2: Resume validates the mode before the guarded  |
 // |         |            |        | rebuild, so a caller error never invalidates a healthy slot.   |
+// | 1.3     | 2026-10-27 | —      | PR 519 review 4: only #30's load (and a mid-match save)        |
+// |         |            |        | invalidates the slot; a failed rebuild from loaded contents    |
+// |         |            |        | propagates and leaves it alone.                                |
+// | 1.4     | 2026-10-29 | —      | PR 522 review: a failed rebuild invalidates the slot too, so   |
+// |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
 #endregion
