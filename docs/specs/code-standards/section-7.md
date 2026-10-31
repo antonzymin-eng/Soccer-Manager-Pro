@@ -5,8 +5,8 @@
 begins, Stage 5+ rule extensions, permanent exclusions (style debates this spec refuses to
 relitigate), and the deferred-decisions tracker (D1–D5).
 **Created:** May 8, 2026
-**Modified:** September 14, 2026
-**Version:** 1.4
+**Modified:** October 30, 2026
+**Version:** 1.5
 **Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 7; `outline-mid.md` v1.2, §7.1–§7.5
@@ -66,8 +66,10 @@ command; failure at that gate blocks the corresponding action.
 conformance. A green Linux `tools/dotnet-ci/run-gate.sh` result is required supplemental
 evidence, but it is not sufficient to establish that the code compiles.** The Linux shim
 uses MSBuild project references, which can make dependencies visible transitively; Unity
-compilation requires every assembly whose types a source assembly names to be listed
-directly in that source assembly's `.asmdef`. A missing direct reference can therefore
+compilation requires direct `.asmdef` references to other assembly-definition
+assemblies whose types the source uses. Unity-supplied engine/framework and
+precompiled references follow the applicable Unity settings separately (§5.4.5 item 7).
+A missing direct assembly-definition reference can therefore
 remain green in the Linux gate and fail the governing Unity compile with errors such as
 CS0012/CS0234. FR-CS-055's rule text is unchanged; §5.4.5 item 7 now makes the direct-
 reference review test explicit until the planned analyzer exists.
@@ -139,10 +141,11 @@ state snapshots, not deterministic arithmetic — per CLAUDE.md "When Writing Co
 Stage 5, cross-platform bit-exact parity becomes a hard requirement. Additions at that
 point:
 
-- FMA and denormals-are-zero compiler flags remain locked to the certified platform tuple
-  in `certification-platform.md`. FR-CS-040 itself is active at Stage 0 (the default ban
-  applies); its override pathway requires both that platform pin and lead-developer
-  sign-off.
+- FMA and denormals-are-zero compiler flags locked per-platform. `certification-platform.md`
+  has pinned them off (DAZ, FTZ, fp-contract and FMA intrinsics) for the Stage 0 host since
+  July 19, 2026 (`ERR-020-008` corrected a stale `_TBD_` claim here). FR-CS-040 itself is active at Stage 0 (the default-ban
+  applies); what unblocks here is FR-CS-040's *override pathway* — the platform-pin
+  precondition that, together with lead-developer sign-off, allows FMA opt-in.
 - Platform-specific known-answer test (KAT) suites added to the merge gate.
 
 ### `unsafe` and SIMD Intrinsic Policy Revisit (Stage 2+ trigger: performance profiling)
@@ -204,7 +207,7 @@ deferrals and decisions whose trigger has fired.
 | D2 | Test framework choice | Spec #19 (Testing Strategy) owns test-framework selection. Spec #20 §3.9.4 remains framework-agnostic to avoid a circular dependency. | Spec #19 is the authoritative owner; no #20 choice is required here. | Spec #19 author |
 | D3 | Build commands, IDE setup, assembly GUIDs | Concrete implementation details live in the existing `src/CLAUDE.md`; the historical creation deferral has fired. | **Resolved as a location decision:** `src/CLAUDE.md` exists; maintain concrete codebase-local guidance there. | Stage 1 setup author |
 | D4 | Fixed64 enforcement rules | Stage 0 uses `float`. Fixed64 migration remains Stage 5+. Spec #9 defines that future surface; see §7.3. | Spec #9 Stage 5+ activation. | Spec #9 author → Spec #20 amendment author |
-| D5 | Concrete C# language version pin | **RESOLVED September 14, 2026 (`ERR-020-008`): C# 9.0**, fixed by the certified Unity 6000.4.9f1 host. FR-CS-008 is active; supplemental/synthetic compilers may not widen the allowed language surface. | **Resolved.** `certification-platform.md` now records the C# 9.0 row explicitly; `tools/dotnet-ci/generate_projects.py` already mirrors it with `<LangVersion>9.0</LangVersion>`. | Lead developer |
+| D5 | Concrete C# language version pin | **RESOLVED October 30, 2026 (`ERR-020-008`, PR #527): C# 9.0**, fixed by the certified Unity 6000.4.9f1 host. FR-CS-008 is active; supplemental/synthetic compilers may not widen the allowed language surface. | **Resolved.** `certification-platform.md` now records the C# 9.0 row explicitly; `tools/dotnet-ci/generate_projects.py` already mirrors it with `<LangVersion>9.0</LangVersion>`. | Lead developer |
 
 **Resolution protocol:** When a deferred decision is resolved, the owner MUST:
 1. Update this table row (change "deferred" entry to a resolution summary with date).
@@ -224,7 +227,8 @@ deferrals and decisions whose trigger has fired.
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** Two sites asserted `src/` is empty / no source code exists, fifteen months after coding began (May 19, 2026). §7.2's "Stage 0 status" paragraph rewritten against the live tree and CI, every figure re-derived August 18, 2026 (35 assemblies via `ls -d src/*/ | wc -l`, 947 `.cs` files via `find src -name '*.cs' | wc -l`; `.github/workflows/ci.yml` runs the advisory `dotnet format whitespace` check and the blocking `tools/dotnet-ci/run-gate.sh` on every push) — and precise about what remains missing: the Roslyn analyzer ruleset, `BannedSymbols.txt`, `.editorconfig`, and the zero-allocation profiler merge gate. §7.5's D1 row premise ("no source code exists at Stage 0") corrected to the surviving half of its own argument: code exists, a profiled baseline does not, so D1 stays deferred on grounds that are still true. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §7.2's "on every push" corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Same correction as `section-4.md` v1.2 and `section-5.md` v1.2; the v1.1 row above is left as written per the history convention. | — |
 | 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Adds the explicit A3→A4→activation boundary for FR-CS-074–081: reapproval, compiler-backed resolver/discovery proof, and enforcement activation are separate gates; Spec #19 retains proof/gate ownership. Also fixes the live §7.2 "Every push" residue to the already-stated main-push/PR trigger scope. | PENDING — A3.4 |
-| 1.4 | September 14, 2026 | Codex | **`ERR-020-008` — verification/platform drift corrected.** Records Unity 6000.4.9f1 on the pinned host as governing compiler; Linux is required supplemental but insufficient; documents the direct-`.asmdef` blind spot and the existing conditional `nightly-determinism-certified` pinned-host lane without misrepresenting it as a PR gate. Corrects the stale host-pin explanation for the profiler gate, resolves D5 at C# 9.0, marks D1's platform half satisfied, and records that the D5 `src/CLAUDE.md` artifact already exists. Consequential correction: D4-artifact now requires block-scoped namespaces because file-scoped namespaces are C# 10 and impossible under the activated C# 9.0 ceiling. The erratum is immediately effective; A3.1b remains pending A3.4. No FR-CS-055 text, architecture rule, schema, RNG stream/domain/draw site, or draw order changed. | — |
+| 1.4 | October 10, 2026 | — | **`ERR-020-008` — stale platform-pin claims corrected.** D1-artifact's trigger now records that its platform half is satisfied. D4-artifact's namespace style changes from file-scoped to block-scoped, because file-scoped namespaces are C# 10 and outside FR-CS-008's C# 9.0 working ceiling. The §7.2 merge-gate paragraph no longer blames the host pin, which was certified July 19; the missing piece is the pinned-host profiler workflow. §7.3 no longer calls the FMA/DAZ flags `_TBD_`. In §7.5, D1's prerequisite (a) is satisfied, D5 is partially resolved (C# 9.0 working ceiling; the exact Unity compiler ceiling and the certification-platform row are still open), and the resolution protocol no longer cites FR-CS-008 as INACTIVE. Out of scope, left unchanged: D3/D5-artifact's stale "`src/CLAUDE.md` MUST NOT be created" wording, and every verification-model change (Unity governs the build; direct `.asmdef` references), which belongs to the separate owner-reviewed amendment. This is an erratum against the approved baseline. It does not approve the pending A3.1a/A3.1b amendment. | — |
+| 1.5 | October 30, 2026 | Codex | **PR #527 / `ERR-020-008` merge reconciliation.** Reconciles PR #527 with current main. Preserves the October 10 history and explicit certified floating-point flags; carries forward the governing Unity compile and supplemental Linux model, conditional nightly-lane limits, missing profiler-gate work, existing src/CLAUDE.md artifact and explicit C# 9.0 language row. D5 is now resolved by that row; historical statements about its absence describe the earlier baseline. Direct-reference wording distinguishes assembly-definition dependencies from Unity-supplied references. A3.1b remains independently pending A3.4. | — |
 
 ---
 

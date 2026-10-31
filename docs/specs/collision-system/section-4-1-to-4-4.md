@@ -3,13 +3,17 @@
 **Purpose:** Defines the comprehensive data structures, constants organization, memory layout, configuration management, and code architecture for the Collision System. This section consolidates all struct definitions referenced throughout Sections 1â€“3 and establishes the implementation blueprint for Stage 0.
 
 **Created:** February 15, 2026, 5:30 PM PST  
-**Revised:** March 05, 2026, audit session  
-**Version:** 1.1  
+**Revised:** October 18, 2026 (ERR-003-010); prior: March 05, 2026, audit session  
+**Version:** 1.2  
 **Status:** Draft — Revised  
 **Author:** Claude (AI) with Anton (Lead Developer)  
 **Prerequisites:** Section 1 (Purpose & Scope) v1.1, Section 2 (System Overview) v1.2, Section 3 (Core Systems) v1.1
 
 **Changelog:**
+- v1.2 (Oct 18, 2026): ERR-003-010. The §4.2.4 `AgentBallCollisionData` definition gains
+  `AgentPosition` (agent centre; Ball Physics #1 §3.1.10.1 deflection-normal input), which
+  production has carried since July 27, 2026 (ERR-003-007) and FR-03 has documented since
+  ERR-003-009. The memory comment is corrected from 32 to 52 bytes. Documentation only.
 - v1.1 (Mar 5, 2026): Updated prerequisite versions. Added note that Section 4 §4.7.3
   BeginFrame seed formula is authoritative (Section 2 §2.6.4 updated to match in v1.2).
   Cross-reference verification §2.4 memory note corrected to §2.5 (Section 2 renumbered
@@ -426,15 +430,36 @@ public enum CollisionType
 /// 
 /// Cross-reference: Ball Physics Spec #1, Section 3.1.10.1 (BodyPart enum)
 /// 
-/// Memory: 32 bytes (Vector3 + Vector3 + enum + two ints + bool + padding)
+/// Memory: 52 bytes (Vector3 x 3 + enum + two ints + bool + padding).
+/// ERR-003-010: was "32 bytes (Vector3 + Vector3 + ...)", which omitted AgentPosition and
+/// also undercounted the two-Vector3 layout (24 + 4 + 8 + 1 = 37, padded to 40).
 /// </summary>
 public struct AgentBallCollisionData
 {
     /// <summary>
-    /// Point where agent contacted ball (world coordinates).
-    /// Used by Ball Physics to determine deflection angle.
+    /// Point where agent contacted ball (world coordinates, meters).
+    /// Lies on the agent hitbox surface at the ball's height (Section 3.2).
+    /// Not the deflection-normal input; see AgentPosition.
     /// </summary>
     public Vector3 ContactPoint;
+
+    /// <summary>
+    /// Agent centre at moment of contact (world coordinates, meters; corner origin per
+    /// Ball Physics #1 §1.2: X 0–105 goal-to-goal, Y 0–68 touchline-to-touchline, Z up).
+    /// Production: CollisionSystem.ProcessAgentBall writes the collision snapshot's Position.
+    ///
+    /// Ball Physics #1 §3.1.10.1 (BallCollision.ApplyAgentDeflection) derives the planar,
+    /// vertical-cylinder deflection normal from ball position minus AgentPosition; Z is
+    /// ignored by the consumer (and is 0 at Stage 0). [CROSS] Agent Movement #2 §3.5.4
+    /// (AgentPhysicalProperties.Position, copied per frame; not a tunable constant).
+    ///
+    /// Example: agent at (50.0, 34.0, 0), hitbox radius 0.40 m, ball at (50.50, 34.0, 0.11):
+    /// ContactPoint ≈ (50.40, 34.0, 0.11), AgentPosition = (50.0, 34.0, 0), normal = +X.
+    ///
+    /// ERR-003-010 (October 18, 2026): ERR-003-009 added this field to FR-03 and §3.3.4
+    /// but not to this consolidated definition.
+    /// </summary>
+    public Vector3 AgentPosition;
     
     /// <summary>
     /// Agent's velocity at moment of contact (m/s).

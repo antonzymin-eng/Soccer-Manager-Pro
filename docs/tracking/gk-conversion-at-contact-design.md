@@ -142,7 +142,7 @@ Why it is nonetheless **not** landed here: §3.
   close-range CONVERSION comparison on identical seeds exists.** *(Title corrected August 18, 2026,
   reviewed adversarial-review finding H13 — it read "until W1's rush geometry is measured", the
   satisfied condition the v1.2 correction removed from the body below but not from this heading;
-  the rush anatomy was measured August 12, 2026, `gk-rush-trigger-design.md` §6 / v1.5.)* The
+  the rush anatomy was measured August 12, 2026, `gk-rush-trigger-design.md` §6 / v1.5, since advanced to **v1.6**.)* The
   `[GT]` ladder in §4 refused the geometry-aware form at every value
   inside #11's own spec ranges, and that refusal was measured against a keeper who **never left his
   line**. Wiring-backlog **W1** landed August 4, 2026 and gives the keeper his first production rush

@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/MatchRenderProjectionTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-16 (P4b AR round 5, M23: the three ball-floor locks are re-anchored on
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-08-16 (P4b AR round 5, M23: the three ball-floor locks are re-anchored on
 //           radius + AgentMarkerLayerHeightM — the >= 0 form stayed green through round 4's M19
 //           ground-layer rescale while the layers were visibly passing through the ball)
 // Author:   —
@@ -79,9 +80,9 @@ namespace TacticalDirector.MatchClientCore.Tests
         public void CuesComeFromTheFrame_AndLandOnTheRightSlot()
         {
             var cues = new LiveAgentCue[Roster];
-            cues[1] = new LiveAgentCue(1, false, -1, false);  // booked outfielder, original starter
-            cues[2] = new LiveAgentCue(0, true, 3, false);    // sent-off substitute
-            cues[3] = new LiveAgentCue(0, false, -1, true);   // the away keeper
+            cues[1] = new LiveAgentCue(1, false, -1, false, MatchEngineConstants.NO_PLAYER_ID);  // booked outfielder, original starter
+            cues[2] = new LiveAgentCue(0, true, 3, false, MatchEngineConstants.NO_PLAYER_ID);    // sent-off substitute
+            cues[3] = new LiveAgentCue(0, false, -1, true, MatchEngineConstants.NO_PLAYER_ID);   // the away keeper
 
             LiveMatchFrame frame = Frame(cues: cues);
             var models = new AgentRenderModel[Roster];
@@ -108,12 +109,12 @@ namespace TacticalDirector.MatchClientCore.Tests
             MatchRoster roster = TwoPerTeam();
 
             var before = new LiveAgentCue[Roster];
-            before[0] = new LiveAgentCue(0, false, -1, true);
+            before[0] = new LiveAgentCue(0, false, -1, true, MatchEngineConstants.NO_PLAYER_ID);
             LiveMatchFrame frameBefore = Frame(cues: before);
 
             var after = new LiveAgentCue[Roster];
-            after[0] = new LiveAgentCue(0, false, 2, false);
-            after[1] = new LiveAgentCue(0, false, -1, true);
+            after[0] = new LiveAgentCue(0, false, 2, false, MatchEngineConstants.NO_PLAYER_ID);
+            after[1] = new LiveAgentCue(0, false, -1, true, MatchEngineConstants.NO_PLAYER_ID);
             LiveMatchFrame frameAfter = Frame(cues: after);
 
             MatchRenderProjection.ProjectAgents(new Vector2[Roster], in frameBefore, roster, models);
@@ -497,4 +498,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | M17_M23 carries the reasoning as a comment and gains a          |
 // |         |            |        | lofted-ball case proving the fix is a FLOOR, not an offset      |
 // |         |            |        | added to every ball in flight.                                  |
+// | 1.5     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
 #endregion

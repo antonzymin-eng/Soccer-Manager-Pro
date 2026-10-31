@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchFrame.cs
 // Created:  2026-07-15
-// Modified: 2026-07-27 (P1 AR-1 M-6: the score and restart triples collapsed into Scoreline /
+// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue)
+// Modified (prior): 2026-07-27 (P1 AR-1 M-6: the score and restart triples collapsed into Scoreline /
 //           RestartBanner, so no two constructor parameters share a type)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
@@ -55,6 +56,13 @@ namespace TacticalDirector.MatchViewer
         /// convention as the two arrays above.</summary>
         public readonly int[] SubstitutionsUsed;
 
+        /// <summary>
+        /// Authoritative cross-tick substitution queue, with sequence identities.
+        /// Null means an older/test-built frame did not provide queue observation;
+        /// an empty array in a captured production frame means the queue is empty.
+        /// </summary>
+        public readonly PendingSubstitution[] PendingSubstitutions;
+
         /// <summary>Goals, home and away.</summary>
         public readonly Scoreline Score;
 
@@ -85,7 +93,8 @@ namespace TacticalDirector.MatchViewer
             Scoreline score,
             bool matchEnded,
             MatchPeriod period,
-            RestartBanner restart)
+            RestartBanner restart,
+            PendingSubstitution[] pendingSubstitutions = null)
         {
             Tick              = tick;
             BallPosition      = ballPosition;
@@ -97,6 +106,7 @@ namespace TacticalDirector.MatchViewer
             MatchEnded        = matchEnded;
             Period            = period;
             Restart           = restart;
+            PendingSubstitutions = pendingSubstitutions;
         }
     }
 }
@@ -117,4 +127,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | 10 parameters, no two sharing a type. HomeScore/AwayScore and  |
 // |         |            |        | LastRestart* are replaced by Score / Restart (all readers      |
 // |         |            |        | updated) rather than kept as duplicate accessors.              |
+// | 1.3     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): PendingSubstitutions, an immutable copy with sequence identities (null for older or test-built frames). |
 #endregion

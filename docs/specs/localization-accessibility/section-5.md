@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** October 7, 2026 (v0.3 — L2 coverage/terminal proof and two-condition identity tests, ERR-049-005/006)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (1H+1M+1L) → AR-2 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -21,7 +22,8 @@
 - **T-LC-IDENTITY-001** — For a fixed `(intent, draw, slots)`, `ILocalizer.Render` with only the base locale
   loaded returns **byte-identical** output to `InteractionTextGenerator`'s pre-retrofit result — the
   migrated corpus + `draw % variantCount` reproduce the exact template selection, slot expansion, and
-  appended clause (the §3.6 / Appendix C worked case, plus a cited-episode case exercising the clause).
+  appended clause (the §3.6 / Appendix C worked case, plus a cited-episode case exercising the clause),
+  provided every slot value is brace-free and every template brace belongs to a well-formed `{name}` token. Brace-bearing values instead obey non-recursive substitution (ERR-049-006).
 - **T-LC-IDENTITY-002** — `variantCount(BaseLocale, Id) == TemplatesFor(intent).Length` for every defined
   intent (the migrated corpus preserves counts).
 
@@ -33,15 +35,21 @@
   (a spy asserts zero draws / zero tick advances from the renderer).
 
 ### T-LC-FALLBACK — Fail-safe fallback (FR-LC-011, KD-5)
-- **T-LC-FALLBACK-001** — A missing key / missing locale / missing `(Id, variant)` / missing clause renders
-  the base-locale identity; **no throw**, **no** state mutation (F2/F4).
+- **T-LC-FALLBACK-001** — A missing static/variant/clause translation or selected locale renders
+  the admitted base-locale identity; **no throw**, **no** state mutation (F2/F4).
 - **T-LC-FALLBACK-002** — In a dev build a missing entry MAY surface a `‹key›` marker; in a production build
-  it MUST fall through to base (a build-flag-gated assert).
+  it MUST fall through to base (a build-flag-gated assert). L2 omits the optional marker.
+- **T-LC-FALLBACK-003** — Each missing required static key/template/clause fails construction, including
+  a completely missing template row; all missing identities are reported in ordinal order. Unknown
+  unrequired keys/ids yield `string.Empty`, and an unrequired missing clause appends nothing, repeatedly
+  without changing other results (ERR-049-005).
 
 ### T-LC-TEMPLATE — Template model (FR-LC-009/010, KD-3)
 - **T-LC-TEMPLATE-001** — Named-placeholder substitution fills `{subject}`/`{opponent}`/`{score}`; a
   template declaring a plural/gender category selects the correct sub-form on the keyed slot.
-- **T-LC-TEMPLATE-002** — Base-locale English (no categories declared) is identity with `.Replace`.
+- **T-LC-TEMPLATE-002** — Base-locale English (no selector of either kind) is identity with chained `.Replace` only when
+  every slot value is brace-free and every template brace belongs to a well-formed `{name}` token. Counterexamples must prove inserted tokens and tokens formed across substitution boundaries
+  are not re-expanded. Unknown placeholders remain verbatim; malformed template braces fail construction.
 - **T-LC-TEMPLATE-003** — The citation clause is selected by `EventKind` (not the draw): varying the draw
   with a fixed `citationKind` yields the same clause; varying `citationKind` changes it (FR-LC-010).
 
@@ -73,7 +81,7 @@
 | FR-LC-007/008 variant selection + count | T-LC-IDENTITY-002, T-LC-PREDRAW-001 |
 | FR-LC-008a roster coverage (construction) | T-LC-PREDRAW-001 |
 | FR-LC-009/010 template model + clause | T-LC-TEMPLATE-001/002/003 |
-| FR-LC-011 fallback | T-LC-FALLBACK-001/002 |
+| FR-LC-011 fallback | T-LC-FALLBACK-001/002/003 |
 | FR-LC-012/013/014 reference direction | T-LC-LAYER-001/002 |
 | FR-LC-015 pre-draw split | T-LC-PREDRAW-001/002 |
 | FR-LC-016 base-locale identity | T-LC-IDENTITY-001 |
@@ -92,4 +100,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial test plan (SEAM/IDENTITY/DET/FALLBACK/TEMPLATE/PREDRAW/LAYER) + FR traceability. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (1H+1M+1L; H-1 generic-core / per-producer boundary-adapter split, M-1 FR-LC-008a construction-time roster-coverage invariant, L-1 `{score}` derived) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-10-07 | — | L2 coverage/terminal proof and two-condition identity tests, ERR-049-005/006. |
 #endregion

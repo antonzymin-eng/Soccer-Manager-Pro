@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" name="TacticalDirector.MatchEngine.Tests.dll" fullname="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" testcasecount="585" result="Failed" start-time="2026-10-12T16:33:44.5286077Z" end-time="2026-10-12T16:33:44.6747474Z" duration="0.146111" total="10" passed="0" failed="10" inconclusive="0" skipped="0" warnings="0" asserts="26" random-seed="240927492">
+  <command-line><![CDATA[/tmp/smp-nunit/Runner.dll src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll --where "method =~ int_OutsidePostRebound or method =~ int_FullCrossingBeforeRearPostContact" --workers=0 --result=/tmp/smp-nunit/engine-before.xml]]></command-line>
+  <filter>
+    <or>
+      <method re="1">int_OutsidePostRebound</method>
+      <method re="1">int_FullCrossingBeforeRearPostContact</method>
+    </or>
+  </filter>
+  <test-suite type="Assembly" id="1704" name="TacticalDirector.MatchEngine.Tests.dll" fullname="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" runstate="Runnable" testcasecount="585" result="Failed" site="Child" start-time="2026-10-12T16:33:44.5286077Z" end-time="2026-10-12T16:33:44.6747474Z" duration="0.146111" total="10" passed="0" failed="10" warnings="0" inconclusive="0" skipped="0" asserts="26">
+    <environment framework-version="3.14.0.0" clr-version="8.0.21" os-version="Ubuntu 24.04.3 LTS" platform="Unix" cwd="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro" machine-name="be87484abc20" user="root" user-domain="be87484abc20" culture="" uiculture="" os-architecture="x64" />
+    <settings>
+      <setting name="NumberOfTestWorkers" value="0" />
+      <setting name="WorkDirectory" value="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro" />
+    </settings>
+    <properties>
+      <property name="_PID" value="208" />
+      <property name="_APPDOMAIN" value="Runner" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="TestSuite" id="1705" name="TacticalDirector" fullname="TacticalDirector" runstate="Runnable" testcasecount="585" result="Failed" site="Child" start-time="2026-10-12T16:33:44.5319274Z" end-time="2026-10-12T16:33:44.6747442Z" duration="0.142816" total="10" passed="0" failed="10" warnings="0" inconclusive="0" skipped="0" asserts="26">
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1706" name="MatchEngine" fullname="TacticalDirector.MatchEngine" runstate="Runnable" testcasecount="585" result="Failed" site="Child" start-time="2026-10-12T16:33:44.5322546Z" end-time="2026-10-12T16:33:44.6747404Z" duration="0.142486" total="10" passed="0" failed="10" warnings="0" inconclusive="0" skipped="0" asserts="26">
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestFixture" id="1451" name="MatchEngineRestartTests" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-10-12T16:33:44.5322658Z" end-time="2026-10-12T16:33:44.6747365Z" duration="0.142471" total="10" passed="0" failed="10" warnings="0" inconclusive="0" skipped="0" asserts="26">
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="ParameterizedMethod" id="1461" name="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-12T16:33:44.5338384Z" end-time="2026-10-12T16:33:44.6533356Z" duration="0.119497" total="4" passed="0" failed="4" warnings="0" inconclusive="0" skipped="0" asserts="4">
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1457" name="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,False)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,False)" methodname="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="890151396" result="Failed" start-time="2026-10-12T16:33:44.5340081Z" end-time="2026-10-12T16:33:44.6440933Z" duration="0.110138" asserts="1">
+              <failure>
+                <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1458" name="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,False)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,False)" methodname="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="806616739" result="Failed" start-time="2026-10-12T16:33:44.6456280Z" end-time="2026-10-12T16:33:44.6484367Z" duration="0.002809" asserts="1">
+              <failure>
+                <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1459" name="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,True)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(False,True)" methodname="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="1433802701" result="Failed" start-time="2026-10-12T16:33:44.6484768Z" end-time="2026-10-12T16:33:44.6505400Z" duration="0.002064" asserts="1">
+              <failure>
+                <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1460" name="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,True)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(True,True)" methodname="int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="114645983" result="Failed" start-time="2026-10-12T16:33:44.6505723Z" end-time="2026-10-12T16:33:44.6525470Z" duration="0.001975" asserts="1">
+              <failure>
+                <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  A rear-side contact after the full crossing must not override the exit.
+  Expected: 0
+  But was:  1
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Boolean awayGoal, Boolean defenderLast) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 88
+   at InvokeStub_MatchEngineRestartTests.int_FullCrossingBeforeRearPostContact_AwardsTheProperRestart(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+          </test-suite>
+          <test-suite type="ParameterizedMethod" id="1456" name="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-12T16:33:44.6536582Z" end-time="2026-10-12T16:33:44.6721092Z" duration="0.018451" total="4" passed="0" failed="4" warnings="0" inconclusive="0" skipped="0" asserts="20">
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1452" name="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,False)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,False)" methodname="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="39018690" result="Failed" start-time="2026-10-12T16:33:44.6536903Z" end-time="2026-10-12T16:33:44.6583973Z" duration="0.004707" asserts="5">
+              <failure>
+                <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1453" name="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,False)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,False)" methodname="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="1543566205" result="Failed" start-time="2026-10-12T16:33:44.6584296Z" end-time="2026-10-12T16:33:44.6602460Z" duration="0.001817" asserts="5">
+              <failure>
+                <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1454" name="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,True)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(False,True)" methodname="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="1608925391" result="Failed" start-time="2026-10-12T16:33:44.6602780Z" end-time="2026-10-12T16:33:44.6704224Z" duration="0.010145" asserts="5">
+              <failure>
+                <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1455" name="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,True)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(True,True)" methodname="int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="786344707" result="Failed" start-time="2026-10-12T16:33:44.6704608Z" end-time="2026-10-12T16:33:44.6720562Z" duration="0.001596" asserts="5">
+              <failure>
+                <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  The pre-fix engine left this in-play rebound OutOfPlay until half-time.
+  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Boolean awayGoal, Boolean secondHalf) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 53
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_DoesNotFreezeBeforeTheNextPeriod(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+          </test-suite>
+          <test-suite type="ParameterizedMethod" id="1464" name="int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-12T16:33:44.6721263Z" end-time="2026-10-12T16:33:44.6747292Z" duration="0.002603" total="2" passed="0" failed="2" warnings="0" inconclusive="0" skipped="0" asserts="2">
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1462" name="int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(False)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(False)" methodname="int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="609310308" result="Failed" start-time="2026-10-12T16:33:44.6721450Z" end-time="2026-10-12T16:33:44.6735968Z" duration="0.001452" asserts="1">
+              <failure>
+                <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-case id="1463" name="int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(True)" fullname="TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(True)" methodname="int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest" classname="TacticalDirector.MatchEngine.MatchEngineRestartTests" runstate="Runnable" seed="1072643180" result="Failed" start-time="2026-10-12T16:33:44.6736269Z" end-time="2026-10-12T16:33:44.6746979Z" duration="0.001071" asserts="1">
+              <failure>
+                <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Object, Span`1)
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.MatchEngine.MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Boolean awayGoal) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineRestartTests.cs:line 108
+   at InvokeStub_MatchEngineRestartTests.int_OutsidePostRebound_SaveRestorePreservesProgressAndDigest(Object, Span`1)
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

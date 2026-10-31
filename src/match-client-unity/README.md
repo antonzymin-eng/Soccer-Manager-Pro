@@ -2,8 +2,7 @@
 
 **Status:** P4b (the render/camera/click binding) **LANDED** —
 `MatchClientBehaviour.cs`, landed across **5 adversarial-review rounds** (findings
-H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) and the on-host half of P6
-remain open. See `docs/tracking/interactive-unity-client-design.md` for the full
+H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) now has a complete screen candidate; pinned-host screen acceptance and the on-host half of P6 remain open. See `docs/tracking/interactive-unity-client-design.md` for the full
 landing history, and `MatchClientBehaviour.cs`'s own `VersionHistory` block for the
 per-round code detail.
 
@@ -14,13 +13,15 @@ per-round code detail.
 > document's to assert.
 
 This is the **Unity-host** half of the interactive Unity client — the
-`MonoBehaviour` that owns a `MatchSession`, reads frames each `Update`, and binds
-them onto scene objects. It is deliberately thin: every render/camera/click
-*decision* is already made in the host-free sibling `src/match-client-core/`
-(`TacticalDirector.MatchClientCore`), which the `tools/dotnet-ci` shim gate
-compiles and tests on every push. This assembly only ever depends on that core
-plus the reused `match-viewer` streamer; it adds a skin, never new engine-facing
-logic (§12 rule 1 — see `docs/tracking/interactive-unity-client-design.md`).
+`MonoBehaviour` that binds a `MatchSession`, reads frames each `Update`, and binds
+them onto scene objects. The validated P5b coordinator owns the session; internal demo ownership is removed.
+It is deliberately thin: every render/camera/click *decision* is already made in
+the host-free sibling `src/match-client-core/` (`TacticalDirector.MatchClientCore`),
+which the `tools/dotnet-ci` shim gate compiles and tests on every push. This
+assembly references ClientApp, UiFramework, MatchClientCore, MatchViewer, MatchEngine, TacticalInstructions, Localization and built-in UnityEngine.UI;
+these are explicit Unity asmdef references, with shell decisions in gate-compiled ClientApp. It
+adds a skin, never new engine-facing logic (§12 rule 1 — see
+`docs/tracking/interactive-unity-client-design.md`).
 
 ## Excluded from the shim gate — compiled only by the Unity editor
 
@@ -45,11 +46,13 @@ editor is now the governing compiler (owner decision, September 12, 2026 —
 see §1) and every project-setting requirement here, since a `MonoBehaviour` can
 neither enforce a Project Settings value nor fail a Unity install that lacks it,
 and a contract stated in two places drifts. This section is that document —
-the single one. `ValidateWiring()` enforces everything it can detect at runtime
-(null references, array lengths, transform scale/rotation) and fails loud,
-naming the offending field, when it can — but the five items below are either
-checked only once a prefab is instantiated, or cannot be checked from code at
-all.
+the single one. `ValidateWiring()` runs on every `Awake`, including when temporary
+demo boot is off, and enforces everything session-independent it can detect at
+runtime (null references, array lengths, transform scale/rotation, colour-property
+name), failing loud and naming the offending field. The demo seed is the one
+exception: `ValidateDemoSeed()` runs only when the temporary demo path is explicitly
+enabled, because the seed has no meaning otherwise. The items below are either
+checked only once a prefab is instantiated, or cannot be checked from code at all.
 
 ### 1. The prefab contract — 8 slots
 
@@ -97,7 +100,8 @@ the rendered pitch. Author the two stroked slots as a ring/annulus mesh, or a ho
 M26: **a stroked slot's stroke thickness is authored as a FRACTION of the prefab's unit radius, and
 is therefore multiplied by that slot's actual metre radius at runtime.** `FlatGroundScale` assigns a
 UNIFORM scale on both ground axes, so nothing in the prefab keeps a stroke at a fixed metre width —
-scale the whole prefab and the stroke scales with it. Author against these fractions:
+scale the whole prefab and the stroke scales with it. **For both stroked slots, the unit radius is the
+OUTER radius: author the stroke inward, with its outer edge at radius 1.0.** Author against these fractions:
 
 | Stroked slot | Fraction of unit radius | Working |
 |---|---|---|
@@ -131,8 +135,8 @@ Every slot, whichever clause it follows:
 - **The agent marker's material must expose the colour property named by the
   `_colorPropertyName` inspector field** (clause 3; default `"_Color"`, the
   Built-in Render Pipeline standard shader's name — URP's Lit/SimpleLit/Unlit
-  shaders expose `"_BaseColor"` instead, and this repo's `GraphicsSettings.asset`
-  / `Packages/manifest.json` do not agree on which pipeline resolves). Checked
+  shaders expose `"_BaseColor"` instead; this project renders with the Built-in
+  pipeline, so keep `"_Color"` unless a deliberate URP migration lands). Checked
   per marker in `BuildAgentObjects`, since only an instantiated prefab's
   material can answer this — `SetColor` against a missing property succeeds
   and changes nothing, so a mismatch would otherwise render both teams, the
@@ -150,9 +154,8 @@ project-setup requirement the binding cannot enforce or detect from code.
 ### 3. The host GameObject's own transform must be at identity scale AND rotation
 
 `ValidateWiring()` checks both and rejects the client, naming the actual value,
-if either fails — but only for the `MatchClient` GameObject and its own
-`transform`; it cannot see the scene hierarchy ahead of time, so set this up
-correctly rather than relying on the runtime check alone:
+if either fails — and it does so even when temporary demo boot is disabled. Set
+this up correctly rather than relying on the runtime check alone:
 
 - **Identity scale** (`transform.lossyScale == Vector3.one`) — `PlaceLine` /
   `PlaceRadial` mix a world POSITION with a LOCAL scale, so a scaled ancestor
@@ -178,8 +181,8 @@ rotation applied anywhere in its ancestry, at the scene root if in doubt.
 `_teamColors` must have exactly `MatchEngineConstants.TEAM_COUNT` (2) entries:
 **index 0 = home, index 1 = away.** `RenderAgents` indexes it by
 `AgentRenderModel.TeamId` unguarded past `ValidateWiring`'s length check, so a
-mis-sized array is rejected at boot rather than index-out-of-ranging the first
-time an away-team agent is drawn.
+mis-sized array is rejected at `Awake` even when demo boot is disabled, rather
+than index-out-of-ranging later when a session is attached or a demo is enabled.
 
 ### 5. The pitch/ground surface (L13) — not a prefab slot, but still this contract's
 
@@ -216,3 +219,132 @@ ground surface narrower than that clips at the touchline/goal line before the
 camera's `CameraOverscanM` margin does; a generous overshoot (the standard
 run-off area a broadcast pitch model already has) costs nothing and avoids the
 edge being visible at the tilted camera's default overscan.
+
+### 6. External lifecycle ownership (P5b candidate)
+
+`MatchClientBehaviour.Attach(session, identity, acceptedFrames, onFailure)` initializes
+and validates synchronously even before Awake on an inactive Match View root. It never
+constructs, starts or stops a session. `ClientMatchCoordinator` owns the existing
+`MatchSessionLifecycle`, approved fixture, observer and playback. The renderer owns
+only its generated container. Detach hides that container immediately, clears all match
+references and then schedules its destruction, preserving authored objects and prefabs.
+Disabling the root changes visibility only. Render rejection/destruction reports the
+captured attachment back to the coordinator so playback is quiesced.
+
+The temporary `_autoBootDemoMatch` and seed fields have been removed. The tracked `Assets/Scenes/Scene.unity` now boots the four-screen shell. Its development-host component is removed; that helper source remains for isolated investigations.
+
+The coordinator lifecycle was validated October 7 on the pinned host; see `docs/tracking/p5b-lifecycle-validation.md` v0.5. That prior compile does not validate the new screen skin.
+
+## 7. PR #470 foundation refresh — October 4, 2026
+
+Gate I and the owner's explicit handoff acceptance landed through PR #478 at main
+`fafb63fc33dd97b3de77c37445357650e1565777`. PR #470 is refreshed onto that main.
+Its implementation is only the foundation: four mutually exclusive roots, pure wiring/
+visibility decisions and Main Menu → Tactics Setup / Cancel. Screen registrations still
+have null source/dispatcher handles. No StartMatch, lifecycle consumer, named-player
+frame projection, localized screens or report binding is claimed by this slice.
+The host-free lifecycle already exists; the next slice consumes its CreateSession /
+Current / ClearSession through the shell coordinator and adds Attach/detach to
+MatchClientBehaviour. That slice removes internal demo boot and the temporary opt-in.
+Follow journey §14 and binding contracts §5; #49 L2 must precede localized screens.
+
+The tracked `Assets/Scenes/Scene.unity` is still the isolated P4b demo and explicitly
+sets `_autoBootDemoMatch: 1`; no shell roots/buttons were added to it. Shell scenes leave
+that flag off. The retained default is false; all wiring validation still runs while inert.
+
+**Validation status: BLOCKED on the refreshed exact-head Unity compile.**
+September 28's reported zero compile errors and boot/off smoke are historical branch
+checks, not compile evidence for this refreshed head. The reported 254 passing / one
+failing EditMode tests are also historical: the repository-root discovery failure is
+tracked separately and remains unresolved. The two GetInstanceID CS0618 warnings are
+known, deferred warnings. No refreshed runtime/Console/player-build/performance result
+has been observed here. The regular Unity CI test job is skipped without the configured
+license; a green Linux shim gate never proves this Unity-only assembly compiles.
+
+Before merge, check out the exact published PR #470 head on Unity 6000.4.9f1, ensure
+Assets/Scripts points to src, preserve the Console baseline, force recursive source
+reimport, and follow the compile procedure in docs/agent-guides/coding-reference.md.
+Record the SHA, editor version, import/assembly-reload completion, compiler errors and
+warnings with the retained Editor.log or CI artifact. A changed head requires fresh
+head-bound evidence. Keep the PR draft until fresh CI and this compile are complete.
+This compile does not discharge remaining B8/B9b/B10 or Gate-J runtime/cert cases.
+
+**October 4, 2026 — exact-head compile PASSED; the block above is discharged.** Head
+`db38e2118922b2a7b8eac384f7cdf0d6f81d6338`, Unity 6000.4.9f1 (f7258d6eebbe), clean checkout,
+`Assets/Scripts` → `src` junction confirmed, forced recursive reimport: Tundra build success
+(55.02 s, 75 items updated), domain reload complete, **0 compile errors**. Warnings: CS0618 at
+`ClientShellBehaviour.cs` (135,34) and (139,48), known and deferred; CS0219 at
+`ball-physics/tests/BallIntegrationTests.cs` (330,19), pre-existing since `ff8ae56ab` and outside
+this PR. Editor.log retained on the host; summary on the PR. The commit recording this is
+Markdown-only. EditMode/PlayMode tests were not run in this pass.
+
+**October 5, 2026 — review fix.** Screen roots must also sit under active ancestors: the shell
+toggles only the roots, so a root beneath an inactive GameObject would stay hidden. The binding
+now reports `parent.gameObject.activeInHierarchy` and the shell refuses such a root with
+`RootUnderInactiveAncestor` (deactivating all roots and logging the reason). Unity 6000.4.9f1
+compile of the fix: 0 errors; ClientApp.Tests 26/26 in EditMode.
+
+## 8. Complete P5b screens candidate — October 8, 2026
+
+The tracked shell assigns `S0ScreensBehaviour` and all four roots, with Main Menu
+alone authored active. It creates persistent UGUI pages/dialogs plus one EventSystem,
+using built-in UGUI 2.0.0. The packaged fallback is `LegacyRuntime.ttf`; assigned fonts
+are admitted for required characters, with equivalent punctuation fallbacks and the
+actual loaded content hash. `_textScale` is fixed per shell at 1.0–2.0. Only the
+coordinator controls match lifetime; UI forwards Start, staged home requests, explicit
+report acknowledgement and Return. The renderer's texture viewport supplies pointer/
+keyboard player inspection (one pitch Tab entry, arrows among visible markers, Tab exit), localized labels and the white substitute annulus using
+an additional instance of the existing stroked ring prefab. That prefab must also
+expose the configured marker colour property. These are source mechanisms; runtime
+layout, glyphs, input and annulus appearance require host validation.
+
+Follow `docs/tracking/p5b-screens-validation.md` v0.9 for exact-head compile, candidate
+lock regeneration, EditMode, real-client I-Q01–19 and cert-host checks. The new UGUI
+binding has not compiled/run in Unity here. Keep B8/B9b/B10 and Gate J open.
+
+**PR #489 review correction:** activation and geometry changes force UGUI layout before
+pitch placement. The scrollable full-label surface may grow vertically around a child
+105:68 image; tethers still anchor to identity-matched rendered markers. Unplaceable
+labels increment `PitchLayoutFailureCount` and warn without terminating the match;
+any nonzero count fails layout QA. Text metrics are cached per string/available width
+with font and scale fixed per shell. Ordinary frames retain structural controls; outcome
+logs copy only on count changes. Explicit feedback sibling order keeps earlier records
+before latest records on both screens and on repeat entry. These changes still require
+actual pinned-host compile, first-frame/dense-layout, Tab and repeat-match checks.
+
+## 9. Gate J skin and whole-pitch view — October 21, 2026
+
+After the owner's Gate-J decisions (record `docs/tracking/p5b-real-client-acceptance.md` v0.2), the
+S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
+- `S0UiConstants` holds the palette and widths.
+- `S0UiFactory` builds panels, control chrome, reason boxes and runtime-generated 1 px border sprites. Solid borders are sliced; dashed borders are tiled.
+- `S0ControlSkin` switches a control to a dashed border and secondary text while it is unavailable, and to a gold outline when it is selected.
+- `S0MaxWidth` centres each page column.
+- Statistics live in the rail, so opening them never shrinks the pitch.
+  After the owner's October 28 screenshot review (record v0.5 §9), the rail table rows abut, its caption shows only for a partial cutoff (the panel heading already says "Match statistics"), and opening statistics scrolls the page just far enough to show the whole panel.
+- Owner decision (October 28, record v0.6 §10): a control that opens content in place keeps one title and shows ▸ closed / ▾ open. The "Match statistics" title is the statistics toggle; "Earlier change feedback (N)" and "Compare all seven Mentalities" use the same glyph.
+- Owner decisions (October 28, record v0.7 §11): the report's partial-statistics toggle is the one-title disclosure "Partial statistics — incomplete". A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop; both discard the draft, as Cancel and Escape do. The backdrop is a sibling behind the frame, so clicks inside the frame never reach it.
+- `S0ScreensBehaviour` sets `MatchClientBehaviour.WholePitchView`: the camera then frames the whole pitch straight down, orthographically (`PitchCameraRig.WholePitchOrthographicSize`), instead of the tilted follow rig.
+- Shirt labels are navy (home) and gold (away) chips tethered to their markers.
+- Unavailable bench choices show their reason under the label (J-01).
+- Outcome rows carry a status bar and a ✓ ✕ – … badge. The badge falls back to a covered character when the font lacks the glyph.
+
+| Documentation revision | Date | Notes |
+|---|---|---|
+| Pop-up closing | October 28, 2026 | §9: partial-statistics disclosure title; pop-up Close control and outside-click close. Host verification in the acceptance record v0.7 §11. |
+| Disclosure titles | October 28, 2026 | §9: statistics, earlier-feedback and comparison toggles keep one title with a ▸/▾ glyph; the "Match statistics" title is the statistics toggle. Host verification in the acceptance record v0.6 §10. |
+| J-04 statistics-rail fix | October 28, 2026 | §9: rail table caption only for a partial cutoff, abutting rows, whole panel revealed on open. Host verification in the acceptance record v0.5 §9. |
+| Gate J skin and whole-pitch view | October 21, 2026 | §9: H v0.2 skin components, statistics in the rail, unavailable-choice reasons and the whole-pitch top-down camera. Host verification in the acceptance record v0.2. |
+| PR #489 Tab order and contract parity | October 8, 2026 | Match View Tab follows journey §9.3 explicitly, then report and pitch entry; permanent 141-role contract parity test. Native input/compile proof remains due. |
+| PR #489 Codex layout/copy corrections | October 8, 2026 | Ignore focus overlays in layout; retain/rebind Current/Requested comparison tags; restore complete substitution/pitch/loose-ball context and audit all 141 base patterns. Native geometry/input proof remains due. |
+| PR #489 approved legend correction | October 8, 2026 | Restore binding-contract v0.4 legend and original content hash; retain keyboard inspection. Key instructions remain in implementation/QA documentation. |
+| PR #489 keyboard pitch inspection | October 8, 2026 | One roving pitch Tab entry and read-only arrows; consume tested ClientApp focus policy, with permanent regressions and explicit native I-Q15 cases. |
+| PR #489 Codex focus corrections | October 8, 2026 | Action-only Tab traversal; first dialog selector and active current feedback focus after repeat matches. Source/control-flow checks recorded; native input/scroll/compile proof still due. |
+| PR #489 Unity allocation correction | October 8, 2026 | Native allocation constraints with positive controls and explicit test-runner references; Linux counter retained. Pinned Editor/runtime proof still due. |
+| PR #489 counter/profiling follow-up | October 8, 2026 | Known-allocation test controls; narrow full-string wrapping qualification and 1×/10× host profiling procedure. ac9a0ac CI green; Unity/runtime proof still due. |
+| PR #489 review corrections | October 8, 2026 | Nonfatal measured layout, cached refresh and stable history; host proof still due. |
+| P5b screens candidate | October 8, 2026 | Complete localized screens and tracked shell scene; prior lifecycle host proof preserved, new exact-head Unity/runtime/cert evidence due. |
+| P5b lifecycle candidate | October 6, 2026 | External attachment and explicit development host replace internal demo ownership; pinned-host validation pending. |
+| PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
+| PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
+| PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |

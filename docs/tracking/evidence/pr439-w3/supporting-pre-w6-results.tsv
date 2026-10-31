@@ -1,0 +1,8 @@
+scope	seed	fromBehindCandidates	fromBehindPricedCandidates	fromBehindCalled	fromBehindWavedOn	fromBehindCandidatesDroppedByStrongerSameTick	fromBehindSentOffSlotOccupancies	fromBehindCandidatesShadowedBySentOffWinner	candidateDisplacedByDecided	foulCooldownSuppressionsFromBehind	pricedCandidateIdentityChecks	pricedCandidateIdentityMismatches	slideTackleCandidates	slideTackleCalled	slideTackleCallsDuringFoulCooldown	slideTackleRaisedDuringCooldownApplied	slideTackleCallsDuringCollisionSuppressionWindow	slideTackleRaisedDuringCollisionSuppressionApplied	totalFouls	yellowCards	straightReds	secondYellowDismissals	totalDismissals	playedTicks	agentBallFanoutEvents	claimEligibilityEpisodes	registeredDuelParticipants	resolvedHandContactDuels	successfulKeeperClaims	crossAttempts	crossCompletions	loftedAttempts	loftedCompletions	headerAttempts	headerContacts
+seed	0x0F1E2D3C4B5A6978	141	139	4	135	0	0	0	0	2	4	0	2	2	0	0	0	0	6	1	0	0	0	323999	34072	165	146	146	100	198	6	392	7	283	0
+seed	0x00000000D1A6D05E	117	114	6	108	0	0	0	0	3	6	0	0	0	0	0	0	0	6	1	0	0	0	323999	34001	171	157	157	95	192	4	388	14	300	0
+seed	0x0000000000000001	116	114	8	106	1	0	0	0	1	8	0	1	1	0	0	0	0	9	0	0	0	0	323999	37122	337	309	309	185	220	12	425	7	301	0
+seed	0x00000000ABCDEF12	133	132	6	126	0	0	0	0	1	6	0	1	1	0	0	0	0	7	2	0	0	0	323999	33754	245	222	222	141	218	12	404	8	291	0
+seed	0x0000000099887766	133	125	6	119	1	0	0	0	7	6	0	0	0	0	0	0	0	6	0	0	0	0	323999	33133	198	181	181	115	196	11	407	10	297	0
+seed	0x000000005A5A5A5A	142	137	10	127	0	0	0	0	5	10	0	1	1	0	0	0	0	11	0	1	0	1	323999	37975	314	283	283	174	234	12	401	14	268	0
+aggregate	ALL	782	761	40	721	2	0	0	0	19	40	0	5	5	0	0	0	0	45	4	1	0	1	1943994	210057	1430	1298	1298	810	1258	57	2417	60	1740	0

@@ -1,0 +1,48 @@
+using System;
+using System.Globalization;
+using System.Text;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.PlayerDatabase;
+using TacticalDirector.AgentMovement;
+
+internal static class ProbeBody
+{
+    static string H(float f) => BitConverter.SingleToInt32Bits(f).ToString("X8", CultureInfo.InvariantCulture);
+    static Squad Build(ulong seed, int clubId)
+    {
+        var rng = new DeterministicRngService(seed ^ (ulong)clubId);
+        int stream = rng.RegisterStream("scenario.roster", SubsystemOrdinals.PlayerDatabase, clubId, 1);
+        var t = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+        int i = 0;
+        for (int k = 0; k < 3; k++) t[i++] = PlayerPosition.Goalkeeper;
+        for (int k = 0; k < 8; k++) t[i++] = PlayerPosition.Defender;
+        for (int k = 0; k < 8; k++) t[i++] = PlayerPosition.Midfielder;
+        while (i < t.Length) t[i++] = PlayerPosition.Forward;
+        return RosterGenerator.Generate(rng, stream, clubId, t);
+    }
+    public static string Run()
+    {
+        ulong seed = 0x0F1E2D3C4B5A6978UL;
+        var e = new TacticalDirector.MatchEngine.MatchEngine(seed);
+        e.ConfigureSquads(Build(seed, 1), Build(seed, 2));
+        var sb = new StringBuilder();
+        for (int tick = 0; tick <= 5; tick++)
+        {
+            e.RunTick();
+            if (tick < 3) continue;
+            for (int a = 0; a < 22; a++)
+            {
+                AgentState s = e.AgentView(a);
+                sb.Append(tick).Append(' ').Append(a)
+                  .Append(" pos=").Append(H(s.Position.x)).Append(',').Append(H(s.Position.y))
+                  .Append(" vel=").Append(H(s.Velocity.x)).Append(',').Append(H(s.Velocity.y))
+                  .Append(" face=").Append(H(s.FacingDirection.x)).Append(',').Append(H(s.FacingDirection.y))
+                  .Append(" st=").Append((int)s.CurrentState)
+                  .Append(" aer=").Append(H(s.AerobicPool)).Append(" spr=").Append(H(s.SprintReservoir))
+                  .Append(" spd=").Append(H(s.Speed)).Append(" turn=").Append(H(s.CurrentTurnRate)).Append(" lean=").Append(H(s.LeanAngle))
+                  .Append('\n');
+            }
+        }
+        return sb.ToString();
+    }
+}

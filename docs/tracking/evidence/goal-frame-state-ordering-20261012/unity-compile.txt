@@ -1,0 +1,15 @@
+# Unity 6000.4.9f1 Editor.log excerpt — Refresh + forced recursive reimport of Assets/Scripts (junction to src/)
+# at PR #500 head c1ad30434e896e071cf349bc1f300e697f41e387, src tree 71d6ce456f563d6070aa8953561c1367599a359f
+
+1:PR500-C1AD3043-MARKER begin reimport
+32:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+33:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+332:*** Tundra build success (13.63 seconds), 75 items updated, 1203 evaluated
+336:Reloading assemblies after finishing script compilation.
+337:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+references to shim build output (bin/Debug): 0
+unique warnings (same three as the fce91e53 / 2a396d56 / e6b71350 baselines):
+BallIntegrationTests.cs(330,19): warning CS0219
+ClientShellBehaviour.cs(146,34): warning CS0618
+ClientShellBehaviour.cs(154,17): warning CS0618

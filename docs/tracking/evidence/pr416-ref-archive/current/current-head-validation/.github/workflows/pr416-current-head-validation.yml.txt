@@ -1,0 +1,94 @@
+name: PR416 current-head validation
+
+on:
+  push:
+    branches:
+      - evidence/pr416-current-head-validation
+    paths:
+      - .github/workflows/pr416-current-head-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  save-restore-latches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evidence/pr416-current-head-validation
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run isolated save-restore latch assertions
+        shell: bash
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=SaveAndRestoreCarryTheTackleLatches"             --logger "console;verbosity=detailed"
+
+  current-head-census:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a7f2b77af61c1d0b7138bfdfce21cd1772c91f26
+          fetch-depth: 0
+      - name: Install preregistered census helper
+        shell: bash
+        run: |
+          git fetch origin evidence/pr416-mechanism-census
+          git show origin/evidence/pr416-mechanism-census:.github/evidence/Pr416MechanismCensusTests.cs > src/match-engine/tests/Pr416MechanismCensusTests.cs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("src/match-engine/tests/Pr416MechanismCensusTests.cs")
+          s = p.read_text()
+          s, ticks_n = re.subn(
+              r"private const int Ticks\s*=\s*150_000;",
+              "private const int Ticks = 324_000;", s, count=1)
+          s, seed_n = re.subn(
+              r"(0x0F1E2D3C4B5A6978UL,\s*\r?\n\s*0x00000000D1A6D05EUL,)",
+              r"\1\n            0x5EED000000000003UL,", s, count=1)
+          if ticks_n != 1 or seed_n != 1:
+              raise SystemExit(f"helper rewrite mismatch ticks={ticks_n} seeds={seed_n}")
+          p.write_text(s)
+          PY
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run current-head census
+        shell: bash
+        run: |
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=MeasurePr416MechanismCensus"             --logger "console;verbosity=detailed"
+
+  focused-targets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a7f2b77af61c1d0b7138bfdfce21cd1772c91f26
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        shell: bash
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run main-relative target set
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-current-focused
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj             --no-restore             --filter "Name=AControlledCarrierIsActuallyDispossessed|Name=BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose|Name=TacklesHappenInComposedPlay|Name=ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice|Name=sim_match_engine_shot_outcomes"             --logger "console;verbosity=detailed"             --logger "trx;LogFileName=pr416-current-focused.trx"             --results-directory artifacts/pr416-current-focused

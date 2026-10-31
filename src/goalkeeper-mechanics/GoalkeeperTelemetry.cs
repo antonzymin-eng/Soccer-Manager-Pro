@@ -1,10 +1,14 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperTelemetry.cs
+// Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-10-13 (W8 B: emit named F-05 diagnostic warning from CONTACT host)
+// Modified (prior): 2026-05-28
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §2.4, Performance Optimization #18 Appendix F.0, Code Standards #20
-// Purpose:  Stage 0 stub for §2.4 gk.* trace-pipeline channel emission.
-//           All methods are no-ops that compile away in Release.
+// Purpose:  Stage 0 gk.* trace-channel adapter. Most channels remain stubbed;
+//           F-05 uses a diagnostic warning until the #18 trace pipeline is available.
+
+using UnityEngine;
 
 namespace TacticalDirector.GoalkeeperMechanics
 {
@@ -17,8 +21,9 @@ namespace TacticalDirector.GoalkeeperMechanics
     /// </summary>
     public sealed class GoalkeeperTelemetry
     {
-        // Stage 0 stub: no real trace pipeline yet. All methods are no-ops that compile away in Release.
-        // Replace at Stage 0+1 with real Performance Optimization #18 trace pipeline calls.
+        // Most channels remain no-ops until the #18 trace pipeline lands. The F-05
+        // receiver-missing channel emits a named Debug warning now; only its sink changes
+        // when structured tracing is implemented. No simulation consumes diagnostic output.
 
         /// <summary>
         /// Emits gk.save.reaction_window.achieved histogram (continuous [0, 1]).
@@ -87,9 +92,12 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// Emits a diagnostic warning when the distribution target receiver is missing (F-05).
         /// §3.8.2 / §2.3 F-05.
         /// </summary>
-        public void WarnDistributionTargetReceiverMissing(int agentId)
+        public void WarnDistributionTargetReceiverMissing(int keeperAgentId, int requestedReceiverId)
         {
-            // TODO: emit to trace pipeline diagnostic channel (Stage 0+1)
+            // W8 B's CONTACT host is the sole caller. This warning is observable in editor,
+            // Linux .NET diagnostics and player logs, but is not gameplay or snapshot state.
+            // A future #18 trace adapter replaces only the sink, preserving the channel key.
+            Debug.LogWarning($"gk.distribution.target_receiver_missing keeper={keeperAgentId} receiver={requestedReceiverId}");
         }
 
         /// <summary>
@@ -120,10 +128,12 @@ namespace TacticalDirector.GoalkeeperMechanics
         }
 
         /// <summary>
-        /// Emits gk.hold.forced_release counter when the 6-second rule forces distribution.
+        /// Records the legacy six-second hold-timeout signal, not a physical release.
+        /// The engine owns the ground-drop backstop. The future trace channel retains
+        /// its specified legacy name gk.hold.forced_release until the C law amendment.
         /// §3.1 / FR-GK-028 / KD-9.
         /// </summary>
-        public void RecordForcedRelease(int agentId)
+        public void RecordHoldTimeoutSignal(int agentId)
         {
             // TODO: emit to trace pipeline (Stage 0+1)
         }
@@ -132,5 +142,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
+// | 1.1     | 2026-10-13 | —      | W8 B prerequisite: emit observable F-05 warning from sole CONTACT host; #18 trace pipeline remains future. |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.2 | 2026-10-16 | — | Name legacy timeout signal honestly; no physical release or trace-channel/schema change. |
 #endregion

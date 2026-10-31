@@ -1,0 +1,10 @@
+08d104f587231c9316eec4fbfddb4aa469ee6661
+90e0a21027dede2fa6769450279c2d915a8117a0
+520ba31c71e06ed408fd5c282b5fd5611cf74879
+8.0.426
+Microsoft.AspNetCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.NETCore.App]
+start 2026-10-16T00:14:23Z
+control=TD_W8_PER_KEEPER filter=FullyQualifiedName~W8PerKeeperPassDiagnostic_ReportsFrozenCorpus configuration=Debug
+exit=0
+end 2026-10-16T01:12:36Z

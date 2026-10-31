@@ -1,8 +1,8 @@
 # Match Analytics & Statistics #37 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+3L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** October 6, 2026 (v0.3 — consumed P5b client observer/report references)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -16,7 +16,14 @@ New presentation-layer assembly **`TacticalDirector.MatchAnalytics`** (`src/matc
 - `TacticalDirector.MatchEngine` — the observation surface (`BallView`/`AgentView`/`AgentTeamId`/
   `PossessingAgentId`/`CurrentTick`) + the new read-only ledger tap (§4.3).
 
-**Referenced by:** the UI layer (#38) only. **No sim assembly may reference
+**Referenced by:** presentation/client consumers only. The existing browser client
+and the consumed P5b `match-client-core` observer/publication and `client-app`
+immutable report are sanctioned, with their directly consuming test assemblies.
+`NoOtherAssemblyReferencesMatchAnalytics` locks this explicit set. P5b uses the
+one pre-playback observer slot, synchronized ObserveTick/Publish, tick-gate →
+analytics-gate lock order, and records incomplete/attempted/completed cutoffs on a
+fault before releasing the analytics lock. No Stop/ServiceOnce call occurs inside
+that lock. **No sim assembly may reference
 `TacticalDirector.MatchAnalytics`** (KD-4 — the presentation-clean, one-directional invariant; the
 build enforces it by the absence of the reference, exactly as `match-viewer` is unreferenced by sim).
 
@@ -87,4 +94,5 @@ scope). If a future spec brings a same-named type into a shared scope, fully-qua
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial architecture: assembly placement + reference direction, the KD-7 read-only ledger tap contract, consumption modes, no-RNG/tag/ordinal, CS0104 note. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+3L; M-1 lossless every-tick + F6, M-2 possession known-handler, L-1 `SubstitutionEvent.Team`, L-2 territorial disambiguation, L-3 phase-context) → AR-2 convergence; APPROVED. See section-9 §9.3. |
+| 0.3 | 2026-10-06 | — | Record actually consumed P5b session observer/publication and report clients and the sanctioned-consumer lock; simulation ban unchanged. |
 #endregion

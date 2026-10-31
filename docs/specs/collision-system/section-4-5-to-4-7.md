@@ -7,7 +7,7 @@
 | CollisionManifold | 28 | Vector2 Ã— 2 + float + int Ã— 2 | Per-collision, temporary |
 | CollisionResponseData | 32 | Vector3 Ã— 2 + bool Ã— 2 + float | Per-agent per-collision |
 | CollisionEvent | 56 | float + enum + int Ã— 2 + Vector3 + float + ContactForceData | Stored in buffer |
-| AgentBallCollisionData | 32 | Vector3 Ã— 2 + enum + int Ã— 2 + bool | Passed to Ball Physics |
+| AgentBallCollisionData | 52 | Vector3 × 3 + enum + int × 2 + bool | Passed to Ball Physics. ERR-003-010 (Oct 18, 2026): + `AgentPosition` (§4.2.4); was 32, which also undercounted the two-Vector3 layout (40) |
 | ContactForceData | 28 | float + Vector3 + enum + int Ã— 2 + bool Ã— 2 | Part of CollisionEvent |
 | DeterministicRNG | 16 | ulong Ã— 2 | Per-frame, stack allocated |
 

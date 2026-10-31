@@ -46,9 +46,7 @@ substring filters: those over-match ordinary unit names such as `Point_`, `Finge
 `tools/dotnet-ci/known-failures.txt` is the shrinking-only functional quarantine ledger. Do not add a
 test merely to obtain green.
 
-`sim_match_engine_close_chance` is different: it is **owner-held RED by decision**, not quarantine.
-PR/nightly policy excludes that exact test `Name` from the ordinary pass, runs the exact `Name`
-separately, and requires:
+No owner-held RED is currently configured: the owner retired `sim_match_engine_close_chance` on September 20, 2026, so it now runs in the ordinary blocking sweep. Owner-held RED remains a supported policy mechanism, distinct from quarantine. When rows are configured, PR/nightly policy excludes each exact test `Name` from the ordinary pass, runs the configured exact `Name` set separately, and requires:
 
 - exactly one matching result;
 - outcome `Failed`;

@@ -1,6 +1,13 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-24 (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
+// Modified: 2026-10-20 (AR round 5 L17 — the AdvanceDay backward-guard comment no longer says "AdvanceDay is public"; comment-only — v1.14)
+//           2026-10-20 (AR round 4 M13 / L12 / L16 — AdvanceDay / PrepareSeasonBoundary / CommitSeasonBoundary demoted to internal; SeedFrom doc; Prepare refuses a worldDay outside the cursor span — v1.13)
+//           2026-10-20 (AR round 3 M13 — CanMovePlayer / MovePlayer demoted to internal; L9 stale comment — v1.12)
+//           (#31 T2 — TryFindPlayer / CanMovePlayer / MovePlayer, the id-preserving re-home;
+//           AR round 1 P-M1 — every mutator goes through BeginMutation — v1.11)
+//           (ERR-028-025 — the staged season boundary: PrepareSeasonBoundary /
+//           CommitSeasonBoundary, the boundary-scoped regen stream, the mutation generation — v1.10)
+//           (round-2 M/L adversarial findings: LifecycleView computes AgeBand (M7) +
 //           the retirement-day feedback-loop invariant documented at the daily evaluation (M5) — v1.9)
 //           (construction-day-credit-implemented-twice — SeedLifecycle delegates — v1.8)
 //           (ERR-028-020 + ERR-028-021 — football-judgment proxy review batch 1 — v1.7)
@@ -17,6 +24,7 @@
 using System;
 using System.Collections.Generic;
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.PlayerProgression
@@ -38,12 +46,13 @@ namespace TacticalDirector.PlayerProgression
     /// moment anything would think to compare them — the silent-divergence shape #29/#41 T2's H2 filed.
     /// </para>
     /// <para>
-    /// <b>What this landing deliberately does NOT do.</b> <c>RunSeasonBoundary</c> (retiree removal +
-    /// 1:1 regen, §3.4) is not here. Retirement FLAGGING is — it is part of the draw-free daily step —
-    /// but applying the roster mutation needs the <c>player-progression.regen</c> stream, whose
-    /// survival across a save §3.5 does not pin, and ERR-029-006 closes without it. So this landing has
-    /// <b>no draw site at all</b>: no stream registration, no <c>0x20</c> promotion, no digest-version
-    /// question.
+    /// <b>The season boundary (§3.4, ERR-028-025).</b> Retirement FLAGGING is part of the draw-free daily
+    /// step; the roster mutation — retiree removal + 1:1 regen — is <see cref="PrepareSeasonBoundary"/>
+    /// (pure) then <see cref="CommitSeasonBoundary"/> (infallible), so #30 stages it before its one
+    /// fallible write and installs it after. The regen stream is BOUNDARY-SCOPED: a fresh
+    /// <c>DeterministicRngService</c> seeded from <c>(worldSeed, completed season)</c> under
+    /// <c>DOMAIN_TAG_PLAYER_PROGRESSION</c>, so it carries no cursor across a save — every input is
+    /// already persisted — which is the save story §3.5 had left unpinned.
     /// </para>
     /// </summary>
     public sealed class ProgressionEngine
@@ -55,6 +64,17 @@ namespace TacticalDirector.PlayerProgression
         private readonly List<PlayerLifecycle[]> _lifecycles = new List<PlayerLifecycle[]>();
 
         private int _nextPlayerId;
+
+        // Bumped by every mutation of the per-club arrays or the id cursor, so a SeasonBoundaryPlan
+        // prepared before one cannot be installed after it — it would resurrect the records it was
+        // computed from (the PlayerCareerStates.RosterGeneration precedent). Not serialized: it guards
+        // an in-memory plan's lifetime, which never crosses a save.
+        //
+        // CLASS INVARIANT (AR round 1 P-M1): every method that writes _records, _lifecycles or
+        // _nextPlayerId calls BeginMutation() BEFORE its first write. A writer that forgets turns
+        // CommitSeasonBoundary's "infallible on a fresh plan" into a silent overwrite of its own work —
+        // a moved player duplicated at his old club, or a regen erasing a transfer.
+        private int _generation;
 
         private ProgressionEngine()
         {
@@ -88,8 +108,9 @@ namespace TacticalDirector.PlayerProgression
         /// from <see cref="PlayerProgressionConstants.NEW_GAME_PA_HEADROOM"/> above his computed CA.
         /// <para>
         /// <b>The PA seed is a placeholder for #47's authored value (ERR-028-003)</b>, and deliberately
-        /// deterministic: a draw here would be #28's first draw site and would force the regen stream to
-        /// register for a number the authored database is going to replace.
+        /// deterministic: a draw here would put a draw site on the new-game path for a number the
+        /// authored database is going to replace. (The regen stream has been registered since ERR-028-025 —
+        /// its only draw site is <see cref="PrepareSeasonBoundary"/>'s regen generation; this seed adds none.)
         /// </para>
         /// </summary>
         /// <param name="squads">The bootstrap's day-0 rosters, one per club. Copied in — the caller's
@@ -354,8 +375,11 @@ namespace TacticalDirector.PlayerProgression
         // ── The daily step (FR-PG-021 / §3.1) ─────────────────────────────────────────
 
         /// <summary>
-        /// #28's public daily entry point (FR-PG-021) — the batch #30 drives at its KD-2 slot 1 and #29
+        /// #28's daily entry point (FR-PG-021) — the batch #30 drives at its KD-2 slot 1 and #29
         /// §3.5 composes against. Advances every carried player to <paramref name="worldDay"/>.
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> reachable only from <c>TacticalDirector.SeasonSave</c>
+        /// (and the test assemblies) through <c>InternalsVisibleTo</c>. A public day step was reachable through
+        /// <c>SeasonLoop.Progression</c> and advanced the roster without the per-day career seams.
         /// <para>
         /// <b>Idempotent per day, and gap-complete.</b> Each player carries
         /// <see cref="PlayerLifecycle.LastAdvancedWorldDay"/>: a day already advanced is a no-op (which
@@ -370,7 +394,7 @@ namespace TacticalDirector.PlayerProgression
         /// <see cref="TrainingInputBatch.Neutral"/> for none (FR-PG-009).</param>
         /// <exception cref="ArgumentException">A bound batch does not describe exactly the players being
         /// advanced — a club this store does not carry, or a club whose ids do not match the store's.</exception>
-        public void AdvanceDay(uint worldDay, in TrainingInputBatch trainingInputs)
+        internal void AdvanceDay(uint worldDay, in TrainingInputBatch trainingInputs)
         {
             // F8 (ERR-028-009): the never-advanced sentinel is not a legal world day. Storing it would re-arm the
             // day-0 trap (a player anchored at the sentinel reads as never-advanced forever, so the
@@ -385,6 +409,7 @@ namespace TacticalDirector.PlayerProgression
             }
 
             ValidateBatch(in trainingInputs);
+            BeginMutation();
 
             for (int c = 0; c < _clubIds.Count; c++)
             {
@@ -440,15 +465,16 @@ namespace TacticalDirector.PlayerProgression
                 // is a no-op) — but for a BACKWARD call it is not: a player not yet flagged whose
                 // rec.Age already satisfies RETIREMENT_AGE would be flagged on that call, stamping
                 // RetirementDay with a day EARLIER than his own cursor. #30 never calls backward (the
-                // cursor-vs-clock gates refuse the composition that could), but AdvanceDay is public, so
-                // the guard stays. Locked by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement, which
+                // cursor-vs-clock gates refuse the composition that could), but AdvanceDay is reachable by
+                // the composition root and the test assemblies (internal + InternalsVisibleTo), which CAN
+                // call backward, so the guard stays. Locked by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement, which
                 // isolates the `return;` from the `if` condition above it.
                 return;
             }
 
             // §3.4 daily retirement evaluation: deterministic, no draw (FR-PG-013). Flagged only — the
-            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation is
-            // the deferred landing's.
+            // player stays selectable until the season boundary (FR-PG-014), whose roster mutation
+            // (retire + 1:1 regen) is CommitSeasonBoundary's (ERR-028-025).
             //
             // ERR-028-021: the comparison is in DAYS against a PER-PLAYER retirement day, not in whole
             // years against one league-wide integer. The retired form retired a goalkeeper on the same
@@ -476,6 +502,327 @@ namespace TacticalDirector.PlayerProgression
             {
                 life.RetirementFlag = true;
                 life.RetirementDay = worldDay;
+            }
+        }
+
+        // ── The season boundary (§3.4 as amended by ERR-028-025) ─────────────────────────
+
+        /// <summary>
+        /// Stages #28's season boundary (§3.4 <c>RunSeasonBoundary</c>): every player whose
+        /// <see cref="PlayerLifecycle.RetirementFlag"/> is set is removed, and each is replaced 1:1
+        /// (FR-PG-019) by a regen at the same club, in the retiree's position (ERR-028-024), with a fresh id
+        /// from <see cref="NextPlayerId"/> (FR-PG-011). <b>Writes nothing</b> — the store is unchanged until
+        /// <see cref="CommitSeasonBoundary"/>.
+        /// <para>
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> a seam for #30's roll (<c>SeasonLoop.RollToNextSeason</c>,
+        /// step (d)) only. A public Prepare/Commit pair reachable through <c>SeasonLoop.Progression</c> removed
+        /// retirees and inserted regens mid-season with no reconciliation of the #29/#41/#30 career rows.
+        /// </para>
+        /// <para>
+        /// <b>Draw order (normative, ERR-028-025).</b> One stream per club that has a retiree, registered
+        /// under <see cref="PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION"/> with
+        /// <c>entityId = clubId</c>; a club's k-th retiree by ascending PlayerId consumes that stream's k-th
+        /// reservation. <b>Id order (normative):</b> clubs ascending, then each club's retirees by ascending
+        /// PlayerId, one <c>NextPlayerId</c> each. Stream keys depend only on (ordinal, entityId, version), so
+        /// registration order cannot move a draw.
+        /// </para>
+        /// <para>
+        /// <b>Seed and save story.</b> The service is seeded from
+        /// <see cref="DeriveRegenSeed"/>(<paramref name="worldSeed"/>, <paramref name="completedSeasonNumber"/>)
+        /// and discarded with the plan: every input — the world seed, the season number, the retirement flags,
+        /// the cursor — is already persisted, so the stream needs no serialized cursor and a save taken
+        /// before the boundary reproduces it exactly. Folding the season number in is what makes successive
+        /// boundaries draw different regens.
+        /// </para>
+        /// </summary>
+        /// <param name="worldSeed">The career's world seed (<c>WorldStore.WorldSeed</c>).</param>
+        /// <param name="completedSeasonNumber">The season this boundary closes.</param>
+        /// <param name="worldDay">The day the regens are constructed on — #30 passes the last LIVED day
+        /// (the clock minus one), which is where every carried player's cursor sits, so a regen's cursor and
+        /// its peers' agree and the next day step advances all of them together.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="worldDay"/> is the never-advanced
+        /// sentinel (F8).</exception>
+        /// <exception cref="ArgumentException"><paramref name="worldDay"/> is outside the span of the carried
+        /// players' progression cursors (AR round 4 L16 — the §3.5 anchor MUST).</exception>
+        /// <exception cref="InvalidOperationException">The id cursor would overflow, or regen generation
+        /// failed (a draw-site misuse).</exception>
+        internal SeasonBoundaryPlan PrepareSeasonBoundary(ulong worldSeed, int completedSeasonNumber, uint worldDay)
+        {
+            if (worldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(worldDay), worldDay,
+                    "The never-advanced sentinel is not a legal day to construct a regen on (F8).");
+            }
+
+            // AR round 4 L16 (the M12 MUST, enforced): a regen is anchored on worldDay and the next day step
+            // advances every player from his own cursor, so a worldDay OUTSIDE the span the carried players'
+            // cursors occupy plants a regen ahead of (or behind) every peer — one day ahead skips that day's
+            // step by the ERR-030-027 same-day idempotence and the regen trails his peers for life. The
+            // caller MUST pass the day the cursors sit on (#30: clock - 1); this refuses the unambiguous
+            // violations (an empty store has no span to violate).
+            bool anyPlayer = false;
+            uint minCursor = uint.MaxValue;
+            uint maxCursor = 0u;
+            for (int c = 0; c < _lifecycles.Count; c++)
+            {
+                PlayerLifecycle[] held = _lifecycles[c];
+                for (int p = 0; p < held.Length; p++)
+                {
+                    uint cursor = held[p].LastAdvancedWorldDay;
+                    anyPlayer = true;
+                    minCursor = cursor < minCursor ? cursor : minCursor;
+                    maxCursor = cursor > maxCursor ? cursor : maxCursor;
+                }
+            }
+
+            if (anyPlayer && (worldDay < minCursor || worldDay > maxCursor))
+            {
+                throw new ArgumentException(
+                    $"worldDay {worldDay} is outside the span [{minCursor}, {maxCursor}] the carried players' "
+                    + "progression cursors occupy: a regen must be constructed on the day his peers' cursors "
+                    + "sit on (#28 §3.5), or the next day step skips or trails him (AR round 4 L16).",
+                    nameof(worldDay));
+            }
+
+            DeterministicRngService rng = null;
+            int next = _nextPlayerId;
+            var clubIds = _clubIds.ToArray();
+            var records = new PlayerRecord[clubIds.Length][];
+            var lifecycles = new PlayerLifecycle[clubIds.Length][];
+            var retired = new List<int>();
+            var regens = new List<int>();
+            var regenClubs = new List<int>();
+
+            for (int c = 0; c < clubIds.Length; c++)
+            {
+                PlayerRecord[] heldRecords = _records[c];
+                PlayerLifecycle[] heldLives = _lifecycles[c];
+                var nextRecords = new PlayerRecord[heldRecords.Length];
+                var nextLives = new PlayerLifecycle[heldLives.Length];
+                int streamIndex = -1;
+
+                // Records ascend by PlayerId, so this walk visits a club's retirees in the normative order.
+                for (int p = 0; p < heldRecords.Length; p++)
+                {
+                    if (!heldLives[p].RetirementFlag)
+                    {
+                        nextRecords[p] = heldRecords[p];
+                        nextLives[p] = heldLives[p];
+                        continue;
+                    }
+
+                    if (rng == null)
+                    {
+                        rng = new DeterministicRngService(DeriveRegenSeed(worldSeed, completedSeasonNumber));
+                    }
+
+                    if (streamIndex < 0)
+                    {
+                        streamIndex = rng.RegisterStream(
+                            PlayerProgressionConstants.REGEN_STREAM_SITE_ID,
+                            PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION,
+                            entityId: clubIds[c],
+                            streamVersion: PlayerProgressionConstants.REGEN_STREAM_VERSION);
+                    }
+
+                    if (next == int.MaxValue)
+                    {
+                        throw new InvalidOperationException(
+                            "The PlayerId cursor is exhausted (FR-PG-011): no fresh id remains for a regen.");
+                    }
+
+                    int regenId = next++;
+                    (PlayerRecord regen, PlayerLifecycle life) = RegenGenerator.GenerateRegen(
+                        rng, streamIndex, clubIds[c], regenId, heldRecords[p].Position, worldDay);
+
+                    string outOfRange = ProgressionSaveCodec.DescribeOutOfRangeValues(in regen, in life, clubIds[c]);
+                    if (outOfRange != null)
+                    {
+                        throw new InvalidOperationException(
+                            "A generated regen carries state the save path would refuse: " + outOfRange);
+                    }
+
+                    retired.Add(heldRecords[p].PlayerId);
+                    regens.Add(regenId);
+                    regenClubs.Add(clubIds[c]);
+                    nextRecords[p] = regen;
+                    nextLives[p] = life;
+                }
+
+                SortByPlayerId(nextRecords, nextLives);
+                records[c] = nextRecords;
+                lifecycles[c] = nextLives;
+            }
+
+            return new SeasonBoundaryPlan(
+                this, _generation, clubIds, records, lifecycles, next,
+                retired.ToArray(), regens.ToArray(), regenClubs.ToArray());
+        }
+
+        /// <summary>
+        /// Installs a plan <see cref="PrepareSeasonBoundary"/> built from this store. <b>Cannot fail</b> on a
+        /// plan this store prepared with no mutation since, which is what lets #30 call it after its roll's
+        /// last fallible write. The store instance is kept (arrays are replaced in place), so every
+        /// <c>ProgressionSquads</c> projection and every holder of this reference sees the new roster.
+        /// <b>INTERNAL (AR round 4 M13 / ERR-028-028):</b> #30's roll only, for the reason
+        /// <see cref="PrepareSeasonBoundary"/> states.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="plan"/> is null.</exception>
+        /// <exception cref="ArgumentException">The plan belongs to another store, or this store has mutated
+        /// since it was prepared (installing it would resurrect stale records).</exception>
+        internal void CommitSeasonBoundary(SeasonBoundaryPlan plan)
+        {
+            if (plan == null)
+            {
+                throw new ArgumentNullException(nameof(plan));
+            }
+
+            if (!ReferenceEquals(plan.Owner, this) || plan.Generation != _generation)
+            {
+                throw new ArgumentException(
+                    "This season-boundary plan was not prepared from this store's current state "
+                    + $"(plan generation {plan.Generation}, store generation {_generation}).",
+                    nameof(plan));
+            }
+
+            BeginMutation();
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                // Copied, not aliased (AR round 1 P-L4): AdvanceDay mutates the store's arrays in place,
+                // and a retained plan's PlannedSquadFor must keep describing the boundary it staged.
+                _records[c] = (PlayerRecord[])plan.Records[c].Clone();
+                _lifecycles[c] = (PlayerLifecycle[])plan.Lifecycles[c].Clone();
+            }
+
+            _nextPlayerId = plan.NextPlayerId;
+        }
+
+        // The one place _generation moves (P-M1): see the field's class-invariant note.
+        private void BeginMutation()
+        {
+            _generation++;
+        }
+
+        // ── Transfers: the stable-id re-home (#31 T2, ERR-031-005) ──────────────────────
+
+        /// <summary>
+        /// Finds a carried player by id across every club — the roster's answer to "who owns him",
+        /// which #31 must use instead of deriving a club from the id (ERR-031-005).
+        /// </summary>
+        /// <returns>True with his current record and club; false (and <c>clubId = -1</c>) when no carried
+        /// club has him.</returns>
+        public bool TryFindPlayer(int playerId, out PlayerRecord record, out int clubId)
+        {
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                int p = PlayerIndexOf(c, playerId);
+                if (p >= 0)
+                {
+                    record = _records[c][p];
+                    clubId = _clubIds[c];
+                    return true;
+                }
+            }
+
+            record = default;
+            clubId = -1;
+            return false;
+        }
+
+        /// <summary>
+        /// Whether <see cref="MovePlayer"/> would succeed (INTERNAL, AR round 3 M13: the roster authority's
+        /// re-home is a seam for #30's transfer adapter only — <c>SeasonTransferRoster</c> in TacticalDirector.SeasonSave,
+        /// via InternalsVisibleTo. A public re-home would let any client forge a free transfer that leaves the
+        /// #29/#41/#30 rows and #31's contracts behind): both clubs carried and distinct, the player on
+        /// <paramref name="fromClubId"/>'s roster, and <paramref name="toClubId"/>'s roster below
+        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/>. Exactly the move's preconditions, so a
+        /// preview that asks this makes the commit infallible (#31 §3.4). The source keeping at least one
+        /// player is implied by the caller's matchday-squad guard (ERR-031-007), and re-checked here so the
+        /// store can never hold an empty club (F11).
+        /// </summary>
+        internal bool CanMovePlayer(int playerId, int fromClubId, int toClubId)
+        {
+            if (fromClubId == toClubId)
+            {
+                return false;
+            }
+
+            int from = ClubIndexOf(fromClubId);
+            int to = ClubIndexOf(toClubId);
+            return from >= 0
+                && to >= 0
+                && PlayerIndexOf(from, playerId) >= 0
+                && _records[from].Length > 1
+                && _records[to].Length < PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+        }
+
+        /// <summary>
+        /// #31 T2's re-home (ERR-031-005): moves one player's record AND lifecycle from
+        /// <paramref name="fromClubId"/> to <paramref name="toClubId"/> under his UNCHANGED id. Nothing is
+        /// allocated and the id cursor does not move (FR-PG-011: transfers allocate nothing). His growth
+        /// cursor, potential and retirement state travel with him. Both clubs stay in ascending id order.
+        /// INTERNAL (AR round 3 M13): reachable only through #30's transfer adapter, never from a client.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><see cref="CanMovePlayer"/> is false.</exception>
+        internal void MovePlayer(int playerId, int fromClubId, int toClubId)
+        {
+            if (!CanMovePlayer(playerId, fromClubId, toClubId))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot re-home player {playerId} from club {fromClubId} to club {toClubId}: a club is "
+                    + "not carried, he is not on the source, the source would be emptied, or the destination "
+                    + "is at CLUB_SQUAD_SIZE.");
+            }
+
+            BeginMutation();
+            int from = ClubIndexOf(fromClubId);
+            int to = ClubIndexOf(toClubId);
+            int p = PlayerIndexOf(from, playerId);
+            PlayerRecord record = _records[from][p];
+            PlayerLifecycle life = _lifecycles[from][p];
+
+            var fromRecords = new PlayerRecord[_records[from].Length - 1];
+            var fromLives = new PlayerLifecycle[fromRecords.Length];
+            Array.Copy(_records[from], 0, fromRecords, 0, p);
+            Array.Copy(_records[from], p + 1, fromRecords, p, fromRecords.Length - p);
+            Array.Copy(_lifecycles[from], 0, fromLives, 0, p);
+            Array.Copy(_lifecycles[from], p + 1, fromLives, p, fromLives.Length - p);
+
+            var toRecords = new PlayerRecord[_records[to].Length + 1];
+            var toLives = new PlayerLifecycle[toRecords.Length];
+            Array.Copy(_records[to], toRecords, _records[to].Length);
+            Array.Copy(_lifecycles[to], toLives, _lifecycles[to].Length);
+            toRecords[toRecords.Length - 1] = record;
+            toLives[toLives.Length - 1] = life;
+            SortByPlayerId(toRecords, toLives);
+
+            _records[from] = fromRecords;
+            _lifecycles[from] = fromLives;
+            _records[to] = toRecords;
+            _lifecycles[to] = toLives;
+        }
+
+        /// <summary>
+        /// The boundary-scoped regen stream's seed (ERR-028-025): the #16 tag folded in first, then the
+        /// world seed, then the completed season number — the <c>RoundResolutionModel.FixtureKey</c> fold.
+        /// </summary>
+        internal static ulong DeriveRegenSeed(ulong worldSeed, int completedSeasonNumber)
+        {
+            ulong h = Mix(PlayerProgressionConstants.DOMAIN_TAG_PLAYER_PROGRESSION ^ worldSeed);
+            return Mix(h ^ (ulong)(uint)completedSeasonNumber);
+        }
+
+        // SplitMix64's finalizer. A per-assembly copy is this project's accepted norm (RoundResolutionModel,
+        // MedicalStep, LeagueBootstrap each carry one); no shared helper exists on deterministic-sim.
+        private static ulong Mix(ulong value)
+        {
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+            {
+                ulong z = value + 0x9E3779B97F4A7C15UL;
+                z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
+                z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
+                return z ^ (z >> 31);
             }
         }
 
@@ -896,4 +1243,40 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | RetirementFlag's stickiness, locked by a new AbilityModelTests.cs
 // |         |            |        | case rather than left as an unstated accident. No behaviour change,
 // |         |            |        | no format version, no draw.
+// | 1.10    | 2026-10-19 | —      | ERR-028-025: the season boundary lands. PrepareSeasonBoundary   |
+// |         |            |        | (pure) stages retiree removal + 1:1 regen in the retiree's      |
+// |         |            |        | position (ERR-028-024) with fresh NextPlayerId ids;             |
+// |         |            |        | CommitSeasonBoundary (infallible, generation-checked) installs  |
+// |         |            |        | it in place. The regen stream is boundary-scoped: seeded from   |
+// |         |            |        | (worldSeed, completed season) under DOMAIN_TAG 0x20, one        |
+// |         |            |        | registration per club (ordinal 82), no serialized cursor. A     |
+// |         |            |        | mutation generation (bumped by AdvanceDay too) refuses stale    |
+// |         |            |        | plans. #28's first draw site.                                   |
+// | 1.11    | 2026-10-20 | —      | #31 T2 (ERR-031-005): TryFindPlayer (roster-answered ownership),  |
+// |         |            |        | CanMovePlayer / MovePlayer (record + lifecycle re-homed under the |
+// |         |            |        | unchanged id; no allocation). AR round 1 P-M1: every mutator calls |
+// |         |            |        | BeginMutation, the one place the plan-staleness generation moves.  |
+// |         |            |        | P-L4: CommitSeasonBoundary installs COPIES of the plan's arrays.   |
+// | 1.12    | 2026-10-20 | —      | AR round 3 M13 (ERR-028-028): CanMovePlayer / MovePlayer demoted   |
+// |         |            |        | public -> internal (a public re-home forged a free transfer and    |
+// |         |            |        | orphaned the #29/#41/#30 rows); the IVT grant lives in            |
+// |         |            |        | AssemblyInfo.cs. L9: the retirement-evaluation comment no longer   |
+// |         |            |        | calls the boundary roster mutation "the deferred landing's".       |
+// | 1.13    | 2026-10-20 | —      | AR round 4 M13 / L12 (ERR-028-028 widening): AdvanceDay /          |
+// |         |            |        | PrepareSeasonBoundary / CommitSeasonBoundary demoted public ->     |
+// |         |            |        | internal — the same forged-roster-mutation class as CanMovePlayer /|
+// |         |            |        | MovePlayer, reachable through the public SeasonLoop.Progression:   |
+// |         |            |        | a client's CommitSeasonBoundary(PrepareSeasonBoundary(..)) mid-    |
+// |         |            |        | season removed retirees and inserted regens with no career-row     |
+// |         |            |        | reconciliation. Callers (grep of src/): SeasonLoop and the         |
+// |         |            |        | SeasonSave / PlayerProgression test assemblies only — all covered  |
+// |         |            |        | by the existing IVT grants. SeedFrom doc: the regen stream has     |
+// |         |            |        | been registered since ERR-028-025. No behaviour change.            |
+// |         |            |        | L16: PrepareSeasonBoundary also refuses (ArgumentException) a      |
+// |         |            |        | worldDay outside [min, max] of the carried players' cursors —      |
+// |         |            |        | enforcing the §3.5 anchor MUST; no legal call changes behaviour.   |
+// | 1.14    | 2026-10-20 | —      | AR round 5 L17 (comment-only): the backward-call guard's comment  |
+// |         |            |        | said "AdvanceDay is public, so the guard stays" - it has been     |
+// |         |            |        | internal since v1.13. Restated: reachable by the composition root |
+// |         |            |        | and the test assemblies, which can call backward. No behaviour.   |
 #endregion

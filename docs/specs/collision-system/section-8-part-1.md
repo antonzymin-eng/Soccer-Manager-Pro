@@ -3,8 +3,8 @@
 **Purpose:** Comprehensive bibliography of all research papers, technical references, and internal documentation used to derive, validate, and implement collision system algorithms. Includes citation audit tracing every formula and constant to its source or explicitly flagging empirically-chosen values.
 
 **Created:** February 16, 2026, 2:45 PM PST  
-**Revised:** February 16, 2026, 3:30 PM PST  
-**Version:** 1.1  
+**Revised:** October 18, 2026 (ERR-003-010); prior: February 16, 2026, 3:30 PM PST  
+**Version:** 1.3  
 **Status:** Draft  
 **Author:** Claude (AI) with Anton (Lead Developer)  
 **Dependencies:** Section 3 (Core Systems v1.0), Section 4 (Data Structures v1.0), Section 5 (Testing v1.0), Section 6 (Performance Analysis v1.1), Section 7 (Future Extensions v1.1), Ball Physics Spec #1 (v1.x approved), Agent Movement Spec #2 (in review), Master Vol 1 (Physics Core)
@@ -12,6 +12,12 @@
 **Rendering note:** This document contains mathematical symbols (Ã—, â‰ˆ, Ï€, etc.) that require UTF-8 encoding to display correctly. If symbols appear garbled, verify the file is being read with UTF-8 encoding.
 
 ---
+
+## CHANGELOG v1.2 → v1.3
+
+- Oct 18, 2026: ERR-003-010. §8.3 [BALL-PHYSICS-SPEC] interface contract lists every
+  `AgentBallCollisionData` field, including `AgentPosition`. The header version is corrected from the
+  stale 1.1 (the v1.1 → v1.2 changes below had already landed). Documentation only.
 
 ## CHANGELOG v1.1 → v1.2
 
@@ -331,7 +337,7 @@ Cross-references to Master Volumes and related specifications.
   - Section 3.1.10: `Ball.OnCollision(AgentCollisionData)` interface â€” Collision System calls this
   - Section 8: References format â€” pattern followed by this section
 - **Interface contract:**
-  - Collision System provides: `AgentBallCollisionData` struct (contact point, agent velocity, body part)
+  - Collision System provides: `AgentBallCollisionData` struct (contact point, agent position — the agent centre from which Ball Physics derives the deflection normal, ERR-003-010 — agent velocity, body part, agent/team IDs, goalkeeper flag; §4.2.4)
   - Ball Physics provides: `BallState` struct for collision detection, `OnCollision()` callback for response
 - **Relationship:** Collision System detects agent-ball contact; Ball Physics handles ball deflection physics.
 

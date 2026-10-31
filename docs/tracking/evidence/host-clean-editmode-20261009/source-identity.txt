@@ -1,0 +1,22 @@
+# Source identity captured before the pinned-host compile and EditMode rerun
+captured_utc: 2026-10-10T03:46:56Z
+branch: claude/unity-clean-editmode
+head_commit: 3927a13bde897cc7c0828a1c0c0efffdbbe5e0d1
+head_tree: a11a864e7df63c6d2c43092f282af4018669775c
+tree_src: 0124d2b3e1945437d28ec8fdf509913fa79f0fd1
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree_Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain_tracked_and_untracked (git status --porcelain=v1 --untracked-files=all): 0 entries
+porcelain_ignored_under_src_Packages_ProjectSettings (git status --porcelain=v1 --ignored -- src Packages ProjectSettings): 0 entries
+unity_editor: 6000.4.9f1 (6000.4.9f1 (f7258d6eebbe))
+assets_scripts_junction: C:\Users\azymi\Desktop\Soccer-Manager-Pro\src
+
+# Re-captured after the EditMode run finished
+captured_utc: 2026-10-10T04:22:50Z
+head_commit: 3927a13bde897cc7c0828a1c0c0efffdbbe5e0d1
+tree_src: 0124d2b3e1945437d28ec8fdf509913fa79f0fd1
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+porcelain_src_Packages_ProjectSettings_including_untracked_and_ignored (git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings): 0 entries
+verify: git rev-parse 3927a13b:src  ->  0124d2b3e1945437d28ec8fdf509913fa79f0fd1

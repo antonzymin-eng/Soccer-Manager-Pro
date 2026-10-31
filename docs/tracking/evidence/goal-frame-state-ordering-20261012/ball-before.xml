@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" name="TacticalDirector.BallPhysics.Tests.dll" fullname="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll" testcasecount="118" result="Failed" start-time="2026-10-12T16:28:33.1235269Z" end-time="2026-10-12T16:28:33.1783852Z" duration="0.054822" total="5" passed="0" failed="5" inconclusive="0" skipped="0" warnings="0" asserts="5" random-seed="1531246176">
+  <command-line><![CDATA[/tmp/smp-nunit/Runner.dll src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll --where "method == PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable or method == OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision" --workers=0 --result=/tmp/smp-nunit/ball-before.xml]]></command-line>
+  <filter>
+    <or>
+      <method>PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable</method>
+      <method>OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision</method>
+    </or>
+  </filter>
+  <test-suite type="Assembly" id="1130" name="TacticalDirector.BallPhysics.Tests.dll" fullname="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll" runstate="Runnable" testcasecount="118" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1235269Z" end-time="2026-10-12T16:28:33.1783852Z" duration="0.054822" total="5" passed="0" failed="5" warnings="0" inconclusive="0" skipped="0" asserts="5">
+    <environment framework-version="3.14.0.0" clr-version="8.0.21" os-version="Ubuntu 24.04.3 LTS" platform="Unix" cwd="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro" machine-name="be87484abc20" user="root" user-domain="be87484abc20" culture="" uiculture="" os-architecture="x64" />
+    <settings>
+      <setting name="NumberOfTestWorkers" value="0" />
+      <setting name="WorkDirectory" value="/workspace/scratch/4c1d6c768732/Soccer-Manager-Pro" />
+    </settings>
+    <properties>
+      <property name="_PID" value="5" />
+      <property name="_APPDOMAIN" value="Runner" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="TestSuite" id="1131" name="TacticalDirector" fullname="TacticalDirector" runstate="Runnable" testcasecount="118" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1283192Z" end-time="2026-10-12T16:28:33.1783823Z" duration="0.050063" total="5" passed="0" failed="5" warnings="0" inconclusive="0" skipped="0" asserts="5">
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1132" name="BallPhysics" fullname="TacticalDirector.BallPhysics" runstate="Runnable" testcasecount="118" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1286996Z" end-time="2026-10-12T16:28:33.1783796Z" duration="0.049680" total="5" passed="0" failed="5" warnings="0" inconclusive="0" skipped="0" asserts="5">
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1133" name="Tests" fullname="TacticalDirector.BallPhysics.Tests" runstate="Runnable" testcasecount="118" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1287128Z" end-time="2026-10-12T16:28:33.1783768Z" duration="0.049664" total="5" passed="0" failed="5" warnings="0" inconclusive="0" skipped="0" asserts="5">
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1109" name="SweptGoalFrameTests" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" testcasecount="18" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1287159Z" end-time="2026-10-12T16:28:33.1783364Z" duration="0.049621" total="5" passed="0" failed="5" warnings="0" inconclusive="0" skipped="0" asserts="5">
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1118" name="OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision" methodname="OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" seed="1405516709" result="Failed" start-time="2026-10-12T16:28:33.1308853Z" end-time="2026-10-12T16:28:33.1628612Z" duration="0.032046" asserts="1">
+              <failure>
+                <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision() in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 86
+]]></stack-trace>
+              </failure>
+              <assertions>
+                <assertion result="Failed">
+                  <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision() in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 86
+]]></stack-trace>
+                </assertion>
+              </assertions>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1114" name="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-12T16:28:33.1640710Z" end-time="2026-10-12T16:28:33.1781247Z" duration="0.014054" total="4" passed="0" failed="4" warnings="0" inconclusive="0" skipped="0" asserts="4">
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="1110" name="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,False)" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,False)" methodname="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" seed="1957278840" result="Failed" start-time="2026-10-12T16:28:33.1642691Z" end-time="2026-10-12T16:28:33.1751870Z" duration="0.010918" asserts="1">
+                <failure>
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+]]></stack-trace>
+                </failure>
+                <assertions>
+                  <assertion result="Failed">
+                    <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                    <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+]]></stack-trace>
+                  </assertion>
+                </assertions>
+              </test-case>
+              <test-case id="1111" name="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,False)" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,False)" methodname="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" seed="620181586" result="Failed" start-time="2026-10-12T16:28:33.1752554Z" end-time="2026-10-12T16:28:33.1766754Z" duration="0.001420" asserts="1">
+                <failure>
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                </failure>
+                <assertions>
+                  <assertion result="Failed">
+                    <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                    <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                  </assertion>
+                </assertions>
+              </test-case>
+              <test-case id="1112" name="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,True)" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,True)" methodname="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" seed="1692720671" result="Failed" start-time="2026-10-12T16:28:33.1767078Z" end-time="2026-10-12T16:28:33.1771597Z" duration="0.000452" asserts="1">
+                <failure>
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                </failure>
+                <assertions>
+                  <assertion result="Failed">
+                    <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                    <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                  </assertion>
+                </assertions>
+              </test-case>
+              <test-case id="1113" name="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,True)" fullname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,True)" methodname="PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable" classname="TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests" runstate="Runnable" seed="896033186" result="Failed" start-time="2026-10-12T16:28:33.1771840Z" end-time="2026-10-12T16:28:33.1774751Z" duration="0.000291" asserts="1">
+                <failure>
+                  <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                  <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                </failure>
+                <assertions>
+                  <assertion result="Failed">
+                    <message><![CDATA[  Expected: Airborne
+  But was:  OutOfPlay
+]]></message>
+                    <stack-trace><![CDATA[   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+]]></stack-trace>
+                  </assertion>
+                </assertions>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,62 @@
+NUnitLite 3.14.0 (.NET Standard 2.0)
+Copyright (c) 2023 Charlie Poole, Rob Prouse
+
+Runtime Environment
+   OS Version: Ubuntu 24.04.3 LTS
+  CLR Version: 8.0.21
+
+Test Files
+    /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll
+
+Test Discovery
+  Start time: 2026-10-12 16:28:33Z
+    End time: 2026-10-12 16:28:33Z
+    Duration: 0.049 seconds
+
+Test Filters
+    Where: method == PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable or method == OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision
+
+Errors, Failures and Warnings
+
+1) Failed : TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision
+  Expected: False
+  But was:  True
+   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.OutOfPlayBall_IsNeverReturnedToPlayByAFrameCollision() in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 86
+
+2) Failed : TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,False)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+
+3) Failed : TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,False)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+
+4) Failed : TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(False,True)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+
+5) Failed : TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(True,True)
+  Expected: Airborne
+  But was:  OutOfPlay
+   at TacticalDirector.BallPhysics.Tests.SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Boolean homeGoal, Boolean crossbar) in /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro/src/ball-physics/tests/SweptGoalFrameTests.cs:line 50
+   at InvokeStub_SweptGoalFrameTests.PhysicsUpdate_FrameBeforeFullCrossing_KeepsReboundPlayable(Object, Span`1)
+
+Run Settings
+    Number of Test Workers: 0
+    Work Directory: /workspace/scratch/4c1d6c768732/Soccer-Manager-Pro
+    Internal Trace: Off
+
+Test Run Summary
+  Overall result: Failed
+  Test Count: 5, Passed: 0, Failed: 5, Warnings: 0, Inconclusive: 0, Skipped: 0
+    Failed Tests - Failures: 5, Errors: 0, Invalid: 0
+  Start time: 2026-10-12 16:28:33Z
+    End time: 2026-10-12 16:28:33Z
+    Duration: 0.055 seconds
+
+Results (nunit3) saved as /tmp/smp-nunit/ball-before.xml

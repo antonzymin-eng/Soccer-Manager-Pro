@@ -1,0 +1,51 @@
+# One B8/B10 condition: launch the development player with its own profiler log, start a match by
+# keyboard, apply the condition's keys, verify by screenshot, hold N seconds in focus, quit.
+# Usage: pcond.ps1 -Build <dir> -Tag s100 -Cond 1x-closed -Keys "" [-Hold 30]
+# v2 (October 28, 2026): the player is always stopped (try/finally), even when a key is refused, and the
+# hold aborts if the profiler log passes MaxRawGB. An aborted v1 trial left a player profiling for an hour.
+param([string]$Build, [string]$Tag, [string]$Cond, [string]$Keys = '', [int]$Hold = 30, [int]$Width = 1920, [int]$Height = 1080, [double]$MaxRawGB = 4)
+$root = 'C:\Users\azymi\AppData\Local\Temp\s0sf'
+$k = Join-Path $root 'tools\pkey.ps1'
+$raw = Join-Path $root "perf\$Tag-$Cond.raw"
+function Stop-Player {
+    Get-Process SystemXI -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+    Start-Sleep -Seconds 4
+    Get-Process SystemXI -ErrorAction SilentlyContinue | Stop-Process -Force
+}
+function RawGB { (Get-ChildItem (Split-Path $raw) -Filter "$Tag-$Cond.raw*" -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB }
+Get-Process SystemXI -ErrorAction SilentlyContinue | Stop-Process -Force
+try {
+    Start-Process -FilePath (Join-Path $Build 'SystemXI.exe') -ArgumentList "-screen-fullscreen 0 -screen-width $Width -screen-height $Height -profiler-enable -profiler-maxusedmemory 512000000 -profiler-log-file `"$raw`" -logFile `"$(Join-Path $Build "player-$Cond.log")`""
+    Start-Sleep -Seconds 10
+    # The development player follows the connected Editor's recording state: attach the Editor profiler
+    # and record, or the player's own log stops after its first frames.
+    $chan = Join-Path $root 'cmd'; $clog = Join-Path $chan 'channel.log'
+    $n0 = (Get-Content $clog).Count
+    [IO.File]::WriteAllText((Join-Path $chan ("{0}.cmd" -f [DateTime]::UtcNow.Ticks)), 'call S0HostPerf.Start')
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-Date) -lt $deadline -and -not ((Get-Content $clog | Select-Object -Skip $n0) -match 'S0HostPerf.Start')) { Start-Sleep -Milliseconds 500 }
+    if (-not ((Get-Content $clog | Select-Object -Skip $n0) -match 'S0HostPerf.Start')) { throw 'ABORT: Editor did not start recording' }
+    Start-Sleep -Seconds 2
+    # Park the pointer on blank page space so hover/click cannot reach a control during the hold.
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(1880, 1040)
+    & $k -Tag $Tag -Keys 'TAB,ENTER' | Out-Null
+    Start-Sleep -Milliseconds 800
+    & $k -Tag $Tag -Keys 'TAB,TAB,TAB,TAB,TAB,TAB,TAB,TAB' | Out-Null
+    Start-Sleep -Milliseconds 500
+    & $k -Tag $Tag -Keys 'ENTER' | Out-Null
+    Start-Sleep -Seconds 2
+    & $k -Tag $Tag -Shot "$Cond-started"
+    if ($Keys) { & $k -Tag $Tag -Keys $Keys | Out-Null; Start-Sleep -Seconds 1 }
+    & $k -Tag $Tag -Shot "$Cond-set"
+    $end = (Get-Date).AddSeconds($Hold)
+    while ((Get-Date) -lt $end) {
+        if ((RawGB) -gt $MaxRawGB) { throw "ABORT: profiler log over $MaxRawGB GB" }
+        & $k -FocusOnly | Out-Null; Start-Sleep -Seconds 3
+    }
+    & $k -Tag $Tag -Shot "$Cond-end"
+}
+finally {
+    Stop-Player
+}
+Get-ChildItem (Split-Path $raw) -Filter "$Tag-$Cond.raw*" | Select-Object Name, Length

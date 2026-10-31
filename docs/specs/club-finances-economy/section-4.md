@@ -1,12 +1,16 @@
 # Club Finances & Economy #40 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
+**Last Updated:** October 13, 2026 (v0.11 — T3b2 model and parameter-only test seam use existing assembly and save boundaries)
+**Last Updated (prior):** October 8, 2026 (v0.10 — daily composition uses the existing edge and adds no persisted state)
+**Last Updated (prior):** September 11, 2026 (v0.9 — T3a review close-out: restore-time coherence includes accumulated revenue; canonical newline restored)
+**Last Updated (prior):** September 11, 2026 (v0.8 — T3a: record draw-free daily revenue accounting surface; dependency graph unchanged)
+**Last Updated (prior):** September 11, 2026 (v0.7 — T2b: #30 bootstrap/settlement composition is live; ERR-030-051 pins staged commit semantics)
 **Last Updated (prior):** September 11, 2026 (v0.6 — PR #392 T2a: the consumed #40 → #27 Squad.ClubId edge is now live; #30 invocation remains T2b)
 **Last Updated (prior):** September 10, 2026 (v0.5 — T1b landed: the #30 composition edge is now real, ERR-030-049)
 **Last Updated (prior):** September 6, 2026 (v0.4 — PR #363 external-review correction: phase-real dependencies and T1a/T1b persistence boundary)
 **Last Updated (prior):** September 4, 2026 (v0.3 — T1 self-identifying save framing back-prop)
-**Version:** 0.7
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -25,22 +29,37 @@ its consumer would have been a dead architectural reference; carrying it now is 
 requires. At every phase #40 does **not** reference `MatchEngine`, `LivingWorld`, `SeasonSave`, #30, #31,
 #34, or #45; those higher/future systems call down into #40 rather than reversing ownership (FR-FN-027).
 
+**T3a changes no assembly edge.** `FinanceStep.AccrueDailyRevenue` is a pure #40-owned accounting transform
+over caller-supplied integer revenue amounts. It neither discovers the day/fixture nor calls #30, and it
+performs no deterministic draw, so the existing `DeterministicSim` reference remains save-framing-only and
+the reserved `0x29`/91 namespace remains unpromoted. T3b1's #30 daily invocation is a caller-side
+composition change on the already-existing `#30 → #40` edge, not a reverse dependency.
+
 ```
-T2a current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical save framing]
+T3a current:  ClubFinances (#40) ──▶ DeterministicSim (#16)     [canonical save framing only; no draw]
                                  ├──▶ ProjectConstants           [[GT] GameplayConfig loading]
                                  └──▶ PlayerDatabase (#27)       [Squad.ClubId bootstrap transform]
 T1b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [compose finance sub-blob]
 T2b current:  #30 SeasonSave ──────▶ ClubFinances (#40)         [League.CreateLoop bootstrap + staged settle at step (b')]
+T3b1 current: #30 SeasonSave ─────▶ ClubFinances (#40)         [day-completion identity invocation; non-zero model remains T3b2]
 T3/future:    #31/#34/#45 ─────────▶ ClubFinances (#40)         [downstream query/commands/modifier producers]
 ```
 
 The T1b edge is **intra-tier**: `season-save` and `club-finances` are both Tier-7 Management (Code
 Standards #20 §3.5.2), which permits the reference and forbids only a cycle. The direction is the one
 FR-FN-027 fixes — #30 reads down into #40, never the reverse. T2a adds only the already-authorized downward
-#27 dependency; it does not change that ownership direction.
+#27 dependency; T3a adds no reference at all.
 
 The foundation edges introduce no domain ownership seam and #40 introduces no alternate config/serialization
 framework. #27's assembly remains schema-untouched: T2a consumes the existing `Squad.ClubId` surface only.
+
+**T3b2:** `FinanceStep.DailyRevenue` owns deterministic amounts and validates the enabled catalogue.
+`SeasonFinanceRuntime.PrepareDailyRevenue(entries, gate, season, day)` derives only settled facts;
+`Fixture.Played` is the persisted assertion that #30 applied its result. The disabled path does not
+inspect the season or day. `SeasonLoop.TestOnly_AdvanceDays` supplies a parameter to the same guarded
+advance core for tests; it stores no override and adds no production gate producer. Production
+`AdvanceDays` and `AdvanceToNextFixtureDay` forward the sole `ClubFinancesConstants.DeepRevenueEnabled`.
+No assembly reference, save field/version or RNG namespace changes.
 
 ## 4.2 File layout (lands incrementally by T-phase)
 
@@ -53,31 +72,39 @@ src/club-finances/
 ├── ClubFinanceEntry.cs               // persisted record (T1a) + pure Squad.ClubId bootstrap factory (T2a)
 ├── FinanceTransaction.cs             // the ApplyTransaction input value (T0)
 ├── BoardModifier.cs                  // KD-4 identity routing seam (T0)
-├── FinanceStep.cs                    // SettleFinances + PrizeMoneyForPosition (T0)
+├── FinanceStep.cs                    // SettleFinances + PrizeMoneyForPosition (T0); AccrueDailyRevenue (T3a); DailyRevenue (T3b2)
 ├── FinanceLedger.cs                  // ApplyTransaction + AvailableTransferBudget (T0)
 ├── FinancesViewModel.cs              // KD-8 observer (T0)
 ├── ClubFinancesSaveCodec.cs          // self-identifying finance sub-blob (T1a)
-├── ClubFinancesConstants.cs          // Appendix A catalogue (T0/T1a constants)
+├── ClubFinancesConstants.cs          // Appendix A catalogue (T0/T1a constants; later T3 tuning extends it)
 └── tests/ …
 ```
 
 ## 4.3 Seam contracts
 
 - **From #16 (T1a):** `ClubFinancesSaveCodec` consumes `CanonicalSerializer` and
-  `SaveBlobFramingHelpers` for canonical framing. No RNG API or stream is consumed.
+  `SaveBlobFramingHelpers` for canonical framing. T3a still consumes no RNG API or stream.
 - **From ProjectConstants (T0):** #40's `[GT]` catalogue uses the existing `GameplayConfig.Get*` loader.
   This is a foundation/config-loading dependency only; it creates no gameplay ownership or mutation seam.
 - **From #27 (T2a, live):** `CreateInitialForSquads(Squad[])` reads only each canonical `Squad.ClubId`,
   produces one initial entry per distinct club and canonicalizes by ClubId. #40 declares no write path into
   `Squad`, `PlayerAttributes`, or `PlayerRecord`; the caller supplies the club universe and retains lifecycle
   ownership.
-- **To #30 (T1b/T2b, live):** T1b composes #40's opaque codec into `SeasonSaveCodec`. T2b's
-  `League.CreateLoop` is the new-game lifecycle seam: it invokes T2a's bootstrap transform exactly once.
-  `SeasonLoop.RollToNextSeason()` computes `SettleFinances` per club at reserved step (b') and stages those
-  values until the fallible #30 season commit succeeds; only then are they installed (ERR-030-051). #40
-  never references #30 and never invokes its own bootstrap factory independently.
+- **To #30 (T1b/T2b/T3b1 live):** T1b composes #40's opaque codec into
+  `SeasonSaveCodec`. T2b's `League.CreateLoop` is the new-game lifecycle seam: it invokes T2a's bootstrap
+  transform exactly once. `SeasonLoop.RollToNextSeason()` computes `SettleFinances` per club at reserved
+  step (b') and stages those values until the fallible #30 season commit succeeds; only then are they
+  installed (ERR-030-051). T3b1 invokes the pure `AccrueDailyRevenue` accounting transform at day-completion slot 11a,
+  outside the replayed pre-round career helper. T3b2 supplies §3.7 deterministic amounts only when the sole #40 config gate is enabled; its
+  default-off path still supplies zero amounts. #40 never
+  references #30 and never invokes its own bootstrap factory independently.
+- **T3a autonomous accounting:** `AccrueDailyRevenue` is #40-owned rather than a second caller-command
+  ledger. With its gate disabled it returns the prior state exactly; enabled, it can change only `Balance`
+  and `SeasonRevenueAccrued`. The caller may supply already-derived amounts, but the normative amount model
+  remains #40-owned and is not delegated to #30/#31/#34/#45 by this surface.
 - **From #31 (future):** `AvailableTransferBudget` is a read-only query; `ApplyTransaction` is the single
-  command #31 invokes on a committed deal. #40 declares no interface into #31 — #31 is a caller only.
+  externally-commanded ledger command #31 invokes on a committed deal. #40 declares no interface into #31 —
+  #31 is a caller only.
 - **From #34 (future):** staff wage line items reach #40 through the same `ApplyTransaction` command; no #34
   interface exists today.
 - **From #45 (future):** `BoardModifier` is a value parameter passed into `SettleFinances`; #45 becomes the
@@ -93,8 +120,9 @@ codec**; composition into #30's `SeasonSaveCodec` and the coordinating outer `SE
 bump were **T1b**, and landed September 10, 2026 (ERR-030-049: frame `6 → 7`, the mandatory `FNCE` block
 between #44's discipline block and the optional match block). The split kept each implementation phase
 matched to the code: the codec was built and validated without pretending the season-save envelope had
-already changed. The byte layout below is unchanged by T1b or T2a — the frame nests this block opaquely and
-T2a only supplies initial records, so `FINANCE_SAVE_FORMAT_VERSION` stays 1.
+already changed. The byte layout below is unchanged by T1b, T2a, T2b, T3a, or T3b1 — T3a mutates fields that were
+already persisted in the six-field record and introduces no new cursor/state field, so
+`FINANCE_SAVE_FORMAT_VERSION` stays 1.
 
 A version word alone does not identify a format because multiple sibling sub-blobs legitimately sit at
 version 1. The block therefore starts with fixed `FINANCE_SAVE_MAGIC = 0x464E4345` (`FNCE`) and rejects a
@@ -114,7 +142,7 @@ EncodeFinances(perClubFinances) -> bytes:
         WriteI64(f.WageBillAggregate)
         WriteI64(f.SeasonRevenueAccrued)
         WriteI64(f.FfpBalanceWindow)
-    # No RNG cursor/action ordinal block at minimal.
+    # No RNG cursor/action ordinal block at minimal/T3a.
 
 DecodeFinances(bytes) -> perClubFinances:
     magic = ReadU32(); if magic != FINANCE_SAVE_MAGIC: throw
@@ -125,7 +153,7 @@ DecodeFinances(bytes) -> perClubFinances:
         clubId = ReadI32(); if clubId <= previousClubId: throw
         previousClubId = clubId
         ... read six i64 fields ...
-        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0: throw
+        if transferBudget < 0 or wageBudget < 0 or wageBillAggregate < 0 or seasonRevenueAccrued < 0: throw
     if bytesRemaining != 0: throw
 ```
 
@@ -135,13 +163,14 @@ directly. Encode sorts a copy of caller keys and refuses duplicates; decode requ
 All fields serialize through #16's `CanonicalSerializer`; signed `long` fields round-trip bitwise, including
 negative `Balance` (debt). **Serialize, don't regenerate.**
 
-## 4.5 RNG-namespace reservation (KD-2) — not registered at Stage 2
+## 4.5 RNG-namespace reservation (KD-2) — still not registered at T3a
 
 `_RESERVED_0x29_` / `SubsystemOrdinals.ClubFinances = 91` is filed as a placeholder row (ERR-040-001) —
-reserved, **not** a named/promoted tag, because the minimal tier has no draw. No code constant is declared and
-no stream is registered at T0–T2; the actual `DOMAIN_TAG_CLUB_FINANCES = 0x29` promotion, code const, and first
-stochastic draw land together at #40 T3, keyed on `(clubId, seasonNumber, purpose)`. T1a therefore serializes
-no `RngCursor` or `actionOrdinal`, and adding #40 through T2 leaves existing stream cursors unchanged.
+reserved, **not** a named/promoted tag. T3a performs no draw, so no code constant is declared and no stream is
+registered through this slice. The actual `DOMAIN_TAG_CLUB_FINANCES = 0x29` promotion, code const, and first
+stochastic sponsorship-variance consumer MUST still land atomically in the later T3 stochastic slice, keyed
+on `(clubId, seasonNumber, purpose)`. T3a therefore serializes no `RngCursor` or `actionOrdinal`, and adding
+its deterministic accounting transform leaves every existing stream cursor unchanged.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -153,4 +182,8 @@ no `RngCursor` or `actionOrdinal`, and adding #40 through T2 leaves existing str
 | 0.5 | 2026-09-10 | — | **T1b landed (ERR-030-049).** §4.1's reference diagram promotes the `#30 SeasonSave → ClubFinances` edge from future to current and records that it is an intra-Tier-7 reference (permitted; only cycles are forbidden) leaving #40's own reference set unchanged. §4.4 records the composition and the outer frame bump `6 → 7` as landed, and states that the block's own byte layout and `FINANCE_SAVE_FORMAT_VERSION = 1` are untouched by it — the frame nests the block opaquely. |
 | 0.6 | 2026-09-11 | — | **PR #392 T2a architecture back-prop.** Promotes the authorized #40 → #27 `PlayerDatabase` edge from future to current with its `Squad.ClubId` bootstrap consumer, records the factory as a pure transform rather than a lifecycle owner, and keeps #30's production invocation/settlement wiring in T2b. |
 | 0.7 | 2026-09-11 | — | **T2b / ERR-030-051 architecture back-prop.** Promotes #30's bootstrap/settlement edge to current, records `League.CreateLoop` as the lifecycle owner, and pins settlement-at-(b') with post-commit installation to preserve #30 atomicity. |
+| 0.8 | 2026-09-11 | OpenAI | **T3a architecture back-prop.** Records `AccrueDailyRevenue` as a draw-free #40-owned autonomous accounting transform, keeps the assembly graph unchanged, leaves #30 daily invocation deferred, and keeps `0x29`/91 reserved until the first stochastic sponsorship-variance consumer. |
+| 0.9 | 2026-09-11 | OpenAI | **T3a review close-out.** Restore-time coherence pseudocode now includes negative `SeasonRevenueAccrued` rejection and the file regains a canonical trailing newline. |
+| 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** daily composition uses the existing edge and adds no persisted state. |
+| 0.11 | 2026-10-13 | — | **T3b2 implementation.** T3b2 model and parameter-only test seam use existing assembly and save boundaries. Default remains off; pinned Unity compilation pending. |
 #endregion

@@ -1,0 +1,110 @@
+// SCRATCH — not committed. Retained as evidence text (w8-corpus-stall-trace.cs.txt).
+// Purpose: per-tick OutOfPlay stall audit of the frozen W8 six-seed corpus at the pre-B anchor.
+// Same population and exposure as W8StageADiagnostic_ReportsFrozenSixSeedBaseline:
+// new MatchEngine(seed), EnableGkHeading(), no ConfigureSquads, 324,000 consecutive ticks.
+// No observer is installed; the terminal digest must equal the W8 instrument's seedEnd digest,
+// which proves both runs played the same matches. Reads BallView only; changes no state.
+
+using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
+
+using NUnit.Framework;
+
+using TacticalDirector.BallPhysics;
+
+namespace TacticalDirector.MatchEngine
+{
+    [TestFixture]
+    internal sealed class W8CorpusStallTraceScratch
+    {
+        private const int TicksPerSeed = 324000;
+        private const int HalfTick = 162000;
+        private const int ReportRunTicks = 60;      // list every OutOfPlay run of at least 1 s
+        private const int CandidateRunTicks = 600;  // a "long stall" candidate: at least 10 s
+
+        private static readonly ulong[] Seeds =
+        {
+            0x0F1E2D3C4B5A6978UL, 0x00000000D1A6D05EUL,
+            0x0000000000000001UL, 0x00000000ABCDEF12UL,
+            0x0000000099887766UL, 0x000000005A5A5A5AUL
+        };
+
+        [Test]
+        [Category("Calibration")]
+        public void W8Corpus_PerTickOutOfPlayStallTrace()
+        {
+            string outPath = Environment.GetEnvironmentVariable("TD_W8_STALL_TRACE_OUT");
+            if (string.IsNullOrEmpty(outPath)) Assert.Ignore("Set TD_W8_STALL_TRACE_OUT=<file>.");
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                var sb = new StringBuilder();
+                sb.Append("=== W8 corpus per-tick OutOfPlay stall trace ===\n");
+                sb.Append("seed,tick,oopTicks,oopRuns,longestOopTicks,longestOopStart,longestOopPeriod,longestOopX,longestOopY,")
+                  .Append("longestStaticTicks,longestStaticStart,longestStaticState,candidates,digest\n");
+                var runs = new StringBuilder();
+                runs.Append("seed,runStartTick,runTicks,period,state,x,y,z\n");
+                int totalCandidates = 0;
+
+                foreach (ulong seed in Seeds)
+                {
+                    var engine = new MatchEngine(seed);
+                    engine.EnableGkHeading();
+
+                    int oopTicks = 0, oopRuns = 0, candidates = 0;
+                    int runStart = -1, runLen = 0;
+                    int bestOop = 0, bestOopStart = -1; float bestX = 0f, bestY = 0f;
+                    int staticLen = 0, staticStart = -1, bestStatic = 0, bestStaticStart = -1;
+                    BallStateType bestStaticState = BallStateType.Stationary;
+                    float px = float.NaN, py = float.NaN, pz = float.NaN;
+
+                    for (int t = 0; t < TicksPerSeed; t++)
+                    {
+                        engine.RunTick();
+                        BallState b = engine.BallView;
+                        bool oop = b.State == BallStateType.OutOfPlay;
+                        if (oop)
+                        {
+                            oopTicks++;
+                            if (runLen == 0) { runStart = t; oopRuns++; }
+                            runLen++;
+                            if (runLen > bestOop) { bestOop = runLen; bestOopStart = runStart; bestX = b.Position.x; bestY = b.Position.y; }
+                        }
+                        if ((!oop || t == TicksPerSeed - 1) && runLen > 0)
+                        {
+                            if (runLen >= ReportRunTicks)
+                            {
+                                runs.Append(Inv($"0x{seed:X16},{runStart},{runLen},{(runStart < HalfTick ? 1 : 2)},OutOfPlay,{b.Position.x:F3},{b.Position.y:F3},{b.Position.z:F3}\n"));
+                            }
+                            if (runLen >= CandidateRunTicks) candidates++;
+                            runLen = 0;
+                        }
+
+                        bool same = b.Position.x == px && b.Position.y == py && b.Position.z == pz;
+                        if (same) { staticLen++; if (staticLen > bestStatic) { bestStatic = staticLen; bestStaticStart = staticStart; bestStaticState = b.State; } }
+                        else { staticLen = 1; staticStart = t; }
+                        px = b.Position.x; py = b.Position.y; pz = b.Position.z;
+                    }
+
+                    totalCandidates += candidates;
+                    sb.Append(Inv($"0x{seed:X16},{engine.CurrentTick},{oopTicks},{oopRuns},{bestOop},{bestOopStart},"))
+                      .Append(Inv($"{(bestOopStart < 0 ? 0 : bestOopStart < HalfTick ? 1 : 2)},{bestX:F3},{bestY:F3},"))
+                      .Append(Inv($"{bestStatic},{bestStaticStart},{bestStaticState},{candidates},"))
+                      .Append(BitConverter.ToString(engine.CurrentSnapshotDigest).Replace("-", "").ToLowerInvariant())
+                      .Append('\n');
+                    File.WriteAllText(outPath, sb + "\n" + runs);
+                }
+
+                sb.Append(Inv($"totalLongStallCandidates(>= {CandidateRunTicks} ticks OutOfPlay)={totalCandidates}\n"));
+                File.WriteAllText(outPath, sb + "\n" + runs);
+                TestContext.WriteLine(sb.ToString());
+                TestContext.WriteLine(runs.ToString());
+            }
+            finally { UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false; }
+        }
+
+        private static string Inv(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+    }
+}

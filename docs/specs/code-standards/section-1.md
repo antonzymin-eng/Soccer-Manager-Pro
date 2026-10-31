@@ -6,8 +6,8 @@ dependency contracts for Spec #20. Authoritative reference for what this specifi
 owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
-**Modified:** September 14, 2026
-**Version:** 1.3
+**Modified:** October 30, 2026
+**Version:** 1.4
 **Status:** AMENDMENT DRAFT (A3.1b post-merge correction; approved v1.0.4 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
@@ -295,7 +295,8 @@ checks. Unsupported semantic claims remain report-only.
 | 1.0.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M3.** The 1.0.3 row above fixed §1's prose scope list but missed the §1.3 Authority Matrix row two sections later, which still enumerated five tags (`[GT]`/`[EST]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`) — the same six-vs-five gap the 1.0.3 row exists to close, left standing in a second table. `[CROSS-PENDING]` added to the Authority Matrix row; no other content change. | — |
 | 1.1 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Extends scope/authority/dependency text to FR-CS-074–081, Project Architecture Governance, and Spec #19's proof/gate ownership; states that A3 approval is distinct from A4/A8 mechanical activation. No new runtime dependency or enforcement is introduced. | PENDING — A3.4 |
 | 1.2 | September 3, 2026 | Claude Code | **A3.1b stale-claim sweep completed here.** §1.4's downstream bullet still described `src/CLAUDE.md` as future work ("The future `src/CLAUDE.md` will contain concrete paths and assembly definitions"); the file exists, and §1.4's own architecture-governance bullets and both other outline tiers had already been corrected in A3.1b. Restated as existing. **KD-4 deliberately NOT modernized here.** An automated review of PR #351 asked for the normative KD-4 text to be updated to match live tooling; the owner declined that scope for this slice — A3.1b is a synchronization and finding-closure pass, and rewriting a Key Design Decision's statement is a governance-semantic change, not a stale-wording fix. §5.1's "Tooling status" paragraph already frames KD-4 as the historical Stage 0 decision and records that the Stage 0+1 transition has since arrived, which is where reviewers meet the question. Tracked separately for A3.4. No FR, count, KD, authority-matrix row or scope boundary changed. | PENDING — A3.4 |
-| 1.3 | September 14, 2026 | Codex | **`ERR-020-008` — expired platform-placeholder dependency corrected.** §1.4 now records the July 19 certified Unity 6000.4.9f1 host as the active implementation authority and the resulting C# 9.0 language surface. The old FR-CS-008 placeholder/activation gate had already fired but remained described as unresolved. This erratum is effective immediately against the approved baseline; it does not approve or activate the separate A3.1a/A3.1b architecture amendment. | — |
+| 1.3 | October 10, 2026 | — | **`ERR-020-008` — expired platform-placeholder dependency corrected.** §1.4 still described `certification-platform.md` as a placeholder gating FR-CS-008. The pin was certified on July 19, 2026, so the gate has fired. §1.4 now records the pinned host and points to §3.1.3 for the working C# 9.0 ceiling. This is an erratum against the approved baseline. It does not approve or activate the separate A3.1a/A3.1b amendment, and it does not include the separately pending owner-reviewed verification amendment (direct `.asmdef` verification, final-head Unity compile requirement). | — |
+| 1.4 | October 30, 2026 | Codex | **PR #527 / `ERR-020-008` merge reconciliation.** Reconciles PR #527 with current main. Retains the October 10 activation erratum and carries forward the explicit Unity 6000.4.9f1 / C# 9.0 implementation authority. The verification correction is carried by this PR; the A3.1a/A3.1b architecture amendment remains independently pending A3.4. | — |
 
 ---
 

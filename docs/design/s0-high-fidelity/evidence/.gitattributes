@@ -1,0 +1,4 @@
+# Created: 2026-09-30. Purpose: small, standalone documentation review images.
+# These are not Unity textures. Keep them directly viewable and downloadable;
+# the repository binary-size guard still requires LFS if an image exceeds 1 MiB.
+*.png -filter -diff -merge -text

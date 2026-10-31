@@ -1,5 +1,10 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-10-13 (W8 B: real engine Resolve consumption and restored feedback exactly once)
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.15)
+// Modified: 2026-09-27 (W8 B/v24: harden mid-windup restore + add through-CONTACT deterministic continuation)
+// Modified: 2026-09-26 (W8 B/v24: goalkeeper-distribution mid-windup real writer/reader round-trip)
+// Modified: 2026-09-22 (W3/v23: active ClaimIntent field-for-field restore + continuation chain)
 // Modified: 2026-09-11 (W5/v22: non-default pressing pass-ring save/restore round-trip)
 // Modified: 2026-07-23
 // Author:   —
@@ -131,21 +136,265 @@ namespace TacticalDirector.MatchEngine
             // the save point arms the §4 save trigger, so the committed SaveIntent + set latch + advanced
             // goalkeeper.mechanics RNG cursor (dive-timing draws) + the evolving GkContactState arrays are
             // all baked into the saved payload. The restore must reproduce every one of them.
-            //
-            // §5.Z Phase H made this scenario reach a code path it never used to: the ball is now actually
-            // POSSESSED during the run, so forcing it loose mid-windup legitimately cancels an in-flight
-            // pass at CONTACT and Pass Mechanics #5 logs its FM-08 possession-recheck message. That is the
-            // documented cancel path working, not a defect — but #5 emits it at Error level, so the run
-            // must declare it. (Whether a legitimate mid-windup possession loss deserves Error rather than
-            // Warning is a #5 question, recorded in the design note, not changed here.)
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             AssertRoundTripDeterministic(
                 setup: e => e.EnableGkHeading(),
                 n: 180, k: 120,
                 midRun: e => e.TestOnly_ForceBallLoose(
                     new UnityEngine.Vector3(5f, 34f, 0.11f), new UnityEngine.Vector3(-10f, 0f, 0f)),
                 midRunTick: 60);
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
+        }
+
+        [Test]
+        public void RoundTrip_GoalkeeperDistributionMidWindup_RestoresFieldsAndContinuation()
+        {
+            var a = new MatchEngine(MatchSeed);
+            a.TestOnly_SetPossession(0);
+            PassExecutorState source = a.TestOnly_PassExecutorState(0);
+            PassRequest ordinaryRequest = source.Request;
+            PassResult lastResult = source.LastResult;
+            var goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = 0,
+                TeamId = 0,
+                Delivery = GoalkeeperDeliveryVariant.Kick,
+                TargetAgentId = 5,
+                TargetPosition = new UnityEngine.Vector3(35f, 34f, 0f),
+                EmittedPower01 = 0.82f,
+                SpinIntent = UnityEngine.Vector3.zero,
+                ReleaseHeightM = 0.45f,
+                WindupFrames = 120,
+                FrameNumber = 0,
+            };
+            GoalkeeperDistributionFeedback feedback = default;
+            var staged = new PassExecutorState(
+                state: 1,
+                request: ordinaryRequest,
+                effectiveSubType: source.EffectiveSubType,
+                kickSpeed: source.KickSpeed,
+                launchAngleDeg: source.LaunchAngleDeg,
+                spinVector: source.SpinVector,
+                baseKickDirection: source.BaseKickDirection,
+                aimPoint: source.AimPoint,
+                leadDistance: source.LeadDistance,
+                cachedPassing: source.CachedPassing,
+                cachedFatigue: source.CachedFatigue,
+                cachedBodyAngleDeg: source.CachedBodyAngleDeg,
+                cachedIsWeakFoot: source.CachedIsWeakFoot,
+                cachedWeakFootRating: source.CachedWeakFootRating,
+                windupFramesRemaining: 120,
+                followThroughFramesRemaining: source.FollowThroughFramesRemaining,
+                lastResult: lastResult,
+                executionMode: 1,
+                goalkeeperRequest: goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId: 5,
+                goalkeeperEffectiveTargetPosition: goalkeeperRequest.TargetPosition,
+                goalkeeperFeedbackPending: false,
+                goalkeeperFeedback: feedback);
+            a.TestOnly_SetPassExecutorState(0, in staged);
+
+            a.RunTick();
+            PassExecutorState saved = a.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(1, saved.ExecutionMode);
+            Assert.AreEqual(1, saved.State, "Staging failed: the W8 executor must still be in WINDUP.");
+            Assert.IsFalse(saved.GoalkeeperFeedbackPending,
+                "A mid-windup save must not already carry terminal feedback.");
+            Assert.AreEqual(GoalkeeperDeliveryVariant.Kick, saved.GoalkeeperRequest.Delivery);
+            Assert.Greater(saved.WindupFramesRemaining, 0,
+                "Staging failed: the W8 executor must still be mid-windup at the save point.");
+
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
+
+            const int continuationTicks = 4;
+            var reference = new List<byte[]>(continuationTicks);
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                a.RunTick();
+                reference.Add(a.CurrentSnapshotDigest);
+            }
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            PassExecutorState restored = c.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(saved.ExecutionMode, restored.ExecutionMode);
+            Assert.AreEqual(saved.GoalkeeperRequest.Delivery, restored.GoalkeeperRequest.Delivery);
+            Assert.AreEqual(saved.GoalkeeperRequest.TargetAgentId, restored.GoalkeeperRequest.TargetAgentId);
+            Assert.AreEqual(saved.GoalkeeperRequest.TargetPosition, restored.GoalkeeperRequest.TargetPosition);
+            Assert.AreEqual(saved.GoalkeeperRequest.EmittedPower01, restored.GoalkeeperRequest.EmittedPower01, 0f);
+            Assert.AreEqual(saved.GoalkeeperRequest.WindupFrames, restored.GoalkeeperRequest.WindupFrames);
+            Assert.AreEqual(saved.WindupFramesRemaining, restored.WindupFramesRemaining);
+
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                c.RunTick();
+                CollectionAssert.AreEqual(
+                    reference[i], c.CurrentSnapshotDigest,
+                    $"W8 goalkeeper-distribution mid-windup round-trip diverged at continuation tick {i + 1}.");
+            }
+        }
+
+        [Test]
+        public void RoundTrip_GoalkeeperDistributionThroughContact_RestoresDeterministically()
+        {
+            var a = new MatchEngine(MatchSeed);
+            a.TestOnly_SetPossession(0);
+            PassExecutorState source = a.TestOnly_PassExecutorState(0);
+            PassRequest ordinaryRequest = source.Request;
+            PassResult lastResult = source.LastResult;
+            var goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = 0,
+                TeamId = 0,
+                Delivery = GoalkeeperDeliveryVariant.Roll,
+                TargetAgentId = PassMechanicsConstants.AGENT_ID_NONE,
+                TargetPosition = new UnityEngine.Vector3(35f, 34f, 0f),
+                EmittedPower01 = 0.50f,
+                SpinIntent = UnityEngine.Vector3.zero,
+                ReleaseHeightM = 1.8f,
+                WindupFrames = 2,
+                FrameNumber = 0,
+            };
+            GoalkeeperDistributionFeedback feedback = default;
+            var staged = new PassExecutorState(
+                state: 1,
+                request: ordinaryRequest,
+                effectiveSubType: source.EffectiveSubType,
+                kickSpeed: source.KickSpeed,
+                launchAngleDeg: source.LaunchAngleDeg,
+                spinVector: source.SpinVector,
+                baseKickDirection: source.BaseKickDirection,
+                aimPoint: source.AimPoint,
+                leadDistance: source.LeadDistance,
+                cachedPassing: source.CachedPassing,
+                cachedFatigue: source.CachedFatigue,
+                cachedBodyAngleDeg: source.CachedBodyAngleDeg,
+                cachedIsWeakFoot: source.CachedIsWeakFoot,
+                cachedWeakFootRating: source.CachedWeakFootRating,
+                windupFramesRemaining: 2,
+                followThroughFramesRemaining: source.FollowThroughFramesRemaining,
+                lastResult: lastResult,
+                executionMode: 1,
+                goalkeeperRequest: goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId: PassMechanicsConstants.AGENT_ID_NONE,
+                goalkeeperEffectiveTargetPosition: goalkeeperRequest.TargetPosition,
+                goalkeeperFeedbackPending: false,
+                goalkeeperFeedback: feedback);
+            a.TestOnly_SetPassExecutorState(0, in staged);
+
+            a.RunTick(); // 2 -> 1: still WINDUP; save here.
+            PassExecutorState saved = a.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(1, saved.State);
+            Assert.AreEqual(1, saved.WindupFramesRemaining);
+            Assert.IsFalse(saved.GoalkeeperFeedbackPending);
+
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
+
+            const int continuationTicks = 3; // WINDUP -> CONTACT, CONTACT kick and Resolve feedback consumption.
+            int referenceFeedbackCount = 0;
+            GoalkeeperDistributionFeedback referenceFeedback = default;
+            a.TestOnly_W8BTerminalFeedbackObserver = (id, terminal, missing) =>
+            {
+                Assert.AreEqual(0, id);
+                Assert.IsFalse(missing);
+                referenceFeedback = terminal;
+                referenceFeedbackCount++;
+            };
+            var reference = new List<byte[]>(continuationTicks);
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                a.RunTick();
+                reference.Add(a.CurrentSnapshotDigest);
+            }
+
+            PassExecutorState completed = a.TestOnly_PassExecutorState(0);
+            Assert.AreEqual(0, completed.State, "Executor must be internally Idle after CONTACT.");
+            Assert.IsFalse(completed.GoalkeeperFeedbackPending,
+                "The host must consume Completed in the CONTACT Resolve phase.");
+            Assert.AreEqual(0, completed.ExecutionMode, "Ordinary mode resumes only after terminal consumption.");
+            Assert.AreEqual(1, referenceFeedbackCount);
+            Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, referenceFeedback.Kind);
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            int restoredFeedbackCount = 0;
+            GoalkeeperDistributionFeedback restoredFeedback = default;
+            c.TestOnly_W8BTerminalFeedbackObserver = (id, terminal, missing) =>
+            {
+                Assert.AreEqual(0, id);
+                Assert.IsFalse(missing);
+                restoredFeedback = terminal;
+                restoredFeedbackCount++;
+            };
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                c.RunTick();
+                CollectionAssert.AreEqual(
+                    reference[i], c.CurrentSnapshotDigest,
+                    $"W8 goalkeeper-distribution through-CONTACT restore diverged at continuation tick {i + 1}.");
+            }
+
+            PassExecutorState restoredCompleted = c.TestOnly_PassExecutorState(0);
+            Assert.IsFalse(restoredCompleted.GoalkeeperFeedbackPending);
+            Assert.AreEqual(0, restoredCompleted.ExecutionMode);
+            Assert.AreEqual(1, restoredFeedbackCount);
+            Assert.AreEqual(referenceFeedback.ContactFrame, restoredFeedback.ContactFrame);
+            Assert.AreEqual(referenceFeedback.FinalVelocity, restoredFeedback.FinalVelocity);
+            c.RunTick();
+            Assert.AreEqual(1, restoredFeedbackCount, "Restored terminal feedback must not replay.");
+        }
+
+        [Test]
+        public void RoundTrip_ActiveClaimIntent_RestoresFieldsAndContinuation()
+        {
+            // W3/v23: save DURING a bounded claim episode rather than merely inspecting CaptureState.
+            // This catches both writer/reader order mistakes and fields that never enter the payload.
+            var a = new MatchEngine(MatchSeed);
+            a.EnableGkHeading();
+
+            var claim = new TacticalDirector.GoalkeeperMechanics.ClaimIntent
+            {
+                TargetContactPoint = new UnityEngine.Vector3(1.75f, 33.25f, 1.90f),
+                ClutchFirmness = 0.61f,
+                ReachDirectionLateral = -1.0f,
+                AttemptCommittedTick = 0,
+            };
+            a.TestOnly_CommitGoalkeeperClaimIntent(0, claim);
+            a.RunTick();
+
+            TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState savedState =
+                a.TestOnly_GoalkeeperState;
+            Assert.IsTrue(savedState.ClaimIntentActive[0],
+                "Staging failed: the W3 claim must still be active at the save point.");
+
+            SnapshotHeader header = a.CaptureDurableHeader();
+            SnapshotPayload payload = a.CaptureDurablePayload();
+
+            const int continuationTicks = 12;
+            var reference = new List<byte[]>(continuationTicks);
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                a.RunTick();
+                reference.Add(a.CurrentSnapshotDigest);
+            }
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, MatchSeed);
+            TacticalDirector.GoalkeeperMechanics.GoalkeeperTickState restored =
+                c.TestOnly_GoalkeeperState;
+
+            Assert.IsTrue(restored.ClaimIntentActive[0],
+                "v23 restore dropped the active ClaimIntent latch.");
+            Assert.AreEqual(claim.TargetContactPoint, restored.ClaimIntents[0].TargetContactPoint);
+            Assert.AreEqual(claim.ClutchFirmness, restored.ClaimIntents[0].ClutchFirmness, 0f);
+            Assert.AreEqual(claim.ReachDirectionLateral, restored.ClaimIntents[0].ReachDirectionLateral, 0f,
+                "The locked claim reach side must survive a mid-episode restore.");
+            Assert.AreEqual(claim.AttemptCommittedTick, restored.ClaimIntents[0].AttemptCommittedTick);
+
+            for (int i = 0; i < continuationTicks; i++)
+            {
+                c.RunTick();
+                CollectionAssert.AreEqual(
+                    reference[i], c.CurrentSnapshotDigest,
+                    $"Active-claim round-trip diverged at continuation tick {i + 1}.");
+            }
         }
 
         [Test]
@@ -496,4 +745,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | latches + GkContactState arrays) restores and continues the    |
 // |         |            |        | chain byte-for-byte.                                            |
 // | 1.3     | 2026-09-11 | —      | W5/v22: round-trip lock saves with a non-default latest opposing pass retained in the home pressing ring. |
+// | 1.12    | 2026-09-22 | —      | W3/v23 active ClaimIntent round-trip: field-for-field restore plus post-save digest continuation, including locked reach side. |
+// | 1.13    | 2026-09-26 | —      | W8 B/v24: real MatchEngine writer/reader round-trip saves a possessed keeper mid-distribution windup, restores non-default request/mode state, and continues an identical digest chain. |
+// | 1.14    | 2026-09-27 | —      | W8 B review hardening: mid-windup lock now asserts WINDUP + no pending feedback; second real save/restore case crosses CONTACT and proves completed terminal feedback plus post-kick digest continuation are identical. |
+// | 1.16    | 2026-10-13 | —      | Through-CONTACT restore now asserts Resolve consumes exactly one completion and clears executor mode on both branches. |
+// | 1.15    | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
 #endregion

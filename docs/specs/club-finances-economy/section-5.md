@@ -1,11 +1,21 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
+**Last Updated:** October 13, 2026 (v0.16 — REV-001–009 now have executable formula and daily-composition locks)
+**Last Updated (prior):** October 11, 2026 (v0.15 — PR #497 review: REV-009 delayed-roll day count)
+**Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: T-FN-REV-009 delayed-roll attribution lock)
+**Last Updated (prior):** October 10, 2026 (v0.13 — §5.10 T3b2 revenue acceptance T-FN-REV-001–009, specified ahead of the code slice)
+**Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: add T-FN-DAY-008 for pending-final-day refusal and save continuation)
+**Last Updated (prior):** October 8, 2026 (v0.11 — bound structural and continuation evidence; lock detached daily publication)
+**Last Updated (prior):** October 8, 2026 (v0.10 — T-FN-DAY-001–006 name executable daily identity and continuation locks)
+**Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review: traceability IDs, gate-order lock, and negative-revenue restore coherence)
+**Last Updated (prior):** September 11, 2026 (v0.8 — T3a lifecycle acceptance: settlement resets current-season revenue and carries FFP window)
+**Last Updated (prior):** September 11, 2026 (v0.7 — T3a daily-revenue identity, mutation-isolation and overflow acceptance locks)
+**Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051/T2b: boundary atomicity contract corrected and live lifecycle evidence named)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T-FN-LIFE-001 coverage split recorded across T2a/T2b)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board-scaling coverage)
 **Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board failure coverage)
-**Version:** 0.6
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -28,7 +38,8 @@ Tests land at T-phase; this is the acceptance contract.
   one world seed produces byte-identical `ClubFinances` for every club on both runs.
 - **T-FN-DET-004** — No RNG stream registered at minimal: the serialized finance block contains no
   `RngCursor`/`actionOrdinal` field (grep/schema-shape assertion), and `_RESERVED_0x29_`/91 is not consumed
-  by any draw (KD-2/FR-FN-008/009).
+  by any draw (KD-2/FR-FN-008/009). T3a remains covered by this same lock because its daily accounting
+  primitive is still draw-free; promotion waits for the first stochastic sponsorship-variance consumer.
 - **T-FN-DET-005** — `SettleFinances` purity: called twice with identical inputs (`prior`,
   `finalTablePosition`, `clubCount`, `board`) yields byte-identical output `ClubFinances` (no hidden state,
   no clock read).
@@ -55,6 +66,12 @@ Tests land at T-phase; this is the acceptance contract.
   minimal) leaves every existing stream's cursor byte-identical across a full season run with and without
   #40 active (stream independence) — trivially true at Stage 2 since no stream exists yet, the same test
   class as #41's `T-MD-NEU-003`.
+- **T-FN-NEU-004** — For a **coherent prior finance value**, T3a
+  `AccrueDailyRevenue(..., deepRevenueEnabled:false)` returns the complete `ClubFinances` value
+  field-identically and does not interpret deep-only revenue amounts; even negative placeholder amounts on
+  the disabled path cannot change state or throw. Canonical prior-state coherence is validated **before**
+  the gate, so an incoherent prior (e.g. negative `TransferBudget`) still fails loud with the feature off
+  (KD-8 / §3.4.1 / ERR-040-003).
 
 ## 5.4 Season-boundary ordering (KD-6)
 
@@ -79,7 +96,7 @@ Tests land at T-phase; this is the acceptance contract.
   `WageBillAggregate` only; a season's worth of `ApplyTransaction` calls leaves both ceilings exactly as
   `SettleFinances` last set them — FR-FN-004/016.
 
-## 5.6 Ledger correctness & integer currency
+## 5.6 Ledger correctness, T3a revenue & integer currency
 
 - **T-FN-LEDGER-001** — `ApplyTransaction(Debit, TransferFee)` decreases `Balance` by `Amount` and leaves
   `WageBillAggregate` unchanged.
@@ -91,14 +108,28 @@ Tests land at T-phase; this is the acceptance contract.
   throw (FR-FN-011's integer posture does not imply a non-negativity constraint on `Balance`).
 - **T-FN-LEDGER-004** — A Credit wage-reversal larger than the current `WageBillAggregate` fails loud (F1)
   rather than driving the aggregate negative (FR-FN-016).
+- **T-FN-REV-001** — Enabled T3a `AccrueDailyRevenue` adds `sponsorshipRevenue + matchdayRevenue` exactly
+  once to both `Balance` and `SeasonRevenueAccrued`, while `TransferBudget`, `WageBudget`,
+  `WageBillAggregate`, and `FfpBalanceWindow` remain field-identical (FR-FN-003 / §3.4.1).
+- **T-FN-REV-002** — With T3a enabled, a negative sponsorship or matchday component fails loud (F8) rather
+  than turning the revenue path into an implicit expenditure channel.
+- **T-FN-REV-003** — `SettleFinances` given a non-zero `prior.SeasonRevenueAccrued` MUST return
+  `SeasonRevenueAccrued = 0`, while carrying `WageBillAggregate` and `FfpBalanceWindow` field-identically.
+  This closes the current-season accumulator at the boundary without inventing the future FFP-window rule;
+  the Stage-2 zero-accumulator case remains exactly behaviour-neutral (FR-FN-005 / §3.1).
 - **T-FN-INT-001** — Every `ClubFinances`/`FinanceTransaction`/`BoardModifier` field is an integer type; no
-  accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`) introduces
-  a float — a static/reflection-level assertion mirroring #41's integer posture (FR-FN-011).
+  accounting formula (`PrizeMoneyForPosition`, the budget-ceiling projection, `ApplyTransaction`,
+  `AccrueDailyRevenue`) introduces a float — a static/reflection-level assertion mirroring #41's integer
+  posture (FR-FN-011).
 - **T-FN-INT-002** — Board scaling MUST not overflow before the upper budget cap can apply. A base ceiling
   derived from accepted signed-Int32 tuning extremes and a positive non-identity board multiplier that would
   overflow a direct `baseCeiling * multiplier` MUST return `CLUB_FINANCES_BUDGET_CEILING_MAX` without an
   `OverflowException`; a representative below-cap case MUST retain the exact integer-floor result from
   `baseCeiling * multiplier / PERMILLE_DENOM` (FR-FN-011, §3.1).
+- **T-FN-INT-003** — T3a independently locks every checked-arithmetic failure site: overflow while summing
+  the two revenue components, overflow adding a safe daily total to `Balance`, and overflow adding a safe
+  daily total to `SeasonRevenueAccrued` each MUST throw `OverflowException` without exposing partial state
+  (F9 / FR-FN-011 / §3.4.1).
 
 ## 5.7 FFP/board seam & fail-loud
 
@@ -109,8 +140,10 @@ Tests land at T-phase; this is the acceptance contract.
   FR-FN-018/F4. The clamp is not used to legitimize an invalid board multiplier.
 - **T-FN-FAIL-001** — Bad `FINANCE_SAVE_FORMAT_VERSION` → fail loud (F3).
 - **T-FN-FAIL-002** — Out-of-bounds length prefix / trailing bytes → fail loud (F5).
-- **T-FN-FAIL-003** — `TransferBudget` or `WageBudget` negative reaching a consuming seam (e.g. a corrupted
-  restore) → fail loud (F1).
+- **T-FN-FAIL-003** — `TransferBudget`, `WageBudget`, `WageBillAggregate`, or T3a
+  `SeasonRevenueAccrued` negative reaching a consuming/restore seam → fail loud (F1). The save-codec
+  regression mutates an otherwise-canonical finance block to a negative current-season revenue value and
+  proves restore rejects it.
 - **T-FN-FAIL-004** — `ApplyTransaction` with a negative `Amount`, or an out-of-contract `Kind`/`LineItem`
   byte on restore, → fail loud (F2).
 - **T-FN-FAIL-005** — `finalTablePosition` outside `[1, clubCount]` passed to `SettleFinances` → fail loud
@@ -124,33 +157,106 @@ Tests land at T-phase; this is the acceptance contract.
 | FR | Covering test(s) |
 |---|---|
 | FR-FN-001 | T-FN-ORD-003 |
-| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001 |
-| FR-FN-003 | T-FN-BOUND-001, T-FN-BOUND-003 |
+| FR-FN-002 | T-FN-DET-001, T-FN-LIFE-001, T-FN-FAIL-003 |
+| FR-FN-003 | T-FN-BOUND-003, T-FN-REV-001 |
 | FR-FN-004 | T-FN-BOUND-003 |
-| FR-FN-005 | (worked-example locked, §3.5) |
+| FR-FN-005 | T-FN-REV-003, worked-example lock (§3.5) |
 | FR-FN-006 | T-FN-NEU-001 |
 | FR-FN-007 | T-FN-FAIL-005 |
 | FR-FN-008 | T-FN-DET-004, T-FN-DET-005 |
 | FR-FN-009 | T-FN-DET-004 |
-| FR-FN-010 | (deferred to T3 — recorded in §7) |
-| FR-FN-011 | T-FN-INT-001, T-FN-INT-002 |
+| FR-FN-010 | (deferred to stochastic T3 slice — recorded in §7) |
+| FR-FN-011 | T-FN-INT-001, T-FN-INT-002, T-FN-INT-003 |
 | FR-FN-012 | T-FN-BOUND-001 |
 | FR-FN-013 | T-FN-BOUND-002 |
 | FR-FN-014 | T-FN-FAIL-004 |
 | FR-FN-015 | T-FN-NEU-002 |
 | FR-FN-016 | T-FN-LEDGER-002, T-FN-LEDGER-004 |
-| FR-FN-017 | (deferred to T3 — recorded in §7) |
+| FR-FN-017 | (deferred to later T3 FFP slice — recorded in §7) |
 | FR-FN-018 | T-FN-MOD-001, T-FN-FAIL-BOARD-001 |
 | FR-FN-019 | (structural — no #45 interface exists to test against; asserted by assembly-reference absence, T-FN-BOUND-002-class) |
 | FR-FN-020 | T-FN-FAIL-001 |
-| FR-FN-021 | T-FN-DET-001 |
-| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002 |
+| FR-FN-021 | T-FN-DET-001, T-FN-FAIL-003 |
+| FR-FN-022 | T-FN-FAIL-001, T-FN-FAIL-002, T-FN-FAIL-003 |
 | FR-FN-023 | T-FN-ORD-001 |
 | FR-FN-024 | T-FN-DET-002 |
 | FR-FN-025 | T-FN-LIFE-001, T-FN-FAIL-CLUB-001 |
 | FR-FN-026 | T-FN-NEU-002 (`FinancesViewModel` shape locked alongside the identity state) |
 | FR-FN-027 | T-FN-BOUND-002 |
-| FR-FN-028 | T-FN-NEU-001, T-FN-NEU-002, T-FN-NEU-003 |
+| FR-FN-028 | T-FN-NEU-001, T-FN-NEU-002, T-FN-NEU-003, T-FN-NEU-004 |
+
+## 5.9 T3b1 daily composition acceptance
+
+`SeasonLoopFinanceTests` and `SeasonFinancePersistenceTests` contain the following locks:
+
+- **T-FN-DAY-001:** zero-input accounting with either gate value returns a detached array, leaves the input
+  array unchanged, and preserves all six populated fields for all clubs; real multi-day advancement also preserves the living-world snapshot identity.
+- **T-FN-DAY-002:** corruption injected into each live club after composition is rejected by daily
+  accounting with the gate off, before the world clock increments; no finance field changes on refusal.
+- **T-FN-DAY-003:** reaching, preparing and resolving a fixture does not invoke day-completion accounting;
+  the next day advance invokes it. Zero-day and same-fixture-day advances remain no-ops.
+- **T-FN-DAY-004:** decoded compiled IL proves exactly one direct daily-finance call site in `SeasonLoop`,
+  at `RunWorldTickInFixedOrder`, ordered after `RunCareerDaySteps` and before `WorldStore.AdvanceDay`.
+  This scans only methods/constructors declared directly on `SeasonLoop`, excluding compiler-generated
+  nested types and other classes. Identity output cannot distinguish zero/one/two calls; T3b2 MUST add
+  behavioural counts with non-zero amounts, including save/restore and retry after a late-club failure.
+- **T-FN-DAY-005:** actual off-day, pre-fixture and post-fixture Save/Load/Restore continuation produces
+  the same complete save bytes as an uninterrupted run, including world/RNG and finance state.
+  This proves whole-save continuation with zero revenue, not the number of daily accounting calls.
+- **T-FN-DAY-006:** accounting remains identity during the season break and after a successful season roll.
+- **T-FN-DAY-007:** a final-club coherence failure with either gate value preserves the published input
+  array and its fields; repairing that club permits retry and returns a detached complete result.
+  Together with DAY-001 this locks staging/publication. Zero inputs cannot reveal partial monetary writes;
+  the non-zero failure/retry accounting assertion remains required at T3b2.
+
+- **T-FN-DAY-008:** rolling immediately after the final round refuses before any state change, including
+  after Save/Load/Restore; the refused save is byte-identical and the published finance array is retained.
+  Completing that day with `AdvanceDays(1)` permits settlement; restoring after completion continues with
+  identical save bytes. Rolls after one or three completed days preserve their entry world clock. Existing
+  season-roll tests retain the opening date and total `SeasonBreakDays`. These checks prove the boundary
+  precondition and continuation with zero revenue; non-zero completed-season attribution remains T3b2 work.
+
+## 5.10 T3b2 revenue acceptance (implemented October 13, 2026)
+
+`DailyRevenueTests` implements formula/default/failure locks. `SeasonDailyRevenueTests` implements
+non-zero count, Save/Load/Restore, retry, unplayed-fixture and season-attribution locks. These IDs are
+qualified by §5.10; the earlier T3a REV-001–003 in §5.6 retain their original accounting meanings.
+SeasonLoop-level locks run with
+the gate on through a test-only forwarding seam; no production path may set the gate except the §3.7.1
+config producer.
+
+- **T-FN-REV-001 (formula):** `DailyRevenue` returns the §3.7.4 figures exactly: position 4/20 with one home
+  fixture → `(1,000, 35,800)`; positions 1 and 20 → matchday `38,000` and `24,000`; no home fixture →
+  matchday `0`; two home fixtures double the matchday amount. Integer floors are asserted at a position
+  whose division is inexact.
+- **T-FN-REV-002 (failure rows):** each §3.7.5 row fails loud with its stated exception type, and a
+  checked overflow at a large `homeFixturesCompleted` fails rather than wrapping.
+- **T-FN-REV-003 (default identity):** with the default gate, every T-FN-DAY lock passes unchanged and
+  `DailyRevenue` is not evaluated (a null season that refuses on the enabled composition path is never inspected).
+- **T-FN-REV-004 (non-zero counts):** over a multi-round span, each club's `SeasonRevenueAccrued` equals
+  `completedInSeasonDays × DAILY_SPONSORSHIP_REVENUE + Σ` (its home-day matchday amounts at its position on
+  each of those days). This is the behavioural count DAY-004 requires: one call too many or too few changes the total.
+- **T-FN-REV-005 (save/restore):** Save/Load/Restore before a fixture, after resolving it but before the
+  completing advance, and after that advance each continue to the same totals and save bytes as an
+  uninterrupted run. The fixture day is accounted exactly once.
+- **T-FN-REV-006 (late-club failure and retry):** an incoherent last club refuses the day: no club's
+  fields change and the clock stays on `d`. After repair, retry accrues each earlier club exactly once
+  (non-zero totals asserted, not only field identity).
+- **T-FN-REV-007 (final-fixture attribution):** the final round's home club's matchday revenue is
+  inside the completed season's `SeasonRevenueAccrued` when settlement reads it (asserted before the
+  reset). Break days accrue nothing, so after the roll the new season's accumulator stays `0` until its
+  first in-season day.
+- **T-FN-REV-008 (unplayed-fixture assertion):** a scheduled home fixture on `d` without a result fails
+  loud instead of being counted. This guards §3.7.3 against a future change to #30's KD-4 guard.
+- **T-FN-REV-009 (delayed roll, PR #497 review):** two runs from the same save after final-day completion,
+  one rolling immediately and one first advancing to the next opening day, produce the same
+  completed-season `SeasonRevenueAccrued` at settlement, the same per-club `Balance` after the roll, and
+  the same totals at the next opening day. Also asserts `DailyRevenue` refuses a home fixture on a day
+  that is not `inSeasonDay`, and that first-season pre-season days accrue `0`. The delayed run advances
+  `Calendar.DayOfRound(RoundCount − 1) + SeasonBreakDays − CurrentWorldTick` days (the next opening
+  day minus the clock, from public state), not a literal. Completion already consumed one break advance, so this is `SeasonBreakDays − 1`
+  (`SeasonRollTests.RollToNextSeason_ThenAdvance_ReachesTheNewOpeningDay`). Advancing the full
+  `SeasonBreakDays` would pass the opening day and be refused.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -161,4 +267,14 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Adds T-FN-INT-002 to lock overflow-safe pre-cap board scaling and exact below-cap integer-floor semantics. |
 | 0.5 | 2026-09-11 | — | **PR #392 review follow-up.** T-FN-LIFE-001 remains one acceptance id, but its executable evidence is phase-split: T2a covers canonical bootstrap/universe coherence; T2b must cover unchanged entry cardinality across season rolls after live #30 wiring exists. |
 | 0.6 | 2026-09-11 | — | **ERR-030-051 / T2b executable-contract correction.** T-FN-DET-002 removes the unsupported mid-call save premise and instead locks synchronous all-or-nothing boundary semantics; T-FN-LIFE-001 names the live across-roll regression evidence. |
+| 0.7 | 2026-09-11 | OpenAI | **T3a acceptance back-prop.** Adds identity-off, revenue-field isolation, negative-component and all three overflow-site locks; updates FR-FN-003/011/028 traceability while keeping stochastic FR-FN-010 and FFP FR-FN-017 deferred. |
+| 0.8 | 2026-09-11 | OpenAI | **T3a lifecycle acceptance.** Adds T-FN-REV-003 for boundary reset of current-season revenue while carrying the future FFP window; FR-FN-005 traceability now includes that executable lock. |
+| 0.9 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Every new T3a acceptance ID is now cited by executable test summaries; T-FN-NEU-004 pins coherence-before-gate ordering, and T-FN-FAIL-003 expands to reject negative restored `SeasonRevenueAccrued`. |
+| 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** T-FN-DAY-001–006 name executable daily identity and continuation locks. |
+| 0.11 | 2026-10-08 | — | **PR #491 review.** bound structural and continuation evidence; lock detached daily publication. |
+| 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** add T-FN-DAY-008 for pending-final-day refusal and save continuation. |
+| 0.13 | 2026-10-10 | — | **T3b2 formula half.** New §5.10 names T-FN-REV-001–008 (formula, failure rows, default identity, non-zero counts, save/restore, late-club retry, final-fixture attribution, unplayed-fixture assertion) for the §3.7 code slice. No test exists yet. |
+| 0.14 | 2026-10-11 | — | **PR #497 review.** REV-004/REV-007 count in-season days only; new T-FN-REV-009 locks roll-timing independence (immediate roll vs advancing the whole break first), the out-of-season home-fixture refusal and zero pre-season sponsorship. |
+| 0.15 | 2026-10-11 | — | **PR #497 review.** T-FN-REV-009's delayed run advances to the opening day computed from the clock (`SeasonBreakDays − 1` after final-day completion), not the full `SeasonBreakDays`, which `AdvanceDays` refuses. |
+| 0.16 | 2026-10-13 | — | **T3b2 implementation.** REV-001–009 now have executable formula and daily-composition locks. Default remains off; pinned Unity compilation pending. |
 #endregion

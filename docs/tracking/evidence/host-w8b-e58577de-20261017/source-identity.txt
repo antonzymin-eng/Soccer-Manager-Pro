@@ -1,0 +1,25 @@
+captured_utc: 2026-10-17T02:46:24Z (before compile)
+head_commit: e58577de038647a0134e7ceecb151126cf7fa025
+tree_root: c763f91a7192e158c0ff34a5330a256ba3fa4f21
+tree_src: cae1dd3cc1c6476c59d5344209c2ddefd6884656
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree_Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain_src_Packages_ProjectSettings_incl_untracked_ignored: 0 entries
+unity_editor: 6000.4.9f1 (f7258d6eebbe)
+assets_scripts_junction: C:\Users\azymi\Desktop\Soccer-Manager-Pro\src
+untracked_elsewhere:
+  ?? .agents/
+  ?? .codex/
+  ?? AGENTS.md
+  ?? Assets/_Recovery.meta
+  ?? Assets/_Recovery/
+
+# Re-captured after all runs (incl. keeper_conversion rerun)
+captured_utc: 2026-10-17T14:54:08Z
+head_commit: e58577de038647a0134e7ceecb151126cf7fa025
+tree_src: cae1dd3cc1c6476c59d5344209c2ddefd6884656
+tree_Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree_ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+porcelain_src_Packages_ProjectSettings_incl_untracked_ignored: 0 entries
+verify: git rev-parse e58577de:src -> cae1dd3cc1c6476c59d5344209c2ddefd6884656

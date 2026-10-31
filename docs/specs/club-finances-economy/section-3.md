@@ -1,9 +1,20 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
-**Last Updated (prior):** September 7, 2026 (v0.3 — PR #363 follow-up: non-positive board multiplier failure gate)
-**Version:** 0.4
+**Last Updated:** October 13, 2026 (v0.16 — deterministic amount model implemented behind the default-off config gate)
+**Last Updated (prior):** October 11, 2026 (v0.15 — PR #497 review: break-advance citation states its starting day)
+**Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: break days accrue no sponsorship, so attribution is independent of roll timing)
+**Last Updated (prior):** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
+**Last Updated (prior):** October 9, 2026 (v0.12 — ERR-030-053: keep final-fixture day accounting in the completed season before settlement)
+**Last Updated (prior):** October 8, 2026 (v0.11 — stage the complete daily finance result before publication)
+**Last Updated (prior):** October 8, 2026 (v0.10 — zero inputs, sole gate ownership and fixture/save timing pinned)
+**Last Updated (prior):** September 11, 2026 (v0.9 — ERR-040-003 review close-out: §3.1 pseudocode realigned to the shipped direct reset after the handoff helper was removed)
+**Last Updated (prior):** September 11, 2026 (v0.8 — ERR-040-003 review: explicit completed-season revenue handoff and coherent-prior gate semantics)
+**Last Updated (prior):** September 11, 2026 (v0.7 — wording correction: ApplyTransaction remains the single externally-commanded ledger path, not the only T3 mutation)
+**Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: current-season revenue resets at settlement; FFP window still carries)
+**Last Updated (prior):** September 11, 2026 (v0.5 — T3a accounting primitive: identity gate, checked daily revenue accrual, no producer/RNG/tick wiring)
+**Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 Codex correction: overflow-safe board scaling)
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -16,6 +27,7 @@ across a save/restore boundary.
 
 ```
 SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardModifier board) -> ClubFinances:
+    validate prior coherence
     assert 1 <= finalTablePosition <= clubCount                        # F7 — bad input bound
     assert board.BudgetMultiplierMillPermille > 0                      # F4 — non-positive caller error (fail loud)
 
@@ -35,9 +47,12 @@ SettleFinances(in ClubFinances prior, finalTablePosition, clubCount, in BoardMod
     result.WageBudget   = ScaleAndClampBudget(baseWageCeiling, board.BudgetMultiplierMillPermille)
                                                                         # SETS — overwrites prior ceiling
 
-    # WageBillAggregate / SeasonRevenueAccrued / FfpBalanceWindow are UNTOUCHED by the minimal projection —
-    # a committed wage does not vanish at season end (WageBillAggregate carries forward); the deep-tier
-    # accumulators reset or carry per their own T3 rules (deferred, KD-1/KD-8).
+    # Future FFP logic that consumes the completed season's revenue inserts HERE, ABOVE the reset, and
+    # reads prior.SeasonRevenueAccrued — never result.SeasonRevenueAccrued, which is zero from here on.
+    result.SeasonRevenueAccrued = 0
+
+    # WageBillAggregate carries: a committed wage does not vanish at season end.
+    # FfpBalanceWindow carries unchanged until the later FFP slice defines its own window update.
     return result
 
 ScaleAndClampBudget(baseCeiling, positiveMultiplier) -> long:
@@ -69,6 +84,17 @@ through the shared signed-Int32 loader; those accepted values can produce a `bas
 non-identity positive board multiplier would overflow `long` before a naïve post-multiply clamp ran. The cap
 therefore applies **before** any unsafe product, while ordinary below-cap values retain the exact same integer
 floor semantics.
+
+`SeasonRevenueAccrued` is explicitly a **non-negative current-season** accumulator at T3a. Resetting it in
+`SettleFinances` prevents a live daily accrual from silently spanning seasons. The completed season's value
+remains readable as `prior.SeasonRevenueAccrued` for the whole of the settlement calculation; the FFP slice is
+required to derive its next-season penalty from that parameter (plus any other then-specified terms) at a point
+**above** the reset, not from `result.SeasonRevenueAccrued`, which is zero from the reset onward. T3a introduces
+no intermediate handoff local or helper for this: `prior` is already the source of truth, and a second named
+carrier would give the FFP slice a place to accumulate state the reset then contradicts.
+T3a does not guess how `FfpBalanceWindow` rolls, so that field is
+carried field-identically until its own slice lands. This rule is behaviour-neutral at Stage 2 because the
+accumulator is always zero there (KD-8).
 
 `SettleFinances` reads no caller state beyond its four parameters — it is a pure function, so calling it
 twice with identical inputs yields byte-identical output (no hidden clock, no RNG). A `ClubId` with no prior
@@ -119,11 +145,14 @@ ApplyTransaction(ref ClubFinances f, in FinanceTransaction txn):
     # This function NEVER touches TransferBudget/WageBudget (FR-FN-004) — those are SettleFinances-only.
 ```
 
-`ApplyTransaction` is the single mutation path between season boundaries (KD-3/KD-5, FR-FN-013). It never
-reads or writes `TransferBudget`/`WageBudget` — those are set exclusively by `SettleFinances` once per season
-(§1.6/FR-FN-004); Stage 2 has no concept of "budget remaining after this season's spend" as a tracked field —
-if a caller (#31) wants that, it computes it externally by summing the transactions it has itself submitted,
-or a future deep-tier extension adds it as a new field (recorded in §7, not built here).
+`ApplyTransaction` is the single **externally-commanded ledger** mutation path between season boundaries
+(KD-3/KD-5, FR-FN-013). At T3+, #40-owned autonomous accrual functions such as `AccrueDailyRevenue` are
+separate accounting transforms, not a second caller-command ledger. This is the ERR-040-003 correction to
+the earlier over-broad wording. `ApplyTransaction` never reads or writes `TransferBudget`/`WageBudget` — those
+are set exclusively by `SettleFinances` once per season (§1.6/FR-FN-004); Stage 2 has no concept of "budget
+remaining after this season's spend" as a tracked field — if a caller (#31) wants that, it computes it
+externally by summing the transactions it has itself submitted, or a future deep-tier extension adds it as a
+new field (recorded in §7, not built here).
 
 ## 3.3 The read-only constraint query (`AvailableTransferBudget`)
 
@@ -164,6 +193,53 @@ actually play in next season (KD-6's ordering rationale). While #43 is unbuilt, 
 the pre-#43 `finalTable` directly — the same "prerequisite gate degenerates to a pass-through" pattern #26's
 T2/T4 decision gates use ahead of their own upstream engine-substrate deliverables.
 
+### 3.4.1 T3a daily revenue accounting primitive (`AccrueDailyRevenue`)
+
+T3a defines the **accounting mutation only**. It deliberately does not decide how much sponsorship or
+matchday revenue a club earns, does not own the calendar invocation, and does not draw sponsorship variance.
+Calendar invocation lands at T3b1 (§3.6); amount production and variance are later slices (§7). Keeping this primitive pure preserves #40's ownership of the accounting
+rule while allowing #30 to remain the lifecycle/composition owner when the daily slot is wired.
+
+```
+AccrueDailyRevenue(in ClubFinances prior,
+                   sponsorshipRevenue,
+                   matchdayRevenue,
+                   deepRevenueEnabled) -> ClubFinances:
+    validate prior coherence                              # F1 runs even when the deep gate is off
+
+    if deepRevenueEnabled == false:
+        return prior exactly                              # coherent-prior KD-8 identity; do not interpret deep amounts
+
+    assert sponsorshipRevenue >= 0                       # revenue is not an expenditure channel
+    assert matchdayRevenue >= 0
+
+    dailyRevenue = checked(sponsorshipRevenue + matchdayRevenue)
+    result = prior
+    result.Balance = checked(result.Balance + dailyRevenue)
+    result.SeasonRevenueAccrued = checked(result.SeasonRevenueAccrued + dailyRevenue)
+
+    # T3a changes NO other field:
+    # TransferBudget / WageBudget / WageBillAggregate / FfpBalanceWindow stay field-identical.
+    validate result coherence
+    return result
+```
+
+The three additions are checked independently: a component-sum overflow, cash-balance overflow, or season-
+accumulator overflow fails loud rather than wrapping into a plausible finance value. Because `result` is a
+value copy and the function returns only after all checks pass, no partial mutation can escape on failure.
+
+`deepRevenueEnabled = false` is the exact Stage-2 identity **for a coherent prior finance value**, including
+for otherwise-invalid deep-only input amounts: the off path returns before interpreting those amounts.
+Canonical finance-state coherence is intentionally validated first; disabling a feature is not permission to
+admit corrupt budget/liability/revenue state. T-FN-NEU-004 locks both halves of that ordering.
+
+This T3a primitive **does not promote** `_RESERVED_0x29_` / `SubsystemOrdinals.ClubFinances = 91`: it performs
+no draw and stores no draw cursor/action ordinal. Promotion remains atomic with the first genuine stochastic
+sponsorship-variance consumer. It also does not update `FfpBalanceWindow`, debit `WageBillAggregate`, choose
+`[GT]` revenue magnitudes; T3b1 supplies the separate #30 day-completion call (§3.6). Passing already-derived amounts into this pure
+primitive is an internal layering boundary, not permission for #30/#31/#34/#45 to invent competing finance
+models; the amount-production rules remain #40-owned when those later T3 slices are specified.
+
 ## 3.5 Worked example
 
 Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (from season 6's end):
@@ -186,7 +262,8 @@ Club 12, season 7, finishes **position 4 of 20** clubs. Prior `ClubFinances` (fr
 (`1,715,790 × 150 = 257,368,500`, integer-divided by 1000 floors to `257,368`). `× 1000/1000 = 307,368`
 unchanged. `result.WageBudget = 307,368` (SETS, overwriting the stale `180,000`).
 
-`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it.
+`WageBillAggregate` stays `95,000` — `SettleFinances` never touches it. `SeasonRevenueAccrued` is reset to
+`0` for the new season; `FfpBalanceWindow` carries unchanged until its later T3 rule lands.
 
 **Post-`SettleFinances` state:** `{ Balance: 2,965,790, TransferBudget: 786,316, WageBudget: 307,368,
 WageBillAggregate: 95,000, SeasonRevenueAccrued: 0, FfpBalanceWindow: 0 }`.
@@ -209,6 +286,164 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 **not** fail loud — debt is representable (`Balance` carries no F1 floor); only `TransferBudget`/
 `WageBudget`/`WageBillAggregate` do.
 
+## 3.6 T3b1 day-completion baseline (ERR-030-052)
+
+T3b1 established `SeasonFinanceRuntime.PrepareDailyRevenue` once per completed world day at **slot 11a**,
+after career/management slots 0–11 and before slot 12's `WorldStore.AdvanceDay()`, with zero amounts and
+a fixed disabled gate. T3b2 (§3.7) now replaces that gate with the sole #40-owned/config-owned
+`ClubFinancesConstants.DeepRevenueEnabled`; the default still passes `0L, 0L, false` to the T3a primitive. The primitive is
+still invoked with the gate off, so canonical finance coherence is checked. Generic low-level loops with
+an explicitly empty/unwired finance set skip this pass without manufacturing entries; canonical new games
+and Restore-normalized saves have a complete set. Finance commands and settlement still refuse emptiness.
+
+**Atomic publication:** `PrepareDailyRevenue` computes every club into a detached array. #30 replaces
+its live array only after the complete pass succeeds, then advances the world clock. If any club fails
+coherence or arithmetic validation, no finance result is published and the clock remains on the same day.
+The prior career steps are idempotent on that day, so repair-and-retry cannot double-accrue earlier clubs.
+This all-club staging rule MUST remain when T3b2 supplies non-zero amounts; per-club value-copy arithmetic
+alone does not protect a multi-club pass. The temporary array is not serialized.
+
+**Fixture timing:** slots 0–11 may run pre-round and again on the following advance using their career
+cursors. Finance is outside that replayed helper. Resolving a fixture does not complete its day; the next
+advance accounts for that day, after its fixtures, exactly once. A save before or after the fixture keeps
+the same world day; a save after advancement keeps the next day. No finance cursor, gate bit, save-layout
+change, or RNG draw is added. Zero-day and refused advances invoke no accounting. Season-break advances
+use the same slot. T3b2 must feed its model through this completion seam, rather than adding a second caller.
+
+**Final-day precondition (ERR-030-053):** playing the last round closes its fixtures, not its world
+day. After every fixture is played, `RollToNextSeason` MUST refuse while
+`WorldStore.CurrentWorldTick <= Calendar.DayOfRound(Calendar.RoundCount - 1)`, before staging or
+committing boundary work. Callers use `AdvanceDays(1)` to complete a pending final fixture day through
+slot 11a, against the completed season, before settlement resets `SeasonRevenueAccrued`. The roll never
+implicitly advances the world. Its refusal preserves the whole save, and Save/Load/Restore preserves this
+precondition through the existing world clock. Already-completed final days require no additional step.
+The next opening date and `SeasonBreakDays` remain unchanged; completion consumes the first break advance.
+T-FN-DAY-008 in #40 §5.9 covers refusal, continuation and the boundary clock contract. T3b2 MUST also
+prove that non-zero final-fixture revenue belongs to the completed season before settlement.
+
+**Worked identity example (integer currency units):** day 5, club 2, coherent prior
+`{ Balance: -102, TransferBudget: 202, WageBudget: 302, WageBillAggregate: 402,
+SeasonRevenueAccrued: 502, FfpBalanceWindow: -602 }`. Revenue inputs are `0 + 0 = 0`; the disabled gate
+returns all six fields identically, and only #30 advances the world clock to day 6. Negative balance and
+FFP-window values remain representable; budgets, liability and accrued revenue must stay non-negative.
+
+## 3.7 T3b2 deterministic daily revenue model
+
+**Status:** implemented October 13, 2026 by `FinanceStep.DailyRevenue`, composed through
+`SeasonFinanceRuntime.PrepareDailyRevenue` at slot 11a. The config gate defaults off, preserving
+§3.6's zero-input identity. Exact-final-head Unity compilation remains pending.
+Every magnitude below is `[GT]` and illustrative, like the rest of Appendix A, pending a balance pass.
+
+**Ownership.** #40 owns both formulas, every constant and the single gate producer. #30 owns only timing
+(slot 11a, §3.6) and forwards four facts it already holds for the day being completed. It chooses no
+amount and adds no flag. The model is integer-only and draw-free; the reserved `0x29`/91 namespace stays
+reserved (T3c+).
+
+### 3.7.1 Gate
+
+`DeepRevenueEnabled` replaces the T3b1 `[FIXED] DEEP_REVENUE_ENABLED = false` as the **only** producer of
+`deepRevenueEnabled`: a `[GT]` boolean read once through the shared config loader
+(`[club-finances] DeepRevenueEnabled`), **default `false`**. With the default, §3.6's behaviour and every
+T3b1 lock hold unchanged (KD-8): #30 passes `0L, 0L, false` and does not evaluate §3.7.2. Turning the gate on
+is a gameplay change for career saves. It belongs to the balance pass or an owner decision, not to the
+T3b2 code landing.
+
+### 3.7.2 Daily amounts (`DailyRevenue`, pure, #40)
+
+Inputs per club for completed world day `d`, supplied by #30:
+
+| Input | Meaning | Range |
+|---|---|---|
+| `homeFixturesCompleted` | league fixtures scheduled on `d` in which the club is the home side | `0..` (0 or 1 in the Stage-2 double round robin) |
+| `leaguePosition` | the club's live league-table position at slot 11a, after `d`'s fixtures | `1..clubCount` |
+| `clubCount` | clubs in the league | `≥ 2` |
+| `inSeasonDay` | `d` lies in the live season's playing span, `DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` | bool |
+
+```
+DailyRevenue(homeFixturesCompleted, leaguePosition, clubCount, inSeasonDay) -> (sponsorship, matchday):
+    assert homeFixturesCompleted >= 0
+    assert clubCount >= 2 and 1 <= leaguePosition <= clubCount
+    assert inSeasonDay or homeFixturesCompleted == 0                         # fixtures only occur in-season
+    sponsorship = inSeasonDay ? DAILY_SPONSORSHIP_REVENUE : 0                # in-season days only (§3.7.3)
+
+    fillSpan     = MATCHDAY_FILL_TOP_PERMILLE - MATCHDAY_FILL_BOTTOM_PERMILLE  # >= 0 (catalogue invariant)
+    fillPermille = MATCHDAY_FILL_TOP_PERMILLE
+                   - fillSpan * (leaguePosition - 1) / (clubCount - 1)       # integer division, as §3.1.1
+    attendance   = MATCHDAY_STADIUM_CAPACITY * fillPermille / PERMILLE_DENOM   # spectators, floored
+    matchday     = checked(homeFixturesCompleted * attendance * MATCHDAY_REVENUE_PER_SPECTATOR)
+    return (sponsorship, matchday)
+```
+
+Units: currency amounts are integer currency units (the unit of `Balance`); `fillPermille` is per-mille of
+capacity (600..950 with the default catalogue); `attendance` is spectators. All formula arithmetic is `long` and
+checked; `homeFixturesCompleted` is an Int64 count, while position and club count are Int32 identities. `fillPermille` is linear in table position, the same shape as §3.1.1 prize money: position 1 fills
+`MATCHDAY_FILL_TOP_PERMILLE`, last place fills `MATCHDAY_FILL_BOTTOM_PERMILLE`.
+
+`MATCHDAY_STADIUM_CAPACITY` is `[CROSS-PENDING]` against #53's `STADIUM_BASE_CAPACITY` (20,000). The
+intended input is #53's per-club `StadiumCapacity(clubId)` (FR-IN-025, ERR-040-002), but #53 has no
+assembly. When #53's T0 lands, that query replaces this constant per club; until then every club uses the
+same capacity, and #40 builds no #53 interface (CLAUDE.md: nothing is wired ahead of a T0 landing).
+
+### 3.7.3 Composition at slot 11a
+
+With the gate on, #30 computes the four inputs for each initialized club and passes the result into the
+unchanged T3a primitive: `AccrueDailyRevenue(prior, sponsorship, matchday, true)`. §3.6's all-club staging
+and detached publication are unchanged: any club's refusal, including a `DailyRevenue` assertion, publishes
+nothing and leaves the clock on `d`.
+
+**Why the inputs are already settled at slot 11a.** #30's KD-4 guard (`AdvanceDays`, FR-SN-011) refuses to
+move the clock past a pending round's fixture day, so every fixture scheduled on `d` has a result before
+`d` completes. The table at slot 11a therefore already includes `d`'s results. `homeFixturesCompleted`
+counts scheduled fixtures; an implementation MUST assert that each counted fixture has a result rather
+than silently counting an unplayed one.
+
+**Timing consequences (follow from §3.6, restated for amounts):**
+
+- A fixture day's matchday revenue is accrued once, on the advance that completes it, after its fixtures.
+- The final round's day is completed by `AdvanceDays(1)` before `RollToNextSeason` (ERR-030-053). Its
+  sponsorship and matchday revenue land in the **completed** season's `SeasonRevenueAccrued` before
+  settlement reads the handoff and resets it.
+- **Season-break days accrue nothing**, before or after the roll. #30 lets a caller advance the whole break
+  before rolling (`AdvanceDays` refuses only a step past the next opening day; from the final round day,
+  `SeasonRollTests` advances `SeasonBreakDays` and then rolls, the first of those advances completing the
+  final day). Break days after the final round day are outside the completed
+  season's span; once the roll installs the next calendar, the remaining break days precede its
+  `DayOfRound(0)`. Either way `inSeasonDay` is false, so the completed season's `SeasonRevenueAccrued` at
+  settlement is the same whether the roll happens immediately after final-day completion or at the end
+  of the break. The same rule gives no sponsorship on the first season's pre-season days before round 0.
+- No new save field: `d`, the fixtures, their results and the table are all restored from the existing
+  season save, so a save at any point continues identically.
+
+### 3.7.4 Worked example (default catalogue, gate on)
+
+Club 12, `clubCount = 20`, completing day `d`, on which club 12 hosted its round fixture; after `d`'s
+results it sits 4th. Prior is §3.5's post-transaction state: `Balance = 2,315,790`,
+`SeasonRevenueAccrued = 0`.
+
+```
+sponsorship  = 1,000
+fillSpan     = 950 − 600 = 350
+fillPermille = 950 − 350 × (4 − 1) / (20 − 1) = 950 − 1,050 / 19 = 950 − 55 = 895      [per-mille]
+attendance   = 20,000 × 895 / 1,000 = 17,900                                           [spectators]
+matchday     = 1 × 17,900 × 2 = 35,800                                                 [currency]
+daily        = 1,000 + 35,800 = 36,800
+Balance      = 2,315,790 + 36,800 = 2,352,590;  SeasonRevenueAccrued = 0 + 36,800 = 36,800
+```
+
+On an in-season day with no home fixture (an away day or a free day) the same club accrues `1,000`; on a
+break or pre-season day it accrues `0`. The endpoints with one home fixture are: position 1 → `950‰ → 19,000 → 38,000`; position 20 →
+`600‰ → 12,000 → 24,000`. Over a 38-round season that is roughly 0.46–0.72 M of matchday revenue, plus
+`1,000` per in-season day, against 0.2–2.0 M of prize money (Appendix A). It is the same order of
+magnitude, and the balance pass may retune it.
+
+### 3.7.5 Failure rows
+
+`DailyRevenue` fails loud (`ArgumentOutOfRangeException`) on `homeFixturesCompleted < 0`, `clubCount < 2`,
+`leaguePosition` outside `1..clubCount`, or a home fixture on a day that is not `inSeasonDay`, and (`OverflowException`) on checked overflow. These are F8's
+sibling rows: they are evaluated only with the gate on, so the default gate cannot surface them. The enabled model also
+rejects negative sponsorship/price tuning or fill endpoints outside `0 ≤ bottom ≤ top ≤ 1000` with
+`InvalidOperationException`, matching the Appendix A catalogue invariants.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -216,4 +451,16 @@ A hypothetical cash (`TransferFee`/`General`) transaction large enough to drive 
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §3.2 `ApplyTransaction` split — wage line items change `WageBillAggregate` only (periodic cash-out deferred), cash line items change `Balance` only; worked example updated. |
 | 0.3 | 2026-09-07 | OpenAI | **PR #363 follow-up review correction.** §3.1 now rejects every non-positive board multiplier before arithmetic; the lower budget clamp is not an authorization for a negative modifier. |
 | 0.4 | 2026-09-07 | — | **PR #363 Codex correction.** Replaces post-multiply clamping with an overflow-safe quotient/remainder scale-and-cap that preserves exact integer-floor semantics below the ceiling. |
+| 0.5 | 2026-09-11 | OpenAI | **T3a contract.** Adds the pure identity-gated daily sponsorship/matchday accounting primitive; pins checked arithmetic and field isolation while explicitly deferring amount producers, #30 tick wiring, RNG promotion, wage cash-out, and FFP. |
+| 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle closure.** Defines `SeasonRevenueAccrued` as current-season state reset by `SettleFinances`; the future FFP term must consume the prior value before reset, while `FfpBalanceWindow` continues to carry until its own rule lands. |
+| 0.7 | 2026-09-11 | OpenAI | **T3a wording correction.** Restates `ApplyTransaction` as the single externally-commanded ledger mutation path so §3.2 no longer conflicts with the autonomous T3a accrual path defined in §3.4.1 and FR-FN-003. |
+| 0.8 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Names the completed-season revenue handoff before reset, pins future FFP consumption to that handoff, and clarifies that the disabled revenue gate is identity only after canonical prior-state coherence validation. |
+| 0.9 | 2026-09-11 | Claude | **ERR-040-003 close-out.** v0.8's `completedSeasonRevenue` local and `CloseCompletedSeasonRevenue(...)` call were removed from `FinanceStep.cs` (v1.8) as a misleading indirection, but §3.1's pseudocode and §3.1's prose still described both — an APPROVED spec instructing the next implementer to rebuild a construct the code had just deleted. §3.1 now shows the shipped `result.SeasonRevenueAccrued = 0` with the FFP insertion point pinned **above** the reset and reading `prior.SeasonRevenueAccrued`, and records why no intermediate carrier is reintroduced. No requirement, arithmetic or worked-example value changes. |
+| 0.10 | 2026-10-08 | — | **T3b1 / ERR-030-052.** zero inputs, sole gate ownership and fixture/save timing pinned. |
+| 0.11 | 2026-10-08 | — | **PR #491 review.** stage the complete daily finance result before publication. |
+| 0.12 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** keep final-fixture day accounting in the completed season before settlement. |
+| 0.13 | 2026-10-10 | — | **T3b2 formula half (§7.1).** New §3.7: `[GT]` config-owned `DeepRevenueEnabled` (default false) replaces the `[FIXED]` T3b1 gate; pure integer `DailyRevenue` (flat daily sponsorship; per home fixture, attendance = capacity × position-linear fill × per-spectator price); `MATCHDAY_STADIUM_CAPACITY` `[CROSS-PENDING]` on #53; slot-11a composition reusing §3.6 staging; KD-4 settledness argument; worked example; failure rows. No code yet; production remains §3.6 identity. |
+| 0.14 | 2026-10-11 | — | **PR #497 review (delayed roll).** #30 permits advancing the whole break before `RollToNextSeason`, so v0.13's "break days accrue into the new season" was false and made completed-season revenue depend on roll timing. `DailyRevenue` gains `inSeasonDay` (`DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` of the live season): sponsorship accrues only in-season, break and pre-season days accrue nothing, and a home fixture outside that span fails loud. Worked example and failure rows updated. Still spec only. |
+| 0.15 | 2026-10-11 | — | **PR #497 review.** §3.7.3 states that the cited `SeasonRollTests` break advance starts from the final round day, so its first advance is the final-day completion. Wording only. |
+| 0.16 | 2026-10-13 | — | **T3b2 implementation.** deterministic amount model implemented behind the default-off config gate. Default remains off; pinned Unity compilation pending. |
 #endregion

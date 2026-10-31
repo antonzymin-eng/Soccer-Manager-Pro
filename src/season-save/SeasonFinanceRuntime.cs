@@ -1,13 +1,14 @@
 // ============================================================================
 // File:     src/season-save/SeasonFinanceRuntime.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11
+// Modified: 2026-10-20 (#31 T2: StageFor / ReplaceStaged for the transfer bid seam — v1.7)
+//           Prior: 2026-10-13
 // Author:   —
 // Spec:     Club Finances & Economy #40 FR-FN-001/002/003/004/012/013/023/025/027,
-//           §3.4, §4.1-§4.3, §7.1 T2b; Season & Competition Loop #30 §3.5/§4.3;
+//           §3.4/§3.6/§3.7, §4.1-§4.3, §7.1 T2b/T3b2; Season Loop #30 §3.3/§3.5/§4.3;
 //           Code Standards #20
 // Purpose:  #30-owned composition mechanics for the live #40 state: keyed access, ledger routing,
-//           and the pure per-club season-boundary settlement plan consumed by SeasonLoop.
+//           staged daily accounting and season-boundary settlement for SeasonLoop.
 // ============================================================================
 
 using System;
@@ -25,6 +26,83 @@ namespace TacticalDirector.SeasonSave
     /// </summary>
     internal static class SeasonFinanceRuntime
     {
+        /// <summary>
+        /// Invokes #40's accounting primitive once per initialized club for the day being completed.
+        /// With the gate on, forwards settled calendar/fixture/table facts into #40's amount model.
+        /// With the gate off, does not inspect deep-only season inputs and supplies zero amounts.
+        /// Returns all clubs in a detached array only after every calculation succeeds. SeasonLoop
+        /// publishes that complete result; a refusal preserves live state for retry without a day cursor.
+        /// </summary>
+        internal static ClubFinanceEntry[] PrepareDailyRevenue(
+            ClubFinanceEntry[] entries, bool deepRevenueEnabled, SeasonState season, uint day)
+        {
+            if (entries == null)
+            {
+                throw new ArgumentNullException(nameof(entries));
+            }
+
+            if (entries.Length == 0)
+            {
+                throw new InvalidOperationException("Daily finance accounting requires initialized club finances.");
+            }
+
+            bool inSeasonDay = false;
+            int clubCount = 0;
+            if (deepRevenueEnabled)
+            {
+                if (season == null)
+                {
+                    throw new ArgumentNullException(nameof(season));
+                }
+
+                clubCount = season.ClubIds.Count;
+                inSeasonDay = day >= season.Calendar.DayOfRound(0)
+                    && day <= season.Calendar.DayOfRound(season.Calendar.RoundCount - 1);
+            }
+
+            var accrued = new ClubFinanceEntry[entries.Length];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                ClubFinanceEntry entry = entries[i];
+                ClubFinanceState prior = entry.Finances;
+                long sponsorship = 0L;
+                long matchday = 0L;
+                if (deepRevenueEnabled)
+                {
+                    long homeFixturesCompleted = 0L;
+                    for (int fixtureIndex = 0; fixtureIndex < season.FixtureCount; fixtureIndex++)
+                    {
+                        Fixture fixture = season.FixtureAt(fixtureIndex);
+                        if (fixture.HomeClubId != entry.ClubId
+                            || season.Calendar.DayOfRound(fixture.RoundIndex) != day)
+                        {
+                            continue;
+                        }
+
+                        // Played is #30's persisted assertion that the result was applied to the table.
+                        if (!fixture.Played)
+                        {
+                            throw new InvalidOperationException("Daily revenue cannot count an unplayed home fixture.");
+                        }
+
+                        homeFixturesCompleted = checked(homeFixturesCompleted + 1L);
+                    }
+
+                    (sponsorship, matchday) = FinanceStep.DailyRevenue(
+                        homeFixturesCompleted, season.PositionOf(entry.ClubId), clubCount, inSeasonDay);
+                }
+
+                ClubFinanceState next = FinanceStep.AccrueDailyRevenue(
+                    in prior,
+                    sponsorshipRevenue: sponsorship,
+                    matchdayRevenue: matchday,
+                    deepRevenueEnabled);
+                accrued[i] = new ClubFinanceEntry(entry.ClubId, in next);
+            }
+
+            return accrued;
+        }
+
         /// <summary>
         /// Computes the complete season-boundary finance result without mutating the live array.
         /// <see cref="SeasonLoop.RollToNextSeason"/> calls this at step (b') and installs the returned
@@ -112,6 +190,36 @@ namespace TacticalDirector.SeasonSave
             entries[index] = new ClubFinanceEntry(clubId, in finances);
         }
 
+        /// <summary>
+        /// #31 T2's staging read: the club's EXACT live value and its index, resolved before the bid so the
+        /// later <see cref="ReplaceStaged"/> cannot fail on a lookup. A value copy — #31 stages its
+        /// canonical #40 transaction on it, never on the live entry (§7.1 T2: no raw mutable
+        /// <c>ClubFinances</c> handed out, nothing rebuilt from <c>FinanceView</c>).
+        /// </summary>
+        internal static ClubFinanceState StageFor(ClubFinanceEntry[] entries, int clubId, out int index)
+        {
+            index = IndexOf(entries, clubId);
+            return entries[index].Finances;
+        }
+
+        /// <summary>
+        /// Publishes a value #31 staged through #40's own <c>FinanceLedger.ApplyTransaction</c>, after the
+        /// roster commit is confirmed (#31 §3.3). The value IS #40-validated — it is the output of
+        /// <c>FinanceLedger.ApplyTransaction</c>, the canonical mutation, which refuses an incoherent
+        /// result — so this replaces the keyed entry at the index <see cref="StageFor"/> resolved — the same "replace only a value #40 accepted" posture
+        /// <see cref="ApplyTransaction"/> takes.
+        /// </summary>
+        internal static void ReplaceStaged(ClubFinanceEntry[] entries, int index, int clubId, in ClubFinanceState staged)
+        {
+            if (entries[index].ClubId != clubId)
+            {
+                throw new InvalidOperationException(
+                    $"Finance entry {index} belongs to club {entries[index].ClubId}, not {clubId}.");
+            }
+
+            entries[index] = new ClubFinanceEntry(clubId, in staged);
+        }
+
         private static int IndexOf(ClubFinanceEntry[] entries, int clubId)
         {
             if (entries == null)
@@ -163,4 +271,8 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-09-11 | —      | First review made empty state fail loud at runtime.           |
 // | 1.3     | 2026-09-11 | —      | Claude review: comments align with Restore-only legacy        |
 // |         |            |        | migration; BoardModifier.Identity explicitly pinned to T2b.   |
+// | 1.4     | 2026-10-08 | —      | T3b1: allocation-free, per-club zero daily accounting invocation. |
+// | 1.5     | 2026-10-08 | —      | PR #491 review: publish daily state only after every club succeeds. |
+// | 1.6     | 2026-10-13 | —      | T3b2: compose settled day/fixture/table facts through #40 amounts, only when enabled. |
+// | 1.7     | 2026-10-20 | —      | #31 T2: StageFor (exact live value + pre-resolved index) and ReplaceStaged (publish a #40-validated staged value) for SeasonLoop.SubmitTransferBid. |
 #endregion

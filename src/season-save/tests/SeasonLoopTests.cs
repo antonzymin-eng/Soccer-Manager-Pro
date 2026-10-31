@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
-// Modified: 2026-09-10 (#40 T1b, ERR-030-049 — the Save call site passes the new required finance
+// Modified: 2026-10-20 (AR round 5 S-L3 — the constructor KD-4 test asserts ParamName "season" — v1.8)
+//           2026-10-18 (#31 T1 — call sites carry the transfers block)
+//           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — the Save call site passes the new required finance
 //           set; SeasonLoop holds no finance state until #40 T2 adds the resume seam — v1.6)
 // Prior-Modified: 2026-08-15 (M4, reviewed-findings pass — the one Save call site here drives no #44
 //           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
@@ -418,7 +420,10 @@ namespace TacticalDirector.SeasonSave.Tests
                 world.AdvanceDay();
             }
 
-            Assert.Throws<System.ArgumentException>(() => new SeasonLoop(world, season));
+            // AR round 5 S-L3: the offender is named — the constructor reports the season argument (League.CreateLoop
+            // reports `world`), so a swapped paramName in the shared SeasonCalendar.RequireCursorInvariant call fails here.
+            var ex = Assert.Throws<System.ArgumentException>(() => new SeasonLoop(world, season));
+            Assert.That(ex.ParamName, Is.EqualTo("season"));
         }
 
         [Test]
@@ -460,7 +465,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(firstWorld, first.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false, NoFinances, transfersOrNull: null);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -711,4 +716,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | empty finance set via a NoFinances helper. SeasonLoop holds no    |
 // |         |            |        | finance state until #40 T2 adds the resume seam, so there is      |
 // |         |            |        | nothing else this suite can pass. No assertion or intent change.  |
+// | 1.7 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call site passes transfersOrNull: null. |
+// | 1.8 | 2026-10-20 | — | AR round 5 S-L3: Constructor_WorldPastThePendingFixtureDay_FailsLoud also asserts ex.ParamName == "season" (the shared RequireCursorInvariant reports the caller's offending argument). |
 #endregion

@@ -1,0 +1,40 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  UnityShim -> /home/user/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  UnityShim.TestTools -> /home/user/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  project-constants.gen -> /home/user/Soccer-Manager-Pro/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  tactical-instructions.gen -> /home/user/Soccer-Manager-Pro/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  deterministic-sim.gen -> /home/user/Soccer-Manager-Pro/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  positioning-ai.gen -> /home/user/Soccer-Manager-Pro/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+  agent-movement.gen -> /home/user/Soccer-Manager-Pro/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  event-system.gen -> /home/user/Soccer-Manager-Pro/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  ball-physics.gen -> /home/user/Soccer-Manager-Pro/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  player-database.gen -> /home/user/Soccer-Manager-Pro/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  performance-optimization.gen -> /home/user/Soccer-Manager-Pro/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  collision-system.gen -> /home/user/Soccer-Manager-Pro/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  first-touch.gen -> /home/user/Soccer-Manager-Pro/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  pass-mechanics.gen -> /home/user/Soccer-Manager-Pro/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  testing-strategy.gen -> /home/user/Soccer-Manager-Pro/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  heading-mechanics.gen -> /home/user/Soccer-Manager-Pro/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  shot-mechanics.gen -> /home/user/Soccer-Manager-Pro/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  goalkeeper-mechanics.gen -> /home/user/Soccer-Manager-Pro/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  pressing-ai.gen -> /home/user/Soccer-Manager-Pro/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  perception-system.gen -> /home/user/Soccer-Manager-Pro/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  attacking-ai.gen -> /home/user/Soccer-Manager-Pro/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  defensive-ai.gen -> /home/user/Soccer-Manager-Pro/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+/home/user/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/home/user/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/home/user/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/home/user/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/home/user/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/home/user/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+  decision-tree.gen -> /home/user/Soccer-Manager-Pro/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  match-engine.gen -> /home/user/Soccer-Manager-Pro/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  match-engine-tests.gen -> /home/user/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+Test run for /home/user/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll (.NETCoreApp,Version=v8.0)
+Microsoft (R) Test Execution Command Line Tool Version 17.8.0 (x64)
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /tmp/claude-0/-home-user-Soccer-Manager-Pro/d1e7756a-611a-5e6b-ac28-9858ea4ba19d/scratchpad/stall/diag.trx
+
+Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1, Duration: 23 m 58 s - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+exit=0

@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassMechanicsConstants.cs
 // Created:  2026-05-26
+// Modified: 2026-09-26 (W8 B — reserved goalkeeper-distribution error hash discriminator 0x47)
 // Modified: 2026-06-06
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.2.9, §3.3.7, §3.4.7, §3.5.9, §3.6.9, §3.7.6,
@@ -36,6 +37,9 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>[FIXED] Minimum spin below which knuckling regime is entered [HONG-2012]. §3.4.4.</summary>
         public const float SPIN_MIN = 1.0f;
+
+        /// <summary>[FIXED] Reserved error-direction hash discriminator for dedicated goalkeeper distribution. §3.8.13.</summary>
+        public const int GK_DISTRIBUTION_ERROR_HASH_DISCRIMINATOR = 0x47;
 
         #endregion
 
@@ -366,4 +370,5 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        |     BaseErrorDriven. MaxErrorAngle was unobservable — the chain's            |
 // |         |            |        |     output clamp masks the sentinel against legitimate worst-case error.    |
 // |         |            |        |     Mid-range value + gated LogError is now the sole fault surface.         |
+// | 1.4     | 2026-09-26 | —      | W8 B: + [FIXED] GK_DISTRIBUTION_ERROR_HASH_DISCRIMINATOR = 0x47 for deterministic dedicated-distribution error direction. No new RNG stream or draw site. |
 #endregion

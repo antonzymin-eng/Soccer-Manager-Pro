@@ -1,0 +1,39 @@
+UnityShim 0
+TacticalDirector.ProjectConstants 0
+TacticalDirector.DeterministicSim 0
+TacticalDirector.PlayerDatabase 0
+TacticalDirector.ClubFinances 0
+TacticalDirector.PerformanceOptimization 0
+TacticalDirector.TestingStrategy 0
+UnityShim.TestTools 0
+warning CS1701: Assuming assembly reference 'netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51' used by 'nunit.framework' matches identity 'netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51' of 'netstandard', you may need to supply runtime policy
+
+TacticalDirector.ClubFinances.Tests 0
+TacticalDirector.EventSystem 0
+TacticalDirector.BallPhysics 0
+TacticalDirector.AgentMovement 0
+TacticalDirector.CollisionSystem 0
+TacticalDirector.FirstTouch 0
+TacticalDirector.PassMechanics 0
+TacticalDirector.ShotMechanics 0
+TacticalDirector.PerceptionSystem 0
+TacticalDirector.HeadingMechanics 0
+TacticalDirector.GoalkeeperMechanics 0
+TacticalDirector.TacticalInstructions 0
+TacticalDirector.PositioningAI 0
+TacticalDirector.DecisionTree 0
+src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false
+src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false
+src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0
+
+TacticalDirector.PressingAI 0
+TacticalDirector.DefensiveAI 0
+TacticalDirector.AttackingAI 0
+TacticalDirector.MatchEngine 0
+TacticalDirector.LivingWorld 0
+TacticalDirector.PlayerProgression 0
+TacticalDirector.TrainingSystem 0
+TacticalDirector.InjuriesMedical 0
+TacticalDirector.Discipline 0
+TacticalDirector.SeasonSave 0
+TacticalDirector.SeasonSave.Tests 0

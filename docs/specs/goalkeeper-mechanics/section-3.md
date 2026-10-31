@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.8
+**Last Updated:** October 29, 2026 (v0.24 — ERR-011-021: W8 C eight-second Law-12 hand-control offence, §3.8.5; six-second rule retired)
+**Version:** 0.24
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -16,25 +17,77 @@ States: `Resting`, `Set`, `Anticipate`, `Diving`, `Airborne`,
 `HandsOnBall`, `Recovering`, `Distributing`, `Rushing`, `OneOnOne`,
 `Smothered`.
 
+### 3.1.0 Ball-region inputs (ERR-011-002)
+
+The tactical rows read two predicates. Both derive from ONE distance, measured from the goal the
+keeper defends, so they cannot disagree about which end of the pitch is meant:
+
+```
+ownGoalX            = 0                if the keeper defends the x = 0 goal (team 0)
+                      PITCH_LENGTH_M   otherwise                               // m
+ballDistToOwnGoalM  = abs(ball.x − ownGoalX)                                   // m, [0, PITCH_LENGTH_M]
+ballThreateningOwnGoal = ballDistToOwnGoalM ≤ PITCH_LENGTH_M − BALL_ATTACKING_THIRD_X_M   // near third
+ballSafelyUpfield      = ballDistToOwnGoalM ≥ BALL_ATTACKING_THIRD_X_M                    // far third
+```
+
+Neither predicate reads possession. With `PITCH_LENGTH_M` = 105 m and `BALL_ATTACKING_THIRD_X_M`
+= 70 m, the near third is 0–35 m from the keeper's own goal and the far third is 70–105 m.
+**Worked example:** the team-1 keeper defends x = 105. A ball at x = 80 is 25 m away, so
+`ballThreateningOwnGoal` is true and `ballSafelyUpfield` false. A ball at x = 20 is 85 m away, so
+the reverse holds. A ball at x = 55 (50 m away) is in neither region. The defended goal comes from the
+keeper's goalkeeper index, never from an attribute snapshot: a default snapshot would make both
+keepers defend x = 0.
+
+**Stage-0 anticipation stub.** Decision Tree #8 publishes no `gkAnticipationScore` at Stage 0, so
+#11 supplies a stand-in keyed to the same predicate:
+
+```
+gkAnticipationScore = STAGE0_ANTICIPATION_SCORE_ACTIVE   if ballThreateningOwnGoal   // 0.6, dimensionless
+                    = 0                                  otherwise
+```
+
+Consequences while the stub stands:
+
+- `STAGE0_ANTICIPATION_SCORE_ACTIVE` (0.6) exceeds `ANTICIPATE_THRESHOLD` (0.55), so `Set → Anticipate`
+  fires on the first 10 Hz tick a `Set` keeper has the ball in its near third.
+- `ANTICIPATE_THRESHOLD` has no effect anywhere below 0.6. At 0.6 or above, inside its listed range,
+  the row becomes unreachable.
+- `Set` evaluates `Set → Anticipate` before `Set → Rushing`, so while the ball is in the near third a
+  rush starts from `Anticipate`, not from `Set`.
+- The `ShotExecutedEvent` route into `Anticipate` (the second `Set → Anticipate` row) is not wired at
+  Stage 0, so the stub is the only way into `Anticipate`.
+
+The stub is replaced when #8 publishes a real score (Stage 1).
+
+**Worked example:** a `Resting` team-0 keeper, with the ball arriving 25 m from x = 0. The state
+machine takes one transition per keeper per tactical tick. On tick N the keeper goes
+`Resting → Set` (`ballThreateningOwnGoal`). On tick N + 1 the score is 0.6 > 0.55, so it goes
+`Set → Anticipate`. When the ball goes back beyond 35 m, it goes `Anticipate → Set` on the next
+tick and `Set → Resting` on the tick after.
+
 ### 3.1.1 Transition table
 
 Each row is `(from, to, trigger, tick-rate, source spec)`.
 
 | From | To | Trigger | Tick-rate | Source |
 |------|----|---------|-----------|--------|
-| `Resting` | `Set` | `BallState.position` enters attacking third (`x` past `BALL_ATTACKING_THIRD_X_M` for attacker-controlled possession) | 10 Hz | #11 / #8 |
-| `Set` | `Anticipate` | Decision Tree #8 sets `gkAnticipationScore > ANTICIPATE_THRESHOLD` | 10 Hz | #8 |
+| `Resting` | `Set` | `ballThreateningOwnGoal` (§3.1.0): the ball is in the third in front of the goal this keeper defends, whoever has possession (ERR-011-002) | 10 Hz | #11 |
+| `Set` | `Anticipate` | `gkAnticipationScore > ANTICIPATE_THRESHOLD`. Decision Tree #8 owns the score; at Stage 0 it is the §3.1.0 stub | 10 Hz | #8 / §3.1.0 |
+| `Set` | `Resting` | No `Set → Anticipate` or `Set → Rushing` row fired AND NOT `ballThreateningOwnGoal` (§3.1.0): the ball has left the keeper's defensive third (ERR-011-002) | 10 Hz | #11 |
 | `Set` | `Anticipate` | `ShotExecutedEvent` consumed (early predictive) | 60 Hz event | #6 §4.5 |
 | `Anticipate` | `Diving` | Decision Tree #8 commits `SaveIntent` with valid `targetHand` AND the ball's predicted time-to-plane ≤ the §3.3.6 commit lead (ERR-011-007 — a committed keeper HOLDS `Anticipate` until the dive's envelope covers the arrival; a ball already inside the lead dives immediately, and a ball that stops closing disarms via the engine's `ClearSaveIntent` path, so the hold cannot deadlock) | 10 Hz | #8 / §3.3.6 |
+| `Anticipate` | `Set` | No `Anticipate → Diving` or `Anticipate → Rushing` row fired AND NOT `ballThreateningOwnGoal` (§3.1.0): the threat has passed. Without this exit a keeper that entered `Anticipate` never left (measured 76–92% of every match before ERR-011-002; 11–18% after) | 10 Hz | #11 (ERR-011-002) |
 | `Diving` | `Airborne` | Dive launch impulse applied (60 Hz physics) | 60 Hz | #11 §3.3 |
 | `Airborne` | `HandsOnBall` | #3 hand-ball contact event with positive `handlingQualityScalar ≥ MIN_HANDLING_QUALITY` AND `≥ CATCH_THRESHOLD` (caught path) | 60 Hz | #3 / #11 §3.5 |
 | `Airborne` | `Recovering` | #3 hand-ball contact event with `handlingQualityScalar < CATCH_THRESHOLD` (parry / deflect / spill paths) | 60 Hz | #3 / #11 §3.5 |
 | `Airborne` | `Recovering` | Ground re-entry (`agentZ ≤ 0`) without contact event (F-01 / F-02 / F-03) | 60 Hz | #11 §3.3 |
-| `HandsOnBall` | `Distributing` | Decision Tree #8 commits `DistributeIntent` AND `currentTick ≥ releaseTickEarliest` | 10 Hz | #8 |
-| `HandsOnBall` | `HandsOnBall` | `currentTick − claimTick ≥ GK_HOLD_MAX_TICKS` (Laws-of-the-Game 6-second rule; forced release) | 10 Hz | KD-9 / FR-GK-028 |
-| `Distributing` | `Recovering` | Distribution release frame reached (windup elapsed; `passIntent` published) | 60 Hz | #11 §3.8 |
+| `HandsOnBall` | `Distributing` | Match Engine's #21 producer has a valid `DistributeIntent`, all release/policy tick gates are satisfied, the §3.8.4 admission predicate holds (`currentFrame + WindupFrames ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`), and #5 **accepts** the corresponding `GoalkeeperDistributionRequest` | 10 Hz initiation | W8 B / #21 / #5 |
+| `HandsOnBall` | `HandsOnBall` | #5 rejects initiation while the same keeper still owns controlled possession: clear `DistributeIntent`, preserve claim/release clocks and `handControlStartFrame`; retry no earlier than a later tactical heartbeat and only when §3.8.4's retry-budget predicate still permits CONTACT (the atomic hand release) no later than `handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES` | 10 Hz initiation | W8 B / #5 feedback |
+| `Distributing` | `HandsOnBall` | Accepted #5 request is cancelled without a kick (under C only at the CONTACT frame, §3.8.4) while the same keeper still owns controlled possession: clear intent, preserve claim/release clocks and `handControlStartFrame` | 60 Hz feedback | W8 B / #5 feedback |
+| `Distributing` | `Recovering` | Successful #5 CONTACT completes, or cancellation/teardown accompanies real possession loss/restart/takeover, a §3.1.4 DFK or the §3.8.5 corner | 60 Hz | W8 B / #5 / Match Engine |
+| `HandsOnBall` | `Recovering` | Shared possession-change / hand-episode teardown (§3.8.3): real possession loss, restart, takeover, a §3.1.4 DFK or the §3.8.5 corner; clears intent and the hand-control start frame, starts the ordinary recovery cooldown | 60 Hz | W8 B / #11 §3.8.3 / §3.8.5 |
 | `Recovering` | `Set` | Recovery-to-line cooldown elapsed (`RECOVERY_COOLDOWN_TICKS`) OR GK XY already within `GK_REACTIVE_RADIUS_M` of #12 baseline (v0.2 AR-S1-M5: OR not AND — prevents stall when GK is already at baseline after distribution release) | 10 Hz | #11 §3.3.0 |
-| `Recovering` | `Resting` | Possession transitions to GK's own team in defensive third | 10 Hz | #11 / #8 |
+| `Recovering` | `Resting` | The `Set` exit above did not fire AND `ballSafelyUpfield` (§3.1.0): the ball is in the far third from the keeper's own goal, whoever has possession (ERR-011-002) | 10 Hz | #11 (ERR-011-002) |
 | `Set` | `Rushing` | Decision Tree #8 commits `RushIntent` with `commitmentLevel > RUSH_COMMIT_THRESHOLD` | 10 Hz | #8 |
 | `Anticipate` | `Rushing` | Decision Tree #8 commits `RushIntent` (preferred over `SaveIntent` per #8 priority) | 10 Hz | #8 |
 | `Rushing` | `Smothered` | #3 hand-ball contact event during rush | 60 Hz | #3 / #11 §3.7 |
@@ -46,7 +99,30 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `OneOnOne` | `Diving` | Decision Tree #8 commits `SaveIntent` (1v1 dive path; KD-20 coefficients apply) | 10 Hz | #8 |
 | `OneOnOne` | `Smothered` | GK closes within `SMOTHER_TRIGGER_RADIUS_M` of attacker AND attacker shot pending | 60 Hz | #11 |
 | `OneOnOne` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without ever closing to a smother (ERR-011-009). `OneOnOne` is reachable only from `Rushing` and inherits the identical gap | 60 Hz | ERR-011-009 / §3.7.2 |
-| `Resting` | `Resting` | Default holding state when ball is in own / middle thirds with own possession | 10 Hz | #11 |
+| `Resting` | `Resting` | Default holding state while NOT `ballThreateningOwnGoal` (§3.1.0), whoever has possession | 10 Hz | #11 |
+
+**`Recovering` is not claim-, rush- or save-eligible (owner decision D-03, October 10, 2026).**
+The table has no row from `Recovering` to `Anticipate`, `Diving`, `Rushing` or a hand claim, and
+that absence is intentional. A keeper in `Recovering` commits no `ClaimIntent` or `RushIntent` and
+starts no dive, whatever the cause of entry, until it leaves through one of the two exits above:
+to `Set` (cooldown elapsed, or already within `GK_REACTIVE_RADIUS_M` of the slot) or, failing
+that, to `Resting` (ball in the far third from its own goal). **Save commitment is not gated:** a
+visible save threat during `Recovering` may still commit and hold a `SaveIntent` and open the §3.2
+reaction window, but that intent can produce a dive only after the keeper exits to `Set` and then
+reaches `Anticipate` through the ordinary rows. This matches the engine at D-03 and changes no
+behavior. This restricts only #11-owned actions: the keeper remains an ordinary agent for the
+Match Engine's first-touch and loose-ball pickup paths. Two refinements are candidates for the
+PM-2 engine scope (roadmap D-08) after W8 B, not part of this contract: distinguishing `Recovering`
+entries by cause (a ground event versus a completed distribution or rush), and withholding save
+commitment while `Recovering`. Either would change behavior and need its own measurement. No
+cooldown value is changed by this decision.
+
+**Hand-control timeout is not a transition (ERR-011-021).** Exceeding the eight-second limit is a
+Resolve-phase infringement adjudicated by §3.8.5, which tears the episode down through the shared
+restart. The former `HandsOnBall → HandsOnBall` row keyed to the six-second `GK_HOLD_MAX_TICKS`
+no-intent guard is retired. `HandsOnBall` remains hand control until actual CONTACT/release, real
+possession loss or sanction; `Distributing` remains hand control for the whole accepted #5 WINDUP.
+*Until the C implementation lands, code still raises that legacy signal (W8 B).*
 
 Iteration order is deterministic per #16 §3.2. With one GK per
 side, iteration-order ambiguity is restricted to multi-attacker
@@ -55,11 +131,19 @@ scenarios in §3.6 (cross-claim duel).
 ### 3.1.2 Pseudocode for state evaluation
 
 ```
-on TacticalTick(currentTick):                   // 10 Hz
-    for gk in {homeGK, awayGK}:                 // #16 §3.2 entity order
-        ballState = BallPhysics.GetBallState(currentTick)
-        intent    = DecisionTree.GetGKIntent(gk.agentId, currentTick)
-        gk.state  = evaluateTacticalTransition(gk.state, ballState, intent, currentTick)
+on TacticalTick(currentTacticalTick):           // 10 Hz; Match Engine passes floor(frame/6)
+    for gk in {homeGK, awayGK}:                  // #16 §3.2 entity order
+        ballState = BallPhysics.GetBallState(currentTacticalTick)
+        # SAVE/rush inputs come from their owning producers; W8 does not redefine them.
+        gk.state = evaluateTacticalTransition(
+            gk.state, ballState, currentTacticalTick, existingSaveRushInputs)
+
+        if gk has live controlled hand possession:
+            # W8 B producer is Match Engine + #21, never Decision Tree #8.
+            candidate = buildDistributionFromPolicy(gk, TeamTactic.GkDistributionPolicy)
+            if candidate gates pass AND #5 accepts GoalkeeperDistributionRequest(candidate):
+                CommitDistributeIntent(gk, candidate)
+                gk.state = Distributing
 
 on PhysicsFrame(currentFrame):                  // 60 Hz
     for gk in {homeGK, awayGK}:
@@ -71,6 +155,116 @@ on PhysicsFrame(currentFrame):                  // 60 Hz
 ```
 
 ---
+
+### 3.1.3 Own-release hand restriction (ERR-011-020)
+
+**Owner approval:** Anton approved the separate own-release re-handling fix inside PR #511 on
+October 16, 2026, as recorded in the [review](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/511#issuecomment-6225792272).
+This amendment does not change D-03's recovery eligibility or C's eight-second/corner scope.
+
+The composition root records the identity of a keeper releasing `HandsOnBall` or a still-held
+`Distributing` episode. A release through the inherited six-second hand drop also arms the restriction (that drop leaves hand
+episodes when W8 C makes it feet-only, §3.8.5);
+a feet-possession drop does not newly arm it. The keeper's own feet/body touches do not discharge it.
+A physical touch by any other player does: kick/header, first touch, acquisition, or applied collision
+response. A nearby agent or unexecuted intent is not a touch. Restarts and replacement of the restricted
+player clear the history. This does not model the separate deliberate teammate back-pass restriction.
+
+`IGoalkeeperBallSystem.CanUseHands(teamId)` reads that canonical history without a second latch.
+A restricted keeper forms no `SaveIntent` or `ClaimIntent`, supplies no Hand reach participant, and
+cannot enter a smother. Both clock boundaries cancel stale hand intents; a stale dive/airborne/smother
+enters ordinary recovery. Existing rush movement may finish at its locked target using the ordinary
+feet/first-touch/pickup paths. While restricted, any save is through ordinary legal body/feet collision
+physics; #11 does not manufacture a hand-shaped deflection, catch, parry or spill. No extra RNG site is
+introduced; prevented hand attempts consume none of the handling/dive draws they would have used.
+
+The actual-contact `TryHandContact(agentId, position)` gate remains a backstop before every
+ball-changing catch/parry/deflection/spill/smother. A handling quality below `MinHandlingQuality`
+is a miss: it performs no ball mutation and records no touch. If a prohibited contact is reached,
+Physics queues it and Resolve awards an opponents' IFK inside the keeper's own penalty area, or a DFK
+outside. A completed boundary crossing takes precedence. The handling whistle discards a captured
+same-frame tackle/collision foul candidate, including its decided flag, so it cannot award another
+restart or delayed card on the next frame. This is the Stage-0 single-offence precedence rule.
+
+The [restart contract](../../tracking/match-flow-completion-design.md#51-keeper-own-release-re-handling)
+owns event codes, placement, taker selection and direct-goal prevention. General outside-area handling
+is enforced separately under §3.1.4, including contacts with no own-release history.
+Snapshot body v27 stores the restriction, pending offender/contact point and IFK taker. Save-file
+format stays v3; incompatible snapshot bodies use the existing strict version refusal.
+
+**Worked example (both ends):** team 0's keeper releases at `(10, 34)` m. With no intervening player
+touch, the ball returns to `(12, 34)` m. The keeper forms no hand intent and collects with the feet;
+the restriction remains. Team 1's mirrored example uses `(95, 34)` then `(93, 34)` m. Once a teammate
+or opponent actually touches the ball, hand intent formation resumes. If the backstop instead receives
+an illegal hand contact at `(3, 34)` / `(102, 34)` m, Law 13 places the IFK at `(5.5, 34)` /
+`(99.5, 34)` m on the goal-area line. No direct goal from that IFK is accepted.
+
+### 3.1.4 Outside-area handling (D-07 option A)
+
+**Owner decision — October 18, 2026:** implement general outside-area handling before W8 C ships.
+An actual hand/arm contact outside the keeper's own penalty area awards the opponents a **direct
+free kick at the contact point**, regardless of release/touch history. The existing actual-contact
+gate applies to catches, parries, deflections, spills and smothers; an attempted contact that misses
+does not constitute handling. This decision adds no hand-intent avoidance policy.
+
+The contact position is the ball's position, not the keeper's body or a locked intent target.
+Penalty-area lines are inclusive and measured on the ball centre. For a keeper of team `t`, with
+`s = (x − ownGoalX(t)) · attackDirX(t)` (m, signed depth from the own goal line) and
+`l = |y − 34|` (m, lateral distance from the pitch centre):
+
+```text
+dx = max(0, s − 16.5, −r − s)          // m; 16.5 [FIXED: IFAB Law 1]
+dy = max(0, l − (16.5 + goalWidth/2))  // m; half-width 20.16 [DERIVED]
+distanceOutside = sqrt(dx² + dy²)      // m, ≥ 0; inside ⇔ distanceOutside = 0
+```
+
+`r = 0.11 m` is the ball radius `[CROSS: Ball Physics #1 Ball.RADIUS]`. A ball still in play
+can overhang its own goal line by up to `r` (Ball Physics treats it as out only when wholly over),
+and the goal line belongs to the area, so that overhang counts as on the line. Valid inputs are
+on-pitch or overhanging positions; a ball wholly out takes its boundary restart first. Geometry is
+mirrored for both defending ends. The opponents' penalty area grants no handling entitlement.
+A handling restart is placed at the contact point clamped onto the pitch (`0 ≤ x ≤ 105`,
+`0 ≤ y ≤ 68` m), so an overhanging contact restarts on the line it overhangs.
+
+Continuous hand control is also handling. A held `Controlled` ball is modelled at the keeper's XY.
+The acquisition itself was adjudicated at the ball by the contact gate, so snapping a legal catch
+onto the keeper's body is **not** a carry. After every later attachment (locomotion or collision
+correction) while #11 reports `HandsOnBall` or still-held `Distributing` and that keeper remains
+the possessor, the composition root compares the newly attached ball with its previous attached
+position and queues the offence only when `distanceOutside(new) > distanceOutside(previous)`: the
+carry takes the ball out of the area, or farther from it. Stage 0 does not model a hand offset from
+the body, so a keeper who catches inside with the body outside may hold still or move back toward
+the area without sanction.
+
+Physics queues an offence after movement/attachment. Resolve adjudicates it before collision or
+executor CONTACT; a collision correction can itself carry the ball out, so Resolve checks again
+immediately after reattachment and before executors. The shared restart tears down hand control,
+cancels pending distributions, clears the captured foul candidate and publishes one DFK event.
+A ball already wholly out takes its boundary restart. Feet possession outside the area remains legal.
+Neither this offence nor own-release re-handling is the W8 C eight-second/corner offence (§3.8.5).
+
+**Worked example:** team 0 carries a held ball from `(16.50, 34)` to `(16.51, 34)` m:
+`distanceOutside` goes 0 → 0.01 m, so team 1 gets a DFK at `(16.51, 34)` m. Team 1's mirrored path is
+`(88.50, 34)` to `(88.49, 34)` m and awards team 0 the DFK. No goal-area relocation or indirect-goal
+restriction applies. Picking the ball up at either outside point receives the same sanction.
+
+**Worked example (body outside):** team 0's keeper stands at `(17.2, 34)` and catches a ball at
+`(16.0, 34)` m. The contact is inside, so it is legal; attachment moves the ball to `(17.2, 34)`
+(0.7 m outside), which is not a carry. Holding there (0.7 → 0.7) or walking to `(16.9, 34)`
+(0.7 → 0.4) stays legal. Walking to `(17.5, 34)` (0.7 → 1.0) gives team 1 a DFK at `(17.5, 34)`.
+Team 1 mirrors at `x = 87.8, 89.0, 88.1, 87.5` m.
+
+**Worked example (goal line):** team 0 catches a ball at `(−0.05, 34)` m: `s = −0.05 ≥ −0.11`, so it
+is inside and legal. A contact at `(−0.05, 10)` m has `dy = 24 − 20.16 = 3.84` m, so it is outside;
+team 1's DFK is placed at `(0, 10)` m. Team 1's mirrors are `(105.05, 34)` (legal) and
+`(105.05, 10)` → DFK at `(105, 10)` m.
+
+The existing v27 pending offender/contact fields represent both offences; no bytes or fields are
+added and outer save format remains v3. A pending offence without matching own-release history is
+valid only outside the keeper's own area. Tests cover mirrored contacts, both lateral boundaries,
+carries, collision correction, distribution CONTACT cancellation, direct scoring, restart precedence,
+deterministic restore with no release history, the real catch composition with the keeper's body
+outside (legal hold, back toward goal legal, farther out sanctioned) and goal-line overhang.
 
 ## 3.2 Shot Reaction Pipeline (KD-2, KD-18)
 
@@ -107,17 +301,59 @@ it is cleared when the episode disarms without a dive and when a
 save attempt resolves. An un-cleared stamp dated later dives against
 shots struck minutes earlier (measured mean elapsed-when-airborne
 34–174 s), clamping §3.2.3's window to 0 for nearly every contact.
-Two producers write the stamp:
+Three producers write the stamp (`ERR-011-019`; the third and the
+visibility conditions were wired by W4, PR #403, September 13, 2026):
 
 1. `ShotExecutedEvent` — the precise anchor, `matchTimeMs` = the
    strike frame, always overwriting (the newest shot is the live
-   threat);
-2. **threat-onset fallback** — save episodes with no #6 shot event
-   (deflections, rebounds, mis-hit passes driving at the goal) are
-   stamped at the moment the save-trigger geometry arms, through the
-   same §3.2.1/§3.2.2 formulas, ONLY when no stamp is live. A live
-   stamp always wins, so the fallback is idempotent within an
-   episode and needs no edge-detection state of its own.
+   threat). Sets the pending-shot flag. Not visibility-gated at the
+   moment of the strike.
+2. **threat-onset fallback** (`OnThreatArmed`) — save episodes with
+   no #6 shot event (rebounds, mis-hit passes driving at the goal) are
+   stamped through the same §3.2.1/§3.2.2 formulas, ONLY when no
+   stamp is live. A live stamp always wins, so the fallback is
+   idempotent within an episode and needs no edge-detection state of
+   its own. **Visibility-owned:** the match engine calls it at the
+   10 Hz tactical tick only when the threat is both armed and
+   *visible* to the keeper (#8 §3.1.13's `KeeperPerceptionGate`
+   condition: raw save geometry plus current-frame all-body line of
+   sight). The stamp therefore dates the moment the keeper can first
+   see the threat, not the moment hidden geometry arms.
+3. **deflection reset** (`OnThreatDeflected`) — when an agent body
+   actually changes the ball's flight during Resolve (Collision #3 →
+   Ball Physics deflection), the match engine evaluates the
+   *post-deflection* flight and calls this producer only for the
+   keeper whose goal is now threatened and who can currently see the
+   threat. Unlike (2) it **always overwrites** a live stamp, because
+   a deflection is a changed threat whose reaction window restarts.
+   Unlike (1) it does **not** set the pending-shot flag: a deflection
+   is not a newly struck shot. A hidden deflection writes nothing; (2)
+   stamps the episode when the ball emerges from the screen.
+
+**Screened threats clear the stamp.** At a 10 Hz tick where the raw
+save geometry is armed but the keeper's line of sight is blocked, the
+match engine clears the save intent and, with it, the stamp
+(`ClearSaveIntent`) — including a stamp written by (1) — unless a
+dive is already in flight (`Diving`/`Airborne`), which keeps its
+stamp. A screened shot therefore restarts its reaction window when it
+becomes visible, through (2). The raw geometry still vetoes RUSH while
+the threat is screened (#8 §3.1.13).
+
+*Worked example.* A shot is struck in Resolve at t = 10 000 ms, and
+producer (1) stamps it. A defender screens the keeper at the next
+tactical tick (Mechanics/AI runs before Resolve, so that is
+t = 10 100 ms); that tick clears the stamp. At the following tick,
+t = 10 200 ms, the ball has cleared the defender, and producer (2)
+stamps
+`10 200 + PERCEPTION_BASE_LATENCY_MS · perceptionLatencyScale(gk)`.
+If the ball then clips a defender at t = 10 250 ms and still drives
+at the goal in view, producer (3) overwrites the 10 200 ms stamp with
+`10 250 + PERCEPTION_BASE_LATENCY_MS · perceptionLatencyScale(gk)` and
+recomputes `requiredReactionMs` from the post-deflection speed.
+
+Determinism: no new state. All three producers write the existing
+serialized per-keeper stamp and required-reaction fields; no RNG
+draw, schema field, or event type is added.
 
 ### 3.2.2 `requiredReactionMs`
 
@@ -247,7 +483,13 @@ the dive's vertical component until that migration.
 ```
 // Lateral dive axis is Y (touchline-to-touchline): the goal mouth spans Y, so
 // the keeper dives left/right across the goal along Y, NOT along goal-to-goal X (§1.2).
-diveDirectionY     = sign(targetHandY - gkY)      // ∈ {-1, 0, +1}
+// ERR-011-003: an explicit SaveIntent.DeflectionTarget wins; otherwise the
+// ball decides, through the same plane-crossing predictor as §3.3.6.
+targetY            = SaveIntent.DeflectionTarget.y       if DeflectionTarget is set
+                   = predictedY (§3.3.6)                  if the ball crosses the keeper's
+                                                          plane within DIVE_PREDICTION_HORIZON_S
+                   = ball.y                               otherwise (not closing, or too far out)
+diveDirectionY     = sign(targetY − gkY)                  // ∈ {-1, 0, +1}
 diveLaunchImpulse  = DIVE_LAUNCH_BASE_MPS
                    + DIVE_LAUNCH_K_STRENGTH · Strength_norm
                    + DIVE_LAUNCH_K_AERIAL   · Aerial_norm
@@ -256,6 +498,15 @@ diveLaunchImpulse  = DIVE_LAUNCH_BASE_MPS
 
 `diveLaunchImpulse` is applied as a single-frame XY velocity
 addition to `gk.kinematics` per AM #2 §3.5.1 update protocol.
+
+**Why the ball decides (ERR-011-003).** `DeflectionTarget` is where the keeper wants to *put*
+the ball (§3.5.3), not where to *dive*. The engine's only producer leaves it unset, so a
+direction taken from it alone was 0 for every dive ever launched (measured mean
+`|diveDirectionLateral|` = 0.000; contacts 0 → 15 after the fix). **Worked example:** keeper at
+(103, 34), no `DeflectionTarget`, ball at (88, 30) moving (+15, +3) m/s. `timeToPlaneS` =
+(103 − 88) / 15 = 1.0 s ≤ 2.0 s, `predictedY` = 30 + 3 × 1.0 = 33 m, so `diveDirectionY` =
+sign(33 − 34) = −1. The same ball moving (−15, +3) m/s is not closing, so `targetY` = 30 and
+the direction is still −1, from the ball's current position.
 
 ### 3.3.2 Dive timing jitter
 
@@ -334,10 +585,17 @@ ball's predicted plane crossing, so the dive's fixed
 than opening and closing during its flight:
 
 ```
-// Shared derivation with §3.3.4's dive direction (one predictor,
+// Shared derivation with §3.3.1's dive direction (one predictor,
 // two consumers — direction and timing cannot drift apart):
-timeToPlaneS = (gk.x − ball.x) / ball.vx        // only when closing
-predictedY   = ball.y + ball.vy × timeToPlaneS  // the crossing point
+// ε = DEGENERACY_EPSILON (§3.4.4), a numerical-zero guard, not a gameplay value
+closing = |ball.vx| > ε  and  sign(gk.x − ball.x) = sign(ball.vx)
+if closing and (gk.x − ball.x) / ball.vx ≤ DIVE_PREDICTION_HORIZON_S:
+    timeToPlaneS = (gk.x − ball.x) / ball.vx       // s
+    predictedY   = ball.y + ball.vy × timeToPlaneS // m; the crossing point
+else if not closing and |gk.x − ball.x| ≤ ε:       // already AT the plane, any velocity:
+    timeToPlaneS = 0, predictedY = ball.y          //   an immediate crossing (a smother)
+else:
+    no crossing                                    // hold; §3.3.1 falls back to ball.y
 
 lateralNeedM = |predictedY − gk.y|
 commitLeadS  = clamp(lateralNeedM / DIVE_LAUNCH_DISPLACEMENT_M,
@@ -355,9 +613,11 @@ short sharp commit (floored by `DIVE_COMMIT_MIN_LEAD_FRAC` so the
 lead never degenerates below the 10 Hz decision grid). A ball
 already inside the lead when `SaveIntent` commits dives at the next
 tactical tick — the pre-ERR-011-007 behaviour, preserved for
-close-range shots. A ball that is not closing on the keeper's
-plane, or whose crossing lies beyond `DivePredictionHorizonS`,
-holds: diving at an extrapolation of a ball that is not coming is
+close-range shots. A ball already at the keeper's plane (within ε) is an immediate
+crossing at t = 0 and its current Y, whatever its velocity, so the
+dive commits at once: a smother, never a hold. Any other ball that
+is not closing on the plane, or whose crossing lies beyond
+`DIVE_PREDICTION_HORIZON_S`, holds: diving at an extrapolation of a ball that is not coming is
 the "dive at nothing" failure the `ClearSaveIntent` doc describes,
 and the episode's disarm path ends the hold.
 
@@ -379,16 +639,44 @@ Position*. It is the explicit ratification event for the three
 
 ### 3.3.0.1 Inputs Spec #11 expects from #12
 
-Read-only at every 10 Hz tactical tick:
+Read-only at every 10 Hz tactical tick, supplied by the Match Engine
+composition root (ERR-011-018):
 
 ```
-PositioningAI.GetGKBaselineSlot(matchTime) → Vector2
+canonicalSlot  = PositioningAITick[team].GetFormationSlot(keeperEntityId)   // #12 frame
+gkBaselineSlot = isSentinel(canonicalSlot)
+                   ? keeperPosition                                           // degenerate
+                   : mapCanonicalToWorld(team, canonicalSlot)                 // world, m
+GoalkeeperMechanics.UpdateBaselineSlot(team, gkBaselineSlot)
 ```
 
-The returned `gkBaselineSlot` is computed by #12 §3.3.3 using the
-three constants `GK_DEPTH_M`, `GK_ADVANCE_FACTOR`,
-`GK_LATERAL_FACTOR` and the current ball position via #12's
-`basisX` / `basisY` formation-aware functions.
+`GetFormationSlot` returns, for the entity #12 flags `IsGoalkeeper`,
+the dedicated §3.3.3 GK slot (`GK_DEPTH_M`, `GK_ADVANCE_FACTOR`, the
+ball-line lateral term clamped by `GK_LATERAL_CLAMP_M` per
+ERR-012-010) in #12's canonical attack-toward-+X frame. The
+composition root maps it to world space with the same 180° pitch map
+(`x → 105 − x`, `y → 68 − y` for team 1; identity for team 0) it
+applies to the keeper's `MOVE_TO_POSITION` anchor, so the slot #11
+measures recovery against is the slot the keeper is walking to. It is
+read after #12's tick in the same tactical stride, never a stale
+stride's value. The keeper's own position is **not** a valid stand-in
+except for #12's inactive-agent sentinel: it makes the §3.1.1
+`Recovering → Set` at-baseline test identically true.
+
+Units: metres, world frame (§1.2 corner origin). Range: x ∈
+[0, 52.5] from the keeper's own goal line (own half, by #12's ball-X
+clamp), y ∈ [31, 37] (34 ± `GK_LATERAL_CLAMP_M`).
+
+*Worked example.* Ball at world (52.5, 50). Team 1 keeper: canonical
+ball = (105 − 52.5, 68 − 50) = (52.5, 18); `basisX(52.5) = 0`, so
+x = 5.5 m; gain = 5.5 / 52.5 = 0.1048; lateral = (18 − 34) × 0.1048 =
+−1.68 m (inside ±3.0); canonical slot (5.5, 32.32) → world
+(99.5, 35.68). Team 0 with the mirrored ball (52.5, 18) gets world
+(5.5, 32.32): the home/away mirror. A team-1 keeper standing 6 m
+lateral of that slot at `Recovering` entry on tactical tick 1000
+(cooldown end 1006) stays `Recovering` on ticks 1001–1005 (6 m >
+`GK_REACTIVE_RADIUS_M` = 1.5 m) and exits to `Set` on tick 1006;
+before ERR-011-018 it exited on tick 1001.
 
 ### 3.3.0.2 What Spec #11 reserves for itself
 
@@ -440,9 +728,10 @@ mirrors this table.
 
 | Constant | Tag | Unit | Value | Valid range | Citation |
 |----------|-----|------|-------|-------------|----------|
-| `GK_HOLD_MAX_TICKS` | `[FIXED]` | ticks @10 Hz | 60 | n/a (rule constant) | Laws of the Game (6-second rule); §3.1 / FR-GK-028 |
+| `GK_HAND_CONTROL_MAX_FRAMES` | `[FIXED]` | physics frames @ 60 Hz | 480 (= 8 s × 60 frames/s) | n/a (current Law 12) | IFAB Law 12.3 (2026/27); §3.8.5 / FR-GK-028 (ERR-011-021). Replaces `GK_HOLD_MAX_TICKS` = 60 ticks @ 10 Hz, a six-second rule that is not current law; retired, implementation lands with W8 C |
 | `RECOVERY_COOLDOWN_TICKS` | `[GT]` | ticks @10 Hz | 6 | [2, 20] | §3.1 |
 | `ANTICIPATE_THRESHOLD` | `[GT]` | dimensionless | 0.55 | [0.30, 0.80] | §3.1 / #8 |
+| `STAGE0_ANTICIPATION_SCORE_ACTIVE` | `[GT]` | dimensionless | 0.6 | (`ANTICIPATE_THRESHOLD`, 1.0] | §3.1.0 (Stage-0 stand-in for the #8 anticipation score while `ballThreateningOwnGoal`; at or below `ANTICIPATE_THRESHOLD` it makes `Set → Anticipate` unreachable. Removed at Stage 1. Code: `GoalkeeperConstants.Stage0AnticipationScoreActive`, a literal that is not config-loaded) |
 | `RUSH_COMMIT_THRESHOLD` | `[GT]` | dimensionless | 0.60 | [0.40, 0.85] | §3.1 / §3.7 |
 | `ONE_VS_ONE_TRIGGER_RADIUS_M` | `[GT]` | m | 8.0 | [5.0, 14.0] | §3.7 |
 | `SMOTHER_TRIGGER_RADIUS_M` | `[GT]` | m | 1.8 | [1.0, 3.0] | §3.7 |
@@ -473,6 +762,9 @@ mirrors this table.
 | `DIVE_LAUNCH_K_AERIAL` | `[GT]` | m/s | 0.8 | [0.3, 1.5] | §3.3 |
 | `DIVE_LAUNCH_FATIGUE_COEFF` | `[GT]` | m/s | 0.7 | [0.3, 1.5] | §3.3 / KD-8 |
 | `DIVE_PHASE_DURATION_MS` | `[GT]` | ms | 600 | [400, 900] | §3.3 (Stage 0 flat; attribute-scaling deferred per §7.4) |
+| `DEGENERACY_EPSILON_SQ` | `[FIXED]` | m² (or (m/s)²) | 1e-6 | n/a (numerical guard) | §3.3 / §3.5 (squared-magnitude guard against division by zero; code `GoalkeeperConstants.DEGENERACY_EPSILON_SQ`) |
+| `DEGENERACY_EPSILON` | `[DERIVED]` | m (or m/s) | `sqrt(DEGENERACY_EPSILON_SQ)` (= 0.001) | derived | §3.3.6 (single-axis guard: "closing" needs `abs(ball.vx)` > ε, and `abs(gk.x − ball.x)` ≤ ε is "at the plane"; code `GoalkeeperConstants.DegeneracyEpsilon`) |
+| `DIVE_PREDICTION_HORIZON_S` | `[GT]` | s | 2.0 | [DIVE_PHASE_DURATION_MS / 1000, 5.5] | §3.3.1 / §3.3.6 (ERR-011-003 — longest plane-crossing extrapolation trusted. 2.0 s covers a 16.5 m shot at ≥ 8 m/s, every shot worth diving at. Below one dive duration the commit gate could not see a crossing early enough to time a full dive. 5.5 s is the slowest armable ball (16.5 m at 3 m/s); beyond it, longer extrapolations only admit balls that will be touched first. Code: `GoalkeeperConstants.DivePredictionHorizonS`) |
 | `DIVE_COMMIT_MIN_LEAD_FRAC` | `[GT]` | — | 0.25 | [0.17, 0.50] | §3.3.6 (ERR-011-007 — floor on the commit lead as a fraction of dive duration; below ~0.17 a central commit is quantisation-dominated by the 10 Hz grid) |
 | `DIVE_PEAK_Z_BASE_M` | `[GT]` | m | 1.20 | [0.80, 1.70] | §3.3 |
 | `DIVE_PEAK_Z_K_AERIAL` | `[GT]` | m | 0.70 | [0.30, 1.00] | §3.3 |
@@ -735,32 +1027,92 @@ Cross / aerial / 1v1 duels among ≥2 agents within
 `CROSS_CLAIM_VOLUME_RADIUS_M`. Algorithm mirrors Heading #10 §3.7
 structure so the duel arithmetic is consistent across specs.
 
-### 3.6.1 Body-part determination (KD-14)
+### 3.6.1 Body-part determination and live claim episode (KD-14 / ERR-011-011 / ERR-011-012)
+
+Collision System #3's read-only `AGENT_BALL` publication is **observation only**. Its Stage-0
+agent-body cylinder is capped at `AgentReachHeight` (2.0 m), while legitimate Heading #10 and
+Goalkeeper #11 aerial contacts can occur above that height. Therefore a #3 record MUST NOT be a
+prerequisite for W3 contest membership, Hand eligibility, or Head eligibility. The W3 composition
+root may retain the #3 fan-out as a diagnostic/secondary consumer, including a legitimate zero count
+during a real high-aerial contest.
+
+**Contest membership comes from the mechanics that own the physical geometry:**
+
+- Heading #10 contributes a Head participant only when its prepared current-frame head-contact
+  geometry admits the ball.
+- Goalkeeper #11 contributes a W3 Hand participant only when an active `ClaimIntent` exposes a
+  current-frame hand/reach envelope and the ball intersects that envelope. Ordinary shot-save dive
+  handling remains on #11's existing save path and is not enrolled into W3 cross-claim arbitration.
+- Outfield players MUST NOT be projected through `GoalkeeperAgentAttributes`; W3 uses only their
+  canonical Balance/Strength/Aerial inputs for the shared duel score.
+- Registration is canonicalized to #16 §3.2 entity order. Callback/feed arrival order is irrelevant.
+
+For each mechanic-confirmed participant:
 
 ```
-// Stage 0 approximation: capsule-vs-sphere intersection priority
-for each agent in candidates:
-    handCapsuleHit = #3.IntersectsBallSphere(agent.handCapsule, ballSphere)
-    headSphereHit  = #3.IntersectsBallSphere(agent.headSphere,  ballSphere)
-    if handCapsuleHit AND headSphereHit:
-        // priority by Z proximity to ball center
-        agent.contactBodyPart = (|ball.z - agent.handZ| < |ball.z - agent.headZ|)
-                                  ? Hand : Head
-    elif handCapsuleHit: agent.contactBodyPart = Hand
-    elif headSphereHit:  agent.contactBodyPart = Head
-    else:                agent.contactBodyPart = None
+headHit = #10 prepared current-frame head-contact geometry admits the ball
+handHit = false
+
+if participant is a goalkeeper
+   AND #11 has a live current-frame hand/reach envelope:
+    handCenter = #11 reachCenter for that frame
+    handRadius = #11 ComputeReachRadius(gkAttrs)
+    handHit = distance(ball.position, handCenter) <= handRadius
+
+if handHit AND headHit:
+    // physical tie rule; intent never chooses the body part
+    contactBodyPart = (|ball.z - handCenter.z| < |ball.z - headCenter.z|)
+                        ? Hand : Head
+elif handHit:
+    contactBodyPart = Hand
+elif headHit:
+    contactBodyPart = Head
+else:
+    contactBodyPart = None
 ```
 
-Body part is determined by physical geometry, NOT by intent
-(FR-GK-022).
+**Live ClaimIntent producer and arming policy (ERR-011-012).** W3 gives the previously dormant
+`ClaimIntent` a Stage-0 MatchEngine composition producer at 10 Hz. A new episode may arm only when
+the ball is loose, the keeper is in `Set` or `Anticipate`, no higher-priority raw SAVE threat is
+armed for that keeper, and the ball's XY point lies inside the existing
+`CROSS_CLAIM_VOLUME_RADIUS_M`. There is **no vertical arming threshold**. In particular,
+`GkRushMaxBallHeightM = 2.5 m` remains a W1 rush-routing ceiling and MUST NOT be reused as a W3
+claim-height floor. Physical #11 reach geometry alone decides whether the hands can actually contact
+the ball.
 
-**Surface citations (v0.2 AR-S1-M4).** `agent.handCapsule` and
-`agent.headSphere` are Collision System #3 agent-shape colliders
-(per #3 collider geometry definitions consumed via the agent's
-`Agent` reference per #2 §3.5.1). `agent.handZ` and `agent.headZ`
-derive from #3 collider centroids at the current frame.
-`#3.IntersectsBallSphere` is the standard `ICollisionEventConsumer`
-collision-query helper (#3 §3.4.2).
+At commit, the producer locks:
+
+```
+ClaimIntent.targetContactPoint      = ball.position          // tactical aim only
+ClaimIntent.clutchFirmness          = gkAttrs.Handling_norm
+ClaimIntent.reachDirectionLateral   = sign(ball.y - gk.y)    // world-Y, {-1,0,+1}
+ClaimIntent.attemptCommittedTick    = currentTacticalTick
+```
+
+The target and lateral side remain immutable for one bounded claim episode. The episode starts at
+`attemptCommittedTick * FramesPerTacticalTick` and lasts exactly the existing
+`GoalkeeperDiveKinematics.ComputeDiveDurationFrames()` window. A later tactical tick MUST NOT cancel
+or retarget an active episode merely because the ball has descended, left the initial arming radius,
+or otherwise fails the ordinary new-episode trigger; this is what allows a cross armed while high to
+descend into reachable hand height. The episode hard-cancels only when possession is no longer loose,
+a higher-priority raw SAVE threat takes over, the keeper slot becomes invalid/sent-off/replaced, or
+the bounded duration expires. While the claim is active, the W1 rush producer MUST NOT steal the same
+ball solely because it has descended below the rush ceiling. After expiry, a later 10 Hz tick may
+commit a fresh episode if the ordinary arming conditions hold.
+
+**Claim reach kinematics.** A claim reuses #11's existing
+`GoalkeeperDiveKinematics.ComputeHandPathZ`, `ComputeReachCenter`, `ComputePeakHandZ`, and
+`ComputeReachRadius` surfaces. The claim's launch anchor is its commit frame, its lateral direction
+is the locked `reachDirectionLateral`, and `ComputePeakHandZ` receives zero save-only dive-timing
+jitter. The zero jitter is intentional: the registered save-dive timing draw site remains
+single-purpose, so W3 does not consume or reorder that RNG stream. `targetContactPoint` is never a
+synthetic collider and no standing hand capsule is manufactured.
+
+Body part is determined by physical geometry, NOT by intent (FR-GK-022). ERR-011-012 introduces no
+new `[GT]`, RNG stream, domain tag, or draw site. It **does** make `ClaimIntent` authoritative
+cross-tick state: MatchEngine snapshot schema v23 serializes target point, clutch firmness, locked
+lateral direction, commit tick, and active latch. Active-claim snapshots therefore change the digest
+preimage and MUST round-trip mid-episode.
 
 ### 3.6.2 Routing
 
@@ -996,13 +1348,38 @@ reaching pitch coordinates past `gkPos.x` while still in
 
 ---
 
-## 3.8 Distribution Generation (KD-6, KD-16)
+## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
-Decision Tree #8 supplies `DistributeIntent` at the 10 Hz tactical
-tick once the GK enters `HandsOnBall` state and
-`releaseTickEarliest` has passed.
+**W8 C amendment APPROVED by owner, October 29, 2026:** the eight-second hand-control offence, §3.8.5
+(ERR-011-021). Specified, not yet implemented.
 
-### 3.8.1 Release-point geometry (KD-16)
+**W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #11 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#11 §3.8, #5 §2.4.4 / §3.8.13, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
+
+**Ownership.** While a keeper has live hand control, Match Engine — not Decision Tree #8 —
+is the producer of `DistributeIntent`. It reads #21 `GkDistributionPolicy` and commits one
+total receiver-or-zone intent. Decision Tree keeper on-ball actions are suppressed while the
+keeper is in `HandsOnBall` or remains the controlled possessor during `Distributing` windup.
+This resolves **ERR-011-016**; no Decision Tree ordinal or composure-noise width changes.
+
+**Clock domain.** Every `currentTick` supplied to #11 tactical state transitions is a **10 Hz
+tactical tick**, derived once by the composition root as
+`floor(currentFrame / FramesPerTacticalTick)`. `_claimTick` and
+`_releaseTickEarliest` are in that same domain. Passing a 60 Hz frame index here is invalid
+and is the defect recorded by **ERR-011-017**.
+
+For a policy delay `D` from #21 §3.4.1, the producer may commit only when:
+
+```
+currentTacticalTick >= releaseTickEarliest
+AND currentTacticalTick >= claimTick + D
+AND keeper still has live hand control
+AND no DistributeIntent is already active
+AND currentFrame + WindupFrames <= handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES   // §3.8.4 admission
+```
+
+The B producer and selector consume **zero RNG draws**.
+
+### 3.8.1 Release-point geometry and windup (KD-16)
 
 ```
 releaseHeight = match distributeIntent.deliveryKind:
@@ -1015,63 +1392,472 @@ windupMs      = match distributeIntent.deliveryKind:
                   Roll  → ROLL_WINDUP_MS
                   Kick  → KICK_WINDUP_MS
 
-// v0.2 AR-S1-M3: distribution-accuracy attribute modulation
 accuracyCoeff = match distributeIntent.deliveryKind:
                   Throw → THROW_ACCURACY_COEFF · Throwing_norm
                   Roll  → 1.0
                   Kick  → KICK_ACCURACY_COEFF  · Kicking_norm
 
-releasePoint  = gkPosition + Vector3(0, 0, releaseHeight)
-emittedPowerIntent = distributeIntent.powerIntent · accuracyCoeff
+releasePoint       = liveGkPositionAtContact + Vector3(0, 0, releaseHeight)
+emittedPowerIntent = clamp01(distributeIntent.powerIntent · accuracyCoeff)
+windupFrames       = ceil(windupMs · 60 / 1000)
 ```
 
-### 3.8.2 Target validation (F-05, F-09)
+**Worked windup example.** A Kick with the default `KICK_WINDUP_MS = 900 ms` gives
+`ceil(900*60/1000) = 54 frames`. At the permitted live-config maximum 1400 ms the same formula gives
+84 frames. The formula is dimensionally `ms * frames/s / ms/s = frames`; valid input bounds are the
+delivery-kind `[GT]` ranges in §3.4.7.
+
+The release point is sampled from the keeper's **live CONTACT-frame position**, not the
+position at intent commit. #5 receives the release-height offset and recomputes the source point
+from its live agent query at CONTACT. W8 B does not apply ordinary-pass urgency reduction or the
+ordinary `MIN_WINDUP_FRAMES` floor to this windup: exactly one #11 windup is authoritative.
+
+### 3.8.2 Target validation and total fallback (F-05, F-09)
+
+The producer uses the live active roster at commit. A receiver is eligible only when the agent is an
+active, non-sent-off outfield team-mate and satisfies #21 §3.4.1. Exact distance ties use the lower
+roster index.
+
+At commit, `DistributeIntent.TargetReceiverId` stores the selected receiver id (or null), and
+`TargetPoint` stores that receiver's **commit-time position** or the already-selected receiverless
+fallback. `TargetPoint` is therefore the deterministic last-known fallback, not necessarily the
+final aim point.
+
+At #5 CONTACT, the live target is resolved again:
 
 ```
-if distributeIntent.targetReceiverId != null
-   AND !agentRoster.contains(distributeIntent.targetReceiverId):
-    // F-05: receiver substituted between commit and release
-    distributeIntent.targetReceiverId = null
-    distributeIntent.targetPoint     = lastKnownReceiverPosition
+if targetReceiverId != null AND liveRoster.containsEligible(targetReceiverId):
+    effectiveReceiver = targetReceiverId
+    effectiveTarget = livePosition(targetReceiverId)         // CONTACT-frame position
+else if targetReceiverId != null:
+    effectiveReceiver = null                                  // F-05
+    effectiveTarget = targetPoint                             // committed last-known point
     emit telemetry warning "gk.distribution.target_receiver_missing"
+else:
+    effectiveReceiver = null
+    effectiveTarget = targetPoint
 
-if distributeIntent.targetPoint.x ∉ [0, PITCH_LENGTH_M]
-   OR distributeIntent.targetPoint.y ∉ [0, PITCH_WIDTH_M]:
-    // F-09: clamp to in-bounds
-    distributeIntent.targetPoint = clampToInBounds(distributeIntent.targetPoint)
-    emit telemetry warning "gk.distribution.target_out_of_bounds"
+effectiveTarget = clampToInBounds(effectiveTarget)            // F-09
+
+if effectiveReceiver == null AND effectiveTarget lies on own goal line:
+    effectiveTarget = policyFallbackZone(teamId)              // #21 §3.4.1
 ```
 
-### 3.8.3 PassIntent emission
+Thus a receiver who moves during a 0.4–1.4 s windup is aimed at his live CONTACT-frame position; a
+receiver who disappears becomes receiverless but keeps a deterministic committed fallback. Missing
+receiver does **not** cancel an otherwise valid distribution, and the selected delivery kind is
+preserved through fallback, including `RollOut` and `ThrowOut`. #5 performs the CONTACT re-query
+through the Match Engine host surface; #11 owns F-05/F-09 semantics and #21 owns eligibility.
+
+### 3.8.3 Faithful Pass Mechanics execution (ERR-011-015)
+
+The old `PassIntent` / `PassMechanics.ConsumePassIntent` /
+`PassMechanics.DeliveryKind.LowDriven|GroundRoll|Lofted` text described APIs that do not exist.
+W8 B replaces that phantom contract with #5's dedicated
+`GoalkeeperDistributionRequest` / `GoalkeeperDeliveryVariant` seam (§5 §2.4.4, §3.8.13).
+
+The composition root translates fields structurally; #11 does not reference the #5 assembly:
 
 ```
-passIntent = PassIntent {
-    sourceAgentId     = gkId,
-    sourcePoint       = releasePoint,
-    targetPoint       = distributeIntent.targetPoint,
-    targetReceiverId  = distributeIntent.targetReceiverId,
-    powerIntent       = emittedPowerIntent,
-    spinIntent        = distributeIntent.spinIntent,
-    deliveryKind      = mapToPassMechanicsDelivery(distributeIntent.deliveryKind)
-}
-
-PassMechanics.ConsumePassIntent(passIntent)         // #5 §3 intent surface
-emit DistributionExecutedEvent { ..., releasePoint, windupDurationMs: windupMs }
-
-state machine: Distributing → Recovering
+#11 DistributeIntent              #5 GoalkeeperDistributionRequest
+------------------------------------------------------------------
+keeper id / team               -> AgentId / TeamId
+Throw | Roll | Kick            -> Throw | Roll | Kick
+targetReceiverId               -> TargetAgentId (-1 for zone)
+targetPoint                    -> TargetPosition
+emittedPowerIntent             -> EmittedPower01
+spinIntent                     -> SpinIntent
+releaseHeight                  -> ReleaseHeightM
+windupFrames                   -> WindupFrames
+commit frame                   -> FrameNumber
 ```
 
-### 3.8.4 `mapToPassMechanicsDelivery`
+Accepted initiation moves #11 to `Distributing` but **does not release possession**.
+`Distributing` remains live controlled hand possession through #5 WINDUP. At #5 CONTACT:
 
-One-to-one structural mapping:
+1. #5 re-checks that the keeper still possesses the ball.
+2. #5 samples the live keeper position, forms `releasePoint`, resolves the one B error model,
+   and calls the ball kick exactly once.
+3. The Match Engine adapter releases controlled possession through the central possession-change
+   seam on that same CONTACT, tagged as the **successful goalkeeper-distribution CONTACT** cause.
+4. W5 is armed exactly once when `TargetAgentId >= 0`; receiverless zone execution arms no W5
+   receiver latch.
+5. `DistributionExecutedEvent` is published in its registered **Resolve** phase only after the
+   successful CONTACT kick. Its `releasePoint` is the executed sample; its `WindupMs` is the request's
+   configured windup (`WindupFrames · 1000 / 60` ms), not a measured one.
+6. #11 receives completion feedback, clears the intent, and transitions
+   `Distributing → Recovering`.
+
+**Possession-change teardown rule.** The central possession seam first compares the old and next
+possessor. If they are equal, it performs no #11 teardown. If they differ, #11 teardown is considered
+only when the outgoing possessor owns a live hand episode. An ordinary loss/takeover/restart while
+such an episode is live cancels the distribution and clears the intent. The expected possession
+release caused by **this distribution's successful #5 CONTACT is not a cancellation**: it ends hand
+control normally and must not cancel the #5 execution or clear its intent before the completion
+feedback above is consumed. The composition root therefore carries a typed possession-change cause
+(or an equivalently explicit non-ambiguous signal); inferring this case from `next == NO_POSSESSION`
+is forbidden because ordinary kicks use the same possession seam.
+
+#5 feedback is state-specific:
+
+- **Rejected before WINDUP, possession retained:** clear only `DistributeIntent`; remain
+  `HandsOnBall`; preserve `claimTick`, `releaseTickEarliest` and `handControlStartFrame`; retry no earlier than a later
+  10 Hz heartbeat **and only if** §3.8.4's retry-budget predicate passes for the new candidate.
+- **Cancelled after acceptance, possession retained:** return `Distributing → HandsOnBall`; clear
+  only the distribution intent; preserve the same claim clock and `handControlStartFrame`; a later retry is allowed only if
+  §3.8.4's retry-budget predicate passes.
+- **Cancelled because possession was actually lost / restart / takeover:** clear the hand episode
+  and enter `Recovering`.
+- **Completed CONTACT:** clear the intent and enter `Recovering` as normal completion.
+
+A retained-possession retry is **budget-gated, not unconditional**. At the later tactical heartbeat,
+let `candidateContactFrame = currentFrame + candidate.WindupFrames` (`currentFrame` is the AI-phase
+commit frame; §3.8.4). The producer may submit the new #5 request only when
+`candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES` (§3.8.4, ERR-011-021). If it fails, no new #5 request starts; #11 remains `HandsOnBall` and the
+§3.8.5 offence adjudicates the episode at elapsed 481. Repeated rejections are subject to the same
+check on every attempt. *W8 B code, until C lands, instead requires CONTACT strictly before both the
+corrected #11 no-intent boundary and the engine ground-drop boundary.*
+
+No reject/cancel path publishes `DistributionExecutedEvent`. `ClearDistributeIntent` is the
+idempotent intent cleanup entry point; hand-episode teardown remains separate so a retained-possession
+rejection does not accidentally re-enable foot actions or, in W8 B code only, wait for the 360-frame ground drop.
+
+Reaching a hand-control deadline may not manufacture `Distributing` with no accepted #5 request,
+create a default Roll intent, simulate a no-kick release or force a keeper-specific ground drop
+(FR-GK-043 retired, ERR-011-021). Ordinary policy scheduling must reach accepted #5 execution
+earlier; otherwise §3.8.5's offence applies. In W8 B code the retired six-second condition remains a
+defensive legacy signal while the keeper stays `HandsOnBall`.
+
+The pre-B helper's frozen-digest proof applies only to its assignment-only form and is **not**
+evidence that this B teardown behavior is neutral.
+
+### 3.8.4 Deadline budget
+
+**W8 C (ERR-011-021).** A hand episode's only legal deadline is §3.8.5's
+`GK_HAND_CONTROL_MAX_FRAMES` = 480-frame limit. The six-second tactical no-intent condition is
+retired, and the Match Engine's 360-frame ground drop becomes feet-only, so neither budgets a hand
+distribution. In the atomic Stage-0 model the #5 CONTACT is the hand release, so the budget is
+measured to CONTACT: a delivery is legal when CONTACT occurs at elapsed ≤ 480. *Until the C
+implementation lands, W8 B code still budgets against both inherited backstops (CONTACT strictly
+before the corrected #11 no-intent boundary and the 360-frame ground drop); the B inequalities
+`295 < 355 < 360` recorded in v0.13–v0.23 describe that code, whose `DistributionContactFits`
+counts CONTACT at `frame + windup + 1`, a harmless one-frame margin under B's strict guards; the C
+count below has no `+ 1`.*
+
+The maximum policy delay imported from #21 is
+`GK_DIST_MAX_POLICY_DELAY_TICKS = 35` tactical ticks (`[CROSS]`, 10 Hz). The largest allowed live
+windup is Kick `1400 ms = ceil(1400*60/1000) = 84 frames`. The producer commits in the AI phase of
+frame `F`, and the #5 executor's first windup decrement runs in Resolve of that **same** frame; after
+`WindupFrames` decrements (frames `F … F + WindupFrames − 1`) CONTACT occurs on the next executor
+update, frame `F + WindupFrames` (#5 §3.8.13 item 4; pinned by W8 B's
+`W8BDistributionTests` `feedback.ContactFrame == request.FrameNumber + request.WindupFrames`). No
+extra CONTACT frame is budgeted (B's `+ 1` above is B code only).
+
+Worst-case claim-to-CONTACT budget (first attempt):
 
 ```
-Throw → PassMechanics.DeliveryKind.LowDriven   (sub-cross height)
-Roll  → PassMechanics.DeliveryKind.GroundRoll
-Kick  → PassMechanics.DeliveryKind.Lofted
+policy wait   = 35 ticks * 6 frames/tick = 210 frames   // upper bound: claimTick = floor(claimFrame/6)
+max windup    = 84 frames                                // CONTACT on commitFrame + 84
+total         = 294 frames ≤ 480                         // 186-frame margin
 ```
 
-The mapping is structural only; #5 owns the resulting trajectory.
+The policy wait cannot exceed `6·D` frames after the claim frame, because the commit heartbeat is
+tactical tick `claimTick + D` (#21 delays range over [1, 35], so `claimTick + D ≥ releaseTickEarliest =
+claimTick + 1` and the release gate never binds) and `6·claimTick ≤ claimFrame`. The 294-frame figure is the first-attempt bound only; retries use the
+predicate below, which also gates the first commit.
+
+**Admission and retry predicate.** At a tactical heartbeat on `currentFrame` (the AI-phase commit
+frame), the first commit and every retained-possession retry may submit a #5 request only when
+
+```
+candidateContactFrame = currentFrame + candidate.WindupFrames         // frames @ 60 Hz
+candidateContactFrame ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES
+```
+
+Valid inputs: `currentFrame ≥ handControlStartFrame`, `WindupFrames` from the live configured
+delivery windups (§3.4.7, 1–84 frames at the current Kick maximum), integers in physics frames.
+The executor's first windup decrement runs in Resolve of `currentFrame`, so CONTACT lands exactly on
+`candidateContactFrame` (#5 §3.8.13 item 4).
+
+The candidate is the team policy's own delivery kind and configured windup (§3.8, #21 §3.4.1); a retry
+never substitutes a shorter delivery, and there is no late fallback Roll (approved contract §2.4).
+
+**Worked alignment example.** Claim at frame 101 (`claimTick = floor(101/6) = 16`). A Kick policy at
+the maximum delay `D = 35` may commit when tactical tick reaches 51, at frame 306: 205 frames after the
+claim. A maximum 84-frame Kick windup reaches CONTACT at frame `306 + 84 = 390`, 289 frames after the claim and 191 frames
+before the legal limit (frame 581 = 101 + 480). The §3.8.5 offence could first apply at frame 582.
+
+**Late-cancellation retry examples.** (a) Under C a retained cancellation can arise only at the
+CONTACT frame (`ExecuteGoalkeeperDistributionContact`'s non-finite-velocity branch; a lost-possession
+cancellation is not retained). A retained cancellation at CONTACT about `210 + 84 = 294` frames after
+the claim, a heartbeat up to 6 frames later and another maximum 84-frame windup reach CONTACT at about
+`294 + 6 + 84 = 384` frames: `384 ≤ 480`, so the retry
+is **permitted** under C (W8 B code refuses it against its 355/360-frame backstops). (b) Claim at
+frame 1,000; a retained cancellation is followed by the heartbeat at frame 1,398 (elapsed 398). An
+84-frame Kick gives `1,398 + 84 = 1,482 > 1,480`: **refused**. A policy whose configured windup is
+≤ 82 frames fits (`1,398 + 82 = 1,480`, elapsed 480, legal; 83 gives 1,481, refused). If the policy's
+delivery does not fit, no request starts and the §3.8.5 corner applies at 481.
+
+Regressions must read the **live configured** delivery windup values and all six #21 policy delays,
+recompute the first-attempt inequality for each policy (`6·D + W` against `GK_HAND_CONTROL_MAX_FRAMES`, with
+`W` the windup frames of that policy's delivery kind), and fail if any configured policy has
+`6·D + W > GK_HAND_CONTROL_MAX_FRAMES`: such a first attempt would be refused by the admission predicate and
+the keeper would concede a corner. The first-attempt regression therefore trips on a mis-set delay or
+windup, not only on a CONTACT after elapsed 480. The regressions must
+also cover (a) a retained cancellation at CONTACT whose retry still fits, (b) a retry refused
+by exactly one frame (CONTACT at elapsed 481) next to one accepted at elapsed 480, and (c) repeated
+rejection until the remaining budget closes. Testing only default constants or only the first
+attempt is insufficient.
+
+### 3.8.5 Hand-control clock and Law-12 offence (W8 C; ERR-011-021)
+
+**Owner approval:** Anton Zymin approved the W8 C wording on October 29, 2026, with the
+recommended eligibility predicate ([contract v0.5](../../tracking/w8-c-law12-amendment-draft.md)).
+This subsection is the normative home of that wording. **Implementation status:** specified, not yet
+implemented. Until the C implementation landing, code still runs the W8 B backstops: the six-second
+tactical no-intent signal and the Match Engine's 360-frame ground drop for any keeper possession.
+The B hand-distribution budget lives at two further sites in
+`src/match-engine/MatchEngine.GoalkeeperDistribution.cs`, handled at C as follows. `DistributionContactFits`
+(commit/retry admission: CONTACT strictly before both the `GK_HOLD_MAX_TICKS` boundary and the
+ground-drop boundary) is replaced by the §3.8.4 admission predicate
+`currentFrame + WindupFrames ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`, which gates the first
+commit and every retry. `CancelExpiredGoalkeeperDistributions` (cancels a pending distribution at either
+B boundary) is **removed for hand episodes**: this subsection's elapsed-481 corner is the only hand
+deadline and it cancels any request still in flight, so a pre-executor guard would only cancel a
+distribution that is still legal at elapsed 480.
+
+**Governing rule.** IFAB Laws of the Game 2026/27, Law 12.3 and Law 17.1: a goalkeeper who controls
+the ball with the hands/arms inside their own penalty area for more than eight seconds concedes a
+corner kick to the opponents, taken on the side nearest the goalkeeper's position when penalised.
+Holding the ball between the hands/arms or against another surface, holding it in open hands, and
+bouncing or tossing it while retaining control are all hand control and do not reset the clock.
+**Control ends at physical hand release.** This offence is distinct from ordinary feet possession,
+own-release re-handling (§3.1.3), back-pass restrictions and outside-area handling (§3.1.4). One
+offence generates no card and no card event at Stage 0; repeated-offence bookings are deferred (§7.3).
+Any on-screen countdown is presentation-only and MUST NOT shift the adjudication frame. A keeper with
+hand control may not be challenged by an opponent.
+
+**Clock.** `handControlStartFrame`, the exact 60 Hz physics frame on which lawful hand control is
+established, is #11 per-slot hand-episode state in `GoalkeeperMechanics`, held beside `_claimTick`. #11
+sets it at **each of the three** live successful hand-claim sites (the aerial/cross claim
+(`ResolveClaimHandContact`), the dive-save catch branch and the smother) from the 60 Hz frame it is
+given there. It is one 64-bit signed (`long`) absolute frame value with an explicit inactive sentinel of
+**−1** (the same value `_claimTick` already uses for an inactive slot); #11's existing `int` frame parameters are widened on store, never narrowed. The frame domain feeding it
+is the engine's existing `int` frame (`(int)_clock.CurrentTick`), which holds about
+2^31 / 60 ≈ 35.8 million s ≈ 414 days of continuous play: an accepted Stage-0 limit, not a defect. The
+clock is live only while a hand episode is live. #11 exposes it read-only to the Match Engine composition root, which runs the
+Resolve check and neither records nor owns it. It is never inferred from the 10 Hz `claimTick`. `claimTick` and `releaseTickEarliest` stay in the tactical domain for policy scheduling
+(§3.8) and have **no legal-deadline authority**.
+
+- **Live-iff invariant (normative).** The restore check is on #11 state alone. For each slot,
+  `state ∈ {HandsOnBall, Distributing}` if and only if `handControlStartFrame` is active
+  (`0 ≤ handControlStartFrame ≤ currentFrame`; the inactive sentinel is −1). **Range:** for any hand state
+  at a tick boundary of a live match, `currentFrame − handControlStartFrame ≤ GK_HAND_CONTROL_MAX_FRAMES`,
+  because a live match never holds elapsed > 480: the corner fires at 481 within Resolve. The range does
+  not apply after full time (see **Full time** below). The engine separately checks that
+  a #11 hand state implies the possessing agent is that keeper and the ball is `Controlled`. Only a
+  successful claim sets the clock: a transition into `HandsOnBall` from a
+  non-hand state, at the three claim sites. Same-state writes (`HandsOnBall → HandsOnBall` at 10 Hz and
+  60 Hz, including the retained #5 reject) and the retained-cancel return (`Distributing → HandsOnBall`)
+  preserve it. The checks run in the engine snapshot reader, which passes the restored frame (#11
+  `RestoreState` has no frame parameter). The reader rejects a body that violates the invariant or the
+  range with `InvalidOperationException`, as the handling-law state reader does for its own corrupt state.
+- **In-flight request check on restore (normative).** The snapshot reader also rejects, with
+  `InvalidOperationException`, a body in which a #5 goalkeeper request is **in flight** (accepted and not
+  yet at its CONTACT frame: `PassExecutor.IsGoalkeeperDistributionInFlight`, WINDUP) and either (a) #11
+  has no active clock for that keeper, or (b) the request's remaining windup
+  (`PassExecutorState.WindupFramesRemaining`) would put CONTACT after
+  `handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`. By the §3.8.4 counting, a body captured after the
+  Resolve of frame `f` with remaining windup `R` reaches CONTACT on frame `f + R + 1`; (b) rejects when
+  that exceeds `handControlStartFrame + 480`. Check (b) applies only to a live match; check (a) always
+  applies. A request that is only terminal-pending (a `Cancelled`
+  terminal awaiting its drain, not in flight) with a sentinel clock is valid. In a live match an in-flight
+  request at elapsed ≥ 481 is therefore unreachable in production, and a snapshot-body restore cannot
+  build it (the restore check rejects it); tests build it only through `TestOnly_` seams
+  (`TestOnly_StartGoalkeeperDistribution`, `TestOnly_SetPassExecutorState`, `TestOnly_SetPhysicsFrame`).
+- **Full time (normative): a freeze, not a teardown.** Full time is set in the Input phase of the tick
+  that reaches `MATCH_TICKS_TOTAL`; from then on the per-phase `_matchEnded` guards skip Physics, AI and
+  Resolve while the tick keeps advancing. Full time therefore does not end the hand episode, cancel a #5
+  request or award this corner: the hand state, its clock and any request in WINDUP stay frozen, and no
+  corner fires after full time. That includes a hold that reaches elapsed 481 on the final-whistle tick
+  itself, because that tick's Resolve does not run. Worked example: a claim at frame
+  `MATCH_TICKS_TOTAL − 481`, held to full time, leaves a frozen hand state at elapsed 481 on the final tick
+  and at elapsed `481 + n` after `n` further ticks; both bodies are valid. When the restored `_matchEnded`
+  is true, the snapshot reader skips the two time-dependent checks, the range
+  (`currentFrame − handControlStartFrame ≤ 480`) and in-flight check (b). It keeps every structural check:
+  the live-iff invariant with `0 ≤ handControlStartFrame ≤ currentFrame`, the possessor and `Controlled`
+  checks, and in-flight check (a). The reader reads `_matchEnded` before the goalkeeper state but after the
+  pass executors, so these cross-subsystem checks run once the whole body has been read. Statements in this
+  subsection that a state is unreachable in production refer to a live match.
+- A continuing episode keeps its original start: every tactical tick of holding, `Distributing`
+  WINDUP, and a retained-possession #5 reject or cancel (`Distributing → HandsOnBall`) all preserve it.
+  Bounce/toss would preserve it too, but Stage 0 has no producer of either, and the future punt/drop is
+  deferred to its own specification (Atomic Stage-0 release below); neither is a Stage-0 test.
+- The single possession-change / hand-episode teardown seam (§3.8.3) clears the start frame together
+  with its validity sentinel (`EndHandEpisodeOnPossessionLoss`, and `FinishDistribution` on its
+  non-retained paths), any pending intent, #11's wait state and hand-control state
+  **exactly once** on genuine loss, restart, takeover or completed CONTACT. Any #5 `Cancelled` terminal is
+  drained through `FinishDistribution` with no further state change (in the same Resolve, or on the next
+  frame after an early-return whistle). The typed possession-change cause separates
+  completed #5 CONTACT from cancellation.
+- A new lawful hand episode after an actual release starts a new clock, subject to §3.1.3.
+- `ResetSlot` clears the start frame and its sentinel with the rest of the slot (a disowned slot has no
+  episode); a slot refresh that does not call it preserves the episode and its clock. Restore
+  reproduces the stored values exactly. Neither path creates a phantom kick or corner.
+
+**Atomic Stage-0 release.** The #5 Roll, Throw and Kick variants keep `Controlled` possession through
+WINDUP and perform no separate hand-to-air drop. In this atomic model only, the successful #5 CONTACT
+(`ApplyKick`) is the hand release for all three variants; the Kick variant is lofted foot-pass
+geometry, not a two-event punt or drop-kick. Starting a WINDUP is not a release. A future physical
+punt/drop-kick MUST publish an authoritative earlier hand-release frame, stop the clock there, keep
+the later kick as its own action, serialize the intermediate state and re-check possession,
+re-handling, restarts and W5 ordering; that extension needs its own specification and approval.
+Under it, a hand release at elapsed 480 followed by a kick at 481 is legal.
+
+**Eligibility.** The offence is eligible at adjudication only when **all five** hold:
+
+1. The keeper's #11 state is `HandsOnBall` or still-controlled `Distributing`.
+2. The Match Engine's authoritative possessing agent is that keeper.
+3. `BallStateType` is `Controlled` and the original lawful hand episode is still live.
+4. **Own-area hand control:** no §3.1.4 handling offence is pending or has been whistled for this
+   episode. §3.1.4 sanctions every outside hand contact and every carry that moves the held ball out
+   of the area or farther from it, so a live hand episode that survives it is lawful own-area hand
+   control. That includes §3.1.4's body-outside hold: a legal catch inside, with the keeper's body
+   (and, in Stage 0, the attached ball) outside, held still or moved back toward the area. C adds no
+   second area test; any change to §3.1.4's line geometry (for example the open whole-ball-rule
+   decision for the front and side lines) moves both offences together.
+5. **Ball in play:** the ball is not wholly out of play this frame, i.e.
+   `BallCollision.CheckBoundaries(...).isOut` is false, the same test §3.1.4's contact gate uses. A
+   completed boundary crossing takes its boundary/goal restart, as §3.1.4 and the restart contract
+   [§5.2](../../tracking/match-flow-completion-design.md#52-general-outside-area-goalkeeper-handling--d-07-option-a)
+   already rule ("a completed boundary crossing takes precedence"); this corner then does not fire.
+
+**Resolve order and boundary.** On each 60 Hz Resolve frame, run **one** check immediately after the
+post-collision-reattachment `ApplyPendingKeeperHandlingOffence` (§3.1.4's re-check) and **before**
+`ApplyFoulIfCaptured`, hence also before the C3 #5 pass-executor update loop and its CONTACT
+processing and before `CheckRestartAndApply`, which runs after the executors. A §3.1.4 whistle ends the
+frame early and tears the episode down, so the two offences cannot fire on the same frame. Predicate 4 is
+therefore structurally implied at this slot and is kept as a defensive guard. Predicate 5 is structurally
+implied at Stage 0 too: `DriveControlledBallToPossessor` clamps a held keeper ball to the own goal line
+before this slot, and reaching a touchline needs an outward carry that §3.1.4 whistles first. It is kept
+as a defensive guard, like predicate 4, so a completed boundary crossing can never be preceded by this
+corner if a later change loosens either clamp.
+
+```
+elapsedFrames = currentFrame − handControlStartFrame   // physics frames @ 60 Hz, integer ≥ 0
+if eligible(keeper) AND elapsedFrames > GK_HAND_CONTROL_MAX_FRAMES:   // 480 [FIXED]
+    sanction(keeper)                                                   // before any executor CONTACT
+```
+
+- `elapsedFrames = 0` on the claim frame. Legal frames are elapsed 0 through 480 inclusive
+  (481 indexed frames).
+- At `elapsedFrames = 480`, an actual hand release on this frame (in the atomic model, the #5
+  CONTACT) is legal; merely initiating a distribution is not a release.
+- At `elapsedFrames ≥ 481` with all five predicates true: stop play and award the corner before an
+  executor can reach CONTACT on that frame.
+- If the ball was already released, is not `Controlled`, a prior stoppage (including a §3.1.4 DFK)
+  ended the episode, or a predicate fails, this corner MUST NOT fire.
+- No rounded seconds and no tactical-tick comparison are admissible.
+
+**Worked boundary (both ends):** team 0's keeper claims at frame 1,000 at `(8.0, 30.0)` m. An
+atomic-model #5 CONTACT at frame 1,480 (elapsed 480) ends the episode lawfully. If the keeper still
+holds the ball when Resolve begins on frame 1,481 (elapsed 481), the offence is adjudicated first: one
+team-1 corner, zero new ball kicks and zero `DistributionExecutedEvent`. In production no #5 request is
+in flight at that point (see Sanction), so no terminal exists and no feedback is drained. Team 1's mirror
+claims at `(97.0, 30.0)` m with the same frames and gives team 0 the corner.
+
+**Worked boundary, defensive case (request in flight at elapsed 481; unreachable in production, built only
+through `TestOnly_` seams):** same
+claim, with a #5 request, started through `TestOnly_StartGoalkeeperDistribution`, that would otherwise
+reach CONTACT on frame 1,481. The sanction cancels it and
+produces no CONTACT and no `Completed` terminal; `ApplyRestart` leaves exactly one `Cancelled` terminal,
+which Resolve drains on frame 1,482 with no #11 state change (the keeper is already `Recovering`).
+
+**Worked eligibility case for predicate 5 (a function-level case):** same claim at frame 1,000, evaluated
+at frame 1,481 (elapsed 481) with the other four predicates true. With the held team-0 ball at
+`(−0.30, 34.0)` m (beyond `−r = −0.11` m), `CheckBoundaries(...).isOut` is true, so predicate 5 is false,
+eligibility is false and there is no corner. Team 1's mirror is the ball at `(105.30, 34.0)` m (beyond
+`105 + r`). With the ball at `(−0.05, 34.0)` m (overhanging by less than `r`, still in play) predicate 5
+is true and the corner is awarded. Because the ball is clamped to the goal line before the slot, a
+composed version of this case needs a `TestOnly_` ball setter that writes after the reattachment;
+`TestOnly_SetBall` writes before the tick and the reattachment overwrites it, so no existing seam fits and
+one is required.
+
+**Sanction.** Resolve exactly one offence/stoppage: if a #5 goalkeeper request is still in flight, cancel
+it through its explicit cancellation/terminal-feedback path; suppress any in-flight ordinary pass, later CONTACT,
+distribution event and `Completed` terminal; end the hand episode; then use the shared restart, taker,
+placement, cue and event machinery ([restart contract §5.3](../../tracking/match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)).
+Goal, foul, §3.1.4 handling, own-release re-handling, boundary, possession-loss and restart ownership
+are reconciled so no same-frame competing restart or delayed second whistle can occur. When the
+corner fires it discards the captured foul candidate and its decided flag with no card-severity draw
+(the Stage-0 single-offence precedence rule of §3.1.3/§3.1.4 and restart contract §5.1), and Resolve
+ends for that frame through the shared whistle-finish helper below, exactly as §3.1.4's adjudication
+returns early. The offence is not implemented by reusing the post-executor
+keeper-drop slot. The sanction produces no CONTACT, no `Completed` terminal and no
+`DistributionExecutedEvent`. If a #5 goalkeeper request is still in flight, the sanction cancels it and
+`ApplyRestart` leaves exactly one `Cancelled` terminal on the executor, drained on the following frame's
+Resolve through `FinishDistribution` with no #11 state change (the keeper is already `Recovering`), the
+same as the landed §3.1.4 path; otherwise no terminal exists. Under the §3.8.4 admission predicate every
+accepted request in a live match reaches CONTACT by elapsed 480, so an in-flight request at elapsed ≥ 481 is unreachable
+in production and the production sanction drains nothing. The same-frame-CONTACT ordering is defensive:
+a snapshot-body restore cannot build it (the restore check rejects it, see the in-flight request check
+above), and its test builds the state only through `TestOnly_` seams (`TestOnly_StartGoalkeeperDistribution`,
+`TestOnly_SetPassExecutorState`, `TestOnly_SetPhysicsFrame`).
+
+**Shared whistle-finish helper.** The §3.1.4 handling whistle and this corner MUST end the frame through
+ONE shared helper, so the two cannot drift. The helper returns `bool` (always `true`) and each caller
+returns from Resolve on it. In the order the landed §3.1.4 path (`ApplyPendingKeeperHandlingOffence`)
+performs them, after the offence has been decided it:
+
+1. discards the captured foul candidate and its decided flag (`_foulCandidateFound`,
+   `_foulCandidateIsDecided`);
+2. calls `ApplyRestart` (cue `RestartCue.FreeKick` for §3.1.4, `RestartCue.Corner` for the corner);
+   cancelling a #5 request still in flight happens inside `ApplyRestart` (through
+   `EndGoalkeeperHandEpisode`), not before it;
+3. resets the legacy guard counters `_gkHoldTicks`, `_gkReleasedAgentId` and
+   `_gkReleaseCooldownRemaining`;
+4. when the `recordIndirectTaker` flag is set (only §3.1.4's inside-area free kick), writes
+   `_indirectKickTaker`;
+5. publishes the `RestartAwardedEvent` (for the corner, `RestartKind = Corner (3)`, the
+   `BallPhysics.RestartType` ordinal; not the `RestartCue` value);
+6. clears the collision output buffers (`_isCollisionKnockdown`, `_collisionForces`, `_stumbleScratch`);
+7. calls `UpdateMatchContext()`;
+8. updates `_lastHolderAgentId` when a possessor exists;
+9. calls `PublishPossessionChangeIfChanged()`;
+10. returns `true`.
+
+The restart spot, awarded team, cue, event payload and `recordIndirectTaker` flag are the caller's inputs.
+
+**Corner side.** The recipient is the opposing team. The corner is on the **sanctioned keeper's
+defended goal line** (`x = 0` for team 0, `x = 105` m for team 1); only X flips between teams. The
+side is chosen from the keeper's Y at sanction, not from any ball-exit point:
+`y < 34` → low-Y corner (`y = 0`); `y > 34` → high-Y corner (`y = 68` m); exactly `y = 34` →
+high-Y. The tie rule is a deterministic project convention, not an IFAB rule. Worked examples:
+team 0 keeper at `(8.0, 30.0)` → team 1 corner at the `(0, 0)` corner; team 1 keeper at
+`(97.0, 30.0)` → team 0 corner at `(105, 0)`; a keeper exactly at `y = 34.0` → the `y = 68` corner.
+The restart contract owns the exact placement inset.
+
+**Legacy guard split.** The Match Engine's inherited 360-frame stall guard
+(`EnforceGoalkeeperReleaseRule`, `GK_MAX_HOLD_SECONDS` = 6 s, `GkMaxHoldTicks` = 360 frames) is not a
+Law-12 rule. At C it becomes **feet-only** via `!HasGoalkeeperHandControl(holder)`, with **no hand
+exception**: the eight-second corner bounds every live hand episode, including the body-outside hold
+above. Its elapsed state resets or is segregated at the hand-to-feet transition; that reset is a defensive rule,
+because a hand episode ends through teardown under C and the reset has no production path (it is tested only
+through a named `TestOnly_` seam, T-5.1.10.3(c)). Its
+post-executor placement cannot override an active hand WINDUP. Its base duration is retagged `[EST]`
+(a provisional legacy anti-stall duration, value unchanged); the derived frame count stays
+`[DERIVED]`. This is a tag and rationale correction, not a calibration. Whether a feet guard is still
+needed is decided later from measured feet-possession durations, guard firings and stall recurrence.
+
+**Durable state and determinism.** The claim frame and its validity/lifecycle state are serialized with
+#11's existing tick-state capture (the capture that carries `_claimTick`), in the next available
+snapshot schema at the C implementation landing; no version is reserved here.
+Read/write order, `ResetSlot`, restore, mid-WINDUP pending #5 state, terminal feedback and restart
+state must reproduce the next release or corner exactly. Older saved keeper hold/cooldown/release
+fields are retained or retired with a documented migration, never silently reinterpreted. No RNG
+draw, domain tag, draw site, distribution policy or trajectory tuning is added. Digest differences
+caused only by new serialized bytes are reported separately from gameplay-event and ball-trajectory
+differences.
 
 ---
 
@@ -1141,3 +1927,19 @@ standard rebound physics.
 | 0.6 | August 3, 2026 | conversion-at-contact pass | **ERR-011-008** — §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, while §3.5.2's body carries `ball.velocity = gkHandVelocity` ("parked at hand position"). The implementation followed the summary and omitted the park; because possession in the composition root is a FLAG rather than a kinematic constraint (the ball integrates unconditionally and the goal check adjudicates on ball POSITION), a claimed shot kept its velocity and crossed the line — measured over three full matches: ball speed 11.1 m/s in and **10.8 m/s out** of a catch, **7 of 10 catches followed by a goal within 5 s**, against parry 10.8 → 0.0 and deflect 10.3 → 4.2. §3.5's Outputs now states the catch's TWO effects and §3.5.2 gains the sentence that every contact resolves to exactly one ball-side action, the catch's being a pair. **§3.5.2's pseudocode body is unchanged — it was correct.** Code: `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall()`), `GoalkeeperMechanics.cs` v1.10 (both claim sites — §3.5.2 catch and the Stage-0 smother), `MatchEngine.cs` (adapter). See `docs/tracking/gk-conversion-at-contact-design.md` | implementation + measurement (per-contact fate instrument, 3 full matches); acceptance 2 of 3 predicates fail pre-fix, verified by execution |
 | 0.7 | August 4, 2026 | wiring backlog W1 | **ERR-011-010** — **the rush decision had no owner.** §3.7's state entry delegated the entire "when" to Decision Tree #8, which has no goalkeeper model and structurally cannot acquire one (`ActionType.SAVE = 7` is the last ordinal fitting §3.3.3's 3-bit composure-noise field, so a `RUSH` action forces a digest rebaseline), so `CommitRushIntent` had **no caller of any kind** from May 28 to August 4, 2026 and every one-on-one was a stationary keeper on his line. New **§3.7.0** takes the decision back — the same move §3.3.6 made for dive timing. It is normative on two points: a team-mate merely CHASING the carrier is **not** a reason to stay (a recovering defender narrows no shooting angle — only a goal-side body in the shot corridor does), and how far out the keeper comes is **his own attributes**, `clamp(RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE·OneVsOne_norm + RUSH_COMMIT_K_COMPOSURE·Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M·fatigue, min, max)`, with six new `[GT]`s in §3.4.6 and a worked example. `OneVsOne` is consumed for the commit DECISION only; FR-GK-024's closed-form constraint on the 1v1 SAVE formulas (§3.2 / §3.5) is untouched. **ERR-011-009** — **a rush that REACHED its target had no exit.** §3.1.1 gave `Rushing` exactly three exits (contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball none of them can fire: the 1v1 and smother triggers are false by construction without a possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops. A keeper who swept a loose ball therefore stood over it in `Rushing` for the rest of the match. The completion was anticipated everywhere except in the table that adjudicates state — `RushPhase.Reached` has existed in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. Two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2. A **completion, not an abort** — FR-GK-018 / KD-15 are untouched, since nothing about the ball's trajectory ends the rush. Found by wiring the trigger: `CommitRushIntent` had never had a production caller, so no rush had ever run in a match. Code: `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperConstants.cs` v1.5, `MatchEngine.cs` v1.58 (the trigger itself). See `docs/tracking/gk-rush-trigger-design.md` | implementation; **measurement NOT run — no .NET SDK in the authoring environment** |
 | 0.8 | August 4, 2026 | W1 adversarial review pass 1 | Doc-only in this spec: §3.7.0 gains a **fatigue arm — no live input at Stage 0** paragraph. `RUSH_COMMIT_FATIGUE_PENALTY_M` (and §3.7.1's `RUSH_COMMIT_FATIGUE_COEFF`) multiply a value every composition-root projection hardcodes to zero, so both arms are structurally unreachable and MUST NOT be calibrated until fatigue reaches the projection — a dial with no input cannot be fitted. The worked example is left as written: it is correct arithmetic for the formula, and the new paragraph directly above says why production never reaches that branch. The review's other findings were engine-side (the trigger's missing minimum-run guard, the sent-off keeper freeze) and are recorded in `gk-rush-trigger-design.md` v1.2. | doc |
+| 0.9 | September 22, 2026 | W3 / ERR-011-011 | §3.6.1 removes phantom Collision #3 `handCapsule` / `headSphere` / `IntersectsBallSphere` surfaces. #3 is candidate discovery only; #10 owns head geometry, #11 owns its live hand/reach envelope, and no live hand envelope means no Hand participant. The dormant `ClaimIntent` must gain a real producer before ordinary cross claims can use Hand. No `[GT]`, schema or RNG change. | spec correction |
+| 0.10 | September 22, 2026 | W3 / ERR-011-012 | §3.6.1 corrects the live W3 policy discovered during implementation review: Collision #3's 2.0 m observation feed is not contest membership; ClaimIntent arms from loose/local geometry with no vertical floor, stays locked for one existing dive-duration reach episode, locks its lateral reach side, and hard-cancels only on possession/SAVE/slot invalidation/expiry. Claims reuse existing #11 dive/reach kinematics with zero save-only timing jitter. ClaimIntent is now authoritative cross-tick state in MatchEngine snapshot v23. No new `[GT]`, RNG stream/domain/draw site/order. | implementation/spec back-prop |
+| 0.11 | September 22, 2026 | W3 draft scope clarification | §3.6.1 now matches the preregistered W3 boundary exactly: only active ClaimIntent contributes W3 Hand membership. `TryGetHandReachEnvelope` may also describe an ordinary save dive for #11's own save pipeline, but W3 does not interpose on normal shot-save handling. No code/tuning/schema/RNG change. | pre-merge contract sync |
+| 0.12 | September 25, 2026 | W8 B spec / ERR-011-015/016/017 | §3.8 replaces the phantom #5 pass API with the dedicated #5 goalkeeper request, moves hand-distribution production from #8 to Match Engine + #21, pins the 10 Hz clock domain, live-roster/receiverless fallback, CONTACT-only possession release/event, zero-RNG selector, and 35-tactical-tick safety ceiling. C still owns the Law-12 eight-second correction. | spec-first; B code deferred to W8 wiring |
+| 0.13 | September 26, 2026 | W8 B review closure | `Distributing` now means an accepted #5 request only; legacy no-intent expiry cannot manufacture that state. Commit-time target point is explicitly fallback-only, valid receivers re-aim to live CONTACT position, reject/cancel outcomes distinguish retained possession from real loss, and the inherited-guard proof is shown as `210 + 84 + 1 = 295 < 355 < 360` with worked windup/alignment examples. | review correction; code still deferred |
+| 0.16 | September 26, 2026 | W8 B owner approval | Records owner approval of the W8 B amendment bundle, including the 35 m fallback as an uncalibrated B default. Overall #11 remains DRAFT; realistic punt length is explicitly not claimed solved and is tracked as a #5 trajectory follow-up after B landing-point measurement. | owner approval; code still deferred until #461 merges |
+| 0.15 | September 26, 2026 | W8 B review closure | Makes retained-possession retries conditional on a live CONTACT-before-both-guards budget, requires late-cancel/repeated-reject regressions, adds the explicit W8 owner-approval gate, and states that LongKick arrival is an evidence question rather than an assumed target hit. | review correction; code still deferred |
+| 0.14 | September 26, 2026 | W8 B final consistency | §3.1.2 tactical pseudocode no longer uses a generic Decision Tree GK intent that could re-imply the ERR-011-016 producer defect; it keeps existing SAVE/rush ownership and names Match Engine + #21 as the hand-distribution producer, with #5 acceptance gating `Distributing`. | review correction; code still deferred |
+| 0.17 | September 27, 2026 | ERR-011-018 baseline-slot wiring | §3.3.0.1 replaced the phantom `PositioningAI.GetGKBaselineSlot(matchTime)` with the real surface: #12's per-team `GetFormationSlot(keeperEntityId)` (the §3.3.3 GK slot, canonical attack-+X frame), mapped to world space by the composition root with the keeper's `MOVE_TO_POSITION` map, read after #12's tick in the same stride; the keeper's own position is ruled out as a stand-in (it made `Recovering → Set` immediate). Units, range, mirrored worked example and the 6 m / tick 1001 → 1006 cooldown example added. §3.1.1 unchanged. No `[GT]`, schema or RNG change. | spec + code, same commit |
+| 0.18 | October 10, 2026 | ERR-011-019 spec-text drift | §3.2.1 listed two stamp producers. W4 (PR #403) had added a third, `GoalkeeperMechanics.OnThreatDeflected`, which always overwrites and does not set the pending-shot flag. W4 also made the threat-onset fallback visibility-owned and made a screened armed tick clear the stamp unless a dive is in flight. §3.2.1 now describes all three producers and the screened-clear rule, with a worked example. Spec text only; code unchanged. Determinism impact: none. | — |
+| 0.19 | October 10, 2026 | Owner decision D-03 | §3.1.1 records that the missing `Recovering` → `Anticipate`/`Diving`/`Rushing`/claim rows are intentional: a `Recovering` keeper commits no claim or rush and starts no dive until it exits to `Set` or `Resting` (both exits named), while remaining an ordinary agent for Match Engine first touch and pickup. Save commitment is documented as ungated: a `SaveIntent` may be held during `Recovering` and dives only after exit, matching the engine. A cause-split and gating save commitment are D-08 candidates after W8 B. Clarification of existing behavior; no code, constant or schema change. Packet: `docs/tracking/pre-b-decision-packets.md`. | — |
+| 0.20 | October 10, 2026 | ERR-011-002 / ERR-011-003 back-prop completion (owner-directed) | The July 27 code fixes' spec text, pending owner sign-off since then, lands now. **ERR-011-002:** new §3.1.0 defines `ballThreateningOwnGoal` / `ballSafelyUpfield` from one distance to the keeper's own goal, with a worked example; `Resting → Set`, `Recovering → Resting` and the `Resting` hold row read those predicates and no possession condition; new `Set → Resting` and `Anticipate → Set` rows. **ERR-011-003:** §3.3.1 dive direction comes from an explicit `DeflectionTarget`, else the §3.3.6 plane-crossing prediction, else the ball's current Y, with a worked example; §3.3.6's predictor states its closing/horizon conditions; new `[GT] DIVE_PREDICTION_HORIZON_S` = 2.0 s in §3.4.4. Matches production; no code, constant value or schema change. ERR-011-004's text already landed through §3.2.1 (ERR-011-006/019). **Also (owner-directed):** §3.1.0 documents the Stage-0 anticipation stub (0.6 while `ballThreateningOwnGoal`, else 0), with its consequences: `ANTICIPATE_THRESHOLD` is inert below 0.6 and makes the row unreachable at or above it, rushes start from `Anticipate` in the near third, and the `ShotExecutedEvent` row is unwired so the stub is the only route into `Anticipate`. Includes a worked example. New `[GT] STAGE0_ANTICIPATION_SCORE_ACTIVE` row in §3.4.2. **Review fix:** §3.3.6's predictor and hold text state the at-plane exception (abs(dx) ≤ ε is an immediate crossing at t = 0 and the current Y, any velocity), which `Predict_BallAtPlane_IsImmediateCrossingAtCurrentY` locks; §3.4.4 catalogues `DEGENERACY_EPSILON_SQ` / `DEGENERACY_EPSILON`, the guard the predictor uses. | — |
+| 0.21 | October 16, 2026 | — | ERR-011-020: keeper own-release avoidance, contact sanction and mirrored worked example | PR #511 |
+| 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |
+| 0.23 | October 18, 2026 | — | D-07 review fixes: §3.1.4 `distanceOutside` formula; acquisition snap of a legal catch is not a carry, carries sanction only an outward move; a ball overhanging its own goal line (≤ r) is on the line; restart spot clamped onto the pitch; worked examples | PR #515 review |
+| 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility (five after review round 1) with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. Review fix: §3.8.3/§3.8.4 candidate CONTACT is `currentFrame + WindupFrames` (no `+ 1`; the executor's first decrement runs in Resolve of the commit frame, #5 §3.8.13 item 4 and the W8 B test pin), the predicate gates the first commit and retries; first-attempt 294 frames (186 margin), alignment example CONTACT at 390, late-cancel (a) 384, (b) `1,398 + 84 = 1,482` refused and `WindupFrames ≤ 82` fits; W8 B `+ 1` kept as a B-code description. Review round 2: C removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate; the sanction leaves one `Cancelled` terminal drained next frame (no CONTACT, `Completed` or `DistributionExecutedEvent`); normative live-iff invariant between `handControlStartFrame` and the hand states, with snapshot-reader rejection; `int` frame-domain limit (~414 days) stated; windup constants cited as §3.4.7. Review round 3: only a successful claim sets `handControlStartFrame` (same-state writes and the retained-cancel return preserve it); the single `Cancelled` terminal is conditional on a request in flight, which is unreachable at elapsed ≥ 481 in production (defensive case via a `TestOnly_` seam or crafted restore); admission predicate added to the §3.8 producer list and the §3.1.1 `HandsOnBall → Distributing` row; `DistributionExecutedEvent.WindupMs` is the configured windup; example (a) is a retained cancellation at CONTACT; the maximum-delay example is a Kick policy at `D = 35`; dead `D = 0` clause dropped; first-attempt regression fails on any `6·D + W > 480`; `Distributing → Recovering` row names the DFK and corner causes. Review round 4: §3.8.5 requires one shared whistle-finish helper for the §3.1.4 whistle and the corner, with its nine steps in the landed order; the live-iff restore check is on #11 state alone with the engine checking possessor and `Controlled` separately; a restore-time rejection rule for an in-flight #5 request (no active clock, or remaining windup putting CONTACT past the 480-frame limit), with the defensive in-flight-at-481 state unreachable in production and built by tests only through `TestOnly_` seams (the "crafted restore" route is withdrawn); the teardown bullet drains a `Cancelled` terminal through `FinishDistribution` rather than clearing it; predicate 4 stated as structurally implied and kept as a defensive guard; the §3.1.1 retained-cancel row says cancelled without a kick, at CONTACT under C. Review round 5: predicate 5 is structurally implied at Stage 0 and kept as a defensive guard (the precedence example is recast as an eligibility-function case); the admission predicate states that the candidate is the policy's own delivery with no late fallback Roll; the inactive clock sentinel is −1 (as `_claimTick`), the live-iff clause is `0 ≤ handControlStartFrame ≤ currentFrame` with a range check `currentFrame − handControlStartFrame ≤ 480`, both run in the snapshot reader; the in-flight-at-481 state is unreachable in production and built only through `TestOnly_` seams; the whistle-finish helper returns `bool` with a `recordIndirectTaker` flag and the #5 cancellation happens inside `ApplyRestart`; the feet-guard hand-to-feet reset is stated as defensive. Review round 6 (October 30, 2026): §3.8.5 gains a normative Full-time rule: full time is a freeze, not a teardown, so the hand state, its clock and any #5 WINDUP stay frozen and no corner fires, including at elapsed 481 on the final-whistle tick; when the restored `_matchEnded` is true the snapshot reader skips the range check and in-flight check (b) and keeps the structural checks, run once the whole body is read; production-unreachability statements are scoped to a live match. Review round 7: the Sanction paragraph's "every accepted request reaches CONTACT by elapsed 480" is scoped to a live match (a request frozen at full time never reaches CONTACT). | W8 C contract v0.5 |

@@ -1,0 +1,2 @@
+Binary guard OK: no un-LFS'd binaries over 1048576 bytes,
+no text files over 4194304 bytes.

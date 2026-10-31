@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/PlayerAttributeProjectionTests.cs
 // Created:  2026-07-17
+// Modified: 2026-09-22 (W3: narrow mixed-participant ToCrossClaim projection lock)
 // Modified: 2026-07-22
 // Author:   —
 // Spec:     Player-attribute projection design supplement §3/§4/§7/§9; Code Standards #20
@@ -246,6 +247,24 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(0.25f, h.Fatigue, 0f, "Fatigue is caller-supplied runtime state (KD-P4).");
         }
 
+        // ── W3 mixed cross-claim participant: normalized narrow projection ─────────────
+
+        [Test]
+        public void ToCrossClaim_ProjectsOnlyNormalizedBalanceStrengthAerial()
+        {
+            var c = TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+            c.Balance = 4;
+            c.Strength = 11;
+            c.Aerial = 19;
+
+            TacticalDirector.GoalkeeperMechanics.CrossClaimParticipantAttributes x =
+                PlayerAttributeProjection.ToCrossClaim(in c);
+
+            Assert.AreEqual(4f / 20f, x.BalanceNorm, 1e-6f);
+            Assert.AreEqual(11f / 20f, x.StrengthNorm, 1e-6f);
+            Assert.AreEqual(19f / 20f, x.AerialNorm, 1e-6f);
+        }
+
         // ── §3.7 Goalkeeper (#11): int→float widening + runtime TeamId/Fatigue ─────────
 
         [Test]
@@ -282,4 +301,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-17 | —      | Initial implementation (#27 T1/T2 projection locks).           |
 // | 1.1     | 2026-07-22 | —      | GK/Heading engine integration: ToHeading (#10 raw copy) +      |
 // |         |            |        | ToGoalkeeper (#11 int→float widen) per-field scale locks.      |
+// | 1.2     | 2026-09-22 | —      | W3: ToCrossClaim locks the narrow normalized Balance/Strength/Aerial projection used for both outfield and goalkeeper duel participants. |
 #endregion

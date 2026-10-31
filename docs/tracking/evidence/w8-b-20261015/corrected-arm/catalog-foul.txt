@@ -1,0 +1,1 @@
+measurement verification PASS: foul-rate (passing test + report sentinel)

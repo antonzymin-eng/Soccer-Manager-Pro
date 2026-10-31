@@ -21,6 +21,22 @@ class Instrument:
 
 
 INSTRUMENTS = {
+    "w8-b": Instrument(
+        "w8-b",
+        "TD_W8_B",
+        "src/match-engine/tests/W8BDistributionDiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings",
+        "=== W8 B frozen corpus and landing evidence ===",
+    ),
+    "w8-stage-a": Instrument(
+        "w8-stage-a",
+        "TD_W8_STAGE_A",
+        "src/match-engine/tests/W8StageADiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~W8StageADiagnostic_ReportsFrozenSixSeedBaseline",
+        "=== W8 Stage A frozen six-seed baseline ===",
+    ),
     "w12-gate-firing": Instrument(
         "w12-gate-firing",
         "TD_W12_GATE_DIAGNOSTIC",
@@ -83,7 +99,7 @@ INSTRUMENTS = {
         "src/match-engine/tests/FoulRateDiagnosticTests.cs",
         "src/match-engine/tests/match-engine-tests.gen.csproj",
         "FullyQualifiedName~FoulRateDiagnostic",
-        "=== §5.Z.9 foul-rate measurement ===",
+        "=== #435 §2.1 source-complete foul/card measurement ===",
     ),
     "close-chance": Instrument(
         "close-chance",
@@ -108,6 +124,14 @@ INSTRUMENTS = {
         "src/match-engine/tests/match-engine-tests.gen.csproj",
         "FullyQualifiedName~MatchBalanceDiagnostic_ReportsContactStream",
         "=== §5.Z.9 recorded finding: the CONTACT STREAM itself ===",
+    ),
+    "header-reachability": Instrument(
+        "header-reachability",
+        "TD_HEADER441_DIAGNOSTIC",
+        "src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs",
+        "src/match-engine/tests/match-engine-tests.gen.csproj",
+        "FullyQualifiedName~HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters",
+        "=== #441 header reachability counters (frozen six seeds) ===",
     ),
     "engine-scoring": Instrument(
         "engine-scoring",

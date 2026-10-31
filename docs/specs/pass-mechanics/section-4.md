@@ -8,7 +8,7 @@ This section is the authoritative reference for boundary ownership and interface
 Implementers must not cross these boundaries without a formal amendment.
 
 **Created:** February 20, 2026, 9:00 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -327,6 +327,14 @@ Vector3 ReceiverVelocity; // Current receiver velocity. Used for linear projecti
 
 No other agent's state is read. The pressure query (§4.4.1) uses the Collision System
 spatial hash — Pass Mechanics does not iterate over all agents itself.
+
+**W8 dedicated-distribution identity query.** Before a goalkeeper-distribution WINDUP may
+start, Pass Mechanics reads one additional host-owned authoritative predicate through
+`IPassAgentQuery.IsGoalkeeperOfTeam(agentId, teamId)`. The host returns true only when
+`agentId` is a live, unsent-off goalkeeper whose authoritative team equals `teamId`.
+This query is read-only, adds no cached or serialized state, and is used only by the
+dedicated goalkeeper-distribution INITIATING guard in §3.8.13. False returns `Rejected`
+before WINDUP. Ordinary `PassRequest` execution does not use this predicate.
 
 ### 4.3.3 Write Prohibition
 
@@ -694,6 +702,7 @@ before Section 3 finalisation (already flagged in Section 1 and 2 dependency tab
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | 1.0 | February 20, 2026, 9:00 PM PST | Claude (AI) / Anton | Initial draft. All five integration contracts defined. Polling-flag decision for tackle interrupt formalised. ERR-007 and ERR-008 flags carried forward. Cross-spec validation table complete (8 checks). |
+| 1.2 | September 28, 2026 | — | Owner-approved W8 review amendment: §4.3 records the read-only `IPassAgentQuery.IsGoalkeeperOfTeam` boundary used by dedicated goalkeeper-distribution INITIATING. No cached/serialized state; ordinary pass execution unchanged. |
 | 1.1 | March 25, 2026 | Claude (AI) / Anton | Post-audit fixes: Decision Tree #7→#8 (C-03, 5 instances); Prerequisites §3.1 version updated v1.0→v1.1 (Mod-03). |
 
 ---

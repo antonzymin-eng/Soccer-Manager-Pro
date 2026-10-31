@@ -3,14 +3,17 @@
 **Purpose:** Defines the responsibilities, boundaries, and terminology for Specification #3 (Collision System) of Stage 0 Physics Foundation.
 
 **Created:** February 15, 2026, 2:45 PM PST  
-**Revised:** March 05, 2026, audit session  
-**Version:** 1.1  
+**Revised:** October 10, 2026 (ERR-003-009); prior: March 05, 2026, audit session  
+**Version:** 1.2  
 **Status:** Draft — Revised  
 **Author:** Claude (AI) with Anton (Lead Developer)  
 **Specification:** #3 of 20 (Stage 0 Physics Foundation)  
 **Preceding Specs:** Ball Physics (#1, approved), Agent Movement (#2, in review)
 
 **Changelog:**
+- v1.2 (Oct 10, 2026): ERR-003-009. §1.5.2 Ball Physics interface row lists
+  `AgentBallCollisionData.AgentPosition` (added in code by ERR-003-007, July 27, 2026). No other
+  change.
 - v1.1 (Mar 5, 2026): Corrected hitbox radius range from "0.35–0.50m" to "0.3525–0.50m"
   in §1.3 Terminology and §1.5.1 upstream dependency table to match Agent Movement
   §3.5.4.3 authoritative formula (Strength 1: 0.35 + 1/20 × 0.15 = 0.3525m). No
@@ -169,7 +172,7 @@ This ordering ensures all entities have committed their frame's movement before 
 
 | Target Spec | Interface | Data Provided | Section Reference |
 |-------------|-----------|---------------|-------------------|
-| Ball Physics (#1) | `Ball.OnCollision(AgentBallCollisionData)` | ContactPoint, AgentVelocity, BodyPart, AgentID, TeamID, IsGoalkeeper | Ball Physics Â§3.1.10.1 |
+| Ball Physics (#1) | `Ball.OnCollision(AgentBallCollisionData)` | ContactPoint, AgentPosition (agent centre; deflection-normal input, ERR-003-009), AgentVelocity, BodyPart, AgentID, TeamID, IsGoalkeeper | Ball Physics Â§3.1.10.1 |
 | Agent Movement (#2) | `CollisionResponse` | VelocityImpulse, PositionCorrection, TriggerGrounded, TriggerStumble, GroundedDuration | Agent Movement Â§3.1.2 (state triggers) |
 | Event System (#17) | `CollisionEvent` | MatchTime, CollisionType, Entity IDs, ContactPoint, ImpactForce, FoulData | Event System (forward reference) |
 | Referee System (TBD) | `ContactForceData` | ForceMagnitude, ForceDirection, ContactType, InstigatorID, VictimID, VictimHasBall, InstigatorPlayingBall | Stage 1+ |

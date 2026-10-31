@@ -1,5 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineDisciplineTests.cs
 // Created:  2026-07-26
+// Modified: 2026-10-11 ([Timeout(7200000)] for Unity's 180 s default — v1.2)
+// Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.1)
 // Modified: 2026-07-26
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.9;
@@ -17,21 +19,14 @@ namespace TacticalDirector.MatchEngine
     public sealed class MatchEngineDisciplineTests
     {
         [Test]
+        [Timeout(7200000)]
         public void sim_match_engine_discipline_plausible()
         {
-            // Live play emits #5's FM-08 "lost possession before CONTACT" at Error level whenever a
-            // restart is awarded against a passer mid-windup — an ordinary match event since Phase H, and
-            // fouls are one of the things that award restarts. §5.Z.7 item 3 records that the log LEVEL is
-            // the stale part, not the cancel path; the composed runs declare it meanwhile.
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-
             var runner = new ScenarioRunner(MatchEngineDisciplineScenarios.BuildIndex());
 
             ScenarioResult result = runner.Run(
                 MatchEngineDisciplineScenarios.DisciplinePlausiblePath,
                 MatchEngineDisciplineScenarios.DisciplineSeed);
-
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             Assert.AreEqual(ScenarioStatus.Passed, result.Status, result.Diagnostics);
         }
@@ -41,4 +36,6 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                                              |
 // | 1.0     | 2026-07-26 | —      | Initial: runs the discipline acceptance scenario. |
+// | 1.1     | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.2     | 2026-10-11 | —      | [Timeout(7200000)]: 284 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 #endregion

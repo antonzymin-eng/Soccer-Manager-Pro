@@ -1,7 +1,10 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
+// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-07-27 (shot-outcome pass)
 // Modified: 2026-07-28 (shot-speed pass: swept goal-frame collision + crossing-point adjudication (ERR-001-005))
+// Modified: 2026-09-14 (W6: production Controlled entry + explicit non-kick release transition)
+// Modified: 2026-09-15 (ERR-001-006: elevated uncontrolled balls cannot become Stationary)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
@@ -93,7 +96,8 @@ namespace TacticalDirector.BallPhysics
         /// position test TUNNELS straight through a 0.12 m post — the segment test cannot. On the
         /// EARLIEST parametric hit the ball centre is placed at the contact parameter and the
         /// existing restitution/spin-retention response runs against the normal from the closest
-        /// point on the struck cylinder's axis. Gates: a <c>Controlled</c> ball never deflects (a
+        /// point on the struck cylinder's axis. ERR-001-007: contact must precede a full boundary
+        /// crossing, and an <c>OutOfPlay</c> ball never deflects. A <c>Controlled</c> ball never deflects (a
         /// possessed ball is driven at the holder's feet — the ApplyAgentDeflection precedent);
         /// a degenerate segment is a no-op; an X-band prefilter
         /// (<see cref="BallPhysicsConstants.GoalFrame.SweptPrefilterBandM"/>) skips the cylinder
@@ -104,7 +108,7 @@ namespace TacticalDirector.BallPhysics
         /// <returns>True when a frame strike was applied; false otherwise.</returns>
         public static bool ApplySweptGoalFrameCollision(ref BallState ball, Vector3 prevPosition)
         {
-            if (ball.State == BallStateType.Controlled)
+            if (ball.State == BallStateType.Controlled || ball.State == BallStateType.OutOfPlay)
                 return false;
 
             Vector3 d = ball.Position - prevPosition;
@@ -131,6 +135,10 @@ namespace TacticalDirector.BallPhysics
                 return false;
 
             Vector3 contactPoint = prevPosition + bestT * d;
+            // ERR-001-007: a full boundary crossing earlier on the straight segment wins over
+            // a later rear-side frame hit. Never rewind an already-out trajectory into play.
+            if (BallStateMachine.IsOutOfBounds(prevPosition) || BallStateMachine.IsOutOfBounds(contactPoint))
+                return false;
             ball.Position = contactPoint;
             ApplyGoalPostCollision(ref ball, contactPoint, bestAxisPoint, logger: null, matchTime: 0f);
             return true;
@@ -336,14 +344,40 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
-        /// Transitions ball to Controlled state. Called by agent system after CheckPossession.
-        /// Does NOT record which agent has possession (Option B — agent system owns that).
+        /// Transitions ball to Controlled state after the host possession mechanic adjudicates
+        /// a successful touch. CheckPossession remains available to hosts using Ball Physics'
+        /// own acquisition geometry. Does NOT record which agent has possession (Option B).
         /// </summary>
         public static void SetBallControlled(ref BallState ball)
         {
-            ball.State           = BallStateType.Controlled;
-            ball.Velocity        = Vector3.zero;
-            ball.AngularVelocity = Vector3.zero;
+            ball.State             = BallStateType.Controlled;
+            ball.Velocity          = Vector3.zero;
+            ball.AngularVelocity   = Vector3.zero;
+            ball.LastValidPosition = ball.Position;
+            ball.LastValidVelocity = Vector3.zero;
+        }
+
+        /// <summary>
+        /// Releases a physically controlled ball without applying a kick. The caller owns possession
+        /// identity (Option B); this method owns only the BallState transition. A non-Controlled ball is
+        /// left untouched so restart/taker designation can never be converted into a physical release.
+        /// </summary>
+        public static void ReleaseBallControl(ref BallState ball)
+        {
+            if (ball.State != BallStateType.Controlled)
+            {
+                return;
+            }
+
+            // ERR-001-006: Stationary is a ground-rest state. An elevated controlled ball
+            // released without a kick must fall under gravity rather than freeze in mid-air.
+            ball.State = ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold
+                ? BallStateType.Airborne
+                : BallStateType.Stationary;
+            ball.Velocity          = Vector3.zero;
+            ball.AngularVelocity   = Vector3.zero;
+            ball.LastValidPosition = ball.Position;
+            ball.LastValidVelocity = Vector3.zero;
         }
 
         /// <summary>
@@ -406,7 +440,10 @@ namespace TacticalDirector.BallPhysics
 
             float horizontalSpeed = new Vector2(velocity.x, velocity.y).magnitude;
 
-            if (velocity.z > 0f)
+            // ERR-001-006: height is authoritative for an already-elevated ball. A zero,
+            // horizontal, or downward kick cannot turn an elevated ball into a force-free
+            // Stationary/Rolling state; it must remain Airborne so gravity can act.
+            if (ball.Position.z > BallPhysicsConstants.State.AirborneEnterThreshold || velocity.z > 0f)
                 ball.State = BallStateType.Airborne;
             else if (horizontalSpeed > BallPhysicsConstants.State.MinVelocity)
                 ball.State = BallStateType.Rolling;
@@ -472,4 +509,12 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | crossing point (detected position is up to ~0.42 m past the plane); the     |
 // |         |            |        | position-only overload delegates with prev == pos (IsOutOfBounds contract   |
 // |         |            |        | unchanged — out-ness identical, only goal-vs-over/wide refines).            |
+// | 1.9     | 2026-09-14 | —      | W6: SetBallControlled refreshes its recovery checkpoint; new                |
+// |         |            |        | ReleaseBallControl provides explicit non-kick Controlled release while      |
+// |         |            |        | possession identity remains host-owned (Option B).                          |
+// | 2.0     | 2026-09-15 | —      | ERR-001-006: ApplyKick and non-kick Controlled release preserve Airborne    |
+// |         |            |        | state whenever the ball centre is above AirborneEnterThreshold, preventing  |
+// |         |            |        | force-free elevated Stationary balls.                                       |
+// | 2.1     | 2026-10-12 | —      | ERR-001-007: Controlled/OutOfPlay stand down; a completed boundary |
+// |         |            |        | crossing before contact takes precedence over a later frame hit.   |
 #endregion

@@ -1,0 +1,2 @@
+October 13 archived anchor vs fresh .NET 8.0.32 host: complete common report and all 6 terminal digests match exactly.
+Bridge b60cc532 vs anchor: every common report row matches except 6 schema-v25 terminal fingerprints.

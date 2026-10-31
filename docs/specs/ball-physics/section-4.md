@@ -1,8 +1,12 @@
 # Ball Physics Specification - Section 4: Implementation Details
 
 **Created:** February 4, 2026, 12:35 AM PST  
-**Version:** 1.3 (Revised)  
+**Version:** 1.4 (ERR-001-007)
 **Status:** Draft  
+**Modified:** October 12, 2026
+**Changes from v1.3:**
+- §4.4.1: Ball Physics owns swept frame resolution inside its update, before final state classification; the optional contact-result overload is observation only.
+
 **Changes from v1.2:**
 - Mi-01-D: Removed `Bounce.COR_GRASS_DEFAULT`, `Bounce.FRICTION_GRASS_DEFAULT`,
   `Bounce.SPIN_RETENTION_GRASS` rows from §4.3.1 tunable parameters table (constants
@@ -78,8 +82,8 @@ namespace TacticalDirector.Core.Physics.Ball.Tests
 #### 4.1.3 Class Responsibilities
 
 **BallPhysicsCore (Static class)**
-- Pure physics calculations
-- No state management
+- Composes pure physics calculations, swept frame response and state classification
+- No ownership of the host's BallState (ERR-001-007)
 - All methods static, side-effect free (except validation warnings)
 - Profiling hooks in editor builds
 
@@ -240,6 +244,14 @@ public const float LIFT_COEFFICIENT_SCALE = 0.40f;
 #### 4.4.1 Match Simulator Interface
 
 **Match simulator calls ball physics at 60Hz:**
+
+**ERR-001-007:** `BallPhysicsCore` composes `BallCollision` and `BallStateMachine` in the
+§3.1.9 order: integrate, validate, eligible swept frame contact, final state, snapshot log.
+The existing six-argument call below performs all of these steps. A seven-argument overload
+adds `out bool hitGoalFrame` for the host woodwork counter; it adds no cross-tick state and
+is false on early returns. The match simulator consumes that result once and does not run
+another frame collision after the state has been classified. Restart adjudication remains
+owned by the match simulator and uses the actual collision-shortened segment.
 
 ```csharp
 public class MatchSimulator
@@ -459,3 +471,9 @@ public Vector3 CalculateMagnusForce(Vector3 velocity, Vector3 angularVelocity)
 **Page Count:** ~6 pages (revised from 8)  
 **Status:** Ready for review  
 **Next Section:** Section 5 (Testing)
+
+## Revision History
+
+| Version | Date | Change |
+|---|---|---|
+| 1.4 | October 12, 2026 | ERR-001-007: document swept-frame/state composition ownership and the observation-only overload in §4.4.1. |

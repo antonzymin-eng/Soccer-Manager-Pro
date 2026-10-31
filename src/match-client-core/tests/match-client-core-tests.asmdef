@@ -8,7 +8,9 @@
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.PlayerDatabase",
-        "TacticalDirector.TestingStrategy"
+        "TacticalDirector.TestingStrategy",
+        "TacticalDirector.MatchAnalytics",
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

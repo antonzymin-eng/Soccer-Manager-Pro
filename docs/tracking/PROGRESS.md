@@ -1,7 +1,8 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+**Last Updated:** October 30, 2026 (**PR #527 reconciliation with main** — Spec #20 carries forward the governing Unity 6000.4.9f1 compile and supplemental Linux verification model, preserves the October 10 activation erratum and later assembly/client guidance, and records C# 9.0 explicitly in `certification-platform.md`. §7.5 D5 is resolved within this PR by that language row; D1 still awaits profiling. The separate A3.1a/A3.1b architecture amendment remains pending A3.4; merging main into the PR grants no approval.)
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
 §9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;

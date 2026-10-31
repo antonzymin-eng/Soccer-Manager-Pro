@@ -1,0 +1,14 @@
+.F.
+======================================================================
+FAIL: test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required (test_precommit_incremental_snapshot.PrecommitIncrementalSnapshotTests.test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/smp-clean-main/tools/tests/test_precommit_incremental_snapshot.py", line 119, in test_snapshot_checkout_disables_lfs_process_and_smudge_even_when_required
+    self.assertEqual(proc.returncode, 0, proc.stdout)
+AssertionError: 128 != 0 : fatal: the remote end hung up unexpectedly
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.268s
+
+FAILED (failures=1)

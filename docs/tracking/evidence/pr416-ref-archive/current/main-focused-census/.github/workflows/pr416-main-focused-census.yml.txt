@@ -1,0 +1,77 @@
+name: PR416 main focused census
+
+on:
+  push:
+    branches:
+      - evidence/pr416-main-focused-census
+    paths:
+      - .github/workflows/pr416-main-focused-census.yml
+
+permissions:
+  contents: read
+
+jobs:
+  discover-match-engine-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: List MatchEngine tests
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-main-discovery
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --list-tests \
+            --logger "console;verbosity=detailed" \
+            2>&1 | tee artifacts/pr416-main-discovery/list-tests.log
+      - name: Upload discovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-main-discovery-${{ github.run_id }}
+          path: artifacts/pr416-main-discovery/
+          if-no-files-found: error
+
+  focused-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - AControlledCarrierIsActuallyDispossessed
+          - BothOutcomesOccur_TheBallIsSometimesWonAndSometimesKnockedLoose
+          - sim_match_engine_shot_outcomes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate projects and restore
+        run: |
+          python3 tools/dotnet-ci/generate_projects.py
+          dotnet restore tools/dotnet-ci/TacticalDirector.gen.sln
+      - name: Run focused MatchEngine regression
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/pr416-main-${{ matrix.test_name }}
+          dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
+            --no-restore \
+            --filter "Name=${{ matrix.test_name }}" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=${{ matrix.test_name }}.trx" \
+            --results-directory artifacts/pr416-main-${{ matrix.test_name }} \
+            2>&1 | tee artifacts/pr416-main-${{ matrix.test_name }}/console.log
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr416-main-${{ matrix.test_name }}-${{ github.run_id }}
+          path: artifacts/pr416-main-${{ matrix.test_name }}/
+          if-no-files-found: error

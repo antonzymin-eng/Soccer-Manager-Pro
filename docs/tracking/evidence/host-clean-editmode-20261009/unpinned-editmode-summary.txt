@@ -1,0 +1,10 @@
+Host: owner Windows 11, Unity 6000.4.9f1 editor (Mono). Source: branch claude/unity-clean-editmode working tree (PR #492 head 773ecb67 + the shared RepositoryRoot resolver and the two SeasonSave [Timeout] attributes), Assets/Scripts junction -> src.
+Quick run (quick-results.xml.xz): EditMode, MatchAnalytics + UiFramework + ClubFinances assemblies plus TestingStrategy RepositoryRootTests. 2026-10-10 01:39:55Z - 01:40:04Z. passed=169 failed=0 skipped=0 inconclusive=0 status=Passed.
+Full run (editmode-results.xml.xz): EditMode, assemblies Localization, ClubFinances, SeasonSave, ClientApp, MatchClientCore, MatchAnalytics, UiFramework, TestingStrategy.
+STARTED 2026-10-10T01:40:31.9363415Z
+FINISHED 2026-10-10T02:19:11.1512248Z passed=1064 failed=0 skipped=3 inconclusive=0 status=Skipped (NUnit reports Skipped:Ignored when any test is ignored; no test failed)
+Per assembly: ClientApp 125, ClubFinances 54, Localization 67, MatchAnalytics 59, MatchClientCore 183, SeasonSave 493 passed / 3 ignored, TestingStrategy 33, UiFramework 50.
+Ignored (opt-in harnesses, by design): EngineScoringDiagnosticTests (TD_ENGINE_DIAGNOSTIC=1), RoundResolutionCalibrationHarnessTests.Corpus_GeneratesTheRequestedSlice (TD_CALIBRATION_SAMPLES), .Pilot_ExtremeDifferentialsAreDistinguishable (TD_CALIBRATION_PILOT=1).
+Formerly failing, now passing: ClubFinancesCritiqueTests.AssemblyReferences_AreExactlyCurrentPhaseDependencies, .MinimalFinanceSaveShape_HasNoRngCursorOrActionOrdinal, MatchAnalyticsValueTypeTests.NoOtherAssemblyReferencesMatchAnalytics, MatchViewObserverNeutralityTests.NoOtherAssemblyReferencesTheUiFramework, SeasonLoopDisciplineTests.ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse (571.6 s), SeasonLoopScenarioTests.sim_season_multi_fixture (284.8 s).
+Longest: S0DemoFixtureComparisonTests.sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral 1421.4 s.
+Linux-equivalent shim on the same host (.NET 8, NUnit 3.14): ClubFinances.Tests 54/54, MatchAnalytics.Tests 59/59, UiFramework.Tests 50/50, RepositoryRootTests 6/6, the two SeasonSave timeout tests 2/2 (12 m 22 s).

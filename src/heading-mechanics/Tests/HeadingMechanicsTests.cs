@@ -1,5 +1,7 @@
 // File:     src/heading-mechanics/Tests/HeadingMechanicsTests.cs
 // Created:  2026-05-31
+// Modified: 2026-09-23 (ERR-010-004: full-fan-out contact-buffer capacity lock)
+// Modified: 2026-09-22 (W3: stale-frame, ClearDuelBuffer and fail-closed contact-buffer locks)
 // Modified: 2026-09-08
 // Author:   —
 // Spec:     Heading Mechanics #10 §5, Code Standards #20
@@ -8,6 +10,10 @@
 using NUnit.Framework;
 
 using UnityEngine;
+
+using TacticalDirector.CollisionSystem;
+using TacticalDirector.AgentMovement;
+using TacticalDirector.BallPhysics;
 
 namespace TacticalDirector.HeadingMechanics.Tests
 {
@@ -880,6 +886,108 @@ namespace TacticalDirector.HeadingMechanics.Tests
         }
 
         [Test]
+        public void HeadingMechanics_DirectUpdate_DoesNotCarryStaleCollisionFrame()
+        {
+            var heading = new HeadingMechanics(ballSystem: null, rng: null);
+            var agents = new AgentState[HeadingMechanicsConstants.MaxAgents];
+            var ball = new BallState();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 2,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            heading.BeginPhysicsFrame();
+            heading.CollisionConsumer.OnCollisionEvent(in evt);
+            Assert.AreEqual(1, heading.BufferedCollisionContactCount);
+
+            heading.Update(agents, ball, currentFrame: 1, currentMatchTime: 1f);
+            Assert.AreEqual(1, heading.BufferedCollisionContactCount,
+                "Prepared same-frame contacts must survive into the corresponding Update.");
+
+            heading.Update(agents, ball, currentFrame: 2, currentMatchTime: 2f);
+            Assert.AreEqual(0, heading.BufferedCollisionContactCount,
+                "A direct Update without BeginPhysicsFrame must self-clear stale prior-frame contacts.");
+        }
+
+        [Test]
+        public void ClearDuelBuffer_PreservesSameFrameCollisionContacts()
+        {
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                Entity2ID = 3,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            duel.OnCollisionEvent(in evt);
+            duel.RegisterDuelCandidate(agentId: 3, contactFrameMatchTime: 1f, baseScore: 0.5f);
+            Assert.AreEqual(1, duel.ContactCount);
+            Assert.AreEqual(1, duel.DuelCount);
+
+            duel.ClearDuelBuffer();
+
+            Assert.AreEqual(1, duel.ContactCount,
+                "W3 lifecycle: duel reset must not erase contacts already published for this frame.");
+            Assert.AreEqual(0, duel.DuelCount);
+        }
+
+        [Test]
+        public void CollisionContactBuffer_CoversFullAgentFanout()
+        {
+            Assert.GreaterOrEqual(
+                HeadingMechanicsConstants.HeadingContactBufferCapacity,
+                HeadingMechanicsConstants.MaxAgents,
+                "W3 can publish one AGENT_BALL event per agent; Heading must cover the full fan-out.");
+
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            for (int i = 0; i < HeadingMechanicsConstants.MaxAgents; i++)
+            {
+                evt.Entity2ID = i;
+                duel.OnCollisionEvent(in evt);
+            }
+
+            Assert.AreEqual(HeadingMechanicsConstants.MaxAgents, duel.ContactCount);
+        }
+
+        [Test]
+        public void CollisionContactBuffer_OverflowFailsClosed()
+        {
+            var duel = new HeadingDuelResolution();
+            var evt = new CollisionEvent
+            {
+                MatchTime = 1f,
+                Type = CollisionType.AGENT_BALL,
+                Entity1ID = SpatialHashConstants.BALL_ENTITY_ID,
+                ContactPoint = new Vector3(10f, 20f, 1f)
+            };
+
+            for (int i = 0; i < HeadingMechanicsConstants.HeadingContactBufferCapacity; i++)
+            {
+                evt.Entity2ID = i;
+                duel.OnCollisionEvent(in evt);
+            }
+
+            evt.Entity2ID = HeadingMechanicsConstants.HeadingContactBufferCapacity;
+            Assert.Throws<System.InvalidOperationException>(() => duel.OnCollisionEvent(in evt),
+                "W3 must fail closed rather than silently truncate AGENT_BALL contacts.");
+        }
+
+        [Test]
         public void HeadingAttrScale_HighHeadingProducesHigherScale()
         {
             HeadingAgentAttributes loAttrs = new HeadingAgentAttributes { Heading = 4,  Strength = 10, Balance = 10 };
@@ -1099,4 +1207,8 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        | (z=0 at t≈0.66 s) and reached x=0 only at z≈−3.05 m, so the predicate          |
 // |         |            |        | correctly returned false; vz=5 keeps it at z≈1.23 m ∈ [0,2.44] when x=0.       |
 // | 1.4     | 2026-09-08 | —      | Regression coverage for invalid jump-frame inputs.                 |
+// | 1.5     | 2026-09-22 | —      | W3 (PR #439): DirectUpdate_DoesNotCarryStaleCollisionFrame,        |
+// |         |            |        | ClearDuelBuffer_PreservesSameFrameCollisionContacts and            |
+// |         |            |        | CollisionContactBuffer_OverflowFailsClosed. Row added at close-out.|
+// | 1.6     | 2026-09-23 | —      | ERR-010-004: full MaxAgents AGENT_BALL fan-out fits; overflow still fails closed beyond effective capacity. (Renumbered from 1.5 at the #439 close-out so rows stay in date order.) |
 #endregion

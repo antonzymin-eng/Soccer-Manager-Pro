@@ -1,7 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 6: Performance Analysis & Budgets
 
 **Created:** May 16, 2026
-**Version:** 0.2
+**Version:** 0.3
+**Last Updated:** September 27, 2026 (v0.3 — ERR-011-018 surface rename)
 **Status:** DRAFT
 **Purpose:** Per Performance Optimization #18 KD-2
 (ratify-not-override authority), publish the per-tick cost budgets,
@@ -66,7 +67,7 @@ Stage 0+1 perf-gate activation is gated on that pin and not on
 | State-machine evaluation (§3.1) | ≈5 µs | 24-row transition table; ≤3 condition evaluations per frame |
 | Reactive-position micro-update (§3.3.0) | ≈10 µs | Single vector arithmetic; bounded by `GK_REACTIVE_RADIUS_M` |
 | `BallState.GetBallState` read | ≈3 µs | Per #1 publish convention |
-| `PositioningAI.GetGKBaselineSlot` read (10 Hz amortised) | ≈1 µs / 60 Hz frame | Cached between tactical ticks |
+| #12 `GetFormationSlot` GK baseline read (10 Hz amortised; ERR-011-018) | ≈1 µs / 60 Hz frame | Cached between tactical ticks |
 | Telemetry counter emission (§2.4) | ≈1 µs | 12 channels; lazy-emission |
 | **Per-GK total** | **≈20 µs** | |
 | **Per-match total (2 GKs)** | **≈40 µs** | Matches §6.1 revised ≤40 µs `[EST]` budget (v0.2 AR-S1-H1) |
@@ -145,3 +146,4 @@ until benchmarked.
 |---------|------|--------|-------|----------|
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; three-tier budget; component decomposition for steady-state, save-frame, and cross-claim duel-frame; profiling compliance and Stage 0→1 migration notes | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | AR-S1-H1 (steady-state budget reconciled ≤30 µs → ≤40 µs to match §6.3.1 decomposition); AR-S1-L1 (channel-count restatement in §6.4) | self-pass-2 self-critique on v0.2 yields no further findings |
+| 0.3 | September 27, 2026 | ERR-011-018 | Budget row renamed to the real #12 surface; cost unchanged. | spec + code, same commit |

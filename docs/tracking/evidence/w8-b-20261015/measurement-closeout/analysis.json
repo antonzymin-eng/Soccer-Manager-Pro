@@ -1,0 +1,125 @@
+{
+  "matches": 12,
+  "claims": [
+    {
+      "arm": "before",
+      "seed": "0F1E2D3C4B5A6978",
+      "claims": 83,
+      "contacts": 83,
+      "sameKeeperHandReturns": 42,
+      "otherClaims": 41,
+      "digest": "1082c2c92bb12556901b6c9f707f08e9fe866cd98f675ed6038eb31dd1d94ec7"
+    },
+    {
+      "arm": "before",
+      "seed": "00000000D1A6D05E",
+      "claims": 70,
+      "contacts": 70,
+      "sameKeeperHandReturns": 29,
+      "otherClaims": 41,
+      "digest": "3dad87fd4557d50f417dc5bc2cca8ebda2efe08a12d2257f1657a380ac72ab5e"
+    },
+    {
+      "arm": "before",
+      "seed": "0000000000000001",
+      "claims": 66,
+      "contacts": 66,
+      "sameKeeperHandReturns": 32,
+      "otherClaims": 34,
+      "digest": "cd88730a541d7442088706295d2057bc15e7dd3b2c19fcb8a4e6225bb0636aad"
+    },
+    {
+      "arm": "before",
+      "seed": "00000000ABCDEF12",
+      "claims": 50,
+      "contacts": 50,
+      "sameKeeperHandReturns": 23,
+      "otherClaims": 27,
+      "digest": "0b57ad59274ae593f81f1ec021418346d2caa084dc8507257b4956f991db1394"
+    },
+    {
+      "arm": "before",
+      "seed": "0000000099887766",
+      "claims": 42,
+      "contacts": 42,
+      "sameKeeperHandReturns": 16,
+      "otherClaims": 26,
+      "digest": "3b1ff4c46b37195aeb6d5b6147ac055fc373a9ee11eb7a4285543eb771f57a87"
+    },
+    {
+      "arm": "before",
+      "seed": "000000005A5A5A5A",
+      "claims": 37,
+      "contacts": 37,
+      "sameKeeperHandReturns": 13,
+      "otherClaims": 24,
+      "digest": "6934c86a8b27d26ac4b4cc2218660897f4cdad542d2707388c772e6b462dd983"
+    },
+    {
+      "arm": "after",
+      "seed": "0F1E2D3C4B5A6978",
+      "claims": 7,
+      "contacts": 7,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 7,
+      "digest": "6ef1e77f9dcf86c4bce5e1f66a989a64b42f26c268ead53340b9c57d282b4072"
+    },
+    {
+      "arm": "after",
+      "seed": "00000000D1A6D05E",
+      "claims": 20,
+      "contacts": 20,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 20,
+      "digest": "06e3daf03f1c45a112f958c4bfac980c30956971e175b35b7d815d685b4caf93"
+    },
+    {
+      "arm": "after",
+      "seed": "0000000000000001",
+      "claims": 15,
+      "contacts": 15,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 15,
+      "digest": "25ceac27f7d4e87fb1166227f683eaff87336efd301fa5500b6d212a28deba59"
+    },
+    {
+      "arm": "after",
+      "seed": "00000000ABCDEF12",
+      "claims": 22,
+      "contacts": 22,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 22,
+      "digest": "77b4e0cc08a4ac903fbb364f2bb28612eaa39b380955111c58fe040ebf474a80"
+    },
+    {
+      "arm": "after",
+      "seed": "0000000099887766",
+      "claims": 23,
+      "contacts": 23,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 23,
+      "digest": "ccc99ba78dce889ed07d18609c568486920ffd97c45cb283f15d7f5c203f6e4f"
+    },
+    {
+      "arm": "after",
+      "seed": "000000005A5A5A5A",
+      "claims": 39,
+      "contacts": 39,
+      "sameKeeperHandReturns": 0,
+      "otherClaims": 39,
+      "digest": "6961b03ff4cb1512967c01c46158274b3516bb4c632d921f75e5f6baad936eb3"
+    }
+  ],
+  "spellCount": 126,
+  "endReasons": {
+    "opponent-touch": 12,
+    "teammate-touch": 114
+  },
+  "uniqueOpponentWindowShots": 8,
+  "uniqueOpponentWindowGoals": 6,
+  "minFrames": 0,
+  "medianFrames": 127.0,
+  "maxFrames": 507,
+  "opponentWindowShots": 8,
+  "opponentWindowGoals": 6
+}

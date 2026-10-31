@@ -28,7 +28,7 @@
 > **All host-free phases (P0–P3) are therefore complete.** What remains is P4–P6 — the Unity render
 > skin, the UGUI shell, and integration/cert — of which P6's head-less closed-loop scenario is
 > gate-verifiable and P4/P5 are verifiable only on the pinned host. That host block cleared with the
-> July 19, 2026 certification (`certification-platform.md` v1.4 ✅ PINNED).
+> July 19, 2026 certification (`certification-platform.md` v1.4, now v1.5 ✅ PINNED).
 >
 > **UPDATE 2026-08-03, later same day — the HEAD-LESS HALF of P6 LANDED** (v0.10 row). Both §5-P6
 > scenarios (`match-client-command-log-replay`, `match-client-save-restore-replay`) run on the #19
@@ -82,6 +82,15 @@
 > presentation OPEN ISSUE names as the next surface above that floor.
 
 ---
+
+**UPDATE October 6, 2026 — P5b A–C implementation candidate.** The approved
+[plan](p5b-lifecycle-identity-plan.md) is now consumed by a shell coordinator,
+frame-owned identity, a synchronized analytics observer/report source and external
+renderer attachment. The isolated scene uses an explicit development host. Full time
+freezes Match View until the named report action. Existing Open/Cancel remains the
+shell's only player-facing surface until #49 L2 and the complete screen slice.
+[Validation and remaining host checks](p5b-lifecycle-validation.md) govern the draft;
+this is neither a full P5b journey nor a Gate-J/B8/B9b/B10 acceptance claim.
 
 ## 1. Problem & current floor
 
@@ -164,7 +173,7 @@ These are inherited, not chosen — violating any of them is a defect, not a tra
 5. **Layer taxonomy.** The UI layer is Stage 1+ and unspecified (src/CLAUDE.md §3.5.2). This client
    is that layer's first member; it may reference the presentation/observation surface and the
    public mutation API, and **must not** reach into any Physics/Mechanics/AI internals.
-6. **Pinned platform.** Unity 6000.4.9f1, DX11, Mono, x64 (`certification-platform.md` v1.4
+6. **Pinned platform.** Unity 6000.4.9f1, DX11, Mono, x64 (`certification-platform.md` v1.4, now v1.5
    ✅ PINNED). UGUI for UI (master plan §3.4), not UI Toolkit, for Stage 1 simplicity.
 7. **Command channel is not a dev toy.** Unlike the browser viewer's deliberately inert `/control`,
    this client *does* carry gameplay mutations. That channel must be in-process (Unity UI → driver →
@@ -602,6 +611,50 @@ now have their answer by precedent: they register into this same assembly when P
 
 #### P5b — Unity UGUI binding (host, cert-verified)
 
+**Current status, October 5, 2026 — FOUNDATION LANDED; full P5b acceptance open.**
+#470 merged at f276f700 from 509a9f5d. CI run 37264147436 passed including the
+Linux functional gate; Unity CI tests were skipped. The merged tree has no file
+differences from the source compiled/tested on the pinned host (0 compile errors,
+ClientApp.Tests 26/26). The dated candidate/compile entries below remain history.
+Next is the consumed [lifecycle/identity implementation](p5b-lifecycle-identity-plan.md)
+v0.2: shell lifecycle, external renderer Attach/detach, approved fixture/frame identity,
+analytics and repeat-session teardown. Full time enters frozen Match View; the
+player opens the report explicitly. #49 L2 precedes localized copy/scale/screens.
+B8/B9b/B10 and Gate J remain open; this update claims no new runtime/cert proof.
+
+**October 4, 2026 — foundation candidate refreshed after Gate I.** S0 Gate I and
+explicit owner acceptance landed via #478 at main fafb63fc. PR #470 now carries the
+foundation on that baseline: ClientShellBehaviour forwards the existing Main Menu /
+Cancel moves and applies four-root visibility; ClientShellRootSnapshot,
+ClientShellWiringValidator/Fault and ClientScreenVisibility keep decisions in ClientApp,
+with ten host-free test cases. Null registrations remain stubs; no StartMatch or complete
+UGUI journey is exposed. The UI-framework reference lock sanctions this Unity renderer.
+The isolated tracked P4b demo explicitly opts in; shell scenes keep boot off until the
+consumed lifecycle/renderer Attach slice removes temporary ownership. Gate-I journey
+§14/binding contracts are the S0 target; the broader original master-plan list below does
+not admit formation/per-player controls into S0. #49 L2 precedes localized screens.
+
+**Candidate, not landed or acceptance-complete:** fresh PR CI and a Unity 6000.4.9f1
+compile on the exact refreshed head are required before #470 merges. September 28
+compile/smoke/test figures are historical, not refreshed-head evidence. Known obsolete
+instance-ID warnings and Unity repo-root test discovery remain recorded. Full P5b,
+B8/B9b/B10 and Gate J stay open; no runtime, cert or localized-screen proof is supplied.
+
+**October 4, 2026 — exact-head compile PASSED.** On the pinned host, Unity 6000.4.9f1
+(f7258d6eebbe) force-reimported `Assets/Scripts` at #470 head db38e211 from a clean checkout:
+Tundra build success (75 items), domain reload complete, **0 compile errors**. Warnings: the two
+deferred CS0618 `GetInstanceID()` in ClientShellBehaviour, plus a pre-existing CS0219 in
+ball-physics tests (`ff8ae56ab`, not this PR). Fresh CI run 37243726582 was green (Unity tests
+skipped). This discharges the compile half of the merge requirement only; EditMode/PlayMode,
+runtime, cert and Gate-J evidence are not supplied. Merge is the owner's call.
+
+**October 5, 2026 — review fix: roots under an inactive ancestor are refused.** Codex (P2)
+showed that a root beneath an inactive intermediate GameObject passed validation and then
+"activated" into a blank screen, because the shell captured only each root's `activeSelf`.
+The binding now reports `AreAncestorsActive` and the host-free validator returns the new
+`RootUnderInactiveAncestor` fault, keeping the decision gate-compiled (§12 rule 1). Host-free
+shell cases 10 → 11. Unity 6000.4.9f1 compile 0 errors; ClientApp.Tests 26/26 in EditMode.
+
 **P5b prerequisite landed September 11, 2026 — deliberately unconsumed, owner-bounded.** `MatchSessionLifecycle` now exists in gate-compiled `match-client-core` as the serial owner above single-match `MatchSession`: it constructs a fresh not-yet-started replacement, stops a running predecessor before publishing the replacement, and provides explicit teardown. It is intentionally not consumed yet because its concrete consumer is the Gate-I-authorized Unity `Attach(MatchSession)` / shell binding identified by PR #361. Owner decision: exactly this one consumer-less prerequisite is allowed; **no second unconsumed lifecycle/UI prerequisite may land before this one is consumed**. The never-started predecessor boundary is chosen rather than accidental: `Stop()` is a no-op before paced playback starts, so lifecycle selection does not revoke a caller-held stale raw reference; the eventual Unity binding must atomically replace its held session and never continue using the predecessor. Eight host-free tests lock the lifecycle surface. This does not make P5b complete and does not authorize the UGUI binding ahead of UX Gate I.
 - The master plan's four screens: **Main Menu** (New Demo Match), **Tactics Setup** (formation /
   team / player instructions — writing a `MatchSetup`), **Match View** (canvas + collapsible stats
@@ -623,6 +676,115 @@ now have their answer by precedent: they register into this same assembly when P
   composition level, head-less.
 - On the pinned host: open the scene, run a live match, capture the FR-PO-052-class render-loop perf
   number, confirm 60 FPS, sign off the rendering half.
+
+### P7 — Career management screens (roadmap C3/C4) — host-free decisions LANDED 2026-10-18
+
+**Governance.** This section is the roadmap §6 item 2 governance for C3 (season/squad screens) and C4
+(new-game flow): an extension of this note rather than the Wave-7 #38 screens spec, on the precedent
+§6 names. #38 §7.1 gates each screen on its data spec; #30 and #27 are APPROVED **and implemented**
+(`src/season-save/`, `src/player-database/`), so the gate is met. The only framework change is the
+additive season-intent row of #38 Appendix C (ERR-038-005, below). The P7 screens register into
+`src/client-app/` by the §5-P5a precedent.
+
+**Owner product decisions — October 18, 2026.** `ux-detailed-plan.md` §7.4 lists the product decisions
+UX may not invent. The owner answered them on October 18, 2026; they are recorded here as the
+authority the code below implements:
+
+| ID | Decision | Implementation consequence |
+|---|---|---|
+| **D-P7-1** new-game options | The world seed is generated; the player picks a club from the generated league; the board objective is the bootstrap default (top half). No seed entry in Early Access. | `NewCareerSetup.Prepare(seed)` / `Select(club)` / `Start()`. The seed is a parameter: the host binding supplies entropy, this assembly reads no clock and no `System.Random`. |
+| **D-P7-2** save promise | One autosave slot, written when a career is created and after every played round and every season roll, plus three manual slots. **Continue** loads the most recently written loadable slot directly; **Load** opens a picker. | `CareerSaveSlots` (four slots; `.tdsave` + client-owned `.slot` sidecar; store-wide monotonic write sequence decides "latest" without clock or file timestamps). `CareerSession` autosaves; `LoadCareerSource.TryContinue/TryLoad`. |
+| **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
+| **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
+| **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION`, or another version of any sub-blob nested in the save (each is gated independently, so an inner bump leaves the outer version alone), is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. A Ready slot whose save fails to decode anyway is invalidated to `Damaged`, so it cannot keep winning Continue. |
+| **D-P7-6** career match interactivity | *Not an owner question; a seam fact.* #30 has no seam that plays the managed fixture interactively and folds its result back into the round (`ActiveMatch` is visible only inside the synchronous `AdvanceAndPlayNextRound`). | **No Career Home → Tactics Setup and no Post-Match → Career Home edge** — each would be the FR-CS-049 phantom. Matchday resolves on Career Home through the season dispatcher. Named dependency below. |
+
+**The progress rule (D-P7-3), against #30's guards.** The client offers only what `SeasonLoop` would
+accept, and each withheld action is one #30 refuses (each row has a positive-control test):
+
+| State | Offered | Seam | Withheld, and why #30 refuses it |
+|---|---|---|---|
+| mid-season, clock before the pending fixture day | `AdvanceDay` | `AdvanceDays(1)` | Play: `PlayNextRound` refuses a round the clock has not reached (§3.3) |
+| mid-season, clock ON the fixture day | `PlayMatchday` | `AdvanceAndPlayNextRound()` | Day: `AdvanceDays(1)` would pass the target — KD-4 / FR-SN-011 |
+| season complete, final fixture day not yet ticked | `AdvanceDay` | `AdvanceDays(1)` | Roll: ERR-030-053 — the final day's finance accounting must precede settlement |
+| season complete, final fixture day ticked | `StartNextSeason` | `RollToNextSeason()` | — (the roll opens the next season; its first fixture day is then ahead, so `AdvanceDay` follows) |
+
+**ERR-038-005 — #38 Appendix C had one season row, and the owner's progress model needs three.**
+Appendix C (and `IntentKind`'s own "append ordinal 4 when #30 is built" note) routed only
+`AdvanceRound → AdvanceAndPlayNextRound`. With day-granular progress the season dispatcher also owns
+`AdvanceDays(1)` and `RollToNextSeason()` — both existing public #30 seams, so the Appendix C rule
+("each kind maps to exactly one existing public seam") holds. Landed together: `IntentKind`
+**appends** `AdvanceRound = 4`, `AdvanceDay = 5`, `StartNextSeason = 6` (ordinals 1–3 unchanged);
+`ManagerIntent` gains three payload-free factories; the new `IntentRouting` is the single
+match-vs-season classifier; `MatchTacticsDispatcher` refuses the season kinds with a routing message;
+and #38 Appendix C gains the two rows. The KD-U2 drift guard (`EveryMatchIntentKind_MapsToACommandKind`)
+would otherwise have failed on the new kinds — it now skips season kinds through `IntentRouting` and
+**counts** the three match kinds, and a sibling test asserts every season kind is refused by the match
+channel, so the guard is narrowed by classification, not weakened.
+
+**What landed (host-free, gate-compiled, `src/client-app/` unless noted).**
+
+- *Navigation* — `ClientScreens` gains `CareerHome` (5), `NewCareer` (6), `LoadCareer` (7).
+  `ClientScreenFlow` gains a seven-registration constructor (the four-registration PM-1 constructor and
+  graph are unchanged) and eight guarded career moves: `OpenNewCareer`/`CancelNewCareer`/`StartCareer`,
+  `OpenLoadCareer`/`CancelLoadCareer`/`EnterLoadedCareer`, `ContinueCareer`, `QuitToMainMenu`. Both form
+  screens are **`Replace`d** by Career Home, so the career root always sits exactly one screen above
+  Main Menu and Quit can never land on a stale New/Load form — locked by where Quit lands. On a
+  four-screen flow every career move throws.
+- *Career runtime* — `CareerSession` owns one running career. **New game (C4)** is the canonical full
+  composition: `LeagueBootstrap.Generate` → `ProgressionEngine.SeedFrom` (#28 roster authority, KD-4) →
+  `PlayerCareerStates.ForLeague(new ProgressionSquads(...), armed)` (#29/#41, production dial posture,
+  FR-MD-027) → `new DisciplineState()` (#44) → `League.CreateLoop` (#40 bootstrapped once, FR-FN-025) →
+  autosave. **Resume** threads every `SeasonSaveManager.Load` block back verbatim; the league is
+  regenerated from the saved world seed for club identity only, never rosters. `Execute(action)`
+  accepts only `NextAction`; `Revision` increments per operation; an autosave failure does not undo the
+  step and is held in `LastAutosaveError` until the next success (ux-experience-architecture §7 rule 5).
+  `CareerSessionHolder` is the one owned, constructor-injected slot for "the active career".
+- *Season dispatcher* — `SeasonCommandDispatcher` is the #38 Appendix C season dispatcher: routes the
+  three season kinds through `CareerSession.Execute` (one path for intent and direct call), refuses
+  `None` and match kinds (F3).
+- *Screens' sources* — `CareerHomeSource` → `CareerHomeViewModel` answers ux-detailed-plan §7.5 in
+  order from LIVE surfaces only: what changed (`CareerChange`: managed result / roll outcome), what needs
+  attention (injured count via #41 `IsAvailable`, objective on/off track, autosave error), what is next
+  (the managed club's fixture in #30's own fixture list, its day, days until), how to progress
+  (`NextAction`, `IsProgressBlocked`), plus the ordered table with names. It **caches on the session's
+  `Revision`**, so a per-frame `Project()` allocates nothing between operations (#30 has no writer but
+  the session, FR-SN-032). `NewCareerSetup` → `NewCareerViewModel`; `LoadCareerSource` →
+  `LoadCareerViewModel` (`CanContinue` is Main Menu's Continue enablement; `LastError` is kept until the
+  next success; a failed load leaves the active career untouched — §7 rule 4).
+- *ui-framework* — `IntentKind` 4–6, `ManagerIntent` factories, `IntentRouting`, the match-dispatcher
+  refusal (ERR-038-005).
+
+**Tests.** `ClientApp.Tests` +34 (`ClientScreenFlowCareerTests` 6, `CareerProgressTests` 6,
+`CareerSessionTests` 8, `CareerSaveSlotsTests` 7, `CareerScreensTests` 7) plus the three career screens
+added to `ClientScreensTests`' three locks; `UiFramework.Tests` +2 with the KD-U2 drift guard narrowed by
+classification. The decisive lock is `ResumedCareer_ContinuesExactlyAsTheUninterruptedOne`: two careers
+from one seed, one saved to a manual slot and resumed mid-season, played on in lockstep — season state
+`FieldsEqual` **and** `SeasonLoop.Snapshot()` bytes equal. All career suites run under
+`RoundResolutionMode.QuickSimAll` (a whole season in seconds); `ManagedThroughEngine` is the
+production default and is exercised by the existing #30 suites.
+
+**No sim reach.** No `SNAPSHOT_SCHEMA_VERSION` or `SEASON_SAVE_FORMAT_VERSION` change, no RNG stream,
+domain tag, draw site or draw-order change; the client calls only public #30 seams. No scenario window,
+rate band, corpus fit or perf baseline is perturbed.
+
+**Remaining, in order (none is decided by this landing).**
+
+1. **P7b — UGUI binding on the pinned host** (Career Home, New Career, Load Career, Main Menu's
+   New/Continue/Load entries) against these sources, with the S0 shared interaction system
+   (`S0TextFormatter`/focus/layout) and its pseudo-locale/text-scale checks. **Matchday under
+   `ManagedThroughEngine` runs a real 90-minute match synchronously (~2 minutes of compute, roadmap C1)**,
+   so the binding must run `Execute` off the UI thread and render `IsProgressBlocked`; that threading is
+   binding work, not a decision — the session already refuses re-entry. P7b also extends `ClientScreenVisibility` (today an exhaustive
+   four-screen projection that fails loud on the career ids — correct while the shell builds the
+   four-screen flow) and builds the seven-registration `ClientScreenFlow`.
+2. **The interactive career-fixture seam (D-P7-6)** — owned by #30 / `season-save`: play the managed
+   fixture through `MatchSession` and fold its `MatchResult` into the round. When it exists, the career
+   gains `CareerHome → TacticsSetup` and `PostMatchReport → CareerHome` as **new named moves**, never a
+   reuse of `ReturnToMainMenu` (ux-experience-architecture §3.1).
+3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
+4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
+   per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
 
 ## 6. Deterministic manager-command channel (design detail)
 
@@ -787,7 +949,7 @@ follows once the input/determinism core is locked and a cert-host slot is schedu
 
 ~~**Next step (2026-08-03): P6's head-less closed-loop scenario, before P4.** Both preconditions the
 original recommendation named are met — the input/determinism core is locked, and the cert-host slot
-is no longer hypothetical (the July 19, 2026 certification, `certification-platform.md` v1.4
+is no longer hypothetical (the July 19, 2026 certification, `certification-platform.md` v1.4, now v1.5
 ✅ PINNED, cleared the host block on P4–P6).~~
 
 ~~The ordering argument is the shim gate. `match-client-unity` is in
@@ -864,7 +1026,7 @@ genuinely verifies, rather than *behaviour*, which a cert run verifies only alon
 thought to click.
 
 **2. Budget a cert-host run per landing, not one at the end.** The host block cleared July 19, 2026
-(`certification-platform.md` v1.4 ✅ PINNED), so this is a scheduling choice, not an access problem. A
+(`certification-platform.md` v1.4, now v1.5 ✅ PINNED), so this is a scheduling choice, not an access problem. A
 skin first exercised at the end is the never-compiled-surface trap; this project has hit that seven
 times, including on a *production* assembly.
 
@@ -895,6 +1057,14 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.30 | 2026-10-18 | **§5-P7 — career management screens (roadmap C3/C4): governance + host-free landing.** Records the owner's October 18, 2026 product decisions D-P7-1..D-P7-5 (club-only new game; autosave + 3 manual slots with direct Continue; day-granular progress; no mandatory blockers; D-10 breakable saves through PM-3) and the D-P7-6 seam fact (no interactive career-fixture seam, so no career → Tactics/Match edges). Landed in `client-app`: three career `ScreenId`s, the seven-registration `ClientScreenFlow` with eight guarded career moves, `CareerProgress` (the progress rule against #30's guards), `CareerSession`/`CareerSessionHolder`, `CareerSaveSlots`, `SeasonCommandDispatcher`, and the Career Home / New Career / Load Career sources; in `ui-framework`, ERR-038-005 (`IntentKind` 4–6, `IntentRouting`). ClientApp.Tests +34, UiFramework.Tests +2. No sim reach. Remaining: P7b host binding, the #30 interactive fixture seam, S1 Gates B–I. **PR 519 review amendment (October 27, 2026):** a failed sidecar write or swap no longer splits a slot's save from its sidecar (both temps are prepared first and a failed sidecar swap restores the backed-up save); a Ready slot whose save fails to decode is invalidated so Continue falls back to the next loadable slot; and the sidecar (layout v2) records every nested sub-blob format version, so an inner bump reads as Incompatible under D-10. A second review pass added: Resume validates its mode before the guarded rebuild, so a caller error never invalidates a healthy slot; and each sidecar records its save's SHA-256, so opening the store recovers a write interrupted between its two swaps (the staged sidecar is swapped in, or the backup is put back). A third pass made recovery keep every file when a sidecar cannot be read (a locked staged sidecar was being deleted as if invalid). A fourth pass made invalidation reversible and narrower: `MarkDamaged` sets the sidecar aside (`.slot.damaged`) instead of deleting it, and `RestoreDamaged` puts it back while it still matches the save; Resume invalidates a slot when #30's load or the rebuild from loaded contents fails, so Continue cannot get stuck on it; the sidecar swap keeps a backup that is put back if the replace fails; the sidecar is flushed to disk before it is swapped in; recovery at open never revives a set-aside slot from stale backups and puts back a save left only as its backup; and cleanup after a committed write is best effort. `RestoreDamaged` has no caller yet: retrying a set-aside slot needs a player-facing action with approved copy. ClientApp.Tests +23 more (+57 in all). |
+| 0.29 | 2026-10-06 | Records consumed lifecycle/identity candidate and explicit development host; host-free evidence and pending Unity/full fixture comparison tracked separately. Complete localized screens and acceptance remain open. |
+| 0.28 | 2026-10-05 | PR #479 review corrections: implementation pointer v0.2 with explicit analytics locking, observer composition and dependency-lock work; screen/navigation scope retained in B9b. Approved scope and host acceptance unchanged. |
+| 0.27 | 2026-10-05 | Records #470 foundation merged at f276f700 with green PR CI; routes consumed lifecycle/identity/analytics and renderer attachment to the new plan. Full P5b/Gate-J acceptance remains open. |
+| 0.26 | 2026-10-05 | Records the #470 Codex P2 fix: `AreAncestorsActive` fact plus `RootUnderInactiveAncestor` refusal; Unity compile 0 errors; ClientApp.Tests 26/26 EditMode. |
+| 0.25 | 2026-10-04 | Records the #470 exact-head Unity 6000.4.9f1 compile at db38e211 (0 errors; two deferred CS0618; pre-existing CS0219). Compile requirement discharged; no runtime/test/Gate-J claim. |
+| 0.24 | 2026-10-04 | PR #470 foundation candidate refreshed onto main fafb63fc after landed Gate I/owner acceptance. Records pure root/wiring/visibility decisions, temporary demo opt-in and remaining consumed lifecycle/localization scope. Fresh CI and exact-head pinned Unity compile remain pre-merge requirements; no P5b/Gate-J completion claim. |
+| 0.23 | 2026-09-13 | **P4b host evidence, partial.** First on-host run of `MatchClientBehaviour`. `Scene.unity` is wired to eight placeholder prefabs authored to README §1: flat unit disc, ring and rectangle meshes with zero Y extent under a neutral root; the two stroked rings at the M26 fractions 0.022 and 0.10, outer edge at unit radius; the ball as a ×2 child of the 0.5-radius built-in sphere under a neutral root; Standard-shader materials exposing `_Color`. A 125 m × 88 m pitch plane sits at Y = −0.01 (README §5). Play mode on the pinned host: `ValidateWiring` and every `InstantiatePrefab` check passed; 22 markers, 22 possession rings, ball, shadow and 27 marking drawables were built; the camera followed the ball at about 220 FPS in the editor, with no project errors. A Game-view capture showed every IFAB marking and both team palettes. Two authoring findings. First, the hand-placed stand-ins in the previously untracked scene broke the contract in three ways the runtime checks would have rejected: a volumetric capsule marker, 90°-rotated quad roots, and a Y-squashed cylinder root. Second, README §1 does not say whether a stroked slot's stroke is centred on the unit radius or lies inside it; outer edge at unit radius was chosen and is recorded here as that choice, not as a contract reading. **Not verified:** click-to-select (the click path only logs until P5b), the 60 FPS cert-host render-loop capture, and a non-editor player build. No code change; project configuration (Built-in renderer, legacy input) was reconciled in the preceding commit. |
 | 0.22 | 2026-09-11 | **P5b prerequisite:** `MatchSessionLifecycle` + eight host-free tests landed. Owner approves exactly one bounded deliberately-unconsumed prerequisite; no second unconsumed lifecycle/UI prerequisite may land before the Gate-I-authorized `Attach(MatchSession)` / shell binding consumes it. Chosen stale-never-started-reference boundary and Stop/direct-drive limits recorded; P5b remains open. |
 | 0.21 | 2026-08-16 | **P4b AR round 4, Medium/Low findings (M19-M22/L12-L13), all fixed — plus M13's third regression, fixed with verified-fresh figures.** M19: `MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer` (round 3's own M16 validator) had no lower bound on `MarkingLayerStepM` — a zero or negative step passed the ceiling check trivially, silently reopening the M16 z-fighting bug with no diagnostic — and its ceiling admitted a step 54-100x finer than the 1 mm M12 itself judged sufficient for the identical hazard at the identical camera distance. Fixed: the validator composes a strictly-positive check first; `MarkingLayerStepM`'s default rises 0.00001 → 0.001 m (matching M12's own judgment), and `BallShadowLayerHeightM`/`PossessionRingLayerHeightM`/`AgentMarkerLayerHeightM` rise together (0.08/0.081/0.082) so the resulting 0.027 m band still clears comfortably, keeping the same 1 mm inter-layer gaps M12 chose. M20: `MatchClientBehaviour`'s two rotation checks (`ValidateWiring`, `InstantiatePrefab`) used sign-sensitive `!= Quaternion.identity` — a legitimately-unrotated transform whose composed quaternion lands on the negative representative of identity was falsely rejected, by a message printing only `eulerAngles` (itself `(0,0,0)` for that case). Both now use a new double-cover-safe `IsIdentityRotation` (`|Dot| >= 1 - 1e-5`), and both messages print the raw `(x,y,z,w)` components too. M21: three doc comments — `BallRenderModel.WorldPosition`/`ShadowPosition` and `MatchClientBehaviour.RenderBall`'s comment — still described the ball's PRE-M17 (round 3) height behaviour; corrected to state the M17 radius floor (`WorldPosition.y == max(sanitised HeightM, Radius)`; `ShadowPosition` always the true ground point, never equal to `WorldPosition`). M22: the prefab-contract clause 2a never distinguished the marking circle and possession ring (STROKED, per `PitchMarkingKind.Circle`'s own doc: "a renderer that collapsed the two would draw a solid centre circle") from the marking spot/agent marker/ball shadow (FILLED); now named in both the type doc and the README's slot table. L12: `Update` had no H5-shaped try/catch — one non-finite frame coordinate (which `MatchRenderProjection` refuses fail-loud, and nothing upstream gates) threw every frame forever, camera and click handling never reached again; now wrapped, routing to `RejectWiring`, mirroring H5's own `Awake` catch with the same "top-level MonoBehaviour callback, not a per-frame inner loop" FR-CS-069 reasoning stated explicitly. L13: the README named no pitch/ground-surface placement requirement, even though `MarkingLayerHeightM` (the lowest M12/M16 layer) defaults to the same `Y = 0` an "obvious" turf plane would use; a new README section states the surface must sit strictly below it, with the pitch's extent for reference. **M13's doc-backprop finding regressed a THIRD time:** round 3's landing (`d17ab63`) updated `CLAUDE.md`/`README.md`/`file-manifest.md`/`open-issues.md`/this supplement but never `CHANGELOG.md`/`CHANGELOG-src.md`, whose newest row still claimed `MatchClientBehaviour.cs` v1.0 → v1.4 and `MatchClientCore.Tests` 165/165 — both stale (actually v1.5 pre-round-4, and 168/168 verified fresh by an isolated `dotnet test` run this round). Also fixed: `CHANGELOG.md`/`CHANGELOG-src.md` new v2.84 entries; `file-manifest.md`'s three self-contradictions (stale H1-H6/M1-M13/L1-L8 range, "two AR rounds", a README row still describing the assembly as empty); root `CLAUDE.md`'s and `src/match-client-unity/README.md`'s stale status lines *(round-5 note: the replacement figures and the `git log` citation written here were themselves wrong; both are DELETED rather than corrected — see v0.22)*; and THIS supplement's own §5-P4b job-list bullet, which still described markings placed "at one of four ordered `[GT]` ground-layer heights" — exactly what round 3's own M16 replaced with the band formula, now corrected to describe it. Gate: build 0 errors / 5 pre-existing warnings (verified by a full solution `-t:Rebuild`, none in this landing's files); `MatchClientCore.Tests` 168/168 (verified by an isolated run, since `run-gate.sh`'s `-clp:ErrorsOnly` build step and piped console output do not preserve a re-inspectable per-suite breakdown); whole-tree gate PASSED, quarantine empty; `MatchEngine.Tests` 436/0/10/446 in 42 m 3 s, unchanged from round 3's baseline. `match-client-unity` stays excluded by design, reviewed by hand. |
 | 0.20 | 2026-08-16 | **P4b AR round 3, Medium/Low findings (M14-M18/L9-L11), all fixed.** M14: round 2's M13 backprop had stopped short — `src/match-client-unity/README.md`, root `CLAUDE.md`, `docs/tracking/open-issues.md` and root `README.md` (three spots) all still said the assembly was empty/unbuilt, and `MatchClientBehaviour.cs`'s own doc deferred the Active Input Handling requirement to "the Editor-setup instructions, which this file does not own" — a document that existed nowhere in the repo. The README is now that document: it records the P4b landing briefly and states the 8-slot prefab contract as a table, the Active Input Handling requirement, the host GameObject's own transform requirement (M15, below), and the 2-entry team-colour palette; the four stale docs are corrected to "code landed, host verification outstanding" without rewriting the surrounding history they sit in. M15: `ValidateWiring` gains a world-ROTATION check beside its existing scale check — `Instantiate(prefab, parent)` resets a child's local rotation from the prefab but still inherits the parent's WORLD rotation, and `PlaceRadial`/`RenderAgents`/`RenderBall` assign only world position and local scale, never rotation, so a rotated ancestor would silently tilt every circle, spot, marker, ring, ball and shadow while `PlaceLine`'s markings (which do assign a world rotation) stayed flat — with no diagnostic anywhere. M16: the marking layer becomes a BAND, not a plane — every entry from `PitchMarkings.BuildDrawables()` had been landing at the exact same `MarkingLayerHeightM`, so the boundary/penalty area/goal area/goal mouth all overlapped at each goal line, the centre spot sat exactly on the halfway line, and the centre circle crossed it twice. `BuildMarkings` now threads each drawable's index through to `PlaceLine`/`PlaceRadial` as `MarkingLayerHeightM + i * MarkingLayerStepM`, a new `[GT]` in `MatchClientConstants.cs` boot-validated (`RequireMarkingBandFitsBelowShadowLayer`, in `RequireFarRayMeetsGround`'s pairing-check shape) to keep `DRAWABLE_COUNT` steps of it comfortably under `BallShadowLayerHeightM`. M17: `MatchRenderProjection.ProjectBall` floors the drawn ball's world Y on its DRAWN radius (`BallMarkerRadiusM`, a legibility figure, 0.35 m by default) rather than zero — the prefab contract scales the ball uniformly by that radius, so a sphere of it centred on the engine's raw physical height (0.11 m at rest) had its lower hemisphere below the turf at every height under the radius, including rest, its single most common state, visibly sinking through the ground/markings and swallowing its own shadow. `HeightM` and `ShadowPosition` are untouched. M18: the type-doc prefab-contract clause 2a enumeration gains the goal mouth, missing since round 2's M10 gave it its own prefab despite going through the identical `PlaceLine` path and needing the identical authoring as a marking line. L9: `InstantiatePrefab`'s doc and `BuildScene`'s echoing comment no longer claim to be THE single gate for any further wiring check — round 2's H6 already put a per-marker check in `BuildAgentObjects`, contradicting the claim; both now scope it to checks applying UNIFORMLY to every prefab, naming H6 as the precedent for a per-slot check's correct home. L10: two false verification claims in round 2's own v0.19 row, corrected in place — the "`MatchClientConstantsTests.cs` 165 tests" line attributed the whole `MatchClientCore.Tests` assembly's count to one 11-test file; the `file-manifest.md` header's "Build 0 errors / 0 warnings" is corrected to "5 pre-existing warnings (decision-tree CS0649s)", already documented elsewhere in that same file. L11: §5-P4b's job-list bullet's closing sentence — "It should contain no branch a test would want to reach" — is corrected to "no DECISION a test would want to reach", the rule the rounds actually settled on: the file now has ~15 `RejectWiring` branches, a 3-arm material check and a `try`/`catch`, none reachable by any test because they are fail-loud guards in a file the gate cannot compile. Gate: `MatchClientCore.Tests` green including the new `RequireMarkingBandFitsBelowShadowLayer` coverage and the revised `ProjectBall` ball-height locks; `match-client-unity` stays excluded by design, reviewed by hand. |

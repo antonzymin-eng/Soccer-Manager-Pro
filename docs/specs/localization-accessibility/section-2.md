@@ -1,9 +1,13 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** October 7, 2026 (v0.8 — L2 coverage and terminal fallback (ERR-049-005), conditional single-pass identity (ERR-049-006))
+**Last Updated (prior):** September 14, 2026 (v0.7 — restore omitted v0.3 header-chain record; review hardening only)
+**Last Updated (prior):** September 12, 2026 (v0.6 — frozen-history restoration and LocaleId external-tag clarification)
+**Last Updated (prior):** September 11, 2026 (v0.5 — L1 typed-selector and value-identity contract; ERR-049-004 fix implemented pending tracker close-out)
+**Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.4
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -18,8 +22,9 @@
   enforced at the producer's own spec.
 - **FR-LC-003** — Static strings MUST resolve via `string Resolve(LocalizationKey key)`.
 - **FR-LC-004** — Procedural text MUST render via `string Render(in LocalizedTextRequest req)`, where the
-  request carries a `TextTemplateId`, the `ulong` selection draw, the slot facts, and the citation
-  `(hasCitedEpisode, citationKind)`.
+  request carries a `TextTemplateId`, the `ulong` selection draw, immutable preformatted string slots,
+  immutable **typed locale-neutral selector operands** for bounded cardinal/gender selection, and the
+  citation `(hasCitedEpisode, citationKind)`.
 
 **Localize-after-generate (KD-2)**
 - **FR-LC-005** — The localization transform MUST run display-side, strictly **after** deterministic
@@ -35,8 +40,12 @@
 
 **Template model (KD-3)**
 - **FR-LC-009** — The template model MUST be named-placeholder substitution plus a bounded plural/gender
-  category selector (CLDR-style categories + a small gender set). A template MUST NOT require arbitrary
-  runtime morphology. Base-locale English declares no categories (identity with `.Replace`).
+  category selector (CLDR-style categories + a small gender set). The request-side selector input MUST be
+  typed and locale-neutral (for example, a cardinal number and/or authored grammatical-gender value), not
+  a preformatted localized category string. A template MUST NOT require arbitrary runtime morphology.
+  Base-locale English declares no plural or gender selector. Expansion substitutes each original token
+  once, never re-scans values, and leaves an unknown placeholder verbatim (ERR-049-006). Identity with
+  chained `.Replace` holds only when every slot value is brace-free and every template brace belongs to a well-formed `{name}` token.
 - **FR-LC-010** — The episode citation clause MUST be a per-`EventKind` localizable string, selected by
   `EventKind` (a sim fact), **not** by the draw, and appended when `hasCitedEpisode` — matching
   `InteractionTextGenerator`'s `text + " " + clause`. The clause table migrates to the base-locale catalogue
@@ -46,7 +55,9 @@
 **Fallback (KD-5)**
 - **FR-LC-011** — A missing key, locale, `(Id, variant)`, or clause MUST render the base-locale identity;
   it MUST NOT crash and MUST NOT mutate any state. A visible `‹key›` marker is permitted **only** in dev
-  builds; production MUST fall through to the base locale.
+  builds; production MUST fall through to the base locale. If both catalogues lack a never-admitted
+  static key or template id, return `string.Empty`; if both lack an unrequired clause, append nothing.
+  Admitted identities cannot reach those terminal paths because construction enforces coverage (ERR-049-005).
 
 **Seam placement / reference direction (KD-6)**
 - **FR-LC-012** — No sim/loop assembly may reference `TacticalDirector.Localization` (the no-reverse-
@@ -70,9 +81,12 @@
   base-locale template, and every defined citable `EventKind` has a base-locale clause. This is asserted
   **fail-loud at catalogue construction** (F5), so a defined id **missing** a row is caught at the authoring
   boundary — not merely an explicit 0-count row, and never a consumed-cursor-then-fail at render.
+  The caller/boundary supplies generic required identities; the core enumerates no producer roster.
+  This coverage also includes every caller-admitted static key (ERR-049-005).
 - **FR-LC-016** — The #22 retrofit MUST be base-locale-identity-neutral: `InteractionTextGenerator.Generate`
   returns native values, the corpus (template rows **and** the per-`EventKind` clause table) migrates to
-  #49, and the rendered base-locale output is byte-identical to today's (§3 / Appendix C).
+  #49, and the rendered base-locale output is byte-identical to today's when every slot value is brace-free and every template brace belongs to a well-formed `{name}` token
+  (ERR-049-006; §3 / Appendix C). Brace-bearing values are intentionally substituted non-recursively.
 
 **Determinism / persistence (KD-7 / KD-4)**
 - **FR-LC-017** — #49 MUST register no RNG stream, no `DOMAIN_TAG_*`, no `SubsystemOrdinal`, hold no
@@ -96,6 +110,16 @@
 **The core seam is producer-agnostic (references nothing sim-side — the #38 rule, §4.1). The #22 coupling
 lives in a per-producer boundary adapter (§2.2.1), the only thing that references `living-world`.**
 
+L1 also freezes two identity policies needed before L2 catalogue keys exist:
+
+- `LocalizationKey` is an exact **ordinal, case-sensitive** authored identity. Surrounding whitespace is
+  invalid and is rejected rather than silently normalized into another key.
+- `LocaleId` performs only identity canonicalization — trim surrounding whitespace and apply invariant
+  lower-case. That internal identity is **not a BCP-47 canonical-form guarantee**: for example, `en-US`
+  normalizes to `en-us`. Wave-8 file/CLDR/external-locale lookup must map from this normalized internal
+  identity to the canonical external tag/form required by that boundary. This is **not** a new BCP-47
+  validation requirement; `BaseLocale` remains the fixed `"en"`.
+
 ```csharp
 // --- CORE seam (in TacticalDirector.Localization) — references NO sim assembly ---
 public interface ILocalizer
@@ -104,13 +128,22 @@ public interface ILocalizer
     string Render(in LocalizedTextRequest req);          // procedural text — generic input only
 }
 
-public readonly struct LocalizationKey { /* stable identity for one static string */ }
+public readonly struct LocalizationKey
+{
+    public string Value { get; }                         // ordinal/case-sensitive; surrounding whitespace invalid
+}
+
+public readonly struct LocaleId
+{
+    public string Value { get; }                         // trimmed + invariant lower-case identity
+    public static LocaleId BaseLocale { get; }           // fixed "en"
+}
 
 public readonly struct TextTemplateId
 {
     // GENERIC identity: (producerTag, localOrdinal) — NOT modeled on any one producer's enum.
-    public readonly int ProducerTag;      // which producer family (e.g. living-world interactions)
-    public readonly int LocalOrdinal;     // the producer's own id within that family
+    public int ProducerTag { get; }                      // which producer family (e.g. living-world interactions)
+    public int LocalOrdinal { get; }                     // the producer's own id within that family
 }
 
 public readonly struct NamedSlotSet
@@ -121,19 +154,53 @@ public readonly struct NamedSlotSet
     // expander does pure string substitution and no producer-specific formatting.
 }
 
+public enum GrammaticalGender
+{
+    Unspecified = 0,
+    Masculine,
+    Feminine,
+    Neutral,
+    Other
+}
+
+public readonly struct SelectorOperand
+{
+    // LOCALE-NEUTRAL typed data only. Carries a cardinal value and/or an authored grammatical-gender
+    // value. It does NOT carry localized category names such as "one"/"few" or rendered text.
+    public bool HasCardinal { get; }
+    public long CardinalValue { get; }
+    public bool HasGender { get; }
+    public GrammaticalGender Gender { get; }
+
+    // Named factories avoid an ambiguous numeric-literal overload between cardinal and enum forms.
+    public static SelectorOperand FromCardinal(long cardinalValue);
+    public static SelectorOperand FromGender(GrammaticalGender gender);
+    public static SelectorOperand From(long cardinalValue, GrammaticalGender gender);
+}
+
+public readonly struct NamedSelectorSet
+{
+    // immutable name -> SelectorOperand map; producer-specific names are introduced only by adapters.
+}
+
 public readonly struct LocalizedTextRequest
 {
-    public readonly TextTemplateId Id;        // carries ProducerTag — scopes both template AND clause lookups
-    public readonly ulong SelectionDraw;      // the world.text draw, verbatim (FR-LC-020)
-    public readonly NamedSlotSet Slots;       // name -> string (already formatted; §3.5)
-    public readonly bool HasCitedEpisode;
-    public readonly int CitationKind;         // the producer's clause key (e.g. #22 EventKind ordinal); looked up PRODUCER-SCOPED by (Id.ProducerTag, CitationKind) (FR-LC-010)
+    public TextTemplateId Id { get; }                    // carries ProducerTag — scopes template + clause lookups
+    public ulong SelectionDraw { get; }                  // producer-owned deterministic selection value, verbatim
+    public NamedSlotSet Slots { get; }                   // name -> string (already formatted; §3.5)
+    public NamedSelectorSet Selectors { get; }           // typed locale-neutral bounded-selector input
+    public bool HasCitedEpisode { get; }
+    public int CitationKind { get; }                     // producer-scoped by (Id.ProducerTag, CitationKind)
 }
 
 // content (in TacticalDirector.Localization): per-locale keyed static strings + per-(Id, variant) templates
 // + variantCount(Id) + per-(ProducerTag, clauseKey) clauses. Base-locale = the migrated InteractionTextCorpus content.
 public sealed class TemplateCatalogue { /* ... */ }
 ```
+
+The L1 contract stores selector operands immutably and deterministically but performs **no selector
+interpretation**. Mapping a typed cardinal/gender operand to an authored locale-specific category and
+choosing a sub-form is renderer behavior and therefore begins in L2.
 
 ### 2.2.1 Per-producer boundary adapter (the ONLY sim-side reference)
 
@@ -154,12 +221,13 @@ public static class LivingWorldTextBoundary
 
 | ID | Condition | Handling |
 |---|---|---|
-| **F1** | An undefined / `None` `TextTemplateId` reaches the renderer (`variantCount == 0`) | **Cannot occur** — the producer refuses it pre-draw (FR-LC-015 intent-value gate), and FR-LC-008a construction coverage guarantees every admitted defined id has `variantCount ≥ 1`. |
-| **F2** | Missing locale / `(Id, variant)` **translation** / **non-base** clause | Render the base-locale identity (FR-LC-011); no throw, no mutation. (A missing **base-locale** row/clause for a defined id is F5, caught at construction — not this graceful path.) |
+| **F1** | An undefined / `None` `TextTemplateId` reaches the renderer (`variantCount == 0`) | **Cannot occur for admitted ids** — the producer refuses invalid ids pre-draw and construction guarantees `variantCount ≥ 1`. A never-admitted id reaching `Render` defensively returns `string.Empty` before modulo. |
+| **F2** | Missing locale / `(Id, variant)` **translation** / **non-base** clause | Render the base-locale identity (FR-LC-011); no throw, no mutation. (A missing **base-locale** row/clause for a defined id is F5, caught at construction — not this graceful path.) An unrequired clause absent from both catalogues appends nothing. |
 | **F3** | A producer emits a baked, human-readable localized string | **Coverage-lock failure** — a routing check at the producer's spec (FR-LC-002); not a runtime path in #49. |
 | **F4** | `currentLocale` set to an unknown locale | Falls back entirely to the base locale (KD-5); no throw. |
-| **F5** | Catalogue fails **roster coverage** at construction (FR-LC-008a: a defined `InteractionIntent` with no base-locale template row, or a defined citable `EventKind` with no base-locale clause; a defined id with an explicit 0-count row) | **Fail loud** at catalogue construction (the authoring boundary), never a silent render-time default or a consumed-cursor-then-fail. |
+| **F5** | Catalogue fails **roster coverage** at construction (FR-LC-008a: a defined `InteractionIntent` with no base-locale template row, or a defined citable `EventKind` with no base-locale clause; a defined id with an explicit 0-count row; or any caller-admitted static key missing from base) | **Fail loud** at catalogue construction (the authoring boundary), never a silent render-time default or a consumed-cursor-then-fail. |
 | **F6** | A sim/loop assembly references `TacticalDirector.Localization` | **Build error** (asmdef direction, FR-LC-012). |
+| **F7** | A never-admitted static key or template id is absent from both catalogues | Return `string.Empty`, no throw, key dump or state mutation. Required identities fail at construction instead (ERR-049-005). |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -168,4 +236,8 @@ public static class LivingWorldTextBoundary
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
 | 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
+| 0.5 | 2026-09-11 | GPT-5.6 Sol | **L1 ERR-049-004 fix implementation.** Extends the procedural request contract with immutable typed locale-neutral selector operands (cardinal and/or grammatical gender), aligns the pseudo-contract to the L1 get-only property API, and freezes static-key/locale identity policy. Authoritative ERR closure remains pending `spec-error-log.md` landing-closeout synchronization. Selector interpretation remains L2 rendering behavior. |
+| 0.6 | 2026-09-12 | GPT-5.6 Sol | Restores the frozen v0.4 history row verbatim and clarifies that `LocaleId.Value` is an internal lower-case identity, not BCP-47 canonical form; Wave-8 external file/CLDR lookups map from it to the external canonical tag/form they require. |
+| 0.7 | 2026-09-14 | GPT-5.6 Sol | Restores the omitted v0.3 header-chain record. No normative contract change. |
+| 0.8 | 2026-10-07 | — | L2 coverage and terminal fallback (ERR-049-005), conditional single-pass identity (ERR-049-006). |
 #endregion

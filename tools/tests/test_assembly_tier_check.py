@@ -102,6 +102,49 @@ class AssemblyTierReportTests(unittest.TestCase):
     def tearDown(self):
         self.fx.close()
 
+    def ugui_fixture(self):
+        (self.fx.root / "src/tier-9/tier-9.asmdef").unlink()
+        spec = self.fx.root / checker.SPEC_PATH
+        spec.write_text(spec.read_text().replace("`tier-9`", "`match-client-unity`"))
+        self.fx.asmdef("match-client-unity/match-client-unity.asmdef", "Example.Tier9", ["UnityEngine.UI"])
+        packages = self.fx.root / "Packages"
+        packages.mkdir()
+        (packages / "manifest.json").write_text(json.dumps({"dependencies": {"com.unity.ugui": "2.0.0"}}))
+        dependencies = {"com.unity.modules.ui": "1.0.0", "com.unity.modules.imgui": "1.0.0"}
+        lock = {key: {"version": value} for key, value in dependencies.items()}
+        lock["com.unity.ugui"] = {"version": "2.0.0", "source": "builtin", "dependencies": dependencies}
+        (packages / "packages-lock.json").write_text(json.dumps({"dependencies": lock}))
+        return packages
+
+    def test_pinned_ugui_resolves_only_in_unity_skin_and_binds_graph_evidence(self):
+        packages = self.ugui_fixture()
+        baseline = checker.analyze(self.fx.root)
+        self.assertEqual("pass", baseline["status"])
+        self.assertEqual([], baseline["production_unknown_references"])
+        self.assertIsNone(checker.resolve_builtin_package(self.fx.root, "src/client-app/client-app.asmdef", "UnityEngine.UI"))
+        self.assertIsNone(checker.resolve_builtin_package(self.fx.root, "src/match-client-unity/renamed.asmdef", "UnityEngine.UI"))
+        (packages / "manifest.json").write_text('{"dependencies":{"com.unity.ugui":"7.0.0"}}')
+        changed = checker.analyze(self.fx.root)
+        self.assertEqual("fail", changed["status"])
+        self.assertNotEqual(baseline["digests"]["graph_sha256"], changed["digests"]["graph_sha256"])
+
+    def test_ugui_resolution_rejects_missing_or_mismatched_dependency_lock(self):
+        packages = self.ugui_fixture()
+        lock_file = packages / "packages-lock.json"
+        lock = json.loads(lock_file.read_text())
+        del lock["dependencies"]["com.unity.modules.imgui"]
+        lock_file.write_text(json.dumps(lock))
+        self.assertEqual("fail", checker.analyze(self.fx.root)["status"])
+        lock_file.unlink()
+        self.assertEqual("fail", checker.analyze(self.fx.root)["status"])
+
+    def test_ugui_does_not_allow_other_unknown_references(self):
+        self.ugui_fixture()
+        self.fx.asmdef("match-client-unity/match-client-unity.asmdef", "Example.Tier9", ["UnityEngine.UI", "Unknown.Package"])
+        report = checker.analyze(self.fx.root)
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("Unknown.Package", report["production_unknown_references"][0]["reference"])
+
     def test_subject_digest_changes_when_classification_changes(self):
         baseline = checker.analyze(self.fx.root)
         graph_digest = baseline["digests"]["graph_sha256"]

@@ -1,0 +1,3 @@
+STARTED 2026-10-11T21:32:54.8469084Z
+BEGIN 2026-10-11T21:32:55.6407140Z TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace
+Passed 1890.8s TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace :: Diagnostic only — see C:\Users\azymi\AppData\Local\Temp\claude\C--Users-azymi-Desktop-Soccer-Manager-Pro\f3c1de35-3fa7-4242-b662-00464153aac2\scratchpad\unity-out\unity-shares.tsv

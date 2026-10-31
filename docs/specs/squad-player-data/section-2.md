@@ -1,9 +1,11 @@
 # Squad / Player Data Layer Specification #27 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v0.3 — **ERR-027-004**: FR-SQ-010 gains the career-level GLOBAL `PlayerId` uniqueness requirement #41's club-less occurrence-draw key imposes over KD-3's club scope (#41 §3.1.1 / ERR-041-019); §2.2.3 amended to match. The consuming spec carried the contract for one AR pass while the OWNING spec — the one #42/#31's allocators will be written against — said nothing.)
+**Last Updated:** October 20, 2026 (v0.5 — AR round 1 L1: FR-SQ-010 no longer lists #31 transfers as an id allocator)
+**Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: FR-SQ-010 — the packed formula is genesis allocation only; ids are stable)
+**Last Updated (prior):** August 8, 2026 (v0.3 — **ERR-027-004**: FR-SQ-010 gains the career-level GLOBAL `PlayerId` uniqueness requirement #41's club-less occurrence-draw key imposes over KD-3's club scope (#41 §3.1.1 / ERR-041-019); §2.2.3 amended to match. The consuming spec carried the contract for one AR pass while the OWNING spec — the one #42/#31's allocators will be written against — said nothing.)
 **Last Updated (prior):** July 22, 2026 (v0.1; the v0.2 PASS-1 row below also shipped without a header bump)
-**Version:** 0.3
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -31,7 +33,7 @@ All requirements describe the **landed** implementation (present tense).
 | FR-SQ-007 | `PlayerPosition` is `{Goalkeeper=0, Defender, Midfielder, Forward}`, byte-stable/APPEND-only; it is NOT positioning-ai's `RoleId`. | MUST | KD-4 |
 | FR-SQ-008 | `PlayerRecord` carries `{PlayerId, FirstName, LastName, Age, Position, Attributes}`. | MUST | §2.2.3 |
 | FR-SQ-009 | `Squad` carries `{ClubId, PlayerRecord[] (1..CLUB_SQUAD_SIZE), Count, GetPlayer(i)}`; the ctor snapshot-copies the caller's array and `GetPlayer` bounds-checks the index. | MUST | §2.2.4 / F3 |
-| FR-SQ-010 | `PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex`; club identity is distinct from match `teamId`. **A career carrying more than one club additionally requires GLOBAL uniqueness across clubs** — #41's occurrence draw is keyed on `PlayerId` with no club term (#41 §3.1.1, ERR-041-019; the KD-3 formula satisfies it today, and `PlayerCareerStates` enforces it fail-loud); any future allocator (#42 intake, #31 transfers) MUST preserve it. | MUST | KD-3 / ERR-027-004 |
+| FR-SQ-010 | **Genesis allocation:** `PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex` — a rule for how the bootstrap ASSIGNS ids, not an identity rule: a `PlayerId` is career-unique and **stable** (a #31 transfer re-homes the player under the same id), every post-genesis id comes from #28's monotonic `ProgressionEngine.NextPlayerId` (the career's single allocator), and nothing may derive a player's club from his id — club membership is a roster fact (ERR-031-005, owner decision October 19, 2026). Club identity is distinct from match `teamId`. **A career carrying more than one club additionally requires GLOBAL uniqueness across clubs** — #41's occurrence draw is keyed on `PlayerId` with no club term (#41 §3.1.1, ERR-041-019; the KD-3 formula satisfies it today, and `PlayerCareerStates` enforces it fail-loud); any future allocator (#42 intake) MUST preserve it. *[Annotated AR round 1 L1: #31 transfers is NOT an allocator — per ERR-031-005 a transfer re-homes a player under his unchanged id and allocates nothing; the only post-genesis allocator today is #28's `NextPlayerId` (regens).]* | MUST | KD-3 / ERR-027-004 |
 | FR-SQ-011 | `PlayerDatabaseConstants` is the constant catalogue; every constant carries exactly one `[FIXED]/[DERIVED]/[GT]/[CROSS]` tag. | MUST | KD-5 / #20 |
 
 ### Generation (FR-SQ-012..017)
@@ -101,7 +103,8 @@ APPEND-only (ordinal indexes the position-bias table). NOT positioning-ai's `Rol
 ### 2.2.3 `PlayerRecord` (struct)
 
 `{ int PlayerId, string FirstName, string LastName, int Age, PlayerPosition Position,
-PlayerAttributes Attributes }`. `PlayerId` is club-scoped (KD-3) — and globally
+PlayerAttributes Attributes }`. `PlayerId` is genesis-allocated club-scoped (KD-3) but is a STABLE,
+career-unique identity thereafter (ERR-031-005 — transfers keep it; later ids come from #28's allocator) — and globally
 unique across a career's clubs, the stronger requirement #41's club-less draw key imposes (FR-SQ-010 as
 amended by ERR-027-004). `CreateDefault(playerId)` yields the
 identity record (`"Player"` / `playerId` / age 25 / `Midfielder` / `CreateDefault()` attributes).
@@ -147,4 +150,6 @@ re-projectable from the roster keyed by the serialized `_activeBenchSlot` (§7).
 | 0.1 | 2026-07-22 | — | Initial FR set (FR-SQ-001..026), data structures (confirmed against `src/player-database/`), failure modes F1–F5. |
 | 0.2 | 2026-07-22 | — | PASS-1 L: FR-SQ-018 omitted-key default-name corrected to `FirstName "Player"` / `LastName = playerId` (was the imprecise "Player N"; `PlayerRecord.CreateDefault` sets `LastName = playerId.ToString()`). |
 | 0.3 | 2026-08-08 | — | **ERR-027-004** (balance-pass AR pass 4, M3): FR-SQ-010 + §2.2.3 gain the career-level GLOBAL `PlayerId` uniqueness requirement — #41's occurrence draw is keyed `(worldSeed, playerId, worldDay)` *[as-published; canonical spelling `(worldSeed, playerId, actionOrdinal)` per #41 §3.1.1 — annotated at AR pass 14 L3]* with no club term (ERR-041-019), so KD-3's club-scoped promise is not enough the moment two clubs share a career; today's formula satisfies it, `PlayerCareerStates` enforces it fail-loud at construction/restore/sync, and every future allocator MUST preserve it. |
+| 0.4 | 2026-10-19 | — | **ERR-031-005** (owner decision Oct 19, 2026, at #31 T2 planning): FR-SQ-010 and §2.2.3 — `clubId*CLUB_SQUAD_SIZE+localIndex` is the GENESIS allocation only; a `PlayerId` is stable across transfers, post-genesis ids come from #28 `NextPlayerId`, and nothing derives a club from an id. The formula as an identity rule had contradicted #28 FR-PG-011 the moment a regen existed. |
+| 0.5 | 2026-10-20 | — | **AR round 1 L1 (ERR-031-005)**, annotation only. FR-SQ-010's uniqueness clause still listed "#31 transfers" among the future allocators that must preserve global `PlayerId` uniqueness; ERR-031-005 settled that a transfer allocates nothing (it re-homes under the unchanged id), so #31 is removed from the list and the clause annotated. |
 #endregion

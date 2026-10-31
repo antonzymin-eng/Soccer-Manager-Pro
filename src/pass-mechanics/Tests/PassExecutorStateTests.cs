@@ -1,5 +1,7 @@
 // File:     src/pass-mechanics/Tests/PassExecutorStateTests.cs
 // Created:  2026-06-19
+// Modified: 2026-09-28 (W8 B review — IPassAgentQuery identity stub)
+// Modified: 2026-09-26 (W8 B — dedicated state serializer/identity coverage + 27-field omission guard)
 // Modified: 2026-06-19
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8; Match Engine design note §2.6 (Phase C step C0); Code Standards #20
@@ -54,6 +56,23 @@ namespace TacticalDirector.PassMechanics.Tests
                 ContactMatchTime = 72.05f
             };
 
+            var goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = 1, TeamId = 0, Delivery = GoalkeeperDeliveryVariant.Throw,
+                TargetAgentId = 4, TargetPosition = new Vector3(28f, 18f, 0f),
+                EmittedPower01 = 0.75f, SpinIntent = new Vector3(1f, 2f, 3f),
+                ReleaseHeightM = 1.8f, WindupFrames = 24, FrameNumber = 4300
+            };
+            var goalkeeperFeedback = new GoalkeeperDistributionFeedback
+            {
+                Kind = GoalkeeperDistributionFeedbackKind.Completed,
+                EffectiveTargetAgentId = 4,
+                EffectiveTargetPosition = new Vector3(29f, 19f, 0f),
+                ReleasePoint = new Vector3(8f, 34f, 1.8f),
+                FinalVelocity = new Vector3(15f, 2f, 3f),
+                ErrorAngleDeg = 1.25f, ContactFrame = 4324, ContactMatchTime = 72.4f
+            };
+
             return new PassExecutorState(
                 state: 1, // Windup
                 request: request,
@@ -71,7 +90,13 @@ namespace TacticalDirector.PassMechanics.Tests
                 cachedWeakFootRating: 4,
                 windupFramesRemaining: 9,
                 followThroughFramesRemaining: 5,
-                lastResult: lastResult);
+                lastResult: lastResult,
+                executionMode: 1,
+                goalkeeperRequest: goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId: 4,
+                goalkeeperEffectiveTargetPosition: new Vector3(29f, 19f, 0f),
+                goalkeeperFeedbackPending: true,
+                goalkeeperFeedback: goalkeeperFeedback);
         }
 
         // Mirrors the field order the match-engine snapshot layer will use at C5.
@@ -130,6 +155,41 @@ namespace TacticalDirector.PassMechanics.Tests
             CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastResult.PassType);
             CanonicalSerializer.WriteI32(buf, ref o, s.LastResult.ContactFrame);
             CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ContactMatchTime);
+
+            CanonicalSerializer.WriteI32(buf, ref o, s.ExecutionMode);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.AgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.TeamId);
+            CanonicalSerializer.WriteU8(buf, ref o, (byte)s.GoalkeeperRequest.Delivery);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.TargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.TargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.EmittedPower01);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.SpinIntent.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperRequest.ReleaseHeightM);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.WindupFrames);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperRequest.FrameNumber);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperEffectiveTargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperEffectiveTargetPosition.z);
+            CanonicalSerializer.WriteBool(buf, ref o, s.GoalkeeperFeedbackPending);
+            CanonicalSerializer.WriteU8(buf, ref o, (byte)s.GoalkeeperFeedback.Kind);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.EffectiveTargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ReleasePoint.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.FinalVelocity.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ErrorAngleDeg);
+            CanonicalSerializer.WriteI32(buf, ref o, s.GoalkeeperFeedback.ContactFrame);
+            CanonicalSerializer.WriteF32(buf, ref o, s.GoalkeeperFeedback.ContactMatchTime);
         }
 
         private static PassExecutorState Deserialize(byte[] buf, ref int o)
@@ -199,11 +259,42 @@ namespace TacticalDirector.PassMechanics.Tests
                 ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o)
             };
 
+            int executionMode = CanonicalSerializer.ReadI32(buf, ref o);
+            var goalkeeperRequest = new GoalkeeperDistributionRequest
+            {
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                Delivery = (GoalkeeperDeliveryVariant)CanonicalSerializer.ReadU8(buf, ref o),
+                TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                EmittedPower01 = CanonicalSerializer.ReadF32(buf, ref o),
+                SpinIntent = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ReleaseHeightM = CanonicalSerializer.ReadF32(buf, ref o),
+                WindupFrames = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o)
+            };
+            int goalkeeperEffectiveTargetAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+            var goalkeeperEffectiveTargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            bool goalkeeperFeedbackPending = CanonicalSerializer.ReadBool(buf, ref o);
+            var goalkeeperFeedback = new GoalkeeperDistributionFeedback
+            {
+                Kind = (GoalkeeperDistributionFeedbackKind)CanonicalSerializer.ReadU8(buf, ref o),
+                EffectiveTargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                EffectiveTargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ReleasePoint = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactFrame = CanonicalSerializer.ReadI32(buf, ref o),
+                ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o)
+            };
+
             return new PassExecutorState(
                 state, in request, effectiveSubType,
                 kickSpeed, launchAngleDeg, spinVector, baseKickDirection, aimPoint, leadDistance,
                 cachedPassing, cachedFatigue, cachedBodyAngleDeg, cachedIsWeakFoot, cachedWeakFootRating,
-                windupRemaining, followThroughRemaining, in lastResult);
+                windupRemaining, followThroughRemaining, in lastResult, executionMode, in goalkeeperRequest,
+                goalkeeperEffectiveTargetAgentId, goalkeeperEffectiveTargetPosition,
+                goalkeeperFeedbackPending, in goalkeeperFeedback);
         }
 
         private static void AssertStateEquals(in PassExecutorState expected, in PassExecutorState actual)
@@ -245,6 +336,28 @@ namespace TacticalDirector.PassMechanics.Tests
             Assert.AreEqual(expected.LastResult.PassType, actual.LastResult.PassType, "LastResult.PassType");
             Assert.AreEqual(expected.LastResult.ContactFrame, actual.LastResult.ContactFrame, "LastResult.ContactFrame");
             Assert.AreEqual(expected.LastResult.ContactMatchTime, actual.LastResult.ContactMatchTime, "LastResult.ContactMatchTime");
+            Assert.AreEqual(expected.ExecutionMode, actual.ExecutionMode, "ExecutionMode");
+            Assert.AreEqual(expected.GoalkeeperRequest.AgentId, actual.GoalkeeperRequest.AgentId, "GoalkeeperRequest.AgentId");
+            Assert.AreEqual(expected.GoalkeeperRequest.TeamId, actual.GoalkeeperRequest.TeamId, "GoalkeeperRequest.TeamId");
+            Assert.AreEqual(expected.GoalkeeperRequest.Delivery, actual.GoalkeeperRequest.Delivery, "GoalkeeperRequest.Delivery");
+            Assert.AreEqual(expected.GoalkeeperRequest.TargetAgentId, actual.GoalkeeperRequest.TargetAgentId, "GoalkeeperRequest.TargetAgentId");
+            Assert.AreEqual(expected.GoalkeeperRequest.TargetPosition, actual.GoalkeeperRequest.TargetPosition, "GoalkeeperRequest.TargetPosition");
+            Assert.AreEqual(expected.GoalkeeperRequest.EmittedPower01, actual.GoalkeeperRequest.EmittedPower01, "GoalkeeperRequest.EmittedPower01");
+            Assert.AreEqual(expected.GoalkeeperRequest.SpinIntent, actual.GoalkeeperRequest.SpinIntent, "GoalkeeperRequest.SpinIntent");
+            Assert.AreEqual(expected.GoalkeeperRequest.ReleaseHeightM, actual.GoalkeeperRequest.ReleaseHeightM, "GoalkeeperRequest.ReleaseHeightM");
+            Assert.AreEqual(expected.GoalkeeperRequest.WindupFrames, actual.GoalkeeperRequest.WindupFrames, "GoalkeeperRequest.WindupFrames");
+            Assert.AreEqual(expected.GoalkeeperRequest.FrameNumber, actual.GoalkeeperRequest.FrameNumber, "GoalkeeperRequest.FrameNumber");
+            Assert.AreEqual(expected.GoalkeeperEffectiveTargetAgentId, actual.GoalkeeperEffectiveTargetAgentId, "GoalkeeperEffectiveTargetAgentId");
+            Assert.AreEqual(expected.GoalkeeperEffectiveTargetPosition, actual.GoalkeeperEffectiveTargetPosition, "GoalkeeperEffectiveTargetPosition");
+            Assert.AreEqual(expected.GoalkeeperFeedbackPending, actual.GoalkeeperFeedbackPending, "GoalkeeperFeedbackPending");
+            Assert.AreEqual(expected.GoalkeeperFeedback.Kind, actual.GoalkeeperFeedback.Kind, "GoalkeeperFeedback.Kind");
+            Assert.AreEqual(expected.GoalkeeperFeedback.EffectiveTargetAgentId, actual.GoalkeeperFeedback.EffectiveTargetAgentId, "GoalkeeperFeedback.EffectiveTargetAgentId");
+            Assert.AreEqual(expected.GoalkeeperFeedback.EffectiveTargetPosition, actual.GoalkeeperFeedback.EffectiveTargetPosition, "GoalkeeperFeedback.EffectiveTargetPosition");
+            Assert.AreEqual(expected.GoalkeeperFeedback.ReleasePoint, actual.GoalkeeperFeedback.ReleasePoint, "GoalkeeperFeedback.ReleasePoint");
+            Assert.AreEqual(expected.GoalkeeperFeedback.FinalVelocity, actual.GoalkeeperFeedback.FinalVelocity, "GoalkeeperFeedback.FinalVelocity");
+            Assert.AreEqual(expected.GoalkeeperFeedback.ErrorAngleDeg, actual.GoalkeeperFeedback.ErrorAngleDeg, "GoalkeeperFeedback.ErrorAngleDeg");
+            Assert.AreEqual(expected.GoalkeeperFeedback.ContactFrame, actual.GoalkeeperFeedback.ContactFrame, "GoalkeeperFeedback.ContactFrame");
+            Assert.AreEqual(expected.GoalkeeperFeedback.ContactMatchTime, actual.GoalkeeperFeedback.ContactMatchTime, "GoalkeeperFeedback.ContactMatchTime");
         }
 
         [Test]
@@ -299,6 +412,16 @@ namespace TacticalDirector.PassMechanics.Tests
             {
                 Position = new Vector2(30f, 34f), Velocity = Vector2.zero, FacingDirection = new Vector2(1f, 0f)
             };
+
+            public bool IsGoalkeeperOfTeam(int agentId, int teamId) => true;
+
+            public bool IsEligibleGoalkeeperDistributionReceiver(int agentId, int teamId) => true;
+
+            public bool IsGoalkeeperDistributionOwnGoalLine(int teamId, Vector3 targetPosition)
+                => teamId == 0 ? targetPosition.x == 0f : targetPosition.x == 105f;
+
+            public Vector3 GetGoalkeeperDistributionFallbackPosition(int teamId)
+                => teamId == 0 ? new Vector3(35f, 34f, 0f) : new Vector3(70f, 34f, 0f);
         }
 
         private sealed class StubCollision : IPassCollisionQuery
@@ -351,12 +474,12 @@ namespace TacticalDirector.PassMechanics.Tests
             // if a maintainer adds cross-tick in-flight state to PassExecutor without extending
             // PassExecutorState / CaptureState / RestoreState, the snapshot silently drops it and
             // replay diverges (invisible to same-seed in-process tests — the §2.6 trap). This count
-            // (3 injected deps + 18 captured in-flight fields) trips first.
+            // (3 injected deps + 18 ordinary fields + 6 goalkeeper-mode fields) trips first.
             int fieldCount = typeof(PassExecutor)
                 .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
                 .Length;
 
-            Assert.AreEqual(21, fieldCount,
+            Assert.AreEqual(27, fieldCount,
                 "PassExecutor instance field count changed. If you added cross-tick in-flight state, " +
                 "extend PassExecutorState + CaptureState + RestoreState, then update this count.");
         }
@@ -371,4 +494,6 @@ namespace TacticalDirector.PassMechanics.Tests
 // |         |            |        | test (genuine computed state, stays in WINDUP) + M-2 reflection|
 // |         |            |        | field-count lock (silent-omission guard, B0 BufferSize analogue|
 // |         |            |        | ). Added stub IPass* implementations.                         |
+// | 1.2     | 2026-09-26 | —      | W8 B: serializer/deserialize and Capture/Restore identity cover the appended dedicated-distribution fields; reflection omission guard advances 21 → 27 fields. |
+// | 1.3     | 2026-09-28 | —      | W8 B review: test IPassAgentQuery stub implements the new goalkeeper/team identity query; snapshot field set remains unchanged. |
 #endregion

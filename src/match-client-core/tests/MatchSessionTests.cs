@@ -1,6 +1,7 @@
 // File:     src/match-client-core/tests/MatchSessionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-09-11 (wiring backlog W7: live MatchSession boot is digest-locked against the explicit ManagerAdaptation.ApplyKickoff reference path before tick 1)
+// Modified: 2026-10-15 (Match save v3: paused off-tick saves)
+// Modified (prior): 2026-09-11 (wiring backlog W7: live MatchSession boot is digest-locked against the explicit ManagerAdaptation.ApplyKickoff reference path before tick 1)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P6/§6.3),
 //           Code Standards #20
@@ -238,6 +239,77 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void PausedOffTickSubstitution_SaveRestore_ContinuesIdenticalDigestChain()
+        {
+            // Real command channel + paused ServiceOnce: the request is accepted before
+            // the same tick's save, and it MUST be represented in the restored engine.
+            var live = new MatchSession(MatchSetup.NeutralDemo(Seed));
+            for (int i = 0; i < 10; i++) live.TickOnce();
+            live.Streamer.Pause();
+            live.Commands.Enqueue(ManagerCommand.Substitute(
+                0, 1, 0, SubstitutionReason.Tactical));
+            ulong savedTick = live.CurrentTick;
+            byte[] save = live.CaptureSave();
+            Assert.AreEqual(savedTick, live.CurrentTick, "Saving cannot advance a paused match.");
+            Assert.AreEqual(1, live.Driver.Log.Count, "Command must be drained before save.");
+            Assert.AreEqual(1, live.TestOnly_Engine.PendingSubstitutionCount);
+
+            const int continuation = 12;
+            var digests = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                live.TickOnce();
+                digests[i] = (byte[])live.CurrentSnapshotDigest.Clone();
+            }
+
+            MatchSession restored = MatchSession.RestoreFrom(save);
+            Assert.AreEqual(savedTick, restored.CurrentTick);
+            Assert.AreEqual(1, restored.TestOnly_Engine.PendingSubstitutionCount);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.TickOnce();
+                CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest,
+                    "Off-tick substitution restore diverged at continuation " + i);
+            }
+        }
+
+        [Test]
+        public void PausedOffTickMentality_SaveRestore_ContinuesIdenticalDigestChain()
+        {
+            var live = new MatchSession(MatchSetup.NeutralDemo(Seed));
+            for (int i = 0; i < 10; i++) live.TickOnce();
+            live.Streamer.Pause();
+            TeamTactic balanced = TeamTactic.Balanced;
+            var changed = new TeamTactic(
+                Mentality.Attacking, balanced.Formation, balanced.Tempo, balanced.Width,
+                balanced.Passing, balanced.Pressing, balanced.LineOfEngagement,
+                balanced.DefensiveLine, balanced.DefensiveWidth, balanced.TransitionWon,
+                balanced.TransitionLost, balanced.OffsideTrap, balanced.TriggerPressMask,
+                balanced.FocusPlay, balanced.GkDistribution, balanced.TimeWasting,
+                balanced.MarkingOrientation, balanced.DismarkIntensity,
+                balanced.BuildUpStructure, balanced.RotationFreedom);
+            live.Commands.Enqueue(ManagerCommand.SetTeamTactic(0, changed));
+            ulong savedTick = live.CurrentTick;
+            byte[] save = live.CaptureSave();
+            Assert.AreEqual(savedTick, live.CurrentTick);
+            Assert.AreEqual(1, live.Driver.Log.Count);
+            const int continuation = 12;
+            var digests = new byte[continuation][];
+            for (int i = 0; i < continuation; i++)
+            {
+                live.TickOnce();
+                digests[i] = (byte[])live.CurrentSnapshotDigest.Clone();
+            }
+            MatchSession restored = MatchSession.RestoreFrom(save);
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.TickOnce();
+                CollectionAssert.AreEqual(digests[i], restored.CurrentSnapshotDigest,
+                    "Off-tick mentality restore diverged at continuation " + i);
+            }
+        }
+
+        [Test]
         public void RestoreFrom_ResumesAtTheSavedTick_WithAFreshCommandLog()
         {
             var session = new MatchSession(MatchSetup.NeutralDemo(Seed));
@@ -274,4 +346,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.1     | 2026-08-03 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
 // | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
 // | 1.3     | 2026-09-11 | —            | W7 regression locks: AI boot matches explicit ApplyKickoff; neutral boot remains digest-identical to the prior two-team-tactic baseline despite identity player-tactic staging. |
+// | 1.4     | 2026-10-15 | —      | Match save format v3 (PR #505): a paused off-tick substitution and a paused mentality change survive save/restore with an identical continuation digest chain. |
 #endregion

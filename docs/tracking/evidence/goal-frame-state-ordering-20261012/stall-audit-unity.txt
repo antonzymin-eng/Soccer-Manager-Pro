@@ -1,0 +1,67 @@
+# Post-fix six-seed corpus stall audit — Unity lane (pinned host), October 13, 2026 UTC
+# Governing half of the audit; the .NET half is stall-audit-net8-linux.txt.
+
+PR #500 head:   c1ad30434e896e071cf349bc1f300e697f41e387
+src tree:       71d6ce456f563d6070aa8953561c1367599a359f (identical to the .NET half's src tree)
+Host:           owner's Windows 11 Home 10.0.26200 PC, Unity 6000.4.9f1 editor (pinned certification host)
+Compile:        unity-compile.txt (forced recursive reimport; 0 errors)
+Runner:         TestRunnerApi in the open editor, EditMode, filter = the one test below, run after
+                sim_match_engine_inposs_gate in the same run (unity-editmode-status.txt, run B)
+Environment:    TD_PLATFORM_DIVERGENCE_OUT=<scratch dir>, TD_PLATFORM_DIVERGENCE_PREFIX=unity
+                (set in-process with Environment.SetEnvironmentVariable before Execute); no ticks
+                override: 324,000 ticks per seed, both halves
+Result:         Passed 2423.8 s TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.
+                PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace (03:26:26 to 04:06:50 UTC)
+
+## Shares (unity-shares.tsv, verbatim)
+seed	ticks	samples	homeShare	awayShare	homeShareBits	awayShareBits	squadHome	squadAway
+0x0F1E2D3C4B5A6978	324000	16708	0.949485	0.949485	3F731178	3F731178	97B7D5CF	7ABE9B55
+0x00000000D1A6D05E	324000	18688	0.939052	0.939052	3F7065B3	3F7065B3	5F7DB9C7	0AC1F179
+0x5EED000000000003	324000	17185	0.944487	0.944487	3F71C9DE	3F71C9DE	99A15134	5A109369
+0x5EED000000000004	324000	14620	0.971409	0.971409	3F78AE43	3F78AE43	2DF2255D	3EC3FE0D
+0x00000000D1A6D05F	324000	17453	0.951241	0.951241	3F73847F	3F73847F	3B19B300	24989F3B
+0x1A2B3C4D5E6F7081	324000	17882	0.943910	0.943910	3F71A417	3F71A417	4CAE18A0	9946AA57
+
+## Stall audit (stall_audit.py.txt, run with python -I over the six full traces)
+0x00000000D1A6D05E rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick255600 oopIdenticalRuns=0
+0x00000000D1A6D05F rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick274200 oopIdenticalRuns=0
+0x0F1E2D3C4B5A6978 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick291600 oopIdenticalRuns=0
+0x1A2B3C4D5E6F7081 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick255000 oopIdenticalRuns=0
+0x5EED000000000003 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick10200 oopIdenticalRuns=0
+0x5EED000000000004 rows=4135 lastTick=323400 p2Checkpoints=270 oopRows=0 longestStaticAnyState=10s@tick99000 oopIdenticalRuns=0
+
+Reading: as in stall-audit-net8-linux.txt. oopRows = sampled rows in OutOfPlay (ordinal 5);
+oopIdenticalRuns = runs of >=2 consecutive sampled rows in OutOfPlay at a bitwise-identical position.
+Zero everywhere: no candidate in either half of any seed. The same script over the pre-fix Unity trace
+of 0x0F1E2D3C4B5A6978 reports one candidate, ticks 57000-161400, period 1 (the known freeze).
+Sampling limit: after tick 3600 a stall shorter than ~10-20 s can fall between checkpoints.
+
+## Full-trace SHA-256 (of the uncompressed traces; committed as unity-trace-<seed>.tsv.xz)
+86e40303854794e60148b413105f9a40c30e97b98cf1be8388019a47b3eb8e19  unity-trace-0x00000000D1A6D05E.tsv
+802713d4f6e7753f2df9d8de5cabe16d61084c8174c2b471208f56080a73f781  unity-trace-0x00000000D1A6D05F.tsv
+89471c5d763c4b7fdaa268e40df890eabfc1c3218a1ed7398a4567881033e13e  unity-trace-0x0F1E2D3C4B5A6978.tsv
+fd959ea7c2c91cd98453bc0d427b0d9183b7331e2ab745b3e2c16cb12a879449  unity-trace-0x1A2B3C4D5E6F7081.tsv
+8059e33521d1f83938e9859e39c62330f62924652572f22a53178af1079933e1  unity-trace-0x5EED000000000003.tsv
+b32c68342ae9dd48be3e5e6da1a2d72bcd37bdccec9d230fd1da8deb8c842640  unity-trace-0x5EED000000000004.tsv
+
+## Comparison with the pre-fix Unity lane (inposs-platform-divergence-20261011, src 1839bb0f)
+Five of six full traces are byte-identical to the pre-fix Unity traces (digests in that directory's
+full-trace-sha256.txt), and those five shares match to the bit (unity-shares.tsv there):
+0x00000000D1A6D05E, 0x00000000D1A6D05F, 0x1A2B3C4D5E6F7081, 0x5EED000000000003, 0x5EED000000000004.
+So on those five Unity matches every recorded sample is unchanged by the fix (same sampling caveat
+as the .NET half: an unsampled-tick difference that left every later sample unchanged is not excluded).
+
+0x0F1E2D3C4B5A6978 is the seed that froze before the fix. Against the pre-fix trimmed Unity trace
+(ticks -1..60 and every 600th tick from 3600) its rows are identical through sampled tick 56,400 and
+first differ at checkpoint 57,000, the first checkpoint after the tick-56,956 post strike recorded in
+stall-window-unity.txt. Pre-fix that checkpoint begins the frozen OutOfPlay run to 161,400; post-fix
+the ball is in play there and no OutOfPlay row is sampled for the rest of the match. Its share moves
+from 0.360611 (28,363 samples) to 0.949485 (16,708 samples), in line with the other five seeds
+(0.939 to 0.971). This is the fix working on the governing build at the match that exposed the defect.
+
+## Retained artifacts
+unity-trace-<seed>.tsv.xz         the six full traces as written by the test (xz -9)
+unity-shares.tsv                  the shares file as written by the test
+unity-gate-diag-results.xml.xz    TestRunnerApi NUnit XML for run B (gate + diagnostic) (xz -9)
+unity-editmode-status.txt         per-test status lines for runs A and B
+unity-compile.txt                 Editor.log compile excerpt

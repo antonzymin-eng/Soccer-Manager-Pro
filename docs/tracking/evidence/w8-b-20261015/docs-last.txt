@@ -1,0 +1,99 @@
+coverage (surface: in-scope bytes / citations checked / cardinality claims / agreement figures / citations skipped):
+  CLAUDE.md: 4622 chars in scope / 0 / 0 / 0 / 0
+  src/CLAUDE.md: 6042 chars in scope / 0 / 0 / 0 / 0
+  README.md: 10478 chars in scope / 0 / 1 / 0 / 0
+  docs/tracking/open-issues.md: 284470 chars in scope / 80 / 1 / 0 / 0  [excused as dated records: 0 region / 3 chronicle / 2 phrasing / 1 historical marker]
+  docs/tracking/open-issues-resolved.md: 318892 chars in scope / 55 / 2 / 0 / 4  [excused as dated records: 27 region / 0 chronicle / 0 phrasing / 0 historical marker]
+  docs/tracking/spec-error-log.md: 855788 chars in scope / 14 / 0 / 0 / 4  [283560 chars frozen history excluded]  [excused as dated records: 10 region / 0 chronicle / 0 phrasing / 0 historical marker]
+  docs/tracking/CHANGELOG.md: 1537 chars in scope / 7 / 0 / 0 / 4  [1076628 chars frozen history excluded]
+  docs/tracking/CHANGELOG-src.md: 1494 chars in scope / 2 / 0 / 0 / 0  [894361 chars frozen history excluded]
+  docs/tracking/file-manifest.md: 347050 chars in scope / 54 / 1 / 0 / 2  [593543 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 2 phrasing / 0 historical marker]
+  docs/tracking/path-to-playable-roadmap.md: 93258 chars in scope / 4 / 0 / 0 / 0  [44095 chars frozen history excluded]
+  docs/tracking/match-engine-wiring-backlog.md: 78302 chars in scope / 1 / 0 / 0 / 0  [28212 chars frozen history excluded]
+  .claude/advisors/invariants.md: 10934 chars in scope / 0 / 0 / 1 / 0
+  .claude/agents/advisor-integrity.md: 6925 chars in scope / 0 / 0 / 1 / 0
+  docs/tracking/advanced-positional-behaviors-design.md: 17850 chars in scope / 0 / 0 / 0 / 0  [1397 chars frozen history excluded]
+  docs/tracking/audio-sound-design.md: 24877 chars in scope / 0 / 0 / 0 / 0  [4345 chars frozen history excluded]
+  docs/tracking/board-ownership-dynamics-design.md: 25102 chars in scope / 0 / 0 / 0 / 0  [2488 chars frozen history excluded]
+  docs/tracking/browser-match-client-design.md: 11231 chars in scope / 0 / 0 / 0 / 0  [6050 chars frozen history excluded]
+  docs/tracking/close-chance-creation-design.md: 99512 chars in scope / 1 / 0 / 0 / 0
+  docs/tracking/club-finances-economy-design.md: 19048 chars in scope / 0 / 0 / 0 / 0  [849 chars frozen history excluded]
+  docs/tracking/club-infrastructure-facilities-design.md: 24575 chars in scope / 0 / 0 / 0 / 0  [4565 chars frozen history excluded]
+  docs/tracking/competition-structure-design.md: 27290 chars in scope / 1 / 0 / 0 / 0  [2444 chars frozen history excluded]  [excused as dated records: 0 region / 1 chronicle / 0 phrasing / 0 historical marker]
+  docs/tracking/discipline-suspensions-design.md: 18958 chars in scope / 1 / 0 / 0 / 0  [2007 chars frozen history excluded]  [excused as dated records: 0 region / 1 chronicle / 0 phrasing / 0 historical marker]
+  docs/tracking/foul-discipline-balance-design.md: 29258 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/game-model-ai-manager-design.md: 16552 chars in scope / 0 / 0 / 0 / 0  [1667 chars frozen history excluded]
+  docs/tracking/gk-catch-parry-conversion-design.md: 19951 chars in scope / 0 / 0 / 0 / 0  [748 chars frozen history excluded]
+  docs/tracking/gk-contact-rate-design.md: 26812 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/gk-conversion-at-contact-design.md: 27138 chars in scope / 2 / 0 / 0 / 0  [excused as dated records: 0 region / 0 chronicle / 1 phrasing / 0 historical marker]
+  docs/tracking/gk-heading-dt-producer-design.md: 39439 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/gk-heading-engine-integration-design.md: 46036 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/gk-heading-scenario-design.md: 20260 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/gk-rush-trigger-design.md: 27382 chars in scope / 0 / 0 / 0 / 0  [8092 chars frozen history excluded]
+  docs/tracking/goalkeeper-save-pipeline-design.md: 26809 chars in scope / 0 / 0 / 0 / 0  [1358 chars frozen history excluded]
+  docs/tracking/injuries-medical-design.md: 23594 chars in scope / 0 / 0 / 0 / 0  [8650 chars frozen history excluded]
+  docs/tracking/injury-aging-research-alignment-design.md: 51143 chars in scope / 0 / 0 / 0 / 0  [10563 chars frozen history excluded]
+  docs/tracking/interactive-match-view-design.md: 16789 chars in scope / 0 / 0 / 0 / 0  [6841 chars frozen history excluded]
+  docs/tracking/interactive-unity-client-design.md: 76610 chars in scope / 5 / 0 / 0 / 0  [60447 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 1 phrasing / 0 historical marker]
+  docs/tracking/league-bootstrap-design.md: 59575 chars in scope / 0 / 0 / 0 / 0  [7201 chars frozen history excluded]
+  docs/tracking/lineup-selection-design.md: 14245 chars in scope / 0 / 0 / 0 / 0  [566 chars frozen history excluded]
+  docs/tracking/living-world-arc-triggers-design.md: 52334 chars in scope / 0 / 0 / 0 / 0  [6408 chars frozen history excluded]
+  docs/tracking/living-world-system-design.md: 23638 chars in scope / 0 / 0 / 0 / 0  [3716 chars frozen history excluded]
+  docs/tracking/localization-content-a11y-design.md: 27625 chars in scope / 0 / 0 / 0 / 0  [4330 chars frozen history excluded]
+  docs/tracking/localization-seam-template-design.md: 25338 chars in scope / 0 / 0 / 0 / 0  [1119 chars frozen history excluded]
+  docs/tracking/manager-career-reputation-design.md: 25928 chars in scope / 0 / 0 / 0 / 0  [4834 chars frozen history excluded]
+  docs/tracking/match-analytics-statistics-design.md: 14755 chars in scope / 0 / 0 / 0 / 0  [1473 chars frozen history excluded]
+  docs/tracking/match-engine-design.md: 159153 chars in scope / 3 / 0 / 0 / 0  [74821 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 3 phrasing / 0 historical marker]
+  docs/tracking/match-flow-completion-design.md: 44028 chars in scope / 1 / 0 / 0 / 0  [12565 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 1 phrasing / 0 historical marker]
+  docs/tracking/match-presentation-depth-design.md: 27161 chars in scope / 0 / 0 / 0 / 0  [5832 chars frozen history excluded]
+  docs/tracking/match-save-file-design.md: 21297 chars in scope / 0 / 0 / 0 / 0  [6682 chars frozen history excluded]
+  docs/tracking/media-press-interactions-design.md: 46527 chars in scope / 1 / 0 / 0 / 0  [9192 chars frozen history excluded]
+  docs/tracking/national-teams-international-design.md: 30290 chars in scope / 0 / 0 / 0 / 0  [6573 chars frozen history excluded]
+  docs/tracking/new-game-setup-db-editor-design.md: 25249 chars in scope / 0 / 0 / 0 / 0  [5923 chars frozen history excluded]
+  docs/tracking/news-inbox-man-management-design.md: 34448 chars in scope / 0 / 0 / 0 / 0  [7224 chars frozen history excluded]
+  docs/tracking/perception-shared-pass-design.md: 29855 chars in scope / 1 / 0 / 0 / 0  [3241 chars frozen history excluded]
+  docs/tracking/personalities-morale-dynamics-design.md: 33877 chars in scope / 0 / 0 / 0 / 0  [1893 chars frozen history excluded]
+  docs/tracking/player-attribute-projection-design.md: 26059 chars in scope / 0 / 0 / 0 / 1  [1892 chars frozen history excluded]
+  docs/tracking/player-progression-lifecycle-design.md: 26102 chars in scope / 0 / 0 / 0 / 0  [2901 chars frozen history excluded]
+  docs/tracking/round-2-architecture-remediation-design.md: 54933 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/save-migration-versioning-design.md: 26817 chars in scope / 0 / 0 / 0 / 0  [6380 chars frozen history excluded]
+  docs/tracking/scouting-player-knowledge-design.md: 40708 chars in scope / 1 / 0 / 0 / 0  [3157 chars frozen history excluded]  [excused as dated records: 0 region / 1 chronicle / 0 phrasing / 0 historical marker]
+  docs/tracking/season-competition-loop-design.md: 24291 chars in scope / 0 / 0 / 0 / 0  [2703 chars frozen history excluded]
+  docs/tracking/shot-outcome-distribution-design.md: 21487 chars in scope / 0 / 0 / 0 / 0  [657 chars frozen history excluded]
+  docs/tracking/shot-speed-woodwork-design.md: 24589 chars in scope / 0 / 0 / 0 / 0  [1469 chars frozen history excluded]
+  docs/tracking/shot-volume-design.md: 14704 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/snapshot-deserialize-design.md: 35429 chars in scope / 1 / 0 / 0 / 0  [11738 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 1 phrasing / 0 historical marker]
+  docs/tracking/squad-player-data-design.md: 18513 chars in scope / 0 / 0 / 0 / 1  [2683 chars frozen history excluded]
+  docs/tracking/squad-roster-reference-design.md: 15088 chars in scope / 0 / 0 / 0 / 0  [1550 chars frozen history excluded]
+  docs/tracking/staff-backroom-design.md: 45761 chars in scope / 0 / 0 / 0 / 0  [2840 chars frozen history excluded]
+  docs/tracking/steam-packaging-release-design.md: 27715 chars in scope / 1 / 0 / 0 / 0  [4420 chars frozen history excluded]
+  docs/tracking/tackle-wiring-design.md: 38665 chars in scope / 1 / 0 / 0 / 0  [8206 chars frozen history excluded]  [excused as dated records: 0 region / 0 chronicle / 1 phrasing / 0 historical marker]
+  docs/tracking/tactical-instruction-layer-design.md: 25428 chars in scope / 0 / 0 / 0 / 0
+  docs/tracking/training-system-design.md: 16498 chars in scope / 0 / 0 / 0 / 0  [6147 chars frozen history excluded]
+  docs/tracking/transfers-contracts-negotiation-design.md: 39876 chars in scope / 0 / 0 / 0 / 0  [2960 chars frozen history excluded]
+  docs/tracking/ui-client-framework-design.md: 12661 chars in scope / 0 / 0 / 0 / 0  [2056 chars frozen history excluded]
+  docs/tracking/unified-season-save-design.md: 25713 chars in scope / 0 / 0 / 0 / 0  [7249 chars frozen history excluded]
+  docs/tracking/w3-agent-ball-fanout-design.md: 37549 chars in scope / 0 / 0 / 0 / 0  [8105 chars frozen history excluded]
+  docs/tracking/youth-academy-intake-design.md: 28003 chars in scope / 0 / 0 / 0 / 0  [3735 chars frozen history excluded]
+  .claude/README.md: 16346 chars in scope / 0 / 0 / 0 / 0
+  .claude/agents/advisor-evidence.md: 7645 chars in scope / 0 / 0 / 0 / 0
+  .claude/agents/doc-scribe.md: 4844 chars in scope / 0 / 0 / 0 / 0
+  .claude/agents/gate-runner.md: 3298 chars in scope / 0 / 0 / 0 / 0
+  .claude/agents/orienteer.md: 2919 chars in scope / 0 / 0 / 1 / 0
+  .claude/skills/README.md: 7737 chars in scope / 1 / 0 / 0 / 0  [excused as dated records: 0 region / 1 chronicle / 0 phrasing / 0 historical marker]
+  .claude/skills/adversarial-review/SKILL.md: 28489 chars in scope / 0 / 1 / 0 / 0
+  .claude/skills/advisor/SKILL.md: 8628 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/chat-review/SKILL.md: 5394 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/dotnet-gate/SKILL.md: 3623 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/err-file-and-backprop/SKILL.md: 8752 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/landing-close-out/SKILL.md: 14139 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/match-realism-pass/SKILL.md: 24628 chars in scope / 0 / 0 / 1 / 0
+  .claude/skills/orchestrator/SKILL.md: 9102 chars in scope / 0 / 0 / 1 / 0
+  .claude/skills/snapshot-schema-bump/SKILL.md: 7975 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/spec-promotion/SKILL.md: 6689 chars in scope / 0 / 0 / 0 / 0
+  .claude/skills/steward/SKILL.md: 7426 chars in scope / 0 / 0 / 0 / 0
+16 citation(s) skipped (target version unresolvable)
+57 stale-looking claim(s) excused as dated records (37 in archive/log-body record regions, 7 citing append-only chronicles, 12 by record phrasing, 1 by historical marker) — excusals are counted, never silent; audit them when these counts move
+NOTE: the registry share ("N% of the registry") agreement group matched no surface — it is currently checking nothing
+measured: ERR- index rows=264, active open issues=31, archived open issues=70, design supplements=63, production assemblies=38, spec folders=53
+PASS — no stale cross-document version citation or cardinality found (with the coverage stated above).

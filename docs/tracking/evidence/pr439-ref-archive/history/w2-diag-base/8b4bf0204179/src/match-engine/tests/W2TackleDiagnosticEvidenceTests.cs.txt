@@ -1,0 +1,221 @@
+// Disposable evidence only: PR #439 W2 three-arm diagnostic.
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+using NUnit.Framework;
+
+using TacticalDirector.DefensiveAI;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.PlayerDatabase;
+
+namespace TacticalDirector.MatchEngine
+{
+    [TestFixture]
+    internal sealed class W2TackleDiagnosticEvidenceTests
+    {
+        private const int Ticks = 150_000;
+
+        private static readonly ulong[] Seeds =
+        {
+            0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+        };
+
+        private sealed class Challenge
+        {
+            internal int Tackler;
+            internal int Carrier;
+            internal TackleDuelInputs Inputs;
+            internal float Uniform;
+            internal TackleOutcome Outcome;
+            internal double PWin;
+        }
+
+        private static Squad BuildSquad(ulong seed, int clubId)
+        {
+            var rng = new DeterministicRngService(seed ^ (ulong)clubId);
+            int stream = rng.RegisterStream(
+                "tackle.roster", SubsystemOrdinals.PlayerDatabase, entityId: clubId, streamVersion: 1);
+
+            var template = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+            int i = 0;
+            for (int k = 0; k < 3; k++) template[i++] = PlayerPosition.Goalkeeper;
+            for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Defender;
+            for (int k = 0; k < 8; k++) template[i++] = PlayerPosition.Midfielder;
+            while (i < template.Length) template[i++] = PlayerPosition.Forward;
+
+            return RosterGenerator.Generate(rng, stream, clubId, template);
+        }
+
+        private static MatchEngine Booted(ulong seed)
+        {
+            var engine = new MatchEngine(seed);
+            engine.ConfigureSquads(BuildSquad(seed, 1), BuildSquad(seed, 2));
+            return engine;
+        }
+
+        private static string F(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+        private static double Quantile(List<double> sorted, double q)
+        {
+            if (sorted.Count == 0) return double.NaN;
+            if (sorted.Count == 1) return sorted[0];
+            double pos = (sorted.Count - 1) * q;
+            int lo = (int)Math.Floor(pos);
+            int hi = (int)Math.Ceiling(pos);
+            if (lo == hi) return sorted[lo];
+            double w = pos - lo;
+            return sorted[lo] * (1.0 - w) + sorted[hi] * w;
+        }
+
+        [Test]
+        public void W2Diagnostic_ThreeWayEvidence()
+        {
+            // Evidence-only containment: FM-03 is a separately tracked composed-play log-severity
+            // defect. It must not turn one production arm red after the diagnostic data is complete.
+            bool priorIgnore = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+            try
+            {
+            int won = 0, loose = 0, foul = 0, missed = 0;
+            int dispossessions = 0;
+            int looseSameCarrier = 0, looseOtherPlayer = 0, looseStillLoose = 0;
+            int challengeOrdinal = 0;
+            var pWins = new List<double>();
+
+            foreach (ulong seed in Seeds)
+            {
+                MatchEngine engine = Booted(seed);
+                Challenge observed = null;
+                int prevHolder = MatchEngineConstants.NO_POSSESSION;
+                var before = engine.TestOnly_TackleOutcomeCounts;
+
+                engine.TestOnly_TackleDiagnosticObserver = (tackler, carrier, inputs, uniform, outcome) =>
+                {
+                    float engage = TackleOutcomeResolver.EngageProbability(in inputs);
+                    float foulShare = TackleOutcomeResolver.FoulShare(in inputs);
+                    float cleanShare = TackleOutcomeResolver.CleanShare(in inputs);
+                    double pWin = (double)engage * (1.0 - foulShare) * cleanShare;
+
+                    observed = new Challenge
+                    {
+                        Tackler = tackler,
+                        Carrier = carrier,
+                        Inputs = inputs,
+                        Uniform = uniform,
+                        Outcome = outcome,
+                        PWin = pWin,
+                    };
+                    pWins.Add(pWin);
+                    challengeOrdinal++;
+
+                    TestContext.Out.WriteLine(
+                        "W2DIAG CHALLENGE seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                        + " ordinal=" + challengeOrdinal
+                        + " tackler=" + tackler
+                        + " carrier=" + carrier
+                        + " tackling=" + F(inputs.TacklerTackling)
+                        + " aggression=" + F(inputs.TacklerAggression)
+                        + " dribbling=" + F(inputs.CarrierDribbling)
+                        + " balance=" + F(inputs.CarrierBalance)
+                        + " approachAngle=" + F(inputs.ApproachAngle)
+                        + " reachFraction=" + F(inputs.ReachFraction)
+                        + " engage=" + F(engage)
+                        + " foulShare=" + F(foulShare)
+                        + " cleanShare=" + F(cleanShare)
+                        + " pWin=" + F(pWin)
+                        + " uniform=" + F(uniform)
+                        + " outcome=" + outcome);
+                };
+
+                for (int t = 0; t < Ticks; t++)
+                {
+                    observed = null;
+                    engine.RunTick();
+
+                    var now = engine.TestOnly_TackleOutcomeCounts;
+                    bool landed = (now.Won + now.Loose) > (before.Won + before.Loose);
+                    int holder = engine.TestOnly_PossessingAgentId;
+                    if (landed && prevHolder >= 0 && holder != prevHolder)
+                    {
+                        dispossessions++;
+                    }
+
+                    if (observed != null && observed.Outcome == TackleOutcome.BallLoose)
+                    {
+                        if (holder == observed.Carrier)
+                        {
+                            looseSameCarrier++;
+                        }
+                        else if (holder == MatchEngineConstants.NO_POSSESSION)
+                        {
+                            looseStillLoose++;
+                        }
+                        else
+                        {
+                            looseOtherPlayer++;
+                        }
+
+                        TestContext.Out.WriteLine(
+                            "W2DIAG BALL_LOOSE seed=0x" + seed.ToString("X16", CultureInfo.InvariantCulture)
+                            + " tick=" + t
+                            + " originalCarrier=" + observed.Carrier
+                            + " endHolder=" + holder
+                            + " category=" + (holder == observed.Carrier ? "original-carrier-repicked"
+                                : holder == MatchEngineConstants.NO_POSSESSION ? "remained-loose"
+                                : "other-player-picked"));
+                    }
+
+                    before = now;
+                    prevHolder = holder;
+                }
+
+                var counts = engine.TestOnly_TackleOutcomeCounts;
+                won += counts.Won;
+                loose += counts.Loose;
+                foul += counts.Foul;
+                missed += counts.Missed;
+            }
+
+            pWins.Sort();
+            double logP0 = 0.0;
+            for (int i = 0; i < pWins.Count; i++)
+            {
+                logP0 += Math.Log(1.0 - pWins[i]);
+            }
+            double p0 = Math.Exp(logP0);
+            double mean = 0.0;
+            for (int i = 0; i < pWins.Count; i++) mean += pWins[i];
+            if (pWins.Count > 0) mean /= pWins.Count;
+
+            TestContext.Out.WriteLine(
+                "W2DIAG SUMMARY"
+                + " won=" + won
+                + " loose=" + loose
+                + " foul=" + foul
+                + " missed=" + missed
+                + " dispossessions=" + dispossessions
+                + " ballLooseOriginalCarrierRepicked=" + looseSameCarrier
+                + " ballLooseOtherPlayerPicked=" + looseOtherPlayer
+                + " ballLooseRemainedLoose=" + looseStillLoose
+                + " challenges=" + pWins.Count
+                + " p0wins=" + F(p0)
+                + " pWinMin=" + F(pWins.Count > 0 ? pWins[0] : double.NaN)
+                + " pWinP25=" + F(Quantile(pWins, 0.25))
+                + " pWinMedian=" + F(Quantile(pWins, 0.50))
+                + " pWinP75=" + F(Quantile(pWins, 0.75))
+                + " pWinMax=" + F(pWins.Count > 0 ? pWins[pWins.Count - 1] : double.NaN)
+                + " pWinMean=" + F(mean));
+
+            Assert.That(pWins.Count, Is.GreaterThan(0), "diagnostic corpus observed no W2 challenges");
+            Assert.That(looseSameCarrier + looseOtherPlayer + looseStillLoose, Is.EqualTo(loose),
+                "every BallLoose challenge must land in exactly one end-of-tick category");
+            }
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = priorIgnore;
+            }
+        }
+    }
+}

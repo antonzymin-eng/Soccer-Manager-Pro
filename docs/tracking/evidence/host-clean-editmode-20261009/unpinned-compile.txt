@@ -1,0 +1,19 @@
+# Unity 6000.4.9f1 Editor.log excerpt — forced recursive reimport of the repo-root resolver / SeasonSave timeout change
+
+Source: branch claude/unity-clean-editmode (working tree = PR #492 head 773ecb67 + this change), Assets/Scripts junction -> src.
+
+1:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+2:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+144:*** Tundra build success (5.82 seconds), 53 items updated, 1203 evaluated
+146:Reloading assemblies after finishing script compilation.
+171:Reloading assemblies after forced synchronous recompile.
+329:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+330:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+1172:*** Tundra build success (11.22 seconds), 75 items updated, 1203 evaluated
+1176:Reloading assemblies after finishing script compilation.
+1177:Reloading assemblies after forced synchronous recompile.
+error CS lines: 0
+unique warnings:
+BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius'
+ClientShellBehaviour.cs(146,34): warning CS0618: 'Object.GetInstanceID()'
+ClientShellBehaviour.cs(154,17): warning CS0618: 'Object.GetInstanceID()'

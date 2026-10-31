@@ -1,0 +1,16 @@
+run_id	head_branch	head_sha	commit_subject	commit_date	event	conclusion	workflow_name
+35812444215	wiring/w3-agent-ball-fanout	40a3bf4f8772cf5788408be16d1643cbb81e4185	test(season-save): make log-scope action unambiguous	2026-09-23T02:57:51Z	pull_request	cancelled	CI
+35813515236	wiring/w3-agent-ball-fanout	f40f0853909cc2a42190023fea1da72d25409b12	docs(w6): add PR439 resolve-order correction	2026-09-23T03:14:01Z	pull_request	cancelled	CI
+35813627716	evidence/pr439-w6-prefixtest	a6cfa40703c74ca42848ae1deaa44ba99f61fe4d	ci(evidence): prove PR439 W6 regression fails pre-fix	2026-09-23T03:15:43Z	push	success	PR439 W6 pre-fix discriminator
+35814050060	evidence/pr439-w3-six-seed-20260922	7347b0452d8143c5b540575b4db1f882302f1988	ci(evidence): run frozen PR439 W3 W6 six-seed corpus	2026-09-23T03:22:12Z	push	success	PR439 frozen W3 + W6 six-seed characterization
+35814099718	evidence/pr439-w6-postfix-focused	495f9b0ed2eef06b6dffb7f3b09e4e9e0eaae0f3	ci(evidence): run focused PR439 W6 post-fix proof	2026-09-23T03:22:56Z	push	success	PR439 W6 focused post-fix proof
+35815420707	evidence/pr439-seasonsave-focused-v2	300aae34349493b4a111659a1ac4aa58d9b72fce	ci(evidence): rerun focused PR439 SeasonSave proof	2026-09-23T03:42:53Z	push	success	PR439 SeasonSave focused proof v2
+35815761065	evidence/pr439-w3-prewire-six-seed	cf36526ce6ecd64632133780ed98ca0afe46c987	ci(evidence): run frozen PR439 pre-W3 arm	2026-09-23T03:47:55Z	push	success	PR439 frozen pre-W3 six-seed characterization
+35878836477	evidence/pr439-m7-order-mutation	58cf6ec88e33054c069ef8e2914ce395fd2d76f1	ci(evidence): prove rewritten M7 order lock by mutation	2026-09-23T15:04:09Z	push	success	PR439 M7 mutation proof
+35880226626	wiring/w3-agent-ball-fanout	1d8aabdf2edbb8eae90f56742ed477b91b84cec1	docs(pr439): advance maintained W3 backlog pointers	2026-09-23T15:15:33Z	pull_request	failure	CI
+35887487201	evidence/pr439-header-reachability	7494300341cae94ed3eae41033d874e23cac0b06	ci(evidence): run #441 frozen seeds in parallel	2026-09-23T16:15:27Z	push	success	PR439 header reachability evidence
+35902447061	evidence/w2-442-six-seed-measure-20260923	2b3bcb290c65fb50fd999033055e39635bc325f8	evidence(W2): run frozen #442 base/head protocol	2026-09-23T18:26:11Z	push	success	W2
+35910763485	test/w2-six-seed-contract-442	aaa0c6064a7298d5692daa49bfd4a60e092fd066	docs(W2): record #442 corpus evidence and runtime	2026-09-23T19:39:10Z	pull_request	success	CI
+35916101661	wiring/w3-agent-ball-fanout	9ba53481a8722c1f9eafebdadf72bb6dcd975453	docs(W3): advance maintained backlog pointers to v1.27	2026-09-23T20:27:36Z	pull_request	success	CI
+35923780245	wiring/w3-agent-ball-fanout	bab4cd41b232cbbe4820279e7d456c505bdab77b	docs(W3): back-prop Codex review closure	2026-09-23T21:39:16Z	pull_request	failure	CI
+35925236129	evidence/pr439-w3-six-seed-rerun-20260923	3f391fed45795a9c4f22bc601e187dd2cbe0e39a	ci(evidence): rerun frozen PR439 W3 six-seed corpus at bab4cd4	2026-09-23T21:54:02Z	push	success	PR439 frozen W3 + W6 six-seed characterization (post ERR-010-004 / ERR-011-014 rerun)

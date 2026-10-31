@@ -1,0 +1,46 @@
+# EditMode runs — pinned host, commit 05898cd0 (PR #520 after merging main), NUnit 3.5 XML summary
+
+Run A: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames "TacticalDirector.DeterministicSim.Tests;TacticalDirector.CollisionSystem.Tests;TacticalDirector.ClientApp.Tests;TacticalDirector.UiFramework.Tests;TacticalDirector.MatchClientCore.Tests" -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-10-29 20:01:31Z  end: 2026-10-29 20:12:57Z  duration: 686.2 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=566 passed=554 failed=0 inconclusive=0 skipped=12
+  TacticalDirector.ClientApp.Tests.dll: total=184 passed=182 failed=0 skipped=2
+  TacticalDirector.CollisionSystem.Tests.dll: total=49 passed=40 failed=0 skipped=9
+  TacticalDirector.DeterministicSim.Tests.dll: total=91 passed=90 failed=0 skipped=1
+  TacticalDirector.MatchClientCore.Tests.dll: total=190 passed=190 failed=0 skipped=0
+  TacticalDirector.UiFramework.Tests.dll: total=52 passed=52 failed=0 skipped=0
+  fixture TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests: Skipped passed=0/2
+    S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs: Skipped
+    S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit: Skipped
+  fixture TacticalDirector.CollisionSystem.Tests.SpatialHashGridQueryOrderTests: Passed passed=2/2
+    Query_PerceptionRange_ReturnsEveryEntityInRowMajorCellOrder: Passed
+    Query_SeededConfigurations_ReturnsTheDenseScanSequenceExactly: Passed
+  fixture TacticalDirector.DeterministicSim.SnapshotDigestBackendTests: Passed passed=4/4
+    CngSha256_OnWindows_IsActive_AndAgreesWithManagedSha256: Passed
+    Encode_ChainedAcrossPaddingBoundaries_EqualsIndependentSha256OfThePreimage: Passed
+    Encode_SteadyState_AllocatesNothing: Passed
+    ValidateCurrentDigest_SingleFlippedPayloadByte_IsRejected: Passed
+  not passed: 12 (0 failed)
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs: Ignored — Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit: Ignored — Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.AgentHitsBall_BallCollisionHandlerCalled: Ignored — Stage 0+1: requires Play Mode with BallPhysics #1 wired — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.CornerKickClustering_PerformanceUnder500us: Ignored — Stage 0+1: requires Play Mode with Profiler — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.CrossSystem_CollisionTriggersAgentMovementStateChange: Ignored — Stage 0+1: requires AgentMovement #2 and CollisionSystem #3 both wired — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.FullMatch90Minutes_NoCrashNoNaN: Ignored — Stage 0+1: requires full 90-minute match simulation — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.GroundedObstacle_RunnerStumbles: Ignored — Stage 0+1: requires Play Mode stumble/grounded logic — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.SameTeamCollision_ReducedMomentumNoFall: Ignored — Stage 0+1: requires Play Mode with team-ID filtering — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.SprintingHitsStationary_StationaryKnockedBack: Ignored — Stage 0+1: requires Play Mode with AgentMovement #2 wired — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.ThreeAgentsCluster_AllProcessedNoInfiniteLoop: Ignored — Stage 0+1: requires Play Mode 3-agent scenario — §5.3
+    TacticalDirector.CollisionSystem.Tests.CollisionSystemIntegrationTests.TwoAgentsApproach_BothBounceBack: Ignored — Stage 0+1: requires Play Mode with full CollisionSystem.Tick — §5.3
+    TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_MidTickSnapshot_SaveAndLoad: Ignored — Stage 0+1: SaveManager.SaveAtomicMidTick does not exist at Stage 0 — activate when the mid-tick save overload is added at Stage 1 (§5.3 T-DS-005 / §4.6.1).
+
+Run B: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests -testFilter MatchEngineSnapshotDigestReferenceTests -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-10-29 20:13:16Z  end: 2026-10-29 20:13:17Z  duration: 1.6 s  nunit engine: 3.5.0.0
+run: result=Passed total=1 passed=1 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchEngine.Tests.dll: total=1 passed=1 failed=0 skipped=0
+  fixture TacticalDirector.MatchEngine.MatchEngineSnapshotDigestReferenceTests: Passed passed=1/1
+    RunTick_EveryDigest_IsSha256OfTheCommittedPreimage_AndChains: Passed
+  not passed: 0 (0 failed)
+
+process exit codes: run A 0, run B 0

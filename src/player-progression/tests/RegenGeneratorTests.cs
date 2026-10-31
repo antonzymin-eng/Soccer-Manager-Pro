@@ -1,6 +1,10 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-24 (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
+// Modified: 2026-10-20 (AR round 5 L21 — the construction-day-credit precondition restated as "entirely below the growth
+//           ramp" — v1.8)
+//           2026-10-20 (AR round 4 L12 — the stale Binomial(25, 0.25) comment restated; comment-only — v1.7)
+//           2026-10-20 (AR round 1 L1 — production ordinal/site-id consts — v1.6)
+//           (construction-day-credit-implemented-twice — the cross-site lock — v1.4)
 //           (football-judgment proxy review, batch-1 adversarial findings — v1.3)
 //           (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
 //           property — v1.2)
@@ -8,7 +12,8 @@
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §4.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  T-PG-REG-001/003 — regen determinism, the exact PROGRESSION_REGEN_FIELDS budget, generated
 //           bounds, and the "attrs below PA / room to grow" contract. Registers the regen stream under
-//           a documented test-local ordinal literal (KD-B — the production const lands at T2). Also
+//           the production PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION and
+//           REGEN_STREAM_SITE_ID (landed with ERR-028-025; formerly a test-local literal). Also
 //           (M3, ERR-028-014 carryforward) that a generated regen never seeds the retired never-advanced
 //           sentinel and that a block built from one is accepted by ProgressionEngine.FromBlocks.
 
@@ -22,18 +27,16 @@ namespace TacticalDirector.PlayerProgression.Tests
     [TestFixture]
     public sealed class RegenGeneratorTests
     {
-        private const string SiteId = "player-progression.regen";
-
-        // = the T2 SubsystemOrdinals.PlayerProgression (#28 §4.3 / FR-PG-020); kept a local literal until
-        // T2 registers the production stream (KD-B — no early deterministic-sim change in T0).
-        private const int OrdinalPlayerProgression = 82;
-
         private const uint WorldDay = 100000;
 
         private static DeterministicRngService NewRng(ulong seed, int clubId, out int streamIndex)
         {
             var rng = new DeterministicRngService(seed);
-            streamIndex = rng.RegisterStream(SiteId, OrdinalPlayerProgression, clubId, streamVersion: 1);
+            streamIndex = rng.RegisterStream(
+                PlayerProgressionConstants.REGEN_STREAM_SITE_ID,
+                PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION,
+                clubId,
+                PlayerProgressionConstants.REGEN_STREAM_VERSION);
             return rng;
         }
 
@@ -43,8 +46,8 @@ namespace TacticalDirector.PlayerProgression.Tests
             var rngA = NewRng(4242UL, clubId: 7, out int idxA);
             var rngB = NewRng(4242UL, clubId: 7, out int idxB);
 
-            (PlayerRecord recA, PlayerLifecycle lifeA) = RegenGenerator.GenerateRegen(rngA, idxA, clubId: 7, newPlayerId: 631, WorldDay);
-            (PlayerRecord recB, PlayerLifecycle lifeB) = RegenGenerator.GenerateRegen(rngB, idxB, clubId: 7, newPlayerId: 631, WorldDay);
+            (PlayerRecord recA, PlayerLifecycle lifeA) = RegenGenerator.GenerateRegen(rngA, idxA, clubId: 7, newPlayerId: 631, PlayerPosition.Midfielder, WorldDay);
+            (PlayerRecord recB, PlayerLifecycle lifeB) = RegenGenerator.GenerateRegen(rngB, idxB, clubId: 7, newPlayerId: 631, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(recA.FirstName, recB.FirstName);
             Assert.AreEqual(recA.LastName, recB.LastName);
@@ -61,7 +64,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_AdvancesCursorByExactlyTheReservationBudget()
         {
             var rng = NewRng(1UL, clubId: 0, out int idx);
-            RegenGenerator.GenerateRegen(rng, idx, clubId: 0, newPlayerId: 100, WorldDay);
+            RegenGenerator.GenerateRegen(rng, idx, clubId: 0, newPlayerId: 100, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(
                 (ulong)PlayerProgressionConstants.PROGRESSION_REGEN_FIELDS,
@@ -73,7 +76,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_UsesTheSuppliedFreshPlayerId()
         {
             var rng = NewRng(9UL, clubId: 3, out int idx);
-            (PlayerRecord rec, _) = RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 999, WorldDay);
+            (PlayerRecord rec, _) = RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 999, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(999, rec.PlayerId, "the regen must take the caller-supplied fresh id (FR-PG-011).");
         }
@@ -82,7 +85,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_CurrentAbilityIsBelowPotential_WithRoomToGrow()
         {
             var rng = NewRng(55UL, clubId: 2, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 2, newPlayerId: 55, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 2, newPlayerId: 55, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(
                 AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
@@ -101,10 +104,14 @@ namespace TacticalDirector.PlayerProgression.Tests
             // Pinned to the literal, NOT re-derived through ClassifyAgeBand — routing the expectation
             // through the same function the production code calls would agree with it however wrong
             // either was. The precondition carries the reasoning instead: a regen is drawn in
-            // [REGEN_AGE_MIN, REGEN_AGE_MAX] and REGEN_AGE_MAX < GROWTH_AGE, so a regen is always in
-            // the Growth band, so its construction-day step is always GROWTH_DAILY_POINTS.
-            Assert.Less(PlayerProgressionConstants.REGEN_AGE_MAX, PlayerProgressionConstants.GROWTH_AGE,
-                "precondition: this lock's expected value only holds while every regen is Growth-band.");
+            // [REGEN_AGE_MIN, REGEN_AGE_MAX], and its construction day is credited the full
+            // GROWTH_DAILY_POINTS only while that age lies ENTIRELY below the growth ramp
+            // (§3.1.3: the rate falls from GROWTH_AGE - AgeBandRampHalfWidthYears, so merely being
+            // under GROWTH_AGE is not enough — inside the ramp the step is fractional).
+            Assert.LessOrEqual(
+                PlayerProgressionConstants.REGEN_AGE_MAX + 1,
+                PlayerProgressionConstants.GROWTH_AGE - PlayerProgressionConstants.AgeBandRampHalfWidthYears,
+                "precondition: this lock's expected value only holds while every regen is drawn entirely below the growth ramp.");
             Assert.AreEqual(
                 (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, life.GrowthCursor,
                 "a regen's cursor must carry its construction day's own band step (ERR-028-018), the "
@@ -116,7 +123,7 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void GenerateRegen_GeneratedValues_AreWithinDeclaredBounds()
         {
             var rng = NewRng(7UL, clubId: 4, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 4, newPlayerId: 4, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 4, newPlayerId: 4, PlayerPosition.Midfielder, WorldDay);
 
             Assert.GreaterOrEqual(rec.Age, PlayerProgressionConstants.REGEN_AGE_MIN);
             Assert.LessOrEqual(rec.Age, PlayerProgressionConstants.REGEN_AGE_MAX);
@@ -145,7 +152,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // name. A regen describes the roster as of worldDay, so that is its anchor, exactly like a
             // seeded player.
             var rng = NewRng(21UL, clubId: 5, out int idx);
-            (_, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 5, newPlayerId: 21, WorldDay);
+            (_, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 5, newPlayerId: 21, PlayerPosition.Midfielder, WorldDay);
 
             Assert.AreEqual(WorldDay, life.LastAdvancedWorldDay,
                 "a generated regen's cursor must anchor at the world day it was generated on.");
@@ -160,7 +167,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // straight from GenerateRegen's output must pass that gate without a caller having to patch
             // LastAdvancedWorldDay first.
             var rng = NewRng(87UL, clubId: 9, out int idx);
-            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 9, newPlayerId: 500, WorldDay);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 9, newPlayerId: 500, PlayerPosition.Midfielder, WorldDay);
 
             var block = new ClubCareerStates(9, new[] { rec }, new[] { life });
 
@@ -169,11 +176,56 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "a block built straight from a generated regen must be a legal store state (ERR-028-014).");
         }
 
+        [TestCase(PlayerPosition.Goalkeeper)]
+        [TestCase(PlayerPosition.Defender)]
+        [TestCase(PlayerPosition.Midfielder)]
+        [TestCase(PlayerPosition.Forward)]
+        public void GenerateRegen_TakesTheRetireesPosition_AndBiasesTheAttributesForIt(PlayerPosition position)
+        {
+            // ERR-028-024: a 1:1 replacement keeps the squad's shape. Under the retired uniform draw every
+            // line drifted to Binomial(squad size, 0.25) after one full turnover (squad size 23 in today's
+            // bootstrap, ERR-031-004; 25 when this was written).
+            var rng = NewRng(3131UL, clubId: 6, out int idx);
+            (PlayerRecord rec, PlayerLifecycle life) =
+                RegenGenerator.GenerateRegen(rng, idx, clubId: 6, newPlayerId: 900, position, WorldDay);
+
+            Assert.AreEqual(position, rec.Position);
+            Assert.AreEqual(AbilityModel.ComputeCA(in rec.Attributes, position), life.CurrentAbility,
+                "CA is computed for the inherited position");
+        }
+
+        [Test]
+        public void GenerateRegen_TheInheritedPosition_MovesNoOtherDrawValue()
+        {
+            // The retired position draw's index stays reserved and undrawn, so the identity draws around
+            // it (name, age, weak foot) are the same whichever position the regen inherits.
+            var gkRng = NewRng(77UL, clubId: 1, out int gk);
+            var fwRng = NewRng(77UL, clubId: 1, out int fw);
+            (PlayerRecord keeper, _) = RegenGenerator.GenerateRegen(gkRng, gk, 1, 800, PlayerPosition.Goalkeeper, WorldDay);
+            (PlayerRecord forward, _) = RegenGenerator.GenerateRegen(fwRng, fw, 1, 800, PlayerPosition.Forward, WorldDay);
+
+            Assert.AreEqual(keeper.FirstName, forward.FirstName);
+            Assert.AreEqual(keeper.LastName, forward.LastName);
+            Assert.AreEqual(keeper.Age, forward.Age);
+            Assert.AreEqual(keeper.Attributes.WeakFootRating, forward.Attributes.WeakFootRating);
+            Assert.Greater(keeper.Attributes.Reflexes, forward.Attributes.Reflexes,
+                "the position bias follows the inherited position (GK reflexes bias)");
+            Assert.AreEqual(gkRng.GetStreamState(gk).RngCursor, fwRng.GetStreamState(fw).RngCursor);
+        }
+
+        [Test]
+        public void GenerateRegen_UndefinedPosition_Throws()
+        {
+            var rng = NewRng(5UL, clubId: 0, out int idx);
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => RegenGenerator.GenerateRegen(rng, idx, 0, 1, (PlayerPosition)99, WorldDay));
+        }
+
         [Test]
         public void GenerateRegen_NullRng_Throws()
         {
             Assert.Throws<System.ArgumentNullException>(
-                () => RegenGenerator.GenerateRegen(null, 0, 0, 1, WorldDay));
+                () => RegenGenerator.GenerateRegen(null, 0, 0, 1, PlayerPosition.Midfielder, WorldDay));
         }
 
         [Test]
@@ -192,7 +244,7 @@ namespace TacticalDirector.PlayerProgression.Tests
             // attributes are identical by construction and the only thing that can differ is the rule.
             var rng = NewRng(2024UL, clubId: 3, out int idx);
             (PlayerRecord rec, PlayerLifecycle regenLife) =
-                RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 701, WorldDay);
+                RegenGenerator.GenerateRegen(rng, idx, clubId: 3, newPlayerId: 701, PlayerPosition.Midfielder, WorldDay);
 
             ProgressionEngine seeded = ProgressionEngine.SeedFrom(
                 new[] { new Squad(3, new[] { rec }) }, WorldDay);
@@ -248,4 +300,8 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | the pre-ERR-028-018 regen credit (GrowthCursor = 0) fails      |
 // |         |            |        | this case, which is the exact defect that shipped once and     |
 // |         |            |        | went a day undetected because nothing compared the two sites.  |
+// | 1.5     | 2026-10-19 | —      | ERR-028-024: every call passes the inherited position; new locks — the regen takes the retiree's position (all four), the position moves no other identity draw, an undefined position throws. |
+// | 1.6     | 2026-10-20 | —      | AR round 1 L1 (ERR-028-025): the test-local ordinal literal 82 and site id "player-progression.regen" ("until the production const lands at T2") replaced by PlayerProgressionConstants.SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION / REGEN_STREAM_SITE_ID / REGEN_STREAM_VERSION, so a constant change can no longer leave this fixture drawing from a stream production never registers. |
+// | 1.7     | 2026-10-20 | —      | AR round 4 L12 (comment-only): "Binomial(25, 0.25)" restated as Binomial(squad size, 0.25) — 23 today (ERR-031-004), as RegenGenerator's own doc already says. |
+// | 1.8     | 2026-10-20 | — | AR round 5 L21: the construction-day-credit lock's precondition was REGEN_AGE_MAX < GROWTH_AGE, which does not imply the full GROWTH_DAILY_POINTS step now that the rate ramps down from GROWTH_AGE - AgeBandRampHalfWidthYears; it is REGEN_AGE_MAX + 1 <= GROWTH_AGE - AgeBandRampHalfWidthYears (entirely below the ramp). Assertion value unchanged. |
 #endregion

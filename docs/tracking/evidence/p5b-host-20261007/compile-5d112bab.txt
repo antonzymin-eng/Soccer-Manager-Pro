@@ -1,0 +1,14 @@
+# Unity 6000.4.9f1 Editor.log excerpt — exact-head compile of main 5d112bab (forced recursive reimport)
+1:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+63:*** Tundra build success (134.81 seconds - 0:02:14), 1 items updated, 1151 evaluated
+64:Reloading assemblies after finishing script compilation.
+65:Reloading assemblies after forced synchronous recompile.
+185:[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+186:[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+476:[ScriptCompilation] Requested script compilation because: Requested through public api
+735:*** Tundra build success (440.86 seconds - 0:07:20), 75 items updated, 1151 evaluated
+error CS lines: 0
+unique warnings:
+BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius'
+ClientShellBehaviour.cs(143,34): warning CS0618: 'Object.GetInstanceID()'
+ClientShellBehaviour.cs(151,17): warning CS0618: 'Object.GetInstanceID()'

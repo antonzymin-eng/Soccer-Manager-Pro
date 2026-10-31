@@ -1,6 +1,6 @@
 // File:     src/match-engine/TackleIntentCensus.cs
 // Created:  2026-08-12
-// Modified: 2026-08-12
+// Modified: 2026-09-15
 // Author:   —
 // Spec:     Defensive AI #14 §3.2 (FR-DA-010 pool exclusion), §3.6 (tackle intent),
 //           match-engine wiring backlog W2 / §1.1, Code Standards #20
@@ -86,11 +86,11 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Episodes in which the "carrier" was ever further than
         /// <see cref="CarrierBallGapThresholdM"/> from the ball he is recorded as possessing.
         ///
-        /// <para>Possession here is a FLAG, not a kinematic constraint — the ball is not glued to the
-        /// possessor (wiring backlog W6: <c>BallStateType.Controlled</c> has no producer). So
-        /// tackler-to-carrier separation and tackler-to-BALL separation are different quantities, and a
-        /// contact gate calibrated against one while the mechanism uses the other would be measuring the
-        /// wrong distance. This counter says how far apart the two readings can drift.</para></summary>
+        /// <para>W6 now makes genuine open-play possession a physical <c>BallStateType.Controlled</c>
+        /// constraint and MatchEngine drives the ball with its carrier. This counter is retained as a
+        /// regression detector: if carrier/ball separation again exceeds the reporting threshold, the
+        /// tackle-contact geometry is no longer observing the same physical carrier the possession state
+        /// names.</para></summary>
         public int EpisodesCarrierBallGapOverThreshold;
 
         // ── Per-stride totals (attribution ratios only — NOT a per-90 rate) ───
@@ -131,6 +131,8 @@ namespace TacticalDirector.MatchEngine
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
+// | 1.1     | 2026-09-15 | —      | W6 comment sync only: Controlled possession is now a kinematic      |
+// |         |            |        | constraint; carrier/ball-gap counter retained as a regression lock. |
 // | 1.0     | 2026-08-12 | —      | Initial. Wiring backlog W2 census accumulator. Episode-based, not  |
 // |         |            |        | tick-based (a 10 Hz tick count is a sampling-rate artifact). The   |
 // |         |            |        | counters discriminate the three possible causes of a zero: nobody  |

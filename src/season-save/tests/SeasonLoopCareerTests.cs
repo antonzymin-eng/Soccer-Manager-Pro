@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
-// Modified: 2026-09-11 (#40 T2b — roll-capable career fixtures carry finance state)
+// Modified: 2026-10-09
 // Modified: 2026-08-16, latest (L-3, adversarial review — v1.10: the two identical "Oracle = the
 //           composed seam..." comments (covering three call sites) were documented, not enforced. Both
 //           sites now call the new SeasonLoopScenarios.ComposedOracle instead of
@@ -759,6 +759,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 loop.AdvanceToNextFixtureDay();
                 loop.AdvanceAndPlayNextRound(provider);
             }
+            loop.AdvanceDays(1);
 
             Squad before = provider.ResolveByClubId(0);
             int departedId = before.GetPlayer(before.Count - 1).PlayerId;
@@ -852,6 +853,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 loop.AdvanceToNextFixtureDay();
                 loop.AdvanceAndPlayNextRound(provider);
             }
+            loop.AdvanceDays(1);
 
             int seasonNumber = loop.State.SeasonNumber;
             int carried = career.TrainingBlocks()[0].Count;
@@ -934,4 +936,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's |
 // |         |            |        | scope once for every caller. No behaviour change.                  |
 // | 1.11    | 2026-09-11 | —      | #40 T2b: WiredLoop carries canonical finance state at boundary.  |
+// | 1.12 | 2026-10-09 | — | ERR-030-053: complete the final day before staging boundary roster churn. |
 #endregion

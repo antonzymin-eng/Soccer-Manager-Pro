@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # File: tools/assembly-tier-check.py
 # Created: August 17, 2026
-# Modified: August 31, 2026
+# Modified: October 8, 2026
 # Purpose: Mechanical guard for the Spec #20 §3.5.2 ten-tier assembly order
 #          (FR-CS-046 / FR-CS-046a / FR-CS-046b). Parses the tier table OUT OF
 #          the spec — docs/specs/code-standards/section-3.md §3.5.2 — rather
@@ -396,9 +396,33 @@ def _digest(value):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def resolve_builtin_package(repo, source, reference):
+    """Resolve exactly the pinned UGUI package in the Unity-only rendering skin."""
+    if (source != "src/match-client-unity/match-client-unity.asmdef"
+            or reference != "UnityEngine.UI"):
+        return None
+    try:
+        manifest = json.loads((repo / "Packages/manifest.json").read_text())
+        lock = json.loads((repo / "Packages/packages-lock.json").read_text())
+        pin = manifest["dependencies"]["com.unity.ugui"]
+        package = lock["dependencies"]["com.unity.ugui"]
+        expected = {"com.unity.modules.ui": "1.0.0",
+                    "com.unity.modules.imgui": "1.0.0"}
+        if (pin == "2.0.0" and package["version"] == pin
+                and package["source"] == "builtin"
+                and package["dependencies"] == expected
+                and all(lock["dependencies"][key]["version"] == version
+                        for key, version in expected.items())):
+            return {"name": "com.unity.ugui", "version": pin,
+                    "source": "builtin", "dependencies": expected}
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return None
+
+
 def build_machine_report(
         records, tier_of, ordered_rows, infra_folders, bound_infra,
-        bound_sequence, folder_of_name, failures, stats):
+        bound_sequence, folder_of_name, failures, stats, repo):
     """Build the machine-readable A1 evidence view from the checker's facts."""
     tier_names = dict(ordered_rows)
     by_name = {}
@@ -505,6 +529,11 @@ def build_machine_report(
     all_cycles = find_cycle_components(all_graph)
     production_cycles = find_cycle_components(production_graph)
 
+    for item in external_references:
+        package = resolve_builtin_package(repo, item["source"], item["reference"])
+        if package is not None:
+            item["resolved_package"] = package
+
     graph_material = {
         "nodes": [
             {
@@ -543,6 +572,7 @@ def build_machine_report(
     production_unknown = [
         item for item in external_references
         if item["source_classification"] in ("production", "out-of-band")
+        and "resolved_package" not in item
     ]
 
     summary = dict(stats)
@@ -655,6 +685,8 @@ def analyze(repo):
                 ".asmdef" % (folder, folder))
 
     downward = intra = upward = infra_sourced = 0
+    source_paths = {record["name"]: record["path"] for record in records
+                    if not record["is_test"]}
     total = 0
     for name in sorted(refs):
         src_folder = folder_of_name[name]
@@ -668,6 +700,8 @@ def analyze(repo):
                     "entirely" % (src_folder, ref))
                 continue
             if ref not in folder_of_name:
+                if resolve_builtin_package(repo, source_paths[name], ref) is not None:
+                    continue
                 failures.append(
                     "production assembly 'src/%s/' references '%s', which "
                     "resolves to no production assembly under src/ — an "
@@ -735,7 +769,7 @@ def analyze(repo):
     }
     return build_machine_report(
         records, tier_of, ordered_rows, infra_folders, bound_infra,
-        bound_sequence, folder_of_name, failures, stats)
+        bound_sequence, folder_of_name, failures, stats, repo)
 
 
 def print_human_report(report):
@@ -874,3 +908,5 @@ if __name__ == "__main__":
 # |         |            |             | share one finite-JSON helper and reject   |
 # |         |            |             | NaN/Infinity instead of emitting non-JSON |
 # |         |            |             | numeric tokens. Verdict semantics unchanged.|
+
+# | 1.7     | 2026-10-08 | — | Resolve exact Unity skin UGUI 2.0.0 pin/dependencies in policy and graph evidence; unknown project/package references still fail. |

@@ -1,0 +1,39 @@
+FROZEN #435 FOUL/CARD CHARACTERIZATION — PROVENANCE
+captured_utc=2026-09-22
+preregistration_pr=435
+preregistration_merge_sha=e92b13ed826927dd5d3a5bcc57b24afb81f10b1e
+instrument_pr=436
+instrument_merge_sha=c56e5e1adff4e240b54c9abbb5ebea9c0290f65e
+measured_sha=c56e5e1adff4e240b54c9abbb5ebea9c0290f65e
+successful_run_id=35765635130
+successful_job_id=106874328764
+successful_workflow_event_sha=50d6229ccd5cf3e2118aae1497d27b40f6986b29
+successful_branch=evidence/foul-card-six-seed-20260922
+successful_artifact_id=10712028713
+successful_artifact_name=foul-card-six-seed-35765635130
+successful_artifact_digest=sha256:50ba7e6c6da7cfa1df7868216589728c3c53d72108470e369b7424cbd1c95f7f
+successful_run_conclusion=success
+successful_run_created_at=2026-09-22T18:12:22Z
+successful_run_updated_at=2026-09-22T18:23:48Z
+instrument=foul-rate
+env=TD_FOUL_DIAGNOSTIC=1
+filter=FullyQualifiedName~FoulRateDiagnostic
+project=src/match-engine/tests/match-engine-tests.gen.csproj
+foul_call_probability_default=0.030
+foul_impact_force_threshold_n_default=1200
+foul_cooldown_ticks_default=180
+original_trx_sha256=8e416087f38b84a3570439f69ec46bd6efaf9a15bbdbefa93bea7e2c523c97d2
+original_instrument_output_sha256=e4fa31b8f2cf0242a8d7c6cb8d7e36d69164215a03837a6ee191695d2ee6467f
+original_measurement_txt_sha256=f430fa35a04fc45adaca3bf97541ebb3bddbb378090f36f19376a43e8e4080a8
+
+The workflow event commit supplied only the one-shot harness. Its Checkout step explicitly
+checked out measured_sha and the next step compared git rev-parse HEAD to that exact SHA,
+failing on mismatch. The measurement therefore describes the landed #436 merge on main, not
+the harness commit.
+
+The harness first ran tools/dotnet-ci/run-gate.sh with the diagnostic environment removed and
+the test filter applied. That step built the full generated tree and then ran only tests matching
+FullyQualifiedName~FoulRateDiagnostic. It is build/meta/filter evidence, not evidence that the
+full test suite ran. The proved measurement invocation then ran the owning MatchEngine test project
+with TD_FOUL_DIAGNOSTIC=1, detailed console logging, TRX logging, TreatNoTestsAsError=true, and the
+catalog verify-run postcondition.

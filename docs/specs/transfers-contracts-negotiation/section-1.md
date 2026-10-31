@@ -1,8 +1,14 @@
 # Transfers, Contracts & Negotiation #31 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** October 21, 2026 (v0.8 — AR round 5, ERR-031-015: KD-2 no longer says the counterparty is "deliberately" left untouched — it is unposted in the interim, the choice is open)
+**Last Updated (prior):** October 20, 2026 (v0.7 — AR round 4, ERR-031-014: KD-2 says option (b) is the recorded interim behaviour and the (a)-vs-(b) owner decision is open)
+**Last Updated (prior):** October 20, 2026 (v0.6 — AR round 3, ERR-031-013: KD-2 records that the counterparty club's #40 entry is deliberately not posted)
+**Last Updated (prior):** October 20, 2026 (v0.5 — ERR-031-011: KD-6 states the window derivation)
+**Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: KD-7 is a stable-id re-home; ids never encode a club)
+**Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001/002 T0 approved-spec back-propagation)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -38,7 +44,8 @@ preserving #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2). **Deep (Stage 3
 - **The on-disk season codec + roster ownership + tick order (#30).** #30 owns `SeasonSaveCodec` /
   `SEASON_SAVE_FORMAT_VERSION`, `RunWorldTickInFixedOrder`, and the roster lifecycle
   (`SeasonLoop`/`SeasonState`, `RollToNextSeason`). #30 **invokes** #31 at a new pre-declared tick-order slot
-  and owns the roster-commit + PlayerId **re-key** a transfer triggers. #31 never references #30 (KD-6/KD-7).
+  and owns the roster commit (a stable-id **re-home**, ERR-031-005) a transfer triggers. #31 never references #30
+  (KD-6/KD-7).
 - **CA/PA (#28).** The current/potential-ability career-state keyed by `PlayerId` is #28-owned; the minimal
   valuation does **not** read it (a recorded deep-tier refinement, KD-1).
 
@@ -57,20 +64,27 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
 
 ## 1.4 Key decisions
 
-- **KD-1 (valuation as the identity the deep tier modulates).** The Stage-2 counterparty valuation is a **pure
-  deterministic integer function** over #27 attributes + age (§3.1). **Club-need, #33 personality, and #28 CA
-  all** enter the **deep tier as a multiplicative bias** on this identity, **never a replacement path**; with
-  `deepTransfersEnabled` off every bias is exactly `1000‰` (`needMult`, `personalityMult`, CA-swap off), so the
-  negotiation reproduces the attributes+age valuation exactly.
+- **KD-1 (valuation identity + minimal positional context).** The Stage-2 **base valuation identity** is a
+  pure deterministic integer function over #27 attributes + age (§3.1). The minimal counterparty view then
+  applies the **always-on #27 positional-scarcity multiplier** required by FR-TX-002. #33 personality, #28
+  CA/PA and #34 staff remain deep-tier multiplicative refinements, never replacement paths; disabling those
+  deep producers leaves the positional-need term active (`ERR-031-001`).
 - **KD-2 (the #40 boundary — read + commit + own the spend counter + atomic commit).** #31 reads
   `AvailableTransferBudget` (returns the static `TransferBudget` ceiling) and posts accepted deals via
   `ApplyTransaction`. Because `ApplyTransaction` never decrements the ceiling and **FR-FN-004 gives #40 no
   "remaining budget net of committed" concept**, #31 keeps its own `committedSpendThisWindow` counter for the
   affordability gate. Every gate is validated **before any mutation** (atomic commit — no half-written deal).
-  Wage posting to #40's `WageBillAggregate` is **deferred to the deep tier** — minimal posts only the
+  In particular, ordinary buy affordability is decided before staged `ApplyTransaction` validation, so checked
+  arithmetic on a coherent signed debt balance cannot preempt `InsufficientBudget` (`ERR-031-002`). Wage posting to #40's `WageBillAggregate` is **deferred to the deep tier** — minimal posts only the
   `TransferFee`, so #40 FR-FN-015 (`WageBillAggregate ≡ 0` at Stage 2, "no #31/#34 producer exists yet") is
   preserved verbatim; the deep-tier wage producer lands with a #40 back-prop relaxing FR-FN-015 + a `WageBudget`
-  affordability gate (§7).
+  affordability gate (§7). **The counterparty is not posted (AR round 3, ERR-031-013):** at minimal #31
+  posts the fee only to the MANAGED club's #40 entry; the AI counterparty club's entry is, in the interim, left
+  untouched (not a decision — see below). Consequence: AI clubs' `FinanceView` and the season-end `SettleFinances` never see transfer cash, so money
+  enters or leaves the league on every transfer (a buy debits the manager's club for a fee no club receives; a sale
+  credits it from no club). Leaving the counterparty unposted (option (b)) is the recorded INTERIM behaviour the minimal tier ships; whether to
+  mirror-post instead (option (a), inside the same staged, publish-on-`Accepted` seam) is an OPEN owner decision
+  deferred in §7.2 (open-issues `transfer-counterparty-ledger`).
 - **KD-3 (the reusable negotiation seam).** The offer/response surface (`Offer`, `NegotiationOutcome`,
   `EvaluateOffer`) is authored once, **counterparty-generic**, so #32 (scouting bids) and #34 (staff hiring)
   consume it without duplication.
@@ -82,11 +96,17 @@ Reference DAG: `compositionRoot → {#30, #31}`, `#31 → {#40, #27, #16}`. **Ac
   **stays reserved** (the #40 ERR-040-001 / #29 precedent). Rival bidding is the deep-tier first draw
   (promotes `DOMAIN_TAG_TRANSFERS = 0x23` at T3, keyed on `(clubId, playerId, worldDay, purpose)`).
 - **KD-6 (the transfer-window model — #31-owned).** #30 has no window concept; #31 owns a `TransferWindow`
-  derived deterministically from #30's `SeasonCalendar` (read-only). Minimal = one summer window.
-- **KD-7 (roster commit + PlayerId re-key — a NEW #30 mid-season entry point).** A transfer re-keys the
-  club-scoped `PlayerId` (`clubId*CLUB_SQUAD_SIZE+localIndex`). #31 **requests** a commit through a new
-  #30-owned mid-season roster-mutation entry point that re-keys the player and dispatches a roster-move hook;
-  #31 migrates only its own `Contract` (#28/#33 migrate their own keyed state).
+  derived deterministically from #30's `SeasonCalendar` (read-only). Minimal = one summer window per season:
+  `Open` = the world day #30 begins the season (the new-game day at genesis, the roll day at each boundary); `Close` = the season's opening fixture day (`SeasonCalendar.DayOfRound(0)`) + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1, inclusive (ERR-031-011) — so the close never depends on when the client rolls; only the open day follows the roll (§3.5).
+- **KD-7 (roster commit — a STABLE-id re-home through a NEW #30 mid-season entry point; ERR-031-005).** A transfer
+  **re-homes** the player: #31 **requests** a commit through a #30-owned mid-season roster-mutation entry point that
+  moves the player's record to the destination club **under his unchanged `PlayerId`**. The id is career-unique and
+  stable (owner decision October 19, 2026): `clubId*CLUB_SQUAD_SIZE+localIndex` is #27's GENESIS allocation only,
+  every post-genesis id comes from #28's monotonic `NextPlayerId` (the career's single allocator), and nothing derives
+  a player's club from his id — club membership is a roster fact. Because nothing re-keys, no PlayerId-keyed state
+  anywhere (#28/#29/#41/#44/#33/#31) needs migrating; #30 carries its own per-club `(ClubId, PlayerId)` rows with the
+  move. *(Originally specified as a packed-id RE-KEY into the destination's free `localIndex`; that contradicted #28
+  FR-PG-011 and #27 FR-SQ-010 as amended by ERR-027-004 the moment a regen existed — see ERR-031-005.)*
 - **KD-8 (behaviour-neutral identity).** Zero manager action ⇒ zero transfers (no autonomous producer at
   minimal) ⇒ a season byte-identical to pre-#31; registering no stream keeps every cursor byte-identical. A
   manager bid is an explicit command (the `SetTeamTactic` discipline), not a neutrality violation.
@@ -102,4 +122,10 @@ slot; minimal is draw-free (KD-5). This is the #40/#41/#28 off-pitch integer + w
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3 (H): wage posting deferred to the deep tier (minimal fee-only, preserves #40 FR-FN-015) — §1.1/KD-2; KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
+| 0.3 | 2026-09-21 | — | ERR-031-001/002: KD-1 now matches FR-TX-002's always-on minimal positional scarcity, and KD-2 explicitly orders affordability before staged #40 mutation validation. |
+| 0.4 | 2026-10-19 | — | ERR-031-005 (owner decision Oct 19, 2026): KD-7 rewritten from a packed-id re-key to a stable-id re-home; the packed formula is genesis allocation only, #28 `NextPlayerId` is the single post-genesis allocator, and club membership is a roster fact. |
+| 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): KD-6 restated with the window derivation — open on the day #30 begins the season, close at the opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 — superseding ERR-031-008's roll-day-length window. |
+| 0.6 | 2026-10-20 | — | ERR-031-013 (AR round 3, M16): KD-2 states that the minimal tier posts the fee to the MANAGED club's #40 entry only; the AI counterparty's entry is deliberately untouched, so AI clubs' `FinanceView` / `SettleFinances` never see transfer cash and money enters or leaves the league on every transfer. The mirror post is an owner decision (§7.2). |
+| 0.7 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L3): KD-2 no longer implies an owner choice — leaving the counterparty unposted (b) is the recorded interim behaviour of the minimal tier; the mirror-post choice is an open owner decision (§7.2, open-issues `transfer-counterparty-ledger`). |
+| 0.8 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-A): KD-2 said the AI counterparty's #40 entry is "deliberately left untouched", which still read as an owner decision; it now says the entry is left untouched in the interim (option (b)), with the (a)-vs-(b) owner decision open (§7.2). No requirement changed. |
 #endregion

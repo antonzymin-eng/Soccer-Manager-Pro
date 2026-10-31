@@ -1,6 +1,7 @@
 // File:     src/match-client-core/FrameInterpolator.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-10-06 (P5b lifecycle/identity)
+// Modified (prior): 2026-07-27
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P3, §7
 //           "Interpolation"), Code Standards #20
@@ -127,7 +128,10 @@ namespace TacticalDirector.MatchClientCore
             {
                 Vector2 to = b[i];
 
-                if (rosterChanged || !IsFinite(to))
+                bool occupantChanged = previous.AgentCues != null && current.AgentCues != null &&
+                    i < previous.AgentCues.Length && i < current.AgentCues.Length &&
+                    previous.AgentCues[i].PlayerId != current.AgentCues[i].PlayerId;
+                if (rosterChanged || occupantChanged || !IsFinite(to))
                 {
                     destination[i] = to;
                     continue;
@@ -164,4 +168,5 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-27 | —      | Initial creation (P3): pure frame-blend math — speed-aware     |
 // |         |            |        | alpha, ball and per-agent blending with snap-on-discontinuity  |
 // |         |            |        | for restarts and substitutions, all failing to the newer frame.|
+// | 1.1     | 2026-10-06 | —      | Snap a replaced occupant even when displacement is below the distance threshold. |
 #endregion

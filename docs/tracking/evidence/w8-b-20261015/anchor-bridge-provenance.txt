@@ -1,0 +1,16 @@
+# Fresh pre-B anchor/bridge run provenance
+Host: Linux x64; .NET SDK 8.0.426; Microsoft.NETCore.App 8.0.32; Debug.
+Both use exact frozen W8 instrument blob 520ba31c71e06ed408fd5c282b5fd5611cf74879.
+
+host-anchor
+3974b78b0383adca3e9546bb47a7b93a62b3cf92
+71d6ce456f563d6070aa8953561c1367599a359f
+{'creation': '2026-10-15T22:47:34.7174011+00:00', 'queuing': '2026-10-15T22:47:34.7174012+00:00', 'start': '2026-10-15T21:59:27.4971773+00:00', 'finish': '2026-10-15T22:47:34.7928500+00:00'}
+Result: Passed; 1 exact frozen diagnostic case.
+
+prewire
+b60cc532254862246c9fc2622dbf2c99d8b787c5
+0016080c0f3aa62dc6a0eb20f7cac9330dee95d6
+{'creation': '2026-10-15T22:29:36.9713555+00:00', 'queuing': '2026-10-15T22:29:36.9713558+00:00', 'start': '2026-10-15T21:54:39.2217327+00:00', 'finish': '2026-10-15T22:29:37.0344049+00:00'}
+Result: Passed; 1 exact frozen diagnostic case.
+Bridge source differs from b60cc532 only by replacing its common W8 test with the frozen 520ba31c reclaim-split instrument. Anchor uses the identical scratch instrument replacement as October 13.

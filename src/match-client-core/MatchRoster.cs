@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchRoster.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-10-06 (P5b authored/neutral identity policy)
+// Modified (prior): 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20
@@ -27,8 +28,8 @@ namespace TacticalDirector.MatchClientCore
     ///
     /// <para><b>Shirt numbers are slot ordinals, not player identity</b>, assigned by
     /// <see cref="RosterShirtNumbers"/> — which is the one implementation of that rule, shared with
-    /// the browser viewer so the two Views cannot drift. Stage 0 carries no shirt-number field on a
-    /// player; when player records gain real numbers, that class is the one place that changes.</para>
+    /// the browser viewer for clients using neutral slot labels. S0 supplies authored metadata through
+    /// MatchIdentityContext; its renderer resolves shirts from accepted-frame PlayerId instead.</para>
     ///
     /// <para>Built once at scene boot and held; it allocates, and is not on the render path.</para>
     /// </summary>
@@ -120,4 +121,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | three documents claimed this type had taken it over. The rule  |
 // |         |            |        | now lives once, in match-viewer's RosterShirtNumbers, which    |
 // |         |            |        | both Views consume; this type delegates to it.                 |
+// | 1.2     | 2026-10-06 | —      | Clarify authored S0 versus neutral slot-shirt policy. |
 #endregion

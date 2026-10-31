@@ -1,0 +1,80 @@
+{
+  "created": "2026-09-30",
+  "purpose": "Focused full-time fault-copy correction; not a new full walkthrough or owner approval",
+  "runId": "UX-GE-S0-20260930-05-DELTA-01",
+  "prototype": "s0-prototype v0.5",
+  "baselineCommit": "a859ea12b9fa5ae9cf366e86c10407d03a9cf885",
+  "baselineRunId": "UX-GE-S0-20260930-05",
+  "baselineEvidenceSha256": "fcb02b69f3f6c2f6f99f075860bc46dbec862c75c088d147b8244306023aea54",
+  "regeneratedImages": [
+    "mv-ft-statistics-fault.pdf"
+  ],
+  "unchangedImages": [
+    "mentality-dialog.pdf",
+    "mm.pdf",
+    "mv-0.pdf",
+    "mv-ft-not-applied.pdf",
+    "mv-ft.pdf",
+    "mv-l.pdf",
+    "mv-live-applied.pdf",
+    "mv-live-pending.pdf",
+    "mv-live-refused.pdf",
+    "mv-live-statistics.pdf",
+    "mv-p.pdf",
+    "mv-paused-pending.pdf",
+    "pr.pdf",
+    "report-incomplete.pdf",
+    "report-partial-open.pdf",
+    "stress-fault-1366.pdf",
+    "substitution-dialog.pdf",
+    "ts.pdf"
+  ],
+  "browser": "153.0.8010.0",
+  "hashes": {
+    "index.html": "18869864ca1fe8eb233a94e48aa23de6d5626f05e9292e8c4e9a39954b60cf41",
+    "prototype.css": "60aaede3535622638dcdce0abd89c366b00404663c9df02f9c11e4e2ae557d87",
+    "model.js": "bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c",
+    "prototype.js": "dfd9c8cd639bc0c34bc0bc8d92039c74ef9ac68165dade8dab5d4b99b78b18d5",
+    "reference-data.js": "fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69",
+    "scenario-data.js": "05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866",
+    "verify.cjs": "18bf2d1642cd0f9d2116d6a4d016785085976037aa14012f96476b1451f0851a"
+  },
+  "imageHashes": {
+    "mentality-dialog.pdf": "62703007c3b7898414f96cc445970373bf67fe1b2a1e05f5507ce5c7dd97c5ac",
+    "mm.pdf": "ca250ec4314275f3719f3c86ec3475eb543b8a1e85ca605d66deeee64da64195",
+    "mv-0.pdf": "97a84b504ffaea95fba53615afa440420045fbc6b578f31cf56dc04b84ee279c",
+    "mv-ft-not-applied.pdf": "1042e2edb6c1aead93cc7bc84eb24e64ec058fac2f9e8823ea779c8012ee5a75",
+    "mv-ft-statistics-fault.pdf": "0a2b1af953f0262979a19fab831aa4d0f8ca45d574c7bbb5bbb9bb4fc90a0751",
+    "mv-ft.pdf": "c3dd83cc75f11e8afc01549abae87a47511ebe3368c53843a90ab1ad7564bf44",
+    "mv-l.pdf": "b0275702b8933ef5e11e9ab074273788463fc29ef58a808ac7c5ca41caa5e06a",
+    "mv-live-applied.pdf": "6ec218138a3d6e003322f63254ae239364d66b48f681426963b67720f0cb763a",
+    "mv-live-pending.pdf": "8f43b54767a8e6862622a5729ab0bc46074a7dfe1cfc64e38842f46db12868de",
+    "mv-live-refused.pdf": "9d3d49a042730754ed8ea46256c51a0ad015f4d1b39bc01908547545417053aa",
+    "mv-live-statistics.pdf": "f2c585e18c207532cca9f61a87993a6445961ffbd3b61877102765d01ac322a7",
+    "mv-p.pdf": "5bda7dd0fb201e3bdb510ce6a0b1cc9c6297e74dfe21f24d5cf43391ecf0e37d",
+    "mv-paused-pending.pdf": "343e36bdb0efe91f0ae09d50a5deecd12d294b56f6c03783b952ee739954a5fd",
+    "pr.pdf": "b57b6a6e13c36cd185f7116c6774047fde1d410b10da68f9bc930fa1ea092f79",
+    "report-incomplete.pdf": "6fdf901c556c5eb84a92b04cb3cd4e22ec7d988c889d1601e37236e0b84c76d7",
+    "report-partial-open.pdf": "f9ac7f8d853c5fa267d80ab8d1c896a6f04f01129db7db827957cef0208455e9",
+    "stress-fault-1366.pdf": "11fc5c15e84eb792e1b15039f53278f9b895a24c44d62b338936529d642cd6b5",
+    "substitution-dialog.pdf": "82445da4c7e8f975c4bd2137843583ad5fdbe96885780046cf70e02dc1a1be4e",
+    "ts.pdf": "ef89daa7e2a57b97d787a166c6f431db4097e41fe3e00b38997e44f6590db374"
+  },
+  "results": [
+    {
+      "name": "healthy full-time report note",
+      "result": "PASS",
+      "detail": "Healthy full-time state retains its final-statistics report note."
+    },
+    {
+      "name": "geometry: full-time statistics fault delta",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "faulted full-time report note",
+      "result": "PASS",
+      "detail": "Normal fault journey reaches full time with partial figures and no promise of final statistics; report disclosure stays closed and Return enabled."
+    }
+  ]
+}

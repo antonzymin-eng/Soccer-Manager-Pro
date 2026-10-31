@@ -3,7 +3,25 @@
     "rootNamespace": "TacticalDirector.ClientApp.Tests",
     "references": [
         "TacticalDirector.ClientApp",
-        "TacticalDirector.UiFramework"
+        "TacticalDirector.UiFramework",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchAnalytics",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.Localization",
+        "TacticalDirector.SeasonSave",
+        "TacticalDirector.LivingWorld",
+        "TacticalDirector.PlayerProgression",
+        "TacticalDirector.Discipline",
+        "TacticalDirector.ClubFinances",
+        "TacticalDirector.TrainingSystem",
+        "TacticalDirector.InjuriesMedical",
+        "TacticalDirector.Transfers",
+        "UnityEngine.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

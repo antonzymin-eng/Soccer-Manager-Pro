@@ -1,9 +1,9 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** September 11, 2026\
-**Version:** 1.5\
-**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 COMPLETE; S0 GATE A NEXT\
+**Last Updated:** October 30, 2026\
+**Version:** 1.35\
+**Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF; S0 J TECHNICAL REVIEW FAIL October 19; FIXES J-01/J-02/J-04 LANDED October 22; J-05 LANDED October 30 (PR #520); S0 GATE J PASS AND ACCEPTED BY THE OWNER October 30, 2026\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
 
@@ -54,7 +54,7 @@ The detailed plan went through three internal critique/revision rounds before v1
 
 Two review claims were stale against the current tree:
 
-- **P4b is landed as code.** `src/match-client-unity/README.md` records `MatchClientBehaviour.cs` as LANDED after five AR rounds. The real gap is that this assembly is excluded from the shim and the P4b binding has never compiled/run on the pinned Unity host; P5b and on-host P6 remain open.
+- **P4b is landed and partially host-verified.** `src/match-client-unity/README.md` records `MatchClientBehaviour.cs` as LANDED after five AR rounds. September 12 proved pinned-editor compilation; September 13 added tracked-scene Play-mode boot/render smoke evidence. Full host acceptance is still open on click-to-command and the cert-host render-loop/performance capture; P5b and on-host P6 remain open.
 - **#30 is implemented.** Its implementation is in `src/season-save/`: `SeasonLoop`, season save state, league bootstrap and T2 round/day progression exist, including `AdvanceAndPlayNextRound`. The meaningful S1 question is which player-facing projection, dispatcher, screen and navigation surfaces exist.
 
 The revised plan below incorporates the structural concerns while using the verified current state.
@@ -333,12 +333,23 @@ Use four layers:
 
 1. contract review;
 2. scripted heuristic/self-walkthrough;
-3. independent task-based participant test;
+3. owner image review for S0; independent task-based participant test for S1;
 4. implementation verification.
 
 ### F4.2 Binding participant mechanism
 
-For **S0 and S1 only**, Gate G requires:
+**Owner decision, September 30, 2026 — S0 image review.** The project owner instructed that
+testers are not required and that he will conduct all image reviews for the current S0 work.
+For S0, Anton Zymin's image review replaces the participant round and its recruitment,
+availability and independence attestations. The owner reviews the versioned wireframes and
+failure/state images, with the Gate-E interaction checks as supporting evidence. Gate G requires
+an explicit image-approval record, dispositions for every finding, an explicit C-DEC-1 decision,
+and no unresolved Blocker or unaccepted Major. Each accepted Major needs a written rationale
+and release condition. Assigning the reviewer is not approving the images. Static images do not establish
+independent task completion or runtime interaction correctness. Gates H/I still follow G;
+Gate J still requires real-client verification.
+
+For **S1**, Gate G requires:
 
 - **2 independent participants** in one formative round;
 - the designer/implementer does not count;
@@ -360,7 +371,7 @@ This is intentionally small enough to bind in a solo/small-team project while st
 
 ### F4.3 Scripted self-walkthrough
 
-Before independent testing, the author executes the same tasks using:
+Before owner image review or independent testing, the author executes the same tasks using:
 
 - baseline data;
 - long names/pseudo-locale;
@@ -417,12 +428,10 @@ Minimum profiles:
 
 ### F4 exit
 
-The protocol is repeatable by someone other than its author, the UX owner is assigned, and two
-privacy-safe independent-participant slots with profiles, recruiting channels and an availability
-attestation mechanism are defined for S0. Personal identity disclosure is not an F4 output. The
-availability attestations are due before S0 reaches Gate F; two real independent completions remain
-mandatory at Gate G. **This is a deliberate timing relaxation from v1.4, which required the two S0
-participants to be identified/recruitable at F4 exit; anonymity itself does not require that timing change.**
+The protocol is repeatable, the UX owner is assigned, and the review route is explicit: owner
+image review for S0 under the September 30 decision; anonymous independent participants for S1.
+S0 tester slots and attestations are superseded. The earlier v1.5 timing relaxation is retained
+in version history; it is no longer a prerequisite for S0.
 
 ---
 
@@ -494,9 +503,15 @@ The prototype is not required to be Unity. It must accurately label real versus 
 
 **Pass:** a participant can attempt the complete task without instructions about which control to click.
 
-## Gate G — Independent usability validation
+## Gate G — Design validation
 
-Run the F4 participant round.
+For S0, run the owner image review defined in F4.2. Record the reviewer, date, prototype version,
+reviewed image paths, findings, C-DEC-1 decision and explicit approval. **S0 pass:** owner-approved
+images; every finding disposition recorded; C-DEC-1 explicitly decided; no unresolved Blocker;
+no unaccepted Major. Each accepted Major requires written rationale and a release condition. The decision record must identify this as owner
+design review, without claiming independent participant evidence.
+
+For S1, run the F4 participant round.
 
 Record:
 
@@ -509,7 +524,7 @@ Record:
 - confidence about what happens next;
 - findings/severity/disposition/retest.
 
-**Pass:** two independent participants completed the round; no unresolved Blocker; no unaccepted Major.
+**S1 pass:** two independent participants completed the round; no unresolved Blocker; no unaccepted Major.
 
 ## Gate H — High-fidelity reference
 
@@ -522,7 +537,7 @@ Only after Gate G:
 - finalize copy roles/localization keys as appropriate;
 - clearly mark future behavior.
 
-**Pass:** design-ready.
+**Pass:** design-ready; S0 high-fidelity images explicitly approved by the project owner.
 
 ## Gate I — Implementation handoff
 
@@ -570,8 +585,9 @@ Against the real implementation:
 
 Known before F1:
 
-- P4b Unity render/camera/click binding code is landed but host-unverified;
+- P4b Unity render/camera/click binding code is landed and remains `HOST-UNVERIFIED`, but current evidence includes pinned-editor compilation plus tracked-scene Play-mode boot/render smoke; click-to-command and cert-host performance acceptance remain open;
 - P5b UGUI shell is open;
+- `MatchSetup` carries initial **team** tactics but no per-player `PlayerTactic` setup state/builder; live `SetPlayerTactic` exists, so pre-match Role/Duty/Instructions are a known blocked setup seam rather than an `UNKNOWN` capability;
 - on-host P6 is open;
 - therefore the shipping Unity PM-1 client cannot currently be launched;
 - host-free command/session/render-decision logic exists;
@@ -584,9 +600,9 @@ S0 does **not** wait for all Unity work before design, but the dependencies are 
 
 - **S0 Gates A–E:** host-free; proceed from code/spec/reference evidence.
 - **S0 Gate F:** use a design prototype for the full flow; use `match-viewer`/`match-client-web` and captured real outputs to validate Match View data/behavior. Do not extend the browser client into a second shipping implementation.
-- **S0 Gate G:** validate the design prototype with two independent participants.
+- **S0 Gate G:** Anton Zymin reviews and explicitly approves the versioned images under F4.2.
 - **S0 Gates H–I:** produce the approved visual reference and the implementation packet that directly feeds **B9b/P5b**.
-- **Roadmap B8/P4b:** its code is landed, but pinned-host compile/runtime/cert evidence is still required. Follow the roadmap/interactive-client ordering for the host landing.
+- **Roadmap B8/P4b:** code, pinned-editor compilation and tracked-scene Play-mode boot/render smoke are complete. The row remains open only on the evidence the roadmap still names: click-to-select routed through the shipping P5b interaction path and the budgeted cert-host render-loop/performance capture. Do **not** repeat completed compile/scene-smoke work as if it were still absent; do not promote the partial evidence into Gate-J acceptance.
 - **Roadmap B9b/P5b:** consumes the S0 Gate-I packet for the four-screen UGUI binding.
 - **Roadmap B10/on-host P6:** verifies scene boot, 60 FPS rendering, live tactical input and render-loop certification.
 - **S0 Gate J:** cannot pass until the relevant B8 host verification, B9b and B10 evidence exists.
@@ -662,7 +678,7 @@ Do not modify those reference harnesses merely to make the prototype easier. The
 
 ## 6.7 S0 usability task
 
-Participant goal:
+Review task goal:
 
 > Prepare the team, start the match, identify what is happening, make one supported intervention, understand the final result, and return successfully.
 
@@ -951,20 +967,63 @@ After Gate H/I:
 
 # 14. Exact first sequence after F0 closes
 
-No additional polished screen comes next.
+**Current next step: validate the merged P5b screens on main on the pinned host.**
+The four screens merged to main October 8 through #489 at `1c8366d`, before any Unity compile.
+Run the [screens record](../tracking/p5b-screens-validation.md) v0.11 procedure against main:
+Unity compile and EditMode, Editor-regenerated package lock, real-client I-Q01–19, then B8
+profiling. A Unity failure is fixed forward on main. B8/B9b/B10/Gate J remain open.
+
+**Prior next step, October 8, 2026 (superseded by the #489 merge): validate the complete P5b screens on the pinned host.**
+The coordinator has the October 7 pinned-host acceptance in [its validation record](../tracking/p5b-lifecycle-validation.md) v0.5.
+L2 merged October 8 through #487 at 574b0344. The four screens now have an
+[implemented candidate and host procedure](../tracking/p5b-screens-validation.md) v0.1.
+All real-client I-Q01–19 and B8/B9b/B10/Gate J remain open; no new product decision or
+reopening of approved H/I is inferred from source implementation.
+
+**Prior next step, October 6, 2026 (coordinator work completed): implement the consumed P5b lifecycle/identity slice.**
+#478 landed Gate-I technical handoff PASS and owner acceptance at fafb63fc.
+#470 foundation then merged October 5 at f276f700 from 509a9f5d after CI run
+37264147436 passed and recorded Unity 6000.4.9f1 compile/ClientApp 26/26 evidence.
+The merged tree matches the tested head. The source-audited
+[P5b lifecycle/identity plan](../tracking/p5b-lifecycle-identity-plan.md) v0.2
+allocates the shell lifecycle consumer, renderer Attach/detach, authored identity,
+analytics publication and teardown; no internal/opt-in demo ownership remains in
+the target. Full time freezes Match View; report navigation requires acknowledgement.
+#49 L2 precedes localized copy/scale/screens. All I-Q01–19 and complete
+B8/B9b/B10/Gate-J evidence remain due. Approved 36-name fixture, 100–200% text
+size, client formatter and H v0.2 pins remain unchanged.
+
+**Prior next-step statement, October 4, 2026 (completed by #478/#470):**
+**Current next step: land the reviewed Gate-I record, then refresh #470 and begin the consumed implementation sequence.**
+Gate I PASS is recorded in journey §14.11 at reviewed PR #478 head e8ffd89. The owner
+approved distinct demo squads, 100–200% text size, the client formatter and the exact
+36 names. Binding contracts §§2–5 specify their producers/consumers and reference deltas.
+The eleven Gate-I deliverables require no additional product behavior decision. H v0.2
+remains approved at a1044d5; prior G/H decisions, hashes and evidence remain unchanged.
+Main's #470 Gate-I block clears only when #478 lands. Refresh #470 onto then-current main,
+reconcile tracking, run fresh CI and compile its exact head in Unity 6000.4.9f1 before merge.
+#49 L2 precedes localized screens; lifecycle/identity and copy/scale/screens follow contracts
+§5. All I-Q01–19 and B8/B9b/B10/Gate-J evidence remain due. No merge or runtime acceptance
+is inferred. The original first sequence remains for traceability.
+
 
 1. **F1.1 — current capability matrix.** First explicitly resolve the P4b/P5b/P6 host/client state and #30 `season-save` state that triggered this review.
 2. **F1.2 — mockup reconciliation.** Begin with `Tactics.html` and provisional `Main Menu.html`.
 3. **F1.4 — PM-1/PM-2 task hierarchy and EA priority.**
 4. **F2 — record the existing `ClientScreenFlow`; produce separate future career-shell map.**
 5. **F3 — audit only S0-required component/state/a11y/localization/fallback primitives.**
-6. **F4 — write scripts, severity ledger and privacy-safe participant mechanism; define two anonymous S0 slots.**
-7. **S0 Gate A — full PM-1 dependency/control audit.**
-8. **S0 Gate B — complete task flow.**
-9. **S0 Gate C — low-fidelity wireframes.**
-10. Continue through D–G; no high fidelity before Gate G passes.
+6. **F4 — write scripts, severity ledger and the review mechanism.** S0 uses owner image review under the September 30 decision; the earlier anonymous S0 slots are superseded.
+7. **S0 Gate A — COMPLETE September 21, 2026.** The reconciled dependency/control audit is `ux-s0-pm1-journey.md` v0.4.
+8. **S0 Gate B — COMPLETE September 28, 2026 (owner-confirmed September 28, 2026).** The task flow is `ux-s0-pm1-journey.md` v0.5 §7. It also corrects Gate A's A-10: Formation has no simulation consumer, so S0's pre-match choice is Mentality.
+9. **S0 Gates C–E — COMPLETE September 30, 2026.** `ux-s0-pm1-journey.md` v0.14 §§9–11 records monochrome wireframes, state matrix and executed resilience evidence.
+10. **S0 Gate F — COMPLETE September 30, 2026.** The complete vehicle and critical-state evidence are in `docs/design/s0-prototype/`; the owner's September 30 review decision removes the pre-F tester prerequisite.
+11. **S0 Gate G — PASS September 30, 2026.** Anton Zymin approved prototype v0.4 at `13c2c09`, all 18 PDFs, and accepted the owner decisions with carried-Major reasons/release conditions. Durable record: `ux-validation-protocol.md` §9.1.
+12. **S0 Gate G for v0.5 — PASS September 30, 2026.** Anton Zymin approved the corrected full-time statistics-fault image at `0e8bd2b`, carrying the other 18 forward from approved v0.4 apart from version text. Protocol §9.1.1 pins the image/source hashes and actual confirmation. Baseline 85-check run and focused three-check delta remain unchanged.
+13. **S0 Gate H — PASS September 30, 2026.** Anton Zymin replied “images approved” to all 23 H v0.1 views at `4a6220c`. Protocol §9.1.2 records actual confirmation, all 46 image/seven executable-source hashes and preserved 90-check evidence. Packet §13 closes S0-H-001–004 and accepts the H shirt identity recheck; production names/feedback obligations remain.
+14. **S0 Gate H v0.2 — PASS October 1, 2026.** Anton Zymin replied “images approved” to all 23 v0.2 views at `a1044d5`. Protocol §9.1.3 pins actual confirmation/time, 46 images, seven sources and walkthrough hash. The unchanged run UX-H-S0-20261001-02 supplies 99 passing checks; prior v0.1 approval/evidence remain intact.
+15. **S0 Gate I — PASS October 4, 2026 (technical handoff review).** Journey §14.11 reviews all eleven deliverables and the binding/reference contracts at e8ffd89. The owner decisions remain in §14.10; main release follows #478 landing. #470 needs refresh, fresh CI and exact-head pinned compile before merge. All production QA and host acceptance remain due.
 
-The existing Main Menu visual is revisited at Gate H unless earlier low-fidelity findings show it should be retired.
+The existing Main Menu reference was revisited at H; its admitted demo-only entry and art fallback are included in the approved image set.
 
 ---
 
@@ -987,7 +1046,7 @@ After the external dependency review, the plan now has no remaining structural e
 - S0 has a named consumer and cert path;
 - #30 status is measured correctly rather than inferred from a folder name;
 - S1 can design ahead without pretending future UI surfaces are live;
-- Gate G requires two real independent participants and cannot be bypassed into H/I;
+- Gate G requires explicit owner image approval for S0 and two independent participants for S1;
 - host-free prototype validation uses the existing real-match reference surfaces without turning them into a second shipping client;
 - ownership and effort are bounded;
 - gates are defined once;
@@ -999,13 +1058,16 @@ Three things are deliberately **not** F1 gates, having been mis-stated as such i
 
 - **PR draft status.** #362 remaining draft is a review-state fact, not a technical dependency. F1 is evidence-gathering against the tree and needs no acceptance decision to proceed.
 - **B8 → B9b → B10 host ordering.** It is the recommended implementation sequence and a real dependency for S0 Gates I/J, but it constrains nothing in the F1 capability audit.
-- **Gate-G tester recruitment.** §4 defines the anonymous participant slots and recruitment mechanism
-  in F4 without requiring public identity disclosure. The UX owner attests that two distinct real
-  participants are available before Gate F; the two-participant requirement stays binding at Gate G.
+- **Gate-G tester recruitment.** S0 uses owner image review under F4.2. S1 retains the anonymous
+  participant mechanism; recruitment is not an F1 gate.
 
 ---
 
 # 17. Owner acceptance
+
+**September 30, 2026 amendment:** F4.2 records the owner-directed S0 image-review route.
+The September 9/11 acceptance and participant limits below are historical decisions superseded
+for S0 by that amendment. They do not reinstate a tester prerequisite or count as image approval.
 
 **The project owner accepted this UX planning package on September 9, 2026.** The acceptance covers the package as it stands at this revision: `ux-high-level-plan.md` v1.2, this plan at v1.4, and the F1–F3 outputs `ux-baseline-evidence.md` v0.3, `ux-experience-architecture.md` v0.1 and `ux-shared-system.md` v0.3 (since advanced to v0.4 by the September 11 status-authority correction).
 
@@ -1040,3 +1102,33 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.3 | September 7, 2026 | F1, F2 and F3 complete; status advanced to *F0–F3 COMPLETE; F4 NEXT*. Outputs: `ux-baseline-evidence.md` v0.3 (F1), `ux-experience-architecture.md` v0.1 (F2), `ux-shared-system.md` v0.3 (F3). **Also corrects a header/version-history desync introduced at v1.2:** that revision appended its history row and edited the status line but left `**Version:**` at 1.1 and `**Last Updated:**` at September 4, so the file's own header contradicted the manifest, changelog and open-issues entries that all cited it as v1.2. Both fields are re-derived here. |
 | 1.4 | September 9, 2026 | **Owner acceptance of the UX planning package, recorded September 9, 2026**, discharging the condition `open-issues.md` had held open since F0. New **§17** states the scope of that acceptance and, more importantly, its limits: Gates A–J are unchanged and unpassed, Gate G still binds at two independent participants, S0 Gate J is still unreachable without B8/B9b/B10 host evidence, the §10.1 role owner and Gate-G participants are still F4 outputs, and §8.1's `FUTURE-BLOCKED` S2 rows are unmoved. Status line advanced accordingly; F4 remains the next work package. Landed alongside `ux-high-level-plan.md` v1.2, which reconciled its §8 F1 band to §10.2's 3–4 working days. |
 | 1.5 | September 11, 2026 | Records the project owner's privacy decision: participant names/contact details are omitted from repository evidence and stable anonymous slots are used instead. Separately, this revision deliberately relaxes F4 exit timing from v1.4: participant availability is now owner-attested before Gate F rather than required at F4 exit. Gate G itself is unchanged — two independent completions remain mandatory, with no bypass to H/I. Status advances to **F0–F4 COMPLETE; S0 GATE A NEXT** under that revised timing rule. |
+| 1.6 | September 21, 2026 | S0 Gate A closes through reconciled PR #406 / `ux-s0-pm1-journey.md` v0.2 and the execution sequence advances to Gate B. The reconciliation also corrects the plan's current P4b evidence from “never compiled/run” to the September 12 compile plus September 13 tracked-scene Play-mode boot/render smoke result; full host acceptance still waits on click-to-command and cert-host render-loop/performance evidence. No Gate E–J rule, participant requirement, P5b release gate or S1/S2 scope changes. |
+| 1.7 | September 21, 2026 | PR #406 review correction. §6.1 records that per-player Role/Duty/Instructions have a bounded `PlayerTactic` vocabulary and a live `SetPlayerTactic` command but **no pre-match `MatchSetup` persistence/builder**, so Gate B may not invent that setup seam. §6.2 reconciles B8 with the roadmap's September 13 state: pinned-editor compile plus tracked-scene boot/render smoke are already complete; only the shipping click path and cert-host render-loop/performance capture remain for B8 acceptance. Gate A remains complete through journey packet v0.3; Gate B remains next. |
+| 1.8 | September 21, 2026 | Review closeout pointer sync after `ux-s0-pm1-journey.md` advances to v0.4. The execution sequence and Gate-A result are unchanged; the v0.4 packet only corrects maintained authority pointers and distinguishes `UNWIRED` existing-contract binding gaps from `FUTURE-BLOCKED` missing contract/state/runtime capabilities. Gate B remains next. |
+| 1.9 | September 28, 2026 | S0 Gate B closes through `ux-s0-pm1-journey.md` v0.5 §7 (owner-confirmed September 28, 2026) and §14 advances to Gate C. The Gate-B re-check corrects a Gate-A overstatement: `TeamTactic.Formation` is serialized and parsed but read by no simulation system, so S0's one pre-match choice is Mentality (read by the Decision Tree risk multiplier and the engine's defensive-line bias). Gate A's verdict and zero-`UNKNOWN` result stand. The project owner explicitly confirmed B-DEC-1/2/5 (home side, existing AI manager for the opponent, full time as the authoritative transition with the report control as acknowledgement only) on September 28, 2026. P5b remains gated on Gate I. |
+| 1.10 | September 30, 2026 | Status sync to S0 packet v0.6: C–E complete with executed prototype evidence; F deliverable ready, formal opening/pass pending both pre-F participant attestations. Gate definitions/participant rules unchanged; G/H/I remain unpassed and #470 blocked. |
+| 1.11 | September 30, 2026 | Pointer sync to S0 packet v0.7 after PR #473 review: initial Gate-E pass withdrawn, focus/disclosure Majors fixed and retested in 74-check v0.2 run. F attestation prerequisites and G/H/I sequencing unchanged. |
+| 1.12 | September 30, 2026 | Owner-directed S0 image review replaces independent tester recruitment, attestations and sessions. S0 F closes on the existing complete vehicle; G awaits explicit owner image approval and finding dispositions. H images also receive owner review before I. S1 participant mechanism and Gate-J production verification retained. |
+| 1.13 | September 30, 2026 | Makes S0 G closure explicit: complete image coverage, every finding disposition, C-DEC-1 decision and written rationale/release condition for accepted Majors. G opens H; H needs separate owner image approval before I. Packet v0.9 adds missing interaction views and visual fixes. |
+| 1.14 | September 30, 2026 | Syncs current packet pointer to v0.10 after image-review cleanup; pending owner decisions and H/I follow-ups remain in the packet. Gate rules unchanged. |
+| 1.15 | September 30, 2026 | Records G PASS and H OPEN after actual owner decisions/image approval pinned to v0.4 / 13c2c09. I/#470 remain blocked until separate H approval. Current packet pointer and next-step sequence updated; gate rules unchanged. |
+| 1.16 | September 30, 2026 | Syncs current v0.5 correction/evidence pointer and G re-review / H-paused status. Preserves actual v0.4 approval and owner decisions. I/#470 remain blocked; gate rules unchanged. |
+| 1.17 | September 30, 2026 | Fixes the full-time fault report-note contradiction with three focused checks and one regenerated image. Narrows pending v0.5 review to that image; carries the other 18 from approved v0.4 apart from version text. Adds disabled Close statistics to H backlog. Original approval and accepted decisions preserved; no new approval inferred. |
+| 1.18 | September 30, 2026 | Records actual owner approval of the corrected v0.5 full-time fault image at 0e8bd2b, carrying the other 18 forward from approved v0.4 apart from version text. G PASS; H OPEN; I/#470 blocked on separately approved H images. Documents-only recording preserves reviewed source, PDFs and evidence. |
+| 1.19 | September 30, 2026 | H v0.1 reference ready on PR #473 base: 23 image pairs / 90 checks, carried findings fixed/retested. H remains OPEN pending separate owner image approval; I/#470 blocked. |
+| 1.20 | September 30, 2026 | H v0.1 separately owner-approved at 4a6220c, all 23 views. H PASS; I OPEN for implementation handoff; #470 remains blocked until I passes. |
+| 1.21 | October 1, 2026 | Current next step is separate review of corrected H v0.2 (99 checks, 23 image pairs); I on hold for this revision. Actual v0.1 approval and prior version-history rows preserved. |
+| 1.22 | October 1, 2026 | Corrects the author-imposed I hold: H PASS / I OPEN remain valid for pinned v0.1. Review of v0.2 is the proposed next action; its adoption requires separate approval. No new owner decision or gate pass inferred. |
+| 1.23 | October 1, 2026 | Records actual H v0.2 image approval at a1044d5; I remains OPEN and adopts v0.2 for handoff. Prior approvals/history preserved; #470 still blocked on completed I. |
+| 1.24 | October 1, 2026 | Starts S0 Gate I through journey packet §14 with the complete handoff draft and planned implementation QA; identifies identity and scale-allocation blockers. Current next step is review/reconciliation, I IN PROGRESS, #470 remains blocked. Gate definitions, actual H approval and historical sequence unchanged. |
+| 1.25 | October 1, 2026 | PR #476 review sync: adds dynamic UI formatting allocation S0-I-003 to the handoff completion conditions alongside identity/scale. I remains IN PROGRESS; #470 remains blocked; gate definitions and prior approvals unchanged. |
+| 1.26 | October 3, 2026 | Records the actual B/C/A owner choices in journey §14.10. Current next step is remaining contract/reference completion and final Gate-I review, not repeated product decisions. I IN PROGRESS and #470 blocked; gate definitions/earlier approvals unchanged. |
+| 1.27 | October 3, 2026 | Defines the next action as final Gate-I mapping/reference review of the binding-contract proposals, with verdict recording still due. Product choices and prior approvals preserved; I IN PROGRESS, #470 blocked, Gate J requires real implementation evidence. |
+| 1.28 | October 4, 2026 | Records technical S0 Gate-I handoff PASS at e8ffd89 and advances next action to landing the verdict then consumed client/localization work. #470 main release follows #478 landing; refresh/CI/pinned compile and Gate J remain due. Gate definitions and prior owner approvals unchanged. |
+| 1.29 | October 5, 2026 | Records #470 foundation merged at f276f700 and routes consumed lifecycle/identity implementation to the source-audited plan. Preserves previous sequence and all gate/approval/QA contracts. |
+| 1.30 | October 5, 2026 | PR #479 review corrections advance the consumed implementation pointer to v0.2; B9b screen/navigation scope and analytics locking, observer-slot and dependency obligations are explicit. Gate definitions, owner approvals and planned QA unchanged. |
+| 1.31 | October 8, 2026 | Sequences exact-head host validation after L2 merged and the complete P5b screen candidate; runtime/cert gates remain open. |
+| 1.32 | October 8, 2026 | Records the #489 merge of the P5b screens to main at `1c8366d` ahead of host acceptance; the current next step is the pinned-host run against main (screens record v0.11). Corrects the header, which still read v1.30 after the v1.31 row. Gates, approvals and QA unchanged. |
+| 1.33 | October 19, 2026 | S0 Gate-J technical review against the real client on the pinned host: FAIL on two substitution-contract gaps (J-01 keeper pairs, J-02 Law 3 windows). B8/B10 host obligations discharged. Owner items J-04 (visual) and J-05 (10× delivers about 5.5×) remain. Record: `docs/tracking/p5b-real-client-acceptance.md`. Gate definitions unchanged. |
+| 1.34 | October 22, 2026 | S0 Gate J: the owner's October 20 decisions are implemented and host-verified (J-01 greyed goalkeeper pairs with reasons, J-02 typed refusal rows with the button kept, J-04 H v0.2 skin with whole-pitch view and statistics in the rail). Technical verdict CONDITIONAL PASS. Record: `docs/tracking/p5b-real-client-acceptance.md` v0.2. |
+| 1.35 | October 30, 2026 | S0 Gate J **ACCEPTED**: the B8/B10 re-capture and an uninterrupted I-Q15 pass on the H v0.2 skin (October 29), the owner's wording approval and J-04 visual acceptance (October 28) and J-05 (PR #520, merged `642294d1`; 10× at 601–602 ticks/s) completed §7 of [`p5b-real-client-acceptance.md`](../tracking/p5b-real-client-acceptance.md); the owner signed off on October 30 (record v0.15 §19). |

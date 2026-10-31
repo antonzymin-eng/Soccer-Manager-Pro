@@ -1,0 +1,24 @@
+Host: owner Windows 11, Unity 6000.4.9f1 (f7258d6eebbe) editor (Mono). Source: commit a7800579337f76ff4fe924d75f25c2cd077e589b (PR #515 head), src tree c3bb11ffa5ffe11832a2c7a4f74bb0238304df7e; 0 untracked or ignored files under src before the reimport and under src/Packages/ProjectSettings after the runs (source-identity.txt). Assets/Scripts junction -> src.
+Compile: forced recursive reimport of Assets/Scripts; Tundra build success, 0 error CS, 0 shim build-output references, only the three known warnings. Re-confirmed afterwards with RequestScriptCompilation(CleanBuildCache): Tundra build success (66.83 s, 948 items), 0 error CS (compile.txt). A first reimport attempt saw stray Linux-shim build outputs under src/ and failed to compile; it was discarded and no test ran on it (compile.txt segment 1).
+Runs (TestRunnerApi via unity-mcp RunCommand):
+  targeted (MatchEngine KeeperOutsideAreaHandlingTests + KeeperRehandlingLawTests + W8BDistributionTests; GoalkeeperMechanics.Tests): START ~20:23:47Z FINISH 2026-10-18T20:24:12Z (last directory entry, its results file; the run took about 25 s) pass=300 fail=0 skip=27 inconclusive=0
+  matchengine (full TacticalDirector.MatchEngine.Tests): START 2026-10-18T20:25:46Z FINISH 2026-10-18T21:57:27Z (5500.96 s) total=843 pass=826 fail=0 skip=16 inconclusive=1
+
+Targeted: KeeperOutsideAreaHandlingTests 52/52 passed; KeeperRehandlingLawTests 42/42; W8BDistributionTests 99/99; GoalkeeperMechanics 107 passed, 27 skipped (existing).
+  Its NUnit XML was overwritten: its callback was not unregistered and also received the full run's RunFinished. Per-test outcomes are kept in targeted-run-status.txt.xz (the run's first 329 status lines). The full run repeats every MatchEngine case of the targeted run.
+MatchEngine: KeeperOutsideAreaHandlingTests 52/52 passed; KeeperRehandlingLawTests 42/42; W8BDistributionTests 99/99.
+  Inconclusive: ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice (also inconclusive on Linux and at #511). Skipped: 16 env-gated diagnostic instruments.
+  Full-match scenarios:
+    Passed 599.7s TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+    Passed 182.2s TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+    Passed 201.3s TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+    Passed 606.6s TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+    Passed 614.5s TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+    Passed 293.2s TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+    Passed 290.3s TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+    Passed 185.0s TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+    Passed 234.9s TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+    Passed 1144.0s TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+    Passed 108.8s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+    Passed 108.0s TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)
+Effective result at a7800579: every MatchEngine test passes except the existing inconclusive; 0 failures.

@@ -1,0 +1,497 @@
+{
+  "created": "2026-09-30",
+  "purpose": "Executed S0 scripted resilience evidence; not participant results",
+  "runId": "UX-GE-S0-20260930-05",
+  "supersedes": "UX-GE-S0-20260930-04: preserved approved-v0.4 record; run 05 corrects fault timing, full-time notice and actual normal-text coverage",
+  "journey": "S0",
+  "prototype": "s0-prototype v0.5",
+  "textScaleMethod": "scale=2 doubles root font size from 16px to 32px; browser zoom remains 100%",
+  "date": "2026-09-30 (UTC)",
+  "runner": "Codex scripted/self-walkthrough",
+  "browser": "153.0.8010.0",
+  "hashes": {
+    "index.html": "18869864ca1fe8eb233a94e48aa23de6d5626f05e9292e8c4e9a39954b60cf41",
+    "prototype.css": "60aaede3535622638dcdce0abd89c366b00404663c9df02f9c11e4e2ae557d87",
+    "model.js": "bf64020cacacf0cdd0275ee3da55af349bcdf3f248d132cb7a03060354ec7f9c",
+    "prototype.js": "c620e5f096d1f1857e074e102660b3b594ade404153b07f1b3035896277aec16",
+    "reference-data.js": "fafa28bbd78b067bb63241a64042ebd8d0cea7e8050c95d7db8fdda9feb8ad69",
+    "scenario-data.js": "05412989bdcbd11eb72fb76673f44d93d190e257ec6dbe529600cce1e1cd6866",
+    "verify.cjs": "dc9f61d0f9edb056241aa36cecd523d66ef18f031c55da77f949f9499b74a47f"
+  },
+  "imageHashes": {
+    "mentality-dialog.pdf": "62703007c3b7898414f96cc445970373bf67fe1b2a1e05f5507ce5c7dd97c5ac",
+    "mm.pdf": "ca250ec4314275f3719f3c86ec3475eb543b8a1e85ca605d66deeee64da64195",
+    "mv-0.pdf": "97a84b504ffaea95fba53615afa440420045fbc6b578f31cf56dc04b84ee279c",
+    "mv-ft-not-applied.pdf": "1042e2edb6c1aead93cc7bc84eb24e64ec058fac2f9e8823ea779c8012ee5a75",
+    "mv-ft-statistics-fault.pdf": "575e37a86ce141e471dd627d48a3de8b85331f54137949718b9a9213026cd169",
+    "mv-ft.pdf": "c3dd83cc75f11e8afc01549abae87a47511ebe3368c53843a90ab1ad7564bf44",
+    "mv-l.pdf": "b0275702b8933ef5e11e9ab074273788463fc29ef58a808ac7c5ca41caa5e06a",
+    "mv-live-applied.pdf": "6ec218138a3d6e003322f63254ae239364d66b48f681426963b67720f0cb763a",
+    "mv-live-pending.pdf": "8f43b54767a8e6862622a5729ab0bc46074a7dfe1cfc64e38842f46db12868de",
+    "mv-live-refused.pdf": "9d3d49a042730754ed8ea46256c51a0ad015f4d1b39bc01908547545417053aa",
+    "mv-live-statistics.pdf": "f2c585e18c207532cca9f61a87993a6445961ffbd3b61877102765d01ac322a7",
+    "mv-p.pdf": "5bda7dd0fb201e3bdb510ce6a0b1cc9c6297e74dfe21f24d5cf43391ecf0e37d",
+    "mv-paused-pending.pdf": "343e36bdb0efe91f0ae09d50a5deecd12d294b56f6c03783b952ee739954a5fd",
+    "pr.pdf": "b57b6a6e13c36cd185f7116c6774047fde1d410b10da68f9bc930fa1ea092f79",
+    "report-incomplete.pdf": "6fdf901c556c5eb84a92b04cb3cd4e22ec7d988c889d1601e37236e0b84c76d7",
+    "report-partial-open.pdf": "f9ac7f8d853c5fa267d80ab8d1c896a6f04f01129db7db827957cef0208455e9",
+    "stress-fault-1366.pdf": "11fc5c15e84eb792e1b15039f53278f9b895a24c44d62b338936529d642cd6b5",
+    "substitution-dialog.pdf": "82445da4c7e8f975c4bd2137843583ad5fdbe96885780046cf70e02dc1a1be4e",
+    "ts.pdf": "ef89daa7e2a57b97d787a166c6f431db4097e41fe3e00b38997e44f6590db374"
+  },
+  "results": [
+    {
+      "name": "geometry: wireframe MM",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe TS",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe MV-0",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe MV-L",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe MV-P",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe MV-FT",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: wireframe PR",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: mouse journey 1366 live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: mouse journey 1366 report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "mouse journey 1366",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: mouse journey 1920 live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: mouse journey 1920 report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "mouse journey 1920",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: mouse journey 2560 live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: mouse journey 2560 report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "mouse journey 2560",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: keyboard journey 1366 live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: keyboard journey 1366 report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "keyboard journey 1366",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: fault/pseudo/200% journey live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: fault/pseudo/200% journey report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "fault/pseudo/200% journey",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: long-names complete journey live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: long-names complete journey report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "long-names complete journey",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: events complete journey live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: events complete journey report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "events complete journey",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "geometry: scoreline complete journey live statistics",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: scoreline complete journey report",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "scoreline complete journey",
+      "result": "PASS",
+      "detail": "S0-T1–T7 and PM-1 substitution completed; paused request stayed pending, resumed request applied, cancel reset Balanced, report gated by full time."
+    },
+    {
+      "name": "computed contrast",
+      "result": "PASS",
+      "detail": {
+        "pairs": [
+          {
+            "selector": "h1",
+            "foreground": "rgb(22, 22, 22)",
+            "background": "rgb(255, 255, 255)",
+            "ratio": 18.1
+          },
+          {
+            "selector": "#pause",
+            "foreground": "rgb(68, 68, 68)",
+            "background": "rgb(238, 238, 238)",
+            "ratio": 8.39
+          },
+          {
+            "selector": ".reason",
+            "foreground": "rgb(22, 22, 22)",
+            "background": "rgb(238, 238, 238)",
+            "ratio": 15.6
+          },
+          {
+            "selector": ".prototype-notice",
+            "foreground": "rgb(22, 22, 22)",
+            "background": "rgb(238, 238, 238)",
+            "ratio": 15.6
+          }
+        ],
+        "focus": "3px #161616 outline against white; selection checked radio and text; disabled dashed border and persistent reason."
+      }
+    },
+    {
+      "name": "dialog focus and label separation",
+      "result": "PASS",
+      "detail": "Both dialogs and all three dropdowns retain visible 3px focus outlines with at least 4px label clearance at all three widths, normal text and pseudo-locale/200% text."
+    },
+    {
+      "name": "fault progression: MM to match",
+      "result": "PASS",
+      "detail": "Minute 0/17 healthy with current figures; fault activates exactly at 18; figures remain frozen while the clock reaches 21 and pauses."
+    },
+    {
+      "name": "geometry: full-time statistics fault",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "full-time fault notice",
+      "result": "PASS",
+      "detail": "Normal fault journey reaches full time with ended-state copy and the frozen open panel; report retains its incomplete disclosure and final score."
+    },
+    {
+      "name": "fault progression: direct first frame",
+      "result": "PASS",
+      "detail": "Minute 0/17 healthy with current figures; fault activates exactly at 18; figures remain frozen while the clock reaches 21 and pauses."
+    },
+    {
+      "name": "fault cutoff at fast speed",
+      "result": "PASS",
+      "detail": "10× progression jumps 10→20; fault activates on the crossing tick and uses cutoff 18, never current minute 20."
+    },
+    {
+      "name": "geometry: 1366 / ordinary / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / ordinary / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / fault / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / fault / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / events / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / events / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / long-names / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / long-names / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / scoreline / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / scoreline / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1366 / limit / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / ordinary / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / ordinary / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / fault / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / fault / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / events / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / events / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / long-names / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / long-names / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / scoreline / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / scoreline / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 1920 / limit / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / ordinary / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / ordinary / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / fault / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / fault / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / events / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / events / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / long-names / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / long-names / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / scoreline / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / scoreline / substitution dialog",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "geometry: 2560 / limit / pseudo / 200%",
+      "result": "PASS",
+      "detail": "No horizontal overflow, clipped critical labels/cells/buttons or overlapping marker labels. Vertical scrolling permitted."
+    },
+    {
+      "name": "statistics failure",
+      "result": "PASS",
+      "detail": "Final frame score 2 – 1 remained visible, partial table hidden by default, frozen minute 18 stated, return enabled."
+    },
+    {
+      "name": "refused command",
+      "result": "PASS",
+      "detail": "Persistent inline refusal; last applied value remained Balanced; Change Mentality enabled again."
+    },
+    {
+      "name": "end race",
+      "result": "PASS",
+      "detail": "Normal MM→TS→MV journey reached minute 89; paused request stayed Pending; resume/next live tick reached the whistle before application. Not applied, Balanced retained, report focused."
+    },
+    {
+      "name": "no match frame",
+      "result": "PASS",
+      "detail": "Waiting fixture remained non-live, score/clock withheld, all match actions disabled with persistent reason."
+    },
+    {
+      "name": "speed boundaries",
+      "result": "PASS",
+      "detail": "Mouse and keyboard reach 1×/10×; newly disabled Slower/Faster recover focus to Pause/Resume immediately. Pause retains rung."
+    },
+    {
+      "name": "live earlier feedback",
+      "result": "PASS",
+      "detail": "Keyboard-opened disclosure remains open and summary keeps focus over five live ticks; stays open across pause/resume and another tick. Timer not frozen by review=1."
+    },
+    {
+      "name": "dense feedback chronology",
+      "result": "PASS",
+      "detail": "Synthetic prior changes are seeded at the first live frame, minute 15; all 15 Applied timestamps are at or before the visible clock. Waiting state has no future Applied records."
+    },
+    {
+      "name": "score/statistics coherence",
+      "result": "PASS",
+      "detail": "Synthetic ordinary scenario finishes 2–1; unmodified unusual capture finishes 19–9. Each scoreboard agrees with its goals table; source types labelled explicitly."
+    },
+    {
+      "name": "full time while staging",
+      "result": "PASS",
+      "detail": "Unsubmitted chooser closed at full time; no change requested; report received focus."
+    },
+    {
+      "name": "image interaction coverage",
+      "result": "PASS",
+      "detail": "Exports both staged dialogs, live/paused Pending, Mentality plus substitution Applied and healthy live statistics, from exercised controls. Full-time Not applied and incomplete report disclosures exported by their existing fixtures."
+    },
+    {
+      "name": "starting copy",
+      "result": "PASS",
+      "detail": "One lock explanation; placeholder has no pitch markings crossing its text."
+    },
+    {
+      "name": "pitch presentation",
+      "result": "PASS",
+      "detail": "Raw restart/holder captions omitted; two goals, penalty/goal areas and Home-right/Away-left direction shown, matching fixed Stage-0 source convention."
+    },
+    {
+      "name": "full-time statistics proposal",
+      "result": "PASS",
+      "detail": "Statistics cannot be reopened at full time; an already-open panel remains visible. Report destination explicit. This existing behavior remains a proposed owner decision, not approval."
+    },
+    {
+      "name": "partial statistics and alignment",
+      "result": "PASS",
+      "detail": "Synthetic minute-18 possession 47/47 differs from final 51/43; numeric Home/Away headers and cells right-aligned."
+    }
+  ]
+}

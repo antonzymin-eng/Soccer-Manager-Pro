@@ -1,8 +1,11 @@
 # Transfers, Contracts & Negotiation #31 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** October 20, 2026 (v0.5 — ERR-031-011: KD-6 window derivation; section map FR-TX-001..029 / F1..F9)
+**Last Updated (prior):** October 19, 2026 (v0.4 — ERR-031-005: KD-7 summary)
+**Last Updated (prior):** September 21, 2026 (v0.3 — ERR-031-001 approved-spec valuation-decision reconciliation)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-3 fix pass; prior v0.1 initial)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -20,8 +23,8 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 | Section | Content |
 |---------|---------|
 | 1 | Introduction, scope, dependencies, key decisions (KD-1..KD-8) |
-| 2 | Functional requirements (FR-TX-001..028), data structures, failure modes (F1..F8) |
-| 3 | Core algorithms: valuation, offer evaluation, the #40-boundary commit, window model, roster re-key |
+| 2 | Functional requirements (FR-TX-001..029), data structures, failure modes (F1..F9) |
+| 3 | Core algorithms: valuation, offer evaluation, the #40-boundary commit, window model, roster re-home |
 | 4 | Architecture, assembly/file layout, the reusable negotiation seam, save composition |
 | 5 | Test plan (unit + integration + determinism + fail-loud) |
 | 6 | Performance analysis and budgets |
@@ -32,9 +35,10 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 
 ## Governing decisions (see §1)
 
-- **KD-1** — the Stage-2 valuation is a pure deterministic integer function over #27 attributes + age;
-  club-need, #33 personality, and #28 CA all enter the deep tier as multiplicative bias, never a replacement
-  path (each defaulting to `1000‰` / the #27 mean identity with `deepTransfersEnabled` off).
+- **KD-1** — the Stage-2 **base valuation identity** is a pure deterministic integer function over #27
+  attributes + age; the minimal counterparty view then applies an **always-on #27 positional-scarcity**
+  multiplier. #33 personality, #28 CA/PA and #34 staff remain deep-tier multiplicative refinements; disabling
+  those deep producers does not remove the minimal positional-need term (`ERR-031-001`).
 - **KD-2** — #40 boundary: read `AvailableTransferBudget`; commit via `ApplyTransaction`; #31 owns a
   `committedSpendThisWindow` counter (FR-FN-004 gives #40 no such concept); no parallel cash ledger; validate
   all gates before any mutation (atomic commit).
@@ -42,9 +46,10 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 - **KD-4** — one `TRANSFERS_SAVE_FORMAT_VERSION` season-save sub-blob for durable contracts + season-scoped
   window/negotiation/spend; no `WORLD_STORE_FORMAT_VERSION` bump.
 - **KD-5** — draw-free minimal; `_RESERVED_0x23_`/85 stays reserved; rival bidding is the deep-tier first draw.
-- **KD-6** — the transfer-window model is #31-owned (a concept #30 lacks), derived from #30's `SeasonCalendar`.
-- **KD-7** — a transfer re-keys the club-scoped `PlayerId` through a NEW #30 mid-season roster-commit entry
-  point + roster-move hook; #31 migrates only its own `Contract`.
+- **KD-6** — the transfer-window model is #31-owned (a concept #30 lacks), derived from #30's `SeasonCalendar`:
+  `Open` = the world day #30 begins the season (the new-game day at genesis, the roll day at each boundary); `Close` = the season's opening fixture day (`SeasonCalendar.DayOfRound(0)`) + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1, inclusive (ERR-031-011) — so the close never depends on when the client rolls.
+- **KD-7** — a transfer re-homes the player under his stable `PlayerId` through a NEW #30 mid-season
+  roster-commit entry point; nothing re-keys, so no state migrates (ERR-031-005).
 - **KD-8** — behaviour-neutral: zero manager action ⇒ zero transfers ⇒ byte-identical season; a bid is an
   explicit command (the `SetTeamTactic` discipline).
 
@@ -52,7 +57,9 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 
 - **At approval:** one — the #30 transfers tick-order null-seam slot (ERR-030-004, proposed). `0x23`/85 stays
   reserved (draw-free); #40/#33/#27/#16 unchanged.
-- **At T-phase:** the #30 outer `SEASON_SAVE_FORMAT_VERSION` bump + roster-commit/re-key seam; the #16
+- **T0 correction:** `ERR-031-001` reconciles KD-1/G4 with the already-normative always-on positional
+  scarcity; `ERR-031-002` moves the ordinary affordability gate ahead of checked finance staging.
+- **At T-phase:** the #30 outer `SEASON_SAVE_FORMAT_VERSION` bump + roster-commit seam (a stable-id re-home, ERR-031-005); the #16
   `0x23` promotion at the deep-tier first draw.
 
 #region VersionHistory
@@ -60,4 +67,7 @@ agents/clauses/loans/wage-structures/rival bidding on one code path.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from design supplement v0.2. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-3: KD-1 folds club-need into the deep multiplicative bias (minimal = attributes+age). |
+| 0.3 | 2026-09-21 | — | ERR-031-001: reconcile KD-1 with FR-TX-002/§3.1 and shipped T0 — attributes+age remains the base identity, while #27 positional scarcity is always-on at minimal; personality/CA/staff remain deep refinements. |
+| 0.4 | 2026-10-19 | — | ERR-031-005: KD-7 summary and section map name the stable-id re-home. |
+| 0.5 | 2026-10-20 | — | ERR-031-011 (AR round 2): KD-6 states the window derivation (open on the season-begin day, close anchored to the opening fixture day); section map counts FR-TX-001..029 and F1..F9 (FR-TX-029 / F9 landed at T2, ERR-031-007). |
 #endregion

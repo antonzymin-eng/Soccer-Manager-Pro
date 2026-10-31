@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source /workspace/.cloud-tools/activate.sh
+checkout="$1"
+name="$2"
+control="$3"
+filter="$4"
+results=/workspace/Soccer-Manager-Pro/work/w8-b
+cd "$checkout"
+{
+    git rev-parse HEAD HEAD:src
+    git hash-object src/match-engine/tests/W8StageADiagnosticTests.cs
+    dotnet --version
+    dotnet --list-runtimes
+    date -u '+start %Y-%m-%dT%H:%M:%SZ'
+    printf 'control=%s filter=%s configuration=Debug\n' "$control" "$filter"
+} > "$results/$name-provenance.txt"
+result=0
+env "$control=1" dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build \
+    --filter "$filter" -p:TreatNoTestsAsError=true \
+    --logger 'console;verbosity=detailed' --logger "trx;LogFileName=$name.trx" \
+    --results-directory "$results" > "$results/$name-output.txt" 2>&1 || result=$?
+printf 'exit=%s\n' "$result" >> "$results/$name-provenance.txt"
+date -u '+end %Y-%m-%dT%H:%M:%SZ' >> "$results/$name-provenance.txt"
+exit "$result"
