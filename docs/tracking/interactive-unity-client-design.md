@@ -28,7 +28,7 @@
 > **All host-free phases (P0–P3) are therefore complete.** What remains is P4–P6 — the Unity render
 > skin, the UGUI shell, and integration/cert — of which P6's head-less closed-loop scenario is
 > gate-verifiable and P4/P5 are verifiable only on the pinned host. That host block cleared with the
-> July 19, 2026 certification (`certification-platform.md` v1.4 ✅ PINNED).
+> July 19, 2026 certification (`certification-platform.md` v1.4, now v1.5 ✅ PINNED).
 >
 > **UPDATE 2026-08-03, later same day — the HEAD-LESS HALF of P6 LANDED** (v0.10 row). Both §5-P6
 > scenarios (`match-client-command-log-replay`, `match-client-save-restore-replay`) run on the #19
@@ -173,7 +173,7 @@ These are inherited, not chosen — violating any of them is a defect, not a tra
 5. **Layer taxonomy.** The UI layer is Stage 1+ and unspecified (src/CLAUDE.md §3.5.2). This client
    is that layer's first member; it may reference the presentation/observation surface and the
    public mutation API, and **must not** reach into any Physics/Mechanics/AI internals.
-6. **Pinned platform.** Unity 6000.4.9f1, DX11, Mono, x64 (`certification-platform.md` v1.4
+6. **Pinned platform.** Unity 6000.4.9f1, DX11, Mono, x64 (`certification-platform.md` v1.4, now v1.5
    ✅ PINNED). UGUI for UI (master plan §3.4), not UI Toolkit, for Stage 1 simplicity.
 7. **Command channel is not a dev toy.** Unlike the browser viewer's deliberately inert `/control`,
    this client *does* carry gameplay mutations. That channel must be in-process (Unity UI → driver →
@@ -949,7 +949,7 @@ follows once the input/determinism core is locked and a cert-host slot is schedu
 
 ~~**Next step (2026-08-03): P6's head-less closed-loop scenario, before P4.** Both preconditions the
 original recommendation named are met — the input/determinism core is locked, and the cert-host slot
-is no longer hypothetical (the July 19, 2026 certification, `certification-platform.md` v1.4
+is no longer hypothetical (the July 19, 2026 certification, `certification-platform.md` v1.4, now v1.5
 ✅ PINNED, cleared the host block on P4–P6).~~
 
 ~~The ordering argument is the shim gate. `match-client-unity` is in
@@ -1026,7 +1026,7 @@ genuinely verifies, rather than *behaviour*, which a cert run verifies only alon
 thought to click.
 
 **2. Budget a cert-host run per landing, not one at the end.** The host block cleared July 19, 2026
-(`certification-platform.md` v1.4 ✅ PINNED), so this is a scheduling choice, not an access problem. A
+(`certification-platform.md` v1.4, now v1.5 ✅ PINNED), so this is a scheduling choice, not an access problem. A
 skin first exercised at the end is the never-compiled-surface trap; this project has hit that seven
 times, including on a *production* assembly.
 

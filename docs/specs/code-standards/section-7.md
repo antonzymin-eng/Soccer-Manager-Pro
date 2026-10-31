@@ -5,8 +5,8 @@
 begins, Stage 5+ rule extensions, permanent exclusions (style debates this spec refuses to
 relitigate), and the deferred-decisions tracker (D1–D5).
 **Created:** May 8, 2026
-**Modified:** October 10, 2026
-**Version:** 1.4
+**Modified:** October 30, 2026
+**Version:** 1.5
 **Status:** AMENDMENT DRAFT (A3.1b; approved v1.2 baseline remains in force)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 7; `outline-mid.md` v1.2, §7.1–§7.5
@@ -32,15 +32,16 @@ file is committed to `src/`. Each deliverable cites Spec #20 as its normative so
 
 | # | Deliverable | Trigger to activate | Acceptance criterion |
 |---|---|---|---|
-| D1-artifact | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit; resolves Deferral D1 in §7.5) | **Platform half satisfied (`ERR-020-008`):** `docs/tracking/certification-platform.md` has been pinned (Windows 11 / Unity 6000.4.9f1) since July 19, 2026, and FR-CS-008 is active with a C# 9.0 working ceiling (§3.1.3). **Remaining trigger:** the first Stage 1 module is profiled. This triggers a *value selection*, not the activation of FR-CS-008. | Threshold values committed to `.editorconfig` and cited in `src/CLAUDE.md` |
+| D1-artifact | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit; resolves Deferral D1 in §7.5) | **Platform half satisfied:** `docs/tracking/certification-platform.md` is pinned to Unity 6000.4.9f1 / C# 9.0. Remaining trigger: first Stage 1 module profiled. FR-CS-008 is already active; profiling chooses threshold values, not the language version. | Threshold values committed to `.editorconfig` and cited in `src/CLAUDE.md` |
 | D2-artifact | Roslyn analyzer ruleset (`.ruleset` or `.editorconfig` `[*.cs]` severity block) | First `src/` file committed | All Spec #20 Error-level FRs produce `error`-severity Roslyn diagnostics; `dotnet build` fails on any violation; Stage 1 analyzer IDs from Appendix D §D.2–§D.5 are populated |
 | D3-artifact | `BannedSymbols.txt` populated | First `src/` file committed | File contains every symbol in Appendix D categories `det-banned` (§D.1) and `alloc-hot-path` (§D.2); `Microsoft.CodeAnalysis.BannedApiAnalyzers` package referenced in all game-loop `.csproj` files |
-| D4-artifact | `.editorconfig` finalised | First `src/` file committed | Covers: indent style (4 spaces), brace style (Allman), `using` directive placement, `var` policy, namespace style (**block-scoped**: file-scoped namespaces are C# 10, outside FR-CS-008's C# 9.0 working ceiling; `ERR-020-008`), `sealed`-by-default suggestion; committed at repo root alongside `BannedSymbols.txt` |
-| D5-artifact | First `src/CLAUDE.md` drafted | All 20 Stage 0 specs approved | Document covers: exact `src/` subdirectory paths, `.asmdef` GUIDs, build commands (`dotnet build`, `dotnet test`, Unity batch-mode), IDE configuration, constant catalogue concrete file paths; cites Spec #20 as normative source for every convention it concretises |
+| D4-artifact | `.editorconfig` finalised | First `src/` file committed | Covers: indent style (4 spaces), brace style (Allman), `using` directive placement, `var` policy, **block-scoped namespace style (file-scoped namespaces are C# 10 and outside FR-CS-008's C# 9.0 ceiling)**, `sealed`-by-default suggestion; committed at repo root alongside `BannedSymbols.txt` |
+| D5-artifact | First `src/CLAUDE.md` drafted | All 20 Stage 0 specs approved | **Satisfied:** `src/CLAUDE.md` exists and carries concrete source-layout/build guidance. Future corrections follow that file's own landing chain. |
 
-**Relationship to deferred decisions:** D1-artifact depends on D1 (numeric thresholds,
-§7.5). D5-artifact is authorized by the root CLAUDE.md "Deferred: `src/CLAUDE.md`" gate —
-it MUST NOT be created until all 20 specs are approved.
+**Relationship to deferred decisions:** D1-artifact still depends on the unresolved
+profiling half of D1 (§7.5); its platform/language prerequisite is satisfied. The
+historical D5-artifact creation gate has also been satisfied and the artifact exists.
+The D2/D3/D4 artifacts remain owed; this erratum does not claim their implementation.
 
 **Appendix D and Roslyn IDs:** The Appendix D tables in `appendices.md` include a
 "Stage 1 analyzer ID (placeholder)" column. Populating those placeholders with real
@@ -60,31 +61,52 @@ command; failure at that gate blocks the corresponding action.
 | PR | Every pull-request open or push-to-PR | `dotnet build /p:TreatWarningsAsErrors=true` with Roslyn analyzer ruleset active | PR blocked; all Error-level Spec #20 diagnostics must be resolved before merge is permitted |
 | Merge | Merge to `main` | Zero-allocation profiler test on game-loop assemblies (Unity batch-mode, managed-heap snapshot) | Merge blocked; any non-zero allocation in the 60 Hz physics path (FR-CS-066) must be eliminated before merge |
 
-**Status (rewritten August 18, 2026 — the Stage 0 paragraph here claimed `src/` was
-empty and the toolchain unconfigured, both long false):** `src/` holds 35 production
-assemblies and 947 `.cs` files, and `.github/workflows/ci.yml` activates the first two
-gates in substance, with variations from the table above. The format check runs
-`dotnet format whitespace --verify-no-changes` on every push to `main` and every PR targeting `main`, over a synthetic project
-(not as a pre-commit hook, and advisory — a failure emits a warning and exits 0,
-"non-blocking until repo opts in"). Each such push/PR also runs `tools/dotnet-ci/run-gate.sh`,
-which compiles the entire tree and runs every NUnit suite (blocking; a non-certifying
-Linux shim, not the pinned Unity host, and `/p:TreatWarningsAsErrors` is not the gate's
-posture). Still missing: the **Roslyn analyzer ruleset half of the PR gate** — no
-analyzer project, no `BannedSymbols.txt`, and no `.editorconfig` exist anywhere in the
-repository — and the whole **zero-allocation profiler merge gate**, which needs the
-pinned host. The command column above stays the normative target for the missing
-pieces.
+**Current verification model (`ERR-020-008`; owner decision September 12, 2026):** the
+**Unity 6000.4.9f1 editor on the pinned host is the governing compiler for code
+conformance. A green Linux `tools/dotnet-ci/run-gate.sh` result is required supplemental
+evidence, but it is not sufficient to establish that the code compiles.** The Linux shim
+uses MSBuild project references, which can make dependencies visible transitively; Unity
+compilation requires direct `.asmdef` references to other assembly-definition
+assemblies whose types the source uses. Unity-supplied engine/framework and
+precompiled references follow the applicable Unity settings separately (§5.4.5 item 7).
+A missing direct assembly-definition reference can therefore
+remain green in the Linux gate and fail the governing Unity compile with errors such as
+CS0012/CS0234. FR-CS-055's rule text is unchanged; §5.4.5 item 7 now makes the direct-
+reference review test explicit until the planned analyzer exists.
+
+`.github/workflows/ci.yml` currently runs `dotnet format whitespace --verify-no-changes`
+on every push to `main` and every PR targeting `main`, over a synthetic project (advisory
+— a failure emits a warning and exits 0). Each such push/PR also runs
+`tools/dotnet-ci/run-gate.sh`, which compiles the whole synthetic tree and runs the NUnit
+suites (blocking, non-certifying, and supplemental to Unity).
+
+A pinned-host Unity workflow **does exist**, but it is not the per-PR governing compile:
+`.github/workflows/nightly.yml` defines `nightly-determinism-certified`, a self-hosted
+Windows job that checks the Unity 6000.4.9f1 pin and invokes Unity in batch mode. It is
+conditional on `DETERMINISM_CERTIFIED_RUNNER_ENABLED == 'true'`, scheduled/manual rather
+than PR-triggered, and filters execution to the determinism test surface. The current
+repository-variable enablement is not established by this spec correction. This lane is
+the existing automation seam for pinned-host execution; it does not currently prove each
+code landing compiles in Unity.
+
+Still missing from the original Stage 1 target are the Roslyn analyzer ruleset half of
+the PR gate — no analyzer project, `BannedSymbols.txt`, or `.editorconfig` exists — and
+the automated zero-allocation profiler merge gate. The command column above remains the
+normative target for those missing pieces.
 
 **Pre-commit hook setup note:** The pre-commit gate requires a Git pre-commit hook or
 Husky configuration pointing at `dotnet format --verify-no-changes`. The exact hook
 installation command is deferred to `src/CLAUDE.md` (D5-artifact, §7.1).
 
-**Merge gate dependency:** The zero-allocation merge gate depends on the host platform
-being pinned in `docs/tracking/certification-platform.md`. That pin has been certified
-since July 19, 2026 (`ERR-020-008`), so the host pin no longer blocks the gate. What still
-blocks it is that no pinned-host profiler workflow exists to produce the baseline and fail
-a merge. The gate MUST NOT be marked active until that workflow and its evidence path
-exist.
+**Merge gate dependency:** the certification host is pinned; host pinning is no longer
+the reason the zero-allocation merge gate is inactive. The remaining work is to wire and
+verify pinned-host profiler execution as a blocking merge gate. Until that workflow and
+evidence path exists, the profiler requirement remains normative but is not an automated
+GitHub merge check.
+
+**Erratum force.** The `ERR-020-008` platform/verification corrections in §§7.1, 7.2 and
+7.5 are effective immediately against the approved Code Standards baseline. They do not
+approve the separate A3.1a/A3.1b architecture amendment, which remains pending A3.4.
 
 ### Architecture-governance activation boundary (A3 → A4 → later enforcement)
 
@@ -176,21 +198,20 @@ need to change whenever a library is swapped.
 
 ## 7.5 Deferred Decisions Tracker
 
-Five decisions are explicitly deferred from Stage 0. Each entry records the deferral
-statement, the trigger that allows (or requires) the decision to be made, and the owner.
+Five decisions were explicitly deferred from Stage 0. This table records both still-open
+deferrals and decisions whose trigger has fired.
 
-| ID | Decision deferred | Deferral statement | Trigger to revisit | Owner |
+| ID | Decision deferred | Deferral / resolution statement | Trigger / current state | Owner |
 |---|---|---|---|---|
-| D1 | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit) | Thresholds are deferred per KD-5 (§1.3). The deferral was authored when no source code existed; `src/` now holds 35 production assemblies and 947 `.cs` files (August 18, 2026), but no module has a profiled baseline yet, so empirical thresholds still cannot be established. Resolution was gated on (a) FR-CS-008 activation, which is **satisfied** (`ERR-020-008`: the platform was pinned July 19, 2026, and the working ceiling is C# 9.0), and (b) the first Stage 1 module reaching a profiled baseline, which is **still open**. No placeholder values are inserted — a wrong threshold is worse than no threshold. | Platform half satisfied; first Stage 1 module profiled per §5.3 still required | Lead developer + Stage 1 setup author |
-| D2 | Test framework choice | Spec #19 (Testing Strategy) owns test-framework selection. Spec #20 §3.9.4 (test-fixture carve-out) is intentionally framework-agnostic to avoid a circular dependency. | Spec #19 reaches `IN REVIEW` status in `SPEC_INDEX.md` | Spec #19 author |
-| D3 | Build commands, IDE setup, assembly GUIDs | These are concrete implementation details that depend on the Unity LTS version and project directory structure chosen at Stage 1. `src/CLAUDE.md` (D5-artifact) is the home for this information; it MUST NOT be created until all 20 specs are approved. | All 20 Stage 0 specs approved | Stage 1 setup author |
-| D4 | Fixed64 enforcement rules | Stage 0 uses `float`. Fixed64 migration is Stage 5+. Spec #9 will define the Fixed64 library; Spec #20 §3.7 will gain a cross-reference at that point. See §7.3 for detail. | Spec #9 reaches `APPROVED` status | Spec #9 author → Spec #20 amendment author |
-| D5 | Concrete C# language version pin | **Partially resolved October 10, 2026 (`ERR-020-008`).** FR-CS-008 is active, and the working ceiling is **C# 9.0** (§3.1.3): the value the Linux gate compiles with, on the same tree the pinned Unity editor compiles. Post-C# 9.0 syntax (`required` members, primary constructors, file-scoped namespaces) is out. Still open: `certification-platform.md` has no "C# language version" row, and the exact ceiling of Unity 6000.4.9f1's compiler has not been recorded. Raising the working ceiling needs that value first. | The pinned host's compiler language version is read from its compiler arguments and recorded as a `certification-platform.md` row (Platform Certification owner sign-off) | Lead developer |
+| D1 | Numeric lint thresholds (line-length cap, method-length cap, nesting-depth limit) | Thresholds remain deferred per KD-5 (§1.3). The **platform prerequisite is satisfied**: Unity 6000.4.9f1 / C# 9.0 is pinned and FR-CS-008 is active. The only unresolved prerequisite is an actual profiled Stage 1 module from which to choose empirical thresholds. No placeholder values are inserted. | **Partially unblocked:** platform/language pin satisfied; first Stage 1 module profiling per §5.3 still required. | Lead developer + Stage 1 setup author |
+| D2 | Test framework choice | Spec #19 (Testing Strategy) owns test-framework selection. Spec #20 §3.9.4 remains framework-agnostic to avoid a circular dependency. | Spec #19 is the authoritative owner; no #20 choice is required here. | Spec #19 author |
+| D3 | Build commands, IDE setup, assembly GUIDs | Concrete implementation details live in the existing `src/CLAUDE.md`; the historical creation deferral has fired. | **Resolved as a location decision:** `src/CLAUDE.md` exists; maintain concrete codebase-local guidance there. | Stage 1 setup author |
+| D4 | Fixed64 enforcement rules | Stage 0 uses `float`. Fixed64 migration remains Stage 5+. Spec #9 defines that future surface; see §7.3. | Spec #9 Stage 5+ activation. | Spec #9 author → Spec #20 amendment author |
+| D5 | Concrete C# language version pin | **RESOLVED October 30, 2026 (`ERR-020-008`, PR #527): C# 9.0**, fixed by the certified Unity 6000.4.9f1 host. FR-CS-008 is active; supplemental/synthetic compilers may not widen the allowed language surface. | **Resolved.** `certification-platform.md` now records the C# 9.0 row explicitly; `tools/dotnet-ci/generate_projects.py` already mirrors it with `<LangVersion>9.0</LangVersion>`. | Lead developer |
 
 **Resolution protocol:** When a deferred decision is resolved, the owner MUST:
 1. Update this table row (change "deferred" entry to a resolution summary with date).
-2. Activate or amend any INACTIVE FRs that depended on the decision. (FR-CS-008, the
-   original example, was activated by `ERR-020-008`.)
+2. Activate or amend any INACTIVE FRs that depended on the decision.
 3. Append a version history entry to every section file changed.
 4. Update `docs/tracking/PROGRESS.md` with the milestone.
 
@@ -207,6 +228,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §7.2's "on every push" corrected to `ci.yml`'s real triggers (`branches: [main]`, `push` and `pull_request`). Same correction as `section-4.md` v1.2 and `section-5.md` v1.2; the v1.1 row above is left as written per the history convention. | — |
 | 1.3 | September 2, 2026 | Codex | **A3.1b supporting-surface synchronization.** Adds the explicit A3→A4→activation boundary for FR-CS-074–081: reapproval, compiler-backed resolver/discovery proof, and enforcement activation are separate gates; Spec #19 retains proof/gate ownership. Also fixes the live §7.2 "Every push" residue to the already-stated main-push/PR trigger scope. | PENDING — A3.4 |
 | 1.4 | October 10, 2026 | — | **`ERR-020-008` — stale platform-pin claims corrected.** D1-artifact's trigger now records that its platform half is satisfied. D4-artifact's namespace style changes from file-scoped to block-scoped, because file-scoped namespaces are C# 10 and outside FR-CS-008's C# 9.0 working ceiling. The §7.2 merge-gate paragraph no longer blames the host pin, which was certified July 19; the missing piece is the pinned-host profiler workflow. §7.3 no longer calls the FMA/DAZ flags `_TBD_`. In §7.5, D1's prerequisite (a) is satisfied, D5 is partially resolved (C# 9.0 working ceiling; the exact Unity compiler ceiling and the certification-platform row are still open), and the resolution protocol no longer cites FR-CS-008 as INACTIVE. Out of scope, left unchanged: D3/D5-artifact's stale "`src/CLAUDE.md` MUST NOT be created" wording, and every verification-model change (Unity governs the build; direct `.asmdef` references), which belongs to the separate owner-reviewed amendment. This is an erratum against the approved baseline. It does not approve the pending A3.1a/A3.1b amendment. | — |
+| 1.5 | October 30, 2026 | Codex | **PR #527 / `ERR-020-008` merge reconciliation.** Reconciles PR #527 with current main. Preserves the October 10 history and explicit certified floating-point flags; carries forward the governing Unity compile and supplemental Linux model, conditional nightly-lane limits, missing profiler-gate work, existing src/CLAUDE.md artifact and explicit C# 9.0 language row. D5 is now resolved by that row; historical statements about its absence describe the earlier baseline. Direct-reference wording distinguishes assembly-definition dependencies from Unity-supplied references. A3.1b remains independently pending A3.4. | — |
 
 ---
 
