@@ -1,8 +1,9 @@
 # UI / Client Framework #38 — Section 9: Approval Checklist
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.3 — PASS-1 (2M+2L) → AR-2 convergence; R-01..R-05 signed; APPROVED)
-**Version:** 0.3
+**Last Updated:** October 30, 2026 (v0.4 — §9.2 currency refresh: T0 substrate + T1 match projection recorded LANDED; T2 left open)
+**Last Updated (prior):** July 22, 2026 (v0.3 — PASS-1 (2M+2L) → AR-2 convergence; R-01..R-05 signed; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/ui-client-framework-design.md` v0.2
 
@@ -10,7 +11,8 @@
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
 verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec —
-implementation gates are open by construction (nothing is built yet); review gates track the pipeline.
+implementation gates were open by construction at approval (nothing was built then; see §9.2 for current
+status); review gates track the pipeline.
 
 ## 9.1 Content gates
 
@@ -22,12 +24,29 @@ implementation gates are open by construction (nothing is built yet); review gat
       (§1.3 / §7.1).
 - [x] KD-1 layer contract stated with the command-vs-observation surface distinction explicit (§1.6).
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status *(as-approved: forward design, nothing built; currency corrected October 30, 2026)*
+
+> **Currency refresh, October 30, 2026 (cross-document consistency review at `38395f8`).** The rows below
+> had published NOT STARTED against shipped code. A row is ticked only where (a) its source anchor exists at
+> `38395f8` and (b) an executed gate result for the landing is already recorded in the cited tracking
+> document. No gate was re-run for this refresh. The as-approved wording is kept in each row as an annotation.
+> Gate record: `docs/tracking/open-issues.md`, entry "UI / Client Framework (#38) — T0 substrate LANDED"
+> (July 25, 2026; "Full dotnet gate PASSED, whole tree green"). That landing delivered both the T0 substrate
+> and the match projection with its observer-neutrality lock. Its three deliberate deviations are filed as
+> ERR-038-001..003; ERR-038-002 defers §4.1's re-wording "to the next #38 revision", which has not yet happened.
 
 - [x] FR set complete + stable: FR-UI-001..023 (grep-verified in §2/§5).
-- [ ] Pure substrate built (projection / navigation / dispatch) — **NOT STARTED** (T0).
-- [ ] `MatchViewModelSource` + observer-neutrality lock — NOT STARTED (T1).
-- [ ] UGUI rendering binding — NOT STARTED (T2, Unity-host-gated).
+- [x] Pure substrate built (projection / navigation / dispatch) — **LANDED**. Anchors:
+      `src/ui-framework/ui-framework.asmdef`, `src/ui-framework/IViewModelSource.cs`,
+      `src/ui-framework/ICommandDispatcher.cs`, `src/ui-framework/ManagerIntent.cs`,
+      `src/ui-framework/NavigationShell.cs`, `src/ui-framework/MatchTacticsDispatcher.cs`. *(As-approved: NOT STARTED.)*
+- [x] `MatchViewModelSource` + observer-neutrality lock — **LANDED**. Anchors:
+      `src/ui-framework/MatchViewModelSource.cs`; `src/ui-framework/Tests/MatchViewObserverNeutralityTests.cs`
+      (`ObservingThroughTheViewModel_IsByteIdenticalToNotObserving`,
+      `NoOtherAssemblyReferencesTheUiFramework`). *(As-approved: NOT STARTED.)*
+- [ ] UGUI rendering binding — not assessed in this refresh (T2). The Unity screen code now lives in the assembly at
+      `src/match-client-unity/match-client-unity.asmdef`; whether it discharges §7.2 is a separate judgement. *(As-approved: NOT STARTED,
+      Unity-host-gated.)*
 
 ## 9.3 Review gates
 
@@ -105,4 +124,5 @@ non-blocking: the UGUI rendering binding (Unity-host access) and each screen spe
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.3 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L: M-1 match-view source reads the streamer frame not the engine; M-2 live-match command marshaled onto the sim thread via FR-UI-023/F6 + `EnqueueIntent`; L-1 dispatcher-split routing; L-2 Pop-below-root) → AR-2 convergence recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
+| 0.4 | 2026-10-30 | — | **§9.2 currency refresh** (cross-document consistency review at `38395f8`), with the §9 preamble tensed to as-approved: the substrate and `MatchViewModelSource` rows still read NOT STARTED although both landed July 25, 2026 (full dotnet gate passed, per `open-issues.md`). Ticked with source anchors; the UGUI binding row (T2) is left open and unassessed. Notes that ERR-038-001/-002 deviations are recorded in `spec-error-log.md` and that §4.1's promised re-wording is still pending. No FR, review gate or approval decision touched. |
 #endregion

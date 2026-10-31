@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** October 30, 2026 (v0.4 — §7.4 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial))
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -78,10 +78,44 @@
 - **#46 (news/inbox, future) / #42 (youth academy, future):** aggregate report events / reuse the
   knowledge-overlay pattern; #32 builds no interface for them (FR-LW-031).
 
+## 7.4 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Per-day idempotence of `AdvanceScoutingDay` (ERR-030-027, August 7, 2026).** #30 now runs career-day
+  slots 0–11 at the top of `AdvanceAndPlayNextRound` and again on the next day advance for the same world
+  day (`SeasonLoop.RunCareerDaySteps`, two call sites), relying on each live step being idempotent per day
+  through its own cursor. §3.4's `AdvanceScoutingDay` increments `DaysIntoBand` with no per-day guard, so once
+  active (T3, `fogEnabled`) an assignment would accrue two days on every fixture day. The T3 landing MUST add
+  a serialized last-advanced-world-day guard (the #33 / #45 F6 shape), with the §2 / §3 / Appendix B text that
+  carries it and a test that a same-day re-run advances nothing. Inert until then: the slot is a null seam
+  while fog is off.
+
+- **Slot number.** #32's slot is **step 9**, under **ERR-030-022** (#30 §3.3.1), not step 7 / ERR-030-007 as
+  §1, FR-SC-022, §4, §7.1, §8 and §9 still say; the world-day tick is step 12. #30 §3.3.1 deliberately left
+  citing specs unpatched. Correct these citations at T2.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T1**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: the overlay can legitimately empty (it is always empty with fog off,
+  and FR-SC-019 drops entries), so a wiring fact is likely required. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): T2/T3 reconciled with the fog-off command gate — the T2 slot is a structural null seam and the commands are uncallable until T3 flips `fogEnabled` (the v0.1 text had the commands "landing" usable at T2, contradicting FR-SC-020). |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (L): new §7.2 **manager job-change** deferral row — the career-constant-`managedClubId` assumption named, with the required re-club sweep (drop new-club entries + cancel a targeting assignment) recorded so a future #45-class feature does not trip the F4 own-squad codec gate. |
+| 0.4 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (scouting assignment idempotence, slot number, save-block integration). No normative text changed. |
 #endregion

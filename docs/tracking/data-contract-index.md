@@ -98,6 +98,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Medical / injury state | #41 §2.2 | `injuries-medical` | `ClubInjuryStates` |
 | Appearance record | #30 Appendix B.1 | `season-save` | `ClubAppearanceStates`, `AppearanceState` |
 | Progression / career state | #28 §2.2, §3.5 | `player-progression` | `ClubCareerStates` |
+| Discipline tallies and suspensions | #44 §2.2, §3 | `discipline` | `DisciplineState`, `DisciplineEntry`, `DisciplineRules`, `Availability` |
 
 > Player ids are **globally unique**, not club-scoped — `ERR-041-019` / `ERR-027-004`. #27 FR-SQ-010
 > was amended to say so; the keyed injury draw depends on it.
@@ -147,15 +148,17 @@ read the value from the file.
 | Format | Constant | File |
 |---|---|---|
 | Season save frame (the root) | `SEASON_SAVE_FORMAT_VERSION` | `src/season-save/SeasonSaveConstants.cs` |
-| Season sub-blob | `SEASON_STATE_FORMAT_VERSION` | `src/season-save/SeasonSaveConstants.cs` |
+| Season sub-blob | `SEASON_STATE_FORMAT_VERSION` | `src/season-save/SeasonLoopConstants.cs` |
 | Appearance sub-blob (`APPR`) | `APPEARANCE_SAVE_FORMAT_VERSION` | `src/season-save/SeasonSaveConstants.cs` |
 | Progression sub-blob (`PROG`) | `PROGRESSION_SAVE_FORMAT_VERSION` | `src/player-progression/PlayerProgressionConstants.cs` |
 | Training sub-blob | `TRAINING_SAVE_FORMAT_VERSION` | `src/training-system/TrainingSystemConstants.cs` |
 | Medical sub-blob | `MEDICAL_SAVE_FORMAT_VERSION` | `src/injuries-medical/InjuriesMedicalConstants.cs` |
 | Finance sub-blob (`FNCE`) | `FINANCE_SAVE_FORMAT_VERSION` | `src/club-finances/ClubFinancesConstants.cs` |
+| Discipline sub-blob (`DISC`) | `DISCIPLINE_SAVE_FORMAT_VERSION` | `src/discipline/DisciplineConstants.cs` |
 | Match save | `MATCH_SAVE_FORMAT_VERSION` | `src/match-engine/MatchEngineConstants.cs` |
 | World store / world snapshot (#22) | `WORLD_STORE_FORMAT_VERSION`, `WORLD_SNAPSHOT_FORMAT_VERSION` | `src/living-world/LivingWorldConstants.cs` |
 | Scenario manifest (#19) | `SCENARIO_MANIFEST_FORMAT_VERSION` | `src/testing-strategy/TestingStrategyConstants.cs` |
+| Career slot sidecar (`.slot`, client-owned; not a season-save sub-blob) | `CAREER_SLOT_META_FORMAT_VERSION` | `src/client-app/ClientAppConstants.cs` |
 
 > **The rule these blocks were bought with:** *a format version is not a format identifier*
 > (`ERR-029-005` / `ERR-041-009` / `ERR-028-004`). Every sub-blob is magic-led and typed at the frame
@@ -188,6 +191,7 @@ read the value from the file.
 | Screen **identity type** | #38 | `ui-framework` | `ScreenId` — the type; it carries no screen list |
 | The four screens + navigation graph | `interactive-unity-client-design.md` §5-P5a / v0.17 | `client-app` | `ClientScreens` (the catalogue), `ClientScreenFlow`, `ClientAppConstants` |
 | UI framework substrate | #38 | `ui-framework` | T0 substrate only — no screens, no UGUI binding |
+| Localization keys, templates, renderer | #49 §2.2, §3.2 | `localization` | `LocalizationKey`, `TextTemplateId`, `TemplateCatalogue`, `ILocalizer` / `Localizer` |
 
 ---
 
@@ -208,12 +212,10 @@ about whether an implementation exists. This table is a navigational snapshot; v
 | #39 | `steam-packaging-release/` | build/release artefacts |
 | #42 | `youth-academy-intake/` | intake cohorts, youth candidates |
 | #43 | `competition-structure/` | cups, knockouts, multi-competition calendar |
-| #44 | `discipline-suspensions/` | cards, bans, suspension state |
 | #45 | `board-ownership-dynamics/` | board confidence, ownership |
 | #46 | `news-inbox-man-management/` | inbox items, man-management interactions |
 | #47 | `new-game-setup-db-editor/` | **authored** starting data (incl. new-game `PotentialAbility`) |
 | #48 | `match-presentation-depth/` | commentary/presentation depth |
-| #49 | `localization-accessibility/` | localization keys, template contracts |
 | #50 | `save-migration-versioning/` | cross-version save migration |
 | #51 | `audio-sound-design/` | audio events and mixing |
 | #53 | `club-infrastructure-facilities/` | facilities, infrastructure levels |
@@ -261,6 +263,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.6 | October 30, 2026 | Cross-document consistency review at `38395f8`: §8 still listed #44 and #49 as having no assembly although `src/discipline/` and `src/localization/` exist — both rows removed and pointed at instead (§3 discipline row, §7 localization row). §5: `SEASON_STATE_FORMAT_VERSION` re-pointed to `SeasonLoopConstants.cs` (it was never in `SeasonSaveConstants.cs`); `DISCIPLINE_SAVE_FORMAT_VERSION` and `CAREER_SLOT_META_FORMAT_VERSION` rows added. No version values added. |
 | v1.5 | October 21, 2026 | #31 T2 AR round 5 (ERR-031-015): the Manager-transfer-command row no longer says the counterparty ledger is untouched "by design" — it is the interim option (b) with the (a)-vs-(b) owner decision open (§7.2, open-issues `transfer-counterparty-ledger`). Pointer wording only; no contract changed. |
 | v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |
 | v1.3 | September 6, 2026 | #40 T0 + T1a landing: registered `ClubFinances` / `FinancesViewModel` and the finance transaction seam under `club-finances`, added the standalone `FINANCE_SAVE_FORMAT_VERSION` pointer, and removed #40 from the no-assembly table. The §8 percentage was deliberately removed rather than creating another volatile cardinality claim. |

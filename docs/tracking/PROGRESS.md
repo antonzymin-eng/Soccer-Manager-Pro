@@ -1,7 +1,18 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+**Last Updated:** October 30, 2026 (scope note added below; no status, count or milestone changed)  
+
+> **Scope note (October 30, 2026 — cross-document consistency review at `38395f8`).** This file tracks the
+> **Stage 0 specification set**; its Stage 0 count (20 APPROVED) is in scope and still correct. Everything
+> else here — the overall-registry counts (last stated as 26 APPROVED; `SPEC_INDEX.md` now registers 53),
+> the milestone table (last row May 29, 2026), NEXT ACTIONS, and the footer dated May 30, 2026 — has not
+> been maintained since July 10, 2026 and is **historical**. Use `docs/specs/SPEC_INDEX.md` for current spec
+> status, `docs/tracking/path-to-playable-roadmap.md` for implementation order and milestones, and
+> `docs/tracking/open-issues.md` for live blockers. Root `CLAUDE.md` still names this file as the authority
+> for schedule and milestones; changing that routing line is an owner decision and is not made here.
+
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
 §9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;

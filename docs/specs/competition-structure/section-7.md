@@ -1,8 +1,8 @@
 # Competition Structure #43 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** October 30, 2026 (v0.3 — §7.4 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -61,9 +61,36 @@
 - **#38 (UI, future):** renders competition/bracket view models (read-only value copies,
   FR-CP-022); MUST NOT mutate #43 state directly.
 
+## 7.4 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **#44 has landed** (August 13, 2026, `src/discipline/`). It carries `DisciplineConstants.LeagueCompetitionKey
+  = 0` as a `[CROSS]` copy of this spec's `LEAGUE_COMPETITION_ID`, kept as a literal because no #43 symbol
+  exists. §7.2, §7.3 and §8 still treat #44 as a future consumer. At T0, replace that literal with a
+  compiler-checked reference, placing the constant where `discipline` can reference it without a cycle, and
+  land the ERR-044 Appendix A back-prop that file's history records as owed.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T1**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: the minimal singleton collection persists nothing beyond instance
+  0's binding, so an empty block is the ordinary state and a wiring fact is likely required. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M-1/M-2 follow-through): the multi-leg deferral row re-anchored on the FR-CP-026 tie-break baseline; new **byes / preliminary rounds** deferral row (the extension lifting the FR-CP-027 power-of-two gate). |
+| 0.3 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (#44 literal mirror, save-block integration). No normative text changed. |
 #endregion

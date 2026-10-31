@@ -1,8 +1,8 @@
 # Club Infrastructure & Facilities #53 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -93,8 +93,45 @@ a level can change.
   consumer lacking a neutral default, and a future gap-fill candidate must check that property before
   assuming #53's precedent applies.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Future-promotion tag (ERR-054-001).** FR-IN-031 and §1 / §7 / §8 / §9 name `0x2E` / 96 as the target of
+  any future stochastic promotion. `0x2E` was allocated to `DOMAIN_TAG_BUILD_IDENTITY` by ERR-016-009
+  (August 22, 2026). Not re-allocated here (C6): the replacement is chosen with #54's reconciliation and lands
+  in #16 §3.4 in the same commit. The build-identity tag does not move.
+
+- **Per-club modifier routing.** #30's career layer passes one modifier to every club:
+  `PlayerCareerStates.AdvanceTrainingDay` and `GatherTrainingInputs` take one `CoachingModifier`, and
+  `AdvanceMedicalDay` one `MedicalModifier` (`src/season-save/PlayerCareerStates.cs`). T2 is unaffected (every
+  club at baseline gives identity values). Before T3's first non-baseline level reaches those calls, `season-save` needs a per-club
+  routing change (and #30 text, if it pins the signature); otherwise one club's effect would apply to all.
+
+- **Projection names disagree.** #53 §4 composes `staff.ProjectMedicalModifier(clubId)` and
+  `staff.ProjectAcademyTerm(clubId)`; #34 §3 defines `ToMedicalModifier(in StaffRecord physio)` and no
+  academy-term projection. Reconcile the root adapter with #34's actual surface when the first of #34 / #53
+  lands.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: every club carries baseline facilities from genesis and none is
+  removed — the #40 shape, suggesting the emptiness key plus the club-universe coherence rule. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2 as the first non-inert phase and its deliberate behavioural neutrality, deep-tier extensions with the structural-vs-additive distinction called out for multiple grounds and seed-varied genesis, the not-planned list incl. the refused "total infrastructure score", risks R-1..R-6 with the producer-after-consumer inversion recorded as R-6). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (0x2E tag, per-club modifier routing, projection names, save-block integration). No normative text changed. |
 #endregion

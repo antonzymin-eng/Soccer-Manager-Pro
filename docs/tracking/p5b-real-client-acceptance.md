@@ -2,7 +2,7 @@
 
 **Created:** October 19, 2026\
 **Last Updated:** October 30, 2026\
-**Version:** 0.15\
+**Version:** 0.16\
 **Status:** Real-client I-Q01–19 EXECUTED on the pinned host; B8/B10 render-loop capture PASSED against the owner-set budget
 (v0.1 skin) and again on the H v0.2 skin (§14, v0.10). The owner's October 20 decisions are implemented and verified on the host (§6):
 - **J-01 FIXED:** goalkeeper-mismatched choices are greyed out, with a reason.
@@ -82,6 +82,8 @@ and the Gate-J technical review. It supersedes the "real-client I-Q01–19 NOT R
 | J-04 | Minor — **fixed v0.2** | The skin is neutral: plain text buttons without chrome, dialogs as full pages, outcome words without the ✓ ✕ – glyphs of I-C11, shirt labels drawn on the marker discs in dark text, and the follow camera frames part of the pitch while `pitch.description` says goals are shown. Opening statistics at 1920×1080 shrinks the pitch to about 305 px wide. | **Fixed v0.2** (§6): H v0.2 skin, whole-pitch orthographic view, statistics in the rail (pitch 1055×683 with statistics open). The owner's visual acceptance and the B8/B10 re-capture on this skin are still due. |
 | J-05 | Minor — owner chose 10×; PR #520 | The 10× rung delivers about 5.5× on this host (315–340 ticks/s instead of 600). The sim thread is the limit; the engine's per-tick snapshot encode allocates about 35 KB per tick. 1× holds 60 ticks/s. | Owner chose a real 10× (§6); engine throughput work is in PR #520, which still needs a Unity compile and a 10× re-measure on this host. Rendering is unaffected (below). **Re-measured v0.14 (§18): PASS, 601–602 ticks/s at 10× on #520.** |
 | J-06 | Info | Editor-only: an unfocused Editor runs the sim far slower (70–550 ticks/s); never use Editor timing as performance evidence. | Recorded. |
+| J-07 | Minor — **fixed, §16** | Owner observation on the host, October 27: boxes on Match View change size and shape when the match speed changes. Probable cause, from source and not yet confirmed on the host: the slower and faster reasons are two separate boxed rows under the playback buttons (`S0ScreensBehaviour.BuildMatch`). `SetBoxed` hides a row while its text is empty, so one row appears at 1× (slower unavailable), the other at 10× (faster unavailable), and neither at 3× or 5×. Everything below them, the pitch and rail included, moves. H v0.2 `mv-l.png` shows the reason inline to the right of the buttons. | **Fixed and host-verified October 29 (§16):** the shared reserved-height reason box keeps the pitch rect stable. October 27's original finding and decision are preserved in §20. |
+| J-08 | Moderate — **historical October 27 observation** | Owner observation on the host, October 27: each player is drawn as a disc plus a separate shirt chip joined by a line, and the chips wander away from their players. This does not match H v0.2. In the approved images the shirt tag is the marker, labels "may move slightly to avoid overlap", and a leader appears only for a materially displaced label (journey S0-G-010, S0-H-001). The Unity binding draws a tether for every chip. `S0ScreenLayout.TryPlacePitchLabels` moves an overlapping chip to the nearest free grid cell anywhere on the pitch, and when greedy placement fails it lays every chip out on a grid. I-Q16 recorded "0 pitch-label overlaps", which is the placement working as written; it did not test closeness to the marker. | Preserve the October 27 marker-redesign request in §20. The later owner acceptance in §19 remains authoritative; consolidation does not implement this redesign or add an acceptance condition. |
 
 ## 4. B8/B10 render-loop capture
 
@@ -488,6 +490,92 @@ the FR-PO-052 re-baseline, is not run (§18).
 
 No code, copy or evidence changes with this section.
 
+## 20. Preserved October 27 owner observations (branch-local v0.3)
+
+**Historical record:** these observations predate the October 30 Gate-J acceptance in §19. The conditional verdict below records the October 27 branch state; §19 remains authoritative for current acceptance. Movement and full-screen findings remain separately tracked.
+
+On October 27, 2026 the owner, Anton Zymin, reviewed the first host runs of the H v0.2 skin and reported four
+observations. J-07 and J-08 are logged in §3. Player movement is measured in §21: the engine, not the client, holds players in a small area. The full-screen pitch request is
+recorded separately in [open-issues.md](open-issues.md#s0-fullscreen-pitch-request), because it is a new action and,
+under [ux-detailed-plan.md](../design/ux-detailed-plan.md) §13, returns to Gates A/B.
+
+| ID | Owner decision | Consequences recorded here, not yet built |
+| --- | --- | --- |
+| J-07 | Log as a Gate-J finding. | Fix the reason placement so the layout is stable across speeds. No design change: H v0.2 already places the reason inline. |
+| J-08 | Replace the shirt chips and leaders. **Shirt numbers sit inside the player markers. They are hidden when the pitch is small. The H and A prefixes are removed** ("10", not "H10"). | See below. |
+| Colour-blind team cue | Team identity will not rely on the H/A prefix. **A different approach for colour-blind players will be chosen.** The approach is not decided yet. | Owed. Release condition: decided and implemented before S0 Gate-J owner acceptance, unless the owner names a later milestone. Without H/A, home and away markers differ by colour only. The validation protocol's Gate-E "colour-independent meaning" check and WCAG 1.4.1 do not allow that on its own. |
+
+**What the J-08 decision changes.** This is a design change after Gate H/I. Under §13 of the detailed plan it reopens H
+for the pitch views only, and the journey packet records it. Nothing else in the approved H v0.2 set changes.
+
+- **H delta.** New reference images for the pitch-bearing views (`mv-l`, `mv-p`, `mv-live-applied`,
+  `mv-live-1366`, `mv-live-2560`, `stress-fault-1366`), for the owner's image approval. They show bare numbers
+  inside markers where they fit, no numbers where the pitch is small, and the substitute ↔ cue.
+- **When numbers show.** "Small" needs a testable rule. Recommended: show numbers only when the marker's on-screen
+  diameter holds two digits at the current text scale, and hide all of them otherwise, never some. A size rule works
+  for any future larger pitch view without a separate mode. Today's figures, from source: the marker radius is
+  0.7 m (`MatchClientConstants.AgentMarkerRadiusM`). The whole-pitch view at 1920×1080 is 1055 px for 105 m, about
+  10 px/m, so a marker is about 14 px across. Two digits at the 13 px chip size (100%) need roughly 16 px, and twice
+  that at 200%. **So in the current layout numbers will not show at any supported resolution.** They appear only
+  if the marker is drawn larger in screen pixels, or in a larger pitch view such as the full-screen request.
+- **Copy.** `pitch.legend` ("H/A identify Home/Away player shirts…") and `pitch.description` ("Home H attacks
+  right; Away A attacks left…") name H/A and need new wording, for owner approval with the J-01/J-02 copy.
+- **Kept behaviour.** Keyboard and pointer pitch inspection (owner decision October 8, binding contracts v0.5) uses
+  the chips as its targets today. It must move to the markers so each player can still be focused and described
+  with full name, shirt and team in words, also when numbers are hidden.
+- **Retest.** I-Q16's "0 pitch-label overlaps" stops applying. Replace it with: numbers either all shown inside their
+  markers or all hidden, no leader lines, no text outside a marker, at every resolution × text-scale cell.
+
+**Verdict amendment (v0.3).** The §7 verdict stays CONDITIONAL PASS, with three added conditions: J-07 fixed and retested; J-08 implemented against owner-approved H-delta pitch images, with the new legend and description copy approved; and the colour-blind team cue decided and implemented (or moved by the owner to a named later milestone). The B8/B10 re-capture should run after J-08, since it changes what the pitch draws each frame.
+
+## 21. Player movement measurement (branch-local v0.4)
+
+**Question.** The owner saw players barely leave their starting positions. Is that the engine, or the client's drawing?
+
+**Method.** `src/client-app/tests/S0MovementDiagnosticTests.cs` v1.0 (`TD_MOVEMENT_DIAGNOSTIC=1`) plays the approved S0
+fixture (seed 1, Balanced, human home, AI away) and the same squads on two more seeds, each to full time, through
+`MatchSession.TickOnce`. It reads `LiveMatchFrame.AgentPositions`, the positions the Unity client renders. Linux .NET 8
+Debug, shim build, October 27, 2026; about 4 minutes per match. A step over 0.6 m in one tick would count as a
+reposition, not running; there were none.
+
+| Per match (22 players) | Seed 1 (approved) | Seed `0x0F1E2D3C4B5A6978` | Seed `0xD1A6D05E` |
+| --- | --- | --- | --- |
+| Mean outfield distance run | 11.94 km | 11.90 km | 11.84 km |
+| Mean goalkeeper distance run | 11.66 km | 11.67 km | 11.69 km |
+| Range of all 22 players | 11.58–12.19 km | 11.57–12.13 km | 11.52–12.16 km |
+| Outfield time standing (< 0.5 m/s) | 2.6% | 3.2% | 3.4% |
+| Positional standard deviation, outfield (x / y) | 2.4–6.0 m / 1.3–3.8 m | 2.3–4.5 m / 2.0–3.5 m | 2.6–6.8 m / 2.1–8.1 m |
+| Positional standard deviation, goalkeepers (x / y) | 1.6–1.9 m / 1.3–1.7 m | 1.6–1.9 m / 1.5–1.6 m | 1.7–2.5 m / 1.6 m |
+| Mean outfield distance from kick-off spot, minutes 1 → 90 | 33.6 → 32.5 m | 30.4 → 32.1 m | 30.1 → 32.5 m |
+| Final score | 11–10 | 13–11 | 18–14 |
+
+**Reading.**
+
+- **The client is not the cause.** The frames the client draws already show the behaviour; there is nothing for the
+  renderer to lose.
+- **Players are never still, but they stay in a small area.** Each runs about 12 km and stands about 3% of the
+  time, yet the standard deviation of their position is only about 2–7 m along the pitch and 1–8 m across it, and
+  about 3 m for most players. On the 1055 px whole-pitch view, 3 m is about 30 px. That matches "barely moved":
+  constant motion with little travel.
+- **The distance is almost the same for every player, keepers included.** About 2.2 m/s for 90 minutes, whatever the
+  role. Approximate real-world reference: outfield players cover roughly 9–13 km depending on role, and keepers
+  roughly 5–6 km; real heatmaps span tens of metres. Uniform 12 km with a 2–3 m spread, keepers included, suggests
+  players oscillating around a near-fixed target rather than moving with play. This is an inference: the instrument
+  does not count direction reversals.
+- **Positions settle in the first minute and then hold.** The mean distance from the kick-off spot is about 30 m at
+  minute 1 and stays there to minute 90. At kick-off all ten home outfield players stand on one line, x = 26.2 m
+  (away x = 78.8 m), so the first-minute move is the shape forming, not play.
+- **Rare excursions exist.** Some x ranges reach the far penalty area (for example home agent 6: x 26.2–105.4) and
+  a few positions fall slightly outside the touchlines (y −5.0 or 73.0), but these do not move the spread much.
+- **Formation is expected not to apply.** No simulation system reads `TeamTactic.Formation` (S0 Gate B), and
+  formation and Duty routing is #434 part (i), which the owner placed in PM-2.
+- **Goal rate.** 21, 24 and 32 goals per match: the engine's known high goal rate, not a client issue.
+
+**Disposition.** Engine behaviour, outside S0 Gate J (the client renders what the engine produces). Filed as
+[open-issues.md](open-issues.md#engine-players-hold-small-area). Not tuned: under KD-W1 and the wire-first posture,
+the next step is a measurement pass that localizes the cause (the positioning target, the movement controller, or
+the per-tick decision), not a dial change.
+
 ## Version History
 
 | Version | Date | Notes |
@@ -507,3 +595,6 @@ No code, copy or evidence changes with this section.
 | 0.13 | October 29, 2026 | §17: external review of `4ff45ee8` — §14's I-Q15 pass never reached the earlier-outcome disclosure (three records; the disclosure needs four). I-Q15 rerun on the pinned host with four and then five records: disclosure reached by Tab and Shift-Tab, toggled by Enter, expanded state and focus kept through 3,600 live ticks and through a new record; 59/59, uninterrupted. Reason box captured at 200% (1920×1080, 1366×768, 800×1000) and 100% narrow: pitch holds one size at every speed step. Evidence `host-4ff45ee8-20261029/`. Gate-J verdict unchanged (CONDITIONAL PASS, J-05 remaining). |
 | 0.14 | October 30, 2026 | §18: J-05 re-measured on PR #520's merged head `05898cd0` (main with #518 merged in). Unity compile clean (75 assemblies); EditMode 554 passed, 0 failed, 12 ignored. Development player at 10×: 601–602 sim ticks/s in all six #520 sessions (100% and 200% text, statistics open and closed) against 468–557 for a same-session `main` control; 1× holds 60; worst p99 10.88 ms, no frame over 16.7 ms. Evidence `host-05898cd0-20261030/`. The J-05 condition of §7 is met when #520 merges; Gate-J verdict CONDITIONAL PASS until then. |
 | 0.15 | October 30, 2026 | §19: PR #520 merged as `642294d1` at 02:05 UTC, landing J-05, the last §7 condition; Gate-J technical verdict PASS. The owner signed off: “I'll merge and I sign off on gate J”. S0 Gate J ACCEPTED. No code, copy or evidence change. |
+| 0.3 (branch-local owner review) | October 27, 2026 | Owner host review: J-07 (layout shifts with match speed) and J-08 (shirt chips and leaders do not match H v0.2) logged; owner decisions recorded in §8 (numbers inside markers, hidden when small, no H/A; colour-blind team cue owed before Gate-J acceptance); full-screen pitch request filed separately in open-issues; §9 player-movement measurement started. |
+| 0.4 (branch-local movement) | October 27, 2026 | §9 measured: three full S0 matches through `MatchSession` frames. Every player, keepers included, runs about 12 km at about 2.2 m/s, but positional spread is only about 2–6 m; the behaviour is in the engine's positions, not the client. Filed as an open engine issue; outside Gate J. |
+| 0.16 | October 30, 2026 | Consolidation preserves branch-local October 27 owner observations and movement results as §§20–21, retaining §19 acceptance and the existing v0.3/v0.4 history. |
