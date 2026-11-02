@@ -102,9 +102,10 @@ spec has none, so its affected text is listed here and rewritten at the landing 
   `ProgressionEngine.NextPlayerId` is the career's **single** post-genesis allocator. That selects §4.6's "one
   id authority" branch and supersedes §7.5's R-3 bullet, which left the choice open. FR-YA-027's own
   serialized allocator (`AcademyState.NextYouthPlayerId`, §2.2; `AllocateYouthPlayerId`, §3; F6 as a
-  separate high-water check) conflicts with it. The cursor is still read-only in code (no public allocation
-  operation, and #28's regen allocation has not landed), so T2 needs that operation on #28's store and #42's
-  prospects draw from it. Rewrite FR-YA-027, §2.2, §3 and §4.6 at T0 (state shape) and T2 (allocation).
+  separate high-water check) conflicts with it. The cursor advances only inside #28's staged season boundary
+  (`ProgressionEngine.PrepareSeasonBoundary` → `SeasonBoundaryPlan.NextPlayerId` → `CommitSeasonBoundary`, both
+  `internal`; live since ERR-028-025, October 19, 2026). No allocation operation exists outside that boundary,
+  so T2 needs one on #28's store, usable on #42's intake day, that #42's prospects draw from. Rewrite FR-YA-027, §2.2, §3 and §4.6 at T0 (state shape) and T2 (allocation).
   FR-YA-026's "never reused" is satisfied by the monotonic single allocator.
 
 #region VersionHistory
