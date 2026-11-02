@@ -757,6 +757,19 @@ src/
 │       ├── CardLedgerFoldTests.cs
 │       └── DisciplineSaveCodecTests.cs  ← incl. the magic-check and substitution-swap mutant kills
 │
+│   ── Folder-level entries added October 30, 2026 (cross-document consistency review at `38395f8`): these nine
+│      production folders had no top-level entry. Folder-level only, with the asmdef references as read at
+│      `38395f8`; per-file rows live in docs/tracking/file-manifest.md, not here.
+├── match-engine/                      ← Match Engine composition root (not a numbered spec; match-engine-design.md). References every match-layer assembly + TacticalInstructions + PlayerDatabase
+├── match-client-core/                 ← interactive client's host-free core (render models, shell decisions, ManagerCommandQueue). References MatchEngine + MatchViewer + MatchAnalytics + TacticalInstructions + PlayerDatabase
+├── match-client-unity/                ← Unity-only render/UGUI skin. References ClientApp + MatchClientCore + UiFramework + Localization + UnityEngine.UI
+├── match-client-web/                  ← PM-1 browser match client (roadmap B6). References MatchClientCore + UiFramework + MatchAnalytics + MatchViewer
+├── ui-framework/                      ← UI / Client Framework #38 T0 substrate. References MatchEngine + MatchViewer + MatchClientCore + TacticalInstructions (ERR-038-001/-002)
+├── client-app/                        ← client composition layer (roadmap B9c): screens, flow, career slots. References SeasonSave + every career-state assembly + UiFramework + Localization
+├── club-finances/                     ← Club Finances & Economy #40. References DeterministicSim + PlayerDatabase + ProjectConstants
+├── transfers/                         ← Transfers, Contracts & Negotiation #31 T0. References ClubFinances + PlayerDatabase + ProjectConstants
+├── localization/                      ← Localization & Accessibility #49 L1 core. No assembly references (bottom of graph)
+│
 └── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)
     │                                  │   References only project-constants (FR-TI-002); empty asmdef refs until that assembly exists.
     │                                  │   Seams into #8/#11–#15 land at T2–T3 (gated on match-engine Phase C/D + [GT] loader).

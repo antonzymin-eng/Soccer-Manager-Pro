@@ -10,6 +10,16 @@
 
 ---
 
+> **UPDATED October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
+> arrival census records one geometric passage among 36,961,525 overlapping hypothetical
+> starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
+> contract on the observed trajectories. A one- or two-physics-frame delayed take-off remains
+> a possible #10 timing-contract change, without composed contact proof. The initial local
+> zero remains withdrawn. #441 and W9 stay open. Develop #441 independently of W8 C, but
+> land only after C measurement; #434/#440 retain D-05. Definitions, limits and preserved
+> evidence: [#441 counters §6.4–§6.5](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census)
+> and [evidence package](evidence/header441-reachability-20261020/README.md).
+
 > **UPDATED October 18, 2026 (UTC), v1.38:** W8 B and the owner-approved own-release law/avoidance landed in PR #511 (`c0ffd0d2`); final-head CI `a43bbc1c` and governing Unity `e58577de` met. C remains separate. Post-law B digests are adopted; exact physical-touch/team keeper-release follow-up is a required B→C measurement, not a closed balance question.
 
 > **UPDATED October 15, 2026 (v1.37):** W8 B is implemented and measured on the local branch: 348 voluntary CONTACTs, no inherited drops or new DT races; same-keeper hand interruption 24 → 155 stays separate. The claim-observation correction is tested without changing its predicate. Fresh full CI and final-head Unity validation remain pending; [results](w8-b-implementation-results.md).
@@ -22,7 +32,7 @@
 > frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
 > horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
 > Not measured: missed genuine aerial arrivals and launch origin.
-> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 §6.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.14) §6.
 >
 > **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
@@ -292,6 +302,15 @@ recorded **1,811 HeaderIntent commits → 1,811 jump starts → 18 ever-predicte
 Head contacts → 0 executed headers**, with 1,793 `PositionedPoorly` and 16 `MistimedEarly` terminal
 failures. This proves W3 arbitration is downstream of the first complete zero but does not yet decide
 whether the remaining cause is opportunity/geometry or Heading #10's prediction-to-contact realization.
+
+The corrected October 20 local #441 census finds one geometric passage; its two witness starts
+fall outside selection under the existing 10 Hz/first-eligible-start contract on those observed
+trajectories. A #10 change delaying take-off by one or two physics frames remains possible, but
+the witnesses prove geometry only, not a prepared or executed contact. The first local zero is
+withdrawn. Delivery, positioning and the contact/start contract still require investigation.
+[#441's definitions and result](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census)
+and [preserved evidence](evidence/header441-reachability-20261020/README.md) bound this reading.
+#441 stays open and gates W9. Develop it independently now; land after W8 C measurement.
 
 **Owner decision recorded September 23, 2026:** classify W3 **wired but dormant**. The Hand path and
 cross-claim plumbing are live; production Head participation is dormant upstream and remains owned by
@@ -664,7 +683,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. W12 subsequently landed as sequence row 5. |
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
-| 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9. |
+| 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9; develop independently of W8 C now, land after its measurement. |
 | 8 | **W8 B → C**, then **W9**, **W10** | B landed in PR #511; C law/measurement remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
 > **W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated
@@ -759,6 +778,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |
 | 1.37 | 2026-10-15 | — | W8 B local branch wiring and evidence pointer recorded; governing final-head Unity validation, C law correction and LongKick trajectory follow-up remain open. |

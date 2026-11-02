@@ -1,8 +1,8 @@
 # Media & Press Interactions #35 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -90,8 +90,29 @@ be recorded and never delivered, with every #35-local test green (§4.4).
   approved struct, but the clamp is now a correctness dependency outside #35, and T-ME-I-010 is what
   keeps it honest.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: an empty media store is the ordinary state, so a wiring fact is
+  likely required. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's neutrality identified as a **catalogue** rather than a code property — the one place #35 differs from its siblings — deep-tier extensions, the not-planned list incl. the absent-not-false citation field, risks R-1..R-7 with the shared-field cost recorded as R-7). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
 #endregion

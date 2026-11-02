@@ -1,8 +1,8 @@
 # Youth Academy & Intake #42 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.1 — initial))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -60,8 +60,37 @@ contract (§4.6), and the closed-loop scenario (§5.8) all land together — the
   "unifying" the ceiling dial with the growth path; §1.2 and F7 state the disjointness so that unification
   reads as the regression it would be.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **R-3 update — the existing #28 cursor.** #28's `ProgressionEngine` already persists a global player-id
+  cursor (`NextPlayerId`, in the `PROG` block), set to the highest seeded id + 1. It is read-only: there is no
+  public allocation operation, and #28's season-boundary regen (`RunSeasonBoundary`) has not landed. The
+  §4.6 contract therefore still needs a real design at T2 — a shared allocation operation over that cursor
+  (with its persistence), or a documented serialized partition. Global uniqueness is already enforced
+  fail-loud by `PlayerCareerStates` and `ProgressionEngine` (ERR-041-019).
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: an academy whose prospects have all been promoted or released is
+  legitimately empty of prospects; whether the serialized id high-water keeps the block non-empty decides
+  the key. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T0–T3 plan with T2 named as the first non-inert phase, deferred-by-design items, the explicit not-planned list incl. the no-#28-change rule, and the four carried risks incl. the shared `MaxRngStreams` bound). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (R-3 player-id update, save-block integration). No normative text changed. |
 #endregion

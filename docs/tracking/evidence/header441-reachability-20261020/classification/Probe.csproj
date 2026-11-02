@@ -1,0 +1,17 @@
+<!-- Created 2026-10-20. Replays the frozen #441 classification source from the durable archive. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TacticalDirector.MatchEngine.Tests</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <ProjectReference Include="../../../../../src/match-engine/match-engine.gen.csproj" />
+    <ProjectReference Include="../../../../../src/agent-movement/agent-movement.gen.csproj" />
+    <ProjectReference Include="../../../../../src/heading-mechanics/heading-mechanics.gen.csproj" />
+    <ProjectReference Include="../../../../../tools/dotnet-ci/UnityShim/UnityShim.csproj" />
+  </ItemGroup>
+</Project>

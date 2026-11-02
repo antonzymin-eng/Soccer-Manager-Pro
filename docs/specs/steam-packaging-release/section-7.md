@@ -1,8 +1,8 @@
 # Steam Packaging & Release Engineering #39 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -105,8 +105,19 @@ used to justify it.
   the highest cost of being wrong** — FR-PK-012 (a skip is not a pass) and FR-PK-003 (never resolve from
   metadata). Recording that here is the only mitigation a spec can offer.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **Unity host access exists.** T1's runbook run "on the pinned host" no longer waits on access. The pinned Unity host is in use and S0 Gate J was accepted October 30,
+  2026 (roadmap B9b). This removes a blocker only; it does not make the phase done.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3, with the argument that T0 is unusually valuable because the spec's central claim is a **pure fold** and therefore testable against the real skip-shaped CI artifact long before a release; T1 before T2 on the ground that a gate never exercised is a document; the predicted T3 metadata-shortcut failure; deep-tier extensions incl. the Stage-5+ bit-identical deferral; the not-planned list, which is unusually long because most of this spec's content is a prohibition; risks R-1..R-6, with R-6 added because #39 is authored last and implemented under release pressure, which is precisely when its two highest-cost rules are most likely to be waived). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (pinned-host status). No normative text changed. |
 #endregion

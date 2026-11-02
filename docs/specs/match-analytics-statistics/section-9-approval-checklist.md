@@ -1,8 +1,9 @@
 # Match Analytics & Statistics #37 — Section 9: Approval Checklist
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.3 — PASS-1 (2M+3L) → AR-2 convergence; R-01..R-05 signed; APPROVED)
-**Version:** 0.3
+**Last Updated:** October 30, 2026 (v0.4 — §9.2 currency refresh: T0 + T1 recorded LANDED with source anchors; T2 left open)
+**Last Updated (prior):** July 22, 2026 (v0.3 — PASS-1 (2M+3L) → AR-2 convergence; R-01..R-05 signed; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/match-analytics-statistics-design.md` v0.2
 
@@ -10,7 +11,8 @@
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
 verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec —
-implementation gates are open by construction (nothing is built yet); review gates track the pipeline.
+implementation gates were open by construction at approval (nothing was built then; see §9.2 for current
+status); review gates track the pipeline.
 
 ## 9.1 Content gates
 
@@ -24,12 +26,30 @@ implementation gates are open by construction (nothing is built yet); review gat
 - [x] KD-2 xG-as-shape / producer-gated stated; the goal-position-is-crossing-point correction is
       explicit (§3.3 / §1.6).
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status *(as-approved: forward design, nothing built; currency corrected October 30, 2026)*
+
+> **Currency refresh, October 30, 2026 (cross-document consistency review at `38395f8`).** The rows below
+> had published NOT STARTED against shipped code. A row is ticked only where (a) its source anchor exists at
+> `38395f8` and (b) an executed gate result for the landing is already recorded in the cited tracking
+> document. No gate was re-run for this refresh. The as-approved wording is kept in each row as an annotation.
+> Gate record: `docs/tracking/CHANGELOG.md`, the July 27, 2026 entries for Match Analytics #37 T0 (roadmap
+> B2) and "TRACK C PHASE B IS COMPLETE" (B3 = #37 T1; "Full dotnet gate: PASSED, 0 failures", match-analytics
+> 24 → 54 tests).
 
 - [x] FR set complete + stable: FR-AN-001..021 (grep-verified in §2/§5).
-- [ ] Layer built — **NOT STARTED** (forward design; §7 T-phase T0..T2).
-- [ ] The KD-7 read-only ledger tap on `MatchEngine` — NOT STARTED (T1).
-- [ ] Two-run determinism + observer-neutrality proven — NOT STARTED (T1 tests, §5).
+- [x] Layer built, T0 + T1 — **LANDED**. Anchors: `src/match-analytics/match-analytics.asmdef`,
+      `src/match-analytics/MatchStatline.cs`, `src/match-analytics/AdvancedStatline.cs`,
+      `src/match-analytics/StatPoint.cs`, `src/match-analytics/MatchAnalyticsResult.cs`,
+      `src/match-analytics/XgLocationModel.cs`, `src/match-analytics/MatchAnalyticsAggregator.cs`. *(As-approved: "Layer built — NOT STARTED (T0..T2)"; split at this refresh.)*
+- [ ] T2 — the §7.1/§7.2 deferred-producer follow-up (a match-engine change, Appendix D). Not assessed in
+      this refresh.
+- [x] The KD-7 read-only ledger tap on `MatchEngine` — **LANDED** (T1). Anchors:
+      `src/event-system/TickLedgerSnapshot.cs`; `MatchEngine`'s `_tickLedger` field
+      (`src/match-engine/MatchEngine.cs`); `src/match-analytics/ITickLedgerTap.cs`. *(As-approved: NOT STARTED.)*
+- [x] Two-run determinism + observer-neutrality proven — **LANDED** (T1). Anchors:
+      `src/match-analytics/Tests/MatchAnalyticsObserverNeutralityTests.cs`
+      (`TAnNeu001_ObservingAMatchDoesNotPerturbItsDigest`, `TAnDet001_SameMatchYieldsByteIdenticalStatistics`;
+      `docs/tracking/file-manifest.md` records the file as the T1 T-AN-NEU-001 / T-AN-DET-001 locks). *(As-approved: NOT STARTED.)*
 
 ## 9.3 Review gates
 
@@ -104,4 +124,5 @@ pass (§7.4, the #21 §9.2 precedent).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.3 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+3L: M-1 lossless every-tick + F6 guard; M-2 possession known-handler; L-1 `SubstitutionEvent.Team`; L-2 territorial disambiguation; L-3 phase-context note) → AR-2 convergence recorded (§9.3); no #16 §3.4 cross-cite (KD-5); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
+| 0.4 | 2026-10-30 | — | **§9.2 currency refresh** (cross-document consistency review at `38395f8`), with the §9 preamble tensed to as-approved: every implementation row still read NOT STARTED although T0 and T1 landed July 27, 2026 (roadmap B2/B3). The "Layer built (T0..T2)" row is split so T0+T1 can be ticked while §7.1's T2 (the deferred-producer follow-up, a match-engine change) stays open and unassessed. Ticked rows carry source anchors and the recorded landing gate. No FR, review gate or approval decision touched. |
 #endregion

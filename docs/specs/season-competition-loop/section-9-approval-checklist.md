@@ -1,9 +1,10 @@
 # Season & Competition Loop Specification #30 — Section 9: Approval Checklist
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v0.4 — the lint sweep: §9.2's implementation status corrected to LANDED, the §9.1 preamble tensed to as-approved, rows 0.2/0.3 reordered ascending)
+**Last Updated:** October 30, 2026 (v0.5 — §9.2 currency refresh: the MatchEngine/WorldStore wiring and round-trip rows recorded LANDED)
+**Last Updated (prior):** August 8, 2026 (v0.4 — the lint sweep: §9.2's implementation status corrected to LANDED, the §9.1 preamble tensed to as-approved, rows 0.2/0.3 reordered ascending)
 **Last Updated (prior):** July 22, 2026 (v0.3 — #16 §3.4 cross-cite filed + R-01..R-05 signed; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -31,8 +32,16 @@ gates track the promotion pipeline.
 
 - [x] FR set complete + stable: FR-SN-001..034 + 013a/013b (36 distinct; grep-verified in §2/§5).
 - [x] Layer built — **LANDED** (T0–T3 in `src/season-save/`, July 2026; the #29/#41 T2 wiring and the balance pass on top — 356-test suite at the August 8 gate. The as-approved row read NOT STARTED; corrected with the header above).
-- [ ] `MatchEngine` / `WorldStore` wiring — NOT STARTED (T2).
-- [ ] Round-trip determinism proven — NOT STARTED (T1/T2 tests, §5.5/§5.6).
+- [x] `MatchEngine` / `WorldStore` wiring — **LANDED** (T2; covered by the row above and its August 8 gate).
+      Anchors: `src/season-save/SeasonLoop.cs` holds the WorldStore (`_world`) and the active
+      MatchEngine (`_activeMatch`); `src/season-save/League.cs` composes the loop from a WorldStore.
+      *(As-approved: NOT STARTED; corrected October 30, 2026.)*
+- [x] Round-trip determinism proven — **LANDED** (T1/T2 tests). Anchors: `src/season-save/tests/SeasonSaveManagerTests.cs`
+      (`DiskRoundTrip_NoMatchSeason_IsDeterministic`, `DiskRoundTrip_SeasonWithNeutralMatch_IsDeterministic`,
+      `DiskRoundTrip_SeasonWithLeagueBootstrappedMatch_IsDeterministic`), `src/season-save/tests/SeasonStateCodecTests.cs`.
+      Present at `38395f8`. The August 8 gate record names the suite (356 tests), not these tests
+      individually, and was not re-run for this refresh. *(As-approved: NOT
+      STARTED; corrected October 30, 2026.)*
 
 ## 9.3 Review gates
 
@@ -117,4 +126,5 @@ Post-APPROVED, non-blocking: the `[GT]` balance pass pinning the illustrative po
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (1H+2M+2L) → AR-2 convergence recorded in §9.3; H-1 = whole-round resolution (KD-9). §9.5 status note updated (sign-off is the remaining gate). |
 | 0.3 | 2026-07-22 | — | #16 §3.4 `0x22`/84 cross-cite filed (ERR-030-001, spec-text-first); #22 phase-1 cross-check → no back-prop needed; R-01..R-05 signed; §9.6 decision APPROVED. Status APPROVED. |
 | 0.4 | 2026-08-08 | — | **Lint sweep (the recurring-defect tool's first run)**: §9.2 still declared "forward design — nothing built yet" / "Layer built — NOT STARTED" of a spec whose T0–T3 all landed in July and whose suite ran 356 tests at the August 8 gate (the pass-13-L4 outline class, in the approval checklist); §9.1's preamble tensed; rows 0.2/0.3 reordered ascending. As-approved wording preserved by annotation, not rewritten. |
+| 0.5 | 2026-10-30 | — | **§9.2 currency refresh** (cross-document consistency review at `38395f8`): v0.4 ticked "Layer built — LANDED (T0–T3)" but left the T2 wiring and the round-trip row at NOT STARTED, so the section contradicted itself. Both ticked with source anchors under the same August 8 gate record v0.4 cites. No FR, review gate or approval decision touched. |
 #endregion
