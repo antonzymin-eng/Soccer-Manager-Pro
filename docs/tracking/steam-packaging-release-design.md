@@ -68,7 +68,7 @@ whether EditMode/PlayMode tests ran at all.
 **Consequence:** KD-2's gate is **evidence-positive** — it requires artifacts asserting that named checks
 *executed on a named build*, and treats their absence as failure. "Nothing was red" is not an input.
 
-**(c) The certification machinery is real, complete, and host-bound.** `certification-platform.md` v1.4
+**(c) The certification machinery is real, complete, and host-bound.** `certification-platform.md` v1.4, now v1.5
 is **✅ PINNED** on Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
 DAZ·FTZ·fp-contract·FMA all off. Two certified runs exist against it: the determinism KAT
 (44 passed / 0 failed / 4 deferred skips — `cert-runs/determinism-cert-2026-07-19.md`) and the

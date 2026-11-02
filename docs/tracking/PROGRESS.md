@@ -1,7 +1,8 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** October 30, 2026 (scope note added below; no status, count or milestone changed)  
+**Last Updated:** November 2, 2026 (**PR #527 / `ERR-020-008` verification amendment** — adds the governing Unity 6000.4.9f1 compile / supplemental Linux model and a Spec #19 §6.2.1 compatibility cross-reference. FR-CS-008 retains its C# 9.0 working ceiling. D5 remains partially resolved pending actual pinned-host compiler arguments and Platform Certification owner sign-off; D1 still awaits profiling. This is new verification text relative to main's October 10 activation-only erratum. A3.1a/A3.1b and A3.2b remain independently pending A3.4; this PR grants no architecture amendment approval.)
+**Last Updated (prior):** October 30, 2026 (scope note added below; no status, count or milestone changed)  
 
 > **Scope note (October 30, 2026 — cross-document consistency review at `38395f8`).** This file tracks the
 > **Stage 0 specification set**; its Stage 0 count (20 APPROVED) is in scope and still correct. Everything

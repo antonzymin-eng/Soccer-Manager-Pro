@@ -2,7 +2,8 @@
 
 **Created:** October 6, 2026  
 **Purpose:** Record deletion candidates, preserve cited provenance, and track retained work branches.  
-**Version:** 0.4  
+**Version:** 0.5
+
 **Status:** EXECUTED October 6, 2026 — owner-authorized; both annotated archive tags published and verified; all eight candidate branches deleted; the fourteen retained snapshot refs remain. Deferred-work reviewer assignments remain open.
 
 ## Audited snapshot
@@ -21,7 +22,7 @@ is made from a shallow checkout.
 
 | Branch | Audited remote head | Disposition / next review |
 |---|---|---|
-| `BLOCKED-codex/a3.4-reapproval` | `ca344beb585366255f15faacf8ffbdf5ad474738` | Keep: 5 branch-only commits; owner to assign A3.4 author/reviewer at the next A3.4 reapproval review. |
+| `BLOCKED-codex/a3.4-reapproval` | `ca344beb585366255f15faacf8ffbdf5ad474738` (October 6 snapshot) | Keep. October 30: user-requested Codex reconciliation merges main `068851a2`, preserves the five original branch-only commits and refreshes both design/review records. Normative work and independent-reviewer assignment remain open; see `a3.4-reapproval-review.md`. |
 | `BLOCKED-ui/p5b-shell-foundation` | `509a9f5dc43878d134d4356146bc313ebe8062b5` | Delete after authorization and fresh ancestry/head check; merged PR #470. |
 | `claude/fervent-ride-gmknin` | `f7f44b513f5b496ef0d9b2853c2920e49aeb6660` | Archive to annotated tag `archive/fervent-ride-gmknin`, verify remote tag, then delete after authorization; cited provenance, no PR. |
 | `codex/spec20-unity-verification-drift` | `97966ddc5c8208a9f4dbd503a054cbf2ffb2cdbc` | Keep: 9 branch-only commits; owner to assign #20 reviewer at the next A3.4/KD-4 modernization review. |
@@ -45,8 +46,10 @@ is made from a shallow checkout.
 | `wiring/w12-evidence-repair` | `7dd81a9c842298927ac929d35e8caac12860a365` | Archive to annotated tag `archive/w12-evidence-repair`, verify remote tag, then delete after authorization; cited provenance, no PR. |
 
 The seven deferred work branches (five W8, A3.4, and #20) remain unresolved.
+A3.4 now has the user-requested October 30 author reconciliation by Codex; this
+does not assign its independent reviewer or constitute reapproval.
 The project owner is the disposition decision-maker and must assign a named reviewer
-before the respective review trigger above; no assignment or acceptance is claimed
+before the respective review trigger above; no independent-reviewer assignment or acceptance is claimed
 here. Review each branch for salvage, integration, or archive retention, then update
 this ledger before proposing deletion. Keeping them is a deferral, not completion.
 
@@ -178,3 +181,4 @@ depend on the archive tags but still requires authorization and its own fresh ch
 | 0.2 | October 6, 2026 | PR #480 review correction: W12 annotation adds the W6 pre-registration closeout provenance citation and the CHANGELOG/file-manifest references; execution remains pending. |
 | 0.3 | October 6, 2026 | Execution recorded: owner authorization, PR #480 landing, pre-execution checks (ordering against audited and refreshed main stated), published tag-object and peeled OIDs, eight lease-protected deletions and post-delete remote verification. Audited table and gates unchanged. |
 | 0.4 | October 10, 2026 | PR #434 closed unmerged under owner decision D-05; `codex/trace-variable-in-positioning-ai-system` kept until the re-authored formation/Duty PR lands, then deleted after a fresh head check. |
+| 0.5 | October 30, 2026 | Record user-requested A3.4 author reconciliation with main `068851a2`; preserve the audited snapshot and retention, with independent review and reapproval still open. |
