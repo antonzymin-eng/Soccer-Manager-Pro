@@ -1,6 +1,6 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 2, 2026 — **PR #529 conflict resolution against main `509d67c3`.** Preserve the A3.4 design/review inventory and PR #528 pinned-host evidence inventory below. Conflict edits are limited to this manifest and `docs/tracking/CHANGELOG.md`; all other files combine without conflicts. No owning-spec, runtime, tooling, workflow or approval-state change is introduced by this resolution.
+**Last Updated:** November 2, 2026 — **PR #529 conflict resolution against main `509d67c3`.** Preserve the A3.4 design/review inventory and PR #528 pinned-host evidence inventory below. Conflict edits are limited to this manifest and `docs/tracking/CHANGELOG.md`; all other files combine without conflicts. November 2 review follow-up also corrects source-count records in the design/review/status/issue documents and changelog; design/review records advance to v0.3. No owning-spec, runtime, tooling, workflow or approval-state change is introduced by this resolution or count correction.
 
 **Last Updated (prior):** October 30, 2026 — **PR #521 pinned-host Unity evidence at `5849b562`.** **New evidence directory** `docs/tracking/evidence/host-5849b562-20261030/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract), `tools/tests/test_evidence_manifests.py` (32 registered directories), `docs/tracking/CHANGELOG.md` and this manifest. No source, asmdef, package or project-setting change.
 
@@ -3954,7 +3954,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 
 | File | Purpose |
 |------|---------|
-| `docs/tracking/a3.4-reapproval-review.md` | v0.2 current-main A3.4 author reconciliation, measured structural debt, retained R1–R8 acceptance/reapproval requirements and validation limits |
+| `docs/tracking/a3.4-reapproval-review.md` | v0.3 current-main A3.4 author reconciliation with corrected tracked source counts, measured structural debt, retained R1–R8 acceptance/reapproval requirements and validation limits |
 | `docs/tracking/ERR-019-001-status.md` | Current-state successor for ERR-019-001/003; implementation present, host acceptance and coordinated reapproval remain open |
 | `docs/tracking/branch-cleanup-disposition.md` | v0.5 audited branch dispositions (October 30 A3.4 author reconciliation; independent review still open), provenance archive messages and gates, plus the executed record: owner authorization, verified annotated archive tags, eight lease-protected deletions and post-delete remote checks; deferred-work reviewer assignments open |
 | `docs/tracking/PROGRESS.md` | Stage progress, milestones, and current status notes |
@@ -4261,7 +4261,7 @@ those files landed in earlier passes and had never been inventoried here, despit
 
 | File |
 |------|
-| `docs/planning/a3.4-normative-reconciliation.md` — v0.2 current-main design; FR-TS-011/012, non-circular flake activation, KD-4 and Appendix E scope; unapproved |
+| `docs/planning/a3.4-normative-reconciliation.md` — v0.3 current-main design with corrected tracked source counts; FR-TS-011/012, non-circular flake activation, KD-4 and Appendix E scope; unapproved |
 | `docs/planning/art-pipeline-foundation.md` |
 | `docs/planning/master-development-plan.md` |
 | `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md` |

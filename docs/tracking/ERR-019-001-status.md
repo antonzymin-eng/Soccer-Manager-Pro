@@ -16,8 +16,10 @@ No normative patch, ERR closure or reapproval is claimed.
 The current survey measured **1,018 checklist notes + 331 schema notes = 1,349**,
 including **43 in #19/#20**. These are survey findings, not blocking-pass evidence;
 no explicit checklist invocation was executed by that survey. Historical 548 and
-947/956 source counts below must not be reused. Current source measurement is
-1,220 `.cs` files, to be rederived again for final landing.
+947/956 source counts below must not be reused. Corrected November 2, 2026:
+`git ls-tree -r --name-only 068851a2` yields 1,146 tracked `.cs` files under
+`src/`, 1,155 repository-wide, and 75 tracked `src/` asmdefs including tests.
+Use tracked Git-tree paths to exclude untracked build output; rederive at final landing.
 
 The implemented checklist auditor is structural: artifact/row/checkbox presence,
 resolving paths/sections and successful captured execution of explicit invocations.
