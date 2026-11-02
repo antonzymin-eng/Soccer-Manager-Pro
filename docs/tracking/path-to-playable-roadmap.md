@@ -460,7 +460,9 @@ decided.
 
 1. **#526 post-merge host validation (S).** Unity 6000.4.9f1 compile at `4bcc2ae` plus EditMode for the
    two changed fixtures (`HeaderReachabilityDiagnosticTests`, `S0MovementDiagnosticTests`), per D-01a
-   items 1–2. The change is a null-by-default observation hook with digest-neutrality locked, so no
+   items 1–2. Item 2's fixture filter is written for `MatchEngine.Tests`; read literally, ClientApp owes
+   its whole test assembly, which is cheap, so run that rather than the single fixture (v0.85).
+   #526 merged without this record: [open issue](open-issues.md#pr526-host-evidence-gap). The change is a null-by-default observation hook with digest-neutrality locked, so no
    whole-assembly MatchEngine run is owed (item 3). This is the first host job and precedes the pre-C
    control capture.
 2. **Owner decisions.** D-13 (scope and the three integrity choices); a provisional D-08 envelope,
@@ -484,7 +486,7 @@ decided.
    repair needs a failing-before/passing-after composed regression. D-08 then divides the remaining
    backlog into PM-2 anchor / post-PM-2 / post-EA.
 5. **W9/W10 as selected (conditional M/L).** W9 after #441 and D-06; W10 after B→C closes.
-6. **Freeze, D-09, single recapture/refit (M).** Freeze the PM-2 anchor; resolve D-09's
+6. **Freeze, D-09, single recapture/refit (M).** Waits for career-lane item 5 (#44 T3). Freeze the PM-2 anchor; resolve D-09's
    distribution-shape treatment (mean fitting cannot close ERR-030-034); capture, fit and lock once
    for that anchor.
 
@@ -501,7 +503,11 @@ decided.
 4. **Season screens (M).** Fixture list, calendar, table, squad/selection, availability
    (injury/suspension), board objective, progress controls; not every approved #38 screen.
 5. **#44 T3 (M).** Quick-sim card synthesis for league-wide discipline. It stays in PM-2: today
-   suspensions apply to one club in twenty.
+   suspensions apply to one club in twenty. **Cross-lane dependency (v0.85; PM-2 placement
+   owner-confirmed November 2, 2026):** synthesis draws on #30's existing `0x22` stream (FR-DC-019,
+   #44 §8), never a #44 stream. It changes quick-sim availability and therefore later quick-sim
+   results, so its contract must declare whether existing fixture outcomes move, and it lands **before**
+   engine-lane item 6's capture/refit. A later landing reopens that capture and fit.
 
 **Host scheduling.** Per D-01a and D-12: #526 validation first; W8 C engine bookings as ready; short
 client-only slots between engine jobs in isolated worktrees; the frozen Linux pre-C/B→C captures on
@@ -856,6 +862,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.85 | November 2, 2026 | Delta from branch `claude/eloquent-dijkstra-0i7ahb` after merging #531, whose numbering (D-11 to D-13) and §5.1a are retained unchanged. Adds: the #526 host-evidence-gap open issue link; the ClientApp whole-test-assembly reading of D-01a item 2; and #44 T3's cross-lane dependency (draws on #30's `0x22` stream per FR-DC-019 / #44 §8; lands before engine-lane item 6's capture/refit, which now waits for it). The PM-2 placement of #44 T3 is owner-confirmed. |
 | v0.84 | November 2, 2026 | Register: D-10 corrected to DECIDED (October 18, matching the client design); D-11 (interactive PM-2 managed fixtures, unfinished-matchday resume) and D-12 (client-only host slots during W8 C) recorded as owner decisions of November 2; D-13 (Early Access scope and the three career-integrity choices) added as pending. New §5.1a: working sequence to Early Access as a PROPOSED ordering pending owner ratification (shared items, engine lane, career lane, host scheduling, PM-2 join, post-PM-2 release sequence). No contract approved, no gameplay or tuning authorized. |
 | v0.83 | October 30, 2026 | Merge remote main into PR #521: retain the career lane D1–D5 landings and main's D6/D-10 decision, Gate-J acceptance and approved W8 C spec application. Earlier duplicate version labels below are preserved branch-local history. |
 | v0.76 (branch-local #441) | October 20, 2026 | Develop #441 independently of W8 C; land after its measurement, before W9. Link corrected local census and preserved evidence. One geometric passage has no selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 change without composed contact proof. Initial zero withdrawn; #441/W9 open. D-05 and landed D-07 status unchanged. |
