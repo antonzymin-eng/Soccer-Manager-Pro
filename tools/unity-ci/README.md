@@ -1,7 +1,7 @@
 # tools/unity-ci — Unity-specific PR gates
 
 > **Created:** July 22, 2026
-> **Updated:** September 6, 2026
+> **Updated:** October 14, 2026
 > **Purpose:** CI checks the pre-Unity pure-C# gate (`tools/dotnet-ci`) does not
 > cover, now that the repo carries a real Unity 6 project (`ProjectSettings/`,
 > `Packages/`, `.meta` files, asmdefs). Runs on Linux, no Unity install required.
@@ -10,10 +10,10 @@
 
 | Script | CI job | What it enforces |
 |---|---|---|
-| `check-meta-integrity.sh` | **Unity .meta integrity** | Missing/orphan metas for the managed `src/` + `Assets/GameArt/` roots; one project-wide duplicate-GUID scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree. |
+| `check-meta-integrity.sh` | **Unity .meta integrity** | Missing/orphan metas for the managed `src/` + `Assets/GameArt/` roots; one project-wide duplicate-GUID scan across every tracked `.meta` under `Assets/` plus the junction-backed `src/` tree; and, over that same universe, a malformed-GUID check: every tracked `.meta` must hold exactly one top-level line matching `^guid: [0-9a-f]{32}$` (wrong length, uppercase, non-hex, missing, or repeated lines fail, as does a tracked meta absent from the working tree). |
 | `check-binaries.sh` | **Unity asset hygiene** | Any tracked file over the threshold (`TD_BINARY_THRESHOLD_BYTES`, default 1 MiB) must be routed to Git LFS by `.gitattributes`. |
 | `generate-missing-metas.sh` | *(fix helper, not a gate)* | Preserves existing deterministic placeholder generation under `src/`; for `Assets/GameArt/`, writes **folder metas only**. `--check` reports generator-owned gaps and exits non-zero. |
-| `test-meta-integrity-gameart.sh` | *(mutation proof)* | Proves missing GameArt meta, orphan GameArt meta, GameArt↔`src/` duplicate GUID, and GameArt↔other-`Assets/` duplicate GUID are detected without modifying the real Git index. |
+| `test-meta-integrity-gameart.sh` | *(mutation proof)* | Proves missing GameArt meta, orphan GameArt meta, GameArt↔`src/` duplicate GUID, GameArt↔other-`Assets/` duplicate GUID, and malformed GUIDs (33 and 31 characters, uppercase, missing line) are detected without modifying the real Git index. |
 
 The Unity Test Runner job (`unity-tests`, EditMode + PlayMode inside real Unity
 6) lives in `.github/workflows/ci.yml`. It is **gated on the `UNITY_LICENSE`

@@ -13,6 +13,12 @@
 #                  junction-backed src/ tree share a GUID. Unity resolves GUIDs
 #                  project-wide, so duplicate detection must be one combined
 #                  scan rather than separate per-root scans.
+#   (4) MALFORMED GUID — any tracked .meta in that same Assets/ + src/ universe
+#                  lacks exactly one top-level `guid:` line, or that line is not
+#                  32 lowercase hex characters. Check (3) only extracts
+#                  well-formed GUIDs, so without this check a malformed meta
+#                  passes CI while Unity rejects it (PR #505: a 33-character
+#                  GUID left SubstitutionRequestResult.cs uncompiled in Unity).
 #
 # Runs on Linux with no Unity install — pure git + coreutils. The src/ root
 # itself carries no .meta by convention (it is the asset-mount root).
@@ -124,7 +130,49 @@ if [ -n "$dups" ]; then
   fail=1
 fi
 
+# ---- (4) MALFORMED GUID ----
+# Same universe as (3). Every tracked .meta must carry exactly one top-level
+# `guid:` line, and that line must be `guid: <32 lowercase hex>`. Indented
+# `guid:` keys (importer cross-references) are not identity and are ignored.
+# A tracked meta absent from the working tree has no readable GUID and fails.
+# If awk lacked `{32}` interval support, every meta would fail here — loud,
+# which also guards (3) against silently extracting nothing.
+malformed=""
+if [ "${#all_meta_files[@]}" -gt 0 ]; then
+  present_meta_files=()
+  for m in "${all_meta_files[@]}"; do
+    if [ -f "$m" ]; then
+      present_meta_files+=("$m")
+    else
+      malformed+="MALFORMED GUID: $m (tracked but absent from the working tree)"$'\n'
+    fi
+  done
+  if [ "${#present_meta_files[@]}" -gt 0 ]; then
+    malformed+=$(awk '
+      /^guid:/                { any[FILENAME]++ }
+      /^guid: [0-9a-f]{32}$/  { ok[FILENAME]++ }
+      END {
+        for (i = 1; i < ARGC; i++) {
+          f = ARGV[i]
+          if (any[f] + 0 == 0)
+            print "MALFORMED GUID: " f " (no top-level guid: line)"
+          else if (any[f] + 0 > 1)
+            print "MALFORMED GUID: " f " (" any[f] " top-level guid: lines)"
+          else if (ok[f] + 0 != 1)
+            print "MALFORMED GUID: " f " (guid is not 32 lowercase hex characters)"
+        }
+      }' "${present_meta_files[@]}")
+  fi
+fi
+malformed=$(printf '%s' "$malformed" | sed '/^$/d')
+if [ -n "$malformed" ]; then
+  printf '%s\n' "$malformed"
+  malformed_count=$(printf '%s\n' "$malformed" | wc -l | tr -d ' ')
+  echo "::error::$malformed_count tracked .meta file(s) across Assets/ + src/ lack exactly one well-formed 'guid: <32 lowercase hex>' line. Unity rejects such metas: $(printf '%s\n' "$malformed" | sed -E 's/^MALFORMED GUID: (.*) \([^)]*\)$/\1/' | paste -sd ',' - | sed 's/,/, /g')"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "Meta integrity OK: no managed-root missing/orphan metas and no duplicate GUIDs across tracked Assets/ + src/."
+  echo "Meta integrity OK: no managed-root missing/orphan metas, no duplicate GUIDs, and no malformed GUIDs across tracked Assets/ + src/."
 fi
 exit "$fail"

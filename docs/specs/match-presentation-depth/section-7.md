@@ -1,8 +1,8 @@
 # Match Presentation Depth #48 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -94,8 +94,28 @@ simply has none — no error, no crash. T-MP-I-002 is the lock.
   asserts that #48 registers a consumer rather than owning a tap, which is the mechanical form of the
   rule.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **The tap exists, in a different shape (roadmap B3, July 27, 2026).** §4.3 and §7.1 T1 describe the #37
+  tap as unimplemented and push-style (`tap.Register(consumer)`), built by whichever consumer lands first.
+  It is implemented: the engine fills a `TickLedgerSnapshot` (`event-system`) each tick and exposes read
+  accessors; each consumer declares its own consumer-side interface (`IDisciplineTickLedgerTap` in
+  `discipline`, #37's in `match-analytics`) because assembly references rule out a shared one; and the
+  composition root pumps each consumer every tick, so a missed tick loses its records. T1 adapts to that
+  model — a #48 consumer-side interface pumped by the root on the tick thread — and still MUST NOT add a
+  second engine-side tap (F6).
+
+- **Unity host access exists.** T3's 3D-renderer condition ("when Unity host access exists") is met. The pinned Unity host is in use and S0 Gate J was accepted October 30,
+  2026 (roadmap B9b). This removes a blocker only; it does not make the phase done.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with **T1 identified as the earliest point the neutrality claim is assertable** and the argument for not deferring it behind the UI binding; the predicted T2 thread-boundary failure and the silent T3 export failure both named; deep-tier extensions with the two externally-gated items marked; the not-planned list; risks R-1..R-6, with R-6 added for the tap-ownership drift that FR-MP-008 addresses in prose and T-MP-BOUND-006 addresses mechanically). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (implemented tap shape, Unity host status). No normative text changed. |
 #endregion

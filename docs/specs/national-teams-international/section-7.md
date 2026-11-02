@@ -1,8 +1,8 @@
 # National Teams & International Management #36 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.6 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -108,8 +108,34 @@ it stays open.
   its pool. Remove that rule — or implement it partially, dropping the player from iteration but leaving
   the row — and it grows monotonically across a twenty-season career. T-NT-U-012 asserts both halves.
 
+## 7.6 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **#31 re-key status.** #31 has an assembly (T0, PR #407) but no production `ITransferRosterPort`
+  implementation, so no transfer re-keys a player in a career yet. §7.1's condition ("if #31 is live before
+  #36's T2, the hook is the first thing #36 wires") is not yet triggered. Re-check at T2: if #30's roster
+  commit has landed by then, wire `OnPlayerReKeyed` first.
+
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes this block into the season frame (**T2**):
+  (a) a guard against overwriting a populated destination block (ERR-030-036), keyed **per family**: on
+  emptiness only if a destination that once carried this state can never legitimately present as empty
+  (the #28 / #40 case); otherwise on an explicit wiring fact passed through **every** public write entry point
+  (the #44 case, ERR-030-038 / ERR-030-039). Provisional reading: with no window configured the block can be legitimately empty, so
+  a wiring fact is likely required. Confirm the classification against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` resume parameter as soon as the frame can carry populated state (ERR-030-050).
+  (c) Where the block is club-keyed, the equivalent of #40's current-season club-universe coherence rule
+  (ERR-030-050).
+  (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
+  in `SeasonLoop` — a second composition root this plan predates.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's conditional neutrality stated with its precondition, and with the **re-key hook pulled forward to T2** — every transfer without it writes a silently wrong nationality; the Stage-5 gate with the argument for shipping the minimal tier anyway; deep-tier extensions incl. the one plausible #36-owned draw site; the not-planned list; risks R-1..R-6). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.6: C6 findings recorded from the wide check against implemented code (#31 re-key status, save-block integration). No normative text changed. |
 #endregion

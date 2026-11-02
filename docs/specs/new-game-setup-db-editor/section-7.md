@@ -1,8 +1,8 @@
 # New-Game Setup & Database Editor #47 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -101,8 +101,44 @@ player's authored league is quietly gone.
   ~100 KB is acceptable today and does not grow with career length, but it is the one place #47 spends
   something a player could notice, and the judgement should be re-checked if #27's roster model grows.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, October 30, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the October 30,
+2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
+unchanged.
+
+- **The resume path regenerates the league.** §4.4 gives the root two construction paths for a *new* game
+  only. The client's composition root (`src/client-app/CareerSession.cs`, landed October 18, 2026) rebuilds
+  every resumed career through `LeagueBootstrap.Generate(worldSeed, clubCount)`, taking club identity
+  (names) from the generator and rosters from the save. For an authored save that is F7's silent wrong world
+  at the resume layer: authored club names would be replaced by generated ones. T2 MUST branch the resume
+  path on the authored flag and build the league from the authored block (FR-ED-007 applies on resume as
+  well as at new game), with a test that an authored save never reaches the generator on resume.
+- **Roster persistence now overlaps #28.** Since #28 T1 (August 8, 2026; #28 KD-4) the season frame's
+  mandatory `PROG` block carries the evolving `PlayerRecord` set, and a resumed career reads its rosters from
+  it. Appendix B's per-squad `PlayerRecord` section therefore persists a second roster that matches `PROG`
+  on day 0 and diverges as soon as #28 advances. §1.4(a)'s premise, that an authored career which did not
+  persist its rosters would load generated ones, no longer holds once `PROG` is composed; club identity
+  (Appendix B row 3) and nation pins (row 7) are the parts nothing else persists. Decide at T2 whether the
+  squad section is still needed (for example as the immutable authored origin). Either way `PROG` stays the
+  career roster authority, and the authored squads MUST NOT be read as the current roster on resume.
+- **Save-block integration (#30 Appendix B rules added after this spec's approval).** From the phase that
+  composes the block (**T2**):
+  (a) the ERR-030-036 destination guard, keyed per family. Emptiness is not a sound key here: a generated
+  game legitimately writes no block at all. Provisional reading: the authored flag already serves as the
+  wiring fact, and Appendix B (ERR-030-017) already requires flag and block presence to agree in both
+  directions; ERR-030-039 additionally requires that fact to be passed through **every** public write entry
+  point. Confirm against Appendix B at landing.
+  (b) A `SeasonLoop.Restore` (or `CareerSession` resume) carrier for the authored block as soon as the frame
+  can carry it (ERR-030-050).
+  (c) T1's "setup flow wired to the root's generated branch": the generated branch now exists as
+  `NewCareerSetup` + `CareerSession.StartNew` (roadmap C4). Bind to that path rather than adding a parallel
+  one, so T-ED-ID-001's identity claim is made against the code players actually run.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T1's genuine neutrality and T2's one-branch asymmetry stated precisely — the frame bumps for every save while the sub-blob appears only for authored ones — the predicted silent T2 failure named, deep-tier extensions incl. the artifact-vs-save migration split, the not-planned list, risks R-1..R-7 with the `season-save` reference flagged as *the* structural assertion and the ~100 KB blob recorded as R-7). Status IN REVIEW. |
+| 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (resume path regenerates the league, roster overlap with #28 `PROG`, save-block integration). No normative text changed. |
 #endregion
