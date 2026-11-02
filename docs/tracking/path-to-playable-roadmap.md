@@ -195,7 +195,7 @@ surface reached PM-1 on July 27 with no host at all. The owner has since decided
 Unity (see the B6 supersede note), so the fallback no longer removes the block; it only means the block
 was never allowed to stall the project, which is what a good fallback buys. Two facts now govern:
 
-1. **The host block is an access question, and access exists.** `certification-platform.md` v1.4
+1. **The host block is an access question, and access exists.** `certification-platform.md` v1.4, now v1.5
    ✅ PINNED — the July 19, 2026 certification cleared it. What does *not* exist is a Unity host in
    **CI**, and that is not going to change: `tools/dotnet-ci` is a Linux shim gate by construction.
 2. **So the exposure is coverage, not feasibility**, and it is bounded by how much logic sits in

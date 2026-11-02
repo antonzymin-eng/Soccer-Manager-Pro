@@ -1,8 +1,8 @@
 # Testing Strategy & Framework Specification #19 — Section 6: CI Orchestration & Triage
 
 **Created:** May 12, 2026
-**Last Updated:** September 3, 2026
-**Version:** 0.4
+**Last Updated:** November 2, 2026
+**Version:** 0.5
 **Status:** AMENDMENT DRAFT (A3.2b; May 15, 2026 approved baseline remains in force)
 **Amendment plan:** `docs/planning/project-architecture-governance-integration-plan.md` v0.38, §7; A3.2b
 **Purpose:** CI orchestration policy, gate composition rule, Stage-0
@@ -64,6 +64,14 @@ remaining unresolved items stay in §7.5 as deferred decisions.
   execution-truth mechanics; Governance owns applicability/property/
   convergence authority; Spec #20 owns integration/activation
   declarations consumed by the proof.
+
+**Compile compatibility boundary (`ERR-020-008`).** Spec #20 §5.1 and §7.2 own
+the governing pinned-host Unity compile requirement. Linux shim results are required
+supplemental functional evidence; a green synthetic build does not establish Unity
+compile conformance, including direct assembly visibility or Unity-only assemblies.
+This citation applies the existing September 12 owner decision to the approved baseline.
+It adds no test gate, required GitHub status, threshold or architecture activation;
+the separate A3.2b amendment remains pending A3.4.
 
 All four feed a single CI orchestrator. The fourth gate is **topology
 only in A3.2b**: it is not a required status and does not block until
@@ -222,3 +230,4 @@ mode and flip #19 status to `SUSPENDED`.
 | 0.2     | May 12, 2026 | Claude Code | Self-critique sweep. #16 §7 → §5 throughout. M5 §6.4.2 explicit Stage-gating header. |
 | 0.3     | September 3, 2026 | — | **A3.2b supporting-surface synchronization.** Adds the fourth architecture/evidence gate topology, owning-runner/result bridge, strict execution/quarantine/bounded-substitute behavior, Governance convergence boundary, and FR-TS-084 authority model. Gate remains inactive until A8; no required status is created here. Live-repo audit also closes D1 on NUnit/`dotnet test` and D4 on GitHub Actions; D2/D3/D5–D8 remain deferred. |
 | 0.4     | September 3, 2026 | — | **A3.2b review correction (Codex #353 finding 3).** Records where the D4 CI-provider pin lands. FR-TS-078 requires the final provider pin in `src/CLAUDE.md`, which carried no provider declaration, so closing D4 at `.github/workflows/ci.yml` alone left the resolution and the normative FR mutually unsatisfiable. `src/CLAUDE.md` now declares the provider as a pointer to the workflow. FR-TS-078 itself is deliberately unchanged: it lives in §2.2, which A3.2a owns and this slice does not touch. |
+| 0.5 | November 2, 2026 | Codex | **PR #527 / `ERR-020-008`.** §6.2.1 cites Spec #20's governing Unity compile / supplemental Linux compatibility boundary. No gate count, threshold, required status or A3/A4/A8 activation changes. |

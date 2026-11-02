@@ -1,7 +1,8 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
+**Last Updated:** November 2, 2026 (**PR #527 / `ERR-020-008` verification amendment** — adds the governing Unity 6000.4.9f1 compile / supplemental Linux model and a Spec #19 §6.2.1 compatibility cross-reference. FR-CS-008 retains its C# 9.0 working ceiling. D5 remains partially resolved pending actual pinned-host compiler arguments and Platform Certification owner sign-off; D1 still awaits profiling. This is new verification text relative to main's October 10 activation-only erratum. A3.1a/A3.1b and A3.2b remain independently pending A3.4; this PR grants no architecture amendment approval.)
+**Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +
 §9.6 decisions); the #26 Bradley citation VERIFIED (Bradley & Noakes 2013, *J Sports Sci*
 31(15):1627–1638, DOI 10.1080/02640414.2013.796062, PMID 23808376 — index-level corroboration;
