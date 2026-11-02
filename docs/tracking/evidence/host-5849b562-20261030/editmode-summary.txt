@@ -1,0 +1,21 @@
+# EditMode run — pinned host, commit 5849b562 (PR #521 after merging main), NUnit 3.5 XML summary
+
+Command: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.DeterministicSim.Tests;TacticalDirector.Discipline.Tests;TacticalDirector.PlayerDatabase.Tests;TacticalDirector.PlayerProgression.Tests;TacticalDirector.SeasonSave.Tests;TacticalDirector.Transfers.Tests" -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-10-30 21:58:02Z  end: 2026-10-30 22:11:44Z  duration: 821.9 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=1297 passed=1291 failed=0 inconclusive=0 skipped=6
+  TacticalDirector.ClientApp.Tests.dll: total=194 passed=192 failed=0 skipped=2 duration=473.3 s
+  TacticalDirector.DeterministicSim.Tests.dll: total=91 passed=90 failed=0 skipped=1 duration=0.2 s
+  TacticalDirector.Discipline.Tests.dll: total=146 passed=146 failed=0 skipped=0 duration=0.1 s
+  TacticalDirector.PlayerDatabase.Tests.dll: total=50 passed=50 failed=0 skipped=0 duration=0.1 s
+  TacticalDirector.PlayerProgression.Tests.dll: total=193 passed=193 failed=0 skipped=0 duration=0.5 s
+  TacticalDirector.SeasonSave.Tests.dll: total=554 passed=551 failed=0 skipped=3 duration=347.4 s
+  TacticalDirector.Transfers.Tests.dll: total=69 passed=69 failed=0 skipped=0 duration=0.1 s
+  IL scan (Module.ResolveMember under Mono): TacticalDirector.Transfers.Tests.TransfersT0Tests.T0StateAndCommands_ContainNoFloatOrDoubleFields: Passed
+  not passed: 6 (0 failed)
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs: Ignored - Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit: Ignored - Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+    TacticalDirector.DeterministicSim.DeterministicSimSaveLoadTests.SaveLoad_MidTickSnapshot_SaveAndLoad: Ignored - Stage 0+1: SaveManager.SaveAtomicMidTick does not exist at Stage 0 - activate when the mid-tick save overload is added at Stage 1 (S5.3 T-DS-005 / S4.6.1).
+    TacticalDirector.SeasonSave.Tests.EngineScoringDiagnosticTests.EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes: Ignored - Set TD_ENGINE_DIAGNOSTIC=1 to run the ERR-030-014 characterisation (one full match).
+    TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Corpus_GeneratesTheRequestedSlice: Ignored - Set TD_CALIBRATION_SAMPLES (plus optional TD_CALIBRATION_DELTA_FROM / _TO / _OUT) to generate an A4a corpus slice. Each sample is a full ~2-minute engine match.
+    TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Pilot_ExtremeDifferentialsAreDistinguishable: Ignored - Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).
