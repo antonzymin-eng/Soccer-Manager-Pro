@@ -782,6 +782,27 @@ rate band, corpus fit or perf baseline is perturbed.
    fixture through `MatchSession` and fold its `MatchResult` into the round. When it exists, the career
    gains `CareerHome → TacticsSetup` and `PostMatchReport → CareerHome` as **new named moves**, never a
    reuse of `ReturnToMainMenu` (ux-experience-architecture §3.1).
+
+   **November 2, 2026 addendum (v0.31; PROPOSED scope, awaiting owner ratification).** The D-P7-6 row
+   above is kept as the October 18 record: the seam is still absent, and the two moves stay forbidden
+   until it exists. The November 2 sequencing review relayed an owner direction that PM-2 requires
+   interactive managed fixtures (roadmap **D-11**) and save/quit/resume during an unfinished matchday
+   (roadmap **D-12**). Neither is recorded as decided until the owner ratifies it in the roadmap
+   register. If ratified, D-P7-6 stops being only a seam fact and becomes a PM-2 deliverable, and an
+   approved interactive-round contract must precede any seam code. That contract must settle:
+   - when the managed fixture starts, and which other fixtures remain unresolved;
+   - what is durable while the managed match is live, and its relation to the match save and the
+     recorded tick-stamped inputs (season save v9 is the next candidate);
+   - save, quit, resume, failure and retry behavior at every phase;
+   - exactly-once commitment of the managed result and the remaining fixtures, and rejection of stale or
+     repeated completion requests;
+   - one automatic manager policy shared by the headless `ManagedThroughEngine` path and the interactive
+     path. A no-input parity test (same seed, roster, tactics and configuration giving the same result
+     digest) is meaningful only if both paths apply identical automatic manager behavior.
+
+   **P7b split.** Item 1's binding of the existing Career Home, New Career and Load Career screens and
+   the Main Menu New/Continue/Load entries does not depend on D-P7-6 and may proceed now (P7b-1). Only
+   the two moves named above wait for the seam (P7b-2).
 3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
 4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
    per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
@@ -1057,6 +1078,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.31 | 2026-11-02 | **§5-P7 D-P7-6 addendum (PROPOSED scope, no owner approval recorded).** The October 18 D-P7-6 row is kept. The addendum records the relayed direction that PM-2 needs interactive managed fixtures and unfinished-matchday save/resume (roadmap D-11/D-12, both awaiting ratification), and lists what the interactive-round contract must settle before code, including a manager policy shared by both paths so that no-input parity is meaningful. It also splits P7b into P7b-1 (existing career screens, independent of D-P7-6) and P7b-2 (career ↔ match moves after the seam). Documentation only; no `src/` change. |
 | 0.30 | 2026-10-18 | **§5-P7 — career management screens (roadmap C3/C4): governance + host-free landing.** Records the owner's October 18, 2026 product decisions D-P7-1..D-P7-5 (club-only new game; autosave + 3 manual slots with direct Continue; day-granular progress; no mandatory blockers; D-10 breakable saves through PM-3) and the D-P7-6 seam fact (no interactive career-fixture seam, so no career → Tactics/Match edges). Landed in `client-app`: three career `ScreenId`s, the seven-registration `ClientScreenFlow` with eight guarded career moves, `CareerProgress` (the progress rule against #30's guards), `CareerSession`/`CareerSessionHolder`, `CareerSaveSlots`, `SeasonCommandDispatcher`, and the Career Home / New Career / Load Career sources; in `ui-framework`, ERR-038-005 (`IntentKind` 4–6, `IntentRouting`). ClientApp.Tests +34, UiFramework.Tests +2. No sim reach. Remaining: P7b host binding, the #30 interactive fixture seam, S1 Gates B–I. **PR 519 review amendment (October 27, 2026):** a failed sidecar write or swap no longer splits a slot's save from its sidecar (both temps are prepared first and a failed sidecar swap restores the backed-up save); a Ready slot whose save fails to decode is invalidated so Continue falls back to the next loadable slot; and the sidecar (layout v2) records every nested sub-blob format version, so an inner bump reads as Incompatible under D-10. A second review pass added: Resume validates its mode before the guarded rebuild, so a caller error never invalidates a healthy slot; and each sidecar records its save's SHA-256, so opening the store recovers a write interrupted between its two swaps (the staged sidecar is swapped in, or the backup is put back). A third pass made recovery keep every file when a sidecar cannot be read (a locked staged sidecar was being deleted as if invalid). A fourth pass made invalidation reversible and narrower: `MarkDamaged` sets the sidecar aside (`.slot.damaged`) instead of deleting it, and `RestoreDamaged` puts it back while it still matches the save; Resume invalidates a slot when #30's load or the rebuild from loaded contents fails, so Continue cannot get stuck on it; the sidecar swap keeps a backup that is put back if the replace fails; the sidecar is flushed to disk before it is swapped in; recovery at open never revives a set-aside slot from stale backups and puts back a save left only as its backup; and cleanup after a committed write is best effort. `RestoreDamaged` has no caller yet: retrying a set-aside slot needs a player-facing action with approved copy. ClientApp.Tests +23 more (+57 in all). |
 | 0.29 | 2026-10-06 | Records consumed lifecycle/identity candidate and explicit development host; host-free evidence and pending Unity/full fixture comparison tracked separately. Complete localized screens and acceptance remain open. |
 | 0.28 | 2026-10-05 | PR #479 review corrections: implementation pointer v0.2 with explicit analytics locking, observer composition and dependency-lock work; screen/navigation scope retained in B9b. Approved scope and host acceptance unchanged. |
