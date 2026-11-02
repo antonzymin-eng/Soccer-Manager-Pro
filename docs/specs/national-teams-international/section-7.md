@@ -1,8 +1,8 @@
 # National Teams & International Management #36 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.6 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.7 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.6 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -115,7 +115,7 @@ in the landing named in each bullet, in the same commit as the code they govern.
 2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
 unchanged.
 
-- **#31 re-key status.** #31 has an assembly (T0, PR #407) but no production `ITransferRosterPort`
+- **#31 re-key status.** *(Superseded November 2, 2026 — see §7.7.)* #31 has an assembly (T0, PR #407) but no production `ITransferRosterPort`
   implementation, so no transfer re-keys a player in a career yet. §7.1's condition ("if #31 is live before
   #36's T2, the hook is the first thing #36 wires") is not yet triggered. Re-check at T2: if #30's roster
   commit has landed by then, wire `OnPlayerReKeyed` first.
@@ -133,9 +133,34 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.7 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.6. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **§7.6's first bullet is superseded.** A production `ITransferRosterPort`
+  (`src/season-save/SeasonTransferRoster.cs`) exists and transfers run in careers, but they no longer re-key,
+  so the condition that bullet tracked can never trigger.
+
+- **The transfer pin has no trigger and no purpose.** `Derive(worldSeed, playerId)` (§3.1) depends only on
+  the id, and the id no longer changes on a transfer, so a player's nationality is already stable across one.
+  The transfer half of the pin mechanism describes a case that cannot occur: §1's "`PlayerId` is not stable"
+  premise (also §3.1), FR-NT-010's re-key writer, FR-NT-011, F3's re-key clause, F4, `OnPlayerReKeyed` (§3.2
+  and the §4 file layout), worked examples (e)/(f), T-NT-U-008, T-NT-U-011's re-key clause and T-NT-FAIL-004.
+  The hook they cite (#31 FR-TX-022) is now a capacity preflight. At T0: keep `NationPin` for #47 authored
+  nationalities only (genesis becomes its sole writer), drop the re-key writer and its tests, and drop §7.1's
+  "the re-key hook must land at T2" paragraph. FR-NT-023's "migrate on a re-key" now holds by construction,
+  and T-NT-I-001 stays as the lock that a transfer leaves `NationOf` unchanged.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's conditional neutrality stated with its precondition, and with the **re-key hook pulled forward to T2** — every transfer without it writes a silently wrong nationality; the Stage-5 gate with the argument for shipping the minimal tier anyway; deep-tier extensions incl. the one plausible #36-owned draw site; the not-planned list; risks R-1..R-6). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.6: C6 findings recorded from the wide check against implemented code (#31 re-key status, save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.7: C6 findings recorded after ERR-031-005 (ERR-031-005: the transfer pin mechanism); §7.6's superseded bullet marked. No normative text changed. |
 #endregion

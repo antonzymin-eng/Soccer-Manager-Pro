@@ -1,8 +1,8 @@
 # Media & Press Interactions #35 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.6 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -110,9 +110,28 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.6 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.5. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **The pending-delta drop rule keeps its rule but loses half its reason.** §1 KD-7 says #31 re-keys a
+  club-scoped `PlayerId`, so an undelivered delta could land on "whoever now holds that id". Since
+  ERR-031-005 an id is never reassigned (stable across transfers; `NextPlayerId` is monotonic), so that hazard
+  is gone and dropping on departure is a semantic choice, which the text already also argues. Separately,
+  #33's drop boundary (FR-HS-027) covers regen and retirement only, so a delta targeting a player **sold**
+  from the managed roster reaches no #33 boundary. T2 needs its own drop at the transfer commit site, or an
+  explicit decision to deliver it. Correct the KD-7 rationale at T2.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's neutrality identified as a **catalogue** rather than a code property — the one place #35 differs from its siblings — deep-tier extensions, the not-planned list incl. the absent-not-false citation field, risks R-1..R-7 with the shared-field cost recorded as R-7). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: pending-delta drop rationale). No normative text changed. |
 #endregion

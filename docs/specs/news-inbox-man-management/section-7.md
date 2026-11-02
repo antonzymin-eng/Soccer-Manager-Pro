@@ -1,8 +1,8 @@
 # News, Inbox & Man-Management #46 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.6 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -113,9 +113,28 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.6 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.5. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **The #31 projector has a producer.** Transfers are live in careers (#31 T2, `SeasonLoop.SubmitTransferBid`),
+  so the #31 projector §7.1 T3 lists "as its producer lands" can now be built.
+
+- **FR-NW-028's drop boundary does not cover transfers.** It drops an undelivered `PendingDelta` whose target
+  leaves the managed roster "in lockstep with #33's FR-HS-027", but that boundary is #28's season-boundary
+  churn (regen and retirement). A transfer out of the managed club, now live, reaches no such boundary. T3
+  needs a drop at the transfer commit site, or an explicit decision, matching #35 §7.6.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's neutrality identified as stronger than #35's — neutral by construction rather than by authored data — deep-tier extensions, the not-planned list, risks R-1..R-6 incl. the inherited-ordering property as R-4 and the residual payload-*meaning* risk as R-2, which FR-NW-011's arity check does not cover). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: #31 producer, FR-NW-028 boundary). No normative text changed. |
 #endregion
