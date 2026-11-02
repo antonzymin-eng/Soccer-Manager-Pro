@@ -1,7 +1,8 @@
 # Certification Platform Pin
 
 **Created:** May 2, 2026
-**Last Updated:** July 19, 2026 (v1.4 — **CERTIFIED against Unity 6000.4.9f1 (DX11) / Mono.** The Stage-0 platform-determinism KAT run executed on the pinned host (commit `819f9d1`): all three golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass byte-exact — 44 passed / 0 failed / 4 Stage-0+1-deferred skips (`TacticalDirector.DeterministicSim.Tests`, EditMode). Status flips **⏳ RECERT REQUIRED → ✅ PINNED**; every row below flips to ✅; `FR-DS-009-GATE` and the other downstream unblockers close. Evidence + full run record: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md` (+ `determinism-results-2026-07-19.xml`). Distinct from and complementary to the FR-PO-052 perf baseline certified the same day. Platform Certification owner sign-off recorded via the PR merge (Maintenance Rule). Residual, non-blocking: the §4.8.2 runtime MXCSR validation is unbuilt — a guard that *enforces* the pin, not part of *proving* the bits, now buildable against this certified pin. See Version History v1.4.)
+**Last Updated:** November 2, 2026 (v1.5 — **PR #527 / `ERR-020-008` verification amendment.** Adds an explicit C# 9.0 working-policy row, with the Unity documentation reference distinguished from missing pinned-host compiler-argument evidence. D5 remains partially resolved. Adds the governing Unity compile / supplemental Linux boundary. No host tuple setting changed; the July 19 determinism certification remains in force. Platform Certification owner sign-off is still required for this documentation update.)
+**Last Updated (prior):** July 19, 2026 (v1.4 — **CERTIFIED against Unity 6000.4.9f1 (DX11) / Mono.** The Stage-0 platform-determinism KAT run executed on the pinned host (commit `819f9d1`): all three golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass byte-exact — 44 passed / 0 failed / 4 Stage-0+1-deferred skips (`TacticalDirector.DeterministicSim.Tests`, EditMode). Status flips **⏳ RECERT REQUIRED → ✅ PINNED**; every row below flips to ✅; `FR-DS-009-GATE` and the other downstream unblockers close. Evidence + full run record: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md` (+ `determinism-results-2026-07-19.xml`). Distinct from and complementary to the FR-PO-052 perf baseline certified the same day. Platform Certification owner sign-off recorded via the PR merge (Maintenance Rule). Residual, non-blocking: the §4.8.2 runtime MXCSR validation is unbuilt — a guard that *enforces* the pin, not part of *proving* the bits, now buildable against this certified pin. See Version History v1.4.)
 **Last Updated (prior):** July 13, 2026 (v1.3 — **Unity engine version bump proposed: 2022.3.62f1 → Unity 6000.4.9f1, graphics API pinned to DX11.** This is a MAJOR Unity version bump under this file's own Maintenance Rule (row 2), which REQUIRES full recertification before the tuple can be marked ✅ Pinned again. `ProjectSettings/ProjectVersion.txt` has been updated to `6000.4.9f1` to match. No certification run has been performed against the new tuple — the Unity-version and Graphics-API rows below are recorded as the TARGET pin, status **⏳ Recert required**, not yet ✅ Pinned. All downstream unblockers this file previously closed (`FR-DS-009-GATE`, `FR-PO-052`, §7.5 D1, `EnvironmentFingerprint`) revert to blocked until a certification run completes against the new tuple per `cert-run-runbook.md`. See Version History v1.3.)
 **Last Updated (prior):** June 12, 2026 (v1.2 — non-certifying Linux compile/test gate note added; pin unchanged). Prior: June 7, 2026 (Stage 0 host platform pinned — closes the standing OPEN ISSUE that blocked `FR-DS-009-GATE` Stage 0 activation across #16 §5.5, #18 FR-PO-052 perf-gate, #19 §7.5 D1 test-runner pin, #18 §3.9.4 IL2CPP/Mono warmup measurement, and the four downstream `[EST]` constants that depend on the measured warmup characteristic. Pin set: Windows 11, Unity 2022 LTS revision **2022.3.62f1** (default Stage 0; revise if a later patch release supersedes before first cert run), Mono backend (IL2CPP migrates at Stage 5+), x64, SSE4.2 SIMD baseline, 1 worker thread (single-threaded — multi-threading is a Stage 5+ concern), deterministic compiler flags per row 5.)
 **Purpose:** Records the exact Stage 0 host platform tuple for deterministic simulation certification runs, as required by Spec #16 §5.5.
@@ -13,6 +14,12 @@
 **✅ PINNED — certified against Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic flags on July 19, 2026.**
 
 The Stage 0 host platform tuple was re-certified July 19, 2026 after the July-13 major Unity version bump (2022.3.62f1 → 6000.4.9f1) that had reverted it to ⏳ Recert required. The platform-determinism KAT run executed on the pinned host (commit `819f9d1`, `TacticalDirector.DeterministicSim.Tests` under Unity Test Framework EditMode): all three golden-vector corpora (#16 §9.5 #4 a/b/c) and the §5 determinism-tier locks pass **byte-exact — 44 passed / 0 failed** (4 skips are documented Stage-0+1 file-I/O deferrals, outside the Stage-0 surface). Full run record + raw NUnit evidence: `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md`. Platform Certification owner sign-off is recorded via the PR merge landing this flip (Spec #16 §1.7 Governance Artifacts / this file's Maintenance Rule). `FR-DS-009-GATE` Stage 0 activation and the other downstream unblockers below are now **closed**.
+
+The C# working-policy row added by PR #527 on November 2 is not an additional
+July 19 certification result. It changes no host setting or bit-exact evidence, so no
+determinism recertification is required by this documentation update. **D5 remains
+partially resolved:** the pinned host's compiler response-file argument has not been
+captured. Platform Certification owner sign-off remains required for this update.
 
 **Companion certification:** the FR-PO-052 per-tick perf baseline was certified the same day on this tuple (`docs/specs/performance-optimization/baselines/match-engine/kickoff-multi-second.cert.md`). This document certifies *determinism* (the bits are exact); that one certifies *performance* (the per-tick budget).
 
@@ -32,6 +39,7 @@ EditMode batch-mode run recorded in the cert-run record above; the perf half is 
 |-------|---------------|--------------|--------|
 | OS | Windows 10 or 11 | **Windows 11** | ✅ Pinned |
 | Unity version | Unity 6 LTS | **Unity 6000.4.9f1** | ✅ Pinned |
+| C# language version | Project working ceiling; exact host argument still to record | **C# 9.0 working ceiling** | Policy active; D5 host compiler-argument evidence and owner sign-off remain open |
 | Graphics API | Pinned per platform default | **DX11** | ✅ Pinned |
 | Backend | Mono or IL2CPP per project default | **Mono** | ✅ Pinned (confirmed the Stage-0 default under Unity 6 — the July-19 KAT run executed under the editor's Mono EditMode runtime) |
 | IL2CPP version | — | N/A (Mono backend) | ✅ N/A |
@@ -46,7 +54,23 @@ EditMode batch-mode run recorded in the cert-run record above; the perf half is 
 
 **OS — Windows 11.** Win 10 standard support ended October 2025; Win 11 is the supported developer target through Stage 0+1.
 
-**Unity 6000.4.9f1.** Target Unity 6 LTS revision, superseding the prior 2022.3.62f1 pin (record retained below in Version History, not deleted). This is a MAJOR version bump under this file's own rule — it invalidates the June 7, 2026 certification and requires a fresh certification run before the tuple can be marked ✅ Pinned again. Subsequent patch releases (`f10`, `f11`, …) may be adopted before that first Unity-6 certification run by updating this file with sign-off; any further major version bump requires the same reset.
+**Unity 6000.4.9f1.** Target Unity 6 LTS revision, superseding the prior 2022.3.62f1 pin (record retained below in Version History, not deleted). This is a MAJOR version bump under this file's own rule — it invalidated the June 7, 2026 certification and required the fresh July 19 certification before the tuple could return to ✅ Pinned. Any future Unity revision change follows the Maintenance Rule below.
+
+**C# 9.0 working ceiling — evidence boundary.** Spec #20 §3.1.3 keeps the existing
+project ceiling at C# 9.0. The vendor reference is Unity 6000.4's
+[C# compiler documentation](https://docs.unity3d.com/6000.4/Documentation/Manual/csharp-compiler.html);
+this is a documentation reference, not a captured compiler invocation. The Linux
+generator's `<LangVersion>9.0</LangVersion>` is its independently chosen compatibility
+setting, not evidence read from Unity. PR #528's pinned-host compile log shows a
+successful compile but contains no `-langversion` argument. No host compiler maximum
+is asserted here.
+
+To close Spec #20 §7.5 D5, retain the actual language-version argument and path of a
+compiler response file used by the pinned Unity 6000.4.9f1 editor, together with the
+editor revision, source commit and owning assembly. Record any assembly-specific
+overrides, and obtain Platform Certification owner sign-off. Until then, D5 stays
+partially resolved and the working ceiling remains unchanged. The governing Unity
+compile still decides feature compatibility.
 
 **Graphics API — DX11.** New row, not present under the Unity 2022.3.62f1 pin (this file had no graphics-API row because none of the Stage 0 gameplay-simulation surface renders — determinism certification is a headless/logic concern). Recorded here because Unity 6's default graphics API selection differs by platform and template; DX11 is pinned explicitly for the Windows 11 host so `EnvironmentFingerprint` (#16 §4.8) has an unambiguous value to capture once the digest is extended to include it. Rendering is not part of the Stage 0 determinism surface — this pin exists for host-tuple completeness, not because gameplay logic reads the graphics API.
 
@@ -63,16 +87,14 @@ EditMode batch-mode run recorded in the cert-run record above; the perf half is 
 ## Downstream Unblockers
 
 This pin unblocks the following spec-level deliverables that were gated on it.
-**Status (2026-07-19): the pin is certified, so every row below is now active/closed** — the
-`FR-DS-009-GATE` determinism gate is satisfied by the KAT run, `FR-PO-052` by the same-day perf
-capture, and the §7.5 D1 test-runner pin is the EditMode Unity Test Framework runner that executed
-the cert.
+**Status (2026-11-02): the platform is certified and the C# 9.0 working ceiling is explicit; D5 host compiler-argument confirmation remains open.** The `FR-DS-009-GATE` determinism gate is satisfied by the July 19 KAT run, `FR-PO-052` by the same-day perf capture, the §7.5 D1 test-runner pin is the EditMode Unity Test Framework runner that executed the cert, and Spec #20 FR-CS-008's language-version activation condition is satisfied.
 
 | Gate | Spec | Effect |
 |------|------|--------|
-| `FR-DS-009-GATE` Stage 0 activation | #16 §5.5 | Stage 0 cert runs can now execute against this platform tuple. |
+| `FR-DS-009-GATE` Stage 0 activation | #16 §5.5 | Stage 0 cert runs can execute against this platform tuple. |
 | `FR-PO-052` Stage 0+1 perf-gate activation | #18 | Perf baselines captured against this pin become comparison-valid per FR-PO-031. |
 | §7.5 D1 test-runner pin | #19 | `GoldenVectorRunner` Stage 0+1 deferred-status results can promote to live KAT execution. |
+| FR-CS-008 language-version activation | #20 §2.2.1 / §3.1.3 | **C# 9.0 active**; supplemental compilers may not widen the language surface. |
 | §3.9.4 warmup measurement | #18 | `FirstTickWarmupCount` `[EST]` can be measured and promoted to `[GT]`. |
 | `EnvironmentFingerprint` 6-field digest | #16 §4.8 | Replay-mismatch detection (`ERR_DS_REPLAY_ENV_MISMATCH`) becomes meaningful against a known reference platform. |
 
@@ -83,7 +105,7 @@ the cert.
 Update this file and obtain Platform Certification owner sign-off before:
 
 1. **Unity patch-release bump** (e.g. 6000.4.9f1 → 6000.4.10f1) — preferred path, document in row 2 with date.
-2. **Major Unity version bump** (e.g. 2022.3.X → 6000.X, or any future Unity 7+) — REQUIRES full recertification per #16 §4.8. (This is the exact case this v1.3 update records: the pin below is the target tuple, not yet certified.)
+2. **Major Unity version bump** (e.g. 2022.3.X → 6000.X, or any future Unity 7+) — REQUIRES full recertification per #16 §4.8.
 3. **Backend swap** (Mono → IL2CPP) — REQUIRES Stage 5+ planning per `src/CLAUDE.md` Fixed64 stage scope; not a Stage 0 path.
 4. **SIMD baseline raise** (SSE4.2 → AVX2) — REQUIRES re-running all FR-PO-031 baselines against the new instruction set.
 5. **Worker count bump** (1 → N) — REQUIRES Stage 5+ planning; introduces cross-thread determinism concerns not addressed at Stage 0.
@@ -97,13 +119,16 @@ A PR updating this file requires sign-off from the Platform Certification owner 
 The CI job `dotnet-compile-test` (`tools/dotnet-ci/run-gate.sh`, added June 12,
 2026) compiles the entire `src/` tree and executes every NUnit suite on
 ubuntu-latest under .NET 8 with a UnityEngine shim. **That gate is explicitly
-NON-CERTIFYING**: it is a smoke gate for the never-compiled / dead-test-suite
-defect class and for test execution, not a determinism certification. No digest,
-perf number, or replay produced on the Linux gate is authoritative.
-`FR-DS-009-GATE`, `FR-PO-052`, golden-digest pins, and all bit-exactness claims
-are certified ONLY on the pinned tuple above. The two coexist by design: the
-Linux gate answers "does it compile and do the tests pass," this pin answers
-"are the bits exactly right."
+NON-CERTIFYING and, per `ERR-020-008`, required supplemental compile/test evidence
+rather than the governing Unity compiler.** It is a smoke gate for the never-compiled /
+dead-test-suite defect class and for test execution. Its synthetic MSBuild graph can
+resolve dependencies that Unity requires to be direct `.asmdef` references, so a green
+Linux result cannot by itself establish Unity compile conformance. No digest, perf
+number, or replay produced on the Linux gate is authoritative. `FR-DS-009-GATE`,
+`FR-PO-052`, golden-digest pins, and all bit-exactness claims are certified only on the
+pinned tuple above. The two surfaces coexist by design: Linux answers whether the
+synthetic tree compiles and its tests pass; the pinned Unity host governs editor compile
+compatibility and certification claims.
 
 ---
 
@@ -136,3 +161,4 @@ Linux gate answers "does it compile and do the tests pass," this pin answers
 |         |            |        | determinism-cert-2026-07-19.md (+ raw NUnit XML). Companion to the FR-PO-052 |
 |         |            |        | perf baseline certified the same day. Owner sign-off via the PR merge.       |
 |         |            |        | Residual (non-blocking): §4.8.2 runtime MXCSR validation unbuilt.            |
+| 1.5     | 2026-11-02 | Codex  | **PR #527 / `ERR-020-008` verification amendment.** Adds the C# 9.0 working-policy row without claiming a measured host compiler maximum; D5 still requires compiler response-file evidence and owner sign-off. Adds the governing Unity compile / supplemental Linux distinction. No host tuple or certification result changed. |
