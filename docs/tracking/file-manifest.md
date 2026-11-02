@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 2, 2026 — **D-11–D-13 ratified (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32, version pointers in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 2, 2026 — **Roadmap v0.86 corrections and proposed release sequence (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.85 → v0.86 (new §5.2), `docs/tracking/interactive-unity-client-design.md` v0.32 → v0.33, `docs/tracking/open-issues.md` (#526 scope note; #44 owner-decision block; version pointers), `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 2, 2026 — **D-11–D-13 ratified (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32, version pointers in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 2, 2026 — **Integration closeout and roadmap v0.84 sequence refresh (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (new `pr526-host-evidence-gap` entry), `docs/agent-guides/project-reference.md` (index bullet; 39 → 40 active), `docs/tracking/CHANGELOG.md` and this manifest.
 
@@ -3721,7 +3723,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.32). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.33). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
