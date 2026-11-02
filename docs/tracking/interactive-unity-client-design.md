@@ -697,7 +697,7 @@ authority the code below implements:
 | **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
 | **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
 | **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION`, or another version of any sub-blob nested in the save (each is gated independently, so an inner bump leaves the outer version alone), is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. A Ready slot whose save fails to decode anyway is invalidated to `Damaged`, so it cannot keep winning Continue. |
-| **D-P7-6** career match interactivity | **Owner product decision, November 2, 2026 (roadmap D-11):** in PM-2 the managed fixture is played interactively, and an **unfinished matchday resumes** from a save. The October 18 wording ("*not an owner question; a seam fact*") is superseded: the seam fact still holds (#30 has no seam that plays the managed fixture interactively and folds its result back into the round; `ActiveMatch` is visible only inside the synchronous `AdvanceAndPlayNextRound`), but the save/resume scope it implies was an owner choice. The **technical contract is PROPOSED, not approved** — see *Remaining* item 2. | **Until that contract is approved and implemented: no Career Home → Tactics Setup and no Post-Match → Career Home edge** — each would be the FR-CS-049 phantom. Matchday resolves on Career Home through the season dispatcher, and `CareerSaveSlots` keeps refusing a save that carries a match block. |
+| **D-P7-6** career match interactivity | **Owner product decision, November 2, 2026 (roadmap D-11):** in PM-2 the managed fixture is played interactively. **No mid-match saves**; quitting a match abandons it and returns to Career Home with the round unplayed; the starting eleven stays automatic (D-P7-4). The October 18 wording ("*not an owner question; a seam fact*") is superseded: the seam fact still holds (#30 has no seam that plays the managed fixture interactively and folds its result back into the round; `ActiveMatch` is visible only inside the synchronous `AdvanceAndPlayNextRound`), but the interactivity and save scope it implies were owner choices. The **technical contract is PROPOSED, not approved** — see *Remaining* item 2. | **Until that contract is approved and implemented: no Career Home → Tactics Setup and no Post-Match → Career Home edge** — each would be the FR-CS-049 phantom. Matchday resolves on Career Home through the season dispatcher, and `CareerSaveSlots` keeps refusing a save that carries a match block (it continues to after the contract lands, since the career route never writes one). |
 
 **The progress rule (D-P7-3), against #30's guards.** The client offers only what `SeasonLoop` would
 accept, and each withheld action is one #30 refuses (each row has a positive-control test):
@@ -781,32 +781,17 @@ rate band, corpus fit or perf baseline is perturbed.
 2. **The interactive career-fixture seam (D-P7-6)** — owned by #30 / `season-save`: play the managed
    fixture through `MatchSession` and fold its `MatchResult` into the round. When it exists, the career
    gains `CareerHome → TacticsSetup` and `PostMatchReport → CareerHome` as **new named moves**, never a
-   reuse of `ReturnToMainMenu` (ux-experience-architecture §3.1).
-   **November 2, 2026 — contract before code.** The owner's D-11 scope (interactive managed fixtures
-   and unfinished-matchday resume) makes this a contract to review and approve before implementation.
-   The contract below is **PROPOSED**:
-   - **Persistence.** Reuse #30's existing optional match block (`matchPresent` flag + match blob,
-     #30 appendices; `SeasonSaveCodec`). The missing piece is the stop-between-ticks seam that
-     `SeasonLoop.ActiveMatch`'s remarks already require before any save is taken mid-match. Allocate a
-     `SEASON_SAVE_FORMAT_VERSION` bump **only** if the approved contract changes the persisted layout.
-   - **Round lifecycle.** Define round ownership while the managed match is live, the state of the
-     round's other fixtures, the safe capture boundaries, save/quit/resume, cancellation, failure
-     and retry. Prove that pausing or resuming cannot consume another fixture's random draws twice
-     or early.
-   - **Exactly-once commitment.** The interactive result enters the **same** round-finalization path
-     the synchronous `AdvanceAndPlayNextRound` uses (discipline, appearances, finance, progression,
-     table); no effect is reimplemented for the interactive route.
-   - **Locks.** (1) *No-input parity:* an interactive managed match with no manager commands equals the
-     headless `ManagedThroughEngine` match on identical runtime, seed, rosters, tactics and
-     manager configuration (result and digest). (2) *Input replay:* identical initial state plus the
-     identical tick-stamped command log (§6) gives the identical final digest and result. (3) *Season
-     commit equivalence:* given the same managed result, the interactive and synchronous paths give
-     identical post-round season state, with the result committed once. Resume equivalence is defined
-     over identical initial state plus the recorded tick-stamped inputs (§6.1), not over an input-free
-     run.
-   - **Engine isolation.** Any `src/match-engine/` change this seam needs while the W8 B→C window is
-     open must carry digest-neutrality evidence, or wait until the window closes.
-   `CareerSaveSlots`' refusal of a match block is removed only when this path is complete.
+   reuse of `ReturnToMainMenu` (ux-experience-architecture §3.1), plus `Match → CareerHome` through abandon.
+   **November 2, 2026 — contract before code.** The owner's D-11 scope (interactive managed fixtures,
+   no mid-match saves, quitting abandons the match) makes this a contract to review and approve before implementation.
+   The contract is drafted, **PROPOSED and not approved**, in
+   [`d-p7-6-interactive-career-match-amendment-draft.md`](d-p7-6-interactive-career-match-amendment-draft.md)
+   (a #30 amendment with #41/#44 consequences). Its review found that the short contract first recorded
+   here was incomplete: substitutions break the starting-XI inputs to #41 appearances and #44 ban
+   serving; and engine boot and per-tick card observation must stay with `SeasonLoop`, with
+   `MatchSession` attaching to an engine it did not boot. Draft v0.2 applies the owner's answers: no
+   starting-XI changes, no mid-match saves (which removes the save-format bump v0.1 needed), and an
+   `AbandonManagedFixture` seam for quitting. `CareerSaveSlots` keeps refusing a match block.
 3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
    **November 2, 2026:** Gate A stays recorded; it was audited against the October 18 shell, so it
    takes a **delta refresh** for the interactive career route once the D-P7-6 contract is approved, not
@@ -1089,6 +1074,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.32 | 2026-11-02 | **D-P7-6 contract moved to a #30 amendment draft; D-11 amended.** A review of the v0.31 bullet contract against `SeasonLoop` found it incomplete (substitutions vs the starting-XI inputs to #41 appearances and #44 ban serving; the card fold outside the engine snapshot; engine boot and per-tick card observation across assemblies). §5-P7 *Remaining* item 2 now points to the PROPOSED draft `d-p7-6-interactive-career-match-amendment-draft.md` v0.2. The owner amended D-11 the same day: no mid-match saves; quitting a match abandons it and returns to Career Home with the round unplayed (`Match → CareerHome` move); the starting eleven stays automatic. The D-P7-6 row is updated to match. Documentation only. |
 | 0.31 | 2026-11-02 | **D-P7-6 re-scoped by owner decision (roadmap D-11).** The owner decided on November 2, 2026 that PM-2 managed fixtures are interactive and unfinished matchdays resume from a save; the October 18 "not an owner question" wording is superseded. §5-P7 *Remaining* item 2 gains the PROPOSED technical contract (reuse #30's existing `matchPresent` match block; stop-between-ticks seam; round lifecycle; exactly-once commitment through the existing finalization path; no-input parity, input-replay and season-commit locks; engine isolation during W8 B→C). Item 3 records S1 Gate A as recorded with a delta refresh due, and early participant recruitment. P7b proceeds independently of items 2–3. Documentation only; no code, schema or format change. |
 | 0.30 | 2026-10-18 | **§5-P7 — career management screens (roadmap C3/C4): governance + host-free landing.** Records the owner's October 18, 2026 product decisions D-P7-1..D-P7-5 (club-only new game; autosave + 3 manual slots with direct Continue; day-granular progress; no mandatory blockers; D-10 breakable saves through PM-3) and the D-P7-6 seam fact (no interactive career-fixture seam, so no career → Tactics/Match edges). Landed in `client-app`: three career `ScreenId`s, the seven-registration `ClientScreenFlow` with eight guarded career moves, `CareerProgress` (the progress rule against #30's guards), `CareerSession`/`CareerSessionHolder`, `CareerSaveSlots`, `SeasonCommandDispatcher`, and the Career Home / New Career / Load Career sources; in `ui-framework`, ERR-038-005 (`IntentKind` 4–6, `IntentRouting`). ClientApp.Tests +34, UiFramework.Tests +2. No sim reach. Remaining: P7b host binding, the #30 interactive fixture seam, S1 Gates B–I. **PR 519 review amendment (October 27, 2026):** a failed sidecar write or swap no longer splits a slot's save from its sidecar (both temps are prepared first and a failed sidecar swap restores the backed-up save); a Ready slot whose save fails to decode is invalidated so Continue falls back to the next loadable slot; and the sidecar (layout v2) records every nested sub-blob format version, so an inner bump reads as Incompatible under D-10. A second review pass added: Resume validates its mode before the guarded rebuild, so a caller error never invalidates a healthy slot; and each sidecar records its save's SHA-256, so opening the store recovers a write interrupted between its two swaps (the staged sidecar is swapped in, or the backup is put back). A third pass made recovery keep every file when a sidecar cannot be read (a locked staged sidecar was being deleted as if invalid). A fourth pass made invalidation reversible and narrower: `MarkDamaged` sets the sidecar aside (`.slot.damaged`) instead of deleting it, and `RestoreDamaged` puts it back while it still matches the save; Resume invalidates a slot when #30's load or the rebuild from loaded contents fails, so Continue cannot get stuck on it; the sidecar swap keeps a backup that is put back if the replace fails; the sidecar is flushed to disk before it is swapped in; recovery at open never revives a set-aside slot from stale backups and puts back a save left only as its backup; and cleanup after a committed write is best effort. `RestoreDamaged` has no caller yet: retrying a set-aside slot needs a player-facing action with approved copy. ClientApp.Tests +23 more (+57 in all). |
 | 0.29 | 2026-10-06 | Records consumed lifecycle/identity candidate and explicit development host; host-free evidence and pending Unity/full fixture comparison tracked separately. Complete localized screens and acceptance remain open. |

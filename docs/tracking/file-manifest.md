@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 2, 2026 — **Working sequence to Early Access (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (two live client-design version pointers v0.30 → v0.31; no entry added or archived), `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 2, 2026 — **§5.1a ratified; D-11 amended; D-P7-6 amendment draft (documentation only).** **New:** `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.2 (PROPOSED #30 amendment draft). No paths removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32, `docs/tracking/open-issues.md` (live client-design version pointers v0.31 → v0.32), `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 2, 2026 — **Working sequence to Early Access (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (two live client-design version pointers v0.30 → v0.31; no entry added or archived), `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 2, 2026 — **PR #526 merges remote main `a1dfc07` (PRs #529 and #527).** No paths added or removed by the merge resolution. **Modified (conflict resolution only):** `docs/tracking/CHANGELOG.md`, `PROGRESS.md`, `spec-error-log.md` (v2.95 → v2.96), `docs/agent-guides/project-reference.md` and this manifest. The August 17 entry's "since advanced to" pointers take main's Code Standards versions (§2 v1.10, §3 v1.20, §5 v1.9) and PR #526's tracking versions (injury/aging design v0.8, wiring backlog v1.40), each re-derived from the merged tree.
 
@@ -3719,7 +3721,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.31). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.32). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
