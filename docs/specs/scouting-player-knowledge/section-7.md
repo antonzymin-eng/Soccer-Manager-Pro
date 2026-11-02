@@ -137,6 +137,12 @@ spec has none, so its affected text is listed here and rewritten at the landing 
   site (`SeasonLoop.SubmitTransferBid`). Record the call site and the sell-side decision at T3, and update
   Appendix C step 6 ("the `PlayerId` re-keys into club 3") with it.
 
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the overlay drop and assignment cancellation (FR-SC-019's retirement half) the same way at T3, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -144,5 +150,5 @@ spec has none, so its affected text is listed here and rewritten at the landing 
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): T2/T3 reconciled with the fog-off command gate — the T2 slot is a structural null seam and the commands are uncallable until T3 flips `fogEnabled` (the v0.1 text had the commands "landing" usable at T2, contradicting FR-SC-020). |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (L): new §7.2 **manager job-change** deferral row — the career-constant-`managedClubId` assumption named, with the required re-club sweep (drop new-club entries + cancel a targeting assignment) recorded so a future #45-class feature does not trip the F4 own-squad codec gate. |
 | 0.4 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (scouting assignment idempotence, slot number, save-block integration). No normative text changed. |
-| 0.5 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: own-squad derivation, FR-SC-019 trigger). No normative text changed. |
+| 0.5 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: own-squad derivation, FR-SC-019 trigger; #28 staged season boundary). No normative text changed. |
 #endregion

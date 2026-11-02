@@ -111,11 +111,17 @@ spec has none, so its affected text is listed here and rewritten at the landing 
   and its call site at `SeasonLoop.SubmitTransferBid` by T2. FR-HS-027's "lands on whoever next holds that
   `PlayerId`" rationale is also obsolete: ids are never reassigned.
 
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the FR-HS-027 retire-remove (and the regen-insert, which reads the plan's planned rosters) the same way at T2, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (L): §7.3 records the `SetPlayerEdgeMirror` player↔player caller obligation. |
 | 0.3 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
-| 0.4 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: transfers and the club-scoped pair store). No normative text changed. |
+| 0.4 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: transfers and the club-scoped pair store; #28 staged season boundary). No normative text changed. |
 #endregion

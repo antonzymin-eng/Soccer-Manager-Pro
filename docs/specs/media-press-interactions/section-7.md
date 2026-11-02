@@ -128,10 +128,16 @@ spec has none, so its affected text is listed here and rewritten at the landing 
   from the managed roster reaches no #33 boundary. T2 needs its own drop at the transfer commit site, or an
   explicit decision to deliver it. Correct the KD-7 rationale at T2.
 
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the pending-delta drop for a retiring target the same way at T2, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's neutrality identified as a **catalogue** rather than a code property — the one place #35 differs from its siblings — deep-tier extensions, the not-planned list incl. the absent-not-false citation field, risks R-1..R-7 with the shared-field cost recorded as R-7). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
-| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: pending-delta drop rationale). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: pending-delta drop rationale; #28 staged season boundary). No normative text changed. |
 #endregion

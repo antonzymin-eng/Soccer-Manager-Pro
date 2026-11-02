@@ -131,10 +131,16 @@ spec has none, so its affected text is listed here and rewritten at the landing 
   churn (regen and retirement). A transfer out of the managed club, now live, reaches no such boundary. T3
   needs a drop at the transfer commit site, or an explicit decision, matching #35 §7.6.
 
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the FR-NW-028 pending-delta drop for a retiring target the same way at T3, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T2's neutrality identified as stronger than #35's — neutral by construction rather than by authored data — deep-tier extensions, the not-planned list, risks R-1..R-6 incl. the inherited-ordering property as R-4 and the residual payload-*meaning* risk as R-2, which FR-NW-011's arity check does not cover). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
-| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: #31 producer, FR-NW-028 boundary). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: #31 producer, FR-NW-028 boundary; #28 staged season boundary). No normative text changed. |
 #endregion
