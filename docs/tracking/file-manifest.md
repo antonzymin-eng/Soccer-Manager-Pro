@@ -1,6 +1,6 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 2, 2026 — **§5.1a ratified; D-11 amended; D-P7-6 amendment draft (documentation only).** **New:** `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.2 (PROPOSED #30 amendment draft). No paths removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32, `docs/tracking/open-issues.md` (live client-design version pointers v0.31 → v0.32), `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 2, 2026 — **§5.1a ratified; D-11 amended; D-P7-6 amendment draft (documentation only).** **New:** `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.4 (PROPOSED #30 amendment draft). No paths removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32, `docs/tracking/open-issues.md` (live client-design version pointers v0.31 → v0.32), `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 2, 2026 — **Working sequence to Early Access (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (two live client-design version pointers v0.30 → v0.31; no entry added or archived), `docs/tracking/CHANGELOG.md` and this manifest.
 
