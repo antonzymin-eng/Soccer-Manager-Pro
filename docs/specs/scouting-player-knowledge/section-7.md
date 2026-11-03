@@ -1,8 +1,8 @@
 # Scouting & Player Knowledge #32 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** October 30, 2026 (v0.4 — §7.4 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial))
-**Version:** 0.4
+**Last Updated:** November 2, 2026 (v0.5 — §7.5 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.4 — §7.4 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)))
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -111,6 +111,38 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.5 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.4. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **The own-squad check derives a club from an id.** FR-SC-009, §3.1 `ResolveBand`, §3.4 `AssignScout` (F2),
+  Appendix A's `CLUB_SQUAD_SIZE` row and Appendix B's two codec gates test `PlayerId / CLUB_SQUAD_SIZE ==
+  managedClubId`. ERR-031-005 rules that nothing derives a club from an id: a player the managed club buys
+  keeps his old id and would be classed as external, one it sells would still be classed as own-squad, and
+  `NextPlayerId` ids fall in arbitrary packed ranges. Replace it with a roster-membership query against the #28
+  store, supplied by the composition root: at T0 for `ResolveBand`, and at T1 for the codec gates (which then
+  need the roster, or move to the post-load composition check). File the ERR against #32 with that landing.
+
+- **FR-SC-019's transfer trigger is gone.** It drops the overlay entry and cancels an active assignment on a
+  "re-key (#31 transfer)"; transfers no longer re-key, and #31 has no roster-move hook any more. The need
+  survives in changed form: a player who moves **into** the managed club must lose his overlay entry and any
+  assignment targeting him (own-squad coherence), while one who leaves keeps a valid id, so "sell →
+  knowledge reset" becomes a choice rather than a necessity. The root must call #32 from the transfer commit
+  site (`SeasonLoop.SubmitTransferBid`). Record the call site and the sell-side decision at T3, and update
+  Appendix C step 6 ("the `PlayerId` re-keys into club 3") with it.
+
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the overlay drop and assignment cancellation (FR-SC-019's retirement half) the same way at T3, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -118,4 +150,5 @@ unchanged.
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M-1): T2/T3 reconciled with the fog-off command gate — the T2 slot is a structural null seam and the commands are uncallable until T3 flips `fogEnabled` (the v0.1 text had the commands "landing" usable at T2, contradicting FR-SC-020). |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (L): new §7.2 **manager job-change** deferral row — the career-constant-`managedClubId` assumption named, with the required re-club sweep (drop new-club entries + cancel a targeting assignment) recorded so a future #45-class feature does not trip the F4 own-squad codec gate. |
 | 0.4 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (scouting assignment idempotence, slot number, save-block integration). No normative text changed. |
+| 0.5 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: own-squad derivation, FR-SC-019 trigger; #28 staged season boundary). No normative text changed. |
 #endregion

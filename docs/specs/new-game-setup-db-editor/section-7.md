@@ -1,8 +1,8 @@
 # New-Game Setup & Database Editor #47 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.6 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -136,9 +136,26 @@ unchanged.
   `NewCareerSetup` + `CareerSession.StartNew` (roadmap C4). Bind to that path rather than adding a parallel
   one, so T-ED-ID-001's identity claim is made against the code players actually run.
 
+## 7.6 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.5. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **FR-ED-026's precedence rule has nothing to rank against.** It ranks an authored pin below "a later
+  transfer re-key pin" written by #36's `OnPlayerReKeyed` (§3.4's rule block, the outline). After ERR-031-005
+  no transfer writes a pin (#36 §7.7), so an authored nationality simply persists across transfers, which is
+  also the football-correct outcome. At T0, rewrite FR-ED-026 and §3.4 as "authored pins are the only pins",
+  or record an owner decision if some other event should overwrite them.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3 with T1's genuine neutrality and T2's one-branch asymmetry stated precisely — the frame bumps for every save while the sub-blob appears only for authored ones — the predicted silent T2 failure named, deep-tier extensions incl. the artifact-vs-save migration split, the not-planned list, risks R-1..R-7 with the `season-save` reference flagged as *the* structural assertion and the ~100 KB blob recorded as R-7). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (resume path regenerates the league, roster overlap with #28 `PROG`, save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: FR-ED-026 precedence). No normative text changed. |
 #endregion

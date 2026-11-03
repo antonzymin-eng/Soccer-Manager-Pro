@@ -1,8 +1,8 @@
 # Save Migration & Versioning #50 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** November 2, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 27, 2026 (v0.1 — initial section-file set))
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -98,8 +98,40 @@ sentence and starts being retained code.
   code in this spec — and because the seam's design means a wrong one refuses rather than corrupts, which
   is the property worth preserving above all others here.
 
+## 7.5 Findings recorded against implemented code (roadmap C6, November 2, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the November 2, 2026
+full check of this spec against implemented code on `main`. The normative text above is unchanged.
+
+- **Sub-blob headers are not all version-first.** §1.4(d) and §3.1 rest on "every sub-blob codec reads its own
+  version first", so `ReadLeadingVersion(file, offset)` reads one leading field. That holds for the frame
+  (`SEASON_SAVE_FORMAT_VERSION` u32, then the match flag byte), the world blob (`WORLD_STORE_FORMAT_VERSION`
+  **u16**), the season-state blob and the match blob (u32). The seven later blobs write a **magic first and the
+  version second** (the ERR-029-005 rule): training, medical, appearance, progression, discipline, finance and
+  transfers (`*_SAVE_MAGIC`, then `*_SAVE_FORMAT_VERSION`). Read as written, the classifier would take each
+  magic for a version and refuse every current save. At T0, make the header read per `BlobKind` — verify the
+  magic where one exists, then read a version of that kind's width — and lock it with a classify-a-current-save
+  test. Blob kind is positional in the frame (fixed order per frame version; nine mandatory length-prefixed blobs plus the
+  optional match block at `SEASON_SAVE_FORMAT_VERSION` 8), which `EnumerateSubBlobHeaders` must follow.
+
+- **Rosters are saved now.** §1.4(c)'s "Rosters are **not saved**" (quoting `WorldStore.WorldSeed`'s doc
+  comment, corrected in the same commit as this note) stopped being true at #28 T1 (frame v5): the `PROG` block
+  carries the evolving roster, and a resumed career reads it from there. KD-2's generation gate is still
+  needed, for a narrower surface: the seed still rebuilds club identity on resume (`CareerSession`'s
+  `LeagueBootstrap.Generate` call), keys seed-derived draws, and #32/#36 still compute on read from catalogues.
+  Restate §1.4(c) and KD-2's motivation at T1. §1.4(a)'s "12 constants in shipped code" is a dated count; the
+  shipped set now also includes the training, medical, appearance, discipline, finance and transfers versions.
+
+- **Scheduling is now an owner decision.** D-10 (October 18, 2026; roadmap §5.1) declares saves breakable
+  through PM-3 and keeps #50 parked in Wave 8: a `SEASON_SAVE_FORMAT_VERSION` bump rejects older saves and the
+  client lists them as Incompatible. §7.1's "T0 should land early" and "T1 before T2" arguments therefore
+  apply from the point compatibility is first promised, not before. The stamp's own argument still holds:
+  `SaveOriginStamp` must be in saves before any save is promised to survive an update.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3, with the argument for landing T0 early — its identity claim is unusually strong because refusal *is* today's behaviour — and the argument for T1 before T2: the generation stamp **is worth writing long before it is worth reading**, since a stamp added late leaves every earlier career permanently unclassifiable; deep-tier extensions; the not-planned list, which carries the two rejected KD-2 alternatives and the two designs that lose data; risks R-1..R-6, with R-6 added for the fact that every registered step is code whose only exercise is a test). Status IN REVIEW. |
+| 0.2 | 2026-11-02 | — | §7.5: C6 findings recorded from a full check against implemented code (sub-blob headers, roster persistence, D-10 scheduling). No normative text changed. |
 #endregion
