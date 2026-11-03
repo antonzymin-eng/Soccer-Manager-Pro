@@ -1,0 +1,35 @@
+# EditMode runs — pinned host, commit ea84be27 (PR #526 final head), NUnit 3.5 XML summary
+
+Run A: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames "TacticalDirector.MatchEngine.Tests;TacticalDirector.ClientApp.Tests" -testFilter "HeaderReachabilityDiagnosticTests|S0MovementDiagnosticTests" -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-11-03 15:00:12Z  end: 2026-11-03 15:00:29Z  duration: 16.5 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=16 passed=14 failed=0 inconclusive=0 skipped=2
+  TacticalDirector.ClientApp.Tests.dll: total=1 passed=0 failed=0 skipped=1 duration=0.1 s
+  TacticalDirector.MatchEngine.Tests.dll: total=15 passed=14 failed=0 skipped=1 duration=16.3 s
+  fixture TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests: Skipped total=1 passed=0 failed=0 skipped=1
+  fixture TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests: Skipped total=15 passed=14 failed=0 skipped=1
+  neutrality: TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityObserver_DoesNotChangeSnapshotDigests: Passed duration=15.4 s
+  not passed: 2 (0 failed)
+    TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests.S0MovementDiagnostic_ReportsPlayerTravelAndSpread: Ignored - Set TD_MOVEMENT_DIAGNOSTIC=1 to run the S0 player-movement measurement.
+    TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters: Ignored - Set TD_HEADER441_DIAGNOSTIC=1 to run the #441 header-reachability counters.
+
+Run B: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests -testFilter MatchEngineSnapshotDigestReferenceTests -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-11-03 15:01:16Z  end: 2026-11-03 15:01:19Z  duration: 3.0 s  nunit engine: 3.5.0.0
+run: result=Passed total=1 passed=1 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchEngine.Tests.dll: total=1 passed=1 failed=0 skipped=0 duration=2.8 s
+  fixture TacticalDirector.MatchEngine.MatchEngineSnapshotDigestReferenceTests: Passed total=1 passed=1 failed=0 skipped=0
+  not passed: 0 (0 failed)
+
+Run C: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.ClientApp.Tests -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+start: 2026-11-03 15:02:14Z  end: 2026-11-03 15:13:34Z  duration: 679.7 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=195 passed=192 failed=0 inconclusive=0 skipped=3
+  TacticalDirector.ClientApp.Tests.dll: total=195 passed=192 failed=0 skipped=3 duration=679.5 s
+  fixture TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests: Skipped total=1 passed=0 failed=0 skipped=1
+  not passed: 3 (0 failed)
+    TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests.S0MovementDiagnostic_ReportsPlayerTravelAndSpread: Ignored - Set TD_MOVEMENT_DIAGNOSTIC=1 to run the S0 player-movement measurement.
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs: Ignored - Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+    TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit: Ignored - Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+
+distinct cases across runs (the movement case is in both A and C): total=211 passed=207 failed=0 skipped=4

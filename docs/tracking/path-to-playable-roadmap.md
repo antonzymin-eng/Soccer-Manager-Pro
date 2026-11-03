@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 3 — #526 post-merge host validation done (v0.85):** Unity 6000.4.9f1 compile of PR #526's final head `ea84be27` passed with 0 `error CS`, and EditMode had 0 failures (207 passed, 4 opt-in skips). Its `src`, `Packages`, `ProjectSettings` and `Assets` trees are identical to `4bcc2ae`. Evidence: [`host-ea84be27-20261103`](evidence/host-ea84be27-20261103/README.md).
+
 > **November 2 — working sequence to Early Access (v0.84; ordering PROPOSED, owner decisions recorded):** main is `4bcc2ae` (PRs #526, #527, #529 and #530 merged; no file difference from `9be7963`). Register corrections: **D-10 is DECIDED** (October 18, saves breakable through PM-3, as `interactive-unity-client-design.md` §5-P7 already recorded). New owner decisions **D-11** (PM-2 managed fixtures are interactive; unfinished matchdays resume) and **D-12** (short client-only host slots between W8 C engine jobs) are recorded as decided; **D-13** (Early Access release scope) is pending. [§5.1a](#51a-working-sequence-to-early-access--november-2-2026) records the parallel engine and career lanes, the PM-2 join and the post-PM-2 release sequence as a **proposal pending owner ratification**; it changes no approved contract and authorizes no gameplay or tuning. **First host job:** #526's post-merge validation (Unity compile at `4bcc2ae` plus `HeaderReachabilityDiagnosticTests` and `S0MovementDiagnosticTests`); no host receipt yet covers its seven-line observation hook in `MatchEngine.cs`.
 
 > **October 30 — PR #521 merge (v0.83):** The #31 T1/T2 and #28 boundary landings are retained alongside main's D6/D-10 decision, Gate-J acceptance and W8 C spec application. Duplicate earlier version labels in the version history are preserved branch-local records.
@@ -458,7 +460,7 @@ decided.
 
 **Shared, now.**
 
-1. **#526 post-merge host validation (S).** Unity 6000.4.9f1 compile at `4bcc2ae` plus EditMode for the
+1. **#526 post-merge host validation (S).** ✅ **Done November 3, 2026** at the PR's final head `ea84be27`, whose runtime trees are identical to `4bcc2ae`: 0 `error CS`, 0 EditMode failures ([evidence](evidence/host-ea84be27-20261103/README.md)). `S0MovementDiagnosticTests` holds only an opt-in case, so its measurement did not execute. Original item: Unity 6000.4.9f1 compile at `4bcc2ae` plus EditMode for the
    two changed fixtures (`HeaderReachabilityDiagnosticTests`, `S0MovementDiagnosticTests`), per D-01a
    items 1–2. The change is a null-by-default observation hook with digest-neutrality locked, so no
    whole-assembly MatchEngine run is owed (item 3). This is the first host job and precedes the pre-C
@@ -856,6 +858,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.85 | November 3, 2026 | §5.1 working sequence, shared item 1: #526 post-merge host validation done at `ea84be27`, with its evidence linked. No ordering or decision change. |
 | v0.84 | November 2, 2026 | Register: D-10 corrected to DECIDED (October 18, matching the client design); D-11 (interactive PM-2 managed fixtures, unfinished-matchday resume) and D-12 (client-only host slots during W8 C) recorded as owner decisions of November 2; D-13 (Early Access scope and the three career-integrity choices) added as pending. New §5.1a: working sequence to Early Access as a PROPOSED ordering pending owner ratification (shared items, engine lane, career lane, host scheduling, PM-2 join, post-PM-2 release sequence). No contract approved, no gameplay or tuning authorized. |
 | v0.83 | October 30, 2026 | Merge remote main into PR #521: retain the career lane D1–D5 landings and main's D6/D-10 decision, Gate-J acceptance and approved W8 C spec application. Earlier duplicate version labels below are preserved branch-local history. |
 | v0.76 (branch-local #441) | October 20, 2026 | Develop #441 independently of W8 C; land after its measurement, before W9. Link corrected local census and preserved evidence. One geometric passage has no selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 change without composed contact proof. Initial zero withdrawn; #441/W9 open. D-05 and landed D-07 status unchanged. |
