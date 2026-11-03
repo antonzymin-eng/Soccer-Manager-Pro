@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 3, 2026 — **No Early Access planned: roadmap v0.86 (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.85 → v0.86, `docs/tracking/league-bootstrap-design.md` v1.11 → v1.12 (D-09 note), `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32 (D-P7-5 note), version pointers in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 3, 2026 — **§5.1a ratified: roadmap v0.87 (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.86 → v0.87, `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 3, 2026 — **No Early Access planned: roadmap v0.86 (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.85 → v0.86, `docs/tracking/league-bootstrap-design.md` v1.11 → v1.12 (D-09 note), `docs/tracking/interactive-unity-client-design.md` v0.31 → v0.32 (D-P7-5 note), version pointers in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 2, 2026 — **Roadmap v0.85 delta after #531 (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.84 → v0.85, `docs/tracking/open-issues.md` (new `pr526-host-evidence-gap` entry; #44 owner-decision block), `docs/agent-guides/project-reference.md` (index bullet; 39 → 40 active), `docs/tracking/CHANGELOG.md` and this manifest.
 

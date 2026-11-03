@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 3 — §5.1a ordering ratified (v0.87):** Anton Zymin ratified the revised §5.1a work sequence. It is now the ordering authority; the §5.1 step table keeps exit criteria and history. Contracts it names (for example D-P7-6) still need their own approval, and the parked Early Access list stays parked (D-14).
+
 > **November 3 — no Early Access planned (v0.86):** the owner decided D-14 (no Early Access at this time; release work parked until a release-readiness checkpoint), D-08 (PM-2 engine = W8 C + #434/#440; W9/W10 do not block PM-2), D-09 (ERR-030-034's shape gap recorded as a known PM-2 limitation), D-10 extended (saves breakable until that checkpoint) and D-13 reframed as PM-3 product scope. §5.1a is revised: PM-2 and PM-3 are owner-played milestones, then a depth phase (order D-15, decided at PM-2). The November 2 after-PM-2 Early Access list is parked, not deleted.
 
 > **November 2 — working sequence to Early Access (v0.84; ordering PROPOSED, owner decisions recorded):** main is `4bcc2ae` (PRs #526, #527, #529 and #530 merged; no file difference from `9be7963`). Register corrections: **D-10 is DECIDED** (October 18, saves breakable through PM-3, as `interactive-unity-client-design.md` §5-P7 already recorded). New owner decisions **D-11** (PM-2 managed fixtures are interactive; unfinished matchdays resume) and **D-12** (short client-only host slots between W8 C engine jobs) are recorded as decided; **D-13** (Early Access release scope) is pending. [§5.1a](#51a-working-sequence-to-early-access--november-2-2026) records the parallel engine and career lanes, the PM-2 join and the post-PM-2 release sequence as a **proposal pending owner ratification**; it changes no approved contract and authorizes no gameplay or tuning. **First host job:** #526's post-merge validation (Unity compile at `4bcc2ae` plus `HeaderReachabilityDiagnosticTests` and `S0MovementDiagnosticTests`); no host receipt yet covers its seven-line observation hook in `MatchEngine.cs`.
@@ -281,7 +283,8 @@ queue today.
 
 ### 5.1 Current implementation lanes and decision register — October 9, 2026 (evidence anchor refreshed October 10)
 
-This section is the current ordering authority. It supersedes the serial 95-step and 12-step
+This section is the current ordering authority; since November 3, 2026 (v0.87) the ratified §5.1a
+sequence governs order, and the step table below keeps exit criteria and history. It supersedes the serial 95-step and 12-step
 conversation plans, not the approved contracts in the owning documents. The numbered rows express
 dependencies, not a requirement to finish an entire row before starting the next. Track S career
 work and Track C client work continue alongside the measured match-engine lane. No gameplay,
@@ -457,9 +460,11 @@ tests, adversarial review to convergence, and a green full gate — the project'
 D-14 and the D-10 extension and reframed D-13 as PM-3 product scope; the items below are revised to
 match. The heading keeps its November 2 wording so existing links resolve.
 
-**Status: PROPOSED ordering, pending owner ratification.** The owner decisions it relies on (D-08,
-D-09, D-10, D-11, D-12, D-14) are recorded in the register above; D-13 and D-15 are pending. Until ratified, the §5.1 table
-remains the ordering authority. Nothing here approves a contract, authorizes gameplay or tuning, or
+**Status: RATIFIED November 3, 2026 by Anton Zymin (v0.87).** This ordering, as revised in v0.86, is
+now the ordering authority; the §5.1 step table keeps its exit criteria and history. The owner
+decisions it relies on (D-08, D-09, D-10, D-11, D-12, D-14) are recorded in the register above;
+D-13 and D-15 are pending. Ratifying the ordering does not un-park the D-14 list below. Nothing here
+approves a contract, authorizes gameplay or tuning, or
 amends KD-W1. Sizes are relative only (S = one bounded landing, M = two or three, L = several coupled
 landings or substantial evidence work); no calendar dates are attached until D-13 and D-15 are
 decided.
@@ -890,6 +895,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.87 | November 3, 2026 | **§5.1a ordering RATIFIED** by Anton Zymin. It is now the ordering authority (status paragraph and §5.1 intro updated); the §5.1 step table keeps exit criteria and history. It approves no contract, authorizes no gameplay or tuning, does not amend KD-W1 and does not un-park the D-14 list. D-13 and D-15 remain pending. |
 | v0.86 | November 3, 2026 | **No Early Access planned.** Owner decisions: D-14 (no Early Access at this time; release work parked until an owner-called release-readiness checkpoint), D-08 (PM-2 engine = W8 C + #434/#440; #441/W9/W10 do not block PM-2; no PM-2 freeze), D-09 (ERR-030-034 shape gap recorded as a known PM-2 limitation; resolved with the governed final recapture in the depth phase), D-10 extended to the checkpoint, D-13 reframed as PM-3 product scope; D-15 (depth-phase order) pending until PM-2. §5.1a revised: quick-sim check (recapture + mean bar, refit on failure) replaces the PM-2 freeze/refit; PM-3 and a tranche-based depth phase follow; the November 2 after-PM-2 list is parked. §5.1 rows 10–12 and D6 annotated. League-bootstrap supplement v1.12 and client design v0.32 record D-09 and D-10. |
 | v0.85 | November 2, 2026 | Delta from branch `claude/eloquent-dijkstra-0i7ahb` after merging #531, whose numbering (D-11 to D-13) and §5.1a are retained unchanged. Adds: the #526 host-evidence-gap open issue link; the ClientApp whole-test-assembly reading of D-01a item 2; and #44 T3's cross-lane dependency (draws on #30's `0x22` stream per FR-DC-019 / #44 §8; lands before engine-lane item 6's capture/refit, which now waits for it). The PM-2 placement of #44 T3 is owner-confirmed. |
 | v0.84 | November 2, 2026 | Register: D-10 corrected to DECIDED (October 18, matching the client design); D-11 (interactive PM-2 managed fixtures, unfinished-matchday resume) and D-12 (client-only host slots during W8 C) recorded as owner decisions of November 2; D-13 (Early Access scope and the three career-integrity choices) added as pending. New §5.1a: working sequence to Early Access as a PROPOSED ordering pending owner ratification (shared items, engine lane, career lane, host scheduling, PM-2 join, post-PM-2 release sequence). No contract approved, no gameplay or tuning authorized. |
