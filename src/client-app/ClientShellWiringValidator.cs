@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientShellWiringValidator.cs
 // Created:  2026-09-04
-// Modified: 2026-10-05 (PR #470 review: refuse roots under inactive ancestors)
+// Modified: 2026-11-03 (P7b: validate all seven screen roots)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
 //           Code Standards #20 §12 rule 1
@@ -31,52 +31,56 @@ namespace TacticalDirector.ClientApp
             in ClientShellRootSnapshot matchView,
             in ClientShellRootSnapshot postMatchReport)
         {
-            if (mainMenu.InstanceId == 0 || tacticsSetup.InstanceId == 0 ||
-                matchView.InstanceId == 0 || postMatchReport.InstanceId == 0)
-            {
-                return ClientShellWiringFault.MissingRoot;
-            }
+            return ValidateRoots(in shell, new[] { mainMenu, tacticsSetup, matchView, postMatchReport });
+        }
 
-            if (mainMenu.InstanceId == tacticsSetup.InstanceId ||
-                mainMenu.InstanceId == matchView.InstanceId ||
-                mainMenu.InstanceId == postMatchReport.InstanceId ||
-                tacticsSetup.InstanceId == matchView.InstanceId ||
-                tacticsSetup.InstanceId == postMatchReport.InstanceId ||
-                matchView.InstanceId == postMatchReport.InstanceId)
-            {
-                return ClientShellWiringFault.DuplicateRoot;
-            }
+        /// <summary>
+        /// Validates the P7b shell and all seven roots, including every match/career cross-pair.
+        /// Validation occurs once during host bootstrap; all non-menu roots must be saved inactive.
+        /// </summary>
+        public static ClientShellWiringFault Validate(
+            in ClientShellRootSnapshot shell,
+            in ClientShellRootSnapshot mainMenu,
+            in ClientShellRootSnapshot tacticsSetup,
+            in ClientShellRootSnapshot matchView,
+            in ClientShellRootSnapshot postMatchReport,
+            in ClientShellRootSnapshot careerHome,
+            in ClientShellRootSnapshot newCareer,
+            in ClientShellRootSnapshot loadCareer)
+        {
+            return ValidateRoots(in shell,
+                new[] { mainMenu, tacticsSetup, matchView, postMatchReport, careerHome, newCareer, loadCareer });
+        }
 
-            if (IsNested(in mainMenu, in tacticsSetup) ||
-                IsNested(in mainMenu, in matchView) ||
-                IsNested(in mainMenu, in postMatchReport) ||
-                IsNested(in tacticsSetup, in matchView) ||
-                IsNested(in tacticsSetup, in postMatchReport) ||
-                IsNested(in matchView, in postMatchReport))
-            {
-                return ClientShellWiringFault.NestedRoot;
-            }
+        private static ClientShellWiringFault ValidateRoots(
+            in ClientShellRootSnapshot shell, ClientShellRootSnapshot[] roots)
+        {
+            // Preserve the existing fault precedence across the entire root set.
+            for (int i = 0; i < roots.Length; i++)
+                if (roots[i].InstanceId == 0)
+                    return ClientShellWiringFault.MissingRoot;
 
-            if (IsShellInside(in shell, in mainMenu) ||
-                IsShellInside(in shell, in tacticsSetup) ||
-                IsShellInside(in shell, in matchView) ||
-                IsShellInside(in shell, in postMatchReport))
-            {
-                return ClientShellWiringFault.ShellInsideScreenRoot;
-            }
+            for (int i = 0; i < roots.Length; i++)
+                for (int j = i + 1; j < roots.Length; j++)
+                    if (roots[i].InstanceId == roots[j].InstanceId)
+                        return ClientShellWiringFault.DuplicateRoot;
 
-            // The shell owns visibility only by toggling the roots themselves; a root under an
-            // inactive ancestor would stay hidden after SetActive(true) and present a blank screen.
-            if (!mainMenu.AreAncestorsActive || !tacticsSetup.AreAncestorsActive ||
-                !matchView.AreAncestorsActive || !postMatchReport.AreAncestorsActive)
-            {
-                return ClientShellWiringFault.RootUnderInactiveAncestor;
-            }
+            for (int i = 0; i < roots.Length; i++)
+                for (int j = i + 1; j < roots.Length; j++)
+                    if (IsNested(in roots[i], in roots[j]))
+                        return ClientShellWiringFault.NestedRoot;
 
-            if (tacticsSetup.IsActiveSelf || matchView.IsActiveSelf || postMatchReport.IsActiveSelf)
-            {
-                return ClientShellWiringFault.NonMainRootInitiallyActive;
-            }
+            for (int i = 0; i < roots.Length; i++)
+                if (IsShellInside(in shell, in roots[i]))
+                    return ClientShellWiringFault.ShellInsideScreenRoot;
+
+            for (int i = 0; i < roots.Length; i++)
+                if (!roots[i].AreAncestorsActive)
+                    return ClientShellWiringFault.RootUnderInactiveAncestor;
+
+            for (int i = 1; i < roots.Length; i++)
+                if (roots[i].IsActiveSelf)
+                    return ClientShellWiringFault.NonMainRootInitiallyActive;
 
             return ClientShellWiringFault.None;
         }
@@ -99,4 +103,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | non-main activeSelf is UI hygiene, never a P4b lifecycle guard.|
 // | 1.1     | 2026-10-05 | —      | PR #470 review (Codex P2): refuse any root beneath an inactive |
 // |         |            |        | ancestor, checked after shell containment.                     |
+// | 1.2     | 2026-11-03 | —      | P7b seven-root overload with shared fault precedence.         |
 #endregion

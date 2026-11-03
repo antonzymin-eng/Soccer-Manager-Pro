@@ -1,5 +1,54 @@
 # CLAUDE.md — Change Log
 
+> **November 3 — delegation API/result contract.** Remote main remains `1d3cebf3`; active proposal
+> v0.5 defines immutable fixture/staff/discipline inputs, completed record and commit/save receipts,
+> one-way takeover operations, #44 merge rules, distinct fault recovery, and 12 planned acceptance
+> cases. No source/format change or test execution is claimed; canonical owner amendments remain due.
+
+> **November 3 — user clarifications and defaults.** Active delegated-completion proposal v0.4
+> records recommended defaults authorized (opponent archetype 0), session disciplinary baseline-in /
+> completed-record-out with no career-level live updates, no in-match serialization, and no user
+> ability to join/take over a delegated match. Internal thread join is explicitly unrelated to player
+> entry. Injury-dependent eligibility and Home saving on fixture days remain. Documentation only.
+
+> **November 3 — delegated-completion proposal consolidated.** Live remote main rechecked at
+> `1d3cebf3`; the current session proposal records selected assistant/coach takeover, same-match
+> background completion, injury-dependent eligibility and no active-match saving. Opponent AI,
+> return-to-player-control and normal-exit choices are now answered: adaptive opponent, delegation
+> final for the match, finish/save/exit, and Play or selected-coach whole-match delegation before
+> kickoff. The shared transition table and remaining staff/medical/profile/API/fault work are recorded;
+> none of those technical details is treated as implemented or implicitly approved. No code or approval change.
+
+> **November 3 user direction — delegated simulate remainder.** The player selects the assistant
+> manager or another eligible club coach to manage the remaining match in accelerated simulation.
+> The local contract clarification records same-engine state preservation, real staff selection,
+> reviewed staff-to-decision mapping, tactical/substitution behavior, safe ownership handoff and
+> completion locks. Staff roster/assistant assignment and a takeover policy are absent dependencies;
+> no runtime behavior, remote-main draft, staff subsystem or schema is changed by this documentation.
+
+
+> **November 3 remote-main correction:** live main `1d3cebf3` (PR #536), 21 commits beyond the local
+> baseline, contains D-P7-6 amendment draft v0.6: no mid-match saves, abandon to Career Home with round
+> unplayed, automatic XI. The local alternative v0.1–v0.3 wrongly retained superseded resume scope;
+> v0.4 withdraws it and maps its requirements to the remote draft. Resume-specific local S1 delta
+> requirements are withdrawn. Source work is preserved; no merge/reset/runtime change performed.
+
+
+> **November 3, 2026 — Career-lane start and P7b host-free composition.** Detailed D-P7-6 v0.3
+> remains PROPOSED; repository cross-check corrects full-command-journal persistence and dependency
+> direction, and identifies boot/fatigue, fold/identity/report and rollback/transaction gaps.
+> Draft §9 turns those gaps into C-01–C-12 proposed obligations with owners and acceptance evidence;
+> normal resume must retain report aggregate continuity, while real observer faults preserve partial coverage. P7b now has seven-screen visibility/root validation, a worker-backed
+> `ClientCareerCoordinator`, cached UI-only publication, guarded navigation/duplicate suppression,
+> persistence failure/retry and shutdown handling. `ClientMatchCoordinator` optionally composes the
+> career registrations and polls completion even without a match context. All matchday effects still
+> use the existing synchronous season seam; no interactive career edge is added. S1 Gate-A v0.2 is an
+> unadopted delta; recruitment remains deferred by the user. ClientApp: **218 passed / 0 failed /
+> 3 diagnostic skips**, documented host-crash `S0DemoFixtureComparisonTests` fixture excluded;
+> supplemental Linux evidence only. No engine/schema/RNG/Unity scene change. An opt-in career UGUI candidate now binds the cached views with
+> shared layout/focus and isolated career text. Default scene is unchanged. Pinned Unity compile/runtime and the full repository policy gate remain outstanding.
+
+
 > **Created:** July 31, 2026
 > **Purpose:** The `**Last Updated (prior):**` entry chain formerly carried in the header of
 > `CLAUDE.md`. Newest first; each entry records what landed, what was measured, and

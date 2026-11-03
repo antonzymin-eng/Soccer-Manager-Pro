@@ -1,6 +1,6 @@
 // File:     src/client-app/S0TextRole.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-11-03
 // Author:   —
 // Spec:     S0 binding contracts §4, Code Standards #20
 // Purpose:  Immutable identity, base pattern and typed positional schema for a client-owned text role.
@@ -15,8 +15,13 @@ namespace TacticalDirector.ClientApp
     {
         /// <summary>Creates a client-owned schema; construction also validates its base pattern.</summary>
         public S0TextRole(string suffix, string basePattern, string argumentTypes)
+            : this("ui.s0.", suffix, basePattern, argumentTypes)
         {
-            Key = new LocalizationKey("ui.s0." + suffix);
+        }
+
+        internal S0TextRole(string prefix, string suffix, string basePattern, string argumentTypes)
+        {
+            Key = new LocalizationKey(prefix + suffix);
             BasePattern = basePattern ?? throw new ArgumentNullException(nameof(basePattern));
             ArgumentTypes = argumentTypes ?? throw new ArgumentNullException(nameof(argumentTypes));
             foreach (char type in ArgumentTypes)
@@ -36,4 +41,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Typed S0 static/pattern schema. |
+// | 1.1 | 2026-11-03 | — | Reuse typed schemas in a separate career namespace. |
 #endregion

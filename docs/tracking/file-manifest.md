@@ -1,6 +1,24 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 2, 2026 — **Working sequence to Early Access (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (two live client-design version pointers v0.30 → v0.31; no entry added or archived), `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 3, 2026 — Added `docs/tracking/d-p7-6-delegated-completion-proposal.md` v0.5: current user scope, pending decisions and owner dependencies against live remote main v0.6. No source or approval change.
+
+**Last Updated (prior):** November 3, 2026 — **Career-lane start, not completion.** Added
+`docs/tracking/d-p7-6-interactive-career-contract.md` v0.4 (SUPERSEDED; resume scope withdrawn after live remote-main check at 1d3cebf3; remote v0.6 is the current draft),
+`docs/design/ux-s1-recruitment.md` v0.1 (DEFERRED by user), and
+`docs/agent-guides/unity-career-context.md` v0.1. Modified the client design (v0.32), maintained client-version pointers in roadmap/open issues, S1 Gate-A audit
+(v0.2, delta prepared but not adopted), `src/client-app/ClientScreenVisibility.cs` (v1.1),
+`src/client-app/tests/ClientScreenVisibilityTests.cs` (v1.2), changelog and this manifest.
+P7b continuation adds `src/client-app/ClientCareerCoordinator.cs` and its `.meta`, plus
+`src/client-app/tests/ClientCareerCoordinatorTests.cs` and its `.meta`. Extends `ClientShellWiringValidator`
+(v1.2), `ClientMatchCoordinator` (v1.2), `CareerHomeViewModel` (v1.1), and their wiring/lifecycle tests.
+ClientApp: 218 passed / 0 failed / 3 diagnostic skips, documented host-crash fixture excluded.
+UI continuation adds `src/client-app/CareerScreenText.cs`, `tests/CareerScreenTextTests.cs` and their
+metas, plus `src/match-client-unity/S0ScreensBehaviour.Career.cs` and its meta. Updates the shared typed
+formatter/role schema, shell/screens, Unity asmdef (direct SeasonSave reference) and binding README.
+UGUI is an opt-in candidate; default scene/settings/schema/RNG unchanged. Pinned-host compile/runtime
+and S1 copy/layout acceptance remain due.
+
+**Last Updated (prior):** November 2, 2026 — **Working sequence to Early Access (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.83 → v0.84, `docs/tracking/interactive-unity-client-design.md` v0.30 → v0.31, `docs/tracking/open-issues.md` (two live client-design version pointers v0.30 → v0.31; no entry added or archived), `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 2, 2026 — **PR #526 merges remote main `a1dfc07` (PRs #529 and #527).** No paths added or removed by the merge resolution. **Modified (conflict resolution only):** `docs/tracking/CHANGELOG.md`, `PROGRESS.md`, `spec-error-log.md` (v2.95 → v2.96), `docs/agent-guides/project-reference.md` and this manifest. The August 17 entry's "since advanced to" pointers take main's Code Standards versions (§2 v1.10, §3 v1.20, §5 v1.9) and PR #526's tracking versions (injury/aging design v0.8, wiring backlog v1.40), each re-derived from the merged tree.
 
@@ -3719,7 +3737,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.31). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.32). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
@@ -3736,11 +3754,15 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `ClientScreenVisibility.cs` | Exhaustive four-screen visibility projection; unknown ids fail loud |
+| `ClientCareerCoordinator.cs` | P7b worker-owned career operations, cached immutable UI views, guarded completion/navigation and shutdown |
+| `ClientCareerCoordinator.cs.meta` | Stable Unity identity for the career coordinator |
+| `tests/ClientCareerCoordinatorTests.cs` | Worker publication, busy exclusion, load/save failure/retry, shared career navigation and shutdown locks |
+| `tests/ClientCareerCoordinatorTests.cs.meta` | Stable Unity identity for the coordinator tests |
+| `ClientScreenVisibility.cs` | Exhaustive seven-screen visibility projection (P7b foundation); unknown ids fail loud |
 | `ClientScreenVisibility.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `tests/ClientShellWiringValidatorTests.cs` | v1.1: nine host-free validation/immutability cases; passed in Unity EditMode (ClientApp.Tests 26/26) |
 | `tests/ClientShellWiringValidatorTests.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `tests/ClientScreenVisibilityTests.cs` | Two host-free exhaustive/unknown-id cases; refreshed-head execution due in CI |
+| `tests/ClientScreenVisibilityTests.cs` | Seven-screen visibility, invalid ids and career-navigation presentation locks |
 | `tests/ClientScreenVisibilityTests.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `tests/client-app-tests.asmdef` | `TacticalDirector.ClientApp.Tests` (Editor-only) |
 | `tests/ClientScreensTests.cs` | Id distinctness, zero-value safety, constant wiring (3) |
@@ -4148,7 +4170,7 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
 | `docs/design/ux-validation-protocol.md` | Validation packet v0.37: execution pointer v1.30 and #470 foundation merge/next implementation; original approvals/evidence and all I-Q planned status unchanged |
-| `docs/design/ux-s1-gate-a-audit.md` | S1 Gate-A capability audit v0.1 against the §5-P7 landing; §7.4 product decisions recorded as resolved |
+| `docs/design/ux-s1-gate-a-audit.md` | S1 Gate-A audit v0.2: October 18 baseline plus unadopted interactive delta; §7.4 product decisions recorded as resolved |
 | `docs/design/ux-s0-pm1-journey.md` | S0 journey v0.37: Gate-J owner decisions J-01 (greyed goalkeeper pairs with a reason) and J-02 (engine-typed refusal named) in §§14.4–14.5; v0.36: owner-approved keyboard pitch inspection stop added to §9.3/§14 focus order (October 8); v0.35: #470 foundation merged; next consumed lifecycle/identity plan v0.2; reviewed H/I contracts and pins unchanged; all I-Q QA planned and Gate J open |
 | `docs/design/ux-s0-binding-contracts.md` | S0 binding contracts v0.10 (v0.10: `action.close` and the new `action.partial` wording, owner decisions October 28, 151 roles; v0.9: disclosure-title binding note, owner decision October 28; v0.8: owner approved the v0.7 copy unchanged, October 28; v0.7: three goalkeeper-pair reasons and six typed refusal rows, 150 roles, copy pending owner approval; v0.6: deferred-substitution copy for Match Flow §6.2.6, PR #505). v0.5: pitch descriptions read-only with pointer/keyboard display (owner decision October 8); v0.4: reviewed authored fixture/current-frame identity/history, fixed scale/reflow, typed copy/provider/landing contracts; TO BUILD, Gate-I handoff PASS |
 | `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |
