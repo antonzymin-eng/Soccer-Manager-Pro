@@ -1,0 +1,22 @@
+# Source identity — pinned-host Unity run at ea84be27 (PR #526 final head)
+# The run script counted `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`
+# lines before the compile, after the compile and after the EditMode runs; tree hashes are those of the commit.
+
+commit: ea84be27bd44d9ee8d593d81027324d408137a91
+parents: a1dfc0710cc48a49931901b184d76b55d6ba9715
+tree repo: 0069db733a3b2c3faf93fc6a28a30f37975a441a
+tree src: 78e3bd0c6a605b4ebc2c5c5a11f5647f1bbb6369
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+merge of PR #526: 9be79639453c3bbf623538853b4abc161901bd86
+src/Packages/ProjectSettings/Assets at 9be79639: identical to ea84be27bd44d9ee8d593d81027324d408137a91
+src/Packages/ProjectSettings/Assets at 4bcc2ae1: identical to ea84be27bd44d9ee8d593d81027324d408137a91
+src/Packages/ProjectSettings/Assets at 32ff375f: identical to ea84be27bd44d9ee8d593d81027324d408137a91
+porcelain lines before compile: 0
+porcelain lines after compile: 0
+porcelain lines after EditMode: 0
+Library present before compile: no (fresh detached worktree, so the compile is a full import)
+compile start: 2026-11-03T14:56:58Z
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src
