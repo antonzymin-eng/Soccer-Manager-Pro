@@ -1,6 +1,7 @@
 // File:     src/living-world/WorldStore.cs
 // Created:  2026-07-03
-// Modified: 2026-07-25
+// Modified: 2026-11-02 (doc-only: the WorldSeed summary no longer says squads are not persisted — v1.8)
+// Prior-Modified: 2026-07-25
 //           the KD-7 latch (WORLD_STORE_FORMAT_VERSION 2 → 3); the E1 flag-on fail-loud is dropped —
 //           a flag-on run now round-trips deterministically)
 //           nullable ArcCanonSource seam; AdvanceDay passes canon per tick; SetArcCanon / a canon ctor
@@ -75,12 +76,13 @@ namespace TacticalDirector.LivingWorld
         /// The seed this world was created from. Already serialized by <see cref="Snapshot"/> and
         /// restored by <see cref="Restore(byte[], ArcCanonSource)"/> — this only makes it READABLE.
         /// <para>
-        /// Load-bearing beyond this assembly: it is the only value in a save file from which a league's
-        /// rosters can be regenerated. Squads are not persisted, so resuming a career means calling
-        /// <c>LeagueBootstrap.Generate(world.WorldSeed, season.ClubCount)</c> to rebuild the
-        /// <c>ISquadProvider</c> that <c>SeasonSaveManager.Load</c> needs. Without an accessor the seed
-        /// was write-only and a saved career could not be reconstructed at all
-        /// (<c>league-bootstrap-design.md</c> KD-9 / AR-5 M-1).
+        /// Load-bearing beyond this assembly. Until #28 T1 (season frame v5) it was the only value in a
+        /// save from which a league's rosters could be regenerated. Since then the evolving roster is
+        /// persisted in the frame's <c>PROG</c> block (#28 KD-4) and a resumed career reads it from there;
+        /// the seed still rebuilds the league's club identity on resume
+        /// (<c>LeagueBootstrap.Generate(world.WorldSeed, season.ClubCount)</c>) and keys seed-derived
+        /// draws such as #41's injury occurrence. Without an accessor the seed was write-only and a saved
+        /// career could not be reconstructed at all (<c>league-bootstrap-design.md</c> KD-9 / AR-5 M-1).
         /// </para>
         /// </summary>
         public ulong WorldSeed => _worldSeed;
@@ -543,4 +545,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | was already serialized and restored but write-only, so a saved |
 // |         |            |        | career could not rebuild the ISquadProvider its rosters are    |
 // |         |            |        | regenerated from. Read-only; no behaviour change.              |
+// | 1.8     | 2026-11-02 | —      | Doc-only: the WorldSeed summary said squads are not persisted; |
+// |         |            |        | the PROG block has carried the roster since #28 T1 (frame v5). |
+// |         |            |        | Restated as club identity + seed-keyed draws. No code change.  |
 #endregion

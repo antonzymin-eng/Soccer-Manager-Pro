@@ -1,8 +1,8 @@
 # Personalities, Morale & Squad Dynamics #33 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 30, 2026 (v0.3 — §7.4 records implementation-time findings under roadmap C6; prior: July 23, 2026 (v0.2 — AR-1 fix pass; prior v0.1 initial))
-**Version:** 0.3
+**Last Updated:** November 2, 2026 (v0.4 — §7.5 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.3 — §7.4 records implementation-time findings under roadmap C6; prior: July 23, 2026 (v0.2 — AR-1 fix pass; prior v0.1 initial)))
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -93,10 +93,35 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.5 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.4. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **Transfers are live, and the club-scoped pair store has no transfer rule.** Per-player `MoraleState` /
+  `PersonalityProfile` are keyed by `PlayerId` (FR-HS-002), so they follow a transferred player, as #31
+  FR-TX-023 now asserts. The pairwise store, however, is club-scoped (FR-HS-003), and FR-HS-027's roster
+  lifecycle covers regen and retirement only. A transferred player's edges would stay in his old club's store
+  as cross-club pairs, which the minimal tier does not model. Define the transfer rule (drop or move his pairs)
+  and its call site at `SeasonLoop.SubmitTransferBid` by T2. FR-HS-027's "lands on whoever next holds that
+  `PlayerId`" rationale is also obsolete: ids are never reassigned.
+
+- **#28's season boundary is live and staged (ERR-028-025, October 19, 2026).** #30 §3.5 now prepares
+  #28's boundary plan at step (d), commits it after (e), and then drops each retiree's per-player state by
+  iterating `boundary.RetiredPlayerIds` (the #44 FR-DC-013 line); anything that can fail is staged before the
+  commits, as (d′) and (d″) are. Hook the FR-HS-027 retire-remove (and the regen-insert, which reads the plan's planned rosters) the same way at T2, so a roll that
+  fails before the commits leaves this spec's state untouched and a re-run does not drop twice.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (L): §7.3 records the `SetPlayerEdgeMirror` player↔player caller obligation. |
 | 0.3 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (save-block integration). No normative text changed. |
+| 0.4 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: transfers and the club-scoped pair store; #28 staged season boundary). No normative text changed. |
 #endregion

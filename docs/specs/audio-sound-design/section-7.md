@@ -1,8 +1,8 @@
 # Audio & Sound Design #51 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 27, 2026
-**Last Updated:** September 6, 2026 (v0.2 — record ERR-051-001 for T0 discharge)
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.6 records implementation-time findings under roadmap C6; prior: September 6, 2026 (v0.2 — record ERR-051-001 for T0 discharge))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -112,9 +112,28 @@ This row is the C6 durable record, not a partial fix. It exists so the T0 implem
 finding merely because the approved normative sections are intentionally left unchanged until executable
 proof exists.
 
+## 7.6 Findings recorded against implemented code (roadmap C6, November 2, 2026)
+
+Recorded, not applied. This spec has no `src/` assembly, so under roadmap C6 these findings are discharged
+in the landing named in each bullet, in the same commit as the code they govern. Found by the November 2, 2026
+full check of this spec against implemented code on `main`. The normative text above is unchanged.
+
+- **The `#49 → #51` edge no longer matches #49.** §4.1's graph, §4.5, §5.6's directional layer scan and §7.1
+  T3 ("#49 gains the `→ #51` reference") rest on #49's core referencing each built producer, "the same
+  relationship it already has to `living-world`". ERR-049-002 (September 11, 2026) corrected #49 to a
+  generic core that references nothing (`src/localization/localization.asmdef` has no references) plus a
+  per-producer **sibling boundary adapter** that references both the core and the producer (#49 §4, the
+  `localization-boundary` pattern). At T3, route captions through such a boundary adapter referencing
+  `TacticalDirector.Localization` and `TacticalDirector.Audio`; #51 and #49's core both stay leaves, and §5.6's
+  scan should assert that shape. KD-4 (a #51-owned `CaptionId`) is unaffected.
+
+- **Re-verified, unchanged:** there is still no audio code in `src/` (§1.4(a)), and no client-local settings
+  store exists or is owned by any spec (§1.4(e)), so KD-3's in-memory fallback remains the live case.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §7 (T0–T3, with the argument that T0 is where **every rule the spec enforces** lives, since all of them are construction-time refusals — so a playback-first ordering would land the sound before the discipline; the completeness check pinned to arrive **with** the adapter rather than after it; the predicted `CueParams` CS0104 failure and why the compile error is the good case; deep-tier extensions incl. a11y beyond captions; the not-planned list, which carries the two "natural fix" traps — moving `CaptionId` into #49, and reading sim state for a mix decision; risks R-1..R-6, with R-6 added because ERR-048-001 changes no code and is therefore the back-prop most likely to be deferred, at the price of the next implementer building the forbidden reference in good faith). Status IN REVIEW. |
 | 0.2 | 2026-09-06 | — | **C6 record-only landing for ERR-051-001.** Added R-7 and §7.5: `CueEntry` names #51-owned `AssetRef` / `CueParams`, but §4.2 inventories neither and neither shape is defined; therefore the original CS0104 pre-check omitted them too. This version deliberately does **not** patch normative §2/§4. The type definitions + §2/§4/Appendix reconciliation + collision re-scan + regression/mutation proof are pinned to land together at T0, when the assembly makes the fix executable. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded from a full check against implemented code (#49 reference direction after ERR-049-002). No normative text changed. |
 #endregion

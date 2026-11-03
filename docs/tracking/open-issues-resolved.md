@@ -8,6 +8,14 @@
 
 ---
 
+<a id="pr526-host-evidence-gap"></a>
+
+- **PR #526 merged without final-head pinned-host evidence; its post-merge Unity validation is the first host job and precedes the pre-C control. OPEN; process exception.** *Opened November 2, 2026.* PR #526 (head `ea84be2`, merge `9be7963`) changes `src/match-engine/MatchEngine.cs` (a null-by-default `TestOnly_HeaderArrivalObserver` before `Heading.Update`, with a `SerializeWorldState` exclusion comment) and adds MatchEngine `HeaderReachabilityDiagnosticTests` and ClientApp `S0MovementDiagnosticTests`. D-01a's ratified host-evidence scope (roadmap §5.1, v0.79) requires a Unity compile of every source-affecting final head plus filtered EditMode. The PR body states that no fresh Unity Editor compile or EditMode run was performed, and no `evidence/host-*` record covers `ea84be2` or `9be7963`. **Remainder:** Unity 6000.4.9f1 forced-reimport compile at `4bcc2ae` (file-identical to `9be7963`), `HeaderReachabilityDiagnosticTests` (no whole-assembly MatchEngine run: behaviour and layout are unchanged) and the ClientApp test assembly, archived as evidence that names the late-validation exception ([roadmap §5.1a](path-to-playable-roadmap.md), shared item 1). Post-merge evidence closes the technical gap; it does not make the pre-merge requirement retroactively met. Do not revert automatically: the change is observation-only, and the PR body reports its Linux 18,000-frame snapshot-neutrality test passing on the source-identical head `47213356`.
+
+
+> **RESOLVED November 3, 2026:** PR #535 supplies the final-head pinned-host compile and required EditMode evidence at `ea84be27`: 0 compiler errors, 207 passed, 0 failed, 4 opt-in skips; whole ClientApp assembly included. The S0 opt-in measurement did not execute and is not claimed as measured. [Evidence](evidence/host-ea84be27-20261103/README.md). This closes the technical gap; the late-validation process exception remains historical.
+
+
 <a id="transfers-t2-capacity"></a>
 
 > **[RESOLVED and ARCHIVED October 20, 2026 — #31 T2 landed on `claude/career-season-save-086ae3`.]** The owner decision (Oct 19) landed as ERR-031-004/005; T2 then wired the production port, the bid seam, genesis seeding and the roll step (d″). The genesis contract-expiry throw was ERR-031-009 (an un-contracted player is sellable). The follow-ups that remain open are filed separately: [`regen-club-strength`](open-issues.md#regen-club-strength) and [`genesis-transfer-budget`](open-issues.md#genesis-transfer-budget).

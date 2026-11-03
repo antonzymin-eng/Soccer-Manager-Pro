@@ -506,6 +506,14 @@ anchor and shape treatment block PM-2 closeout. KD-7a remains HELD until its own
 explicit adoption decision are met; a mean-parameter fit does not cure ERR-030-034 or explain the
 separate draw deficit. No model family, acceptance bar or `[GT]` is changed by this scheduling note.
 
+**D-09 decided November 3, 2026 (Anton Zymin; roadmap v0.86).** With no Early Access planned (D-14),
+ERR-030-034's distribution-shape gap is **recorded as a known PM-2 limitation, not a PM-2 blocker**.
+Before PM-2, the A4a corpus is recaptured on the PM-2 engine and checked against KD-8's mean bar;
+the three means are refitted only if that bar fails. PM-2 acceptance states the shape limitation
+(no silent PASS). The governed final recapture, the shape treatment and the lock happen once in the
+depth phase, after the engine stops changing. KD-7a stays HELD; no model family, acceptance bar or
+`[GT]` changes.
+
 **Fit + lock.** Least-squares over the three KD-7 parameters against the per-bucket means. The lock
 is **not** a statistical sample at test time (the #27 AR-2 precedent: "direct constant assertions,
 not statistical sampling") — it is a pinned table: for each bucket, the quick-sim's mean goals over
@@ -886,3 +894,4 @@ Windows certification host.
 | 1.9 | 2026-10-09 | — | PR #493 review corrections: capture budget starts from measured ~90 s/match (~5 worker-hours for 198), with current throughput/added wiring cost remeasured. Marks the old 154 s universal lower-bound estimate as disproved; retains selected-anchor, shape and adoption gates. |
 | 1.10 | 2026-10-19 | — | **ERR-031-004** (owner decision Oct 19, 2026): KD-6 template 3/8/8/6 = 25 → 3/8/8/4 = 23, strictly below the `CLUB_SQUAD_SIZE` cap so #31 transfers can complete; F3 restated (sum ≥ matchday 18 and < cap). Players 0–20 byte-identical; golden digests re-pinned. |
 | 1.11 | 2026-10-20 | — | **P-M6 / P-L2 / P-L3.** KD-6 template 3/8/8/4 → **3/8/7/5** (still 23): with 4 forwards an F433 club needed only two forwards unavailable to force `AvailabilityComposition`'s press-back-in; spare per line over GK1/DF4/MF5/FW3 is now 2/4/2/2 (min 2). Players 0–17 byte-identical, index 18 becomes a forward; golden digests re-pinned. Stale "25-player" text restated as the template sum (23). The "quick-sim keys on the XI differential only, so the A4a corpus is unaffected" claim is withdrawn as unsupported: the XI is chosen from the reduced pool, the rating distribution moved, and the step-10 recapture is required. |
+| 1.12 | 2026-11-03 | — | **D-09 decided** (roadmap v0.86): ERR-030-034's shape gap is a known PM-2 limitation, not a blocker. Before PM-2: recapture and KD-8 mean-bar check, refitting the means only on failure. The governed final recapture, shape treatment and lock move to the depth phase. KD-7a stays HELD; no model, bar or `[GT]` change. |
