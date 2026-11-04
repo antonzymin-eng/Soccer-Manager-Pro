@@ -1,8 +1,8 @@
 # Staff & Backroom #34 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.4 records implementation-time findings under roadmap C6; prior: July 23, 2026 (v0.1 — initial))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.5 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.4 records implementation-time findings under roadmap C6; prior: July 23, 2026 (v0.1 — initial)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -110,9 +110,24 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.5 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.4. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **KD-7's contrast is out of date.** §1 KD-7 justifies the stable `StaffId` as "a deliberate, simpler
+  divergence from #31's KD-7 (players re-key because `PlayerId` is club-scoped …)". Since ERR-031-005 players
+  do not re-key either. #34's design is unchanged and now matches #31's; correct the sentence at T0.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §7 (T-phase plan T0–T3 + deferred extensions + downstream seam contracts), promoted from design supplement v0.4. Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.4: C6 findings recorded from the wide check against implemented code (per-club modifier routing, projection names, save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.5: C6 findings recorded after ERR-031-005 (ERR-031-005: KD-7 contrast rationale). No normative text changed. |
 #endregion

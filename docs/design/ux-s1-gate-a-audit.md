@@ -1,8 +1,8 @@
 # System XI — S1 Gate-A Capability Audit (PM-2 season loop)
 
 **Created:** October 18, 2026\
-**Last Updated:** November 3, 2026\
-**Version:** 0.2\
+**Last Updated:** November 4, 2026\
+**Version:** 0.3\
 **Status:** ORIGINAL GATE-A AUDIT RECORDED; INTERACTIVE DELTA PREPARED, NOT ADOPTED; Gates B–I not started\
 **Purpose:** classify every S1 capability `ux-detailed-plan.md` §7.3 lists against the tree of the day,
 so S1 design neither assumes #30 is missing nor assumes that because #30 exists the UI exists.\
@@ -64,34 +64,23 @@ until it runs on the pinned host.
   loop" cannot be run against the career path until the D-P7-6 seam lands; until then a round completes
   on Career Home. Gate G planning must either wait for that seam or record the substitution.
 
-## Remote-main correction — November 3
+## 5. Current delta preparation — not adopted
 
-The local delta below was based on stale main `32ff375f`. Live remote main `1d3cebf3` and its
-D-P7-6 amendment v0.6 prohibit mid-match saves and replace unfinished-matchday resume with abandonment.
-Any resume-specific task or persistence requirement below is withdrawn. Subsequent user decisions are consolidated in
-[delegated completion v0.5](../tracking/d-p7-6-delegated-completion-proposal.md): plan Play or
-selected-coach delegation before kickoff, irreversible selected-coach remainder simulation, normal
-finish/save/exit, and no user entry to a delegated match. No active-match save; Home saving before/after
-the match on the same calendar day remains. Do not use the remote abandon/restart choice where these
-new user directions supersede it.
-The independent P7b binding work and deferred recruitment remain. The delta is still unadopted.
-
-## 5. November 3 delta preparation — historical, superseded where noted
-
-The October 18 rows above are retained as historical audit evidence. Baseline inspected for this
-preparation: `32ff375f7b2b74ff5e2c95e4c19aedb1d737efce`. Roadmap D-11 now requires interactive managed
-fixtures and unfinished-matchday resume. The [D-P7-6 draft](../tracking/d-p7-6-interactive-career-contract.md)
-is PROPOSED. Per §5-P7, adopt this delta only after contract approval; then verify the landing's actual
-symbols and host evidence before advancing any capability label. A contract approval alone does not
-make its implementation `LIVE`.
+The October 18 audit above is historical evidence. Recheck it against the opt-in P7b candidate and
+[canonical D-P7-6 amendment v0.7](../tracking/d-p7-6-interactive-career-match-amendment-draft.md).
+No active-match save or ordinary abandon/restart is planned. The player chooses Play or selected-coach
+whole-match delegation, may delegate the same match remainder irreversibly, and normal Exit finishes,
+saves, then exits. Home saving before/after a match on the same day remains available. Adopt the delta
+only after technical approval; verify actual source symbols and host evidence before classifying
+anything as LIVE. Product decisions alone do not prove implementation.
 
 | Original rows | Current evidence / change to re-check | Current disposition |
 |---|---|---|
-| 1–2 | `CareerHomeSource`, `SeasonState.Fixtures`, `SeasonCalendar.DayOfRound` still own table/next-fixture data; no full fixture-list/calendar screen admitted | Existing data retained; presentation still absent |
+| 1–2 | `CareerHomeSource`, `SeasonState.Fixtures`, `SeasonCalendar.DayOfRound` still own table/next-fixture data; no full fixture-list/calendar screen admitted | Existing data retained; opt-in Home/table binding HOST-UNVERIFIED; full fixture list/calendar absent |
 | 3–5 | `CareerProgress.NextAction` and `SeasonCommandDispatcher` still resolve matchday synchronously | Current behavior `LIVE`; interactive begin/finish continuation `FUTURE-BLOCKED` on D-P7-6 |
-| 6–7 | `NewCareerSetup.Prepare/Select/Start` and `CareerSession.StartNew` remain club-only bootstrap | Existing host-free source retained; UGUI absent |
-| 8 | `SeasonSaveCodec` has optional match bytes; `SeasonLoop.ActiveMatch` cannot safely be captured concurrently; `CardLedgerFold` pending cards are not serialized | Between-round save supported; unfinished-matchday resume `FUTURE-BLOCKED`, not implied by the match flag |
-| 9 | `LoadCareerSource.TryContinue/TryLoad` and `CareerSaveSlots` retain loadable/incompatible/damaged handling; career resume refuses a match block | Existing picker source retained; pending-match route and restore validation absent |
+| 6–7 | `NewCareerSetup.Prepare/Select/Start` and `CareerSession.StartNew` remain club-only bootstrap | Existing host-free source retained; opt-in UGUI HOST-UNVERIFIED |
+| 8 | Career Home saves before/after a match; `CareerSaveSlots` refuses active match blocks | Between-round save LIVE; no in-match save/resume requirement |
+| 9 | `LoadCareerSource.TryContinue/TryLoad` and `CareerSaveSlots` retain loadable/incompatible/damaged handling; career resume refuses a match block | Existing picker source retained; opt-in browser HOST-UNVERIFIED; no pending-match restore route |
 | 10 | Seven screen ids/eight career moves; seven-root `ClientShellWiringValidator`; cached worker-backed `ClientCareerCoordinator`; optional seven-screen `ClientMatchCoordinator` composition. Linux ClientApp 218 passed / 3 diagnostic skips, documented host-crash fixture excluded; pinned Unity not run | P7b host-free composition plus opt-in UGUI candidate now exist; default scene remains four roots until host setup. All career runtime/copy/layout acceptance is unverified |
 | 11 | No Career Home → Tactics or Report → Career Home move exists; new named provenance-aware moves required | `FUTURE-BLOCKED` until approved seam implemented; no PM-1 return reuse |
 | 12 | No settings/a11y entry is admitted by the current career shell | Still `FUTURE-BLOCKED`; S1-T8 must remain in prototype coverage |
@@ -107,7 +96,7 @@ make its implementation `LIVE`.
 - Participants run at **Gate G after Gate F**. Gate F may use a host-free prototype, accurately labelled
   where behavior is simulated/future; a missing prescribed task fails readiness rather than shrinking
   the denominator. Gate G validates the design; Gate J verifies actual Unity implementation.
-- Prototype the interactive match/report/return and unfinished-matchday save/resume outcomes, including
+- Prototype the interactive match/report/return and selected-coach delegation, completed-round save and exit outcomes, including
   disabled, failure/retry and cancellation paths after the D-P7-6 contract is settled.
 - Retain the S1-specific two-independent-participant rule. S0 owner image approval does not waive it.
 
@@ -125,3 +114,5 @@ make its implementation `LIVE`.
 |---|---|---|
 | 0.1 | 2026-10-18 | Initial S1 Gate-A audit against the §5-P7 landing: 13 capabilities classified with symbol evidence; §7.4 product decisions recorded as resolved by the owner; Gate B–I consequences. |
 | 0.2 | 2026-11-03 | Preserve the October 18 audit; prepare, but do not adopt, the D-11 interactive delta, source evidence, task consequences and adoption checklist. |
+
+| 0.3 | 2026-11-04 | Replace superseded resume delta with canonical delegation/save/exit scope and source-backed P7b classifications; original October audit retained and current delta still unadopted. |

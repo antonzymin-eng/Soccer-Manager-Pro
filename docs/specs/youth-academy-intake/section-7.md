@@ -1,8 +1,8 @@
 # Youth Academy & Intake #42 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.1 — initial))
-**Version:** 0.2
+**Last Updated:** November 2, 2026 (v0.3 — §7.6 records ERR-031-005 consequences under roadmap C6; prior: October 30, 2026 (v0.2 — §7.5 records implementation-time findings under roadmap C6; prior: July 24, 2026 (v0.1 — initial)))
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -67,7 +67,7 @@ in the landing named in each bullet, in the same commit as the code they govern.
 2026 wide check of assembly-less specs against implemented code on `main`. The normative text above is
 unchanged.
 
-- **R-3 update — the existing #28 cursor.** #28's `ProgressionEngine` already persists a global player-id
+- **R-3 update — the existing #28 cursor.** *(Superseded November 2, 2026 — see §7.6.)* #28's `ProgressionEngine` already persists a global player-id
   cursor (`NextPlayerId`, in the `PROG` block), set to the highest seeded id + 1. It is read-only: there is no
   public allocation operation, and #28's season-boundary regen (`RunSeasonBoundary`) has not landed. The
   §4.6 contract therefore still needs a real design at T2 — a shared allocation operation over that cursor
@@ -88,9 +88,30 @@ unchanged.
   (d) Composition in `client-app`'s `CareerSession` (`StartNew` / `Resume`, landed October 18, 2026) as well as
   in `SeasonLoop` — a second composition root this plan predates.
 
+## 7.6 Findings recorded after ERR-031-005 (roadmap C6, November 2, 2026)
+
+Recorded, not applied (roadmap C6), on the same terms as §7.5. Cause: **ERR-031-005** (owner decision,
+October 19, 2026; #31 FR-TX-021..023 v0.8) replaced the packed-id transfer **re-key** with a **re-home under
+the unchanged `PlayerId`**, deleted #31's `OnPlayerRekeyed` hook (FR-TX-022 is now a capacity preflight),
+ruled that nothing derives a club from an id, and made `ProgressionEngine.NextPlayerId` the career's single
+post-genesis id allocator. Transfers are live in careers (`SeasonLoop.SubmitTransferBid` →
+`SeasonTransferRoster`, #31 T2). ERR-031-005 corrected the specs that have code (#27, #28, #31, #44); this
+spec has none, so its affected text is listed here and rewritten at the landing named.
+
+- **The id-authority choice is made.** ERR-031-005 records the owner's decision that
+  `ProgressionEngine.NextPlayerId` is the career's **single** post-genesis allocator. That selects §4.6's "one
+  id authority" branch and supersedes §7.5's R-3 bullet, which left the choice open. FR-YA-027's own
+  serialized allocator (`AcademyState.NextYouthPlayerId`, §2.2; `AllocateYouthPlayerId`, §3; F6 as a
+  separate high-water check) conflicts with it. The cursor advances only inside #28's staged season boundary
+  (`ProgressionEngine.PrepareSeasonBoundary` → `SeasonBoundaryPlan.NextPlayerId` → `CommitSeasonBoundary`, both
+  `internal`; live since ERR-028-025, October 19, 2026). No allocation operation exists outside that boundary,
+  so T2 needs one on #28's store, usable on #42's intake day, that #42's prospects draw from. Rewrite FR-YA-027, §2.2, §3 and §4.6 at T0 (state shape) and T2 (allocation).
+  FR-YA-026's "never reused" is satisfied by the monotonic single allocator.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T0–T3 plan with T2 named as the first non-inert phase, deferred-by-design items, the explicit not-planned list incl. the no-#28-change rule, and the four carried risks incl. the shared `MaxRngStreams` bound). Status IN REVIEW. |
 | 0.2 | 2026-10-30 | — | §7.5: C6 findings recorded from the wide check against implemented code (R-3 player-id update, save-block integration). No normative text changed. |
+| 0.3 | 2026-11-02 | — | §7.6: C6 findings recorded after ERR-031-005 (ERR-031-005: the single id allocator); §7.5's superseded bullet marked. No normative text changed. |
 #endregion
