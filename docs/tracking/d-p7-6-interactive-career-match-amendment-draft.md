@@ -2,11 +2,13 @@
 
 **Created:** November 2, 2026\
 **Last Updated:** November 4, 2026\
-**Version:** 0.9\
-**Status:** PROPOSED technical contract; product decisions recorded in roadmap D-11. Not implemented
-or a normative spec. AR-3 FAILED v0.8 (4 High / 7 Medium / 9 Low). This revision proposes fixes;
-interactive career play/delegation are deferred until staff ships. Independent re-review, owning-spec
-amendments and technical approval remain due.\
+**Version:** 0.10\
+**Status:** PARKED (owner instruction, November 4, 2026). Technical content is unchanged from v0.9:
+a PROPOSED, unapproved contract for the feature roadmap D-11 defers until #34 staff ships. AR-3
+FAILED v0.8 (4 High / 7 Medium / 9 Low); v0.9's proposed fixes are unreviewed. No further review or
+revision until #34's T0 landing is scheduled (roadmap C6: do not harden ahead of an assembly). On
+unparking, re-verify the source baseline, then run an independent re-review before owning amendments
+or technical approval. Not implemented or a normative spec.\
 **Purpose:** define interactive managed fixtures, selected-coach delegated completion and no in-match
 saving in one contract for #30, with #26/#34/#41/#44/#37/#38 and client consequences. This revision
 replaces v0.6's ordinary live abandon/restart route. The automatic starting eleven is retained.
@@ -898,6 +900,7 @@ planned D-P7-6 cases or establish an AR pass. Recruitment remains deferred.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 2026-11-04 | **PARKED by owner instruction.** Status only; technical content identical to v0.9. The owner confirmed the §2.1/§2.2 quotations as their own answers. AR-3's findings against v0.8 stay recorded in §10; v0.9's proposed dispositions have not been independently reviewed. Resume (re-verify baseline, then independent re-review) when #34 T0 is scheduled. |
 | 0.9 | 2026-11-04 | Record failed independent AR-3 and propose domain-owned results, explicit fault/exit/pause contracts, restored stronger locks, precise amendment map, bounded records and full-match gate budget. Record owner answers: delegation deferred until staff, external queued policy and deterministic profile variety; interactive career play is also deferred and PM-2 retains Home resolution; re-review/sign-off required. |
 | 0.8 | 2026-11-04 | Trace product answers, restore explicit replay/finalizer/drain locks, map every v0.6 lock, specify full-time request outcomes and record author self-review. Independent review and technical approval remain open. |
 | 0.7 | 2026-11-04 | Consolidate confirmed selected-coach delegation, no in-match saving, injury-dependent eligibility and session records into the canonical draft and roadmap D-11; replace ordinary live abandonment, retain round/observer/guard obligations and identify owning amendments. Technical approval remains due. |

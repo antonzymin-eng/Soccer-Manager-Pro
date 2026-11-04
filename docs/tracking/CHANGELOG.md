@@ -12,7 +12,18 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **D-P7-6 independent AR-3 failed; v0.9 proposed fixes.**
+> **Last Updated:** November 4, 2026 — **D-P7-6 parked by the owner (documentation only).**
+> The owner confirmed that the D-11 answers quoted in D-P7-6 §2.1/§2.2 are their own and parked the
+> draft. D-P7-6 v0.10 changes status only (PARKED; technical content identical to v0.9): AR-3's
+> 4 High / 7 Medium / 9 Low against v0.8 stay recorded, and v0.9's proposed fixes are unreviewed. No
+> further review or revision until #34 T0 is scheduled (roadmap C6). Pointers updated: roadmap v0.92
+> (D-11 row, career-lane item 2, later-tranche bullet), client design v0.37 (§5-P7 D-P7-6 row),
+> career context v0.4, the #38 open-issues entry, and the client-design `now v0.37` citation chains
+> (roadmap, open issues, manifest; `tools/doc-consistency-check.py` PASS). PM-2 scope, ordering and S1 tasks unchanged.
+> No code, spec, schema, save format, RNG stream or host evidence changed. Gate not run (no source
+> change; ClientApp last measured at `7f81e48`: 224 passed / 0 failed / 3 skipped).
+
+> **Last Updated (prior):** November 4, 2026 — **D-P7-6 independent AR-3 failed; v0.9 proposed fixes.**
 > Record 4 High / 7 Medium / 9 Low findings, domain-owned collection/result authority, explicit fault/
 > failed-save/close recovery, acknowledged pause and one-owner accelerated playback. Restore stronger
 > preflight/save-byte/ban/attachment locks, exact owning amendment map, bounded records and a proposed
