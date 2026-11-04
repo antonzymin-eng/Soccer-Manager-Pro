@@ -1,6 +1,12 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 4, 2026 — **P7b and D-P7-6 review reconciliation.** Merge main
+**Last Updated:** November 4, 2026 — **D-P7-6 v0.8 review follow-up.** No files added or removed.
+Update the canonical amendment with product-decision provenance, explicit replay/finalizer/drain
+locks, complete v0.6 lock mapping and author review findings. Update maintained draft pointers,
+client design v0.35, roadmap v0.90, Gate-A audit pointer, changelog, open issues and its project-reference
+index (40 active / 74 archived). Source behavior, approval states and Unity evidence remain unchanged.
+
+**Last Updated (prior):** November 4, 2026 — **P7b and D-P7-6 review reconciliation.** Merge main
 `1d3cebf3`, preserving current roadmap and tracking history. Add opt-in career bindings:
 `ClientCareerCoordinator.cs`, `CareerScreenText.cs`, their test files and metas, and
 `S0ScreensBehaviour.Career.cs` plus meta. Extend screen visibility, root validation, optional coordinator
@@ -3747,7 +3753,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.34). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.35). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.

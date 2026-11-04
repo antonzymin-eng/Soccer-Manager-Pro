@@ -67,7 +67,7 @@ until it runs on the pinned host.
 ## 5. Current delta preparation — not adopted
 
 The October 18 audit above is historical evidence. Recheck it against the opt-in P7b candidate and
-[canonical D-P7-6 amendment v0.7](../tracking/d-p7-6-interactive-career-match-amendment-draft.md).
+[canonical D-P7-6 amendment v0.8](../tracking/d-p7-6-interactive-career-match-amendment-draft.md).
 No active-match save or ordinary abandon/restart is planned. The player chooses Play or selected-coach
 whole-match delegation, may delegate the same match remainder irreversibly, and normal Exit finishes,
 saves, then exits. Home saving before/after a match on the same day remains available. Adopt the delta

@@ -12,7 +12,15 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **Career review reconciliation.** Merge main `1d3cebf3`;
+> **Last Updated:** November 4, 2026 — **D-P7-6 v0.8 review follow-up (documentation only).**
+> Preserve product-decision evidence from the owner's earlier answers; distinguish explicit AI choice
+> from recommended archetype 0. Restore explicit T-IM-02 input replay, T-IM-03 finalizer/full-save
+> equivalence and T-IM-08(b) drain refusals as DCT-13–15; map all 17 prior locks and add DCT-16 for
+> full-time request/command outcomes. Record an author self-review without claiming independent review
+> or technical approval. Index the existing P7b shutdown wait: 40 active / 74 archived. Unity compile,
+> independent review, owning amendments and implementation evidence remain due. No runtime change.
+
+> **Last Updated (prior):** November 4, 2026 — **Career review reconciliation.** Merge main `1d3cebf3`;
 > retain current roadmap decisions and consolidate confirmed D-11 delegation into canonical D-P7-6
 > amendment v0.7 (technical approval still due). Remove the superseded resume contract and side proposal.
 > P7b provides opt-in seven-screen visibility/validation, worker-backed cached career coordination and

@@ -697,7 +697,7 @@ authority the code below implements:
 | **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
 | **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
 | **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). *Extended November 3, 2026 (roadmap D-10, v0.86): breakable until the owner's release-readiness checkpoint (D-14; no Early Access planned).* A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION`, or another version of any sub-blob nested in the save (each is gated independently, so an inner bump leaves the outer version alone), is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. A Ready slot whose save fails to decode anyway is invalidated to `Damaged`, so it cannot keep winning Continue. |
-| **D-P7-6** career match interactivity | **Owner product decisions (roadmap D-11, revised November 3):** Play or choose a real assistant/coach to delegate the whole match; adaptive AI opponent; one-way selected-coach simulation of the same match remainder; normal Exit completes/saves before leaving. No saving during a match; Home saving before/after it on the same day remains available. Automatic XI retained. | [Canonical amendment draft](d-p7-6-interactive-career-match-amendment-draft.md) v0.7 is PROPOSED; owning staff, medical, takeover, record-in/out and lifecycle amendments remain due. No interactive career-match code is claimed. |
+| **D-P7-6** career match interactivity | **Owner product decisions (roadmap D-11, revised November 3):** Play or choose a real assistant/coach to delegate the whole match; adaptive AI opponent; one-way selected-coach simulation of the same match remainder; normal Exit completes/saves before leaving. No saving during a match; Home saving before/after it on the same day remains available. Automatic XI retained. | [Canonical amendment draft](d-p7-6-interactive-career-match-amendment-draft.md) v0.8 is PROPOSED; owning staff, medical, takeover, record-in/out and lifecycle amendments remain due. No interactive career-match code is claimed. |
 
 **The progress rule (D-P7-3), against #30's guards.** The client offers only what `SeasonLoop` would
 accept, and each withheld action is one #30 refuses (each row has a positive-control test):
@@ -781,7 +781,7 @@ rate band, corpus fit or perf baseline is perturbed.
    New named career preparation/report/Home moves must preserve provenance and PM-1 behavior.
    Roadmap D-11 records selected-coach delegation, no player re-entry, adaptive opponent, no saving
    during the match and finish/save/exit. The [canonical amendment](d-p7-6-interactive-career-match-amendment-draft.md)
-   v0.7 consolidates those choices and retained round/observer/eligibility obligations. Technical
+   v0.8 consolidates those choices and retained round/observer/eligibility obligations. Technical
    approval and #30/#26/#34/#41/#44/#38 amendments remain due; no interactive seam exists yet.
 3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
    **November 2, 2026:** Gate A stays recorded; it was audited against the October 18 shell, so it
@@ -1093,6 +1093,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.35 | 2026-11-04 | Point to D-P7-6 v0.8 with restored replay/finalizer/drain locks and review traceability; technical approval and pinned-host acceptance remain due. |
 | 0.34 | 2026-11-04 | Reconcile P7b opt-in binding candidate with current roadmap, canonical D-P7-6 v0.7 and deferred S1 recruitment; pinned-host/UX acceptance remains due. |
 | 0.33 | November 3, 2026 | Consolidate the D-P7-5 checkpoint extension and D-P7-6 draft v0.6 / amended D-11 from parallel v0.32 branches. No contract approval or runtime change. |
 | 0.32 | 2026-11-03 | D-P7-5 annotated: roadmap D-10 extended on November 3, 2026, so saves stay breakable until the owner's release-readiness checkpoint (D-14: no Early Access planned). The incompatible-slot behaviour is unchanged. Documentation only. |
