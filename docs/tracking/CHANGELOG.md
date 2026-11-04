@@ -12,7 +12,21 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **Parked D-P7-6 gains a carry-forward list (documentation only).**
+> **Last Updated:** November 4, 2026 — **ERR-028-026 measured: career drift instrument (owner request).**
+> New env-gated `CareerDriftDiagnosticTests` (catalogued `career-drift`, `TD_CAREER_DRIFT=1`) plays the
+> production career composition on quick-sim; evidence `evidence/career-drift-20261104/` (5 seeds × 40
+> seasons). Measured: the top-5 vs bottom-5 genesis clubs' rating gap goes 4.78 → 3.77 (season 5, 79%
+> left) → 2.70 (season 10, 56%) → 0.81 (season 20, 17%) → noise floor by about season 23–24, when the
+> genesis players have all left; strength order holds through season 10 (Spearman 0.95). ERR-028-026's
+> ~18-season estimate was the right order; full erosion takes ~23. A PM-3 horizon of 3–5 seasons loses
+> 13–21%. New finding: `LeagueBootstrap` gives 16–18-year-olds the same mean CA as 24–29-year-olds (5298
+> vs 5287), so the missing youth discount is a genesis property too, not only a regen one. The open issue
+> is updated, still OPEN for D-13. Measurement only: no production file, schema, save format, RNG stream,
+> domain tag, draw site or draw order changed. The default 5 × 20 run reproduced seasons 0–20 byte for byte.
+> Measurement catalog validate and evidence-manifest check PASS. SeasonSave.Tests 551 passed / 0 failed /
+> 4 skipped (the new diagnostic skips without its variable); meta integrity OK; full Linux gate not rerun.
+
+> **Last Updated (prior):** November 4, 2026 — **Parked D-P7-6 gains a carry-forward list (documentation only).**
 > At the owner's request, D-P7-6 v0.11 adds §11: 14 items from the superseded parallel v0.8 draft
 > (`148a01a`, branch `claude/eloquent-dijkstra-o8q4gh`) that v0.9 lacked, each re-checked against
 > source at `73dfb63`. Notable: approved #41 FR-MD-023 says #41 owns no selection logic, which

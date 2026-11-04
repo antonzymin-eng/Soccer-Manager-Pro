@@ -141,6 +141,14 @@ INSTRUMENTS = {
         "FullyQualifiedName~EngineScoringDiagnostic",
         "ERR-030-014 [",
     ),
+    "career-drift": Instrument(
+        "career-drift",
+        "TD_CAREER_DRIFT",
+        "src/season-save/tests/CareerDriftDiagnosticTests.cs",
+        "src/season-save/tests/season-save-tests.gen.csproj",
+        "FullyQualifiedName~CareerDriftDiagnostic",
+        "=== Career drift (ERR-028-026) ===",
+    ),
 }
 
 

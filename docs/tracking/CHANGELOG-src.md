@@ -14,7 +14,16 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 4, 2026 (UTC) — (v2.219 — **P7b review corrections.**
+> **Last Updated:** November 4, 2026 (UTC) — (v2.220 — **ERR-028-026 career drift measurement; test-only.**
+> New `src/season-save/tests/CareerDriftDiagnosticTests.cs` v1.0 (+ `.meta`): env-gated (`TD_CAREER_DRIFT`)
+> diagnostic that restates `CareerSession.StartNew`'s composition (season-save tests cannot reference
+> client-app), plays QuickSimAll seasons with `AdvanceToNextFixtureDay` / `AdvanceAndPlayNextRound` /
+> `AdvanceDays(1)` / `RollToNextSeason`, and reports per season the `SquadRating.StartingElevenMean`
+> ramp gap, SD, Spearman vs genesis, regen share and CA by age band. Asserts non-vacuity only. Catalogued
+> as `career-drift` in `tools/dotnet-ci/measurement_catalog.py`. No production file, seam, schema, RNG
+> stream, domain tag, draw site or draw-order change. Gate line in the version row.)
+
+> **Last Updated (prior):** November 4, 2026 (UTC) — (v2.219 — **P7b review corrections.**
 > Preserve underlying career-operation errors when stale navigation is refused; localize slot
 > name/state composition and use distinct row cache keys; add the neutral change label and selected
 > club status. Update save-compatibility disclosure to D-10's release-readiness checkpoint. Document
@@ -2834,6 +2843,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.220 | 2026-11-04 | — | ERR-028-026 measurement: `CareerDriftDiagnosticTests.cs` v1.0 (env-gated `TD_CAREER_DRIFT`, catalogued `career-drift`); test-only, no production change. SeasonSave.Tests 551 passed / 0 failed / 4 skipped (the new diagnostic skips without `TD_CAREER_DRIFT`); Unity meta integrity OK; full Linux gate not rerun (the change is confined to SeasonSave.Tests and tooling). |
 | 2.219 | 2026-11-04 | — | P7b review: localized per-row copy/cache, neutral change/selection labels, current D-10 disclosure, preserved stale-operation error and explicit shutdown limitation. ClientApp 223/0/3; pinned Unity validation due. |
 | 2.218 | 2026-11-02 | — | Comment-only: `WorldStore.cs` v1.8 corrects the `WorldSeed` summary's stale "squads are not persisted" (the `PROG` block has carried the roster since #28 T1). No behaviour change. |
 | 2.217 | 2026-10-30 | — | Reconcile consolidation with merged #521; preserve main season format 8 and its corrected summary. No executable source changes in the conflict resolution. |

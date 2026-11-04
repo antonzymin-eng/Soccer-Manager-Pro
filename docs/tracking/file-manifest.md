@@ -1,6 +1,13 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 4, 2026 — **Parked D-P7-6 carry-forward, documentation only.** No files added
+**Last Updated:** November 4, 2026 — **ERR-028-026 career drift measurement.** **New:**
+`src/season-save/tests/CareerDriftDiagnosticTests.cs` v1.0 and its `.meta` (env-gated `TD_CAREER_DRIFT`
+measurement); **new evidence directory** `docs/tracking/evidence/career-drift-20261104/` (`README.md`,
+`report-5x40.txt`, `SHA256SUMS` covering both). **Modified:** `tools/dotnet-ci/measurement_catalog.py`
+(instrument `career-drift`), `tools/dotnet-ci/check_evidence_manifests.py` (directory contract),
+`docs/tracking/open-issues.md` (`regen-club-strength` measured), `CHANGELOG.md`, `CHANGELOG-src.md` v2.220 and this manifest.
+
+**Last Updated (prior):** November 4, 2026 — **Parked D-P7-6 carry-forward, documentation only.** No files added
 or removed. Modified: `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.10 → v0.11
 (§11 carry-forward from `148a01a`), `docs/tracking/path-to-playable-roadmap.md` v0.92 → v0.93,
 `docs/tracking/interactive-unity-client-design.md` 0.37 → 0.38, `docs/agent-guides/unity-career-context.md`
