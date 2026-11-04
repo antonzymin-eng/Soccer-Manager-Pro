@@ -2,7 +2,7 @@
 
 **Created:** October 18, 2026\
 **Last Updated:** November 4, 2026\
-**Version:** 0.3\
+**Version:** 0.4\
 **Status:** ORIGINAL GATE-A AUDIT RECORDED; INTERACTIVE DELTA PREPARED, NOT ADOPTED; Gates B–I not started\
 **Purpose:** classify every S1 capability `ux-detailed-plan.md` §7.3 lists against the tree of the day,
 so S1 design neither assumes #30 is missing nor assumes that because #30 exists the UI exists.\
@@ -66,43 +66,44 @@ until it runs on the pinned host.
 
 ## 5. Current delta preparation — not adopted
 
-The October 18 audit above is historical evidence. Recheck it against the opt-in P7b candidate and
-[canonical D-P7-6 amendment v0.8](../tracking/d-p7-6-interactive-career-match-amendment-draft.md).
-No active-match save or ordinary abandon/restart is planned. The player chooses Play or selected-coach
-whole-match delegation, may delegate the same match remainder irreversibly, and normal Exit finishes,
-saves, then exits. Home saving before/after a match on the same day remains available. Adopt the delta
-only after technical approval; verify actual source symbols and host evidence before classifying
-anything as LIVE. Product decisions alone do not prove implementation.
+The October 18 audit above is historical evidence. The November 4 owner decision defers BOTH
+interactive career matches and coach delegation until staff ships. Recheck current PM-2 against the
+P7b candidate and existing Career Home engine-backed round/result/save route. The
+[canonical D-P7-6 v0.9 draft](../tracking/d-p7-6-interactive-career-match-amendment-draft.md) governs
+only the deferred future feature; current S1 does not wait for its technical approval. Gate-A delta
+adoption still needs source-backed classification and actual pinned-host/UX evidence where required.
 
 | Original rows | Current evidence / change to re-check | Current disposition |
 |---|---|---|
 | 1–2 | `CareerHomeSource`, `SeasonState.Fixtures`, `SeasonCalendar.DayOfRound` still own table/next-fixture data; no full fixture-list/calendar screen admitted | Existing data retained; opt-in Home/table binding HOST-UNVERIFIED; full fixture list/calendar absent |
-| 3–5 | `CareerProgress.NextAction` and `SeasonCommandDispatcher` still resolve matchday synchronously | Current behavior `LIVE`; interactive begin/finish continuation `FUTURE-BLOCKED` on D-P7-6 |
+| 3–5 | `CareerProgress.NextAction` and `SeasonCommandDispatcher` still resolve matchday synchronously | Current Home resolution `LIVE` host-free / binding HOST-UNVERIFIED; interactive continuation deferred outside PM-2 |
 | 6–7 | `NewCareerSetup.Prepare/Select/Start` and `CareerSession.StartNew` remain club-only bootstrap | Existing host-free source retained; opt-in UGUI HOST-UNVERIFIED |
 | 8 | Career Home saves before/after a match; `CareerSaveSlots` refuses active match blocks | Between-round save LIVE; no in-match save/resume requirement |
 | 9 | `LoadCareerSource.TryContinue/TryLoad` and `CareerSaveSlots` retain loadable/incompatible/damaged handling; career resume refuses a match block | Existing picker source retained; opt-in browser HOST-UNVERIFIED; no pending-match restore route |
 | 10 | Seven screen ids/eight career moves; seven-root `ClientShellWiringValidator`; cached worker-backed `ClientCareerCoordinator`; optional seven-screen `ClientMatchCoordinator` composition. Linux ClientApp 218 passed / 3 diagnostic skips, documented host-crash fixture excluded; pinned Unity not run | P7b host-free composition plus opt-in UGUI candidate now exist; default scene remains four roots until host setup. All career runtime/copy/layout acceptance is unverified |
-| 11 | No Career Home → Tactics or Report → Career Home move exists; new named provenance-aware moves required | `FUTURE-BLOCKED` until approved seam implemented; no PM-1 return reuse |
+| 11 | No Career Home → Tactics or Report → Career Home move exists; new named provenance-aware moves required | DEFERRED outside PM-2; current round result is read on Home, with no PM-1 return reuse |
 | 12 | No settings/a11y entry is admitted by the current career shell | Still `FUTURE-BLOCKED`; S1-T8 must remain in prototype coverage |
 | 13 | No new #37 season statistic source was introduced | No additional statistic admitted |
 
 ### Task/validation consequences
 
-- Preserve all eight S1 tasks. Replace the old §4 suggestion to record a substituted Home-only round:
-  **that substitution cannot satisfy the D-11 interactive S1-T5 task at Gate G**.
+- Preserve all eight S1 task IDs and per-participant outcomes under the November 4 amended
+  execution-plan §7.6 / protocol §3.2 scope. S1-T3 inspects readiness on the admitted Home/fixture/squad
+  context; S1-T5 resolves one round and reads its Home result/table. These are explicit product-scope
+  changes, not skipped tasks or an unacknowledged substitute for a promised interactive route.
 - Recruitment is **deferred by the user November 3**; retain [the prepared brief](ux-s1-recruitment.md)
   for later. Neither participant is confirmed. This does not block the current contract/P7b work.
   Owner availability and independence/distinctness attestations remain due before Gate F.
 - Participants run at **Gate G after Gate F**. Gate F may use a host-free prototype, accurately labelled
   where behavior is simulated/future; a missing prescribed task fails readiness rather than shrinking
   the denominator. Gate G validates the design; Gate J verifies actual Unity implementation.
-- Prototype the interactive match/report/return and selected-coach delegation, completed-round save and exit outcomes, including
-  disabled, failure/retry and cancellation paths after the D-P7-6 contract is settled.
+- Prototype current Home resolve/result/save, busy/error/retry and cancellation outcomes. Keep the
+  later interactive/delegation/finish-save-exit UX delta separate until its contract/staff dependencies ship.
 - Retain the S1-specific two-independent-participant rule. S0 owner image approval does not waive it.
 
 ### Adoption checklist (all still open)
 
-- [ ] Explicit D-P7-6 contract approval recorded against a reviewed revision.
+- [ ] Apply the current PM-2 task-scope amendment consistently; D-P7-6 approval is required only for the later interactive delta.
 - [ ] Verify new domain/adapter/navigation/persistence symbols; classify implemented vs future separately.
 - [ ] Replace historical rows with adopted current evidence and pin the reviewed source identity.
 - [ ] Reconcile Gates B–I task flow/state matrix; identify prototype behavior vs runtime behavior.
@@ -114,5 +115,5 @@ anything as LIVE. Product decisions alone do not prove implementation.
 |---|---|---|
 | 0.1 | 2026-10-18 | Initial S1 Gate-A audit against the §5-P7 landing: 13 capabilities classified with symbol evidence; §7.4 product decisions recorded as resolved by the owner; Gate B–I consequences. |
 | 0.2 | 2026-11-03 | Preserve the October 18 audit; prepare, but do not adopt, the D-11 interactive delta, source evidence, task consequences and adoption checklist. |
-
 | 0.3 | 2026-11-04 | Replace superseded resume delta with canonical delegation/save/exit scope and source-backed P7b classifications; original October audit retained and current delta still unadopted. |
+| 0.4 | 2026-11-04 | Owner defers interactive career/delegation until staff. Prepare current Home-resolution S1 delta and retain all eight tasks; separate future contract approval from current PM-2 readiness. |

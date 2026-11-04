@@ -1,7 +1,7 @@
 # S1 — Participant recruitment and session brief
 
 **Created:** November 3, 2026\
-**Version:** 0.2\
+**Version:** 0.3\
 **Status:** DEFERRED BY USER November 3, 2026 — no invitations sent, confirmations or bookings\
 **Purpose:** recruit the two independent S1 usability participants without storing personal data.\
 **Authority:** [validation protocol §§3.2, 4, 7, 9.2](ux-validation-protocol.md);
@@ -15,18 +15,18 @@ Each participant independently attempts **all eight** S1 tasks without control-b
 
 1. Start or resume the supported career.
 2. Identify the next match and current league position.
-3. Reach match preparation.
+3. Inspect the next-fixture readiness information on the admitted Home/fixture/squad surface.
 4. Progress time correctly.
-5. Complete the interactive managed match/report/return loop.
+5. Resolve a round on Career Home and read completion/result feedback.
 6. Understand the changed result and league table.
-7. Save, quit and resume according to the product promise: Home saves before/after the match;
-   normal in-match Exit delegates completion, saves the completed round and exits. No in-match save.
+7. Save, quit and resume the coherent career on Home before/after a completed round. No in-match save.
 8. Find settings/accessibility.
 
 Observe first attempts, wrong turns, hesitation, missed information, understanding of what happens
 next, and recovery from errors. Capture task results separately for each participant using the existing
 protocol templates; combine findings only afterward. A missing required seam is a prototype failure,
-not a participant mistake. Current settings/a11y and the interactive career seam are still blocked in production. Gate F may
+not a participant mistake. Current settings/a11y still needs an admitted prototype representation.
+Interactive career play/delegation are deferred until staff and are outside this current PM-2 task flow. Gate F may
 use an accurately labelled host-free prototype with those outcomes represented; every task must
 be attemptable before the scored Gate-G round. Production verification belongs to Gate J.
 
@@ -64,8 +64,8 @@ wording. This brief does not grant a Gate-F/G bypass.
 > management game. We would like one experienced management-sim player and, if possible, one person
 > who knows football but is new to these games.
 >
-> You will try starting or resuming a career, finding the next fixture and league position, preparing
-> and playing a managed match, reading the report and table, saving/resuming an unfinished matchday,
+> You will try starting or resuming a career, finding the next fixture and league position, checking
+> readiness, resolving a round from Career Home, reading the result/table, saving and resuming the career,
 > and finding settings. We are testing whether the interface makes sense; you do not need to be good
 > at the game. We will ask what you expect to happen and where you get stuck, without guiding each click.
 >
@@ -77,7 +77,7 @@ wording. This brief does not grant a Gate-F/G bypass.
 
 - Recruitment is deferred by the user. When resumed, confirm both attestations before S1 Gate F opens.
 - Agree duration after the actual prototype walkthrough; accelerated play may keep the test focused
-  on usability, but must preserve all task outcomes and the interactive route. No full-season run is required.
+  on usability, but must preserve all task outcomes and the current Home-resolution route. No full-season run is required.
 - Book the first practical session after Gate F passes. A separate session for each participant avoids coaching.
 - Follow the canonical neutral moderator script and finding severity/disposition rules.
 - Both participants must complete the required coverage; no S0 image-review waiver applies.
@@ -89,3 +89,4 @@ wording. This brief does not grant a Gate-F/G bypass.
 |---|---|---|
 | 0.1 | 2026-11-03 | Initial scope, anonymous recruiting status, screening and unsent invitation; recruitment then deferred by user. |
 | 0.2 | 2026-11-04 | Align the prepared session scope with D-11 completed-round saving and selected-coach exit; recruitment stays deferred. |
+| 0.3 | 2026-11-04 | Align all eight prepared tasks/invitation with owner-deferred interactive career play; PM-2 tests readiness/Home resolution/results and coherent career save/resume. Recruitment stays deferred. |

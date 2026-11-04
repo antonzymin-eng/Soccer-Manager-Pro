@@ -12,7 +12,16 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **D-P7-6 v0.8 review follow-up (documentation only).**
+> **Last Updated:** November 4, 2026 — **D-P7-6 independent AR-3 failed; v0.9 proposed fixes.**
+> Record 4 High / 7 Medium / 9 Low findings, domain-owned collection/result authority, explicit fault/
+> failed-save/close recovery, acknowledged pause and one-owner accelerated playback. Restore stronger
+> preflight/save-byte/ban/attachment locks, exact owning amendment map, bounded records and a proposed
+> 22-run integration budget. Record the owner answers: delegation waits for staff, external queued coach policy and varied
+> opponent profiles. The owner also deferred interactive career matches: PM-2 keeps Home resolution and current S1
+> retains all eight tasks under amended execution-plan/protocol scope. Independent re-review remains due. No code/spec
+> implementation or approval is claimed. P7b pinned Unity validation and deferred recruitment unchanged.
+
+> **Last Updated (prior):** November 4, 2026 — **D-P7-6 v0.8 review follow-up (documentation only).**
 > Preserve product-decision evidence from the owner's earlier answers; distinguish explicit AI choice
 > from recommended archetype 0. Restore explicit T-IM-02 input replay, T-IM-03 finalizer/full-save
 > equivalence and T-IM-08(b) drain refusals as DCT-13–15; map all 17 prior locks and add DCT-16 for

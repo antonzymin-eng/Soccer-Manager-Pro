@@ -1,6 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 4, 2026 — **D-P7-6 v0.8 review follow-up.** No files added or removed.
+**Last Updated:** November 4, 2026 — **D-P7-6 AR-3 follow-up, documentation only.** No files added
+or removed. Canonical draft v0.9 records the independent FAIL (4H/7M/9L) and proposed fixes with
+interactive career/delegation deferred together until staff, queued policy and varied opponents recorded. Client design v0.36, roadmap v0.91, S1 audit v0.4/recruitment brief v0.3, execution plan v1.36,
+validation protocol v0.38, career context v0.3, maintained issue pointers and this changelog are synchronized. No runtime, normative spec, schema, format, approval or host-evidence change.
+
+**Last Updated (prior):** November 4, 2026 — **D-P7-6 v0.8 review follow-up.** No files added or removed.
 Update the canonical amendment with product-decision provenance, explicit replay/finalizer/drain
 locks, complete v0.6 lock mapping and author review findings. Update maintained draft pointers,
 client design v0.35, roadmap v0.90, Gate-A audit pointer, changelog, open issues and its project-reference
@@ -3753,7 +3758,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.35). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.36). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
@@ -4183,12 +4188,12 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/tracking/p5b-lifecycle-validation.md` | v0.5 implementation/evidence record; pinned-host validation (compile, EditMode, certified full-match outcome, Play-mode lifecycle) passed October 7, 2026 |
 | `docs/tracking/p5b-lifecycle-identity-plan.md` | v0.2 source-audited consumed implementation plan at f276f700: lifecycle, authored/frame identity, analytics, renderer Attach/detach, explicit report acknowledgement, teardown and pre-merge evidence; implementation pending |
 | `docs/tracking/localization-l2-plan.md` | v0.8 L2 implementation/evidence record: Q1–Q4 selected, seven source/two test files, ERR-049-005/006 resolved together; merged via #487, pinned Unity compile + Localization EditMode 67/67 passed post-merge on main `93de60f6` (October 9, 2026) |
-| `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.35: S0 Gate J passed and accepted by the owner October 30, 2026 (J-05 landed through PR #520). v1.34: S0 Gate-J fixes J-01/J-02/J-04 landed October 22, CONDITIONAL PASS. v1.33: S0 Gate-J technical review FAIL October 19 (J-01/J-02; owner items J-04/J-05). Earlier (v1.32): P5b screens merged to main (#489, `1c8366d`); next step is the pinned-host run against main; v1.31: complete P5b screen candidate; next pinned-host validation after the consumed lifecycle/identity implementation planned, L2-dependent screens and Gate J remain due |
+| `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.36: November 4 owner scope keeps all eight S1 tasks on Home readiness/round/result/save flow; interactive career play is deferred until staff. Prior v1.35: S0 Gate J passed and accepted by the owner October 30, 2026 (J-05 landed through PR #520). v1.34: S0 Gate-J fixes J-01/J-02/J-04 landed October 22, CONDITIONAL PASS. v1.33: S0 Gate-J technical review FAIL October 19 (J-01/J-02; owner items J-04/J-05). Earlier (v1.32): P5b screens merged to main (#489, `1c8366d`); next step is the pinned-host run against main; v1.31: complete P5b screen candidate; next pinned-host validation after the consumed lifecycle/identity implementation planned, L2-dependent screens and Gate J remain due |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
-| `docs/design/ux-validation-protocol.md` | Validation packet v0.37: execution pointer v1.30 and #470 foundation merge/next implementation; original approvals/evidence and all I-Q planned status unchanged |
-| `docs/design/ux-s1-gate-a-audit.md` | S1 Gate-A audit v0.3: October 18 baseline plus unadopted interactive delta; §7.4 product decisions recorded as resolved |
+| `docs/design/ux-validation-protocol.md` | Validation packet v0.38: current S1-T3/T5/T7 follow owner-deferred interactive career scope and Home resolution; execution pointer v1.36, all eight IDs and participant rules retained. Original S0 approvals/evidence and I-Q status unchanged |
+| `docs/design/ux-s1-gate-a-audit.md` | S1 Gate-A audit v0.4: October 18 baseline plus unadopted current-PM-2 Home-resolution delta; §7.4 product decisions recorded as resolved |
 | `docs/design/ux-s0-pm1-journey.md` | S0 journey v0.37: Gate-J owner decisions J-01 (greyed goalkeeper pairs with a reason) and J-02 (engine-typed refusal named) in §§14.4–14.5; v0.36: owner-approved keyboard pitch inspection stop added to §9.3/§14 focus order (October 8); v0.35: #470 foundation merged; next consumed lifecycle/identity plan v0.2; reviewed H/I contracts and pins unchanged; all I-Q QA planned and Gate J open |
 | `docs/design/ux-s0-binding-contracts.md` | S0 binding contracts v0.10 (v0.10: `action.close` and the new `action.partial` wording, owner decisions October 28, 151 roles; v0.9: disclosure-title binding note, owner decision October 28; v0.8: owner approved the v0.7 copy unchanged, October 28; v0.7: three goalkeeper-pair reasons and six typed refusal rows, 150 roles, copy pending owner approval; v0.6: deferred-substitution copy for Match Flow §6.2.6, PR #505). v0.5: pitch descriptions read-only with pointer/keyboard display (owner decision October 8); v0.4: reviewed authored fixture/current-frame identity/history, fixed scale/reflow, typed copy/provider/landing contracts; TO BUILD, Gate-I handoff PASS |
 | `docs/design/s0-high-fidelity/README.md` | H v0.2 owner-approved image index/reproduction; actual approval and hashes in protocol §9.1.3 |

@@ -2,27 +2,32 @@
 
 **Created:** November 2, 2026\
 **Last Updated:** November 4, 2026\
-**Version:** 0.8\
+**Version:** 0.9\
 **Status:** PROPOSED technical contract; product decisions recorded in roadmap D-11. Not implemented
-or a normative spec. Owning-spec amendments and final technical approval remain due.\
+or a normative spec. AR-3 FAILED v0.8 (4 High / 7 Medium / 9 Low). This revision proposes fixes;
+interactive career play/delegation are deferred until staff ships. Independent re-review, owning-spec
+amendments and technical approval remain due.\
 **Purpose:** define interactive managed fixtures, selected-coach delegated completion and no in-match
 saving in one contract for #30, with #26/#34/#41/#44/#37/#38 and client consequences. This revision
 replaces v0.6's ordinary live abandon/restart route. The automatic starting eleven is retained.
 
 ## 1. Source baseline and authority
 
-The season/match implementation inspected at `1d3cebf3` still resolves a round synchronously through
+The source baseline is `7f81e48a` (P7b code), retained unchanged through documentation head
+`4162e6d4`. Season/match code inherited from `1d3cebf3` still resolves a round synchronously through
 `SeasonLoop.PlayNextRound`. P7b adds opt-in career UI bindings but no interactive career-match seam.
 `SeasonLoop.BootFixtureEngine` supplies availability-filtered squads and #29 entry fatigue, but no
 adaptive opponent configuration. `MatchSession` owns paced playback/commands; `TickOnce` refuses after
 `Start`, even after `Stop`. The event bus is process-static: only one engine may be in flight.
 `CardLedgerFold` consumes each tick's transient ledger; it does not serialize its pending records.
-`CareerSaveSlots` refuses an active match block. These are integration constraints, not promised APIs.
+`CareerSession.Resume` refuses loaded match bytes and marks that slot Damaged; slot storage
+itself is not the match-resume policy owner. These are integration constraints, not promised APIs.
 
 Roadmap [D-11](path-to-playable-roadmap.md) records the owner's product
 choices. Individual choices do not approve the complete technical contract. Before implementation,
 amend #30, #26, #34, #41, #44, #37 where needed, #38 and the client design with ERR entries and their
-version histories. No match-save block, enum allocation, format bump or tuning change is granted here.
+version histories. New operation/data/refusal types are proposed below. Their symbolic names grant no existing API,
+wire ordinal, enum number, match-save block, format bump or tuning change.
 Staff persistence may independently require its owning format work. Recruitment remains deferred.
 
 ## 2. Decision register
@@ -36,16 +41,17 @@ Staff persistence may independently require its owning format work. Recruitment 
 | DC-05 | Medical eligibility | OWNER-CONFIRMED PRINCIPLE | Ability to start or enter depends on the injury and the owning medical rule. This is not blanket permission for all injured players; the exact #41 eligibility mapping is still due. |
 | DC-06 | Disciplinary records | OWNER-CLARIFIED | Supply the session with starting disciplinary records, let it update private match-local records from cards/participation, and return one completed record with the result. No career-side live polling/writes and no mid-match serialization. Finalization applies the returned effects once through #44 rules. |
 | DC-07 | Starting eleven | RETAINED OWNER DECISION | Automatic starting XI; team-tactic preparation remains. Delegation does not introduce starting-XI selection. |
-| DC-Q1 | Opponent manager | OWNER-CONFIRMED AI; AUTHORIZED DEFAULT archetype | Adaptive AI opponent in career matches. Use the recommended fixed initial archetype 0 for the opponent as the authorized default. This is not a fabricated real coach identity or the selected delegate's mapping. |
+| DC-Q1 | Opponent manager | OWNER-CONFIRMED; REVISED NOVEMBER 4 | Adaptive AI with deterministic variety across Aggressive 0 / Pragmatic 1 / Balanced 2. This explicit answer replaces the earlier fixed-Aggressive recommended default. Freeze the actual club/profile mapping and policy version in fixture/test identity; never present an archetype as a real employee. |
 | DC-Q2 | Return to player control | OWNER-CONFIRMED | Delegation is final for the current match; finish it and show the report. No switch back to player control. Cancelling the coach picker before confirmation is still allowed. |
 | DC-Q3 | Normal application exit | OWNER-CONFIRMED | Offer coach selection, complete the same match and round in the background, save successfully, then exit. A failed save keeps the completed in-memory state and exit pending for retry. Forced termination can recover only the last durable save. |
 | DC-Q4 | Pre-kickoff delegation | OWNER-CONFIRMED | Tactics Setup offers Play or delegate the whole match, selecting the assistant manager or another eligible coach. Both routes use the same match engine; delegation is accelerated engine simulation, not an instant round-model result. |
-| DC-Q5 | Staff behavior mapping / eligibility | TECHNICAL CONTRACT WORK | Use the recommended bounded real-staff slice, stable IDs and role/availability checks; define the selected person's tactical/substitution policy through #34/#26. No numeric mapping was previously recommended, so do not invent one or treat a generic opponent archetype as the chosen coach. |
+| DC-Q5 | Staff scope / policy | OWNER STAGING DECISION NOVEMBER 4; POLICY WORK DUE | Defer delegation until the staff system ships; do not pull a small #34 slice into PM-2. At that later landing, amend FR-ST-003 for actual assistant/coach assignments and freeze #34/#26 tactical/substitution policy. Interactive career matches also wait for staff; PM-2 retains existing Career Home resolution. |
 | DC-08 | Remaining recommended choices | OWNER-AUTHORIZED DEFAULTS | For matters not explicitly overridden, use the current proposal's recommended choices. Explicit injury/save/disciplinary-record/control restrictions take precedence. Mid-match save/resume is excluded. |
 | DC-09 | User entry to delegated simulation | OWNER-CONFIRMED | No joining, spectating-as-a-route-back-to-control, or taking over an ongoing delegated match. After delegation confirmation, complete the match and show its report. Background progress is status, not an entry action. |
 
 The owner authorized the recommended defaults for items not explicitly overridden. That authorization
-settles already recommended choices (including opponent archetype 0); it does not approve nonexistent
+settles earlier recommended choices except where later explicit answers replace them (the fixed
+opponent archetype 0 was replaced by the November 4 variety answer); it does not approve nonexistent
 APIs, unproposed numeric staff/injury formulas or the withdrawn resume design.
 The role/availability checks in DC-Q5 must use real owning-system data.
 
@@ -67,7 +73,27 @@ quotations below preserve the distinction between a direct answer and a recommen
 | DC-06 | “A match sessions receives disciplinary records before starting. Then it updates the record based on the match cards and sends it back.” No live career-side mutation or mid-match serialization is implied. |
 | DC-07 | Automatic XI is the retained owner decision already recorded in v0.6 / D-P7-4, rather than a new decision attributed to these replies. |
 
-## 3. Proposed player flow
+### 2.2 November 4 answers after AR-3
+
+| Question | Exact owner answer / consequence |
+|---|---|
+| Bring a minimal #34 slice forward? | “Defer delegation until the staff system ships.” The earlier small-slice recommendation is rejected. No early staff implementation or roadmap advance is authorized. |
+| Coach decision execution? | “Simulation thread and shared command queue (recommended).” Adopt external policy evaluation on the single simulation thread and the authoritative shared command service. |
+| Opponent disposition? | “Deterministic variety across existing profiles (recommended).” Replace fixed Aggressive 0 with stable variety; exact algorithm below remains part of the technical proposal. |
+| Defer interactive career matches as well? | “Defer interactive career matches too (recommended).” PM-2 retains existing Career Home match resolution; interactive career play and delegation arrive together after staff ships. |
+
+**Resolved staging:** PM-2 keeps existing Career Home engine-backed round resolution, result/table
+feedback and between-round saving. Interactive career matches, pre-kickoff/remainder coach delegation
+and the finish/save/exit match flow ship together only after the real staff system and reviewed
+D-P7-6 contract. No interim in-match Exit policy, fake coach or early staff slice is needed. PM-1's
+standalone interactive match is separate and unchanged. Sections 3–8 describe that deferred future
+contract; they are not PM-2 blockers or a claim of implemented functionality. The independent P7b
+bindings, season screens, #44 T3 and current S1 Home-resolution journey continue.
+
+## 3. Proposed staff-enabled player flow (delegation deferred until #34 ships)
+
+**Staff prerequisite:** this target route is enabled only after the actual staff system and its
+assistant/coach contract ship. The independent P7b Home resolution route remains available today.
 
 **Before kickoff:** Tactics Setup offers **Play** and **Delegate whole match**. Play uses player control.
 Delegating opens the same real-staff picker described below, then boots once with the chosen delegate
@@ -100,12 +126,12 @@ separate fallback before this flow is declared complete. No forfeit or discard f
 | Context | Required behavior |
 |---|---|
 | Career Home before kickoff on a fixture day | Existing manual saves allowed; do not disable by calendar date. |
-| Tactics/preparation, no match started | No active-match bytes may be saved. Existing Home-only save UI can remain; any save exposed here must encode a coherent prematch career with transient plans discardable/rebuildable on load. |
+| Tactics/preparation, no match started | No save action while Open. CancelPreparation discards the transient plan, returns to coherent Closed/Home and allows saving on that same calendar day. No preparation save format is introduced. |
 | Player-controlled, paused or delegated active match | No save control and no career match-block write. |
 | Full time while finalization is in progress | Wait for coherent completion before a save/exit acknowledgement; do not expose a half-committed round. |
 | Career Home after completed round | Existing post-round autosave/manual save behavior. |
-| Simulation or finalization failure | Preserve the owning fault state and persistent reason; never report success, auto-restart the fixture, or offer unsafe abandon from a partly applied round. Keep normal Exit pending; expose the actual recovery state. Remote Faulted/reload recovery and any inability to complete must be specified before implementation, not silently converted into a saved result. |
-| Completed round but autosave fails | Keep the completed in-memory result. Offer retry of the write; never rerun the match. Normal requested exit must wait for successful saving; retain the result and allow retry. A forced process close is outside that acknowledged flow. |
+| Simulation or finalization failure | Enter the specific session/round fault state in §7.5. Quiesce asynchronously, preserve diagnostics and prior durable save; offer explicit recovery exit/reload. Never fabricate a saved result or trap an Exit waiting for impossible completion. |
+| Completed round but autosave fails | Retain the completed revision. Offer write retry/another admitted slot, Cancel Exit (keep the result on Home), or explicit storage-error Exit without saving with a lost-progress warning. The last is a proposed exceptional recovery action, not successful finish/save/exit; see §7.5. |
 | Forced termination/crash | Last successfully written career save only. No hidden mid-match save is introduced. |
 
 This refines the save-enforcement contract's wording: transient unsafe state can still cause a precise refusal, but
@@ -115,11 +141,11 @@ This refines the save-enforcement contract's wording: transient unsafe state can
 
 | Work | Owner and requirement |
 |---|---|
-| Staff foundation | #34: a bounded actual staff roster and assistant/coach assignments, stable staff IDs, club membership and availability. `src/` has no staff/backroom production assembly; the minimal specification has Coach/Scout/Physio, not a completed assistant-manager picker. This dependency does not automatically authorize the entire deep staff/hiring system. |
+| Staff foundation | #34 remains in its existing later roadmap tranche. Delegation waits for that staff system, including actual assistant/coach assignments, stable IDs and availability. Current FR-ST-003 cannot supply the requested picker unchanged; amend it at that owning landing. No early bounded slice is authorized. |
 | Decision mapping | #34 + #26: immutable resolved decision configuration for the chosen person, including supported tactical tendencies and a substitution policy. Existing `ManagerProfile` is an archetype of aggression/caution/patience; it is not a StaffRecord adapter. Current tactical adaptation is not a complete coach substitution controller. |
-| Live manager takeover | #26 / MatchEngine public contract: initialize the selected delegate consistently with the current tactic/preset and match clock. `ConfigureManager` is deterministic mid-match but resets metadata to Balanced and an unfired decision clock; do not blindly use it or rerun kickoff adaptation. Review a proper takeover seam and any necessary digest/schema implications against the actual landing. |
+| Live manager takeover | Owner-selected external coach controller (§7.7): retain managed engine mode Human; install frozen #34/#26 policy on the session simulation thread and submit through the authoritative queue. Do not call ConfigureManager/ApplyKickoff on takeover. Engine-policy alternative would need an explicit schema/digest and eligibility design; it is not the recommended path. |
 | Tick ownership | MatchClientCore: freeze player command acceptance, settle prior accepted input once, then transfer exclusive ownership at an acknowledged boundary. `TickOnce` currently refuses after paced `Start`, even after Stop; add a supported accelerated/unpaced mode rather than bypassing the guard. Keep one engine on the process-static event bus. |
-| Match-local records and observers | MatchSession + #44/#37: collect match-local card/participation/statistics information while the engine runs, preserving substitution attribution and fault/coverage checks; return the completed disciplinary/participation record once. #30 does not poll or update career discipline each tick. Reuse the shared rules and a single composed session observation path; no duplicate consumer or silent reset on takeover. |
+| Match-local records and observers | #30 owns the engine handle, private participation collector and #44 fold; its domain ObserveTick runs on the tick thread. MatchSession only pumps that observer. #37 separately owns analytics. No tick-time career tally mutation, client-built discipline/result record, duplicate consumer or reset on takeover. Explicitly amend #44 §4.5 / §3.1 / §4.3 for frozen output and finalizer authority. |
 | Medical/substitution eligibility | #41/#30/#44: define injury-dependent start/entry eligibility and preserve suspension, keeper, window, cap, used-bench and sent-off constraints. Revalidate automated substitutions at the same authoritative boundary as player requests. |
 | Commit/navigation | #30 + ClientApp: retain BeginRound/CompleteRound and joined completion; only a valid owned full-time result can commit. Add a named delegation transition, prevent duplicate requests/stale callbacks, and show report/Home only after completion. Keep PM-1 and non-career playback behavior separate. |
 | Verification | Owning suites plus pinned Unity host: prove watched/delegated parity for the same actual decision/input sequence, correct staff/team ownership, observer coverage, eligible substitutions, single commitment and responsive background progress. No claim that different decision-making staff must produce identical results. |
@@ -139,9 +165,9 @@ no new persisted mid-match state or ordinal allocation is implied.
 | Preparation | Delegate whole match | Coach picker, retaining the setup; no engine yet. |
 | Coach picker before kickoff | Cancel | Preparation, same setup; no staff/controller/engine change. |
 | Coach picker before kickoff | Confirm real eligible coach | One kickoff into delegated Live; freeze the staff configuration used for this run. |
-| Player Live, including pause | Simulate rest | Coach picker; preserve and quiesce the same engine at a safe boundary while making the selection. No further ticks or player commands until cancel/confirm. |
-| Coach picker during play | Cancel | Restore the previous player-control/pause state exactly; no delegation or abandoned fixture. |
-| Coach picker during play | Confirm | Settle earlier accepted commands, install delegate via reviewed live takeover, then continue the same engine under one accelerated tick owner. |
+| Player Live, including pause | Simulate rest | Request pause/input fence, finish any in-flight tick/observation, then acknowledge and enable the picker. No further ticks after acknowledgement until cancel/confirm. |
+| Coach picker during play | Cancel | Restore the state at the acknowledged fence and prior pause flag; no delegation, rollback of the in-flight tick or abandoned fixture. |
+| Coach picker during play | Confirm | Verify the once-only input settlement receipt, install the external coach controller, then continue the same engine under one accelerated tick owner. |
 | Delegated Live | Return to control | Refuse: user confirmed delegation is final for the match. |
 | Player Live | Normal Exit | Same coach picker with an Exit-after-success flag; cancelling also cancels Exit. |
 | Delegated Live | Normal Exit | Keep the existing confirmed delegate, flag Exit-after-success; do not require a second selection or restart simulation. |
@@ -150,7 +176,7 @@ no new persisted mid-match state or ordinal allocation is implied.
 | Full time | Quiesce/join; validate observer health and owned result | Common finalization; domain Closed only after successful complete. |
 | Finalized, save acknowledged | Exit flag set | Exit; otherwise normal report then Home. |
 | Finalized, autosave failed | Retry save | Keep result and Exit pending; write the same completed career, never rerun the match. |
-| Any observer/simulation/finalization fault | Recovery required | Do not publish success; apply the specified fault protocol. Never discard a partly applied round or label an unfinished match saved. |
+| Critical observer/controller/simulation/finalization fault | Recovery required | Do not publish success; apply the specified fault protocol. Never discard a partly applied round or label an unfinished match saved. |
 
 Only the controlled pause is used during the picker; cancelling preserves whether the player had
 already paused. Confirmed delegation consumes that pause and runs the remainder. This is proposed
@@ -161,15 +187,15 @@ UI/lifecycle detail consistent with the confirmed choices, not a new grant of en
 1. **#34 roster/roles:** real assistant assignment and coach list, stable IDs, employed/available rule,
    and an unavailable-staff case that does not trap the player without a legitimate delegate.
 2. **#34/#26 policy:** staff-to-tactics/substitution mapping and a versioned in-memory configuration
-   identity. Adaptive opponent with fixed archetype 0 is the authorized recommended default; it does
+   identity. Adaptive opponent with deterministic variety across Aggressive/Pragmatic/Balanced is the November 4 decision; it does
    not replace the separate chosen assistant/coach policy. Staff persistence may require its own owning-format work even though no match-save block
    is needed; do not claim the absence of all save-format impact from an unimplemented staff subsystem.
 3. **#41 rule:** injury-dependent start/entry eligibility supplied by the medical owner; exact condition/
    severity thresholds still unchosen. Do not reuse the withdrawn blanket injured-bench option as unrestricted injured-bench permission.
-4. **#30/#26/client signatures:** canonical boot, live delegation, accepted-input fence, exclusive
+4. **#30/#26/client/#match-viewer signatures:** canonical boot, live delegation, acknowledged pause/accepted-input fence, exclusive
    accelerated execution, managed-team restrictions and observer ordering. Preserve no tick-0 XI
    mutation and do not add direct UI-thread engine writes.
-5. **Fault/exit protocol:** decide the safe recoverable behavior when completion cannot succeed. The
+5. **Fault/exit protocol:** review the concrete proposed exceptional recovery actions in §7.5. The
    confirmed successful path is finish/save/exit; this does not authorize freezing the application,
    retrying a partially applied finalizer, or fabricating a result to satisfy an Exit request.
 6. **Verification plan:** pin the old synchronous behavior, attribute deliberate AI changes, then
@@ -178,8 +204,9 @@ UI/lifecycle detail consistent with the confirmed choices, not a new grant of en
 
 ### Session disciplinary-record boundary — revised requirement
 
-Use a pre-match record-in / completed record-out model for both watched and delegated matches.
-Keep tick collection inside the session; authoritative career records change only at finalization.
+Use a pre-match record-in / completed record-out model for both watched and delegated sessions.
+#30/#44 own the private match record inside the domain handle; MatchSession pumps its observer but
+never constructs the record. Authoritative career records change only at finalization.
 
 1. **Input:** #30/#44 supply a copied, validated disciplinary baseline scoped to the fixture's clubs,
    competition and player IDs, plus eligibility/rule context. Bind it to fixture identity and a baseline
@@ -187,7 +214,7 @@ Keep tick collection inside the session; authoritative career records change onl
    pre-existing season/competition accumulation separate from this match's yellow/red counters: a
    previous match's yellow is not this match's first yellow and cannot trigger an immediate second-yellow
    dismissal. Existing suspensions inform eligibility; they are not served or erased at kickoff.
-2. **During play:** the session updates a private match disciplinary record as the engine issues cards
+2. **During play:** the #30-owned observer updates a private #44 match disciplinary record as the engine issues cards
    and substitutions. Retain PlayerId attribution at the time of each event, participation and event
    ordering sufficient for #44's result rules. This is ordinary match bookkeeping, not live career
    persistence. The engine's event ledger is per-tick; current CardLedgerFold consumes it after each
@@ -195,7 +222,7 @@ Keep tick collection inside the session; authoritative career records change onl
    the final engine's occupants/yellow flags would lose substituted players' cards and ordering.
 3. **Handoff:** whole-match and remainder simulation retain that same private record, observers and
    coverage/fault state. Do not initialize an empty record when the selected coach takes over.
-4. **Output:** after full time and internal playback-thread termination, the owned session returns one
+4. **Output:** after full time and internal playback-thread termination, the #30-owned handle freezes one
    immutable completed fixture result with its updated match disciplinary record and participation
    summary. No intermediate career update or live save is required. Return source identity/fingerprint
    and completion identity with it, so another fixture's or stale baseline's record cannot be applied.
@@ -284,12 +311,12 @@ no persisted enum ordinal, schema version, random domain or tuning constant is a
 | Proposed record | Owner → consumer | Required contents and validation |
 |---|---|---|
 | `ManagedFixtureContext` | #30 → session composition | Fixture/season/round identity, managed team index, world day, frozen configuration identity, seed, actual roster and automatic XI/bench, entry fatigue, baseline tactics and eligibility context. MatchSession must attach to its one engine rather than recreate these inputs. |
-| `FixtureDisciplineInput` | #44/#30 → session record collector | Copied competition/player-scoped `DisciplineEntry` baseline, unfiltered membership and eligible participants, applicable rule/config identity and baseline fingerprint. Season accumulation and current-match caution/red state are distinct. Never pass the mutable career tally. |
+| `FixtureDisciplineInput` | #44/#30 → #30-owned domain collector | Copied competition/player-scoped `DisciplineEntry` baseline, unfiltered membership and eligible participants, applicable rule/config identity and baseline fingerprint. Season accumulation and current-match caution/red state are distinct. Never pass the mutable career tally. |
 | `EligibleDelegate` | #34 → client picker | Real stable staff ID, employer club, assistant/coach assignment, available/eligible flag and reason, display identity and decision-profile identity. It must not expose an invented staff record merely to populate the picker. |
 | `DelegateDecisionConfig` | #34/#26 → session controller | Frozen staff/club/team identity, tactical profile reference, substitution-policy reference, policy revision and resolved supported inputs. Revalidate against the actual roster/medical/disciplinary context; never resolve the opponent's configuration from the user's selected coach. |
 | `MedicalParticipationDecision` | #41 → automatic XI/substitution validators | `CanStart`, `CanEnter` and a reason sourced from the actual injury/clinical participation rule. The same underlying injury facts must produce the same decision for player and coach requests. No UI-created severity threshold or blanket injured-player exception. |
-| `MatchDisciplinaryRecord` | session collector → completed result | Source fixture/baseline identities; complete ordered player-attributed new-card record; original roster identity and actual participation; collection health/coverage and completion identity. Each card keeps the kind emitted by the engine, not a guessed conversion from final counts. |
-| `CompletedManagedFixture` | owned session/handle → #30 finalizer | Immutable owned score/end tick, fixture/config identities, final match disciplinary/participation record and report publication with real completeness/cutoff. Valid only after exclusive ticking has stopped and the final observation has completed. The UI cannot supply or edit these values. |
+| `MatchDisciplinaryRecord` | #44 fold / #30 handle → domain-owned completed result | Source fixture/baseline identities; complete ordered player-attributed new-card record; original roster identity and actual participation; collection health/coverage and completion identity. Each card keeps the kind emitted by the engine, not a guessed conversion from final counts. |
+| `CompletedManagedFixture` | private #30 handle → #30 finalizer; read-only client projection | Immutable owned score/end tick, fixture/config identities, final match disciplinary/participation record. #37 separately publishes report completeness/cutoff; no client report DTO enters this domain record. Valid only after exclusive ticking has stopped and the final observation has completed. The UI cannot supply or edit these values. |
 | `MatchCompletionReceipt` | #30 → ClientApp | Committed fixture/round identity and resulting career revision, with outcome and committed/not-committed status. Duplicate completion returns the existing receipt or a refusal without changing state. |
 | `CareerSaveReceipt` | slot writer → exit coordinator | Committed career revision, chosen slot/write sequence and successful durable-write acknowledgement. Exit must be tied to the completed round's revision, not an older successful save. |
 
@@ -303,30 +330,32 @@ These records are transient operation contracts; they do not imply mid-match ser
 | Operation | Caller / execution owner | Guarded result |
 |---|---|---|
 | `PrepareManagedFixture` | client requests; #30 season owner | Validate guards and compute BeginRound/Open preview with automatic XI, initial discipline and eligible delegates. No engine yet, no applied fixture results. Morning-step idempotence is retained; cancellation does not promise a full day rollback. |
-| `StartPlayerMatch(configIdentity)` | client requests; #30 + MatchClientCore | Validate preview/config identity and run one canonical kickoff with entry fatigue and tactics; managed side player-controlled, opponent adaptive AI with initial archetype 0. Refuse a second kickoff. |
+| `StartPlayerMatch(configIdentity)` | client requests; #30 + MatchClientCore | Validate preview/config identity and run one canonical kickoff with entry fatigue and tactics; managed side player-controlled, opponent adaptive AI with its frozen deterministically selected profile. Refuse a second kickoff. |
 | `StartDelegatedMatch(delegateIdentity, configIdentity)` | client requests; same composition | Revalidate staff, medical/disciplinary eligibility and decision profile; boot once and enter delegated control. Preserve automatic XI and the chosen team-tactic baseline; no pre-kickoff substitution or instant round-model score. |
+| `CancelPreparation(previewIdentity)` | UI requests; #30 owner, Open only | Discard preview/plan with no engine/results; keep idempotent day-steps and guarded focus/transfer state; Closed/Home permits save. Refuse during Live/fault. |
 | `RequestRemainderDelegation(delegateIdentity, sessionIdentity)` | UI requests; session control service | Validate and stage all delegate inputs before changing ownership; then perform the one-way boundary sequence below. Return an accepted/rejected operation identity, never a second engine. |
 | `RequestExitAfterCompletion` | UI / lifetime coordinator | During player control, use the same picker and handoff. During delegated control, retain that delegate and attach the exit flag to the existing operation. No abandon/restart, user Join or second delegate request. |
-| `CompleteManagedFixture(ownedCompletion)` | client coordinates only after stop/wait; #30 applies | Check full-time state, session/record identity and coverage, then run the common finalizer once and return its receipt. No caller-provided score/card tally and no second report-triggered commit. |
+| `CompleteManagedFixture(ownedHandle)` | client coordinates only after stop/wait; #30 applies | Check full-time state, session/record identity and coverage, then run the common finalizer once and return its receipt. No caller-provided score/card tally and no second report-triggered commit. |
 | `SaveCompletedCareer(commitReceipt)` | completion coordinator; slot worker | Save that exact committed revision through existing pair-atomic writing. A retry repeats the write from the retained career state and never simulates/finalizes again. |
 | `ExitAfterSave(commitReceipt, saveReceipt)` | application lifetime owner | Require matching completed revision and successful durable save receipt; release owned views/resources and exit. A pending/failed write cannot satisfy this operation. |
 
-These operations need owning-spec/API back-propagation before code. MatchClientCore owns the session
-controller/collector glue; #44 owns disciplinary rules and result validation; #30 owns career mutation.
+These operations need owning-spec/API back-propagation before code. MatchClientCore owns session control and callback pumping. #30 owns the engine handle,
+record construction and career mutation; #44 owns the fold/rules and record validation.
 No domain assembly may gain a dependency on ClientApp or MatchClientCore for convenience.
 
 ### 7.3 One-way handoff transaction
 
-1. Pause at the acknowledged between-ticks boundary when opening the staff picker; remember the
-   previous player pause state. Resolve the staff/configuration before accepting confirmation.
-   Cancelling restores that pause/control state and makes no delegate change.
-2. On confirmation, verify session/fixture and staff identity again, close player command acceptance,
-   and settle all commands already accepted by the session. Reject late/stale player submissions
+1. Request a pause/input fence and await its receipt before opening an interactive coach picker.
+   A tick already in flight may finish, including all observation. No tick may start after the
+   acknowledgement until cancel/confirm. Remember the prior pause flag and the state at that receipt;
+   cancel restores that acknowledged state/flag, not an imaginary rollback of the in-flight tick.
+2. On confirmation, verify session/fixture and staff identity and the input-fence receipt again.
+   Earlier commands have been settled once at that boundary; do not replay them on confirmation. Reject late/stale player submissions
    explicitly; no command can be acknowledged and then silently lost during the transition.
 3. Validate the takeover and stage its controller metadata before installing it. Preserve the actual
    current team/player tactics, pending accepted changes, fatigue, time, score, occupants, cards and
    substitution windows/counts. Opponent state is not reset.
-4. Install the chosen delegate on the managed team only and consume the prior player pause. Advance
+4. Install the chosen external coach controller on the managed team only and consume the prior player pause. Advance
    the same engine with the supported accelerated/unpaced owner; run private match records/analytics
    through the same observation chain on every relevant tick. Do not call the currently forbidden
    Start-then-TickOnce combination or open another match on the process-static event bus.
@@ -336,19 +365,20 @@ No domain assembly may gain a dependency on ClientApp or MatchClientCore for con
 6. At full time, request internal tick-thread termination and wait for it, then freeze the completed
    record/report and finalize once. A report action cannot race a trailing card/participation update.
 
-**Tactic initialization rule:** `ConfigureManager` currently resets its preset marker to Balanced and
-its decision clock to unfired. Neither that call nor `ApplyKickoff` may silently reset live tactics.
-The takeover API must seed state from the actual current tactic and current decision time. If that
-tactic has no exact catalogue preset, retain it as an explicit custom baseline until the next legitimate
-AI decision; do not invent a nearest-preset conversion in the UI. #26 must specify the custom-baseline
-transition before implementation, since today's ladder expects a valid current preset ordinal.
+**Tactic initialization and takeover:** under the owner-selected external-controller option the managed
+engine side stays ManagerMode.Human, even when a coach controls its command queue. Configure squads,
+the opponent's AI profile and all feature flags, then ApplyKickoff with the user's admitted baseline.
+Human mode prevents FR-TP-004 from replacing that baseline. Assert the nondefault team/player tactic
+at the first AI stride. During takeover, do not rerun ApplyKickoff or ConfigureManager; seed the
+external controller from actual current tactics/time. #26 owns its custom-baseline transition and
+substitution policy; this is not an invented nearest-preset conversion in the UI.
 
 **Full-time boundary:** after quiescence, the owner checks whether full time already occurred before
 accepting a handoff. If so, skip delegate installation and complete the same match. An Exit request
 attaches to the existing completion; it does not open a second picker, replay or finalizer. Pending
 commands that can no longer apply must receive an explicit ended-match refusal/outcome in the command
 record. Do not replay them after full time or silently erase an acknowledged request. This requires
-an owner/drain amendment: the current `MatchClientDriver.Drain` clears its batch when `MatchEnded`
+an owner/drain amendment: the current `MatchClientDriver.Service` clears its batch when `MatchEnded`
 is true without appending those commands to `FailedCommands`.
 
 ### 7.4 Disciplinary merge semantics
@@ -385,44 +415,246 @@ state on the tick thread.
 | Failed/incomplete disciplinary record | Refuse completion; never install truncated cards, inferred participants or a false completed round. |
 | Analytics observer failure with healthy disciplinary completion | Preserve actual partial/unavailable statistics and cutoff. Do not invent full-match totals; distinguish this from a discipline-integrity failure that prevents commit. |
 | Error before finalizer's first write | Retain a coherent live/completion state; use the guarded recovery restrictions below. No implicit restart. |
-| Error after finalizer writes | Enter Faulted; refuse saves and normal mutation. No unsafe abandon, fabricated success or automatic partial retry. Keep the previous durable save. |
+| Error after finalizer writes | Enter RoundFaulted (the proposed RoundState.Faulted phase); refuse saves and normal mutation. No unsafe abandon, fabricated success or automatic partial retry. Keep the previous durable save. |
 | Completed round with failed save | Retain the completed revision and pending Exit, allow write retry, and keep failure visible. No duplicate match/commit. |
 
-**Recommended fault-exit resolution:** when a match cannot complete because of a genuine unrecoverable
-integrity fault, stop and release the failed engine safely, preserve diagnostics and the previous
-coherent durable career, and offer an explicit error-recovery exit. Do not label it a successful
-finish/save exit or overwrite the last good save with faulty state. On next launch only that prior
-save loads. This exceptional failure recovery is not an ordinary abandon/restart button and is not
-available on a healthy match. It makes the user's successful finish/save/exit promise precise without
-trapping the application indefinitely or inventing an outcome. Crash/forced termination remains the
-same last-durable-save limitation. This proposed technical default is covered by the user's recommended-
-choices instruction; the owning recovery contract still needs review and implementation evidence.
+**Fault/recovery contract (PROPOSED; technical approval still required):** distinguish domain round
+state from session execution state. A critical observation/controller/tick fault before fixture-finalizer writes
+latches SessionFaulted with the round still Live. Stop advancing and asynchronously quiesce/join the
+owner. Morning day-steps may already have run; no rollback of those steps is promised. No Save or Complete can succeed from that partial session. Offer Recovery Exit or Reload Last
+Durable Career after resource release, with explicit loss of the unfinished match. This is available
+only for a genuine latched fault; it is not a healthy-match abandon/restart action.
+
+If finalization throws before its first write, a validated retry of that operation may be offered;
+otherwise use recovery exit/reload. After the first write, latch RoundFaulted, never retry partial
+application, and offer the same last-durable recovery actions after quiescence. Neither fault state
+waits indefinitely for a normal-success receipt, overwrites the good save or claims completion.
+
+A storage failure after successful round completion is SaveFailed, not either integrity fault. Retain
+the completed revision and offer Retry Write, another admitted slot, Cancel Exit (stay on Home with
+that in-memory result), or **Exit Without Saving** after a clear lost-progress warning. The last action
+is an explicit exceptional storage-error exit; it is not a successful saved exit and cannot be offered
+during healthy unfinished play. No retry re-simulates or re-applies the match. UI remains responsive
+while any write is pending; close requests re-use that operation, not an unbounded main-thread Wait.
+
+These exceptional exits are proposed recovery semantics, not already owner-confirmed normal paths.
+The confirmed successful path remains finish/save/exit. Forced termination always retains only the
+last durable save. DCT-11/12 and DCT-17 test each fault stage, cancelled exit and repeated write failure.
 
 ### 7.6 Traceable acceptance cases for the next implementation slice
 
 | ID | Scenario / expected evidence |
 |---|---|
 | DCT-01 | Validate copied pre-match discipline/medical inputs and real staff identities; immutable input/output cannot alias career state. Refuse stale or foreign selections before mutation. |
-| DCT-02 | Both kickoff actions share fixture/seed/roster/fatigue/tactic configuration; named coach controls delegated path, adaptive archetype-0 opponent remains the opponent. |
-| DCT-03 | Pause/open picker/cancel restores exact player state. Confirm at running/paused/near-full-time boundaries preserves current match state, installs one controller, and closes player entry permanently. |
+| DCT-02 | Both kickoff actions share fixture/seed/roster/fatigue/tactic configuration; named coach controls delegated path, adaptive opponent retains its explicitly frozen profile from the varied club mapping. |
+| DCT-03 | Pause/open picker/cancel restores the acknowledged boundary state and prior pause flag; an in-flight tick may finish before acknowledgement. Confirm at running/paused/near-full-time boundaries preserves current match state, installs one controller, and closes player entry permanently. |
 | DCT-04 | Settle accepted pre-fence commands once; refuse late player commands. Pending substitutions carry across takeover without double application or changed recipient attribution. |
 | DCT-05 | Final returned record includes substituted-off and incoming players, yellow/second-yellow/red cases, season threshold crossings and same-tick ordering. Career discipline remains unchanged throughout play. |
-| DCT-06 | Finalize each valid record once with correct serving-before-card order; duplicate/stale result and wrong baseline cannot change table, appearances, discipline or cursor. |
-| DCT-07 | Watched and accelerated runs with the same controller decisions/input boundary yield the same result/digest/participants/statistics across managed home/away and before-/after-kickoff delegation. |
+| DCT-06 | Refuse completion before full time with full career-save bytes/counters unchanged; finalize each valid record once with correct serving-before-card order; duplicate/stale result and wrong baseline cannot change table, appearances, discipline or cursor. |
+| DCT-07 / T-IM-01 | Compare the interactive attached run to the existing synchronous AdvanceAndPlayNextRound ManagedThroughEngine route through the canonical configure/finalizer halves, with the same actual controllers, seed, inputs, flags and opponent profile. Require equal digest, every result, participants, statistics, bans/appearances, full SeasonSaveManager.Save bytes, MatchOutcomes.Count and EnginePlayedFixtures. Also compare equivalent watched/accelerated delegation before kickoff and for the remainder; mirror managed home/away. |
 | DCT-08 | Internal thread termination completes before final record read; no lost last-tick card, second tick owner, observer reset, or user Join/Resume-control action. |
-| DCT-09 | Save allowed on Home before/after a match on the same day; refused during watched/paused/delegated play and unsafe partial completion. No new persisted match block. |
+| DCT-09 | Prove TakeEngineForSession (working name) succeeds once only; a second attachment/access and stale handle fail without mutation. Save allowed on Home before/after a match on the same day; refused during watched/paused/delegated play and unsafe partial completion. No new persisted match block. |
 | DCT-10 | Repeated Exit during delegated work uses the same operation/delegate. Exit waits for the completed revision's save receipt; failed-write retry never reruns match or finalizer. |
 | DCT-11 | Missing/faulted disciplinary output blocks commit; a statistics-only fault retains truthful partial reporting. Inject before-/after-write finalizer failures and verify distinct recovery states. |
 | DCT-12 | Genuine unrecoverable-fault exit preserves the old durable save and does not claim successful completion; healthy matches cannot invoke fault recovery as an abandon shortcut. |
 | DCT-13 / T-IM-02 | **Input replay, ClientApp.Tests; two real matches per home/away mirror.** Repeat from identical initial career/engine state, seed, PreKickoffConfig and tick-stamped accepted command sequence, including within-tick order. Freeze the same delegate identity/policy and handoff tick where applicable. Require equal final digest, every MatchResult, participation, cards/bans/appearances, MatchOutcomes.Count, EnginePlayedFixtures and full completed career-save bytes. Replay is in-memory test evidence; no mid-match save or durable command journal is introduced. |
-| DCT-14 / T-IM-03 | **Season-commit equivalence, SeasonSave.Tests; controlled end seam.** From identical staged round inputs, supply the same owned managed result, ordered disciplinary record and actual participation set to interactive and synchronous finalization. Require byte-identical SeasonSaveManager.Save output after completion, equal MatchOutcomes.Count and EnginePlayedFixtures, and expected appearances/ban/card effects. Include nonempty card and incoming-substitute positive controls. Use a reviewed internal test-only end seam; expose no public result injection or new production dependency on MatchClientCore. This proves commit equivalence; DCT-07 proves real-run parity and T-IM-16 separately anchors old behavior. |
+| DCT-14 / T-IM-03 | **Season-commit equivalence, SeasonSave.Tests; controlled end seam.** From identical staged round inputs, use internal owner-only test seams to seal each route's own result with the same managed score, ordered disciplinary record and actual participation facts, then run interactive and synchronous finalization. Require byte-identical SeasonSaveManager.Save output after completion, equal MatchOutcomes.Count and EnginePlayedFixtures, and expected appearances/ban/card effects. Include nonempty card and incoming-substitute positive controls. Use a reviewed internal test-only end seam; expose no public result injection or new production dependency on MatchClientCore. This proves commit equivalence; DCT-07 proves real-run parity and T-IM-16 separately anchors old behavior. |
 | DCT-15 / T-IM-08(b) | **Authoritative command-drain refusal, MatchClientCore.Tests; no full match.** On a career-attached session, refuse Substitute at CurrentTick == 0 and opponent-team SetTeamTactic, SetPlayerTactic and Substitute at the drain. Each refusal appears in FailedCommands with its owning reason, never in the applied log, and leaves the digest equal to a no-command control at the same tick. Include an accepted managed-side command as a positive control after kickoff. Mirror managed home/away; enforce eligible-bench/window/cap/keeper rules and refuse player commands after delegation. UI-only rejection cannot satisfy this lock. |
 | DCT-16 | **Full-time request race, ClientApp.Tests plus MatchClientCore.Tests.** End the final tick while opening the picker, confirming delegation or requesting Exit; also hold final observation open. No delegate is installed after full time, queued commands receive applied-or-explicit-refused outcomes, only one completed result/finalizer exists, and Exit waits for that completed revision's save. Inject a late queued command to exercise the existing ended-batch drop hazard. |
+| DCT-17 | Exercise Exit/window-close from preparation, each picker, player Live, delegated Live, completion, SessionFaulted, RoundFaulted and SaveFailed. Verify cancel semantics, exceptional loss warnings, responsive UI, single ownership/write receipt and no healthy abandon shortcut. |
+| DCT-18 / T-IM-09(b) | Put a suspended reinstatee on the bench, keep them unfielded and verify their ban is served at finalization; retain a suspended extremis starter in participation and verify exemption. Refuse an ineligible incoming player both at the authoritative drain and finalization backstop. Mirror home/away and injury-dependent start/entry cases. |
+| DCT-19 / T-IM-04/15 preparation subset | Against a control that only prepares/cancels, compare actual full save bytes and both nonserialized counters before/after cancellation; no result/card/appearance effect. Save/load/reprepare and play with the same inputs; the final full save bytes equal uninterrupted preparation/play. Test guarded focus/transfer/transaction attempts and unchanged bytes on each refusal. Live abandonment stays withdrawn. |
+| DCT-20 | Verify FR-SN-003 one-fixture-per-club preflight, both-club appearance prevalidation, bounded record overflow, no client-created completion payload and exact feature-flag/config identity. Prove critical failure happens before a career write or enters the specified fault state. |
 
 These are planned tests, not executed results. Existing P7b source tests and standalone match replay
 checks are reusable foundations only; they do not prove delegated staff control or the composed
 record-in/record-out career contract. Implementation remains gated on the canonical owner amendments,
 bounded #34/#26/#41 dependencies, appropriate Linux checks and exact-source pinned Unity validation.
+
+### 7.7 Proposed staff/controller slice and authoritative result ownership
+
+**H1 owner decision — delegation waits for staff:** keep #34 in its existing later roadmap tranche.
+Do not bring forward the small staff slice. Before delegation can ship at that later point, amend
+FR-ST-003 to distinguish an actual roster from the designated HeadCoach/HeadPhysio/ChiefScout
+consumer slots and support assistant/coach assignments. Preserve existing StaffRole ordinals;
+allocate new job/assignment encoding only in the owning approved amendment. The real staff system
+must supply stable identities, availability and persistence; the picker cannot precede it. No hiring,
+wage or other staff implementation is authorized by this document. Interactive career play is deferred alongside delegation; PM-2 keeps Home round resolution (§2.2).
+
+`NeutralHouseStaff` is explicitly a REAL generated entity under FR-ST-004/KD-5. An actual assigned,
+named, stable-ID, persisted record from that factory may qualify; a missing record, default struct,
+placeholder UI label or arbitrary archetype presented as an employee may not. The current factory
+alone does not create an assistant assignment or override FR-ST-003. Loaded careers do not silently
+reseed staff. Missing/incompatible staff data follows the owning save-compatibility rule; absent
+eligible staff blocks preparation before kickoff with a precise repair/load reason. A corrupt staff
+dependency detected after kickoff is a latched session fault with recovery exit, never a fabricated
+coach or healthy abandon. New #34 save data may require owning format work, independently of the
+prohibition on match saves. The owner explicitly deferred delegation until this dependency ships; interactive career play is deferred too, with no interim match Exit required in PM-2.
+
+**H2 owner-selected architecture — simulation thread/shared queue:** coach decisions execute on the
+session's single simulation thread, immediately before its authoritative pre-tick command service.
+#34 produces an immutable real-person configuration; #26 owns BOTH tactical and substitution policy,
+its deterministic engine-tick cadence/hold rules and versioned attribute mapping (never wall-clock or playback-speed timing); MatchClientCore evaluates that
+policy from sim-thread reads and enqueues typed commands through the same queue as player input.
+Every accepted/refused coach command is tick-stamped and subject to managed-team, suspension,
+injury, window/cap, keeper and used-player guards. There is no direct coach call to engine mutators,
+UI-thread policy evaluation or second tactical writer for the managed team. Resolve policy inputs
+before installing the controller; numeric mapping/formulas remain required owning-contract artifacts.
+
+The managed engine side stays Human-mode under the selected option, because the external controller supplies
+its commands; the opponent uses the existing adaptive engine manager. The session controller has
+explicit transient policy/handoff state included in in-memory replay evidence, not an engine snapshot
+field or hidden durable command journal. This option does not require a snapshot-schema bump solely
+for external coach identity. Any actual engine-state change still requires schema/digest review.
+The in-engine controller alternative was not selected. Any later move into engine manager state
+requires a separate snapshot/digest/eligibility amendment; it is not part of this proposal.
+
+**H3 domain ownership rule:** #30 constructs and exclusively owns ManagedFixtureHandle, its participation
+collector and the #44 CardLedgerFold seeded from copied pre-match baseline/boot occupants. The client
+receives only an attachment capability and read-only projections; it cannot construct/replace the
+completed score, discipline or participants. ObserveTick is domain code called by the session after
+each tick; it updates private match data only. At joined full time, #30 freezes its OWN result and
+CompleteManagedFixture takes that same owned handle, not a caller-supplied result DTO. Result/record
+constructors and sealing are private/internal to the owning domain assemblies; identity checks bind
+the handle to its loop, fixture and baseline. Reject foreign, forged, reused and stale handles before
+any write. An opaque completion receipt is not a public result-injection API. Internal test end seams
+remain test-only and cannot grant a production caller that ability.
+
+#44 §4.5 / §3.1 / §4.3 MUST be amended explicitly: #30 seeds/pumps the fold, exports/finalizes its
+private fixture record without writing season discipline on the tick thread, then applies serving
+and ordered card effects once in the common finalizer. Existing root ownership and lossless-tap rules
+are retained. #37 separately owns analytics buffers/publication; a partial analytics report is not
+an incomplete disciplinary record, and no client analytics type enters #30's authority boundary.
+
+### 7.8 Pause, accelerated playback, navigation and application close
+
+LiveMatchStreamer.Pause currently sets a flag; PacingLoop reads shouldTick before TickOnce, so that
+call alone is NOT a quiescence receipt. Add a career-scoped RequestPauseAndFence operation in the
+streamer/session contract: close input admission, finish any in-flight RunTick plus every observer,
+service or explicitly refuse accepted queued inputs at the recorded boundary, then publish an ack
+with session identity/tick and prior pause state. Only then show an enabled picker. Cancel restores
+the acknowledged state/pause flag. Tests hold a tick/observer open to prove no premature ack and no
+ticks after ack. Registration/stop locks must not be held while waiting for worker termination.
+
+Add an acknowledged paced/paused/accelerated mode on the SAME exclusive execution owner. Accelerated
+mode removes wall-clock pacing but retains the exact command/observer order; it is not a larger
+speed multiplier and does not call today's forbidden Start-then-TickOnce sequence. A switch does
+not recreate the engine, install a second tick thread or reset the static event bus. Waits/joins
+occur off the Unity main thread; UI consumes published progress/receipts. Amend match-viewer playback
+contract, MatchClientCore session contract and client design §6, with PM-1/browser compatibility tests.
+
+| Exit/navigation context | Proposed behavior |
+|---|---|
+| Preparation, no engine | CancelPreparation → coherent Closed/Home → save → exit; no automatic match is played. Cancel Exit leaves preparation unchanged before cancellation is committed. |
+| Pre-kickoff coach picker | Back returns to preparation. Exit discards the picker/preview, performs the same preparation cancellation/save/exit; no coach or engine is committed. |
+| Player-match picker | An Exit request sets the existing picker's Exit-after-success flag. Confirm delegates/finishes/saves/exits. Cancel cancels Exit and restores the acknowledged prior player/pause state. |
+| Player Live / paused | Normal Exit uses that picker after pause/fence acknowledgement. Closing the window requests the same flow. |
+| Delegated Live | Remain on completion progress; no Home/new fixture/demo/match re-entry. Read-only settings/accessibility overlays may return to progress without changing ownership. Exit attaches to the existing delegate/operation. |
+| Completion or pending save | Repeated close/Exit reuses the current operation; show responsive progress. Only the matching saved revision satisfies normal Exit. |
+| SessionFaulted / RoundFaulted | After asynchronous quiescence, offer diagnostic recovery exit or reload of last durable career; no successful-save claim or healthy abandon. |
+| SaveFailed after completion | Retry/another slot, Cancel Exit to Home, or explicit warned storage-error exit without saving; preserve the completed in-memory revision until that choice. |
+
+Unity window-close must be intercepted BEFORE teardown using the reviewed Application.wantsToQuit /
+OnApplicationWantsToQuit lifetime route; OnApplicationQuit and OnDestroy are too late for an async
+coach picker. Return/defer quitting while the operation is pending, then permit one final quit after
+its receipt. Engine/IO faults use the recovery choices above. OS kill/crash remains outside this
+acknowledged flow. The existing P7b Dispose wait is not an implementation of this route.
+
+### 7.9 Record bounds, replay types and feature configuration
+
+Propose #44-owned boot-allocated fixture storage with explicit derived bounds:
+
+| Buffer | Proposed admitted bound / overflow action |
+|---|---|
+| Occupancy and participant set | MatchEngineConstants.AgentIdSpace = 22 + 2×7 = 36 entries [DERIVED]; seed once before substitutions and retain original PlayerIds. |
+| Substitution records | TEAM_COUNT × MAX_SUBSTITUTIONS_PER_TEAM = 2×5 = 10 [DERIVED] for the currently supported rules; rejected requests do not consume this event buffer. |
+| Player-card records | 3 × AgentIdSpace = 108 [DERIVED], a conservative two-cautions-plus-one-dismissal bound per distinct admitted player. Kind-2 still has its exact one-caution/ban semantics, not an invented extra red. Staff/off-field cards are outside the current engine event contract. |
+
+At admission validate the actual match rules/roster and the derivation. A future rule/capacity change
+requires updating the owning constant and tests before admission. Current CardLedgerFold._pending
+is a growing List, so reserving/bounding it is required implementation work, not existing behavior.
+No silent eviction/truncation; excess/duplicate-invalid events latch integrity failure before another
+tick and block commit. Test each boundary and boundary+1. Per-tick ledger capacity remains owned by
+#17, not reallocated here. Collection has no card/substitution allocation after its boot reservation;
+measure T-IM-17 against control, including event ticks, rather than assuming List growth is free.
+
+New transient working shapes ARE required: ControllerHandoffRecord (identity, policy version, fence
+and effective tick), CommandOutcome (Applied/Refused with request/tick/team), and symbolic refusal
+reasons such as MatchEnded, DelegatedControl, WrongManagedTeam, BeforeKickoff and BenchUnavailable.
+Assign these to MatchClientCore/client command ownership and domain eligibility ownership in their
+amendments; preserve old wire/enum ordinals and allocate additions at that reviewed application.
+DCT-13 replays the frozen policy and ordered applied/handoff records; DCT-15 checks explicit typed
+outcomes. This is not a claim that these types already exist or a durable command-save requirement.
+
+Freeze feature configuration with the fixture identity, including goalkeeper heading DISABLED for
+career matches (today BootFixtureEngine never calls EnableGkHeading), the admitted catalogue, seed,
+rosters/fatigue/tactics, managed team and actual opponent profile. No hidden default differs between
+watched, accelerated and synchronous controls. Adaptive AI is confirmed. Archetype 0 is Aggressive;
+that is the superseded fixed default, retained here only as decision history. The November 4 answer replaces that fixed default with deterministic variety across Aggressive 0 /
+Pragmatic 1 / Balanced 2. Proposed mapping: validated nonnegative opponentClubId modulo the frozen
+ManagerArchetypeCount (currently 3), with no new RNG draw. Club IDs 0/1/2/3 map to 0/1/2/0; the same
+club keeps its profile at home/away and across fixture order. Freeze mapping/catalogue version in
+configuration identity and re-pin affected AI anchors. No real opponent employee is fabricated.
+
+### 7.10 Exact owning-spec amendments proposed for application
+
+One allocated ERR-030 coordinates #30 changes; cross-owner amendments receive their own ERR entries.
+These are proposed replacement obligations, not edits to approved text in this documentation pass.
+
+| Owner/site | Required replacement / addition |
+|---|---|
+| #30 section-1 KD-9 / section-2 FR-SN-012 | “A round may span preparation/kickoff/completion; no fixture effect is applied before Complete, which applies the whole round in fixture-index order. Only preparation with no engine may be cancelled.” |
+| #30 section-1 KD-7 / section-2 FR-SN-032 | Add preparation, cancellation, owned kickoff/completion and read-only round/fault state; include previously omitted AdvanceDays, ApplyTransaction, SubmitTransferBid. Refuse other mutations while Open/Live/Faulted and specified post-cancel pending-day mutations. |
+| #30 section-1 §1.2, §1.5 / section-2 FR-SN-025 | Permit the domain handle's read-only-season ObserveTick on the match tick owner; world-day commands stay refused while the round is open. The client drives ticking but owns no result authority. |
+| #30 section-1 KD-1 / section-2 FR-SN-021 | “SeasonSaveManager.Save refuses non-Closed round/session fault states; no active-match block is written by the career route. Cancel preparation returns to Closed/Home before saving.” No match-save-format bump; staff persistence is separately costed. |
+| #30 section-2 §2.2 | Define RoundState, SessionExecutionState, preview, opaque owned handle and private completed record/participation; retain ActiveMatch only on the synchronous route. One-shot session attachment exposes no reusable engine getter or public result constructor. |
+| #30 section-2 §2.3 | Add named refusals for mode/provider/fixture absence, duplicate club in a round, non-Open kickoff, wrong/stale handle, premature/duplicate completion, observer gap/fault, ineligible participation, repeat attachment, prohibited save/mutation and both fault stages. No retries after partial writes. |
+| #30 section-2 FR-SN-013 / 013b + new FR rows | Actual participants replace XI-only managed appearance/serving inputs. Managed influence includes admitted kickoff baseline and authoritative logged live player/coach commands; non-managed results retain their existing model. Add staged round, collection/finalization/guard/eligibility/threading requirements; allocate FR numbers at application. |
+| #30 section-3 §3.3.2 | BeginRound owns guarded idempotent day-steps. Preparation cancellation leaves them run; until the pending round is played, focus/transfer/transaction mutations remain refused. |
+| #30 section-3 §3.4 | Replace duplicated resolve/apply with BeginRound staging and CompleteRound common finalization. Require FR-SN-003 preflight, paired appearance validation before writes, configure/observe owned handle, explicit critical session fault and post-write RoundFaulted. Retain existing synchronous retry posture and attribute earlier F6/F9 failures. |
+| #30 section-3 §3.4 depleted-squad text / §3.4.1 | Specify ineligible suspended bench and injury-dependent admission, finalization backstop, actual participation and unfiltered rosters. Read squads once per club; reject >1 fixture per club before staging. No second availability walk between preview and kickoff. |
+| #30 section-4 §4.1–4.3 | Record direct TacticalInstructions/other actual type references, owned handle/collector placement, new command/caller contracts, and the ObserveTick hot-path exception with measured bounded allocation behavior. No dependency on client or analytics DTOs. |
+| #30 section-4 §4.4 / appendices B, B.1 | Save refusal at the lowest loop save entry; participation means “took part on anchor−k”. Existing appearance byte layout stays unchanged; any #34 block integration is separately specified. |
+| #30 section-5 §5.8/new integration subsection; section-7 §7.1/7.3; section-9; outline | Apply all season-owned T-IM/DCT locks with ClientApp host labels where cross-assembly; retain exact full-byte/counter comparisons, FR mapping and costs. Add lifecycle seam/T-phase rows and refresh approval counts/FR ranges without claiming tests exist before code. |
+| #44 section-2 FR-DC-011/eligibility failures; section-3 §3.1/§3.3; section-4 §4.3/§4.5; §5/§7 | #30 retains fold seeding/ownership/lossless pumping; add bounded frozen record extraction, no career write on tick, once-only serving-before-cards with actual participants. Amend the root interface explicitly; close ERR-044-010 only with implementing code. Preserve exact card kinds and unfiltered roster membership. |
+| #41 FR-MD-010 / appearance-write contract and tests | Define injury-dependent CanStart/CanEnter, “any participation” appearance/load rule and both-club nonmutating appearance prevalidation. No client severity guesses or blanket injured-bench permission. |
+| #34 FR-ST-003/004/011/012/014; §2 data, §3 genesis/projections, §4 ownership, appendices/save, tests/§7 | At the later staff landing, before delegation: roster plus designated slots, real assistant/coach assignments/availability, NeutralHouseStaff eligibility, stable identity/persistence/genesis and absent-staff refusal. Keep existing modifier reads on designated holders; do not falsely promise byte neutrality for new delegated decisions. |
+| #26 FR-TP-004/007/010 + policy/hold/substitution tests; #21 FR-TI-027 | Selected external policy owns tactical AND substitution decisions through the queue; managed mode Human preserves user kickoff tactic; opponent remains engine AI. Specify current/custom baseline and deterministic cadence. Preserve #21 stride application for live commands. The unselected in-engine alternative would require a separate amendment. |
+| #37 section-3 per-tick observation/publication contract (§3.5), client SessionMatchAnalytics integration and tests | Keep analytics separately owned and isolated from critical domain collection. Preserve final-tick coverage and true cutoff/incomplete status across pause/mode handoff; no client report DTO becomes authoritative career input. |
+| #38 Appendix C / intent-routing and failure records | Name distinct preparation/cancel/report/Home/delegation/exit moves and new symbolic outcomes; refuse late/opponent/delegated commands authoritatively. Allocate added ordinals at code landing, never repurpose PM-1 ReturnToMainMenu. |
+| match-viewer/LiveMatchStreamer contract; MatchClientCore MatchSession; client design §6/§5-P7/test plan | Acknowledged pause/fence and one-owner paced↔accelerated control; full-time queued-command outcomes in MatchClientDriver.Service; PM-1/browser compatibility; Unity close interception and asynchronous finalization/save/recovery UI. |
+| #19 test strategy / CI application and deferred-interactive UX authority | Add the full-match integration gate/costs below with real runner configuration before code merge. The later interactive/delegation UX slice follows contract approval/source evidence. Current S1 targets PM-2 Home resolution, keeps all eight prescribed tasks and does not wait for D-P7-6; recruitment remains deferred. |
+
+### 7.11 Verification placement and time budget (proposed, not measured)
+
+The integration subject owns real-match evidence. Run pre-commit unit/property/short-tick/refusal and
+controlled-end cases in the existing fast gate. Full-match cases require the source PR's named
+career-integration job plus nightly and pinned-host validation; they are not silently skipped by a
+new opt-in environment variable. Apply the actual test categories, filters, timeout and required-job
+configuration with #19/CI approval before implementation lands. Existing mandatory gates stay intact.
+One engine per process; no in-process parallel fixture engines. Shared run artifacts may be reused
+only when fixture/config/controller/input identities and all required assertions match exactly.
+
+| Planned evidence | Full-match runs (both managed-home/away mirrors included) |
+|---|---:|
+| Pre-change T-IM-16 synchronous anchors | 2 unpaced |
+| Post-change attributed T-IM-16 anchors | 2 unpaced |
+| T-IM-01 synchronous versus interactive attached | 4 unpaced |
+| T-IM-02 repeated input replay | 4 unpaced |
+| DCT-07 whole-match delegated equivalent decisions | 2 paced at 10× + 2 unpaced |
+| DCT-07 remainder handoff equivalent decisions | 2 paced at 10× + 2 unpaced |
+| DCT-08/16 real paced final-observer/quiescence race | 2 paced at 10× |
+| **Conservative total, no reuse assumed** | **16 unpaced + 6 paced = 22 runs** |
+
+A 90-minute match at 10× takes at least 540 seconds [DERIVED] of pacing; six such runs require at least 54
+minutes even before overhead. Using the roadmap's ~120-second unpaced compute estimate, sixteen
+unpaced runs add ~32 minutes: ~86 minutes serial plus compile/assertion overhead. Proposed integration
+job budget is 120 minutes [EST]; measure on the pinned runner and revise the budget/job split openly if it
+cannot finish, without weakening oracle assertions. This does not fit the 60-second pre-commit budget.
+Controlled-end tests do not replace real replay/parity. Record source/runtime/config hashes, elapsed
+per case and true throughput; do not claim any of these proposed runs already passed. Pre-change
+anchors are captured before implementation; later PRs consume their immutable source-tagged artifacts
+rather than silently rebuild an old runtime. The 22-run budget conservatively includes that capture.
 
 ## 8. Retained round, ownership and verification obligations
 
@@ -432,6 +664,12 @@ Split `PlayNextRound` into internal `BeginRound` and `CompleteRound` shared by s
 interactive routes. `BeginRound` performs existing guards, `RequireCommittableConfig`, idempotent
 career day-steps (progression, training, medical), then stages all fallible fixture inputs: availability,
 `FieldedXi`/actual participation inputs, `RosterIds` and round-model results where applicable.
+Before any apply, validate FR-SN-003 (each club appears at most once in the round); refuse duplicate
+club fixtures before day-step/result mutation. Prevalidate the two clubs' appearance writes as a pair
+using the same identity/membership/day checks as PlayerCareerStates.ValidateAppearanceWrite, for all
+planned fixtures before the first apply. Revalidate final actual-participation inputs for both clubs
+before the first fixture apply in CompleteRound, as well as before either club's appearance write. Expose the check in the owning #41/#30 contract; do not call today's
+private helper from a client. A refused away side must not leave a home appearance.
 `CompleteRound` applies fixtures in existing fixture-index order through one common effect block
 (appearances, table, outcome event, played state, ban serving, cards), then advances the round cursor.
 KD-9/FR-SN-012 still require the whole round; no strict subset may be committed.
@@ -458,8 +696,14 @@ change and requires attributed before/after evidence and the governed quick-sim 
 | Closed | Coherent career before or after a round | Home saves allowed, including the same fixture calendar day. |
 | Open | Day-steps and staged preview, no engine, no applied result | Transient plan is not saved. Cancel preparation may discard it and return Home. |
 | Live | One owned engine, including paused/delegated and full-time awaiting finalization | No saving or ordinary abandonment; delegate/complete the same match. |
-| Faulted | Finalizer threw after its first career write | No saving, mutation, ordinary cancellation or unsafe partial retry. Preserve diagnostics and previous durable save. |
+| RoundFaulted (RoundState.Faulted) | Finalizer threw after its first fixture-effect write | No saving, mutation, ordinary cancellation or unsafe partial retry. Preserve diagnostics and previous durable save. |
 | Committed → Closed | Whole round applied and cursor advanced | Post-round autosave; failed write retries the same completed revision. |
+
+SessionFaulted is a separate domain-handle integrity latch while the round remains Live; controller
+faults are reported to that owner rather than silently producing results. SaveFailed is a failed
+write after the round is Closed, not a partially applied round. “Faulted” in round guards names
+RoundState.Faulted; all three failure contexts use the concrete §7.5 recovery actions. Running/paused/
+delegated execution modes remain session/client control state, never durable mid-match save state.
 
 There is no stored Ended phase: read full time only after internal tick-thread termination and final
 observation. Closed may include a cancelled *pre-kickoff* preparation whose day-steps ran; those cursors
@@ -485,18 +729,20 @@ retry a partially applied round or infer a rollback from fixture-keyed random se
 
 ### 8.3 Engine and observation ownership
 
-#30 owns fixture preparation, the engine/handle lifetime and career finalization. MatchClientCore
-attaches the playback/session controller to that engine and owns session-local collection; it must
+#30 owns fixture preparation, engine/handle lifetime, private participation/card collection and
+career finalization. MatchClientCore attaches playback/controller and pumps the domain observer; it must
 not construct a second engine. #44 remains the disciplinary-rule authority. Domain assemblies must
 not reference presentation/client assemblies: owner contracts carry data across this boundary.
-Transfer the engine to its session once through an owned attachment; do not expose a reusable public
+Lend the #30-owned engine to its sole session driver once through an owned attachment; do not expose a reusable public
 engine getter. Invalidate the handle after completion or preparation cancellation, reject stale
 callbacks, and permit only one season command owner and one exclusive tick owner at a time.
 
 Compose the admitted squads once and configure those exact instances at kickoff; no second
 availability walk may change the XI shown in preparation. Boot order: squads and entry fatigue,
 manager configuration, then kickoff tactic application in the managed team's home/away slot.
-Use the player's chosen baseline for the managed side and AI archetype 0 for the opponent. Automatic
+Use the player's chosen baseline for the Human-mode managed side and the explicitly frozen opponent
+profile from the owner-selected deterministic variety mapping. Freeze goalkeeper-heading disabled for
+career kickoff, matching current BootFixtureEngine; equivalent-run tests use that exact same flag. Automatic
 XI is retained; refuse pre-kickoff substitutes rather than applying a tick-0 mutation. All player and
 coach commands enforce managed-team ownership and the same eligibility/window/cap/keeper rules.
 Back-filled suspended bench players cannot enter. Injured players start/enter only under #41's
@@ -523,7 +769,7 @@ user entry to an ongoing delegated match. Quiescence must also close the final-t
 
 ### 8.4 Additional retained acceptance locks
 
-DCT-01–16 in §7.6 are planned, not executed. Retain these v0.6 integration obligations alongside them:
+DCT-01–20 in §7.6 are planned, not executed. Retain these v0.6 integration obligations alongside them:
 
 | Lock | Required evidence |
 |---|---|
@@ -531,7 +777,7 @@ DCT-01–16 in §7.6 are planned, not executed. Retain these v0.6 integration ob
 | T-IM-16 pre-change anchor | Pin old synchronous digest, all results, full save-byte hash, bans/appearances and counters before code. Attribute intended AI and earlier-validation changes. |
 | T-IM-01 / DCT-07 full-save parity | Equivalent watched/headless controllers yield equal final digest, all results, participation, bans/appearances, counters and actual full save bytes, including managed-home/away mirrors. |
 | Exhaustive mutation audit | Reflect over public loop/career mutators; every one belongs to the guarded list or explicit read-only allowlist. Test Open, Live, Faulted and cancelled-preparation restrictions. |
-| Preparation cancellation | No engine or result is committed; day-steps stay idempotent; Home save/load/reprepare yields coherent preview, cursor and final round. Healthy Live cannot invoke cancellation. |
+| Preparation cancellation / DCT-19 | No engine/result is committed; compare full save bytes and counters to a prepare/cancel control, then save/load/reprepare/play against uninterrupted play; day-steps/cursors and guarded mutations remain coherent. Healthy Live cannot cancel. |
 | Atomic boot / complete | Inject roster/configuration failure before kickoff and result-write failures before/after the first write; verify distinct coherent/Faulted states and no unsafe retry. |
 | Observation coverage | Miss first, middle and last ticks; hold the final observer open while requesting completion; refuse until it finishes and the tick thread has stopped, without deadlock or lost cards. |
 | Eligibility and commands | Suspended back-fill bench refusal, injury-dependent rules, no pre-kickoff substitution, opponent-team refusal, home/away and eligible/used/sent-off/window/cap cases. |
@@ -548,22 +794,22 @@ supplement real-match cases; they cannot replace the real-run replay/parity evid
 
 | v0.6 lock | Current requirement / disposition |
 |---|---|
-| T-IM-01 | DCT-07 and §8.4 full-save parity: equivalent-input watched/headless runs, full bytes and nonserialized counters. |
+| T-IM-01 | DCT-07 explicitly compares existing synchronous round resolution against interactive play; §8.4 full-save parity: equivalent-input watched/headless runs, full bytes and nonserialized counters. |
 | T-IM-02 | Restored explicitly as DCT-13: repeated tick-stamped input replay. |
 | T-IM-03 | Explicit DCT-14: interactive/synchronous finalizer equivalence; stronger positive controls. |
-| T-IM-04 | Ordinary **live** abandonment withdrawn by D-11; pre-kickoff cancellation remains in §8.4. |
-| T-IM-05 | DCT-06 and §8.2: refuse premature/duplicate completion; no duplicate career effects. |
+| T-IM-04 | Ordinary **live** abandonment withdrawn by D-11; preparation subset retained with explicit full-save/counter comparisons in DCT-19. |
+| T-IM-05 | DCT-06 explicitly refuses premature/duplicate completion with unchanged full save bytes/counters; no duplicate career effects. |
 | T-IM-06 | §8.2 / §8.4 exhaustive public-mutator audit, named refusals and guarded cancellation state. |
 | T-IM-07 | DCT-11 / §8.3–8.4: first/middle/last observation gaps and faults block completion; healthy-live abandon recovery is replaced by the specified fault protocol. |
 | T-IM-08(a) | DCT-05 / §8.3: starters plus incoming, off/sent-off players retained, no-substitution equals starters. Collection must work with career wired and discipline unwired; no dependency on a nonnull card fold. |
 | T-IM-08(b) | Restored explicitly as DCT-15: tick-0 substitution/opponent-team drain rejection, logs and unchanged digest. |
-| T-IM-09 | DCT-01 / DCT-15 and §8.3–8.4: suspended bench and injury-dependent admission; completion rejects ineligible participants and ban serving uses actual participation. |
-| T-IM-10 | DCT-02 / §8.3: same admitted squads, entry fatigue and nondefault baseline on canonical kickoff, correct managed team, AI opponent archetype 0. Compare after the first AI stride and prove setup adds no live command. |
+| T-IM-09 | DCT-18 explicitly proves unfielded suspended-reinstatee ban serving, fielded-starter exemption and refusal; DCT-01 / DCT-15 and §8.3–8.4: suspended bench and injury-dependent admission; completion rejects ineligible participants and ban serving uses actual participation. |
+| T-IM-10 | DCT-02 / §8.3: same admitted squads, entry fatigue and nondefault baseline on canonical kickoff, correct managed team, AI opponent with the same frozen profile from the varied club mapping. Compare after the first AI stride and prove setup adds no live command. |
 | T-IM-11 | DCT-11 / §8.3 observer isolation. PM-1/browser keep set-once observer semantics and PostTickObserverFault; career composition isolates consumers and preserves actual analytics fault/cutoff. Reject duplicate integrity-consumer or post-start registrations. Existing PM-1 fault-reader tests must pass unmodified. |
 | T-IM-12 | DCT-08 / DCT-16 and §8.3–8.4: final observation completes and tick owner terminates before result reads; stale observer callbacks fail safely without killing playback. |
 | T-IM-13 | DCT-11 / §8.1–8.2: pre-stage roster failures and distinguish pre-write refusal from post-write Faulted. No automatic retry of partial application. |
-| T-IM-14 | DCT-09 / §8.5: refuse every save bypass and direct managed-day synchronous progress; retain bye/unmanaged/supported synchronous fallbacks. |
-| T-IM-15 | Live abandon/save/load/replay withdrawn. §8.2 / §8.4 retain preparation-cancel/save/load/reprepare, idempotent day-steps, cursor checks and guarded focus/transfer/transaction mutations. |
+| T-IM-14 | DCT-09 explicitly tests one-shot engine attachment; §8.5: refuse every save bypass and direct managed-day synchronous progress; retain bye/unmanaged/supported synchronous fallbacks. |
+| T-IM-15 | Live abandon/save/load/replay withdrawn; DCT-19 retains full-byte prepare/cancel/save/load/reprepare/play comparison. §8.2 / §8.4 retain preparation-cancel/save/load/reprepare, idempotent day-steps, cursor checks and guarded focus/transfer/transaction mutations. |
 | T-IM-16 | §8.1 / §8.4: old synchronous anchors, attributed AI/failure-boundary changes and existing recording-throw/retry tests. |
 | T-IM-17 | §8.4: measured zero-allocation observation/drain after warmup, explicit bounded-buffer failure. |
 
@@ -582,24 +828,16 @@ after the match remains saveable on the same day. `CareerSession` wrappers stop/
 owner before calling completion, then autosave only the closed coherent round. Preparation
 cancellation returns Home without constructing an engine. No report-open callback can commit twice.
 
-### 8.6 Owning amendment checklist
+### 8.6 Owning amendment application map
 
-- #30: shared round halves/guards, immutable preview/owned handle/result, no-match-save enforcement,
-  complete/cancel-preparation/fault states, common finalizer and named failures; update §1/§2/§3/§4,
-  test contracts, reference algorithms, appendices, outline and approval records together.
-- #44: match-record input/output and actual-participant serving; update ERR-044-010 with the code,
-  and bench-eligibility mirrors. Preserve serving-before-card order and exact ApplyCard kinds.
-- #41/#34/#26: medical participation policy, real delegate roster/persistence/eligibility and versioned
-  staff tactical/substitution mapping/live takeover; no invented thresholds or fake identities.
-- #21/#26: kickoff baseline versus live command semantics, custom takeover baseline, opponent AI
-  and managed-team restrictions, including direct assembly references.
-- #38/client design: distinct career preparation/report/Home moves, one-way delegation, pending exit,
-  save retry and truthful report/fault states. Add lifecycle IntentRouting rows only with real seams;
-  do not repurpose PM-1 ReturnToMainMenu or ship phantom public enum members.
-- S1: adopt the Gate-A delta only after technical contract approval and source/host verification;
-  preserve all prescribed tasks, including delegated finish/report and failure/cancellation states.
+AR-3 replacement text and exact sites are specified in §7.10 above. No approved spec is changed by
+this draft. Allocate ERR/FR/enum IDs against the application head; update outline, test traceability,
+section-7 seam records, section-9 approval counts and version histories in that same application.
 
-## 9. November 4 author review record
+## 9. November 4 author review record (historical v0.8)
+
+AR-3 independently reviewed v0.8 and failed it; see §10. The self-review below is retained as that
+revision's record, not a current pass or an unfulfilled claim that no independent review occurred.
 
 **Scope:** source-backed adversarial self-review of v0.7 against v0.6's 17 test locks and current
 MatchClientCore/ClientApp behavior. This is not an independent reviewer verdict or technical approval.
@@ -619,10 +857,48 @@ v0.6's AR-1/AR-2 conclusions apply to that revision; they do not transfer automa
 owner API/spec back-propagation; implementation of the planned locks and exact-source pinned Unity
 compile/EditMode/runtime validation. A clean document check or existing P7b tests close none of these.
 
+## 10. AR-3 independent review and v0.9 proposed disposition
+
+**Received:** November 4, 2026. **Reviewed revision:** v0.8 at `4162e6d4`. Claude reported two fresh
+reviewers plus source cross-checks: **FAIL, 4 High / 7 Medium / 9 Low**. This record preserves that
+verdict. The rows below are author-proposed fixes for re-review, not independent closure or technical
+sign-off. No runtime code changed. The owner answered H1/H2/Low-8 on November 4: defer delegation until staff, use the simulation
+thread/shared queue, and vary opponent profiles deterministically. The follow-up answer explicitly defers interactive career matches too; PM-2 keeps Home resolution.
+All four scope/architecture/profile answers are recorded in §2.2; technical approval is still separate.
+
+| Finding | Proposed v0.9 disposition / remaining gate |
+|---|---|
+| H1 staff prerequisite | §7.7 names FR-ST-003 amendment, real roster versus designated slots, deferred staff prerequisite and NeutralHouseStaff semantics. **Owner chose to defer delegation until staff ships; #34 stays in its existing tranche. Interactive career matches are also explicitly deferred; current PM-2 Home resolution remains the route.** |
+| H2 controller execution | §7.7 records the owner-selected simulation-thread/shared-queue option; #26 owns tactical AND substitution policy. Numeric policy amendment and technical review remain due. |
+| H3 client result authority | §7.7 restores #30/#44-owned collection, private completion sealing and owned-handle finalization. §7.10 explicitly amends #44 §3.1/§4.3/§4.5. Client-built result/discipline payloads cannot commit. |
+| H4 fault states/exit | §7.5 distinguishes critical SessionFaulted, post-write RoundFaulted and SaveFailed. Explicit exceptional recovery exit/reload breaks impossible-success waits; the recovery policy is PROPOSED rather than falsely owner-confirmed. |
+| M1 missing lifecycle routes | §7.8 covers preparation/picker/window close, CancelPreparation, failed-save alternatives and delegated progress-only navigation. DCT-17 covers all contexts. |
+| M2 pause/accelerated support | §7.8 requires a real pause/fence receipt after in-flight tick/observation and one-owner mode switching; §7.10 names match-viewer and client §6 amendments. Existing Pause flag is insufficient. |
+| M3 weakened locks | DCT-07 explicitly compares existing synchronous round resolution; DCT-19 compares full save bytes/counters for preparation cancellation and save/load/reprepare; DCT-06 refuses premature completion; DCT-18 proves unfielded suspended-reinstatee ban serving; DCT-09 proves one-shot attachment. |
+| M4 amendment specificity | §7.10 restores section/FR/KD/replacement obligations across #30 and cross-owners, including #37 §3.5. Normative application/ERR allocation remains separate. |
+| M5 delegated kickoff tactic | §7.3 / §7.7 keep managed engine mode Human under owner-selected H2 option; only the external coach emits commands. ApplyKickoff therefore retains the admitted baseline. Test first-stride state and both team mirrors. The in-engine alternative was not selected; any later change requires another review. |
+| M6 missing command/refusal shapes | §7.9 explicitly proposes transient handoff/outcome and typed refusal records, identifies owners and defers ordinal allocation. Earlier “no enum allocation” meant no numeric grant, not no new types. |
+| M7 full-match gate cost | §7.11 budgets 22 conservative runs, including six ≥540s paced runs; required PR integration/nightly placement and proposed 120-minute budget need real runner measurements/CI application. No pre-commit claim. |
+| L1 dropped preflight checks | §8.1 requires FR-SN-003 before staging and nonmutating paired appearance validation before any fixture apply; DCT-20 and the #30/#41 application rows cover both. |
+| L2 preparation saving | §4 consistently refuses Open/preparation saves; CancelPreparation returns Closed/Home before saving. No preparation format or direct save action. |
+| L3 source symbol / garbled row | Active source references use MatchClientDriver.Service; §4's failure row is rewritten completely. The prior §9 R-05 “Drain” name is a historical naming error corrected here. |
+| L4 buffer bounds | §7.9 proposes 36 occupancy/participant entries, 10 substitution events and conservative 108 player-card events from existing owner limits; boundary/overflow tests and no truncation. #44 implementation/constant review still due. |
+| L5 roadmap pointers/history | Roadmap maintained D-11/career-lane pointers advance to v0.9. The November 2 historical note is restored to its recorded v0.6 wording, explicitly labelled historical; a separate new dated row owns this revision. |
+| L6 source baseline | §1 names actual P7b source `7f81e48a` and documentation head `4162e6d4`; `1d3cebf3` identifies inherited season code only. |
+| L7 save refusal owner | §1 identifies CareerSession.Resume and its MarkDamaged path; storage alone does not impose the match policy. |
+| L8 Aggressive default | §2 / §7.9 name Aggressive 0, Pragmatic 1 and Balanced 2. **Owner chose deterministic variety on November 4.** The proposed stable club-ID mapping and changed digest anchors still require technical review. |
+| L9 goalkeeper heading | §7.9 freezes career goalkeeper heading disabled, as current BootFixtureEngine does, and compares exactly the same flag/config identity in parity/replay. |
+
+**Next gate for the deferred feature:** independent re-review of this resulting revision;
+resolve findings before owner technical sign-off and normative application. P7b code remains
+unchanged and still owes pinned Unity 6000.4.9f1 validation. Existing P7b tests do not execute these
+planned D-P7-6 cases or establish an AR pass. Recruitment remains deferred.
+
 ## Review history
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 2026-11-04 | Record failed independent AR-3 and propose domain-owned results, explicit fault/exit/pause contracts, restored stronger locks, precise amendment map, bounded records and full-match gate budget. Record owner answers: delegation deferred until staff, external queued policy and deterministic profile variety; interactive career play is also deferred and PM-2 retains Home resolution; re-review/sign-off required. |
 | 0.8 | 2026-11-04 | Trace product answers, restore explicit replay/finalizer/drain locks, map every v0.6 lock, specify full-time request outcomes and record author self-review. Independent review and technical approval remain open. |
 | 0.7 | 2026-11-04 | Consolidate confirmed selected-coach delegation, no in-match saving, injury-dependent eligibility and session records into the canonical draft and roadmap D-11; replace ordinary live abandonment, retain round/observer/guard obligations and identify owning amendments. Technical approval remains due. |
 | 0.6 | 2026-11-03 | AR-2 Medium/Low fixes (M7, M11–M21, L4–L10). **Interactive route (M11–M13, M17):** new `PlayManagedMatchday` action routed to Tactics Setup, `PlayMatchday`/`AdvanceRound` refused on managed fixture days, Q2 gains option (d) and the Q1 (a) × Q2 asymmetry; `ManagedTeamIndex` on preview and handle, with the career-attached drain refusing the other team's commands; `Ended` dropped as a stored state; post-abandon mutators refused until the round is played. **Round integrity (M14, M21, L8, L10):** the synchronous path stays stateless and Faulted is interactive-only, per-mode resolution placement and the moved F6/F9 failure point stated, `Kickoff` atomic, FR-SN-003 plan check, lock-free fault read, join enforced in `CareerSession.CompleteMatchday`/`AbandonMatchday`. **Specs, ownership, locks (M7, M15, M16, M18, M19, L4–L7):** §4 gains the FR-SN-025/§1.2, FR-SN-013b, §4.1/§4.2, §7 and outline sites; locks split by owner and host; #38 Appendix C and the ERR-044-010 closure move to the code landing; §2.7 split with new Q3 for tier 1 and the August 17 decision cited; XI-selection claim replaced; tactic-commit rationale, T-IM-10, the #44 quote, W7 and `IneligibleToEnter` corrected. **Client facts (L9):** `Execute` refuses `MatchdayInProgress`, `IsProgressBlocked` source change, autosave rationale dropped. |

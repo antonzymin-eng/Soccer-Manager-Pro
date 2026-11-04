@@ -1,7 +1,7 @@
 # Unity career-lane context
 
 **Created:** November 3, 2026\
-**Version:** 0.2\
+**Version:** 0.3\
 **Purpose:** concise repository-backed context for P7b/D-P7-6 work.\
 **Source context:** main `1d3cebf3` plus the opt-in P7b binding candidate; Unity validation pending.
 
@@ -26,6 +26,11 @@
   `tools/dotnet-ci/generate_projects.py`, then targeted generated-project tests. Repository policy
   runner is `tools/run-tests-local.sh`. The Unity binding is excluded from the Linux shim build.
   Pinned Unity compile/EditMode and actual UI checks are required before claiming completion.
+- November 4 owner staging decision: PM-2 keeps Career Home round resolution. Interactive career
+  matches and coach delegation wait together until the real staff system ships; do not bring an
+  early #34 slice forward or invent an interim in-match Exit. The future controller uses the shared
+  simulation-thread command queue, with deterministically varied opponent profiles. D-P7-6 v0.9 is
+  a deferred proposal requiring independent re-review/technical approval, not PM-2 implementation.
 - Current direction is [the canonical D-P7-6 amendment](../tracking/d-p7-6-interactive-career-match-amendment-draft.md):
   no in-match saves; choose assistant/coach before kickoff or for the remainder, no user re-entry,
   finish/save before normal exit. Preserve match-local card/participation records and apply them to
@@ -41,5 +46,5 @@
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-11-03 | Initial confirmed environment, career integration boundaries and validation limitations. |
-
 | 0.2 | 2026-11-04 | Refresh actual P7b composition and canonical authority; remove session-specific environment instructions. |
+| 0.3 | 2026-11-04 | Record owner-deferred interactive career/delegation, continued Home-resolution PM-2 and selected future queue/profile policies. |

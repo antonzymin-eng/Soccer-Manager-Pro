@@ -697,7 +697,7 @@ authority the code below implements:
 | **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
 | **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
 | **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). *Extended November 3, 2026 (roadmap D-10, v0.86): breakable until the owner's release-readiness checkpoint (D-14; no Early Access planned).* A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION`, or another version of any sub-blob nested in the save (each is gated independently, so an inner bump leaves the outer version alone), is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. A Ready slot whose save fails to decode anyway is invalidated to `Damaged`, so it cannot keep winning Continue. |
-| **D-P7-6** career match interactivity | **Owner product decisions (roadmap D-11, revised November 3):** Play or choose a real assistant/coach to delegate the whole match; adaptive AI opponent; one-way selected-coach simulation of the same match remainder; normal Exit completes/saves before leaving. No saving during a match; Home saving before/after it on the same day remains available. Automatic XI retained. | [Canonical amendment draft](d-p7-6-interactive-career-match-amendment-draft.md) v0.8 is PROPOSED; owning staff, medical, takeover, record-in/out and lifecycle amendments remain due. No interactive career-match code is claimed. |
+| **D-P7-6** career match interactivity | **Owner decisions, revised November 4 (D-11):** interactive career matches and delegation wait together until staff ships. PM-2 keeps Career Home round resolution. Future coach policy runs on the simulation thread/shared queue; adaptive opponents use deterministic profile variety. No mid-match saving; Home saving on the same calendar day remains valid. | [Canonical v0.9 draft](d-p7-6-interactive-career-match-amendment-draft.md) proposes AR-3 fixes for the deferred feature. Real staff/medical/policy, domain-owned record and playback/lifecycle amendments, independent re-review and technical approval remain due. No new career match edge exists. |
 
 **The progress rule (D-P7-3), against #30's guards.** The client offers only what `SeasonLoop` would
 accept, and each withheld action is one #30 refuses (each row has a positive-control test):
@@ -768,7 +768,7 @@ production default and is exercised by the existing #30 suites.
 domain tag, draw site or draw-order change; the client calls only public #30 seams. No scenario window,
 rate band, corpus fit or perf baseline is perturbed.
 
-**Remaining, in order (none is decided by this landing).**
+**Remaining PM-2 work and deferred interactive follow-up.**
 
 1. **P7b — opt-in UGUI candidate implemented; pinned-host validation remains.** Career Home,
    New Career, Load Career and menu entries consume cached worker-backed snapshots. Seven-screen
@@ -776,19 +776,26 @@ rate band, corpus fit or perf baseline is perturbed.
    The binding uses the S0 formatter/focus/layout system. Career matchday work uses the existing
    synchronous season operation on a worker, with `IsProgressBlocked` and duplicate-action guards.
    Actual Unity compile/runtime, pseudo-locale, text-scale, focus and copy acceptance remain due.
-2. **The interactive career-fixture seam (D-P7-6)** — #30 owns the engine/round/finalizer;
-   the session collects private disciplinary/participation records and returns one completed result.
+2. **Deferred: interactive career-fixture seam (D-P7-6), after staff ships** — #30 owns the engine/round/finalizer;
+   its domain handle collects private disciplinary/participation records; the session only pumps observations.
    New named career preparation/report/Home moves must preserve provenance and PM-1 behavior.
    Roadmap D-11 records selected-coach delegation, no player re-entry, adaptive opponent, no saving
    during the match and finish/save/exit. The [canonical amendment](d-p7-6-interactive-career-match-amendment-draft.md)
-   v0.8 consolidates those choices and retained round/observer/eligibility obligations. Technical
+   v0.9 consolidates those choices and retained round/observer/eligibility obligations. Technical
    approval and #30/#26/#34/#41/#44/#38 amendments remain due; no interactive seam exists yet.
+   **AR-3 boundary:** v0.8 failed independent review. v0.9 proposes domain-owned collection,
+   acknowledged pause/accelerated playback (this plan §6 + match-viewer), explicit fault/close/save
+   recovery and stronger tests. The owner deferred delegation until staff ships, selected queued
+   simulation-thread coach policy and deterministic profile variety. Interactive career matches are
+   deferred too. PM-2 keeps Home resolution; no early #34 slice or interim in-match Exit is required.
+   P7b remains an independent opt-in candidate.
 3. **S1 UX Gates B–I** — `docs/design/ux-s1-gate-a-audit.md` records Gate A against this landing.
-   **November 2, 2026:** Gate A stays recorded; it was audited against the October 18 shell, so it
-   takes a **delta refresh** for the interactive career route once the D-P7-6 contract is approved, not
-   a new audit. Recruitment of two independent participants (`ux-detailed-plan.md` F4.2) is deferred by the owner;
-   availability must still be attested before Gate F; their Gate G round must cover the interactive career route
-   (the S0 owner-review waiver does not apply to S1).
+   **November 4 scope refresh:** retain the October 18 audit and refresh the current S1 delta
+   against P7b/Home round resolution under revised D-11. S1 does not wait for deferred D-P7-6 approval.
+   The eight tasks in the execution plan/protocol cover readiness inspection, Home resolve/result,
+   table feedback and between-round saving. Recruitment remains deferred; availability/independence
+   are still due before Gate F, and the S0 owner-review waiver does not apply. The later interactive
+   career slice requires another contract/source-backed UX delta.
    **P7b (item 1) does not wait for items 2–3:** Career Home, New Career, Load Career and Main Menu
    bindings proceed against the landed sources; the matchday edges are added when item 2 lands.
    **November 3 working implementation:** `ClientScreenVisibility` covers seven screens and
@@ -815,9 +822,9 @@ rate band, corpus fit or perf baseline is perturbed.
    incompatible/damaged/empty slot states. Initialization may be retried after failure. Shutdown waits
    for an accepted synchronous #30 operation; it must not abort a writer. Runtime UGUI validation, localized S1
    copy, focus/reflow, pseudo-locale/scale checks and pinned-host compile/runtime remain outstanding.
-   Gate-A audit v0.3 prepares an unadopted delta. [Recruitment brief](../design/ux-s1-recruitment.md)
+   Gate-A audit v0.4 prepares an unadopted delta. [Recruitment brief](../design/ux-s1-recruitment.md)
    records recruitment **deferred by the user November 3**, with no contacts or confirmations.
-   S1 testers run at Gate G after a complete Gate-F prototype,
+   S1 testers run at Gate G after a complete current-PM-2 Gate-F prototype,
    which may be host-free. No approval, participant attestation or host acceptance is inferred.
 4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
    per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
@@ -1093,6 +1100,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.36 | 2026-11-04 | Point to failed AR-3 and proposed v0.9 fixes; name playback/§6 scope, deferred delegation and owner-selected queued policy/profile variety; interactive career play is deferred too and PM-2 retains Home resolution. No implementation or technical approval. |
 | 0.35 | 2026-11-04 | Point to D-P7-6 v0.8 with restored replay/finalizer/drain locks and review traceability; technical approval and pinned-host acceptance remain due. |
 | 0.34 | 2026-11-04 | Reconcile P7b opt-in binding candidate with current roadmap, canonical D-P7-6 v0.7 and deferred S1 recruitment; pinned-host/UX acceptance remains due. |
 | 0.33 | November 3, 2026 | Consolidate the D-P7-5 checkpoint extension and D-P7-6 draft v0.6 / amended D-11 from parallel v0.32 branches. No contract approval or runtime change. |
