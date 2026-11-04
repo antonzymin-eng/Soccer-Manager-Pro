@@ -41,7 +41,7 @@ Staff persistence may independently require its owning format work. Recruitment 
 | DC-Q3 | Normal application exit | OWNER-CONFIRMED | Offer coach selection, complete the same match and round in the background, save successfully, then exit. A failed save keeps the completed in-memory state and exit pending for retry. Forced termination can recover only the last durable save. |
 | DC-Q4 | Pre-kickoff delegation | OWNER-CONFIRMED | Tactics Setup offers Play or delegate the whole match, selecting the assistant manager or another eligible coach. Both routes use the same match engine; delegation is accelerated engine simulation, not an instant round-model result. |
 | DC-Q5 | Staff behavior mapping / eligibility | TECHNICAL CONTRACT WORK | Use the recommended bounded real-staff slice, stable IDs and role/availability checks; define the selected person's tactical/substitution policy through #34/#26. No numeric mapping was previously recommended, so do not invent one or treat a generic opponent archetype as the chosen coach. |
-| DC-08 | Remaining recommended choices | OWNER-AUTHORIZED DEFAULTS | For matters not explicitly overridden, use the current proposal's recommended choices. Explicit injury/save/disciplinary-record/control restrictions take precedence. Withdrawn C-01–C-12 save/resume choices remain withdrawn. |
+| DC-08 | Remaining recommended choices | OWNER-AUTHORIZED DEFAULTS | For matters not explicitly overridden, use the current proposal's recommended choices. Explicit injury/save/disciplinary-record/control restrictions take precedence. Mid-match save/resume is excluded. |
 | DC-09 | User entry to delegated simulation | OWNER-CONFIRMED | No joining, spectating-as-a-route-back-to-control, or taking over an ongoing delegated match. After delegation confirmation, complete the match and show its report. Background progress is status, not an entry action. |
 
 The owner authorized the recommended defaults for items not explicitly overridden. That authorization
@@ -159,9 +159,8 @@ UI/lifecycle detail consistent with the confirmed choices, not a new grant of en
 
 ### Session disciplinary-record boundary — revised requirement
 
-Use a pre-match record-in / completed record-out model. Use this boundary for both watched
-and delegated matches; do not turn it into a career-level live card tracker merely because the existing
-earlier draft places a fold at #30.
+Use a pre-match record-in / completed record-out model for both watched and delegated matches.
+Keep tick collection inside the session; authoritative career records change only at finalization.
 
 1. **Input:** #30/#44 supply a copied, validated disciplinary baseline scoped to the fixture's clubs,
    competition and player IDs, plus eligibility/rule context. Bind it to fixture identity and a baseline
@@ -459,6 +458,9 @@ retry a partially applied round or infer a rollback from fixture-keyed random se
 attaches the playback/session controller to that engine and owns session-local collection; it must
 not construct a second engine. #44 remains the disciplinary-rule authority. Domain assemblies must
 not reference presentation/client assemblies: owner contracts carry data across this boundary.
+Transfer the engine to its session once through an owned attachment; do not expose a reusable public
+engine getter. Invalidate the handle after completion or preparation cancellation, reject stale
+callbacks, and permit only one season command owner and one exclusive tick owner at a time.
 
 Compose the admitted squads once and configure those exact instances at kickoff; no second
 availability walk may change the XI shown in preparation. Boot order: squads and entry fatigue,
@@ -503,6 +505,7 @@ DCT-01–12 in §7.6 are planned, not executed. Retain these v0.6 integration ob
 | Observation coverage | Miss first, middle and last ticks; hold the final observer open while requesting completion; refuse until it finishes and the tick thread has stopped, without deadlock or lost cards. |
 | Eligibility and commands | Suspended back-fill bench refusal, injury-dependent rules, no pre-kickoff substitution, opponent-team refusal, home/away and eligible/used/sent-off/window/cap cases. |
 | Source wiring / Unity | Direct asmdef references, no reverse domain/client dependency, source-backed routing tests and exact-source pinned Unity compile/EditMode plus actual UI checks. |
+| T-IM-17 hot path | After buffer warmup, measure zero managed allocations in the command drain, record/participation collection and composed per-tick observers; bounded buffers must fail explicitly rather than truncate records. |
 
 ### 8.5 Career routing and source projection
 

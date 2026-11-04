@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-03
+// Modified: 2026-11-04
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -26,7 +26,8 @@ namespace TacticalDirector.ClientApp
             R("no_save", "No loadable career save. Start a career or choose Load to inspect slots."),
             R("choose", "Choose a club. The league is generated; the default objective is a top-half finish."),
             R("select", "Select {0}", "S"), R("selected", "Selected: {0}", "S"),
-            R("warning", "Saves may become incompatible through PM-3. Keep a manual save before leaving."),
+            R("selection.ready", "Club selected. Ready to start."),
+            R("warning", "Saves may become incompatible until the release-readiness checkpoint. Keep a manual save before leaving."),
             R("day", "Advance one day"), R("matchday", "Resolve matchday (on Career Home)"), R("season", "Start next season"),
             R("none", "No progress action available"), R("table", "League table"), R("save", "Save to manual slot {0}", "I"),
             R("slot.auto", "Autosave"), R("slot.manual", "Manual slot {0}", "I"),
@@ -38,7 +39,8 @@ namespace TacticalDirector.ClientApp
             R("ontrack", "Objective on track."), R("offtrack", "Objective off track."),
             R("next", "Next: {0} ({1}), day {2}, in {3} days.", "SSII"), R("home.venue", "home"), R("away.venue", "away"),
             R("complete", "No remaining fixture this season."), R("result", "Last result: {0} {1} - {2} {3}", "SIIS"),
-            R("changed", "Last action: {0}", "S"), R("change.Started", "Career started"), R("change.Resumed", "Career resumed"),
+            R("changed", "Last action: {0}", "S"), R("change.None", "No recent action"),
+            R("change.Started", "Career started"), R("change.Resumed", "Career resumed"),
             R("change.DayAdvanced", "Day advanced"), R("change.RoundPlayed", "Round resolved"), R("change.SeasonRolled", "New season started"),
             R("row", "{0}. {1} | Played {2}, W {3}, D {4}, L {5}, GF {6}, GA {7}, points {8}", "ISIIIIIII"),
             R("autosave.error", "Autosave failed: {0}", "S")
@@ -60,12 +62,14 @@ namespace TacticalDirector.ClientApp
         /// <summary>Visible save state; incompatible/damaged slots remain listed.</summary>
         public string Slot(in CareerSlotSummary row)
         {
-            string name = row.Slot == CareerSaveSlot.Autosave ? Label("slot.auto") : Text.Format("slot.name", "slot.manual", (int)row.Slot);
+            string cell = "slot." + (int)row.Slot;
+            string name = row.Slot == CareerSaveSlot.Autosave ? Label("slot.auto") : Text.Format(cell + ".name", "slot.manual", (int)row.Slot);
             string state = Label(row.State == CareerSlotState.Empty ? "empty" : row.State == CareerSlotState.Ready ? "ready" :
                 row.State == CareerSlotState.Incompatible ? "incompatible" : "damaged");
+            string status = Text.Format(cell + ".state", "slot", name, state);
             if (row.State == CareerSlotState.Empty || row.State == CareerSlotState.Damaged)
-                return Text.Format("slot.row", "slot", name, state);
-            return Text.Format("slot.row", "slot.facts", name + ": " + state, row.ManagedClubName,
+                return status;
+            return Text.Format(cell + ".row", "slot.facts", status, row.ManagedClubName,
                 row.SeasonNumber + 1, checked((int)row.WorldDay), row.RoundsPlayed, row.RoundCount, row.LeaguePosition);
         }
         /// <summary>Ordered career context, change, attention and next fixture, sourced only from the supplied snapshot.</summary>
@@ -99,7 +103,7 @@ namespace TacticalDirector.ClientApp
             {
                 LeagueTableRow row = home.Table[i];
                 if (i > 0) s.AppendLine();
-                s.Append(Text.Format("table.row", "row", i + 1, home.TableClubNames[i], row.Played, row.Won, row.Drawn,
+                s.Append(Text.Format("table.row." + i, "row", i + 1, home.TableClubNames[i], row.Played, row.Won, row.Drawn,
                     row.Lost, row.GoalsFor, row.GoalsAgainst, row.Points));
             }
             return s.ToString();
@@ -109,4 +113,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-03 | — | Isolated career role register, slot states and Home formatting. |
+// | 1.1 | 2026-11-04 | — | Localized slot composition, neutral selection/change copy, D-10 disclosure and distinct row cache keys. |
 #endregion

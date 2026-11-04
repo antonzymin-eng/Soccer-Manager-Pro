@@ -369,7 +369,7 @@ To validate in an isolated host checkout:
 5. During queued/running progress, confirm busy feedback and disabled changes/navigation, including
    the demo action; no duplicate operation or UI hang. Matchday still resolves on Career Home.
 6. Verify the actual updated result/table after a round, autosave failure feedback, manual-save retry,
-   damaged/incompatible slots, and repeat new/load/quit cycles. Shutdown waits for an accepted writer.
+   damaged/incompatible slots, and repeat new/load/quit cycles.
 7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, smallest
    desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
    career labels. All career pages use the existing wrapped/scrolled factory and shared focus rings.
@@ -381,3 +381,11 @@ Career copy lives under `ui.career.*` in `CareerScreenText`, independently of re
 The shared formatter admits both catalogues with the existing typed-placeholder and caching rules.
 Career copy/layout is a binding candidate, not S1 Gate-G/H/I approval. Record source identity, actual
 loaded copy identity, compile/EditMode and runtime receipts before claiming host acceptance.
+
+**Known shutdown limitation:** `ClientCareerCoordinator.Dispose` waits on the main thread, without a
+timeout, for accepted career work to finish. During engine-resolved matchday work this can leave the
+application unresponsive until the full round completes (about two minutes at the recorded compute
+rate). The operation cannot currently be cancelled safely. Releasing its owner on a timeout could
+interrupt saving or race career mutation, so a responsive shutdown requires a separate asynchronous
+lifetime/cancellation design. The future D-P7-6 finish/save/exit flow must address that requirement;
+the current P7b binding does not implement it. Verify shutdown explicitly on the pinned host.

@@ -3712,6 +3712,7 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 
 | File | Purpose |
 |------|---------|
+| `S0ScreensBehaviour.Career.cs` / `.meta` | Opt-in career UGUI bindings over cached worker snapshots, sharing S0 focus/layout |
 | `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine in the landed #470 foundation |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
 | `ClientShellBehaviour.cs` | LANDED #470 at f276f700; foundation v1.3, host-fact/visibility/event binding with inactive-ancestor refusal; Main Menu ↔ Tactics Setup only; pinned compile 0 errors and ClientApp.Tests 26/26 recorded; full lifecycle/screens remain due |
@@ -3763,6 +3764,8 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
+| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, per-slot/table formatting and cached output |
+| `tests/CareerScreenTextTests.cs` / `.meta` | Catalogue isolation, translated slot composition, row cache retention and real Home/result display |
 | `ClientCareerCoordinator.cs` | P7b worker-owned career operations, cached immutable UI views, guarded completion/navigation and shutdown |
 | `ClientCareerCoordinator.cs.meta` | Stable Unity identity for the career coordinator |
 | `tests/ClientCareerCoordinatorTests.cs` | Worker publication, busy exclusion, load/save failure/retry, shared career navigation and shutdown locks |

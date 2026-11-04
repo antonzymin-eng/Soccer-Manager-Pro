@@ -516,11 +516,12 @@ decided.
    D-P7-6.
 2. **D-P7-6 contract, then implementation (L).** Contract first: the PROPOSED #30 amendment draft
    [`d-p7-6-interactive-career-match-amendment-draft.md`](d-p7-6-interactive-career-match-amendment-draft.md)
-   (#41/#44 participation errata; no save-format change), then the seam and the interactive route under
-   D-11 (no mid-match saves; quitting abandons the match), with the no-input parity, input-replay,
-   season-commit and abandon locks.
+   v0.7 (#41/#44 participation, #34/#26 delegate policy; no match-save block), then the seam and
+   interactive/delegated routes under D-11 (no saving during the match; finish/save/exit), with
+   equivalent-input parity, handoff, session-record, exactly-once commit and save/exit locks.
 3. **S1 UX.** Delta-refresh the recorded Gate A after the contract is approved; recruit the two
-   independent participants now; continue Gates B–I on the interactive route.
+   independent participants when recruitment resumes (currently deferred by the owner); attest
+   availability before Gate F and continue Gates B–I on the interactive/delegated route.
 4. **Season screens (M).** Fixture list, calendar, table, squad/selection, availability
    (injury/suspension), board objective, progress controls; not every approved #38 screen.
 5. **#44 T3 (M).** Quick-sim card synthesis for league-wide discipline. It stays in PM-2: today

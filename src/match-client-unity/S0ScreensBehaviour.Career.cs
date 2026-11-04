@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-03
+// Modified: 2026-11-04
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
 // Purpose:  Career UGUI adapter over cached coordinator snapshots; no worker or domain-state reads.
@@ -127,10 +127,10 @@ namespace TacticalDirector.MatchClientUnity
                 Button button = _careerClubButtons[i];
                 button.gameObject.SetActive(i < clubs);
                 button.interactable = !_career.IsBusy;
-                if (i < clubs) _ui.SetButton(button, _careerText.Text.Format("club", preview.HasSelection &&
+                if (i < clubs) _ui.SetButton(button, _careerText.Text.Format("club." + i, preview.HasSelection &&
                     preview.SelectedClubId == preview.Clubs[i].ClubId ? "selected" : "select", preview.Clubs[i].Name));
             }
-            S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("start") : C("choose"));
+            S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("selection.ready") : C("choose"));
             for (int i = 0; i < _careerLoadButtons.Count; i++)
             {
                 bool present = _career.Load.Slots != null;
@@ -149,4 +149,5 @@ namespace TacticalDirector.MatchClientUnity
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-03 | — | Persistent career pages, menu entries, cached binding and shared keyboard focus. |
+// | 1.1 | 2026-11-04 | — | Separate selected-club status from the Start action and cache club rows independently. |
 #endregion

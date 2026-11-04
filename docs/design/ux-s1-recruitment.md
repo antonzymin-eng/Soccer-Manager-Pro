@@ -1,7 +1,7 @@
 # S1 — Participant recruitment and session brief
 
 **Created:** November 3, 2026\
-**Version:** 0.1\
+**Version:** 0.2\
 **Status:** DEFERRED BY USER November 3, 2026 — no invitations sent, confirmations or bookings\
 **Purpose:** recruit the two independent S1 usability participants without storing personal data.\
 **Authority:** [validation protocol §§3.2, 4, 7, 9.2](ux-validation-protocol.md);
@@ -19,7 +19,8 @@ Each participant independently attempts **all eight** S1 tasks without control-b
 4. Progress time correctly.
 5. Complete the interactive managed match/report/return loop.
 6. Understand the changed result and league table.
-7. Save, quit and resume according to the product promise, including an unfinished matchday under D-11.
+7. Save, quit and resume according to the product promise: Home saves before/after the match;
+   normal in-match Exit delegates completion, saves the completed round and exits. No in-match save.
 8. Find settings/accessibility.
 
 Observe first attempts, wrong turns, hesitation, missed information, understanding of what happens
@@ -87,3 +88,4 @@ wording. This brief does not grant a Gate-F/G bypass.
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-11-03 | Initial scope, anonymous recruiting status, screening and unsent invitation; recruitment then deferred by user. |
+| 0.2 | 2026-11-04 | Align the prepared session scope with D-11 completed-round saving and selected-coach exit; recruitment stays deferred. |

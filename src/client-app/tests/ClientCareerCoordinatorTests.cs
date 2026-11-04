@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-03
+// Modified: 2026-11-04
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -312,6 +312,19 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void StaleFailedCompletionPreservesTheOriginalLoadError()
+        {
+            using var h = new Harness();
+            h.Career.ContinueCareer();
+            h.Flow.OpenTacticsSetup();
+            h.Finish();
+            Assert.AreEqual(ClientScreens.TacticsSetup, h.Flow.Current);
+            Assert.IsNotEmpty(h.Career.Load.LastError);
+            StringAssert.StartsWith(h.Career.Load.LastError, h.Career.LastError);
+            StringAssert.Contains("screen changed", h.Career.LastError);
+        }
+
+        [Test]
         public void ShutdownWaitsForAcceptedWork_AndDoesNotPublishItsLateCompletion()
         {
             using var temp = new TempSlots();
@@ -386,4 +399,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-03 | —      | P7b deterministic worker/UI publication and navigation regression cases. |
+// | 1.1     | 2026-11-04 | —      | Retain the underlying load failure when navigation becomes stale. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreenTextTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-03
+// Modified: 2026-11-04
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; Localization #49; Code Standards #20
 // Purpose:  Validate career display semantics and shared formatter isolation/admission.
@@ -51,6 +51,41 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains(expected, text.Slot(CareerSlotSummary.Without(CareerSaveSlot.Manual1, state)));
         }
 
+        [TestCase(CareerSlotState.Ready)]
+        [TestCase(CareerSlotState.Incompatible)]
+        public void SlotsWithFactsUseTheLocalizedNameAndStatePattern(CareerSlotState state)
+        {
+            var text = new CareerScreenText(new[] {
+                new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.slot"), "{1} < {0} >") },
+                new LocaleId("qps-ploc"));
+            var row = new CareerSlotSummary(CareerSaveSlot.Manual2, state, 1, 8, 42, 0,
+                "Test Club", 0, 0, 0, 38, 1);
+            string rendered = text.Slot(row);
+            StringAssert.StartsWith(text.Label(state == CareerSlotState.Ready ? "ready" : "incompatible") +
+                " < Manual slot 2 >", rendered);
+            StringAssert.Contains("Test Club", rendered);
+        }
+
+        [Test]
+        public void SlotCachesKeepEachRowsTextAcrossARefresh()
+        {
+            var text = new CareerScreenText();
+            var first = CareerSlotSummary.Without(CareerSaveSlot.Manual1, CareerSlotState.Empty);
+            var second = CareerSlotSummary.Without(CareerSaveSlot.Manual2, CareerSlotState.Damaged);
+            string before = text.Slot(first);
+            text.Slot(second);
+            Assert.AreSame(before, text.Slot(first));
+        }
+
+        [Test]
+        public void NeutralChangeAndSelectionCopyAreSeparateFromTheStartAction()
+        {
+            var text = new CareerScreenText();
+            Assert.AreEqual("No recent action", text.Label("change.None"));
+            Assert.AreNotEqual(text.Label("start"), text.Label("selection.ready"));
+            StringAssert.Contains("release-readiness checkpoint", text.Label("warning"));
+        }
+
         [Test]
         public void HomeAndResultTextUseTheOwningSnapshots()
         {
@@ -74,4 +109,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-03 | — | Career copy isolation, pseudo-locale schemas, save states and real Home/result text. |
+// | 1.1 | 2026-11-04 | — | Cover translated slot composition, per-row caching and neutral/release-checkpoint copy. |
 #endregion

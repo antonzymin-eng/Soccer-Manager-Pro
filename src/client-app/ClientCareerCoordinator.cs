@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-03
+// Modified: 2026-11-04
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b),
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -329,7 +329,8 @@ namespace TacticalDirector.ClientApp
                 Revision++;
                 if (_flow.Current != _operationScreen)
                 {
-                    LastError = "Career operation completed after its screen changed; navigation was refused.";
+                    const string staleScreen = "Career operation completed after its screen changed; navigation was refused.";
+                    LastError = LastError == null ? staleScreen : LastError + " " + staleScreen;
                     return;
                 }
                 if (LastError == null) navigation?.Invoke();
@@ -365,4 +366,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-03 | —      | P7b worker ownership, immutable publication and guarded career navigation. |
+// | 1.1     | 2026-11-04 | —      | Preserve the operation error when stale-screen navigation is refused. |
 #endregion
