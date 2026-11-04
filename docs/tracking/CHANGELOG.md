@@ -12,7 +12,22 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **ERR-028-026 measured: career drift instrument (owner request).**
+> **Last Updated:** November 4, 2026 — **ERR-040-004: clubs start with a transfer budget (owner decision D-13).**
+> A read-only check showed season 1 was sale-only: the genesis window `[0, 44]` closes before the first
+> `SettleFinances`, the only budget setter, and `CreateInitial` set every ceiling to 0. #40 FR-FN-003 is
+> amended: `CreateInitial` seeds the ceilings a zero-prize identity-board settlement would set
+> (`BASE_TRANSFER_BUDGET` 100,000 / `BASE_WAGE_BUDGET` 50,000, same clamp) and `SettleFinances` stays the
+> sole setter after creation; FR-FN-004, KD-3, §3, T-FN-NEU-002 and Appendix B follow (#40 section-1 v0.5,
+> section-2 v0.9, section-3/-5 v0.17, appendices v0.11; spec-error-log v2.97). Code: `ClubFinances.cs`
+> v1.5, `FinanceStep.cs` v1.10. New outcome lock: a career composed through `League.CreateLoop` with no
+> test-set budget buys in its first window (cheapest other-club player 50,129; 56 of 69 affordable on the
+> 4-club rig); it returned `InsufficientBudget` before. `genesis-transfer-budget` resolved and archived
+> (39 active / 75 archived). Roadmap v0.94 records D-13 as partly decided: starting budget, transfer and
+> finance screens in PM-3, regen measured. No schema, save-format, RNG stream, domain tag, draw site or
+> draw-order change; AI clubs never read budgets, so quick-sim and engine results are unchanged. The
+> counterparty ledger stays the interim. Full Linux gate: every suite passed except SeasonSave.Tests, whose 9 failures were assertions pinning the old zero genesis ceilings (`SeasonDailyRevenueTests` in-season helper, `SeasonLoopFinanceTests` bootstrap and ledger checks). Those now expect the base values (`SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8) and SeasonSave.Tests reran 552 passed / 0 failed / 4 skipped. Same gate: MatchEngine 841/0/16, ClientApp 224/0/3, ClubFinances 70/0/0, Transfers 69/0/0; build 0 errors.
+
+> **Last Updated (prior):** November 4, 2026 — **ERR-028-026 measured: career drift instrument (owner request).**
 > New env-gated `CareerDriftDiagnosticTests` (catalogued `career-drift`, `TD_CAREER_DRIFT=1`) plays the
 > production career composition on quick-sim; evidence `evidence/career-drift-20261104/` (5 seeds × 40
 > seasons). Measured: the top-5 vs bottom-5 genesis clubs' rating gap goes 4.78 → 3.77 (season 5, 79%

@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 13, 2026 (v0.16 — REV-001–009 now have executable formula and daily-composition locks)
+**Last Updated:** November 4, 2026 (v0.17 — ERR-040-004: genesis budget ceilings are the zero-prize base (owner decision D-13))
+**Last Updated (prior):** October 13, 2026 (v0.16 — REV-001–009 now have executable formula and daily-composition locks)
 **Last Updated (prior):** October 11, 2026 (v0.15 — PR #497 review: REV-009 delayed-roll day count)
 **Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: T-FN-REV-009 delayed-roll attribution lock)
 **Last Updated (prior):** October 10, 2026 (v0.13 — §5.10 T3b2 revenue acceptance T-FN-REV-001–009, specified ahead of the code slice)
@@ -60,8 +61,11 @@ Tests land at T-phase; this is the acceptance contract.
   `SettleFinances` yields **exactly** `budget = f(finalTablePosition, prizeMoney)` — no FFP/board adjustment
   changes the projected ceilings (KD-8/FR-FN-028).
 - **T-FN-NEU-002** — `ClubFinances.CreateInitial(startingBalance)` yields `Balance = startingBalance`,
-  `TransferBudget = 0`, `WageBudget = 0`, `WageBillAggregate = 0`, `SeasonRevenueAccrued = 0`,
-  `FfpBalanceWindow = 0` — the pre-first-season identity.
+  `TransferBudget = BASE_TRANSFER_BUDGET` (100,000), `WageBudget = BASE_WAGE_BUDGET` (50,000) — the
+  zero-prize identity-board ceilings, ERR-040-004 — and `WageBillAggregate = 0`, `SeasonRevenueAccrued = 0`,
+  `FfpBalanceWindow = 0`: the pre-first-season state. Amended by ERR-040-004 (previously both budgets 0).
+  A composed career's first-window buy at or below the base ceiling is `Accepted`
+  (`SeasonTransfersT2Tests.GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling`).
 - **T-FN-NEU-003** — Registering #40's reserved namespace slot (not a stream — none is registered at
   minimal) leaves every existing stream's cursor byte-identical across a full season run with and without
   #40 active (stream independence) — trivially true at Stage 2 since no stream exists yet, the same test
@@ -277,4 +281,5 @@ config producer.
 | 0.14 | 2026-10-11 | — | **PR #497 review.** REV-004/REV-007 count in-season days only; new T-FN-REV-009 locks roll-timing independence (immediate roll vs advancing the whole break first), the out-of-season home-fixture refusal and zero pre-season sponsorship. |
 | 0.15 | 2026-10-11 | — | **PR #497 review.** T-FN-REV-009's delayed run advances to the opening day computed from the clock (`SeasonBreakDays − 1` after final-day completion), not the full `SeasonBreakDays`, which `AdvanceDays` refuses. |
 | 0.16 | 2026-10-13 | — | **T3b2 implementation.** REV-001–009 now have executable formula and daily-composition locks. Default remains off; pinned Unity compilation pending. |
+| 0.17 | 2026-11-04 | — | **ERR-040-004.** T-FN-NEU-002 amended: genesis budgets are the zero-prize base ceilings; adds the composed first-window buy lock. |
 #endregion

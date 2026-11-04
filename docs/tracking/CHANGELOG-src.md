@@ -14,7 +14,16 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 4, 2026 (UTC) — (v2.220 — **ERR-028-026 career drift measurement; test-only.**
+> **Last Updated:** November 4, 2026 (UTC) — (v2.221 — **ERR-040-004 genesis budget ceilings.**
+> `club-finances/ClubFinances.cs` v1.5: `CreateInitial` seeds `TransferBudget`/`WageBudget` from
+> `FinanceStep.cs` v1.10's new internal `ZeroPrizeTransferCeiling()` / `ZeroPrizeWageCeiling()` (the existing
+> `ScaleAndClampBudget` at the identity multiplier over `BaseTransferBudget` / `BaseWageBudget`). Tests:
+> `ClubFinancesT0Tests` v1.4 (`CreateInitial_SeedsTheZeroPrizeBaseCeilings`), `ClubFinancesT2BootstrapTests`
+> v1.3, `SeasonTransfersT2Tests` v1.7 (`GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling`),
+> `SeasonDailyRevenueTests` v1.1 and `SeasonLoopFinanceTests` v1.8 (zero-ceiling pins → base values). No new
+> seam, constant, schema, RNG stream or draw-order change.)
+
+> **Last Updated (prior):** November 4, 2026 (UTC) — (v2.220 — **ERR-028-026 career drift measurement; test-only.**
 > New `src/season-save/tests/CareerDriftDiagnosticTests.cs` v1.0 (+ `.meta`): env-gated (`TD_CAREER_DRIFT`)
 > diagnostic that restates `CareerSession.StartNew`'s composition (season-save tests cannot reference
 > client-app), plays QuickSimAll seasons with `AdvanceToNextFixtureDay` / `AdvanceAndPlayNextRound` /
@@ -2843,6 +2852,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.221 | 2026-11-04 | — | ERR-040-004: `ClubFinances.cs` v1.5 / `FinanceStep.cs` v1.10 seed genesis ceilings with the zero-prize base; tests `ClubFinancesT0Tests` v1.4, `ClubFinancesT2BootstrapTests` v1.3, `SeasonTransfersT2Tests` v1.7, `SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8. Full Linux gate: every suite passed except SeasonSave.Tests, whose 9 failures were assertions pinning the old zero genesis ceilings (`SeasonDailyRevenueTests` in-season helper, `SeasonLoopFinanceTests` bootstrap and ledger checks). Those now expect the base values (`SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8) and SeasonSave.Tests reran 552 passed / 0 failed / 4 skipped. Same gate: MatchEngine 841/0/16, ClientApp 224/0/3, ClubFinances 70/0/0, Transfers 69/0/0; build 0 errors. |
 | 2.220 | 2026-11-04 | — | ERR-028-026 measurement: `CareerDriftDiagnosticTests.cs` v1.0 (env-gated `TD_CAREER_DRIFT`, catalogued `career-drift`); test-only, no production change. SeasonSave.Tests 551 passed / 0 failed / 4 skipped (the new diagnostic skips without `TD_CAREER_DRIFT`); Unity meta integrity OK; full Linux gate not rerun (the change is confined to SeasonSave.Tests and tooling). |
 | 2.219 | 2026-11-04 | — | P7b review: localized per-row copy/cache, neutral change/selection labels, current D-10 disclosure, preserved stale-operation error and explicit shutdown limitation. ClientApp 223/0/3; pinned Unity validation due. |
 | 2.218 | 2026-11-02 | — | Comment-only: `WorldStore.cs` v1.8 corrects the `WorldSeed` summary's stale "squads are not persisted" (the `PROG` block has carried the roster since #28 T1). No behaviour change. |

@@ -354,7 +354,7 @@ step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 
 **Branch cleanup/reachability rule.** A local Git result may support a branch-deletion or evidence-reachability decision only after `python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <ref> --descendant <ref>` accepts the repository as non-shallow and evaluates the stored commit graph (replacement refs disabled; legacy grafts rejected). For **remote** branch deletion, the descendant must be a freshly fetched remote-tracking ref such as `refs/remotes/origin/main`, an authoritative remote OID, or an authoritative remote/API comparison; local `main` is sufficient only for local-branch cleanup because a local-only merge does not prove remote publication. If the checkout is shallow, make no local ancestry claim. Fetching refs alone does not satisfy this rule unless the shallow boundary is removed. Current-tree blob absence is not proof that historical evidence is unreachable.
 
-**40 active** / **74 archived**. *(November 4, 2026 — index the existing P7b main-thread shutdown wait; counts re-derived from owning files.)*
+**39 active** / **75 archived**. *(November 4, 2026 — `genesis-transfer-budget` resolved by ERR-040-004 and archived; counts re-derived from owning files.)*
 
 
 - **P7b shutdown waits on the Unity main thread for accepted career work. OPEN; opt-in limitation.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-shutdown-main-thread-wait); asynchronous lifetime/cancellation design and host checks remain due.*

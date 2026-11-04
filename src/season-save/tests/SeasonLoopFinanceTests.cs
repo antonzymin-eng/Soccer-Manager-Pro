@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/season-save/tests/SeasonLoopFinanceTests.cs
 // Created:  2026-09-11
-// Modified: 2026-10-13
+// Modified: 2026-11-04 (ERR-040-004 genesis ceilings)
 // Author:   —
 // Spec:     Club Finances & Economy #40 §3.2/§3.4/§4.1-§4.3/§7.1 T2b,
 //           T-FN-LIFE-001, T-FN-ORD-001/003, T-FN-DET-002; Season Loop #30 §3.5;
@@ -48,8 +48,10 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 Assert.That(entries[i].ClubId, Is.EqualTo(i));
                 Assert.That(entries[i].Finances.Balance, Is.EqualTo(ClubFinancesConstants.StartingClubBalance));
-                Assert.That(entries[i].Finances.TransferBudget, Is.Zero);
-                Assert.That(entries[i].Finances.WageBudget, Is.Zero);
+                Assert.That(entries[i].Finances.TransferBudget, Is.EqualTo(ClubFinancesConstants.BaseTransferBudget),
+                    "ERR-040-004 genesis ceiling");
+                Assert.That(entries[i].Finances.WageBudget, Is.EqualTo(ClubFinancesConstants.BaseWageBudget),
+                    "ERR-040-004 genesis ceiling");
                 Assert.That(entries[i].Finances.WageBillAggregate, Is.Zero);
                 Assert.That(entries[i].Finances.SeasonRevenueAccrued, Is.Zero);
                 Assert.That(entries[i].Finances.FfpBalanceWindow, Is.Zero);
@@ -165,8 +167,8 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(
                 view.Balance,
                 Is.EqualTo(ClubFinancesConstants.StartingClubBalance - 125_000L));
-            Assert.That(loop.AvailableTransferBudget(0), Is.Zero,
-                "between-boundary ledger activity must not rewrite the settlement-owned budget ceiling");
+            Assert.That(loop.AvailableTransferBudget(0), Is.EqualTo(ClubFinancesConstants.BaseTransferBudget),
+                "between-boundary ledger activity must not rewrite the budget ceiling (genesis value, ERR-040-004)");
             Assert.That(loop.FinanceView(1).Balance, Is.EqualTo(ClubFinancesConstants.StartingClubBalance),
                 "a keyed transaction must not mutate another club's finance state");
         }
@@ -615,4 +617,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.5     | 2026-10-08 | —      | PR #491 review: detached publication, late-club refusal/retry, and explicit IL scan scope. |
 // | 1.6 | 2026-10-09 | — | ERR-030-053: lock pending-day refusal and already-completed day settlement. |
 // | 1.7 | 2026-10-13 | — | Preserve T3b1 identity locks using zero-revenue pre-season inputs under the config-owned gate. |
+// | 1.8 | 2026-11-04 | — | ERR-040-004: bootstrap and between-boundary ceilings are the genesis base values, not zero. |
 #endregion
