@@ -4555,3 +4555,45 @@ Update this manifest when:
 - a new spec folder is added,
 - a tracking/planning file is added, removed, or renamed,
 - project-level documentation paths change.
+
+## Pre-C control evidence — November 4, 2026
+
+Created November 4, 2026. Purpose: pin the B control and exact-touch/team instrument before W8 C.
+
+| File | Purpose |
+| --- | --- |
+| `docs/tracking/evidence/pre-c-control-20261104/FrozenW8.cs.txt` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/PROTOCOL.md` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/Program.cs.txt` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/README.md` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/REPRODUCE.md` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/SHA256SUMS` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/analysis.json` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/analysis.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/analyze.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/classifier-tests.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/closeout.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/evidence-check-tests.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/expected.json` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/freeze-verification.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/freeze.json` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/freeze.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/observed-build-accepted.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/observed-build-final-v2.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/observer-only.patch` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/package_evidence.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/per-match.csv` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/plain-build-accepted.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/plain-build-final-v2.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/preflight-attempts.tar.xz` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/prepare.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/render_report.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/run.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/runs.json` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/selected-windows.csv` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/selection-tests.log` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/test_evidence_checks.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/test_selection.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/verify_freeze.py` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |
+| `docs/tracking/evidence/pre-c-control-20261104/windows.json` | Pre-C source/runtime/instrument, capture, analysis or integrity evidence; see the directory README |

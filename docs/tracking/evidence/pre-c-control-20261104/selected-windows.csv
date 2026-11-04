@@ -1,0 +1,13 @@
+seed,keeper,team,release_frame,release_order,first_opponent_touch_frame,touch_order,touch_kind,toucher,delay_frames,complete,own_shots,opponent_shots,own_goals,opponent_goals
+0F1E2D3C4B5A6978,0,0,147726,2,147862,1,touch:first-touch,21,136,True,0,1,0,0
+00000000D1A6D05E,0,0,150552,2,150701,1,touch:first-touch,20,149,True,0,1,0,1
+00000000D1A6D05E,11,1,166242,2,166300,1,touch:first-touch,9,58,True,0,1,0,0
+00000000ABCDEF12,11,1,24126,2,24126,5,touch:first-touch,10,0,True,0,0,0,0
+00000000ABCDEF12,11,1,24378,2,24378,5,touch:first-touch,10,0,True,0,0,0,0
+00000000ABCDEF12,11,1,24630,2,24763,1,touch:first-touch,9,133,True,0,0,0,1
+00000000ABCDEF12,0,0,124920,2,125058,1,touch:first-touch,21,138,True,0,1,0,1
+0000000099887766,0,0,19254,2,19724,1,touch:loose-pickup,21,470,True,0,0,0,0
+0000000099887766,0,0,29184,2,29270,1,touch:first-touch,21,86,True,0,1,0,1
+0000000099887766,11,1,145482,2,145662,1,touch:first-touch,9,180,True,0,1,0,1
+0000000099887766,0,0,197814,2,198057,1,touch:first-touch,20,243,True,0,1,0,0
+000000005A5A5A5A,11,1,124110,2,124236,1,touch:first-touch,9,126,True,0,1,0,1

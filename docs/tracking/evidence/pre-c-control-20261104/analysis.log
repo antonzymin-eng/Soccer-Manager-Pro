@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "observationCounts": {
+    "event": 23755,
+    "touch:pass-contact": 7813,
+    "touch:first-touch": 5438,
+    "restriction-end:restart": 242,
+    "touch:loose-pickup": 2677,
+    "touch:shot-contact": 146,
+    "shot": 146,
+    "goal": 47,
+    "touch:body-applied": 16,
+    "hand-attempt": 165,
+    "touch:hand-contact": 165,
+    "hand-response": 39,
+    "hand-claim-response": 126,
+    "release": 126,
+    "restriction-clear:touch": 126,
+    "touch:tackle-won": 9,
+    "touch:tackle-loose": 37
+  },
+  "releaseSelection": {
+    "teammate-first": 114,
+    "opponent-first-within-507": 12
+  },
+  "selectedWindows": 12,
+  "completeWindows": 12,
+  "overlappingWindowPairs": 2,
+  "perWindowEventCounts": {
+    "shot:opponent": 8,
+    "goal:opponent": 6
+  },
+  "uniqueEvents": {
+    "shot": 8,
+    "goal": 6
+  },
+  "corpusGoals": 47,
+  "simulatedFrames": 1944000,
+  "corpusGoalsPer600Frames": 0.014506172839506172
+}

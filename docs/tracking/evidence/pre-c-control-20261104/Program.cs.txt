@@ -1,0 +1,133 @@
+// Created 2026-11-04. Direct CLR capture runner for the Pre-C control.
+// Custom measurement executable; no Unity or canonical policy-gate claim.
+using System;
+using System.IO;
+using System.Reflection;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using System.Runtime.InteropServices;
+using NUnit.Framework;
+using UnityEngine;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.EventSystem;
+using TacticalDirector.ShotMechanics;
+using TacticalDirector.GoalkeeperMechanics;
+
+internal static class Program
+{
+    internal sealed class ContactClassifier
+    {
+        private int _frame=-1,_agent=-1;
+        internal string Resolve(string kind,int frame,int agent) {
+            if(kind=="touch:hand-contact") { _frame=frame;_agent=agent; }
+            if(kind=="gk-heading-contact") {
+                kind=_frame==frame && _agent==agent ? "hand-response" : "touch:header-contact";
+                _frame=-1;_agent=-1;
+            }
+            if(kind=="hand-claim-response") { _frame=-1;_agent=-1; }
+            return kind;
+        }
+    }
+    static object V(Vector3 p) => new { x=p.x, y=p.y, z=p.z };
+    static FieldInfo Field(Type t,string name) => t.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic);
+    static Action Bind(object instance,Type t,string name) => (Action)Delegate.CreateDelegate(typeof(Action),instance,t.GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic));
+    static int Main(string[] args)
+    {
+        if(args.Length==1 && args[0]=="--self-test") {
+            var c=new ContactClassifier();
+            Assert.AreEqual("touch:header-contact",c.Resolve("gk-heading-contact",1,0));
+            c.Resolve("touch:hand-contact",1,0);
+            Assert.AreEqual("hand-response",c.Resolve("gk-heading-contact",1,0));
+            Assert.AreEqual("touch:header-contact",c.Resolve("gk-heading-contact",1,0));
+            c.Resolve("touch:hand-contact",1,0);c.Resolve("hand-claim-response",1,0);
+            Assert.AreEqual("touch:header-contact",c.Resolve("gk-heading-contact",1,0));
+            c.Resolve("touch:hand-contact",1,0);
+            Assert.AreEqual("touch:header-contact",c.Resolve("gk-heading-contact",2,0));
+            c.Resolve("touch:hand-contact",2,0);
+            Assert.AreEqual("touch:header-contact",c.Resolve("gk-heading-contact",2,11));
+            Console.WriteLine("6 contact-classifier assertions passed");return 0;
+        }
+        CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture=CultureInfo.InvariantCulture;
+        ulong seed=ulong.Parse(args[0],NumberStyles.HexNumber);
+        string mode=args[1], output=args[2];
+        int frames=args.Length>3 ? int.Parse(args[3]):324000;
+        Directory.CreateDirectory(output);
+        UnityEngine.TestTools.LogAssert.ignoreFailingMessages=true;
+        var originalOut=Console.Out;
+        using var log=new StreamWriter(Path.Combine(output,"engine.log"));
+        Console.SetOut(log);
+        try {
+            var engine=new MatchEngine(seed); engine.EnableGkHeading();
+            Assert.AreEqual(TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,engine.TestOnly_W8DistributionPolicy(0));
+            Assert.AreEqual(TacticalDirector.TacticalInstructions.GkDistributionPolicy.SlowDown,engine.TestOnly_W8DistributionPolicy(1));
+            int frame=0, order=0, goals=0, shots=0, distributions=0;
+            using var observations=new StreamWriter(Path.Combine(output,"observations.jsonl"));
+            Action<object> row=value=>observations.WriteLine(JsonSerializer.Serialize(value));
+            Action after=null, finish=null;
+            var frozenReport=new StringBuilder();
+            if(mode=="observed") {
+                Type t=typeof(W8StageADiagnosticTests).GetNestedType("Census",BindingFlags.NonPublic);
+                var census=Activator.CreateInstance(t,BindingFlags.Instance|BindingFlags.NonPublic,null,new object[]{engine,seed,frozenReport},null);
+                var observe=(Action<W8StageAEvent>)Delegate.CreateDelegate(typeof(Action<W8StageAEvent>),census,t.GetMethod("Observe",BindingFlags.Instance|BindingFlags.NonPublic));
+                engine.TestOnly_W8StageAObserver=observe;
+                after=Bind(census,t,"AfterTick");finish=Bind(census,t,"Finish");
+                var classifier=new ContactClassifier();
+                Action<string,int,Vector3,Vector3,int,int,int> capture=(kind,id,contact,position,restriction,pending,taker)=> {
+                    kind=classifier.Resolve(kind,frame,id);
+                    row(new { kind,frame,order=++order,agent=id,team=id>=0?engine.AgentTeamId(id):-1,contact=V(contact),position=V(position),restriction,pending,taker });
+                };
+                typeof(MatchEngine).GetMethod("PreCAttach",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(engine,new object[]{capture});
+                Action<byte,byte[]> publish=(ordinal,raw)=> {
+                    string kind="event";int agent=-1,team=-1,scoringTeam=-1;object location=null;
+                    if(ordinal==EventRegistry.GetOrdinal<ShotExecutedEvent>()) {
+                        var shot=MemoryMarshal.Read<ShotExecutedEvent>(raw); kind="shot";agent=shot.ShootingAgentId;team=shot.TeamId;location=V(engine.BallView.Position);
+                    }
+                    if(ordinal==EventRegistry.GetOrdinal<GoalAwardedEvent>()) {
+                        var goal=MemoryMarshal.Read<GoalAwardedEvent>(raw);kind="goal";agent=goal.Scorer;team=agent>=0?engine.AgentTeamId(agent):-1;scoringTeam=goal.ScoringTeam;location=V(goal.BallPosition);
+                    }
+                    row(new { kind,frame,order=++order,ordinal,agent,team,scoringTeam,location,raw=Convert.ToBase64String(raw),eventTick=BitConverter.ToUInt32(raw,4),subsystem=BitConverter.ToUInt16(raw,8),draw=BitConverter.ToUInt16(raw,10) });
+                };
+                typeof(EventBus).GetField("PreCPublishObserver").SetValue(null,publish);
+            }
+            // Access existing read-only ledger-copy arrays, never the live EventBus ring.
+            var ledger=Field(typeof(MatchEngine),"_tickLedger").GetValue(engine);
+            var lt=ledger.GetType();
+            var payload=(byte[])Field(lt,"_payload").GetValue(ledger);
+            var offsets=(int[])Field(lt,"_offsets").GetValue(ledger);
+            var sizes=(int[])Field(lt,"_sizes").GetValue(ledger);
+            using var digest=new BinaryWriter(File.Create(Path.Combine(output,"digests.bin")));
+            using var trajectory=new BinaryWriter(File.Create(Path.Combine(output,"trajectory.bin")));
+            using var events=new BinaryWriter(File.Create(Path.Combine(output,"ledger.bin")));
+            var watch=System.Diagnostics.Stopwatch.StartNew();
+            for(int i=0;i<frames;i++) {
+                frame=i+1;order=0;
+                engine.RunTick();after?.Invoke();
+                Assert.AreEqual((uint)frame,engine.CurrentTick);
+                digest.Write(engine.CurrentSnapshotDigest);
+                var ball=engine.BallView;
+                foreach(var v in new[]{ball.Position,ball.Velocity,ball.AngularVelocity,ball.LastValidPosition,ball.LastValidVelocity}) { trajectory.Write(v.x);trajectory.Write(v.y);trajectory.Write(v.z); }
+                trajectory.Write((int)ball.State);trajectory.Write(engine.PossessingAgentId);
+                events.Write(engine.TickLedgerCount);
+                for(int n=0;n<engine.TickLedgerCount;n++) {
+                    byte ordinal=engine.TickLedgerOrdinal(n);
+                    events.Write(ordinal);events.Write(sizes[n]);events.Write(payload,offsets[n],sizes[n]);
+                    if(ordinal==EventRegistry.GetOrdinal<ShotExecutedEvent>())shots++;
+                    if(ordinal==EventRegistry.GetOrdinal<GoalAwardedEvent>())goals++;
+                    if(ordinal==EventRegistry.GetOrdinal<DistributionExecutedEvent>())distributions++;
+                }
+                if(frame%54000==0) {log.Flush();observations.Flush();File.WriteAllText(Path.Combine(output,"progress.json"),JsonSerializer.Serialize(new{frame,elapsedSeconds=watch.Elapsed.TotalSeconds}));}
+            }
+            finish?.Invoke();
+            File.WriteAllText(Path.Combine(output,"frozen-w8.txt"),frozenReport.ToString());
+            var summary=new { seed=seed.ToString("X16"),mode,frames,tick=engine.CurrentTick,digest=Convert.ToHexString(engine.CurrentSnapshotDigest).ToLowerInvariant(),goals,shots,distributions,elapsedSeconds=watch.Elapsed.TotalSeconds,restriction=engine.TestOnly_ReleasedHandKeeper,runtime=System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription };
+            File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions{WriteIndented=true}));
+            Console.SetOut(originalOut);originalOut.WriteLine(JsonSerializer.Serialize(summary));
+            return 0;
+        } catch(Exception error) {
+            File.WriteAllText(Path.Combine(output,"failure.txt"),error.ToString());
+            Console.SetOut(originalOut);originalOut.WriteLine(error);return 1;
+        } finally { Console.SetOut(originalOut);UnityEngine.TestTools.LogAssert.ignoreFailingMessages=false; }
+    }
+}

@@ -1,0 +1,6349 @@
+[
+  {
+    "release": {
+      "kind": "release",
+      "frame": 28536,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.0361102,
+        "y": 35.472504,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.0361102,
+        "y": 35.472504,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 28736,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 19.284712,
+        "y": 34.310734,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.304281,
+        "y": 34.311302,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 200,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 124740,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.01117,
+        "y": 33.583855,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.01117,
+        "y": 33.583855,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 124883,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 84.81557,
+        "y": 27.041225,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.10702,
+        "y": 26.469769,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 143,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 147726,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.20011199,
+        "y": 33.03542,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.20011199,
+        "y": 33.03542,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 147862,
+      "order": 1,
+      "agent": 21,
+      "team": 1,
+      "contact": {
+        "x": 18.384771,
+        "y": 27.055874,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.171253,
+        "y": 27.535307,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 147898,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": -1,
+        "location": {
+          "x": 18.08686,
+          "y": 26.974937,
+          "z": 0.11
+        },
+        "raw": "AQEAALpBAgAFAAAAFQAAAAEAAAArcqdB4i4WwH3OhEAGC/DAA1SSQQAAAABmZmY/AAAAPz+beT+O39+9evhFPupqeD90cEo/AAAAAEeSnUF3DxpFukECAAAAAAA=",
+        "eventTick": 147898,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 136,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 150414,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.57879,
+        "y": 31.464838,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.57879,
+        "y": 31.464838,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 150554,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 88.15109,
+        "y": 26.13139,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.1906,
+        "y": 25.858261,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 140,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 169788,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.05566,
+        "y": 30.23992,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.05566,
+        "y": 30.23992,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 169893,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.45737,
+        "y": 26.394457,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.597466,
+        "y": 26.01008,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 105,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 276384,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.05666,
+        "y": 32.494923,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.05666,
+        "y": 32.494923,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 276509,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.97568,
+        "y": 26.889767,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.24258,
+        "y": 26.418615,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 125,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 313068,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.291452,
+        "y": 37.31074,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.291452,
+        "y": 37.31074,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 313179,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 17.188961,
+        "y": 41.985497,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.04363,
+        "y": 42.321617,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 111,
+    "seed": "0F1E2D3C4B5A6978"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 9642,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.30026,
+        "y": 27.935,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.30026,
+        "y": 27.935,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 9708,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 88.94679,
+        "y": 28.616224,
+        "z": 0.15283181
+      },
+      "position": {
+        "x": 88.07605,
+        "y": 28.72138,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 66,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 25086,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 99.776535,
+        "y": 42.262447,
+        "z": 0.15
+      },
+      "position": {
+        "x": 99.776535,
+        "y": 42.262447,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 25248,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 82.275314,
+        "y": 40.59932,
+        "z": 0.11
+      },
+      "position": {
+        "x": 81.4336,
+        "y": 40.15961,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 162,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 83814,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.487188,
+        "y": 34.550293,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.487188,
+        "y": 34.550293,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 83945,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.351397,
+        "y": 27.626438,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.973629,
+        "y": 26.934298,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 131,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 113178,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 8.968791,
+        "y": 35.528713,
+        "z": 0.15
+      },
+      "position": {
+        "x": 8.968791,
+        "y": 35.528713,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 113264,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 18.878649,
+        "y": 41.166325,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.581085,
+        "y": 41.816936,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 86,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 115362,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 101.994644,
+        "y": 36.176525,
+        "z": 0.15
+      },
+      "position": {
+        "x": 101.994644,
+        "y": 36.176525,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 115485,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 86.42217,
+        "y": 39.85146,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.78142,
+        "y": 40.512157,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 123,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 146250,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 105,
+        "y": 39.05685,
+        "z": 0.15
+      },
+      "position": {
+        "x": 105,
+        "y": 39.05685,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 146407,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 89.66855,
+        "y": 44.281578,
+        "z": 0.11
+      },
+      "position": {
+        "x": 88.833435,
+        "y": 43.754604,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 157,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 146886,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.35366,
+        "y": 34.73845,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.35366,
+        "y": 34.73845,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 147019,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.66192,
+        "y": 25.063442,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.72295,
+        "y": 25.27992,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 133,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 147372,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 96.311104,
+        "y": 28.766035,
+        "z": 0.15
+      },
+      "position": {
+        "x": 96.311104,
+        "y": 28.766035,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 147463,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 85.675095,
+        "y": 25.726852,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.97521,
+        "y": 25.176725,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 91,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 150552,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 5.6547527,
+        "y": 35.455757,
+        "z": 0.15
+      },
+      "position": {
+        "x": 5.6547527,
+        "y": 35.455757,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 150701,
+      "order": 1,
+      "agent": 20,
+      "team": 1,
+      "contact": {
+        "x": 19.181778,
+        "y": 40.60062,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.13164,
+        "y": 40.417847,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 150748,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 20,
+        "team": 1,
+        "scoringTeam": -1,
+        "location": {
+          "x": 19.277828,
+          "y": 40.509052,
+          "z": 0.11
+        },
+        "raw": "AQEAANxMAgAFAAAAFAAAAAEAAAAQOqJB/YSUQFf4c0Bzsts/j5adQQAAAADNzMw9AAAAP8Z1dT9PuGA+UpI4PjO/aT8geko/AAAAADkwpEF3Bx1F3EwCAAAAAAA=",
+        "eventTick": 150748,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      },
+      {
+        "kind": "goal",
+        "frame": 150838,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 20,
+        "team": 1,
+        "scoringTeam": 1,
+        "location": {
+          "x": -0.12648301,
+          "y": 35.23565,
+          "z": 0.11
+        },
+        "raw": "BwEAADZNAgA8AAAAFAAAAP////8BAAAAw4QBvk7xDEKuR+E9",
+        "eventTick": 150838,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 149,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 166242,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 95.015465,
+        "y": 30.594233,
+        "z": 0.15
+      },
+      "position": {
+        "x": 95.015465,
+        "y": 30.594233,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 166300,
+      "order": 1,
+      "agent": 9,
+      "team": 0,
+      "contact": {
+        "x": 87.525246,
+        "y": 30.229973,
+        "z": 0.15850843
+      },
+      "position": {
+        "x": 86.736694,
+        "y": 29.72096,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 166324,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 9,
+        "team": 0,
+        "scoringTeam": -1,
+        "location": {
+          "x": 87.55224,
+          "y": 29.521599,
+          "z": 0.11
+        },
+        "raw": "AQEAALSJAgAFAAAACQAAAAAAAAA+D5VBgKwZQaA9cUCjC4pAIvqWQQAAAABmZmY/AAAAP4/0Xz9Z4+Y+Cjo1PtL8cD84PEY/AAAAAGr7kkEQQS1FtIkCAAAAAAA=",
+        "eventTick": 166324,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 58,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 167220,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.98545,
+        "y": 34.562004,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.98545,
+        "y": 34.562004,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 167344,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.107956,
+        "y": 41.507145,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.3437,
+        "y": 42.098087,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 124,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 182766,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 94.214935,
+        "y": 35.404346,
+        "z": 0.15
+      },
+      "position": {
+        "x": 94.214935,
+        "y": 35.404346,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 182879,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 84.04604,
+        "y": 41.413513,
+        "z": 0.11
+      },
+      "position": {
+        "x": 83.26818,
+        "y": 41.972576,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 113,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 183204,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 101.854774,
+        "y": 35.118107,
+        "z": 0.15
+      },
+      "position": {
+        "x": 101.854774,
+        "y": 35.118107,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 183323,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 88.167725,
+        "y": 42.491665,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.18538,
+        "y": 42.54602,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 119,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 183660,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.181496,
+        "y": 34.241882,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.181496,
+        "y": 34.241882,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 183795,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.194855,
+        "y": 43.648655,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.48923,
+        "y": 42.98949,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 135,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 184158,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.02913,
+        "y": 35.128605,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.02913,
+        "y": 35.128605,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 184272,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 86.934326,
+        "y": 41.32956,
+        "z": 0.1289378
+      },
+      "position": {
+        "x": 86.024414,
+        "y": 41.563297,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 114,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 193392,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.5546091,
+        "y": 35.103806,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.5546091,
+        "y": 35.103806,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 193714,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 23.21528,
+        "y": 49.27649,
+        "z": 0.11
+      },
+      "position": {
+        "x": 23.225063,
+        "y": 49.282116,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 322,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 267642,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.86909,
+        "y": 31.09515,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.86909,
+        "y": 31.09515,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 267776,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.266106,
+        "y": 23.116062,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.578285,
+        "y": 23.82672,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 134,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 294714,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 101.50263,
+        "y": 37.90298,
+        "z": 0.15
+      },
+      "position": {
+        "x": 101.50263,
+        "y": 37.90298,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 294837,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 86.907036,
+        "y": 41.214878,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.12582,
+        "y": 41.714195,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 123,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 295314,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.30003,
+        "y": 34.513275,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.30003,
+        "y": 34.513275,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 295473,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.68502,
+        "y": 28.773212,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.28962,
+        "y": 27.878954,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 159,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 320094,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.865974,
+        "y": 33.150627,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.865974,
+        "y": 33.150627,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 320218,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.938934,
+        "y": 26.202627,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.03289,
+        "y": 25.922695,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 124,
+    "seed": "00000000D1A6D05E"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 1974,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.503678,
+        "y": 32.698517,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.503678,
+        "y": 32.698517,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 2299,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 20.834024,
+        "y": 27.934822,
+        "z": 0.11
+      },
+      "position": {
+        "x": 21.132845,
+        "y": 27.089243,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 325,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 2646,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.1509075,
+        "y": 32.389156,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.1509075,
+        "y": 32.389156,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 2742,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 14.526887,
+        "y": 37.60923,
+        "z": 0.13221325
+      },
+      "position": {
+        "x": 15.461019,
+        "y": 37.471153,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 96,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 30564,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 3.2766662,
+        "y": 39.64084,
+        "z": 0.15
+      },
+      "position": {
+        "x": 3.2766662,
+        "y": 39.64084,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 30637,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 12.497308,
+        "y": 39.116673,
+        "z": 0.11
+      },
+      "position": {
+        "x": 13.402713,
+        "y": 39.17431,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 73,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 30984,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.13430527,
+        "y": 34.656647,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.13430527,
+        "y": 34.656647,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 31392,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 15.786976,
+        "y": 30.463295,
+        "z": 0.11
+      },
+      "position": {
+        "x": 16.473064,
+        "y": 29.778797,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 408,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 62214,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.63502,
+        "y": 31.753092,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.63502,
+        "y": 31.753092,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 62325,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.06826,
+        "y": 26.954613,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.21983,
+        "y": 26.475262,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 111,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 72534,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.094008,
+        "y": 32.222557,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.094008,
+        "y": 32.222557,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 72626,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 17.841797,
+        "y": 26.489555,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.680061,
+        "y": 26.261858,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 92,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 122088,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.0737182,
+        "y": 31.926119,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.0737182,
+        "y": 31.926119,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 122229,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 15.281482,
+        "y": 25.531708,
+        "z": 0.11
+      },
+      "position": {
+        "x": 16.26292,
+        "y": 25.433434,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 141,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 122622,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.260795,
+        "y": 34.055664,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.260795,
+        "y": 34.055664,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 122748,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 16.964035,
+        "y": 25.05291,
+        "z": 0.11
+      },
+      "position": {
+        "x": 17.830421,
+        "y": 24.925074,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 126,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 123570,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.81682324,
+        "y": 35.187622,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.81682324,
+        "y": 35.187622,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 123699,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 18.66432,
+        "y": 40.903946,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.16288,
+        "y": 41.719563,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 129,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 159708,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.8872926,
+        "y": 27.603647,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.8872926,
+        "y": 27.603647,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 159845,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 16.466171,
+        "y": 25.207485,
+        "z": 0.11
+      },
+      "position": {
+        "x": 17.43537,
+        "y": 25.099882,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 137,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 160278,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.7603899,
+        "y": 33.50552,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.7603899,
+        "y": 33.50552,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 160413,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 18.474197,
+        "y": 41.623028,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.297373,
+        "y": 42.0251,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 135,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 160824,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.659424,
+        "y": 36.130093,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.659424,
+        "y": 36.130093,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 160921,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 18.66837,
+        "y": 42.544594,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.506474,
+        "y": 43.012295,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 97,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 201486,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 5.628087,
+        "y": 37.758938,
+        "z": 0.15
+      },
+      "position": {
+        "x": 5.628087,
+        "y": 37.758938,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 201611,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 18.704336,
+        "y": 41.46823,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.4053,
+        "y": 42.109165,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 125,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 282246,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 10.978778,
+        "y": 31.371147,
+        "z": 0.15
+      },
+      "position": {
+        "x": 10.978778,
+        "y": 31.371147,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 282326,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.82166,
+        "y": 26.967798,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.637747,
+        "y": 26.419333,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 80,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 300276,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 101.204765,
+        "y": 37.030647,
+        "z": 0.15
+      },
+      "position": {
+        "x": 101.204765,
+        "y": 37.030647,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 300409,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.86312,
+        "y": 40.32621,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.20132,
+        "y": 40.977016,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 133,
+    "seed": "0000000000000001"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 22848,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.463165,
+        "y": 32.50492,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.463165,
+        "y": 32.50492,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 23056,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 80.4309,
+        "y": 19.878883,
+        "z": 0.11
+      },
+      "position": {
+        "x": 80.41526,
+        "y": 19.853539,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 208,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 24126,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.27247,
+        "y": 34.306145,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.27247,
+        "y": 34.306145,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 24126,
+      "order": 5,
+      "agent": 10,
+      "team": 0,
+      "contact": {
+        "x": 104.27247,
+        "y": 34.306145,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.572845,
+        "y": 34.771557,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [],
+    "delayFrames": 0,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 24378,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.56177,
+        "y": 34.092377,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.56177,
+        "y": 34.092377,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 24378,
+      "order": 5,
+      "agent": 10,
+      "team": 0,
+      "contact": {
+        "x": 104.56177,
+        "y": 34.092377,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.86994,
+        "y": 33.624683,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [],
+    "delayFrames": 0,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 24630,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.82835,
+        "y": 33.16446,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.82835,
+        "y": 33.16446,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 24763,
+      "order": 1,
+      "agent": 9,
+      "team": 0,
+      "contact": {
+        "x": 88.879074,
+        "y": 28.086855,
+        "z": 0.11
+      },
+      "position": {
+        "x": 88.28389,
+        "y": 27.401981,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "goal",
+        "frame": 25363,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 13,
+        "team": 1,
+        "scoringTeam": 0,
+        "location": {
+          "x": 105.14081,
+          "y": 31.837343,
+          "z": 0.11
+        },
+        "raw": "BwEAABNjAAA8AAAADQAAAP////8AAAAAGEjSQuGy/kGuR+E9",
+        "eventTick": 25363,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 133,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 28896,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.51046,
+        "y": 34.67329,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.51046,
+        "y": 34.67329,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 29243,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 88.6739,
+        "y": 28.16141,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.78497,
+        "y": 27.738005,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 347,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 29922,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.14536,
+        "y": 35.557964,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.14536,
+        "y": 35.557964,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 30280,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 84.962715,
+        "y": 31.445496,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.4235,
+        "y": 30.620724,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 358,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 30642,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 95.98493,
+        "y": 34.756153,
+        "z": 0.15
+      },
+      "position": {
+        "x": 95.98493,
+        "y": 34.756153,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 30769,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 85.71254,
+        "y": 43.895897,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.7899,
+        "y": 43.5703,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 127,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 47112,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 96.07301,
+        "y": 35.326126,
+        "z": 0.15
+      },
+      "position": {
+        "x": 96.07301,
+        "y": 35.326126,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 47246,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 82.39253,
+        "y": 39.14346,
+        "z": 0.11
+      },
+      "position": {
+        "x": 81.60362,
+        "y": 39.627785,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 134,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 50226,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.118675,
+        "y": 33.44615,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.118675,
+        "y": 33.44615,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 50373,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 89.57648,
+        "y": 25.221872,
+        "z": 0.11
+      },
+      "position": {
+        "x": 88.611404,
+        "y": 25.467827,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 147,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 50796,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.25883,
+        "y": 33.09742,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.25883,
+        "y": 33.09742,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 50977,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.69114,
+        "y": 35.36422,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.92638,
+        "y": 35.88089,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 181,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 51762,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 96.85435,
+        "y": 36.260006,
+        "z": 0.15
+      },
+      "position": {
+        "x": 96.85435,
+        "y": 36.260006,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 51880,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 84.94017,
+        "y": 42.09859,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.07772,
+        "y": 42.36465,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 118,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 80442,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.87691,
+        "y": 33.675014,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.87691,
+        "y": 33.675014,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 80611,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 88.3599,
+        "y": 26.951298,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.521355,
+        "y": 26.569363,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 169,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 124920,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.25857055,
+        "y": 33.843376,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.25857055,
+        "y": 33.843376,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 125058,
+      "order": 1,
+      "agent": 21,
+      "team": 1,
+      "contact": {
+        "x": 18.736189,
+        "y": 28.128681,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.678057,
+        "y": 28.426727,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 125074,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": -1,
+        "location": {
+          "x": 19.169521,
+          "y": 27.936214,
+          "z": 0.11
+        },
+        "raw": "AQEAAJLoAQAFAAAAFQAAAAEAAAA7Hp9B+jmdwCuIgkAcPlDAQBycQQAAAABmZmY/AAAAP7y+cz/u2HC+j/RHPi0dXz9+lEo/AAAAAFvNokERSQJFkugBAAAAAAA=",
+        "eventTick": 125074,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      },
+      {
+        "kind": "goal",
+        "frame": 125162,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": 1,
+        "location": {
+          "x": -0.13280398,
+          "y": 33.02404,
+          "z": 0.11
+        },
+        "raw": "BwEAAOroAQA8AAAAFQAAAP////8BAAAAxP0Hvp4YBEKuR+E9",
+        "eventTick": 125162,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 138,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 154416,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.219604,
+        "y": 35.184868,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.219604,
+        "y": 35.184868,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 154506,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.058235,
+        "y": 41.63853,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.233475,
+        "y": 42.066307,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 90,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 155058,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.959656,
+        "y": 31.73171,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.959656,
+        "y": 31.73171,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 155177,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.73177,
+        "y": 27.242926,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.00968,
+        "y": 26.580587,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 119,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 170562,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.2055125,
+        "y": 31.644117,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.2055125,
+        "y": 31.644117,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 170670,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.85973,
+        "y": 26.301807,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.524866,
+        "y": 25.593336,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 108,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 215232,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.3129899,
+        "y": 37.158775,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.3129899,
+        "y": 37.158775,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 215424,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 17.566364,
+        "y": 41.47115,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.462162,
+        "y": 41.705776,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 192,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 273294,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.311507,
+        "y": 27.364826,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.311507,
+        "y": 27.364826,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 273454,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 22.978119,
+        "y": 23.814196,
+        "z": 0.11
+      },
+      "position": {
+        "x": 23.79379,
+        "y": 23.36709,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 160,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 288810,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.11425,
+        "y": 33.912365,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.11425,
+        "y": 33.912365,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 288933,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.473404,
+        "y": 27.804144,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.729996,
+        "y": 27.144524,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 123,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 289908,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 102.542076,
+        "y": 30.321373,
+        "z": 0.15
+      },
+      "position": {
+        "x": 102.542076,
+        "y": 30.321373,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 290029,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.86719,
+        "y": 28.161774,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.271774,
+        "y": 27.466412,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 121,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 300936,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.77752,
+        "y": 34.312473,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.77752,
+        "y": 34.312473,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 301443,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 76.369545,
+        "y": 52.02547,
+        "z": 0.11
+      },
+      "position": {
+        "x": 76.94529,
+        "y": 51.252945,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 507,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 302256,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.31312,
+        "y": 33.779762,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.31312,
+        "y": 33.779762,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 302373,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.97119,
+        "y": 39.898598,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.454124,
+        "y": 40.710888,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 117,
+    "seed": "00000000ABCDEF12"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 15522,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 9.421361,
+        "y": 31.544489,
+        "z": 0.15
+      },
+      "position": {
+        "x": 9.421361,
+        "y": 31.544489,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 15905,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.668251,
+        "y": 21.47941,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.934258,
+        "y": 22.069452,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 383,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 19254,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.3105351,
+        "y": 34.01127,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.3105351,
+        "y": 34.01127,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 19724,
+      "order": 1,
+      "agent": 21,
+      "team": 1,
+      "contact": {
+        "x": 24.34597,
+        "y": 34.093983,
+        "z": 0.11
+      },
+      "position": {
+        "x": 23.462164,
+        "y": 34.335842,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [],
+    "delayFrames": 470,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 29184,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.16212961,
+        "y": 34.046055,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.16212961,
+        "y": 34.046055,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 29270,
+      "order": 1,
+      "agent": 21,
+      "team": 1,
+      "contact": {
+        "x": 4.2239223,
+        "y": 24.924757,
+        "z": 0.17619856
+      },
+      "position": {
+        "x": 4.9507337,
+        "y": 24.29202,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 29284,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": -1,
+        "location": {
+          "x": 3.988069,
+          "y": 24.793379,
+          "z": 0.11
+        },
+        "raw": "AQEAAGRyAAAFAAAAFQAAAAEAAADRqkRBvE6PwXjhskBaLldBr0dWQQAAAABmZmY/AAAAP5lFDD88bUy/5St/Pkdfaz8yWkI/AAAAAEvxKkGICPRDZHIAAAAAAAA=",
+        "eventTick": 29284,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      },
+      {
+        "kind": "goal",
+        "frame": 29305,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": 1,
+        "location": {
+          "x": -0.19290197,
+          "y": 30.873594,
+          "z": 1.1722142
+        },
+        "raw": "BwEAAHlyAAA8AAAAFQAAAP////8BAAAAGIhFvh/99kEdC5Y/",
+        "eventTick": 29305,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 86,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 57936,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.30466,
+        "y": 33.88509,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.30466,
+        "y": 33.88509,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 58044,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 93.39094,
+        "y": 27.74018,
+        "z": 0.11
+      },
+      "position": {
+        "x": 92.44387,
+        "y": 28.05338,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 108,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 58416,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.84914,
+        "y": 33.752613,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.84914,
+        "y": 33.752613,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 58558,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 85.85076,
+        "y": 27.29437,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.02005,
+        "y": 26.81081,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 142,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 58914,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 99.26166,
+        "y": 31.356607,
+        "z": 0.15
+      },
+      "position": {
+        "x": 99.26166,
+        "y": 31.356607,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 59034,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.50531,
+        "y": 25.348482,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.554504,
+        "y": 25.39822,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 120,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 59382,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.95067,
+        "y": 31.177578,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.95067,
+        "y": 31.177578,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 59497,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.095985,
+        "y": 26.410671,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.140854,
+        "y": 26.22863,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 115,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 60516,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.910034,
+        "y": 32.401493,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.910034,
+        "y": 32.401493,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 60643,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.05632,
+        "y": 26.687094,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.26229,
+        "y": 26.25827,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 127,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 61086,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 98.64239,
+        "y": 32.505383,
+        "z": 0.15
+      },
+      "position": {
+        "x": 98.64239,
+        "y": 32.505383,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 61201,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.95117,
+        "y": 27.139322,
+        "z": 0.12962674
+      },
+      "position": {
+        "x": 86.18774,
+        "y": 26.635792,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 115,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 145482,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.540474,
+        "y": 28.36486,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.540474,
+        "y": 28.36486,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 145662,
+      "order": 1,
+      "agent": 9,
+      "team": 0,
+      "contact": {
+        "x": 83.12657,
+        "y": 26.894524,
+        "z": 0.11
+      },
+      "position": {
+        "x": 82.13746,
+        "y": 26.971296,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 145732,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 9,
+        "team": 0,
+        "scoringTeam": -1,
+        "location": {
+          "x": 84.6534,
+          "y": 26.816956,
+          "z": 0.11
+        },
+        "raw": "AQEAAEQ5AgAFAAAACQAAAAAAAACJT5tBSavuQGiif0AqxYc/0AOeQQAAAABmZmY/AAAAP6Wuaj8JUrQ+XyNBPux8aj/tjEo/AAAAAItIr0HdzRdFRDkCAAAAAAA=",
+        "eventTick": 145732,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      },
+      {
+        "kind": "goal",
+        "frame": 145847,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 9,
+        "team": 0,
+        "scoringTeam": 0,
+        "location": {
+          "x": 105.14529,
+          "y": 34.419205,
+          "z": 0.11
+        },
+        "raw": "BwEAALc5AgA8AAAACQAAAP////8AAAAAY0rSQkStCUKuR+E9",
+        "eventTick": 145847,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 180,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 180198,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.602542,
+        "y": 34.620827,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.602542,
+        "y": 34.620827,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 180334,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 19.818352,
+        "y": 42.053535,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.708363,
+        "y": 42.44066,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 136,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 195336,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.2879296,
+        "y": 34.03117,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.2879296,
+        "y": 34.03117,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 195564,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 16.904434,
+        "y": 42.559296,
+        "z": 0.11
+      },
+      "position": {
+        "x": 17.883762,
+        "y": 42.58136,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 228,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 195918,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 8.817378,
+        "y": 37.39197,
+        "z": 0.15
+      },
+      "position": {
+        "x": 8.817378,
+        "y": 37.39197,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 196024,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 19.83133,
+        "y": 42.601807,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.62007,
+        "y": 43.211456,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 106,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 197814,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.7664877,
+        "y": 33.689293,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.7664877,
+        "y": 33.689293,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 198057,
+      "order": 1,
+      "agent": 20,
+      "team": 1,
+      "contact": {
+        "x": 25.311144,
+        "y": 38.63245,
+        "z": 0.11
+      },
+      "position": {
+        "x": 25.846418,
+        "y": 39.412437,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 198250,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 21,
+        "team": 1,
+        "scoringTeam": -1,
+        "location": {
+          "x": 24.185843,
+          "y": 31.483969,
+          "z": 0.11
+        },
+        "raw": "AQEAAGoGAwAFAAAAFQAAAAEAAAB/vp9BB510v7JDgEAsRZTB3BPfQAAAAABmZmY/AAAAP6W3ej+l9T+9aU9JPih1Sz9cxEo/AAAAAFBcw0Gqgk5FagYDAAAAAAA=",
+        "eventTick": 198250,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 243,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 198570,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.79593,
+        "y": 32.920258,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.79593,
+        "y": 32.920258,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 198683,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 18.727716,
+        "y": 26.698181,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.497818,
+        "y": 26.208797,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 113,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 228918,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.0559812,
+        "y": 32.335476,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.0559812,
+        "y": 32.335476,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 229092,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 17.180231,
+        "y": 26.614506,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.091583,
+        "y": 26.420362,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 174,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 244062,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.44594,
+        "y": 33.57545,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.44594,
+        "y": 33.57545,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 244197,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.48961,
+        "y": 43.51107,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.5978,
+        "y": 43.27803,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 135,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 244548,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.99168,
+        "y": 33.817707,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.99168,
+        "y": 33.817707,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 244685,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 86.61748,
+        "y": 40.896816,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.76593,
+        "y": 41.285973,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 137,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 251448,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 12.10106,
+        "y": 38.375355,
+        "z": 0.15
+      },
+      "position": {
+        "x": 12.10106,
+        "y": 38.375355,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 251523,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 20.226013,
+        "y": 43.26266,
+        "z": 0.11
+      },
+      "position": {
+        "x": 21.135181,
+        "y": 43.299084,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 75,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 269358,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.12882,
+        "y": 34.501404,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.12882,
+        "y": 34.501404,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 269571,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.4288,
+        "y": 26.973259,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.53468,
+        "y": 26.596298,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 213,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 271464,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.851616,
+        "y": 30.885702,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.851616,
+        "y": 30.885702,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 271569,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.60951,
+        "y": 25.998087,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.749466,
+        "y": 25.7243,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 105,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 273462,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.952866,
+        "y": 34.831936,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.952866,
+        "y": 34.831936,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 273672,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.96098,
+        "y": 43.436962,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.04742,
+        "y": 43.09646,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 210,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 299586,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.5237455,
+        "y": 27.696669,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.5237455,
+        "y": 27.696669,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 299722,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 18.03897,
+        "y": 24.527224,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.978603,
+        "y": 24.542074,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 136,
+    "seed": "0000000099887766"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 26100,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.76564,
+        "y": 33.724,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.76564,
+        "y": 33.724,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 26252,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 89.33366,
+        "y": 24.902077,
+        "z": 0.11
+      },
+      "position": {
+        "x": 88.7506,
+        "y": 24.215294,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 152,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 32076,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.17852,
+        "y": 34.239166,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.17852,
+        "y": 34.239166,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 32187,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 90.03625,
+        "y": 42.60993,
+        "z": 0.11
+      },
+      "position": {
+        "x": 89.19006,
+        "y": 42.720005,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 111,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 32652,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.87338,
+        "y": 34.18535,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.87338,
+        "y": 34.18535,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:loose-pickup",
+      "frame": 32977,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 89.84066,
+        "y": 46.174595,
+        "z": 0.11
+      },
+      "position": {
+        "x": 90.434746,
+        "y": 45.402126,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 325,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 53376,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.8932,
+        "y": 33.721806,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.8932,
+        "y": 33.721806,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 53526,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.91692,
+        "y": 42.739063,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.00184,
+        "y": 42.7709,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 150,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 54420,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 102.76077,
+        "y": 31.861835,
+        "z": 0.15
+      },
+      "position": {
+        "x": 102.76077,
+        "y": 31.861835,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 54562,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.65124,
+        "y": 24.129044,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.77745,
+        "y": 24.604311,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 142,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 54912,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.09095,
+        "y": 33.802525,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.09095,
+        "y": 33.802525,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 55036,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 87.2001,
+        "y": 40.457596,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.49001,
+        "y": 40.99764,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 124,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 61140,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.76886,
+        "y": 34.88118,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.76886,
+        "y": 34.88118,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 61283,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.85827,
+        "y": 42.08707,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.027695,
+        "y": 42.364605,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 143,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 65550,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.47891,
+        "y": 34.2315,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.47891,
+        "y": 34.2315,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 65704,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 89.990555,
+        "y": 41.549435,
+        "z": 0.11
+      },
+      "position": {
+        "x": 89.06471,
+        "y": 41.737408,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 154,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 68202,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 12.816818,
+        "y": 32.522266,
+        "z": 0.15
+      },
+      "position": {
+        "x": 12.816818,
+        "y": 32.522266,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 68293,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 21.553432,
+        "y": 25.846672,
+        "z": 0.11
+      },
+      "position": {
+        "x": 22.364098,
+        "y": 25.31694,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 91,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 75312,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.272964,
+        "y": 33.88675,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.272964,
+        "y": 33.88675,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 75521,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.96256,
+        "y": 25.804195,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.999794,
+        "y": 25.751827,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 209,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 75864,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.193474,
+        "y": 33.618618,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.193474,
+        "y": 33.618618,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 75997,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.811455,
+        "y": 24.312048,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.07733,
+        "y": 24.937996,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 133,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 76362,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.117584,
+        "y": 33.338055,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.117584,
+        "y": 33.338055,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 76489,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.86928,
+        "y": 27.499136,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.43502,
+        "y": 26.675835,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 127,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 89646,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 99.14826,
+        "y": 35.11594,
+        "z": 0.15
+      },
+      "position": {
+        "x": 99.14826,
+        "y": 35.11594,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 89776,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 86.96124,
+        "y": 44.23802,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.15821,
+        "y": 43.73935,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 130,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 108474,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.9134,
+        "y": 33.761055,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.9134,
+        "y": 33.761055,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 108598,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 88.17582,
+        "y": 26.29378,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.24469,
+        "y": 25.979433,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 124,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 111924,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 4.920465,
+        "y": 37.13223,
+        "z": 0.15
+      },
+      "position": {
+        "x": 4.920465,
+        "y": 37.13223,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 112042,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 17.848778,
+        "y": 43.379295,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.79071,
+        "y": 43.388847,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 118,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 112698,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.037036,
+        "y": 30.074135,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.037036,
+        "y": 30.074135,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 112783,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 17.27827,
+        "y": 25.454052,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.24865,
+        "y": 25.409164,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 85,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 124110,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.166405,
+        "y": 34.190105,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.166405,
+        "y": 34.190105,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 124236,
+      "order": 1,
+      "agent": 9,
+      "team": 0,
+      "contact": {
+        "x": 85.25788,
+        "y": 27.406658,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.38147,
+        "y": 27.858559,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": true,
+    "reason": "opponent-first-within-507",
+    "events": [
+      {
+        "kind": "shot",
+        "frame": 124252,
+        "order": 2,
+        "ordinal": 1,
+        "agent": 9,
+        "team": 0,
+        "scoringTeam": -1,
+        "location": {
+          "x": 84.573296,
+          "y": 27.35932,
+          "z": 0.11
+        },
+        "raw": "AQEAAFzlAQAFAAAACQAAAAAAAAB195VBDBLWQHeyQ0Cyc9NA5WWUQQAAAABmZmY/AAAAP7dPbj/cFqo+o30bPpLyQT85pEk/AAAAADzAq0HdbQFFXOUBAAAAAAA=",
+        "eventTick": 124252,
+        "subsystem": 5,
+        "draw": 0,
+        "side": "opponent"
+      },
+      {
+        "kind": "goal",
+        "frame": 124399,
+        "order": 1,
+        "ordinal": 7,
+        "agent": 9,
+        "team": 0,
+        "scoringTeam": 0,
+        "location": {
+          "x": 105.12099,
+          "y": 34.355804,
+          "z": 0.11
+        },
+        "raw": "BwEAAO/lAQA8AAAACQAAAP////8AAAAA8j3SQlhsCUKuR+E9",
+        "eventTick": 124399,
+        "subsystem": 60,
+        "draw": 0,
+        "side": "opponent"
+      }
+    ],
+    "delayFrames": 126,
+    "complete": true,
+    "observedFollowingFrames": 600,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 137934,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.284615,
+        "y": 34.024853,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.284615,
+        "y": 34.024853,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 138048,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.82118,
+        "y": 26.433086,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.98467,
+        "y": 25.96016,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 114,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 146628,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 95.56186,
+        "y": 35.938267,
+        "z": 0.15
+      },
+      "position": {
+        "x": 95.56186,
+        "y": 35.938267,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 146756,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 84.61055,
+        "y": 27.496677,
+        "z": 0.11
+      },
+      "position": {
+        "x": 84.044075,
+        "y": 26.69023,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 128,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 155076,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 102.24451,
+        "y": 30.339436,
+        "z": 0.15
+      },
+      "position": {
+        "x": 102.24451,
+        "y": 30.339436,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 155197,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.871994,
+        "y": 27.158482,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.20047,
+        "y": 26.442583,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 121,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 164886,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 102.108246,
+        "y": 34.46133,
+        "z": 0.15
+      },
+      "position": {
+        "x": 102.108246,
+        "y": 34.46133,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 165007,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 88.23042,
+        "y": 42.035553,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.27557,
+        "y": 41.937817,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 121,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 165354,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 99.18052,
+        "y": 36.13356,
+        "z": 0.15
+      },
+      "position": {
+        "x": 99.18052,
+        "y": 36.13356,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 165502,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.70633,
+        "y": 41.39411,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.13197,
+        "y": 42.18351,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 148,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 183846,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.41127,
+        "y": 36.780468,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.41127,
+        "y": 36.780468,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 183996,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 88.34922,
+        "y": 42.250286,
+        "z": 0.11
+      },
+      "position": {
+        "x": 87.45225,
+        "y": 42.435467,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 150,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 184380,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 93.45833,
+        "y": 37.01063,
+        "z": 0.15
+      },
+      "position": {
+        "x": 93.45833,
+        "y": 37.01063,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 184463,
+      "order": 1,
+      "agent": 13,
+      "team": 1,
+      "contact": {
+        "x": 85.58149,
+        "y": 42.947147,
+        "z": 0.15446626
+      },
+      "position": {
+        "x": 84.75963,
+        "y": 43.431858,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 83,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 208782,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.59732413,
+        "y": 32.68529,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.59732413,
+        "y": 32.68529,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 208952,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 18.409187,
+        "y": 28.761806,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.054558,
+        "y": 28.084282,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 170,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 213390,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.14874686,
+        "y": 33.146515,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.14874686,
+        "y": 33.146515,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 213533,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.428843,
+        "y": 27.044418,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.110624,
+        "y": 26.46374,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 143,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 219696,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 8.704048,
+        "y": 38.340656,
+        "z": 0.15
+      },
+      "position": {
+        "x": 8.704048,
+        "y": 38.340656,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 219797,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 19.14681,
+        "y": 43.486954,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.007984,
+        "y": 43.709415,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 101,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 237372,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 9.59146,
+        "y": 27.408257,
+        "z": 0.15
+      },
+      "position": {
+        "x": 9.59146,
+        "y": 27.408257,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 237453,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 19.417007,
+        "y": 27.073578,
+        "z": 0.11
+      },
+      "position": {
+        "x": 20.249153,
+        "y": 26.712332,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 81,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 242850,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 7.9098916,
+        "y": 31.150785,
+        "z": 0.15
+      },
+      "position": {
+        "x": 7.9098916,
+        "y": 31.150785,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 242938,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 18.434874,
+        "y": 26.025717,
+        "z": 0.11
+      },
+      "position": {
+        "x": 19.324865,
+        "y": 25.896114,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 88,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 243780,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.019381102,
+        "y": 35.11917,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.019381102,
+        "y": 35.11917,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 243939,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 14.836393,
+        "y": 42.27191,
+        "z": 0.11
+      },
+      "position": {
+        "x": 15.790156,
+        "y": 42.342346,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 159,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 244326,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.85229343,
+        "y": 36.34395,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.85229343,
+        "y": 36.34395,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 244449,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 17.57094,
+        "y": 42.284206,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.346601,
+        "y": 42.756645,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 123,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 263940,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 103.12361,
+        "y": 33.50821,
+        "z": 0.15
+      },
+      "position": {
+        "x": 103.12361,
+        "y": 33.50821,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 264066,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.37558,
+        "y": 26.782244,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.715675,
+        "y": 26.036255,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 126,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 269472,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 104.74381,
+        "y": 31.693714,
+        "z": 0.15
+      },
+      "position": {
+        "x": 104.74381,
+        "y": 31.693714,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 269598,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 87.46259,
+        "y": 25.413708,
+        "z": 0.11
+      },
+      "position": {
+        "x": 86.50181,
+        "y": 25.258018,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 126,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 283500,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 1.3480598,
+        "y": 32.799763,
+        "z": 0.15
+      },
+      "position": {
+        "x": 1.3480598,
+        "y": 32.799763,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 283682,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 16.53001,
+        "y": 24.211859,
+        "z": 0.11
+      },
+      "position": {
+        "x": 17.421034,
+        "y": 24.588417,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 182,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 284034,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.3011525,
+        "y": 33.77101,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.3011525,
+        "y": 33.77101,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 284167,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 17.54797,
+        "y": 26.301048,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.468275,
+        "y": 26.313448,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 133,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 284532,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 5.2570505,
+        "y": 31.632374,
+        "z": 0.15
+      },
+      "position": {
+        "x": 5.2570505,
+        "y": 31.632374,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 284654,
+      "order": 1,
+      "agent": 2,
+      "team": 0,
+      "contact": {
+        "x": 17.558937,
+        "y": 26.48397,
+        "z": 0.11
+      },
+      "position": {
+        "x": 18.505161,
+        "y": 26.450048,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 122,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 285006,
+      "order": 2,
+      "agent": 0,
+      "team": 0,
+      "contact": {
+        "x": 0.021443075,
+        "y": 34.444843,
+        "z": 0.15
+      },
+      "position": {
+        "x": 0.021443075,
+        "y": 34.444843,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 285131,
+      "order": 1,
+      "agent": 3,
+      "team": 0,
+      "contact": {
+        "x": 17.359798,
+        "y": 40.594604,
+        "z": 0.11
+      },
+      "position": {
+        "x": 17.931324,
+        "y": 41.26821,
+        "z": 0
+      },
+      "restriction": 0,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 125,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 297786,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 93.77903,
+        "y": 32.458103,
+        "z": 0.15
+      },
+      "position": {
+        "x": 93.77903,
+        "y": 32.458103,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 297866,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 86.47486,
+        "y": 25.901964,
+        "z": 0.11
+      },
+      "position": {
+        "x": 85.65826,
+        "y": 25.50022,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 80,
+    "seed": "000000005A5A5A5A"
+  },
+  {
+    "release": {
+      "kind": "release",
+      "frame": 322482,
+      "order": 2,
+      "agent": 11,
+      "team": 1,
+      "contact": {
+        "x": 97.16891,
+        "y": 29.933931,
+        "z": 0.15
+      },
+      "position": {
+        "x": 97.16891,
+        "y": 29.933931,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "ownTouches": [],
+    "firstOtherTouch": {
+      "kind": "touch:first-touch",
+      "frame": 322586,
+      "order": 1,
+      "agent": 14,
+      "team": 1,
+      "contact": {
+        "x": 84.4586,
+        "y": 26.525331,
+        "z": 0.11
+      },
+      "position": {
+        "x": 83.66918,
+        "y": 25.970182,
+        "z": 0
+      },
+      "restriction": 11,
+      "pending": -1,
+      "taker": -1
+    },
+    "selected": false,
+    "reason": "teammate-first",
+    "events": [],
+    "delayFrames": 104,
+    "seed": "000000005A5A5A5A"
+  }
+]

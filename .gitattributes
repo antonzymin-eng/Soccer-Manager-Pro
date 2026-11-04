@@ -78,3 +78,5 @@
 *.bytes filter=lfs diff=lfs merge=lfs -text
 
 *.xz       -text
+# November 4, 2026: full Pre-C ball/event traces exceed the 1 MiB binary gate.
+docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz filter=lfs diff=lfs merge=lfs -text
