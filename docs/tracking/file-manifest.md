@@ -1,6 +1,12 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 4, 2026 — **D-P7-6 parked by the owner, documentation only.** No files added
+**Last Updated:** November 4, 2026 — **Parked D-P7-6 carry-forward, documentation only.** No files added
+or removed. Modified: `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.10 → v0.11
+(§11 carry-forward from `148a01a`), `docs/tracking/path-to-playable-roadmap.md` v0.92 → v0.93,
+`docs/tracking/interactive-unity-client-design.md` 0.37 → 0.38, `docs/agent-guides/unity-career-context.md`
+0.4 → 0.5, version citations in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 4, 2026 — **D-P7-6 parked by the owner, documentation only.** No files added
 or removed. Modified: `docs/tracking/d-p7-6-interactive-career-match-amendment-draft.md` v0.9 → v0.10
 (status PARKED, content unchanged), `docs/tracking/path-to-playable-roadmap.md` v0.91 → v0.92,
 `docs/tracking/interactive-unity-client-design.md` 0.36 → 0.37, `docs/agent-guides/unity-career-context.md`
@@ -3764,7 +3770,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.37). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.38). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.

@@ -12,7 +12,18 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **D-P7-6 parked by the owner (documentation only).**
+> **Last Updated:** November 4, 2026 — **Parked D-P7-6 gains a carry-forward list (documentation only).**
+> At the owner's request, D-P7-6 v0.11 adds §11: 14 items from the superseded parallel v0.8 draft
+> (`148a01a`, branch `claude/eloquent-dijkstra-o8q4gh`) that v0.9 lacked, each re-checked against
+> source at `73dfb63`. Notable: approved #41 FR-MD-023 says #41 owns no selection logic, which
+> conflicts with v0.9 §7.10's #41 row (P-02); a substitution census lock protecting drain-side
+> eligibility (P-01); test hosting that cuts the full-match budget (P-04); and an independent #38
+> Appendix C defect (`Substitute` row cites internal `SubstitutePlayer`; P-14, not filed). Abandon,
+> Q1, Q2 and Q4 content is superseded and not carried. Draft still PARKED and unreviewed. Pointers
+> made version-neutral: roadmap v0.93, client design v0.38 (with its version citation chains), career
+> context v0.5. No code, spec, schema, save format or RNG change; gate not run (no source change).
+
+> **Last Updated (prior):** November 4, 2026 — **D-P7-6 parked by the owner (documentation only).**
 > The owner confirmed that the D-11 answers quoted in D-P7-6 §2.1/§2.2 are their own and parked the
 > draft. D-P7-6 v0.10 changes status only (PARKED; technical content identical to v0.9): AR-3's
 > 4 High / 7 Medium / 9 Low against v0.8 stay recorded, and v0.9's proposed fixes are unreviewed. No
