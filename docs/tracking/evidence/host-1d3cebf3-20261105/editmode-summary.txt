@@ -1,0 +1,17 @@
+# EditMode run — pinned host, commit 1d3cebf3 (main after PR #536), NUnit 3.5 XML summary
+
+Run: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.LivingWorld.Tests -testResults <xml> -logFile <log>
+pre-run build: Tundra build success, 0 items updated (the assemblies from compile.txt, unchanged)
+process: start 2026-11-05T14:36:49Z  end 2026-11-05T14:37:06Z  exit code 0  nunit engine: 3.5.0.0
+run: result=Passed total=129 passed=129 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.LivingWorld.Tests.dll: total=129 passed=129 failed=0 skipped=0 duration=0.2 s
+  fixture TacticalDirector.LivingWorld.Tests.ArcMembershipTests: Passed total=24 passed=24
+  fixture TacticalDirector.LivingWorld.Tests.ArcTriggerTests: Passed total=13 passed=13
+  fixture TacticalDirector.LivingWorld.Tests.InteractionTextGeneratorTests: Passed total=11 passed=11
+  fixture TacticalDirector.LivingWorld.Tests.InteractionTextOracleRosterTests: Passed total=1 passed=1
+  fixture TacticalDirector.LivingWorld.Tests.InteractionTextOracleTests: Passed total=9 passed=9
+  fixture TacticalDirector.LivingWorld.Tests.LivingWorldTests: Passed total=13 passed=13
+  fixture TacticalDirector.LivingWorld.Tests.SeasonWorldLoopTests: Passed total=28 passed=28
+  fixture TacticalDirector.LivingWorld.Tests.WorldStateSerializerTests: Passed total=8 passed=8
+  fixture TacticalDirector.LivingWorld.Tests.WorldStoreTests: Passed total=22 passed=22
+  not passed: 0 (0 failed)
