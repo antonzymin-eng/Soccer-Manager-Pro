@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-04
+// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
 // Purpose:  Career UGUI adapter over cached coordinator snapshots; no worker or domain-state reads.
@@ -137,7 +137,7 @@ namespace TacticalDirector.MatchClientUnity
                 _careerLoadButtons[i].interactable = present && !_career.IsBusy && _career.Load.Slots[i].IsLoadable;
                 if (present) _ui.SetButton(_careerLoadButtons[i], _careerText.Slot(_career.Load.Slots[i]));
             }
-            string notice = _career.IsBusy ? C("busy") : _careerUiError ?? _career.LastError ??
+            string notice = _career.IsBusy ? C("busy") : _careerUiError ?? _career.LastError ?? _career.LastProjectionError ??
                 (home.AutosaveError != null ? _careerText.Text.Format("autosave", "autosave.error", home.AutosaveError) :
                 screen == ClientScreens.MainMenu && !_career.Load.CanContinue ? C("no_save") : "");
             foreach (Text label in _careerNotices) S0UiFactory.SetBoxed(label, notice);
@@ -150,4 +150,5 @@ namespace TacticalDirector.MatchClientUnity
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-03 | — | Persistent career pages, menu entries, cached binding and shared keyboard focus. |
 // | 1.1 | 2026-11-04 | — | Separate selected-club status from the Start action and cache club rows independently. |
+// | 1.2 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 #endregion

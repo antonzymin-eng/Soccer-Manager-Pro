@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T1 live owner refusal and stale-market completed-sale regression.)
+// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -28,9 +28,9 @@ namespace TacticalDirector.ClientApp.Tests
             internal readonly ClientCareerCoordinator Career;
             internal readonly ClientScreenFlow Flow;
 
-            internal Harness()
+            internal Harness(CareerScreenText screenText = null)
             {
-                Career = new ClientCareerCoordinator(Temp.Directory, RoundResolutionMode.QuickSimAll, Work.Enqueue);
+                Career = new ClientCareerCoordinator(Temp.Directory, RoundResolutionMode.QuickSimAll, Work.Enqueue, screenText);
                 Flow = Compose(Career);
                 Career.Initialize();
                 Finish();
@@ -329,23 +329,81 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(financesBefore.Balance + 1L, h.Career.Finances.Balance, "the fee-1 sale shows once projection recovers");
         }
 
-        [Test]
-        public void FailingHomeProjection_RefusesStaleNavigation_ButKeepsTheCommittedCareer_M1()
+        [TestCase("Start")]
+        [TestCase("Load")]
+        [TestCase("Continue")]
+        public void FailingEntryHomeProjection_ReleasesTheCareerAndPreservesTheAutosave(string entry)
         {
             using var h = new Harness();
+            if (entry == "Start")
+            {
+                h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+                h.Finish();
+                h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            }
+            else
+            {
+                h.Start();
+                h.Career.QuitToMainMenu();
+                if (entry == "Load") { h.Career.OpenLoadCareer(); h.Finish(); }
+            }
+            ScreenId screen = h.Flow.Current;
+            Action enter = entry == "Start" ? (Action)h.Career.StartCareer :
+                entry == "Load" ? () => h.Career.LoadCareer(CareerSaveSlot.Autosave) : h.Career.ContinueCareer;
             h.Career.ProjectionProbe = kind =>
             {
-                if (kind == ClientCareerCoordinator.ProjectionKind.Home) throw new InvalidOperationException("injected home failure");
+                if (kind == ClientCareerCoordinator.ProjectionKind.Home)
+                    throw new InvalidOperationException("injected home failure");
             };
-            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
-            h.Finish();
-            h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
-            h.Career.StartCareer();
-            h.Finish();
-            Assert.IsNull(h.Career.LastError);
+            enter(); h.Finish();
+            Assert.AreEqual(new CareerScreenText().Label("entry.failed"), h.Career.LastError);
             StringAssert.Contains("Home", h.Career.LastProjectionError);
-            Assert.AreEqual(ClientScreens.NewCareer, h.Flow.Current, "no navigation onto a Career Home that could not be projected");
-            Assert.IsTrue(h.Career.Load.CanContinue, "the career was committed and autosaved");
+            Assert.AreEqual(screen, h.Flow.Current);
+            Assert.IsFalse(h.Career.Home.HasCareer);
+            Assert.IsFalse(h.Career.TransferMarket.HasCareer);
+            Assert.IsTrue(h.Career.Load.CanContinue, "the autosave survives the failed entry");
+            string autosave = h.Temp.Slots.SavePath(CareerSaveSlot.Autosave);
+            byte[] saved = File.ReadAllBytes(autosave);
+            h.Career.ProjectionProbe = null;
+            h.Career.WorkProbe = () => { throw new InvalidOperationException("stop before retry"); };
+            enter(); h.Finish();
+            Assert.IsFalse(h.Career.Home.HasCareer, "fresh projection proves the holder was cleared, not just cached Home");
+            CollectionAssert.AreEqual(saved, File.ReadAllBytes(autosave));
+            h.Career.WorkProbe = null;
+        }
+
+        [Test]
+        public void FailedEntry_UsesTheInjectedLocalizedMessage()
+        {
+            var translated = new CareerScreenText(new[] {
+                new TacticalDirector.Localization.TemplateCatalogue.StaticRow(
+                    new TacticalDirector.Localization.LocalizationKey("ui.career.entry.failed"), "[Translated career display failure]") });
+            using var h = new Harness(translated);
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED); h.Finish();
+            h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.Home)
+                    throw new InvalidOperationException("injected home failure");
+            };
+            h.Career.StartCareer(); h.Finish();
+            Assert.AreEqual("[Translated career display failure]", h.Career.LastError);
+        }
+
+        [Test]
+        public void QuitToMainMenu_ClearsTheProjectionFailure()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.Finances)
+                    throw new InvalidOperationException("injected finances failure");
+            };
+            h.Career.Progress(); h.Finish();
+            Assert.IsNotNull(h.Career.LastProjectionError);
+            h.Career.QuitToMainMenu();
+            Assert.IsNull(h.Career.LastProjectionError);
         }
 
         [Test]
@@ -748,4 +806,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.3     | 2026-11-05 | —      | H1: out-of-range offer terms (wage above the [CROSS] #40 ceiling, negatives, zero length) are refused before the worker; the inclusive bound still reaches #31. |
 // | 1.4     | 2026-11-05 | —      | M1: a failing projection keeps its last good view and the committed outcome publishes (injected probe). M2: player-reachable offer mistakes are typed refusals (H1 test rewritten); programmer errors stay exceptions. M4: quit reset, no stale result after a failed submit, closed-window refusal, OpenTransfers clears the result. |
 // | 1.5 | 2026-11-05 | — | T1 live owner refusal and stale-market completed-sale regression. |
+// | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 #endregion

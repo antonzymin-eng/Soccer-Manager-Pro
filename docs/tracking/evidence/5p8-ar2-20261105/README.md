@@ -1,8 +1,9 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026\
-**Version:** 1.0\
+**Last Updated:** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
+**Last Updated (prior):** November 5, 2026\
+**Version:** 1.1\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
 
@@ -34,8 +35,25 @@ The restored observer-wrapper test passed (1/1), and the final client career/tra
 The stale-sale regression also checks LastError null, unchanged balance/contracts/committed fees,
 and a recovered market with only one player removed.
 
+## T2 — visible projection errors and consistent entry state
+
+ClientApp full suite: 257 passed, 0 failed, 3 skipped. Focused coordinator/copy tests: 38 passed.
+The restored positive set passed after all three mutants. The old public coordinator constructor is
+preserved; a second overload admits the host's localized CareerScreenText.
+
+| Temporary mutation | Guard exercised | Observed result |
+|---|---|---|
+| Remove the failed-entry holder Clear | `FailingEntryHomeProjection_ReleasesTheCareerAndPreservesTheAutosave` (Start, Load, Continue) | Fresh projection after a stopped retry exposed the incorrectly retained career. |
+| Remove Quit's LastProjectionError reset | `QuitToMainMenu_ClearsTheProjectionFailure` | The projection error survived Quit. |
+| Replace injected entry copy with a new base-locale formatter | `FailedEntry_UsesTheInjectedLocalizedMessage` | The admitted translated message was lost. |
+
+The entry tests retain the original screen, clear career snapshots, preserve the autosave bytes and
+verify Continue remains available. The Unity notice-chain edit was statically inspected; pinned-host
+compilation/runtime is still pending.
+
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-11-05 | — | T1 executed owner, worker and headroom mutation checks; Linux/Unity boundary recorded. |
+| 1.1 | 2026-11-05 | — | T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result. |

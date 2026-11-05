@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
+// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -30,6 +30,7 @@ namespace TacticalDirector.ClientApp
     {
         private static readonly ProfilerMarker RefreshMarker = new ProfilerMarker("ClientCareerCoordinator.Refresh");
         private readonly string _directory;
+        private readonly CareerScreenText _screenText;
         private readonly RoundResolutionMode _mode;
         private readonly Action<Action> _schedule;
         private readonly object _publicationGate = new object();
@@ -93,13 +94,21 @@ namespace TacticalDirector.ClientApp
         {
         }
 
+        /// <summary>Creates a coordinator with the host's admitted localized career copy.</summary>
+        public ClientCareerCoordinator(string directory, CareerScreenText screenText,
+            RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine)
+            : this(directory, mode, Schedule, screenText)
+        {
+        }
+
         // The production consumer uses the ThreadPool; tests explicitly park/complete the same work
         // to prove that cached UI reads never enter the live sources during an operation.
-        internal ClientCareerCoordinator(string directory, RoundResolutionMode mode, Action<Action> schedule)
+        internal ClientCareerCoordinator(string directory, RoundResolutionMode mode, Action<Action> schedule, CareerScreenText screenText = null)
         {
             if (string.IsNullOrWhiteSpace(directory)) throw new ArgumentException("A career directory is required.", nameof(directory));
             if (!Enum.IsDefined(typeof(RoundResolutionMode), mode)) throw new ArgumentOutOfRangeException(nameof(mode));
             _directory = directory;
+            _screenText = screenText ?? new CareerScreenText();
             _mode = mode;
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
         }
@@ -128,8 +137,9 @@ namespace TacticalDirector.ClientApp
         public string LastError { get; private set; }
         /// <summary>
         /// Why one or more cached views could not be refreshed after the last operation (M1), or null. The
-        /// operation itself succeeded and its committed outcome is published; each failed view keeps its last
-        /// good value. Replaced by every completed operation, so a later clean refresh clears it.
+        /// committed mutation outcome still publishes and each failed view normally keeps its last good value.
+        /// An entry whose Home projection fails releases the held career and reports LastError instead.
+        /// Replaced by every completed operation, so a later clean refresh clears it.
         /// </summary>
         public string LastProjectionError { get; private set; }
         /// <summary>UI change counter; idle polling does not allocate or increment it.</summary>
@@ -351,6 +361,7 @@ namespace TacticalDirector.ClientApp
             RequireScreen(ClientScreens.CareerHome);
             _flow.QuitToMainMenu();
             _holder.Clear();
+            LastProjectionError = null;
             Home = default;
             TransferMarket = default;
             Finances = default;
@@ -483,15 +494,24 @@ namespace TacticalDirector.ClientApp
                 Action navigation = _afterSuccess;
                 _afterSuccess = null;
                 Revision++;
+                // An entry has committed a career but cannot show it. Release that session so form and
+                // holder agree; the autosave remains available for Continue after the projection recovers.
+                if (navigation != null && result.HasSnapshot && !result.HasHome)
+                {
+                    LastError = _screenText.Label("entry.failed");
+                    _holder.Clear();
+                    Home = default;
+                    TransferMarket = default;
+                    Finances = default;
+                    return;
+                }
                 if (_flow.Current != _operationScreen)
                 {
                     const string staleScreen = "Career operation completed after its screen changed; navigation was refused.";
                     LastError = LastError == null ? staleScreen : LastError + " " + staleScreen;
                     return;
                 }
-                // Navigation also needs the Home view it lands on to have refreshed (M1): the operation committed,
-                // so the failure is reported in LastProjectionError rather than navigating onto a stale screen.
-                if (LastError == null && (result.HasHome || !result.HasSnapshot)) navigation?.Invoke();
+                if (LastError == null) navigation?.Invoke();
             }
         }
 
@@ -529,4 +549,5 @@ namespace TacticalDirector.ClientApp
 // | 1.3     | 2026-11-05 | —      | H1: SubmitTransfer refuses out-of-range terms (fee/wage < 0, wage > [CROSS] MAX_OFFER_WAGE_PER_PERIOD, length < 1) before Begin; nothing reaches the worker. |
 // | 1.4     | 2026-11-05 | —      | M1: the five views project independently (a failing one keeps its last good view; LastProjectionError records it apart from LastError); the transfer result always publishes. M2: SubmitTransfer refuses player-reachable offer mistakes synchronously through TransferOfferCheck (typed, no exception, nothing queued); the H1 term checks moved into it. M3: LastTransferOutcome replaced by LastTransferResult (offer + outcome or typed refusal). |
 // | 1.5 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
+// | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 #endregion

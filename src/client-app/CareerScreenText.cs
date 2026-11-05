@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (M2 issue copy; M3 Result; M8 SquadDepleted wording; L5 wage-bill line)
+// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -24,6 +24,7 @@ namespace TacticalDirector.ClientApp
             R("home", "Career home"), R("start", "Start career"), R("back", "Back"),
             R("quit", "Return to Main Menu (without saving)"), R("retry", "Retry career storage"),
             R("busy", "Working... Please wait; navigation and changes are unavailable."),
+            R("entry.failed", "The career could not be shown. Return to Main Menu and try Continue."),
             R("no_save", "No loadable career save. Start a career or choose Load to inspect slots."),
             R("choose", "Choose a club. The league is generated; the default objective is a top-half finish."),
             R("select", "Select {0}", "S"), R("selected", "Selected: {0}", "S"),
@@ -286,4 +287,5 @@ namespace TacticalDirector.ClientApp
 // | 1.2 | 2026-11-05 | — | §5-P8: transfer/finance roles, window/budget/row/outcome/finance formatting; outcomes keyed by #31's typed result. |
 // | 1.3 | 2026-11-05 | — | H1: money roles use the L (long) type, no int cast; long.MinValue debt clamps to long.MaxValue; saturated-wage line. H2: SquadFull split into .buy/.sell (buyer named); Outcome takes the submitted Offer. |
 // | 1.4 | 2026-11-05 | — | M2: transfer.issue.* roles + Issue(). M3: Result(in TransferResult, in market). M8: SquadDepleted copy names the complete starting eleven. L5: wage-bill line gated on IsWageBillTracked (finance.wagebill.tracked role). |
+// | 1.5 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 #endregion
