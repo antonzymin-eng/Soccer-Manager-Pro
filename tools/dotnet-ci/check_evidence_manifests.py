@@ -14,6 +14,10 @@ FULL_MANIFEST = "SHA256SUMS"
 PARTIAL_MANIFEST = "artifact-SHA256SUMS"
 MANIFEST_NAMES = {FULL_MANIFEST, PARTIAL_MANIFEST}
 LINE_RE = re.compile(r"^([0-9a-f]{64})  (.+)$")
+LFS_POINTER_RE = re.compile(
+    rb"\Aversion https://git-lfs.github.com/spec/v1\n"
+    rb"oid sha256:([0-9a-f]{64})\nsize (0|[1-9][0-9]*)\n\Z"
+)
 
 # Every tracked top-level evidence directory must declare one integrity contract.
 # "manifest" contracts are verified by this tool. "external" contracts are owned
@@ -123,6 +127,32 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _manifest_digest(repo: Path, path: Path) -> str:
+    """Check content bytes, or the referenced OID of a strict Git LFS pointer.
+
+    Pointer-only CI verifies the committed reference, not unavailable payload
+    bytes. A materialized checkout always hashes its actual payload instead.
+    Pointer-shaped ordinary files are never accepted as LFS references.
+    """
+    with path.open("rb") as handle:
+        prefix = handle.read(1025)
+    if not prefix.startswith(b"version https://git-lfs.github.com/spec/v1"):
+        return _sha256(path)
+    match = LFS_POINTER_RE.fullmatch(prefix)
+    if match is None:
+        raise EvidenceScopeError(f"malformed Git LFS pointer: {path}")
+    try:
+        relative = path.relative_to(repo).as_posix()
+    except ValueError as exc:
+        raise EvidenceScopeError(f"LFS pointer is outside repository: {path}") from exc
+    attributes = _git(repo, "check-attr", "-z", "filter", "--", relative)
+    if attributes.returncode != 0:
+        raise EvidenceScopeError(f"cannot verify Git LFS attributes for {relative}")
+    if attributes.stdout.split(b"\0") != [relative.encode(), b"filter", b"lfs", b""]:
+        raise EvidenceScopeError(f"pointer file is not designated Git LFS: {relative}")
+    return match.group(1).decode("ascii")
+
+
 def _safe_relative_target(manifest: Path, raw_name: str) -> tuple[Path | None, str | None]:
     candidate = Path(raw_name)
     if candidate.is_absolute() or not raw_name or "\\" in raw_name:
@@ -220,7 +250,7 @@ def verify_manifest(repo: Path, manifest: Path) -> list[str]:
         if not target.is_file():
             errors.append(f"{manifest}: listed file is missing: {name}")
             continue
-        actual = _sha256(target)
+        actual = _manifest_digest(repo, target)
         if actual != expected_digest:
             errors.append(
                 f"{manifest}: SHA-256 mismatch for {name}: "
@@ -353,6 +383,7 @@ def main(argv: list[str] | None = None) -> int:
         f"({len(manifests)} SHA-256 manifests; {full} full-coverage, "
         f"{partial} artifact-scoped; {len(DIRECTORY_CONTRACTS)} registered directories)"
     )
+    print("Materialized files: payload SHA-256; Git LFS pointers: referenced OID only.")
     return 0
 
 

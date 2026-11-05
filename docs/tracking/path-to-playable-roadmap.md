@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 4 — Pre-C review closeout (v0.90):** Retain all per-tick digest bytes in the committed LFS capture; pointer-only hygiene checks verify strict LFS reference OIDs without bulk downloads. Portable replay/rebuild commands and analysis rule 1.1 are frozen before C. Abstract BallLoose tackle outcomes are excluded from physical touches; all 126 release decisions and 12 selected windows remain identical. Both same-frame clearings are explained by executor-before-first-touch ordering. [Reviewed control](evidence/pre-c-control-20261104/README.md). No gameplay change or new full-match capture.
+
 > **November 4 — Pre-C control complete (v0.89):** Linux .NET control at `1d3cebf3` reproduces all six adopted post-law W8 B digests in both plain and observed runs. The source/runtime/configuration and exact-touch/team observer are frozen; all six full digest, ball and event streams match. [Evidence](evidence/pre-c-control-20261104/README.md). W8 C is the next engine item.
 
 > **November 3 — consolidated roadmap v0.88:** PRs #532/#533/#534 reconciled with main #535. The current sequence is the November 3 ratified revision below; D-11 uses the November 2 no-mid-match-save amendment. D-P7-6 v0.6 remains PROPOSED. The #526 host technical gap is resolved; its process exception is archived.
@@ -495,7 +497,8 @@ decided.
    CLR 8.0.32. Source, runtime, configuration and the read-only exact-touch/team instrument are frozen;
    all six adopted post-law B digests reproduce in both arms, with full per-tick digest, ball and event
    equality across 324,000 ticks per seed ([evidence](evidence/pre-c-control-20261104/README.md)). C must
-   use this declared lane and instrument for its paired comparison (step 8's measurement obligation).
+   use this declared lane, instrument and reviewed analysis rule **1.1** for its paired comparison
+   (step 8's measurement obligation); `policy-freeze.json` pins the eligibility/window interpretation.
 2. **W8 C (L).** Implement [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
    and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)
    as written; cite them rather than paraphrasing the corner rule. The next free snapshot version is
@@ -906,6 +909,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
 | v0.89 | November 4, 2026 | Close engine lane item 1: freeze Pre-C source/runtime/configuration and exact-touch/team observer at `1d3cebf3`; reproduce all six adopted post-law B digests in plain and observed Linux .NET captures; verify full digest/ball/event neutrality and retain raw attribution/order evidence. W8 C implementation and its paired/host validation remain next. |
 | v0.88 | November 3, 2026 | Consolidate PRs #532/#533/#534 against main #535: retain revised and ratified no-Early-Access ordering, D-11 no-mid-match-save amendment and D-P7-6 draft v0.6; archive the completed #526 host gap; client design v0.33. Parallel v0.85 records below retain their provenance. |
 | v0.87 | November 3, 2026 | **§5.1a ordering RATIFIED** by Anton Zymin. It is now the ordering authority (status paragraph and §5.1 intro updated); the §5.1 step table keeps exit criteria and history. It approves no contract, authorizes no gameplay or tuning, does not amend KD-W1 and does not un-park the D-14 list. D-13 and D-15 remain pending. |

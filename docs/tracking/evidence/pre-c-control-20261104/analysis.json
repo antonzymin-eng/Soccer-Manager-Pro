@@ -31,18 +31,21 @@
       "adoptedDigest": "6ef1e77f9dcf86c4bce5e1f66a989a64b42f26c268ead53340b9c57d282b4072",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "a3270174c122e5410e4c1005726c38f5746c080614b151cd6e16dc073d617888",
           "observedSha256": "a3270174c122e5410e4c1005726c38f5746c080614b151cd6e16dc073d617888"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "e7147d527f9d8dc5b1ef25558d9169de2009b861f455adffb308e925b6e185f6",
           "observedSha256": "e7147d527f9d8dc5b1ef25558d9169de2009b861f455adffb308e925b6e185f6"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "305b158445dc6fb65ba6b18d56e5c3ad723948934aed24760d66d6ad6b46b2b5",
@@ -69,6 +72,7 @@
         "touch:tackle-won": 1,
         "touch:tackle-loose": 3
       },
+      "traceChecksPassed": true,
       "passed": true
     },
     {
@@ -102,18 +106,21 @@
       "adoptedDigest": "06e3daf03f1c45a112f958c4bfac980c30956971e175b35b7d815d685b4caf93",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "435050198ef363e3b7e0035763b4664b2681dad1b1b84eba8313510d07dd1fe1",
           "observedSha256": "435050198ef363e3b7e0035763b4664b2681dad1b1b84eba8313510d07dd1fe1"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "a5ae2eefafe04f73683d38fa6526e9c88d6dc369ee984cb096fedf8937f878ce",
           "observedSha256": "a5ae2eefafe04f73683d38fa6526e9c88d6dc369ee984cb096fedf8937f878ce"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "7e308e502572db3eee1a5143943d608d3271f7be917e5833de12e15cacaccdee",
@@ -140,6 +147,7 @@
         "hand-response": 8,
         "touch:tackle-won": 3
       },
+      "traceChecksPassed": true,
       "passed": true
     },
     {
@@ -173,18 +181,21 @@
       "adoptedDigest": "25ceac27f7d4e87fb1166227f683eaff87336efd301fa5500b6d212a28deba59",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "c686b7128d31adbdf106b48895aa3effc2bbd3f38fd5ca222dcb56448215f8b8",
           "observedSha256": "c686b7128d31adbdf106b48895aa3effc2bbd3f38fd5ca222dcb56448215f8b8"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "fcb9094f9ba23451a8aedb9e5d8e5bd7b7290d30c63b38f4921dd943a87a916e",
           "observedSha256": "fcb9094f9ba23451a8aedb9e5d8e5bd7b7290d30c63b38f4921dd943a87a916e"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "984de0cf5f9a565bc2a90d13e923a477782ccf0d029d1ea3a644bf5ff6bd5090",
@@ -211,6 +222,7 @@
         "goal": 6,
         "touch:tackle-won": 2
       },
+      "traceChecksPassed": true,
       "passed": true
     },
     {
@@ -244,18 +256,21 @@
       "adoptedDigest": "77b4e0cc08a4ac903fbb364f2bb28612eaa39b380955111c58fe040ebf474a80",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "db212c16af82f1eaf92bde0e643e86cbaaaf6fd785f8439f05b00da6d2563944",
           "observedSha256": "db212c16af82f1eaf92bde0e643e86cbaaaf6fd785f8439f05b00da6d2563944"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "d7fa3a5e7c0ada649a0975f8e4ee0524618825379ac0d6f7844c8b79474fcaa9",
           "observedSha256": "d7fa3a5e7c0ada649a0975f8e4ee0524618825379ac0d6f7844c8b79474fcaa9"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "59252ae0dcc00c3cb293ad3d11ed022224a7d94ef92d250cef9d7136295904cf",
@@ -281,6 +296,7 @@
         "touch:shot-contact": 29,
         "shot": 29
       },
+      "traceChecksPassed": true,
       "passed": true
     },
     {
@@ -314,18 +330,21 @@
       "adoptedDigest": "ccc99ba78dce889ed07d18609c568486920ffd97c45cb283f15d7f5c203f6e4f",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "a7ee6c09d46bb39dea1582d78e0d6d620b471318aba4ab3653db86e6164d87e0",
           "observedSha256": "a7ee6c09d46bb39dea1582d78e0d6d620b471318aba4ab3653db86e6164d87e0"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "b011021b5e4d06b65126122befdcf64478a96c2e5dafe91922b824b82c7398a0",
           "observedSha256": "b011021b5e4d06b65126122befdcf64478a96c2e5dafe91922b824b82c7398a0"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "f687c61213c33024bcc748fedb72c91269fe35578d8e8d1ccd3117d3159d2fb7",
@@ -352,6 +371,7 @@
         "touch:tackle-won": 2,
         "touch:tackle-loose": 7
       },
+      "traceChecksPassed": true,
       "passed": true
     },
     {
@@ -385,18 +405,21 @@
       "adoptedDigest": "6961b03ff4cb1512967c01c46158274b3516bb4c632d921f75e5f6baad936eb3",
       "streams": {
         "digests.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "70a6b9e24554dbe9294dd2c3be10c7f683e8d497833c84ed2ec04372fc47be30",
           "observedSha256": "70a6b9e24554dbe9294dd2c3be10c7f683e8d497833c84ed2ec04372fc47be30"
         },
         "trajectory.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "155530f9f053ca2582ca5d32a47689a2fa1d6da9988bdd5be271021edac44c38",
           "observedSha256": "155530f9f053ca2582ca5d32a47689a2fa1d6da9988bdd5be271021edac44c38"
         },
         "ledger.bin": {
+          "checked": true,
           "equal": true,
           "firstDifference": null,
           "sha256": "7f50fc55e469724186e5a7a0c5d1cc8cbd1404bc628bec0afb29a32f438ebc91",
@@ -423,10 +446,13 @@
         "hand-response": 10,
         "touch:tackle-won": 1
       },
+      "traceChecksPassed": true,
       "passed": true
     }
   ],
   "passed": true,
+  "ruleVersion": "1.1",
+  "digestChainsChecked": true,
   "observationCounts": {
     "event": 23755,
     "touch:pass-contact": 7813,
@@ -463,5 +489,11 @@
   },
   "corpusGoals": 47,
   "simulatedFrames": 1944000,
-  "corpusGoalsPer600Frames": 0.014506172839506172
+  "corpusGoalsPer600Frames": 0.014506172839506172,
+  "livePreFreezeFrames": 1943994,
+  "corpusGoalsPer600LiveFrames": 0.014506217611782753,
+  "appliedTouchCount": 16264,
+  "excludedAbstractTackleOutcomes": 37,
+  "traceChecksPassed": true,
+  "status": "PASS"
 }

@@ -61,6 +61,8 @@ The versioned hook tests the staged Git index rather than the unstaged worktree,
 - bootstrap performs the cold cache preparation once outside the normal acceptance measurement;
 - the normal pre-commit composition remains hard-bounded to 60 seconds.
 
+Both snapshot checkout and index-tree creation disable LFS filters. Git 2.52 can invoke a clean/process filter during `write-tree`; an unavailable LFS payload must not prevent testing the already staged blobs. The offline-filter regression covers this path.
+
 This design removes the prior cold-restore/34-sequential-project construction defect. It still does **not** prove the ≤60-second requirement: that requires a successful measured run on the certified developer host.
 
 ## Owner-held RED policy
@@ -99,6 +101,13 @@ of:
   (`check_w12_evidence.py`), the PR #416 ref archive (`check_pr416_evidence_refs.py`), and the PR #439 ref archive (`check_pr439_evidence_refs.py`). This
   registry verifies that the named owner still exists; it does not claim those external contracts
   have identical enforcement strength or duplicate their semantics.
+
+Materialized Git LFS files are hashed like any other payload. In a pointer-only
+checkout, the checker accepts only a strict v1 pointer at a Git LFS-designated path
+and compares its `oid sha256` to the manifest. That verifies the committed reference,
+not unavailable payload bytes or remote object availability. Malformed pointers,
+OID mismatches and ordinary payload corruption fail. Reproducing a capture still
+requires downloading its named LFS object; the hygiene job need not fetch every image.
 
 A new tracked evidence directory with no registered integrity contract fails closed. A
 `*SHA256SUMS*`-style file, case-insensitively, also fails unless it uses a canonical contract name or

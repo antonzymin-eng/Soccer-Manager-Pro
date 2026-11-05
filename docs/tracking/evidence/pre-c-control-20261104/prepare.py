@@ -1,91 +1,147 @@
-"""Created 2026-11-04: isolated, reproducible Pre-C source/build preparation."""
+"""Created 2026-11-04: rebuild the pinned B capture from a checkout into scratch.
+
+The original as-run preparation scripts are retained in as-run-v1.tar.xz.
+This portable entry point never changes the source checkout or historical freeze.
+"""
+import argparse
+import hashlib
+import json
+import os
 from pathlib import Path
-import hashlib, json, subprocess, tarfile, xml.etree.ElementTree as ET
+import platform
+import shutil
+import subprocess
+import tarfile
+import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
-REPO = Path('/workspace/Soccer-Manager-Pro')
-FROZEN = REPO / 'docs/tracking/evidence/pre-b-anchor-3974b78-20261013/W8StageADiagnosticTests-520ba31c.cs.txt'
+SOURCE_PATHS = ['src', 'tools/dotnet-ci', 'Directory.Build.targets', 'Packages', 'ProjectSettings']
 
-def replace(path, old, new, count=1):
-    text = path.read_text()
-    assert text.count(old) == count, (str(path), old, text.count(old), count)
-    path.write_text(text.replace(old, new))
+def sha(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''): digest.update(chunk)
+    return digest.hexdigest()
 
-for arm in ('plain', 'observed'):
-    root = HERE / arm
-    root.mkdir(exist_ok=True)
-    with tarfile.open(HERE / 'source.tar') as archive:
-        archive.extractall(root, filter='data')
-    subprocess.run(['python3', str(root/'tools/dotnet-ci/generate_projects.py')], cwd=root, check=True)
-    harness = root / 'capture'
-    harness.mkdir(exist_ok=True)
-    (harness/'FrozenW8.cs').write_bytes(FROZEN.read_bytes())
-    (harness/'Program.cs').write_bytes((HERE/'Program.cs').read_bytes())
-    projects = ET.parse(root/'src/match-engine/tests/match-engine-tests.gen.csproj')
-    refs = [p.attrib['Include'] for p in projects.iter('ProjectReference')]
-    paths = [(root/'src/match-engine/tests'/p).resolve() for p in refs]
-    project = '''<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>
-<OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9.0</LangVersion>
-<AssemblyName>TacticalDirector.MatchEngine.Tests</AssemblyName><GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-<Deterministic>true</Deterministic><Optimize>false</Optimize><DefineConstants>DEVELOPMENT_BUILD</DefineConstants>
-</PropertyGroup><ItemGroup>'''
-    project += ''.join(f'<ProjectReference Include="{p}" />' for p in paths)
-    project += '<PackageReference Include="NUnit" Version="3.14.0" /></ItemGroup></Project>'
-    (harness/'Capture.csproj').write_text(project)
-    (root/'global.json').write_text('{"sdk":{"version":"8.0.426","rollForward":"disable"}}\n')
-    if arm == 'plain':
-        continue
-    engine = root/'src/match-engine/MatchEngine.cs'
-    replace(engine, 'RecordPlayerBallTouch(toucher);', 'PreCObserve("touch:first-touch", toucher, _ball.Position);\n            RecordPlayerBallTouch(toucher);')
-    replace(engine, 'TakeControlledPossession(claimer);', 'PreCObserve("touch:loose-pickup", claimer, _ball.Position);\n                TakeControlledPossession(claimer);')
-    replace(engine, 'case TackleOutcome.BallWon:\n', 'case TackleOutcome.BallWon:\n                    PreCObserve("touch:tackle-won", tackler, _ball.Position);\n')
-    replace(engine, 'case TackleOutcome.BallLoose:\n', 'case TackleOutcome.BallLoose:\n                    PreCObserve("touch:tackle-loose", tackler, _ball.Position);\n')
-    replace(engine, '_engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.PassKick', '_engine.PreCObserve("touch:pass-contact", agentId, ball.Position);\n                _engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.PassKick')
-    replace(engine, '_engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.ShotKick', '_engine.PreCObserve("touch:shot-contact", agentId, ball.Position);\n                _engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.ShotKick')
-    replace(engine, '_engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.GkHeadingKick', '_engine.PreCObserve("gk-heading-contact", agentId, _engine._ball.Position);\n                _engine.RecordPlayerBallTouch(agentId);\n                _engine.ObserveW8(W8StageAKind.GkHeadingKick')
-    replace(engine, '_engine.ObserveW8(W8StageAKind.HandClaim, agentId);', '_engine.PreCObserve("hand-claim-response", agentId, _engine._ball.Position);\n                _engine.ObserveW8(W8StageAKind.HandClaim, agentId);')
-    replace(engine, 'public bool TryHandContact(int agentId, Vector3 contactPosition) =>\n                _engine.TryKeeperHandContact(agentId, contactPosition);', '''public bool TryHandContact(int agentId, Vector3 contactPosition)
-            {
-                _engine.PreCObserve("hand-attempt", agentId, contactPosition);
-                bool applied = _engine.TryKeeperHandContact(agentId, contactPosition);
-                if (applied) _engine.PreCObserve("touch:hand-contact", agentId, contactPosition);
-                return applied;
-            }''')
-    law = root/'src/match-engine/MatchEngine.KeeperHandlingLaw.cs'
-    replace(law, 'if (_releasedHandKeeper != agentId) _releasedHandKeeper = MatchEngineConstants.NO_POSSESSION;', '''int preCBefore = _releasedHandKeeper;
-            if (_releasedHandKeeper != agentId) _releasedHandKeeper = MatchEngineConstants.NO_POSSESSION;
-            if (preCBefore != _releasedHandKeeper) PreCObserve("restriction-clear:touch", agentId, _ball.Position);''')
-    replace(law, '_releasedHandKeeper = agentId;', '{ _releasedHandKeeper = agentId; PreCObserve("release", agentId, _ball.Position); }')
-    replace(law, 'private void ClearHandlingLawAtRestart()\n        {', 'private void ClearHandlingLawAtRestart()\n        {\n            PreCObserve("restriction-end:restart", _releasedHandKeeper, _ball.Position);')
-    partial = '''// Created 2026-11-04. Scratch-only observation overlay; no canonical state.
-using System;
-using UnityEngine;
-namespace TacticalDirector.MatchEngine {
-public sealed partial class MatchEngine {
-internal Action<string,int,Vector3,Vector3,int,int,int> PreCObserver;
-internal void PreCAttach(Action<string,int,Vector3,Vector3,int,int,int> observer) {
- PreCObserver=observer;
- _collisionSystem.PreCAppliedTouchObserver=(id,contact,position)=>observer("touch:body-applied",id,contact,position,_releasedHandKeeper,_pendingHandlingOffender,_indirectKickTaker);
-}
-private void PreCObserve(string kind,int id,Vector3 contact) {
- if(PreCObserver==null)return;
- Vector3 position=id>=0 ? new Vector3(_agents[id].Position.x,_agents[id].Position.y,0f):Vector3.zero;
- PreCObserver(kind,id,contact,position,_releasedHandKeeper,_pendingHandlingOffender,_indirectKickTaker);
-}
-}}
-'''
-    (root/'src/match-engine/MatchEngine.PreCObservation.cs').write_text(partial)
-    collision = root/'src/collision-system/CollisionSystem.cs'
-    replace(collision, 'public uint AppliedBallTouchMask { get; private set; }', 'public uint AppliedBallTouchMask { get; private set; }\n        public System.Action<int, Vector3, Vector3> PreCAppliedTouchObserver;')
-    replace(collision, 'AppliedBallTouchMask |= 1u << agentId;', 'PreCAppliedTouchObserver?.Invoke(agentId, contactPoint, snap.Position);\n                AppliedBallTouchMask |= 1u << agentId;')
-    bus = root/'src/event-system/EventBus.cs'
-    replace(bus, 'public static class EventBus\n    {', 'public static class EventBus\n    {\n        public static Action<byte, byte[]> PreCPublishObserver;')
-    replace(bus, 'StructSize           = structSize,\n            };', '''StructSize           = structSize,
-            };
-            if (PreCPublishObserver != null) {
-                byte[] preCCopy = new byte[structSize];
-                Array.Copy(buf, slotOffset, preCCopy, 0, structSize);
-                PreCPublishObserver(ordinal, preCCopy);
-            }''')
+def repository_root(start):
+    for path in (start, *start.parents):
+        if (path / '.git').exists(): return path
+    raise ValueError('Pass --repo pointing to the source Git checkout')
 
-print('Prepared plain and observed copies; shipping checkout untouched.')
+def capture_environment(work, packages=None):
+    env = os.environ.copy()
+    env.update(DOTNET_CLI_HOME=str(work / 'dotnet-home'), DOTNET_NOLOGO='1',
+               DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='4')
+    if packages: env['NUGET_PACKAGES'] = str(packages.resolve())
+    elif not env.get('NUGET_PACKAGES'): env['NUGET_PACKAGES'] = str(work / 'nuget-packages')
+    return env
+
+def validate_runtime(dotnet, work, env, freeze):
+    if platform.system() != 'Linux' or platform.machine() != 'x86_64':
+        raise ValueError('This declared lane is Linux x64')
+    if sha(Path(dotnet)) != freeze['dotnetSha256']:
+        raise ValueError('dotnet host executable differs from the frozen lane')
+    version = subprocess.check_output([dotnet, '--version'], cwd=work, env=env, text=True).strip()
+    if version != freeze['sdk']: raise ValueError(f"Expected SDK {freeze['sdk']}; found {version}")
+    runtimes = subprocess.check_output([dotnet, '--list-runtimes'], env=env, text=True)
+    framework = None
+    for line in runtimes.splitlines():
+        if line.startswith('Microsoft.NETCore.App ' + freeze['clr'] + ' '):
+            framework = Path(line.split('[', 1)[1].rstrip(']')) / freeze['clr']
+    if framework is None: raise ValueError('Install Microsoft.NETCore.App ' + freeze['clr'])
+    for name, expected in freeze['frameworkSha256'].items():
+        if sha(framework / name) != expected:
+            raise ValueError('CLR identity differs from the frozen lane: ' + name)
+    for name, expected in freeze['selectedEnvironment'].items():
+        if name not in {'DOTNET_ROOT', 'DOTNET_PROCESSOR_COUNT'} and env.get(name) != expected:
+            raise ValueError('JIT environment differs from freeze: ' + name)
+    return {str(framework / name): digest for name, digest in freeze['frameworkSha256'].items()}
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--work-dir', type=Path, required=True)
+    parser.add_argument('--repo', type=Path)
+    parser.add_argument('--dotnet', default='dotnet')
+    parser.add_argument('--packages', type=Path, help='Optional existing NuGet package cache')
+    parser.add_argument('--build', action='store_true')
+    parser.add_argument('--offline', action='store_true', help='Restore from package cache only')
+    args = parser.parse_args(argv)
+    repo = args.repo.resolve() if args.repo else repository_root(HERE)
+    work = args.work_dir.resolve()
+    if work.exists() and any(work.iterdir()): parser.error('--work-dir must be empty')
+    work.mkdir(parents=True, exist_ok=True)
+    freeze = json.loads((HERE / 'freeze.json').read_text())
+    archive_path = work / 'source.tar'
+    with archive_path.open('wb') as output:
+        # A source archive must contain the committed pointer bytes, exactly as
+        # in the original capture, regardless of the caller's LFS installation.
+        subprocess.run(['git', '-C', str(repo), '-c', 'filter.lfs.process=',
+                        '-c', 'filter.lfs.smudge=', '-c', 'filter.lfs.required=false',
+                        'archive', freeze['sourceCommit'], *SOURCE_PATHS], stdout=output, check=True)
+    if sha(archive_path) != freeze['inputs']['source.tar']:
+        raise ValueError('Pinned source archive SHA-256 mismatch')
+    for name, original in [('Program.cs.txt', 'Program.cs'), ('observer-only.patch', 'observer-only.patch')]:
+        if sha(HERE / name) != freeze['inputs'][original]:
+            raise ValueError('Frozen instrument changed: ' + name)
+    frozen = (HERE / 'FrozenW8.cs.txt').read_bytes()
+    blob = hashlib.sha1(b'blob ' + str(len(frozen)).encode() + b'\0' + frozen).hexdigest()
+    if blob != freeze['frozenW8GitBlob']: raise ValueError('Frozen W8 observer blob mismatch')
+    (work / 'global.json').write_text(json.dumps({'sdk': {'version': freeze['sdk'], 'rollForward': 'disable'}}) + '\n')
+    for arm in ('plain', 'observed'):
+        root = work / arm
+        root.mkdir()
+        with tarfile.open(archive_path) as archive: archive.extractall(root, filter='data')
+        if arm == 'observed':
+            subprocess.run(['patch', '--batch', '--forward', '-p1', '-i', str(HERE / 'observer-only.patch')], cwd=root, check=True)
+        subprocess.run(['python3', str(root / 'tools/dotnet-ci/generate_projects.py')], cwd=root, check=True)
+        capture = root / 'capture'
+        capture.mkdir()
+        shutil.copyfile(HERE / 'Program.cs.txt', capture / 'Program.cs')
+        shutil.copyfile(HERE / 'FrozenW8.cs.txt', capture / 'FrozenW8.cs')
+        source_project = root / 'src/match-engine/tests/match-engine-tests.gen.csproj'
+        references = [(source_project.parent / element.attrib['Include']).resolve()
+                      for element in ET.parse(source_project).iter('ProjectReference')]
+        project = ET.Element('Project', Sdk='Microsoft.NET.Sdk')
+        properties = ET.SubElement(project, 'PropertyGroup')
+        for key, value in {'OutputType':'Exe', 'TargetFramework':'net8.0', 'LangVersion':'9.0',
+                           'AssemblyName':'TacticalDirector.MatchEngine.Tests', 'GenerateAssemblyInfo':'false',
+                           'Deterministic':'true', 'Optimize':'false', 'DefineConstants':'DEVELOPMENT_BUILD',
+                           'RuntimeFrameworkVersion':freeze['clr'], 'RollForward':'Disable'}.items():
+            ET.SubElement(properties, key).text = value
+        group = ET.SubElement(project, 'ItemGroup')
+        for path in references: ET.SubElement(group, 'ProjectReference', Include=str(path))
+        ET.SubElement(group, 'PackageReference', Include='NUnit', Version='3.14.0')
+        ET.ElementTree(project).write(capture / 'Capture.csproj', encoding='unicode')
+    prepared = {'sourceCommit': freeze['sourceCommit'], 'sourceTree': freeze['sourceTree'],
+                'sourceArchiveSha256': sha(archive_path), 'asRunFreezeSha256': sha(HERE / 'freeze.json'),
+                'sdk':freeze['sdk'], 'clr':freeze['clr'], 'ruleVersion':'1.1', 'built':False,
+                'sources':{}, 'binaries':{}, 'runtimeFiles':{}}
+    if args.build:
+        executable = shutil.which(args.dotnet)
+        if executable is None: raise ValueError('dotnet not found; pass --dotnet')
+        dotnet = str(Path(executable).resolve())
+        env = capture_environment(work, args.packages)
+        prepared['runtimeFiles'] = validate_runtime(dotnet, work, env, freeze)
+        prepared['dotnet'] = dotnet
+        for arm in ('plain', 'observed'):
+            command = [dotnet, 'build', str(work / arm / 'capture/Capture.csproj'), '-c', 'Debug',
+                       '--disable-build-servers', '-m:1', '-p:NuGetAudit=false', '-v', 'minimal']
+            if args.offline:
+                feed = work / 'empty-feed'; feed.mkdir(exist_ok=True)
+                command += ['--source', str(feed)]
+            with (work / (arm + '-build.log')).open('w') as output:
+                subprocess.run(command, cwd=work, env=env, stdout=output, stderr=subprocess.STDOUT, check=True)
+            binary_root = work / arm / 'capture/bin/Debug/net8.0'
+            prepared['binaries'][arm] = {str(p.relative_to(work / arm)): sha(p)
+                                        for p in sorted(binary_root.iterdir()) if p.is_file()}
+        prepared['built'] = True
+    for arm in ('plain', 'observed'):
+        prepared['sources'][arm] = {str(p.relative_to(work / arm)):sha(p)
+            for p in sorted((work / arm).rglob('*')) if p.is_file()
+            and p.suffix in {'.cs', '.csproj', '.json', '.targets', '.asmdef'}
+            and not {'bin', 'obj'}.intersection(p.relative_to(work / arm).parts)}
+    (work / 'prepared.json').write_text(json.dumps(prepared, indent=2) + '\n')
+    print('Prepared pinned source/instrument in', work, '(built=' + str(prepared['built']) + ')')
+    return 0
+
+if __name__ == '__main__': raise SystemExit(main())

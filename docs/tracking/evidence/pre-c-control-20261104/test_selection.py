@@ -6,6 +6,24 @@ def row(kind,frame,order,agent=0,team=0,**extra):
     return dict(kind=kind,frame=frame,order=order,agent=agent,team=team,**extra)
 
 class SelectionTests(unittest.TestCase):
+    def test_loose_tackle_outcome_does_not_select_an_opponent_window(self):
+        result=windows([row('release',1,1),row('touch:tackle-loose',2,1,11,1),
+                        row('touch:first-touch',3,1,3,0)],1000)[0]
+        self.assertEqual(result['reason'],'teammate-first')
+        self.assertEqual(result['firstOtherTouch']['agent'],3)
+        self.assertFalse(result['selected'])
+    def test_won_tackle_is_a_recorded_physical_acquisition(self):
+        result=windows([row('release',1,1),row('touch:tackle-won',2,1,11,1)],1000)[0]
+        self.assertTrue(result['selected'])
+    def test_unknown_touch_kind_cannot_silently_change_selection(self):
+        with self.assertRaisesRegex(ValueError,'Unregistered'):
+            windows([row('release',1,1),row('touch:future-producer',2,1,11,1)],1000)
+    def test_full_time_truncates_followup_and_censors_pending_release(self):
+        import base64
+        end=row('event',500,1,ordinal=26,raw=base64.b64encode(bytes(12)+b'\x01').decode())
+        result=windows([row('release',1,1),row('touch:first-touch',2,1,11,1),end],1000)[0]
+        self.assertFalse(result['complete']);self.assertEqual(result['observedFollowingFrames'],497)
+        self.assertEqual(windows([row('release',1,1),end],1000)[0]['reason'],'full-time')
     def test_same_frame_order_and_goal_credit(self):
         rows=[row('release',100,1),row('shot',100,2,11,1),row('touch:body-applied',100,3,11,1),
               row('shot',100,4,11,1),row('goal',100,5,0,0,scoringTeam=1)]

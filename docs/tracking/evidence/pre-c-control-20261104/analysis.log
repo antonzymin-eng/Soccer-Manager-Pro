@@ -1,5 +1,7 @@
 {
   "passed": true,
+  "ruleVersion": "1.1",
+  "digestChainsChecked": true,
   "observationCounts": {
     "event": 23755,
     "touch:pass-contact": 7813,
@@ -36,5 +38,11 @@
   },
   "corpusGoals": 47,
   "simulatedFrames": 1944000,
-  "corpusGoalsPer600Frames": 0.014506172839506172
+  "corpusGoalsPer600Frames": 0.014506172839506172,
+  "livePreFreezeFrames": 1943994,
+  "corpusGoalsPer600LiveFrames": 0.014506217611782753,
+  "appliedTouchCount": 16264,
+  "excludedAbstractTackleOutcomes": 37,
+  "traceChecksPassed": true,
+  "status": "PASS"
 }
