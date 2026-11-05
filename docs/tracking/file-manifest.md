@@ -1,7 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
 
-**Last Updated:** November 3, 2026 — **Consolidate PRs #532, #533 and #534 against remote main #535.** Roadmap v0.88 preserves November 3 ratified no-Early-Access ordering plus amended D-11; client design v0.33 combines D-P7-5 checkpoint and D-P7-6 draft v0.6 (still PROPOSED). Retain C6 §7 records and WorldStore comment-only correction. Archive #526 technical gap using #535 pinned-host evidence; late-validation exception remains, index 39 active / 74 archived. Preserve parallel version histories with provenance. No runtime, save-format, schema or RNG changes.
+**Last Updated:** November 5, 2026 — **Pinned-host Unity compile and living-world EditMode at `main` `1d3cebf3`.** **New evidence directory** `docs/tracking/evidence/host-1d3cebf3-20261105/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract), `tools/tests/test_evidence_manifests.py` (36 registered directories), `docs/tracking/CHANGELOG.md` and this manifest. No source, asmdef, package or project-setting change.
+
+**Last Updated (prior):** November 3, 2026 — **Consolidate PRs #532, #533 and #534 against remote main #535.** Roadmap v0.88 preserves November 3 ratified no-Early-Access ordering plus amended D-11; client design v0.33 combines D-P7-5 checkpoint and D-P7-6 draft v0.6 (still PROPOSED). Retain C6 §7 records and WorldStore comment-only correction. Archive #526 technical gap using #535 pinned-host evidence; late-validation exception remains, index 39 active / 74 archived. Preserve parallel version histories with provenance. No runtime, save-format, schema or RNG changes.
 
 **Last Updated (prior):** November 3, 2026 — **§5.1a ratified: roadmap v0.87 (documentation only).** No paths added or removed. **Modified:** `docs/tracking/path-to-playable-roadmap.md` v0.86 → v0.87, `docs/tracking/CHANGELOG.md` and this manifest.
 

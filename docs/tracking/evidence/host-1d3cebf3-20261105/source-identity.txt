@@ -1,0 +1,21 @@
+# Source identity — pinned-host Unity run at 1d3cebf3 (main after PR #536)
+# The run counted `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`
+# lines before the compile, after the compile and after the EditMode run; tree hashes are those of the commit.
+
+commit: 1d3cebf3b8d874715158067d9deb5fa48b309a30
+parents: 49b7068d673f790825fc8c16febf7da653f5157c 33bd6c6fdb2eac09035e573c24304005d8a35aad
+tree repo: 6c3735becb25d196f9ebc4030679f3442d726071
+tree src: 65c8a8bfc533ac354a9a652a79cf6fb7cc94b2c8
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+last evidenced head: ea84be27bd44d9ee8d593d81027324d408137a91 (host-ea84be27-20261103)
+src/Packages/ProjectSettings/Assets differ from ea84be27 in: src/living-world/WorldStore.cs (only)
+origin/main when the run finished: 1d3cebf3b8d874715158067d9deb5fa48b309a30
+porcelain lines before compile: 0
+porcelain lines after compile: 0
+porcelain lines after EditMode: 0
+Library present before compile: no (fresh detached worktree, so the compile is a full import)
+compile start: 2026-11-05T14:34:19Z
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src
