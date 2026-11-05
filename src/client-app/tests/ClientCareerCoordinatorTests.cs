@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
+// Modified: 2026-11-05 (AR-1 M1: optional-empty transfer save refusal and stale-market regression.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -177,6 +177,79 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(ClientScreens.ClubFinances, h.Flow.Current);
             h.Career.CloseClubFinances();
             Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ResumedOptionalEmptyTransfers_IsTypedUnavailableWithoutStateChange(bool retainWiredMarket)
+        {
+            using var h = new Harness();
+            h.Start();
+            TransferMarketViewModel wired = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(wired, true);
+            var offer = new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(wired), 1L, 0L, 1, false);
+
+            // Use the public current-format writer with every career subsystem except optional #31.
+            SeasonSaveContents contents = h.Temp.Slots.Load(CareerSaveSlot.Autosave);
+            var career = PlayerCareerStates.FromBlocks(
+                contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs, injuryOccurrenceEnabled: true);
+            var unwired = new SeasonLoop(contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                career, null, contents.Progression, contents.Discipline, contents.Finances, transfersOrNull: null);
+            h.Temp.Slots.Write(CareerSaveSlot.Manual1, unwired, contents.World.WorldSeed, h.Career.Home.ManagedClubName);
+            Assert.AreEqual(SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION,
+                h.Temp.Slots.Describe(CareerSaveSlot.Manual1).SeasonSaveFormatVersion);
+            Assert.IsNull(h.Temp.Slots.Load(CareerSaveSlot.Manual1).Transfers, "optional block is empty, not damaged");
+
+            if (retainWiredMarket)
+            {
+                // Preserve the old cached view through the host-free navigation/projection seams.
+                h.Flow.QuitToMainMenu();
+                h.Career.ProjectionProbe = kind =>
+                {
+                    if (kind == ClientCareerCoordinator.ProjectionKind.TransferMarket)
+                        throw new InvalidOperationException("injected retained wired market");
+                };
+            }
+            else h.Career.QuitToMainMenu();
+
+            h.Career.ContinueCareer();
+            h.Finish();
+            Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current);
+            Assert.IsTrue(h.Career.Home.HasCareer);
+            Assert.AreEqual(CareerSaveSlot.Manual1, h.Career.Load.LatestSlot, "Continue resumed the optional-empty save");
+            Assert.IsNull(h.Career.LastError);
+            Assert.AreEqual(retainWiredMarket, h.Career.TransferMarket.IsTransfersWired);
+            if (retainWiredMarket) Assert.AreSame(wired.Players, h.Career.TransferMarket.Players);
+            h.Career.ProjectionProbe = null;
+            CareerHomeViewModel before = h.Career.Home;
+            ClubFinancesViewModel financesBefore = h.Career.Finances;
+            byte[] savedBefore = File.ReadAllBytes(h.Temp.Slots.SavePath(CareerSaveSlot.Manual1));
+
+            h.Career.OpenTransfers();
+            h.Career.SubmitTransfer(in offer);
+            Assert.AreEqual(1, h.Work.Count, "capability is checked on the serialized worker");
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue);
+            h.Finish();
+            Assert.IsTrue(h.Career.LastTransferResult.HasValue);
+            Assert.IsFalse(h.Career.LastTransferResult.HasOutcome);
+            Assert.AreEqual(TransferOfferIssue.TransfersUnavailable, h.Career.LastTransferResult.Issue);
+            Assert.AreEqual(offer, h.Career.LastTransferResult.Offer);
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNull(h.Career.LastProjectionError);
+            Assert.IsFalse(h.Career.IsBusy);
+            Assert.AreEqual(ClientScreens.Transfers, h.Flow.Current);
+            Assert.IsFalse(h.Career.TransferMarket.IsTransfersWired);
+            Assert.AreEqual(before.WorldDay, h.Career.Home.WorldDay);
+            Assert.AreEqual(before.RoundsPlayed, h.Career.Home.RoundsPlayed);
+            Assert.AreEqual(financesBefore.Balance, h.Career.Finances.Balance);
+            Assert.AreEqual(financesBefore.ContractCount, h.Career.Finances.ContractCount);
+            Assert.AreEqual(financesBefore.CommittedTransferSpend, h.Career.Finances.CommittedTransferSpend);
+            h.Career.CloseTransfers();
+            h.Career.SaveTo(CareerSaveSlot.Manual2);
+            h.Finish();
+            Assert.IsNull(h.Career.LastError);
+            CollectionAssert.AreEqual(savedBefore, File.ReadAllBytes(h.Temp.Slots.SavePath(CareerSaveSlot.Manual2)),
+                "the refused offer changes no serialized subsystem, roster, finance or RNG state");
         }
 
         [Test]
@@ -870,4 +943,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.5 | 2026-11-05 | — | T1 live owner refusal and stale-market completed-sale regression. |
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.7 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
+// | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
 #endregion

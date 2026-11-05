@@ -1,10 +1,11 @@
 # UI / Client Framework #38 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** November 5, 2026 (v0.6 — T4 / ERR-038-006: repair amendment version collision; explain dependency choice and P7b lifecycle scope.)
+**Last Updated:** November 5, 2026 (v0.7 — ERR-038-006 / M1: distinguish live capability refusal, owner diagnosis mapping and interim client wage policy.)
+**Last Updated (prior):** November 5, 2026 (v0.6 — T4 / ERR-038-006: repair amendment version collision; explain dependency choice and P7b lifecycle scope.)
 **Last Updated (prior):** November 5, 2026 (v0.5 — ERR-038-006 / ERR-031-017: authoritative live worker diagnosis; cached UI check is a hint.)
 **Last Updated (prior):** November 5, 2026 (v0.4 — ERR-038-006: Appendix C.2 lists payload-carrying career commands (SubmitTransfer → SubmitTransferBid))
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -70,11 +71,15 @@ exist is filed against the owner (FR-UI-020). Intents remain the route for paylo
 
 | Coordinator operation (`src/client-app`) | Session call | Public owner seam (verified) | Typed result | Typed client refusals |
 |---|---|---|---|---|
-| `ClientCareerCoordinator.SubmitTransfer(in Offer)` | `CareerSession.SubmitTransfer` | #30 `SeasonLoop.SubmitTransferBid(in Offer)` → #31 FR-TX-025 UI seam | #31 `TransferSubmissionOutcome` (`Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull`, `SquadDepleted`), published as `TransferResult` | `TransferOfferIssue` (`TransfersUnavailable`, `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`, `LengthTooShort`), mapped from #31 `TransferBidIssue`, diagnosed on the career worker before SubmitTransferBid; the client wage ceiling remains an interim policy |
+| `ClientCareerCoordinator.SubmitTransfer(in Offer)` | `CareerSession.SubmitTransfer` | #30 `SeasonLoop.SubmitTransferBid(in Offer)` → #31 FR-TX-025 UI seam | #31 `TransferSubmissionOutcome` (`Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull`, `SquadDepleted`), published as `TransferResult` | `TransferOfferIssue` (`TransfersUnavailable`, `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`, `LengthTooShort`), live worker capability absence yields `TransfersUnavailable`; #31 `TransferBidIssue` maps the owner-diagnosed categories; the client upper wage ceiling is an interim policy after diagnosis, all before SubmitTransferBid |
 
-A refusal is a value published by the worker without calling the mutation seam. The authoritative
-pre-check is #31 `Diagnose` through `SeasonLoop.DiagnoseTransferBid` / `CareerSession.DiagnoseTransfer`,
-run against live state on the same serialized worker immediately before submission. `TransferOfferCheck`
+A refusal is a value published by the worker without calling the mutation seam. On the serialized
+worker, live session/loop capability is checked first: absent #31 state or #28 roster authority yields
+`TransfersUnavailable` without Diagnose or Submit. Valid current-format optional-empty #31 saves can
+resume in this state; the retained market projection cannot decide capability. For a wired career,
+the authoritative pre-check is #31 `Diagnose` through `SeasonLoop.DiagnoseTransferBid` /
+`CareerSession.DiagnoseTransfer`, run against live state; owner issues are mapped before the client
+upper wage ceiling is applied, then submission may call the mutation seam. `TransferOfferCheck`
 is only a non-authoritative hint over cached snapshot facts plus the client's wage-bound policy; a stale
 market can disagree with it. F4/F6 malformed/stale offers are reported as typed refusals by the worker,
 while invariant and integration defects remain fail-loud. No blanket promise depends on cached UI state.
@@ -118,4 +123,5 @@ substrate the framework pins.
 | 0.4 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
 | 0.5 | 2026-11-05 | — | ERR-038-006 / ERR-031-017: authoritative live worker diagnosis; cached UI check is a hint. |
 | 0.6 | 2026-11-05 | — | T4 / ERR-038-006: repair amendment version collision; explain dependency choice and P7b lifecycle scope. |
+| 0.7 | 2026-11-05 | — | ERR-038-006 / M1: distinguish live capability refusal, owner diagnosis mapping and interim client wage policy. |
 #endregion

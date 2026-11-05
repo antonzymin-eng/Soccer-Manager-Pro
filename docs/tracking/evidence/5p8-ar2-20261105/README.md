@@ -1,15 +1,16 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.5 — T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits.)
+**Last Updated:** November 5, 2026 (v1.6 — AR-1 M1 save-resume capability refusal, DOC-L1–L4 repairs and executed verification; fresh full adversarial verification pending.)
+**Last Updated (prior):** November 5, 2026 (v1.5 — T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits.)
 **Last Updated (prior):** November 5, 2026 (v1.4 — T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence.)
 **Last Updated (prior):** November 5, 2026 (v1.3 — T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected.)
 **Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.5\
+**Version:** 1.6\
 **Author:** —\
-**Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
+**Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks and subsequent AR-1 review fixes.
 
 The source base is `c05cbe5` on `work`. Each mutant below was applied temporarily, compiled, and
 executed against the named test; a compilation error was not accepted as a killed mutant. The original
@@ -115,6 +116,56 @@ not refresh screens after ApplyCurrentScreen rejects wiring. This Unity binding 
 Linux generated solution. Editor compilation, Console, root-visibility runtime and target player build
 remain unverified; no Unity readiness or pinned-host timing certification is claimed.
 
+## AR-1 review fixes — M1 and DOC-L1–L4
+
+Fresh independent Codex reviewers substituted explicitly for unavailable named Claude tiers. The
+round found 0 High / 1 Medium / 4 Low. M1 and DOC-L1–L4 are fixed and validated here; this is not a
+clean-review claim. Fresh full adversarial verification of the final artifact is pending.
+
+M1 reproduced a supported current-format save with optional #31 absent: Continue succeeded but
+unconditional owner Diagnose published raw LastError instead of the existing TransfersUnavailable.
+The coordinator v1.7 now reads live loop capability on the serialized worker before Diagnose/Submit;
+missing #31 state or #28 roster authority yields the typed refusal. Wired sessions keep owner
+Diagnose → client upper wage ceiling → mutation. There is no blanket catch of invariant exceptions.
+Appendix C.2 v0.7 distinguishes these existing responsibilities under ERR-038-006; no #31 domain issue,
+owner wage rule, save format or schema change is introduced.
+
+`ClientCareerCoordinatorTests` v1.8 adds
+`ResumedOptionalEmptyTransfers_IsTypedUnavailableWithoutStateChange(false/true)`. Both cases write a
+normal current-format manual save using public CareerSaveSlots.Write, omit only optional #31, decode
+and Continue it, and submit a real offer. The second retains a previously wired market after an
+injected projection failure. Both assert a typed refusal, null operation/projection errors, preserved
+offer, no outcome, unchanged Home/finance facts, and continued manual-save usability with byte-identical
+full serialized state. The retained view cannot authorize capability.
+
+| Temporary mutation | Guard exercised | Observed result |
+|---|---|---|
+| Remove the whole live capability guard | Both new optional-empty resume cases | Both fail the HasValue behavior assertion; 2 failed / 0 passed / 0 skipped. |
+
+The single new mutant was killed (two failing test cases), restored byte-for-byte in finally, and the
+restored focused set passed. T1–T6 retain their historical total of 32; the cumulative total is now 33.
+
+- Focused ClientApp command: 58 passed / 0 failed / 0 skipped; restored rerun: 58 / 0 / 0.
+- Generated solution build: 0 errors, 2 emitted pre-existing warnings (unused BallIntegrationTests
+  radius; unassigned PassMechanicsTests Pressure). This is non-certifying Linux shim compilation.
+- Full ClientApp: 271 passed / 0 failed / 3 skipped (269 → 271 passed, two new cases).
+- Metadata integrity: PASS. Documentation consistency, landing drift and git diff whitespace: PASS.
+- Transfers 79 / 0 / 0 and SeasonSave 553 / 0 / 4 remain prior T1 full-suite results; neither was rerun
+  for this client/documentation fix. No whole-tree test gate was executed in this review-fix pass.
+
+DOC-L1 restores the historical v1.47 paragraph verbatim from c05cbe5 and moves v2.99/v2.100/v2.101 into
+the correct top Updated chain beneath v2.102. DOC-L2 adds bodies for ERR-031-016/017, ERR-030-059 and
+ERR-038-006 without allocating replacement IDs. DOC-L3 corrects the snapshot-hint/live-owner/wage route
+while keeping ERR-031-016's owner decision Open. DOC-L4 completes #30 §4 v1.7's optional cloned transfer
+holding, constructor/Restore coherence, internal persistence bridge, detached snapshot and public bid
+mutation inventory under the same incomplete back-propagation ERR-030-059. Current inventory/citation
+pointers and all three closeout chains are synchronized; their historical entries remain preserved.
+
+No match-engine, snapshot/save schema, RNG stream/domain/draw-site/order or production simulation rule
+changed. Existing goal-rate scenarios, calibration and certified timing were not remeasured: the fix
+changes refusal routing before simulation mutation. Unity Editor compilation, Console/runtime,
+root visibility, target-player build and pinned-host timing remain unverified.
+
 ## Version History
 
 | Version | Date | Author | Notes |
@@ -125,3 +176,4 @@ remain unverified; no Unity readiness or pinned-host timing certification is cla
 | 1.3 | 2026-11-05 | — | T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected. |
 | 1.4 | 2026-11-05 | — | T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence. |
 | 1.5 | 2026-11-05 | — | T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits. |
+| 1.6 | 2026-11-05 | — | AR-1 M1 save-resume capability refusal and one killed/restored mutant; DOC-L1–L4 repairs; full ClientApp 271/0/3; fresh full adversarial verification pending. |

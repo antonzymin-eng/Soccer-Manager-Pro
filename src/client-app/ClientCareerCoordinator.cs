@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
+// Modified: 2026-11-05 (AR-1 M1: typed refusal for resumed careers without live transfer capability.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -343,6 +343,14 @@ namespace TacticalDirector.ClientApp
             Begin(() =>
             {
                 CareerSession session = _holder.Require();
+                // Current-format saves may omit the optional #31 block. Check the live loop before
+                // diagnosis, which requires wired transfers; a retained market view may be stale.
+                SeasonLoop loop = session.Loop;
+                if (loop.TransfersSnapshot() == null || loop.Progression == null)
+                {
+                    _workerTransferResult = TransferResult.FromRefusal(in accepted, TransferOfferIssue.TransfersUnavailable);
+                    return true;
+                }
                 // ERR-031-017 / ERR-038-006: live owner diagnosis, never the cached market, is authoritative.
                 TransferBidIssue issue = session.DiagnoseTransfer(in accepted);
                 if (issue != TransferBidIssue.None)
@@ -550,4 +558,5 @@ namespace TacticalDirector.ClientApp
 // | 1.4     | 2026-11-05 | —      | M1: the five views project independently (a failing one keeps its last good view; LastProjectionError records it apart from LastError); the transfer result always publishes. M2: SubmitTransfer refuses player-reachable offer mistakes synchronously through TransferOfferCheck (typed, no exception, nothing queued); the H1 term checks moved into it. M3: LastTransferOutcome replaced by LastTransferResult (offer + outcome or typed refusal). |
 // | 1.5 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
+// | 1.7 | 2026-11-05 | — | AR-1 M1: check live transfer capability before owner diagnosis and publish TransfersUnavailable for supported optional-empty saves. |
 #endregion

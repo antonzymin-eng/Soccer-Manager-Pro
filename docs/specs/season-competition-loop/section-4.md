@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** November 5, 2026 (v1.6 — ERR-030-059: list live owner transfer diagnosis and headroom observer wrappers.)
+**Last Updated:** November 5, 2026 (v1.7 — ERR-030-059 / DOC-L4: complete optional transfer ownership, restore/persistence and mutation API inventory.)
+**Last Updated (prior):** November 5, 2026 (v1.6 — ERR-030-059: list live owner transfer diagnosis and headroom observer wrappers.)
 **Last Updated (prior):** October 18, 2026 (v1.5 — ERR-030-054: the §4 file-map frame-version line carried to 8 for #31 T1)
 **Last Updated (prior):** October 9, 2026 (v1.4 — ERR-030-053: document the final-day precondition without a new save cursor)
 **Last Updated (prior):** October 8, 2026 (v1.3 — live finance state participates in daily identity accounting without additional persistence)
@@ -24,7 +25,7 @@ this section's own recorded omission class after the v0.4 and v0.6 rows below. N
 **Last Updated (prior):** August 8, 2026, later same day (v0.5 — AR pass 14 L4: §4.2's leftover 1 → 2 delta line corrected to 1 → 4; the tests list marked illustrative)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
 **Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 1.6
+**Version:** 1.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -149,11 +150,24 @@ src/season-save/
   ledger; `FinanceEntriesForSave()` remains an internal defensive-copy persistence bridge. At the season
   boundary #30 stages #40's (b') settlement and installs it only after the fallible season commit succeeds.
 
+- the optional **`TransfersState _transfers`** (#31; ERR-030-059). Constructor composition accepts
+  `transfersOrNull`, validates it with `SeasonTransfersCoherence.Require`, and retains a clone rather
+  than the caller's mutable object. A populated state belongs to the season's managed club; when a
+  roster provider is resolvable, every tracked contract names a player on that club's roster.
+  `Restore` threads the persisted state through the same constructor validation/clone path; null means
+  #31 is unwired and remains null, including valid current-format optional-empty saves. No transfer
+  state is manufactured by Restore. `TransfersForSave()` is the **internal** persistence bridge: the
+  save root reads the carried state without granting clients another writer. The public
+  `TransfersSnapshot()` returns a detached clone (or null), taken on the sim thread and marshaled to
+  presentation. `SubmitTransferBid` writes through #31, while the staged season-boundary step replaces
+  the carried state after `BeginNextSeason`; these retain #31's ownership/gating rules.
+
 **Transfer observer seams (ERR-030-059).** `SeasonLoop.DiagnoseTransferBid(in Offer) → TransferBidIssue`
 delegates to #31 `TransferCommands.Diagnose` with the live world day, carried transfers state and production
 roster port. `RemainingTransferBudget(int clubId) → long` delegates to #31's read over the club's #40
 entry, subtracting committed spend only for the managed club; unwired/other-club spend is zero. Both are
-SIM-THREAD ONLY, read-only, and published to the UI only as detached values. An unwired diagnosis fails
+SIM-THREAD ONLY, read-only, and published to the UI only as detached values alongside the
+`TransfersSnapshot()` described above. An unwired diagnosis fails
 loud; no observer invents transfers state. No save/schema/RNG change.
 
 Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`, `AdvanceDays(n)`
@@ -162,8 +176,11 @@ opening day, KD-4), `AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whol
 `RollToNextSeason()` (requires every fixture played and the world clock past the final fixture day;
 complete a pending day through `AdvanceDays(1)` before settlement, ERR-030-053), the #40-facing
 `FinanceView(clubId)` / `AvailableTransferBudget(clubId)` /
-`ApplyTransaction(clubId, ...)` surfaces, plus read-only `View()` → `SeasonViewModel` (FR-SN-033) and
-`Snapshot()` / `Restore(...)` for the season sub-blob. It is **not** on the 60 Hz hot
+`ApplyTransaction(clubId, ...)` surfaces, and `SubmitTransferBid(in Offer)` (#31 FR-TX-025),
+called on the sim thread between rounds with #31 state and #28 roster authority wired. The bid retains
+#31 window, terms/direction, budget and squad gates; #40 finance is staged and installed only after
+#31 returns Accepted following the roster commit. Read-only observation includes `View()` → `SeasonViewModel` (FR-SN-033) and
+`Snapshot()` for the season sub-blob; `Restore(...)` composes the resumed loop. It is **not** on the 60 Hz hot
 path (§1.2 world-tick cadence), so allocation / `new` / exceptions are permitted — the
 `SeasonSaveManager` / `WorldStore` precedent. The normative resume composition is `SeasonLoop.Restore(..., financesOrNull)` followed by `SeasonSaveManager.Save(loop, matchOrNull, path)`: populated entries are preserved, while an empty persisted T1b block is migrated at Restore before the loop is constructed (ERR-030-050 / T2b review).
 
@@ -254,4 +271,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 1.4 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** document the final-day precondition without a new save cursor. |
 | 1.5 | 2026-10-18 | — | **ERR-030-054** (#31 T1): `SeasonSaveConstants.cs` file-map line carries `SEASON_SAVE_FORMAT_VERSION` 1 → 8 (the mandatory `XFER` transfers sub-blob). |
 | 1.6 | 2026-11-05 | — | ERR-030-059: list live owner transfer diagnosis and headroom observer wrappers. |
+| 1.7 | 2026-11-05 | — | ERR-030-059 / DOC-L4: complete optional transfer ownership, restore/persistence and mutation API inventory. |
 #endregion
