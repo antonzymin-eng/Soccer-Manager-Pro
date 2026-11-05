@@ -1,6 +1,15 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 5, 2026 — **Transfer/finance screens design.** **New:**
+**Last Updated:** November 5, 2026 — **§5-P8 transfer/finance host-free half.** **New:**
+`src/client-app/TransferMarketViewModel.cs`, `ClubFinancesViewModel.cs`, `TransferMarketSource.cs`,
+`ClubFinancesSource.cs` and `src/client-app/tests/CareerTransfersTests.cs` (v1.0 each, with `.meta` files).
+**Modified:** `src/client-app/ClientAppConstants.cs` v1.3, `ClientScreens.cs` v1.2, `ClientScreenFlow.cs` v1.2,
+`ClientScreenVisibility.cs` v1.2, `CareerSession.cs` v1.6, `ClientCareerCoordinator.cs` v1.2,
+`ClientMatchCoordinator.cs` v1.3, `CareerScreenText.cs` v1.2; tests `ClientCareerCoordinatorTests.cs` v1.2,
+`ClientScreenVisibilityTests.cs` v1.3; `interactive-unity-client-design.md` 0.39 → 0.40 (with its citation
+chains), `path-to-playable-roadmap.md` v0.95, `CHANGELOG.md`, `CHANGELOG-src.md` v2.222 and this manifest.
+
+**Last Updated (prior):** November 5, 2026 — **Transfer/finance screens design.** **New:**
 `docs/design/ux-s2-transfers-finances.md` v0.2 (Gate A audit, Gates B–C draft, owner answers).
 **Modified:** `docs/tracking/interactive-unity-client-design.md` 0.38 → 0.39 (§5-P8) with its version
 citations in `open-issues.md`, `path-to-playable-roadmap.md` and this manifest; `CHANGELOG.md`.
@@ -3791,7 +3800,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.39). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.40). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.

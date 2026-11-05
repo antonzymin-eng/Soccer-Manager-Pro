@@ -829,7 +829,7 @@ rate band, corpus fit or perf baseline is perturbed.
 4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
    per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
 
-### P8 — Transfer and club-finance screens (PM-3, roadmap D-13) — host-free half PROPOSED 2026-11-05
+### P8 — Transfer and club-finance screens (PM-3, roadmap D-13) — host-free half LANDED 2026-11-05
 
 **Governance.** The owner put transfer and finance screens into PM-3 on November 4, 2026 (roadmap D-13).
 This section extends §5-P7 on the same precedent: #31 and #40 are APPROVED **and implemented**
@@ -865,6 +865,17 @@ drafted). The owner answered its Q1–Q3 on November 5, 2026:
   reference `Transfers`). The outcome is kept as `LastTransferOutcome` until the next operation.
 - *Copy.* Outcome and label text in `CareerScreenText` under `ui.career.transfer.*` /
   `ui.career.finance.*`.
+
+**Tests (landed November 5, 2026).** `CareerTransfersTests` (10): an accepted genesis buy at the club's
+price moves the player, budget and rows; rejected / counter-offered / over-budget outcomes pass through
+unchanged and mutate nothing; an accepted sale credits the balance without touching the ceiling; an
+accepted transfer leaves the autosave bytes unchanged (fails if `SubmitTransfer` autosaves); a closed window
+is refused by the session with its own message (fails if the guard is removed, because #31's F4 throw
+would then answer); rows cover the league with #31's `ValuePlayer` and are cached between operations;
+finances match #40's view and the contract wage total; every outcome has a distinct message; flow moves are
+guarded. Plus `ClientCareerCoordinatorTests` (worker-run offer publishes its outcome and fresh snapshots
+only on `Refresh`, never navigates) and `ClientScreenVisibilityTests` (both flags, nine-screen round trip,
+id 10 refused). ClientApp 224 → **237 passed** / 0 failed / 3 skipped; full-tree build 0 errors.
 
 **Not in this slice.** The Unity pages, roots and the seven-to-nine-root wiring wait until the P7b binding
 compiles on the pinned host; until then no Unity control reaches the new screens. Contract renewal,
@@ -1141,6 +1152,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.40 | 2026-11-05 | §5-P8 host-free half landed: screen ids 8/9, four moves, `CareerSession.SubmitTransfer`, `TransferMarketSource` / `ClubFinancesSource`, coordinator operation and copy; tests recorded. Unity pages pending P7b host compile. |
 | 0.39 | 2026-11-05 | New §5-P8: transfer and club-finance screens, owner decisions D-P8-1..3 (estimated value, no autosave, no counter figure) and the host-free slice. |
 | 0.38 | 2026-11-04 | D-P7-6 row pointer made version-neutral after the parked draft gained §11 (v0.11). No design change. |
 | 0.37 | 2026-11-04 | D-P7-6 row points at the owner-parked draft (v0.10, status only). No design change. |

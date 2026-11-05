@@ -14,7 +14,18 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 4, 2026 (UTC) — (v2.221 — **ERR-040-004 genesis budget ceilings.**
+> **Last Updated:** November 5, 2026 (UTC) — (v2.222 — **§5-P8 transfer/finance host-free half.**
+> New `client-app`: `TransferMarketViewModel.cs` (+ `TransferPlayerRow`, `TransferClubRow`),
+> `ClubFinancesViewModel.cs`, `TransferMarketSource.cs`, `ClubFinancesSource.cs` (v1.0 each, with metas).
+> Modified: `ClientAppConstants.cs` v1.3 (`SCREEN_ID_TRANSFERS` 8, `SCREEN_ID_CLUB_FINANCES` 9),
+> `ClientScreens.cs` v1.2, `ClientScreenFlow.cs` v1.2 (nine-registration constructor, `HasTransferScreens`,
+> `OpenTransfers`/`CloseTransfers`/`OpenClubFinances`/`CloseClubFinances`), `ClientScreenVisibility.cs` v1.2,
+> `CareerSession.cs` v1.6 (`SubmitTransfer`), `ClientCareerCoordinator.cs` v1.2 (two registrations and
+> snapshots, four moves, `SubmitTransfer`, `LastTransferOutcome`; `AttachFlow` now requires nine screens),
+> `ClientMatchCoordinator.cs` v1.3 (nine-screen composition), `CareerScreenText.cs` v1.2. Tests: new
+> `CareerTransfersTests.cs` v1.0; `ClientCareerCoordinatorTests.cs` v1.2, `ClientScreenVisibilityTests.cs` v1.3.)
+
+> **Last Updated (prior):** November 4, 2026 (UTC) — (v2.221 — **ERR-040-004 genesis budget ceilings.**
 > `club-finances/ClubFinances.cs` v1.5: `CreateInitial` seeds `TransferBudget`/`WageBudget` from
 > `FinanceStep.cs` v1.10's new internal `ZeroPrizeTransferCeiling()` / `ZeroPrizeWageCeiling()` (the existing
 > `ScaleAndClampBudget` at the identity multiplier over `BaseTransferBudget` / `BaseWageBudget`). Tests:
@@ -2852,6 +2863,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.222 | 2026-11-05 | — | §5-P8 host-free transfer/finance half: 4 new `client-app` files, 8 modified, 1 new test file, 2 modified. ClientApp.Tests 224 → 237 passed / 0 failed / 3 skipped; full-tree build 0 errors; Unity meta integrity OK. Other suites not rerun: no other assembly references client-app (match-client-unity is outside the Linux gate). |
 | 2.221 | 2026-11-04 | — | ERR-040-004: `ClubFinances.cs` v1.5 / `FinanceStep.cs` v1.10 seed genesis ceilings with the zero-prize base; tests `ClubFinancesT0Tests` v1.4, `ClubFinancesT2BootstrapTests` v1.3, `SeasonTransfersT2Tests` v1.7, `SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8. Full Linux gate: every suite passed except SeasonSave.Tests, whose 9 failures were assertions pinning the old zero genesis ceilings (`SeasonDailyRevenueTests` in-season helper, `SeasonLoopFinanceTests` bootstrap and ledger checks). Those now expect the base values (`SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8) and SeasonSave.Tests reran 552 passed / 0 failed / 4 skipped. Same gate: MatchEngine 841/0/16, ClientApp 224/0/3, ClubFinances 70/0/0, Transfers 69/0/0; build 0 errors. |
 | 2.220 | 2026-11-04 | — | ERR-028-026 measurement: `CareerDriftDiagnosticTests.cs` v1.0 (env-gated `TD_CAREER_DRIFT`, catalogued `career-drift`); test-only, no production change. SeasonSave.Tests 551 passed / 0 failed / 4 skipped (the new diagnostic skips without `TD_CAREER_DRIFT`); Unity meta integrity OK; full Linux gate not rerun (the change is confined to SeasonSave.Tests and tooling). |
 | 2.219 | 2026-11-04 | — | P7b review: localized per-row copy/cache, neutral change/selection labels, current D-10 disclosure, preserved stale-operation error and explicit shutdown limitation. ClientApp 223/0/3; pinned Unity validation due. |

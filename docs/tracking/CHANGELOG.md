@@ -12,7 +12,18 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 5, 2026 — **Transfer and finance screens: Gate A audit and design (documentation only).**
+> **Last Updated:** November 5, 2026 — **Transfer and finance screens: host-free client half (§5-P8).**
+> `client-app` gains screen ids Transfers (8) and Club Finances (9), a nine-registration `ClientScreenFlow`
+> with four guarded Career Home moves, `CareerSession.SubmitTransfer` (one busy operation over #31's UI seam
+> that returns its typed outcome unchanged, refuses a closed window itself and never autosaves, D-P8-2),
+> `TransferMarketSource` / `ClubFinancesSource` (revision-cached reads of #28 rosters and ability, #31
+> snapshot and `ValuePlayer` as the estimated value, #40 view, #41 availability), the coordinator's worker
+> operation with `LastTransferOutcome`, and transfer/finance copy. Two locks were mutation-checked: the
+> no-autosave test fails if `SubmitTransfer` autosaves, and the closed-window test fails if the session's
+> guard is removed. No spec, framework, schema, save-format or RNG change; no Unity file changed, and the new
+> screens stay unreachable in Unity until the P7b binding compiles and their pages are built. ClientApp.Tests 224 → 237 passed / 0 failed / 3 skipped; full-tree build 0 errors; Unity meta integrity OK. Other suites not rerun: no other assembly references client-app (match-client-unity is outside the Linux gate).
+
+> **Last Updated (prior):** November 5, 2026 — **Transfer and finance screens: Gate A audit and design (documentation only).**
 > New `docs/design/ux-s2-transfers-finances.md` v0.2 classifies every transfer/finance read and action at
 > `ad05b76`: reads R1–R9 and buy/sell A1–A2 are `DESIGNABLE` through existing #28/#31/#40/#41 surfaces;
 > counter-offer amounts, a wage bill matching contracts, season revenue, contract renewal, AI bids,

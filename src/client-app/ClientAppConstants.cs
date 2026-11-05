@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientAppConstants.cs
 // Created:  2026-08-07
-// Modified: 2026-10-27
+// Modified: 2026-11-05 (§5-P8 Transfers and Club Finances screen ids)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen-catalogue home, owner
 //           decision 2026-08-07), §5-P7 (career screens, save slots), UI / Client Framework #38
@@ -51,6 +51,12 @@ namespace TacticalDirector.ClientApp
         /// <summary>[FIXED] Load Career screen identity — the save-slot picker (§5-P7 D-P7-2).</summary>
         public const int SCREEN_ID_LOAD_CAREER = 7;
 
+        /// <summary>[FIXED] Transfers screen identity — buy and sell offers through #31 (§5-P8).</summary>
+        public const int SCREEN_ID_TRANSFERS = 8;
+
+        /// <summary>[FIXED] Club Finances screen identity — the read-only #40 view (§5-P8).</summary>
+        public const int SCREEN_ID_CLUB_FINANCES = 9;
+
         /// <summary>
         /// [FIXED] Number of manual career save slots, beside the one autosave slot (owner product
         /// decision D-P7-2, October 18, 2026). A product promise, not a balance dial.
@@ -82,4 +88,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | manager id, slot sidecar format version.                       |
 // | 1.2     | 2026-10-27 | —      | PR 519 review: CAREER_SLOT_META_FORMAT_VERSION 1 → 2 (sidecar  |
 // |         |            |        | records the nested sub-blob format stamp).                     |
+// | 1.3     | 2026-11-05 | —      | §5-P8: SCREEN_ID_TRANSFERS (8), SCREEN_ID_CLUB_FINANCES (9).   |
 #endregion

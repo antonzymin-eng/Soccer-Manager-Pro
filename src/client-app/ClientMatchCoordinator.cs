@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientMatchCoordinator.cs
 // Created:  2026-10-06
-// Modified: 2026-11-03 (P7b shared seven-screen composition)
+// Modified: 2026-11-05 (§5-P8: nine-screen career composition)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Consumes one lifecycle with transaction, accepted-frame end barrier and repeat-match teardown.
@@ -71,7 +71,8 @@ namespace TacticalDirector.ClientApp
             else
             {
                 Flow = new ClientScreenFlow(in menu, in setup, in match, in report,
-                    career.HomeRegistration, career.NewRegistration, career.LoadRegistration);
+                    career.HomeRegistration, career.NewRegistration, career.LoadRegistration,
+                    career.TransfersRegistration, career.FinancesRegistration);
                 career.AttachFlow(Flow);
             }
         }
@@ -224,4 +225,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
 // | 1.2     | 2026-11-03 | —      | Optional career composition, UI completion polling and busy guard. |
+// | 1.3     | 2026-11-05 | —      | §5-P8: compose the career's Transfers and Club Finances registrations (nine screens). |
 #endregion

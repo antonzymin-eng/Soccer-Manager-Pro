@@ -1,8 +1,8 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-04
+// Modified: 2026-11-05 (§5-P8: Transfers / Club Finances snapshots and SubmitTransfer)
 // Author:   —
-// Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b),
+// Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
 // Purpose:  Serialize career operations off the UI thread; publish immutable cached screen views and
 //           apply navigation only when the UI consumes a completed operation.
@@ -13,6 +13,7 @@ using System.Threading;
 using Unity.Profiling;
 
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.ClientApp
@@ -24,7 +25,8 @@ namespace TacticalDirector.ClientApp
     /// is called by the worker, and no new career-to-match navigation is introduced (D-P7-6).
     /// </summary>
     public sealed class ClientCareerCoordinator : IViewModelSource<CareerHomeViewModel>,
-        IViewModelSource<NewCareerViewModel>, IViewModelSource<LoadCareerViewModel>, ICommandDispatcher, IDisposable
+        IViewModelSource<NewCareerViewModel>, IViewModelSource<LoadCareerViewModel>,
+        IViewModelSource<TransferMarketViewModel>, IViewModelSource<ClubFinancesViewModel>, ICommandDispatcher, IDisposable
     {
         private static readonly ProfilerMarker RefreshMarker = new ProfilerMarker("ClientCareerCoordinator.Refresh");
         private readonly string _directory;
@@ -38,7 +40,10 @@ namespace TacticalDirector.ClientApp
         private CareerHomeSource _homeSource;
         private NewCareerSetup _setup;
         private LoadCareerSource _loadSource;
+        private TransferMarketSource _transferSource;
+        private ClubFinancesSource _financesSource;
         private SeasonCommandDispatcher _dispatcher;
+        private TransferSubmissionOutcome? _workerTransferOutcome;   // written and read on the worker only
         private Completion _completion;
         private Action _afterSuccess;
         private ScreenId _operationScreen;
@@ -52,6 +57,9 @@ namespace TacticalDirector.ClientApp
             internal CareerHomeViewModel Home;
             internal NewCareerViewModel NewCareer;
             internal LoadCareerViewModel Load;
+            internal TransferMarketViewModel TransferMarket;
+            internal ClubFinancesViewModel Finances;
+            internal TransferSubmissionOutcome? TransferOutcome;
             internal string Error;
         }
 
@@ -79,6 +87,15 @@ namespace TacticalDirector.ClientApp
         public NewCareerViewModel NewCareer { get; private set; }
         /// <summary>Cached save-browser snapshot; no filesystem read occurs in this getter.</summary>
         public LoadCareerViewModel Load { get; private set; }
+        /// <summary>Cached Transfers snapshot (§5-P8), refreshed after every career operation.</summary>
+        public TransferMarketViewModel TransferMarket { get; private set; }
+        /// <summary>Cached Club Finances snapshot (§5-P8), refreshed after every career operation.</summary>
+        public ClubFinancesViewModel Finances { get; private set; }
+        /// <summary>
+        /// The typed #31 outcome of the last completed <see cref="SubmitTransfer"/>; null after any other
+        /// operation or move, and when the submission itself failed (then <see cref="LastError"/> says why).
+        /// </summary>
+        public TransferSubmissionOutcome? LastTransferOutcome { get; private set; }
         /// <summary>True from operation acceptance through UI consumption, including a queued-but-not-started worker.</summary>
         public bool IsBusy { get; private set; }
         /// <summary>True after slot recovery and source creation complete successfully.</summary>
@@ -97,6 +114,8 @@ namespace TacticalDirector.ClientApp
         CareerHomeViewModel IViewModelSource<CareerHomeViewModel>.Project() => Home;
         NewCareerViewModel IViewModelSource<NewCareerViewModel>.Project() => NewCareer;
         LoadCareerViewModel IViewModelSource<LoadCareerViewModel>.Project() => Load;
+        TransferMarketViewModel IViewModelSource<TransferMarketViewModel>.Project() => TransferMarket;
+        ClubFinancesViewModel IViewModelSource<ClubFinancesViewModel>.Project() => Finances;
 
         /// <summary>Lifetime-stable Career Home registration; dispatch is queued rather than run on the UI thread.</summary>
         public ScreenRegistration HomeRegistration => new ScreenRegistration(ClientScreens.CareerHome, this, this);
@@ -104,12 +123,16 @@ namespace TacticalDirector.ClientApp
         public ScreenRegistration NewRegistration => new ScreenRegistration(ClientScreens.NewCareer, this, null);
         /// <summary>Lifetime-stable Load Career registration over the cached slot view.</summary>
         public ScreenRegistration LoadRegistration => new ScreenRegistration(ClientScreens.LoadCareer, this, null);
+        /// <summary>Lifetime-stable Transfers registration over the cached market view; offers go through <see cref="SubmitTransfer"/>.</summary>
+        public ScreenRegistration TransfersRegistration => new ScreenRegistration(ClientScreens.Transfers, this, null);
+        /// <summary>Lifetime-stable read-only Club Finances registration.</summary>
+        public ScreenRegistration FinancesRegistration => new ScreenRegistration(ClientScreens.ClubFinances, this, null);
 
         internal void AttachFlow(ClientScreenFlow flow)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(ClientCareerCoordinator));
             if (_flow != null) throw new InvalidOperationException("Career coordinator already belongs to a shell.");
-            if (flow == null || !flow.HasCareerScreens) throw new ArgumentException("Seven registered screens are required.", nameof(flow));
+            if (flow == null || !flow.HasTransferScreens) throw new ArgumentException("Nine registered screens are required (§5-P8).", nameof(flow));
             _flow = flow;
         }
 
@@ -124,6 +147,10 @@ namespace TacticalDirector.ClientApp
                 var home = new CareerHomeSource(_holder);
                 var setup = new NewCareerSetup(_holder, slots, _mode);
                 var load = new LoadCareerSource(_holder, slots, _mode);
+                var transfers = new TransferMarketSource(_holder);
+                var finances = new ClubFinancesSource(_holder);
+                _transferSource = transfers;
+                _financesSource = finances;
                 _slots = slots;
                 _homeSource = home;
                 _setup = setup;
@@ -225,6 +252,55 @@ namespace TacticalDirector.ClientApp
             Begin(() => { _holder.Require().SaveTo(slot); _loadSource.Refresh(); return true; });
         }
 
+        /// <summary>Career Home → Transfers; the market snapshot is already current (refreshed after every operation).</summary>
+        public void OpenTransfers()
+        {
+            RequireScreen(ClientScreens.CareerHome);
+            _flow.OpenTransfers();
+            LastTransferOutcome = null;
+            Revision++;
+        }
+
+        /// <summary>Transfers → Career Home; nothing is pending, so leaving abandons nothing.</summary>
+        public void CloseTransfers()
+        {
+            RequireScreen(ClientScreens.Transfers);
+            _flow.CloseTransfers();
+            LastTransferOutcome = null;
+            Revision++;
+        }
+
+        /// <summary>Career Home → the read-only Club Finances screen.</summary>
+        public void OpenClubFinances()
+        {
+            RequireScreen(ClientScreens.CareerHome);
+            _flow.OpenClubFinances();
+            Revision++;
+        }
+
+        /// <summary>Club Finances → Career Home.</summary>
+        public void CloseClubFinances()
+        {
+            RequireScreen(ClientScreens.ClubFinances);
+            _flow.CloseClubFinances();
+            Revision++;
+        }
+
+        /// <summary>
+        /// Submits one buy or sell offer off-thread through <see cref="CareerSession.SubmitTransfer"/> (§5-P8).
+        /// The typed outcome arrives in <see cref="LastTransferOutcome"/> on the next <see cref="Refresh"/>;
+        /// it is not autosaved (D-P8-2).
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Not on Transfers, busy, or the cached window is closed.</exception>
+        public void SubmitTransfer(in Offer offer)
+        {
+            RequireScreen(ClientScreens.Transfers);
+            if (!TransferMarket.IsWindowOpen) throw new InvalidOperationException("The transfer window is closed.");
+            Offer accepted = offer;
+            LastTransferOutcome = null;
+            Begin(() => { _workerTransferOutcome = _holder.Require().SubmitTransfer(in accepted); return true; });
+        }
+
         /// <summary>Quits the idle career context; saving is an explicit action, never implied by this move.</summary>
         public void QuitToMainMenu()
         {
@@ -232,6 +308,9 @@ namespace TacticalDirector.ClientApp
             _flow.QuitToMainMenu();
             _holder.Clear();
             Home = default;
+            TransferMarket = default;
+            Finances = default;
+            LastTransferOutcome = null;
             Revision++;
         }
 
@@ -265,6 +344,7 @@ namespace TacticalDirector.ClientApp
         private void Complete(Func<bool> work)
         {
             var result = new Completion();
+            _workerTransferOutcome = null;
             try
             {
                 if (!work()) result.Error = _loadSource.Project().LastError ?? "The career operation did not complete.";
@@ -281,6 +361,9 @@ namespace TacticalDirector.ClientApp
                     result.Home = _homeSource.Project();
                     result.NewCareer = _setup.Project();
                     result.Load = _loadSource.Project();
+                    result.TransferMarket = _transferSource.Project();
+                    result.Finances = _financesSource.Project();
+                    result.TransferOutcome = _workerTransferOutcome;
                     result.Initialized = true;
                     result.HasSnapshot = true;
                 }
@@ -319,6 +402,9 @@ namespace TacticalDirector.ClientApp
                     Home = result.Home;
                     NewCareer = result.NewCareer;
                     Load = result.Load;
+                    TransferMarket = result.TransferMarket;
+                    Finances = result.Finances;
+                    LastTransferOutcome = result.TransferOutcome;
                     _initialized = result.Initialized;
                 }
                 else if (Home.HasCareer) Home = Home.WithProgressBlocked(false);
@@ -367,4 +453,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-03 | —      | P7b worker ownership, immutable publication and guarded career navigation. |
 // | 1.1     | 2026-11-04 | —      | Preserve the operation error when stale-screen navigation is refused. |
+// | 1.2     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances registrations, worker snapshots, four moves and SubmitTransfer (typed outcome, no autosave); flow must carry nine screens. |
 #endregion

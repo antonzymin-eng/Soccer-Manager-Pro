@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientScreenVisibilityTests.cs
 // Created:  2026-09-04
-// Modified: 2026-11-03
+// Modified: 2026-11-05 (§5-P8 Transfers / Club Finances)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
 //           UI / Client Framework #38 §3.2, Code Standards #20 §12 rule 1
@@ -27,10 +27,34 @@ namespace TacticalDirector.ClientApp.Tests
             AssertVisibility(ClientScreens.CareerHome, false, false, false, false, careerHome: true);
             AssertVisibility(ClientScreens.NewCareer, false, false, false, false, newCareer: true);
             AssertVisibility(ClientScreens.LoadCareer, false, false, false, false, loadCareer: true);
+            AssertVisibility(ClientScreens.Transfers, false, false, false, false, transfers: true);
+            AssertVisibility(ClientScreens.ClubFinances, false, false, false, false, clubFinances: true);
+        }
+
+        [Test]
+        public void TransferAndFinanceNavigation_ShowOneRootAndReturnToCareerHome()
+        {
+            var flow = new ClientScreenFlow(
+                Reg(ClientScreens.MainMenu), Reg(ClientScreens.TacticsSetup),
+                Reg(ClientScreens.MatchView), Reg(ClientScreens.PostMatchReport),
+                Reg(ClientScreens.CareerHome), Reg(ClientScreens.NewCareer), Reg(ClientScreens.LoadCareer),
+                Reg(ClientScreens.Transfers), Reg(ClientScreens.ClubFinances));
+            flow.ContinueCareer();
+            flow.OpenTransfers();
+            AssertVisibility(flow.Current, false, false, false, false, transfers: true);
+            flow.CloseTransfers();
+            AssertVisibility(flow.Current, false, false, false, false, careerHome: true);
+            flow.OpenClubFinances();
+            AssertVisibility(flow.Current, false, false, false, false, clubFinances: true);
+            flow.CloseClubFinances();
+            AssertVisibility(flow.Current, false, false, false, false, careerHome: true);
+            flow.QuitToMainMenu();
+            AssertVisibility(flow.Current, true, false, false, false);
         }
 
         [TestCase(0)]
         [TestCase(-1)]
+        [TestCase(10)]
         [TestCase(999)]
         public void UnknownScreen_IsRefused(int id)
         {
@@ -78,7 +102,9 @@ namespace TacticalDirector.ClientApp.Tests
             bool postMatchReport,
             bool careerHome = false,
             bool newCareer = false,
-            bool loadCareer = false)
+            bool loadCareer = false,
+            bool transfers = false,
+            bool clubFinances = false)
         {
             ClientScreenVisibility visibility = ClientScreenVisibility.From(screen);
 
@@ -88,6 +114,8 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(postMatchReport, visibility.PostMatchReport);
             Assert.AreEqual(careerHome, visibility.CareerHome);
             Assert.AreEqual(newCareer, visibility.NewCareer);
+            Assert.AreEqual(transfers, visibility.Transfers);
+            Assert.AreEqual(clubFinances, visibility.ClubFinances);
             Assert.AreEqual(loadCareer, visibility.LoadCareer);
         }
     }
@@ -98,4 +126,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-09-04 | —      | Initial exhaustive screen-visibility mapping locks.            |
 // | 1.1     | 2026-09-06 | —      | Remove redundant same-namespace using after PR review.         |
 // | 1.2     | 2026-11-03 | —      | P7b: career visibility through actual navigation; invalid ids. |
+// | 1.3     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances flags, nine-screen navigation round trip, id 10 refused. |
 #endregion

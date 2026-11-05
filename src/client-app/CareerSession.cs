@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-05 (§5-P8: SubmitTransfer)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -17,6 +17,7 @@ using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.ClientApp
 {
@@ -318,6 +319,44 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        /// <summary>
+        /// Submits one manager transfer offer through #31's UI seam (<c>SeasonLoop.SubmitTransferBid</c>,
+        /// FR-TX-025) and returns its typed outcome unchanged (§5-P8). Ordinary results — rejected,
+        /// counter-offered, over budget, squad full or depleted — are outcomes, not exceptions. Not
+        /// autosaved (owner decision D-P8-2): the next round's autosave or a manual save keeps the deal.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">An operation is already running; transfers are not
+        /// wired on this career; or the window is closed. The UI never offers a closed-window offer, so the
+        /// window is checked here rather than leaving #31's F4 throw as the control flow.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">A #31 caller-contract violation (F6): malformed
+        /// terms, an unknown club or player, or the wrong direction for the player's current club.</exception>
+        public TransferSubmissionOutcome SubmitTransfer(in Offer offer)
+        {
+            BeginOperation(nameof(SubmitTransfer));
+            try
+            {
+                TransfersState transfers = _loop.TransfersSnapshot();
+                if (transfers == null)
+                {
+                    throw new InvalidOperationException("Transfers are not wired on this career.");
+                }
+
+                if (!transfers.ActiveWindow.IsWindowOpen(_loop.CurrentWorldDay))
+                {
+                    throw new InvalidOperationException(
+                        "The transfer window is closed (day " + _loop.CurrentWorldDay + "; window "
+                        + transfers.ActiveWindow.OpenWorldDay + "-" + transfers.ActiveWindow.CloseWorldDay + ").");
+                }
+
+                return _loop.SubmitTransferBid(in offer);
+            }
+            finally
+            {
+                IsBusy = false;
+                Revision++;
+            }
+        }
+
         /// <summary>The display name of <paramref name="clubId"/>.</summary>
         public string ClubName(int clubId) => _league.ClubAt(clubId).Name;
 
@@ -379,4 +418,5 @@ namespace TacticalDirector.ClientApp
 // | 1.4     | 2026-10-29 | —      | PR 522 review: a failed rebuild invalidates the slot too, so   |
 // |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
 // | 1.5     | 2026-10-30 | —      | PR 521 merge: pass the saved #31 state into the resumed loop. |
+// | 1.6     | 2026-11-05 | —      | §5-P8: SubmitTransfer — one busy operation over SeasonLoop.SubmitTransferBid; closed window and unwired #31 refused first; no autosave (D-P8-2). |
 #endregion

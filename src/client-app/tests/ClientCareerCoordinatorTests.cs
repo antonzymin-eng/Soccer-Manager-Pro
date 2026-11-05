@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-04
+// Modified: 2026-11-05 (§5-P8 transfer operation)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -74,7 +74,8 @@ namespace TacticalDirector.ClientApp.Tests
                 new ScreenRegistration(ClientScreens.TacticsSetup, null, null),
                 new ScreenRegistration(ClientScreens.MatchView, null, null),
                 new ScreenRegistration(ClientScreens.PostMatchReport, null, null),
-                career.HomeRegistration, career.NewRegistration, career.LoadRegistration);
+                career.HomeRegistration, career.NewRegistration, career.LoadRegistration,
+                career.TransfersRegistration, career.FinancesRegistration);
             career.AttachFlow(flow);
             return flow;
         }
@@ -126,6 +127,52 @@ namespace TacticalDirector.ClientApp.Tests
             h.Career.QuitToMainMenu();
             Assert.AreEqual(ClientScreens.MainMenu, h.Flow.Current);
             Assert.IsFalse(h.Career.Home.HasCareer);
+        }
+
+        [Test]
+        public void TransferOffer_RunsOnTheWorker_AndPublishesItsTypedOutcomeAndFreshSnapshots()
+        {
+            using var h = new Harness();
+            h.Start();
+            Assert.IsTrue(h.Career.TransferMarket.IsWindowOpen, "Start publishes the market snapshot.");
+            Assert.IsTrue(h.Career.Finances.HasCareer, "Start publishes the finance snapshot.");
+            Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(
+                new TacticalDirector.Transfers.Offer(0, 0, 1L, 1L, 1, true)), "offers only on Transfers");
+
+            h.Career.OpenTransfers();
+            Assert.AreEqual(ClientScreens.Transfers, h.Flow.Current);
+            TransferMarketViewModel before = h.Career.TransferMarket;
+            TransferPlayerRow own = default;
+            foreach (TransferPlayerRow row in before.Players)
+            {
+                if (row.IsManaged) { own = row; break; }
+            }
+
+            int buyer = -1;
+            foreach (TransferClubRow club in before.Clubs)
+            {
+                if (!club.IsManaged) { buyer = club.ClubId; break; }
+            }
+
+            // A sale at fee 1 is at or below every club's value, so it is Accepted.
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, buyer, 1L, 0L, 1, false));
+            Assert.IsTrue(h.Career.IsBusy);
+            Assert.IsNull(h.Career.LastTransferOutcome, "nothing is published before Refresh");
+            Assert.AreSame(before.Players, h.Career.TransferMarket.Players, "the cached snapshot is untouched while work runs");
+            h.Finish();
+
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferOutcome);
+            Assert.IsNull(h.Career.LastError);
+            Assert.AreEqual(ClientScreens.Transfers, h.Flow.Current, "an offer never navigates");
+            Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount);
+            Assert.AreEqual(before.TransferCeiling, h.Career.Finances.TransferBudget);
+
+            h.Career.CloseTransfers();
+            Assert.IsNull(h.Career.LastTransferOutcome, "leaving clears the result line");
+            h.Career.OpenClubFinances();
+            Assert.AreEqual(ClientScreens.ClubFinances, h.Flow.Current);
+            h.Career.CloseClubFinances();
+            Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current);
         }
 
         [Test]
@@ -400,4 +447,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-03 | —      | P7b deterministic worker/UI publication and navigation regression cases. |
 // | 1.1     | 2026-11-04 | —      | Retain the underlying load failure when navigation becomes stale. |
+// | 1.2     | 2026-11-05 | —      | §5-P8: nine-screen composition; worker-run SubmitTransfer publishes its typed outcome and fresh market/finance snapshots. |
 #endregion
