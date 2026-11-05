@@ -1,6 +1,11 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 4, 2026 — **ERR-040-004 genesis budget ceilings.** No files added or removed.
+**Last Updated:** November 5, 2026 — **Transfer/finance screens design.** **New:**
+`docs/design/ux-s2-transfers-finances.md` v0.2 (Gate A audit, Gates B–C draft, owner answers).
+**Modified:** `docs/tracking/interactive-unity-client-design.md` 0.38 → 0.39 (§5-P8) with its version
+citations in `open-issues.md`, `path-to-playable-roadmap.md` and this manifest; `CHANGELOG.md`.
+
+**Last Updated (prior):** November 4, 2026 — **ERR-040-004 genesis budget ceilings.** No files added or removed.
 **Modified:** `src/club-finances/ClubFinances.cs` v1.5, `src/club-finances/FinanceStep.cs` v1.10,
 `src/club-finances/tests/ClubFinancesT0Tests.cs` v1.4, `src/club-finances/tests/ClubFinancesT2BootstrapTests.cs` v1.3,
 `src/season-save/tests/SeasonTransfersT2Tests.cs` v1.7, `SeasonDailyRevenueTests.cs` v1.1, `SeasonLoopFinanceTests.cs` v1.8; #40 `section-1.md` v0.5, `section-2.md` v0.9,
@@ -3786,7 +3791,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.38). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7; current v0.39). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.

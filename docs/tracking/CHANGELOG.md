@@ -12,7 +12,17 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 4, 2026 — **ERR-040-004: clubs start with a transfer budget (owner decision D-13).**
+> **Last Updated:** November 5, 2026 — **Transfer and finance screens: Gate A audit and design (documentation only).**
+> New `docs/design/ux-s2-transfers-finances.md` v0.2 classifies every transfer/finance read and action at
+> `ad05b76`: reads R1–R9 and buy/sell A1–A2 are `DESIGNABLE` through existing #28/#31/#40/#41 surfaces;
+> counter-offer amounts, a wage bill matching contracts, season revenue, contract renewal, AI bids,
+> screen identities, moves and Unity rendering are `FUTURE-BLOCKED`. Drafts the Gate B buy/sell/finances
+> flows and the Gate C layout. Owner answers (November 5): show #31's estimated value, no autosave after a
+> transfer, no counter figure. Client design v0.39 adds §5-P8 with those decisions (D-P8-1..3) and the
+> host-free slice: two screen ids, four moves, `CareerSession.SubmitTransfer`, two sources and a coordinator
+> operation; Unity pages wait for the P7b host compile. No code, spec, schema or save change.
+
+> **Last Updated (prior):** November 4, 2026 — **ERR-040-004: clubs start with a transfer budget (owner decision D-13).**
 > A read-only check showed season 1 was sale-only: the genesis window `[0, 44]` closes before the first
 > `SettleFinances`, the only budget setter, and `CreateInitial` set every ceiling to 0. #40 FR-FN-003 is
 > amended: `CreateInitial` seeds the ceilings a zero-prize identity-board settlement would set

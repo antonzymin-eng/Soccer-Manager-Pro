@@ -829,6 +829,47 @@ rate band, corpus fit or perf baseline is perturbed.
 4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
    per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
 
+### P8 — Transfer and club-finance screens (PM-3, roadmap D-13) — host-free half PROPOSED 2026-11-05
+
+**Governance.** The owner put transfer and finance screens into PM-3 on November 4, 2026 (roadmap D-13).
+This section extends §5-P7 on the same precedent: #31 and #40 are APPROVED **and implemented**
+(`src/transfers/`, `src/club-finances/`), so #38 §7.1's data-spec gate is met. UX authority is
+[`ux-s2-transfers-finances.md`](../design/ux-s2-transfers-finances.md) (Gate A recorded; Gates B–C
+drafted). The owner answered its Q1–Q3 on November 5, 2026:
+
+| ID | Decision | Implementation consequence |
+|---|---|---|
+| **D-P8-1** price shown | Estimated value: #31's base `PlayerValuation.ValuePlayer(attributes, age)`. The club's acceptance price also applies its positional need, so it is not shown. | The row carries `EstimatedValue`; the offer fee is pre-filled with it. |
+| **D-P8-2** saving | No autosave after a transfer. Autosave stays after rounds and rolls (D-P7-2). | `CareerSession.SubmitTransfer` never writes a slot. |
+| **D-P8-3** counter-offers | No counter figure in PM-3. | `CounterOffered` is shown as "close"; no #31 seam is filed. |
+
+**Host-free scope of this slice.** All in `src/client-app/`; no framework, spec or engine change:
+
+- *Navigation.* `ClientScreens` gains `Transfers` (8) and `ClubFinances` (9). `ClientScreenFlow` gains
+  a nine-registration constructor (`HasTransferScreens`) and four moves, each from or back to Career Home:
+  `OpenTransfers` / `CloseTransfers` and `OpenClubFinances` / `CloseClubFinances` (Push / Pop, so Back and
+  Quit keep their P7 meaning). `ClientScreenVisibility` maps both ids. The seven-registration constructor
+  is unchanged.
+- *Runtime.* `CareerSession.SubmitTransfer(in Offer)` is one operation (busy, `Revision`++) that refuses
+  a closed window or unwired #31 before calling #31, so the F4 throw is never the UI's control flow, then
+  returns #31's typed `TransferSubmissionOutcome` unchanged (FR-TX-025). No autosave (D-P8-2).
+- *Sources.* `TransferMarketSource` → `TransferMarketViewModel`: window, ceiling, committed spend,
+  remaining, squad count against `CLUB_SQUAD_SIZE`, default terms, one row per league player (club,
+  name, position, age, current ability, availability, estimated value, managed contract). `ClubFinancesSource`
+  → `ClubFinancesViewModel`: #40 `FinanceView` plus committed spend and the managed contracts' wage
+  total, with `WageBillAggregate` passed through unchanged (it has no producer yet, #40 KD-5). Both are
+  sim-thread reads cached on `Revision`, like `CareerHomeSource`.
+- *Coordinator.* `ClientCareerCoordinator` registers both screens, publishes both view models in its
+  immutable snapshot, and runs `SubmitTransfer` on the career worker like `SaveTo` (a coordinator
+  operation, not an `IntentKind`: `ManagerIntent` cannot carry offer terms and `ui-framework` does not
+  reference `Transfers`). The outcome is kept as `LastTransferOutcome` until the next operation.
+- *Copy.* Outcome and label text in `CareerScreenText` under `ui.career.transfer.*` /
+  `ui.career.finance.*`.
+
+**Not in this slice.** The Unity pages, roots and the seven-to-nine-root wiring wait until the P7b binding
+compiles on the pinned host; until then no Unity control reaches the new screens. Contract renewal,
+AI-initiated bids, counter figures and the counterparty ledger stay out (Gate A A4/A5/R11, ERR-031-013).
+
 ## 6. Deterministic manager-command channel (design detail)
 
 This is the one part of the plan with genuine architectural risk, so it is specified further even
@@ -1100,6 +1141,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.39 | 2026-11-05 | New §5-P8: transfer and club-finance screens, owner decisions D-P8-1..3 (estimated value, no autosave, no counter figure) and the host-free slice. |
 | 0.38 | 2026-11-04 | D-P7-6 row pointer made version-neutral after the parked draft gained §11 (v0.11). No design change. |
 | 0.37 | 2026-11-04 | D-P7-6 row points at the owner-parked draft (v0.10, status only). No design change. |
 | 0.36 | 2026-11-04 | Point to failed AR-3 and proposed v0.9 fixes; name playback/§6 scope, deferred delegation and owner-selected queued policy/profile variety; interactive career play is deferred too and PM-2 retains Home resolution. No implementation or technical approval. |
