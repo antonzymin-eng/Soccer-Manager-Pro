@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-1 M1: optional-empty transfer save refusal and stale-market regression.)
+// Modified: 2026-11-05 (AR-2 review: finance restore composition and four Continue/Load regression cases.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -13,7 +13,11 @@ using System.Threading;
 
 using NUnit.Framework;
 
+using TacticalDirector.ClubFinances;
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
+
+using ClubFinanceState = TacticalDirector.ClubFinances.ClubFinances;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.ClientApp.Tests
@@ -250,6 +254,122 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsNull(h.Career.LastError);
             CollectionAssert.AreEqual(savedBefore, File.ReadAllBytes(h.Temp.Slots.SavePath(CareerSaveSlot.Manual2)),
                 "the refused offer changes no serialized subsystem, roster, finance or RNG state");
+        }
+
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void ResumedFinances_UseOwnerMigrationOrKeepSavedValues(bool hasSavedFinances, bool loadExplicitly)
+        {
+            using var h = new Harness();
+            h.Start();
+
+            SeasonSaveContents contents = h.Temp.Slots.Load(CareerSaveSlot.Autosave);
+            var career = PlayerCareerStates.FromBlocks(
+                contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs,
+                injuryOccurrenceEnabled: true);
+
+            // The save format permits an empty #40 block. A non-empty block must be preserved
+            // exactly rather than silently reinitialized. Give the latter a non-genesis balance.
+            ClubFinanceEntry[] submittedFinances = hasSavedFinances
+                ? (ClubFinanceEntry[])contents.Finances.Clone()
+                : Array.Empty<ClubFinanceEntry>();
+            if (hasSavedFinances)
+            {
+                bool updated = false;
+                for (int i = 0; i < submittedFinances.Length; i++)
+                {
+                    if (submittedFinances[i].ClubId != h.Career.Home.ManagedClubId) continue;
+                    ClubFinanceState state = submittedFinances[i].Finances;
+                    state.Balance += 1234L;
+                    submittedFinances[i] = new ClubFinanceEntry(submittedFinances[i].ClubId, in state);
+                    updated = true;
+                    break;
+                }
+                Assert.IsTrue(updated, "The test must modify the saved managed club.");
+            }
+
+            // Ordinary constructor intentionally does not migrate finances. Persist its valid
+            // optional-empty state using the public current-format save writer.
+            var source = new SeasonLoop(contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
+                career, null, contents.Progression, contents.Discipline,
+                submittedFinances, contents.Transfers);
+            h.Temp.Slots.Write(CareerSaveSlot.Manual1, source, contents.World.WorldSeed,
+                h.Career.Home.ManagedClubName);
+            Assert.AreEqual(submittedFinances.Length,
+                h.Temp.Slots.Load(CareerSaveSlot.Manual1).Finances.Length);
+
+            h.Career.QuitToMainMenu();
+            if (loadExplicitly)
+            {
+                h.Career.OpenLoadCareer();
+                h.Finish();
+                h.Career.LoadCareer(CareerSaveSlot.Manual1);
+            }
+            else h.Career.ContinueCareer();
+            h.Finish();
+
+            Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current);
+            Assert.IsTrue(h.Career.Home.HasCareer);
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNull(h.Career.LastProjectionError, "Both finance and transfer projections must succeed.");
+            Assert.IsTrue(h.Career.Finances.HasCareer);
+            Assert.IsTrue(h.Career.TransferMarket.IsTransfersWired);
+            Assert.IsTrue(h.Career.TransferMarket.IsWindowOpen);
+
+            ClubFinanceState managedExpected = default;
+            bool foundManaged = false;
+            for (int i = 0; i < contents.Season.ClubIds.Count; i++)
+            {
+                if (contents.Season.ClubIds[i] != h.Career.Home.ManagedClubId) continue;
+                managedExpected = hasSavedFinances
+                    ? submittedFinances[i].Finances
+                    : ClubFinanceState.CreateInitial(ClubFinancesConstants.StartingClubBalance);
+                foundManaged = true;
+            }
+            Assert.IsTrue(foundManaged);
+            Assert.AreEqual(managedExpected.Balance, h.Career.Finances.Balance);
+            Assert.AreEqual(managedExpected.TransferBudget, h.Career.Finances.TransferBudget);
+            Assert.AreEqual(managedExpected.WageBudget, h.Career.Finances.WageBudget);
+
+            // Re-save before mutation: compare every club and every persisted #40 field, not
+            // only the managed club's visible balance. #31, season and world must also survive.
+            h.Career.SaveTo(CareerSaveSlot.Manual2);
+            h.Finish();
+            Assert.IsNull(h.Career.LastError);
+            SeasonSaveContents restored = h.Temp.Slots.Load(CareerSaveSlot.Manual2);
+            Assert.AreEqual(contents.Season.ClubIds.Count, restored.Finances.Length);
+            for (int i = 0; i < restored.Finances.Length; i++)
+            {
+                Assert.AreEqual(contents.Season.ClubIds[i], restored.Finances[i].ClubId);
+                ClubFinanceState expected = hasSavedFinances
+                    ? submittedFinances[i].Finances
+                    : ClubFinanceState.CreateInitial(ClubFinancesConstants.StartingClubBalance);
+                ClubFinanceState actual = restored.Finances[i].Finances;
+                Assert.AreEqual(expected.Balance, actual.Balance);
+                Assert.AreEqual(expected.TransferBudget, actual.TransferBudget);
+                Assert.AreEqual(expected.WageBudget, actual.WageBudget);
+                Assert.AreEqual(expected.WageBillAggregate, actual.WageBillAggregate);
+                Assert.AreEqual(expected.SeasonRevenueAccrued, actual.SeasonRevenueAccrued);
+                Assert.AreEqual(expected.FfpBalanceWindow, actual.FfpBalanceWindow);
+            }
+            Assert.IsTrue(contents.Season.FieldsEqual(restored.Season));
+            Assert.AreEqual(contents.World.CurrentWorldTick, restored.World.CurrentWorldTick);
+            CollectionAssert.AreEqual(
+                TransfersSaveCodec.Encode(contents.Transfers), TransfersSaveCodec.Encode(restored.Transfers));
+
+            // An ordinary accepted sale still works after either restore path.
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            var own = FirstRow(market, true);
+            var offer = new Offer(own.PlayerId, FirstOtherClub(market), 1L, 0L, 1, false);
+            h.Career.OpenTransfers();
+            h.Career.SubmitTransfer(in offer);
+            h.Finish();
+            Assert.IsTrue(h.Career.LastTransferResult.HasOutcome);
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome);
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNull(h.Career.LastProjectionError);
         }
 
         [Test]
@@ -944,4 +1064,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.7 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 // | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
+// | 1.9 | 2026-11-05 | — | AR-2 M1: four Continue/Load cases covering empty #40 migration, nondefault populated preservation, complete finance state, market projections and accepted offers. |
 #endregion
