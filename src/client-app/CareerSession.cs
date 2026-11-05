@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-11-05 (L3: SubmitTransfer exception docs)
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -319,6 +319,9 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        /// <summary>Read-only #31 diagnosis on the career worker before submitting an offer.</summary>
+        public TransferBidIssue DiagnoseTransfer(in Offer offer) => _loop.DiagnoseTransferBid(in offer);
+
         /// <summary>
         /// Submits one manager transfer offer through #31's UI seam (<c>SeasonLoop.SubmitTransferBid</c>,
         /// FR-TX-025) and returns its typed outcome unchanged (§5-P8). Ordinary results — rejected,
@@ -331,7 +334,7 @@ namespace TacticalDirector.ClientApp
         /// <c>TransferCommands</c>).</exception>
         /// <exception cref="ArgumentOutOfRangeException">A #31 caller-contract violation (F6): malformed terms,
         /// an unknown club or player, or a counterparty that is the managed club. The client's
-        /// <see cref="TransferOfferCheck"/> keeps every player-reachable case of these from getting here.</exception>
+        /// worker-side owner diagnosis keeps player-reachable cases from getting here.</exception>
         public TransferSubmissionOutcome SubmitTransfer(in Offer offer)
         {
             BeginOperation(nameof(SubmitTransfer));
@@ -422,4 +425,5 @@ namespace TacticalDirector.ClientApp
 // | 1.5     | 2026-10-30 | —      | PR 521 merge: pass the saved #31 state into the resumed loop. |
 // | 1.6     | 2026-11-05 | —      | §5-P8: SubmitTransfer — one busy operation over SeasonLoop.SubmitTransferBid; closed window and unwired #31 refused first; no autosave (D-P8-2). |
 // | 1.7     | 2026-11-05 | —      | L3: SubmitTransfer exception docs — a wrong-direction offer is InvalidOperationException, not ArgumentOutOfRangeException. |
+// | 1.8 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

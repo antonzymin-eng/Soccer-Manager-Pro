@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (M1 independent projections; M2 typed offer refusal; M3 TransferResult)
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -116,8 +116,7 @@ namespace TacticalDirector.ClientApp
         public ClubFinancesViewModel Finances { get; private set; }
         /// <summary>
         /// The result line of the last <see cref="SubmitTransfer"/> (M3): the submitted offer plus #31's typed
-        /// outcome, or the typed client refusal (<see cref="TransferResult.Issue"/>) when the offer never
-        /// reached #31. <c>default</c> (no value) after any other operation or move, and when the worker failed
+        /// outcome, or a typed refusal (<see cref="TransferResult.Issue"/>) before the mutation seam. <c>default</c> (no value) after any other operation or move, and when the worker failed
         /// (then <see cref="LastError"/> says why).
         /// </summary>
         public TransferResult LastTransferResult { get; private set; }
@@ -320,12 +319,9 @@ namespace TacticalDirector.ClientApp
         /// <summary>
         /// Submits one buy or sell offer off-thread through <see cref="CareerSession.SubmitTransfer"/> (§5-P8).
         /// The result arrives in <see cref="LastTransferResult"/> on the next <see cref="Refresh"/>; it is not
-        /// autosaved (D-P8-2). The offer is first checked on the UI thread against the cached market with
-        /// <see cref="TransferOfferCheck.Check"/> (the page calls the same method to disable the action). A
-        /// player-reachable mistake (closed window, wrong direction or counterparty, fee, wage or length out of
-        /// range) is refused synchronously: nothing is queued, #31 is never reached, and
-        /// <see cref="LastTransferResult"/> holds the typed <see cref="TransferOfferIssue"/> at once. The wage
-        /// bound matters because #31 bounds no wage and an unbounded one would reach every finance projection (H1).
+        /// autosaved (D-P8-2). The worker diagnoses against live #31 state before submission and publishes
+        /// a typed refusal on an issue. The cached TransferOfferCheck is only a UI hint. The client also
+        /// bounds wages at MAX_OFFER_WAGE_PER_PERIOD pending ERR-031-016's owner decision.
         /// </summary>
         /// <exception cref="InvalidOperationException">Not on Transfers, or an operation is running (programmer
         /// errors: the UI must not offer the action).</exception>
@@ -333,19 +329,18 @@ namespace TacticalDirector.ClientApp
         {
             RequireScreen(ClientScreens.Transfers);
             Offer accepted = offer;
-            TransferMarketViewModel market = TransferMarket;
-            TransferOfferIssue issue = TransferOfferCheck.Check(in market, in accepted);
-            if (issue != TransferOfferIssue.None)
-            {
-                LastTransferResult = TransferResult.FromRefusal(in accepted, issue);
-                Revision++;
-                return;
-            }
-
             LastTransferResult = default;
             Begin(() =>
             {
-                _workerTransferResult = TransferResult.FromOutcome(in accepted, _holder.Require().SubmitTransfer(in accepted));
+                CareerSession session = _holder.Require();
+                // ERR-031-017 / ERR-038-006: live owner diagnosis, never the cached market, is authoritative.
+                TransferBidIssue issue = session.DiagnoseTransfer(in accepted);
+                if (issue != TransferBidIssue.None)
+                    _workerTransferResult = TransferResult.FromDiagnosis(in accepted, issue);
+                else if (accepted.WagePerPeriod > ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD)
+                    _workerTransferResult = TransferResult.FromRefusal(in accepted, TransferOfferIssue.WageOutOfRange);
+                else
+                    _workerTransferResult = TransferResult.FromOutcome(in accepted, session.SubmitTransfer(in accepted));
                 return true;
             });
         }
@@ -533,4 +528,5 @@ namespace TacticalDirector.ClientApp
 // | 1.2     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances registrations, worker snapshots, four moves and SubmitTransfer (typed outcome, no autosave); flow must carry nine screens. |
 // | 1.3     | 2026-11-05 | —      | H1: SubmitTransfer refuses out-of-range terms (fee/wage < 0, wage > [CROSS] MAX_OFFER_WAGE_PER_PERIOD, length < 1) before Begin; nothing reaches the worker. |
 // | 1.4     | 2026-11-05 | —      | M1: the five views project independently (a failing one keeps its last good view; LastProjectionError records it apart from LastError); the transfer result always publishes. M2: SubmitTransfer refuses player-reachable offer mistakes synchronously through TransferOfferCheck (typed, no exception, nothing queued); the H1 term checks moved into it. M3: LastTransferOutcome replaced by LastTransferResult (offer + outcome or typed refusal). |
+// | 1.5 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

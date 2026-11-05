@@ -1,8 +1,9 @@
 # UI / Client Framework #38 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** November 5, 2026 (v0.3 — ERR-038-006: Appendix C.2 lists payload-carrying career commands (SubmitTransfer → SubmitTransferBid))
-**Version:** 0.3
+**Last Updated:** November 5, 2026 (v0.4 — ERR-038-006 / ERR-031-017: authoritative live worker diagnosis; cached UI check is a hint.)
+**Last Updated (prior):** November 5, 2026 (v0.3 — ERR-038-006: Appendix C.2 lists payload-carrying career commands (SubmitTransfer → SubmitTransferBid))
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -66,10 +67,14 @@ exist is filed against the owner (FR-UI-020). Intents remain the route for paylo
 
 | Coordinator operation (`src/client-app`) | Session call | Public owner seam (verified) | Typed result | Typed client refusals |
 |---|---|---|---|---|
-| `ClientCareerCoordinator.SubmitTransfer(in Offer)` | `CareerSession.SubmitTransfer` | #30 `SeasonLoop.SubmitTransferBid(in Offer)` → #31 FR-TX-025 UI seam | #31 `TransferSubmissionOutcome` (`Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull`, `SquadDepleted`), published as `TransferResult` | `TransferOfferIssue` (`TransfersUnavailable`, `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`, `LengthTooShort`), from `TransferOfferCheck`, before any #31 call |
+| `ClientCareerCoordinator.SubmitTransfer(in Offer)` | `CareerSession.SubmitTransfer` | #30 `SeasonLoop.SubmitTransferBid(in Offer)` → #31 FR-TX-025 UI seam | #31 `TransferSubmissionOutcome` (`Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull`, `SquadDepleted`), published as `TransferResult` | `TransferOfferIssue` (`TransfersUnavailable`, `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`, `LengthTooShort`), mapped from #31 `TransferBidIssue`, diagnosed on the career worker before SubmitTransferBid; the client wage ceiling remains an interim policy |
 
-A refusal is a value, not an exception: it never reaches the worker and never calls the seam. The seam's
-own caller-contract exceptions (#31 F4/F6) stay unreachable from the screen.
+A refusal is a value published by the worker without calling the mutation seam. The authoritative
+pre-check is #31 `Diagnose` through `SeasonLoop.DiagnoseTransferBid` / `CareerSession.DiagnoseTransfer`,
+run against live state on the same serialized worker immediately before submission. `TransferOfferCheck`
+is only a non-authoritative hint over cached snapshot facts plus the client's wage-bound policy; a stale
+market can disagree with it. F4/F6 malformed/stale offers are reported as typed refusals by the worker,
+while invariant and integration defects remain fail-loud. No blanket promise depends on cached UI state.
 
 ## Appendix D — Worked navigation transition (§3.5)
 
@@ -93,4 +98,5 @@ substrate the framework pins.
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-10-18 | — | ERR-038-005: the season dispatcher's rows extended to `AdvanceDay → AdvanceDays(1)` and `StartNextSeason → RollToNextSeason()`, and `AdvanceRound` notes the no-argument overload. Additive; no existing row changed meaning. Landed with the code (`IntentKind` 4–6, `IntentRouting`, `client-app/SeasonCommandDispatcher`). |
 | 0.3 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
+| 0.4 | 2026-11-05 | — | ERR-038-006 / ERR-031-017: authoritative live worker diagnosis; cached UI check is a hint. |
 #endregion

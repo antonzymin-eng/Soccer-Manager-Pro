@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonTransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-11-04 (ERR-040-004 — v1.7: composed genesis career buys in its first window at the base ceiling)
+// Modified: 2026-11-05 (AR-2 T1: owner observer wrappers)
+// Modified (prior): 2026-11-04 (ERR-040-004 — v1.7: composed genesis career buys in its first window at the base ceiling)
 //           2026-10-21 (AR round 5 L-A — v1.6: the counterparty-ledger test is renamed ..._InTheInterimMinimalTier)
 //           2026-10-20 (AR round 5 S-L6 — v1.5: AssertSameRecord compares WeakFootRating; the roll-window Assume.That sits below the core assertions)
 //           2026-10-20 (AR round 4 — v1.4)
@@ -81,6 +82,21 @@ namespace TacticalDirector.SeasonSave.Tests
         /// with no test-set budget, starts with the zero-prize base ceiling and can buy in its first window.
         /// Before ERR-040-004 the genesis ceiling was 0 and this bid returned <c>InsufficientBudget</c>.
         /// </summary>
+        [Test]
+        public void TransferObserverWrappers_UseLiveOwnershipAndOwnerHeadroomWithoutMutation()
+        {
+            Rig c = NewCareer();
+            int target = c.Progression.SquadFor(Seller).GetPlayer(0).PlayerId;
+            var offer = new Offer(target, Seller, 1_000_000L, 0L, 1, true);
+            byte[] before = Snapshot(c);
+            Assert.AreEqual(TransferBidIssue.None, c.Loop.DiagnoseTransferBid(in offer));
+            Assert.AreEqual(Budget, c.Loop.RemainingTransferBudget(Managed));
+            CollectionAssert.AreEqual(before, Snapshot(c));
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, c.Loop.SubmitTransferBid(in offer));
+            Assert.AreEqual(Budget - offer.Fee, c.Loop.RemainingTransferBudget(Managed));
+            Assert.AreEqual(TransferBidIssue.WrongDirection, c.Loop.DiagnoseTransferBid(in offer));
+        }
+
         [Test]
         public void GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling()
         {
@@ -1363,4 +1379,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.5     | 2026-10-20 | —      | AR round 5 S-L6: AssertSameRecord also compares Attributes.WeakFootRating (PlayerAttributes.ToArray() excludes it, so a re-home that clobbered it passed T-TX-REKEY-005); APromptRoll_OpensOnTheRollDay_AndCoversTheOpeningFixtureDay moves its non-vacuity Assume.That below the two core assertions, so a [GT] retune cannot silently skip them. |
 // | 1.6     | 2026-10-21 | —      | AR round 5 L-A (ERR-031-015): AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign renamed ..._InTheInterimMinimalTier — the unposted counterparty is the interim option (b), not a design decision (the (a)-vs-(b) owner decision is open, §7.2); the v1.3 row keeps the name it recorded. |
 // | 1.7     | 2026-11-04 | —      | ERR-040-004: GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling — production League.CreateLoop, no test-set budget, buys the cheapest other-club player in the first window. |
+// | 1.8 | 2026-11-05 | — | T1 / ERR-030-059: live observer wrappers preserve state and share owner headroom. |
 #endregion

@@ -1,11 +1,10 @@
 // File:     src/client-app/TransferOfferCheck.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8, Transfers #31 FR-TX-025 (F4/F6),
 //           UI / Client Framework #38 KD-5 / FR-UI-004, Code Standards #20
-// Purpose:  Pure, typed pre-check of a manager's offer against the cached Transfers view, so a mistake the
-//           player can make never reaches #31 as an exception.
+// Purpose:  Pure, typed pre-check of a manager's offer against the cached Transfers view, as a non-authoritative UI hint.
 
 using TacticalDirector.Transfers;
 
@@ -13,8 +12,8 @@ namespace TacticalDirector.ClientApp
 {
     /// <summary>
     /// Checks an <see cref="Offer"/> against a <see cref="TransferMarketViewModel"/> (M2). Pure and allocation
-    /// free: the Unity page calls it to disable the action and explain why; the coordinator calls the same
-    /// method before queueing any work, so the two can never disagree.
+    /// free: the page may explain cached facts; the worker always runs #31 Diagnose against live state.
+    /// This hint is non-authoritative and its check order can differ from the owner diagnosis.
     /// </summary>
     public static class TransferOfferCheck
     {
@@ -72,4 +71,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (M2): typed offer pre-check (window, player, direction, counterparty, fee, wage, length). |
+// | 1.1 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

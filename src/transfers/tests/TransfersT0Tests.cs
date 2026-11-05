@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/tests/TransfersT0Tests.cs
 // Created:  2026-09-12
-// Modified: 2026-10-21 (#31 T2; AR round 2 L3; AR round 3 M14/M15; AR round 4 R4-L1; AR round 5 L-C/D/E/G/H — v1.11)
+// Modified: 2026-11-05 (AR-2: T1 read-only owner diagnosis agrees with SubmitBid and owner headroom.)
 // Author:   —
 // Specs:    Spec #31 §5.1-§5.6 (T0 valuation, offer, bid, stable-id re-home, window, fail-loud tests)
 // Purpose:  Locks the first D5 implementation slice against the approved minimal-tier transfer contract.
@@ -26,6 +26,58 @@ namespace TacticalDirector.Transfers.Tests
         private const int COUNTERPARTY_CLUB_ID = 11;
         private const int MANAGED_PLAYER_ID = MANAGED_CLUB_ID * PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
         private const int COUNTERPARTY_PLAYER_ID = COUNTERPARTY_CLUB_ID * PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+
+        [TestCase(TransferBidIssue.None)]
+        [TestCase(TransferBidIssue.WindowClosed)]
+        [TestCase(TransferBidIssue.ManagedCounterparty)]
+        [TestCase(TransferBidIssue.UnknownCounterparty)]
+        [TestCase(TransferBidIssue.UnknownPlayer)]
+        [TestCase(TransferBidIssue.WrongDirection)]
+        [TestCase(TransferBidIssue.FeeNegative)]
+        [TestCase(TransferBidIssue.WageNegative)]
+        [TestCase(TransferBidIssue.LengthTooShort)]
+        public void Diagnose_IsReadOnly_AndAgreesWithSubmitBid(TransferBidIssue issue)
+        {
+            FakeRosterPort roster = CreateRosterWithCounterpartyPlayer();
+            var commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            var offer = new Offer(issue == TransferBidIssue.UnknownPlayer ? -1 : COUNTERPARTY_PLAYER_ID,
+                issue == TransferBidIssue.ManagedCounterparty ? MANAGED_CLUB_ID :
+                issue == TransferBidIssue.UnknownCounterparty ? 999 : COUNTERPARTY_CLUB_ID,
+                issue == TransferBidIssue.FeeNegative ? -1L : 1_000_000L,
+                issue == TransferBidIssue.WageNegative ? -1L : long.MaxValue,
+                issue == TransferBidIssue.LengthTooShort ? 0 : 1,
+                issue != TransferBidIssue.WrongDirection);
+            uint day = issue == TransferBidIssue.WindowClosed ? 99U : 110U;
+            byte[] before = TransfersSaveCodec.Encode(state);
+            Assert.AreEqual(issue, commands.Diagnose(in offer, day, state));
+            CollectionAssert.AreEqual(before, TransfersSaveCodec.Encode(state));
+            Assert.AreEqual(0, roster.CommitCount);
+            if (issue == TransferBidIssue.None)
+                Assert.AreEqual(TransferSubmissionOutcome.Accepted, commands.SubmitBid(in offer, day, ref finances, state));
+            else
+            {
+                Exception error = Assert.Catch(() => commands.SubmitBid(in offer, day, ref finances, state));
+                Assert.AreEqual(issue == TransferBidIssue.WindowClosed || issue == TransferBidIssue.WrongDirection
+                    ? typeof(InvalidOperationException) : typeof(ArgumentOutOfRangeException), error.GetType());
+                CollectionAssert.AreEqual(before, TransfersSaveCodec.Encode(state));
+                Assert.AreEqual(0, roster.CommitCount);
+            }
+        }
+
+        [Test]
+        public void RemainingBudget_AfterBuy_IsTheHeadroomUsedBySubmitBid()
+        {
+            FakeRosterPort roster = CreateRosterWithTwoCounterpartyPlayers();
+            var commands = new TransferCommands(roster);
+            TransfersState state = CreateOpenState();
+            ClubFinancesState finances = CreateFinances(1_000_000L, 5_000_000L, 0L);
+            Assert.AreEqual(1_000_000L, TransferCommands.RemainingTransferBudget(in finances, state));
+            var offer = new Offer(COUNTERPARTY_PLAYER_ID, COUNTERPARTY_CLUB_ID, 200_000L, 0L, 1, true);
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, commands.SubmitBid(in offer, 110U, ref finances, state));
+            Assert.AreEqual(800_000L, TransferCommands.RemainingTransferBudget(in finances, state));
+        }
 
         [Test]
         public void ValuePlayer_IsDeterministic_WeakFootExcluded_AndGoldenVectorPinned()
@@ -1288,4 +1340,5 @@ namespace TacticalDirector.Transfers.Tests
 // | 1.9     | 2026-10-20 | —      | AR round 3 M15 (T-TX-BID-008): SubmitBid_PostsOnlyThroughTheLedger_AndTheTransfersAssemblyHoldsNoFinanceState — ledger-equivalence of an accepted buy's finance, a reflection scan for finance-typed or cash-named members across the assembly, and an IL stfld scan (with a violating probe proving it can see a store); M14 TheTransfersAssembly_IsDrawFree_… (no call/newobj of System.Random, DeterministicRngService or RngStreamState; probe-proven scan) backing T-TX-NEU-001's 'no RNG stream' half; M15 TheTransfersAssembly_ReferencesNoOtherSubsystemsPerPlayerState (T-TX-REKEY-003: no reference to the assemblies owning PlayerId-keyed state). |
 // | 1.10    | 2026-10-20 | —      | AR round 4 R4-L1: the T-TX-BID-008 IL scan also flags ldflda/ldsflda/stsfld of a ClubFinances/ClubFinanceEntry field (probe: a ref write through ldflda); AssertNotFinanceShaped unwraps Nullable/generic arguments; the RNG scan is renamed ...RegistersNoRngStream... and scoped to FR-TX-016/G3; new ...ReadsNoClockOrAmbientEntropy_AndEmbedsNoSplitMixConstant scan with probes; the token-resolve catch also covers BadImageFormatException and TypeLoadException (Unity Mono). |
 // | 1.11    | 2026-10-21 | —      | AR round 5 (ERR-031-015): L-C ClubNeedPerPlayerPermille >= 1 pinned; L-D the stfld/ldflda scan comment states what it sees and a new stobj/initobj whole-value scan (allowing only SubmitBid's staged-finance commit) joins it, isAmbient matches every Stopwatch member and any RandomNumberGenerator/RNGCryptoServiceProvider member, isRng also matches members that take a DeterministicRngService/RngStreamState parameter — each with a probe; L-E REKEY-003 becomes an allow-list of the four asmdef references; L-G T-TX-BID-009 gate-order cases (F9 before F5, F6 before F4); L-H a buy with a full contract set fails loud before the roster commit. |
+// | 1.12 | 2026-11-05 | — | T1 read-only owner diagnosis agrees with SubmitBid and owner headroom. |
 #endregion

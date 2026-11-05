@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 5, 2026 — **Transfer and finance screens: two review rounds, two ERRs, docs brought up to the code (§5-P8).**
+> **Last Updated:** November 5, 2026 — T1: ERR-031-017 / ERR-030-059 / ERR-038-006: #31 owns Diagnose and RemainingTransferBudget; worker refuses stale offers before mutation. View models carry owner headroom. New TransferBidIssue.cs (+meta) and AR-2 evidence README; TransferBudgetRule.cs and meta deleted. Approved #31 §§2/3/4, #30 §4 and #38 §3/C.2 amended atomically. No save/snapshot schema, RNG stream/domain/draw-site/order change. Generated build passed; Transfers 79/0/0, ClientApp 253/0/3, SeasonSave 553/0/4 (passed/failed/skipped). Owner/worker/headroom mutation guards were killed and restored; docs/meta/drift pass. Pinned Unity compile/runtime remains unverified.
+
+> **Last Updated (prior):** November 5, 2026 — **Transfer and finance screens: two review rounds, two ERRs, docs brought up to the code (§5-P8).**
 > The first adversarial review of the host-free client (`b04c19a`) found two Highs, fixed in `c1b43e0`, and a set of
 > Mediums and Lows, fixed in `b57c6cf`. **H1:** #31 accepts any non-negative wage, so a buy with fee 50,000 and wage
 > `long.MaxValue` was Accepted and committed, then overflowed the Club Finances projection and wedged publication of every

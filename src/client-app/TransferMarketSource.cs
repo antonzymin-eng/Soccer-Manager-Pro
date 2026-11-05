@@ -1,6 +1,6 @@
 // File:     src/client-app/TransferMarketSource.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (H2: club rows carry squad counts)
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1),
 //           docs/design/ux-s2-transfers-finances.md §2 (R1–R8), UI / Client Framework #38 §3.1
@@ -83,7 +83,7 @@ namespace TacticalDirector.ClientApp
                     false, managed, loop.CurrentWorldDay, false, 0, 0, 0, 0, 0,
                     PlayerDatabaseConstants.CLUB_SQUAD_SIZE, 0, 0,
                     new ReadOnlyCollection<TransferPlayerRow>(new TransferPlayerRow[0]),
-                    new ReadOnlyCollection<TransferClubRow>(clubs));
+                    new ReadOnlyCollection<TransferClubRow>(clubs), 0);
             }
 
             PlayerCareerStates career = loop.Career;
@@ -147,7 +147,7 @@ namespace TacticalDirector.ClientApp
                 TransfersConstants.DefaultWagePerPeriod,
                 TransfersConstants.DefaultContractSeasons,
                 new ReadOnlyCollection<TransferPlayerRow>(rows),
-                new ReadOnlyCollection<TransferClubRow>(clubs));
+                new ReadOnlyCollection<TransferClubRow>(clubs), loop.RemainingTransferBudget(managed));
         }
     }
 }
@@ -156,4 +156,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): revision-cached Transfers source. |
 // | 1.1     | 2026-11-05 | —      | H2: each TransferClubRow carries its #28 squad count, read from the same squads as the player rows. |
+// | 1.2 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

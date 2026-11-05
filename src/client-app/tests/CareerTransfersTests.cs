@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerTransfersTests.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (M5 source-field assertions; M8 SquadDepleted; L5/L6 copy and test strength)
+// Modified: 2026-11-05 (AR-2: T1 view-model headroom is supplied as owner data.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1..3),
 //           docs/design/ux-s2-transfers-finances.md §2–§4, Transfers #31 FR-TX-025, Club Finances #40
@@ -43,12 +43,18 @@ namespace TacticalDirector.ClientApp.Tests
             TransferPlayerRow target = CheapestOtherClubPlayer(before);
             long price = ClubPrice(session, target.PlayerId, buy: true);
             Assert.That(price, Is.LessThanOrEqualTo(before.RemainingBudget), "non-vacuity: an affordable target exists");
+            Assert.AreEqual(TransferBidIssue.None, session.DiagnoseTransfer(
+                new Offer(target.PlayerId, target.ClubId, price, 0L, 1, true)));
+            Assert.AreEqual(before.RemainingBudget, session.Loop.RemainingTransferBudget(session.ManagedClubId));
             int revision = session.Revision;
 
             TransferSubmissionOutcome outcome = session.SubmitTransfer(
                 new Offer(target.PlayerId, target.ClubId, price, before.DefaultWagePerPeriod, before.DefaultContractSeasons, true));
 
             Assert.That(outcome, Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            Assert.AreEqual(TransferBidIssue.WrongDirection, session.DiagnoseTransfer(
+                new Offer(target.PlayerId, target.ClubId, price, 0L, 1, true)));
+            Assert.AreEqual(before.RemainingBudget - price, session.Loop.RemainingTransferBudget(session.ManagedClubId));
             Assert.That(session.Revision, Is.EqualTo(revision + 1));
             Assert.That(session.IsBusy, Is.False);
             TransferMarketViewModel after = market.Project();
@@ -313,7 +319,7 @@ namespace TacticalDirector.ClientApp.Tests
             var text = new CareerScreenText();
             long big = 3_000_000_000L;
             Assert.That(text.Text.Format("wage", "finance.wage", big), Is.EqualTo("Wage budget: 3000000000"));
-            string lines = text.Finances(new ClubFinancesViewModel("Test FC", big, big, 0, big, 0, big, 1));
+            string lines = text.Finances(new ClubFinancesViewModel("Test FC", big, big, 0, big, 0, big, 1, big));
             StringAssert.Contains("Balance: 3000000000", lines);
             StringAssert.Contains("Contracted wages: 3000000000 per period across 1 contracts", lines);
             var row = new TransferPlayerRow(1, 2, "Club", "A Player", PlayerPosition.Forward, 25, 100, true, big, true, true, big, 2);
@@ -321,7 +327,7 @@ namespace TacticalDirector.ClientApp.Tests
 
             // -long.MinValue has no long; the debt line clamps to long.MaxValue instead of overflowing.
             StringAssert.Contains("overdrawn by 9223372036854775807",
-                text.Finances(new ClubFinancesViewModel("Test FC", long.MinValue, 0, 0, 0, 0, 0, 0)));
+                text.Finances(new ClubFinancesViewModel("Test FC", long.MinValue, 0, 0, 0, 0, 0, 0, 0)));
 
             Assert.Throws<ArgumentException>(() => text.Text.Format("wage", "finance.wage", -1L), "L stays non-negative");
             Assert.Throws<ArgumentException>(() => text.Text.Format("wage", "finance.wage", (object)1), "L is exact: an int is refused");
@@ -437,7 +443,7 @@ namespace TacticalDirector.ClientApp.Tests
                 new System.Collections.ObjectModel.ReadOnlyCollection<TransferClubRow>(new[]
                 {
                     new TransferClubRow(0, "Managed FC", true, 23), new TransferClubRow(7, "Buyer Town", false, 24)
-                }));
+                }), 60_000);
             var buy = new Offer(1, 7, 1L, 1_000L, 1, true);
             var sell = new Offer(2, 7, 1L, 0L, 1, false);
             foreach (Offer offer in new[] { buy, sell })
@@ -470,7 +476,7 @@ namespace TacticalDirector.ClientApp.Tests
         public void Finances_ShowDebtAsOverdrawn_AndTheWageBillAsNotTracked()
         {
             var text = new CareerScreenText();
-            string debt = text.Finances(new ClubFinancesViewModel("Test FC", -2_500, 100_000, 0, 50_000, 0, 3_000, 3));
+            string debt = text.Finances(new ClubFinancesViewModel("Test FC", -2_500, 100_000, 0, 50_000, 0, 3_000, 3, 100_000));
             StringAssert.Contains("overdrawn by 2500", debt);
             StringAssert.Contains("not tracked yet", debt);
             StringAssert.Contains("3000", debt);
@@ -481,11 +487,11 @@ namespace TacticalDirector.ClientApp.Tests
         public void WageBillLine_FollowsTheTrackedFlag_BothBranches_L5()
         {
             var text = new CareerScreenText();
-            string untracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3));
+            string untracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3, 100_000));
             StringAssert.Contains("Wage bill: not tracked yet", untracked);
             StringAssert.DoesNotContain("777", untracked, "an untracked aggregate is never shown");
 
-            string tracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3, isWageBillTracked: true));
+            string tracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3, 100, isWageBillTracked: true));
             StringAssert.Contains("Wage bill: 777 per period", tracked);
             StringAssert.DoesNotContain("not tracked yet", tracked);
         }
@@ -502,11 +508,11 @@ namespace TacticalDirector.ClientApp.Tests
             {
                 new TransferClubRow(0, "Managed FC", true, 23), new TransferClubRow(7, "Seller", false, 23), new TransferClubRow(8, "Other", false, 23)
             });
-            TransferMarketViewModel open = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs);
-            TransferMarketViewModel closed = new TransferMarketViewModel(true, 0, 60, false, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs);
+            TransferMarketViewModel open = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs, 100_000);
+            TransferMarketViewModel closed = new TransferMarketViewModel(true, 0, 60, false, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs, 100_000);
             long max = ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD;
             Assert.That(TransferOfferCheck.Check(default, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.TransfersUnavailable));
-            var unwired = new TransferMarketViewModel(false, 0, 3, false, 0, 0, 0, 0, 0, 25, 0, 0, players, clubs);
+            var unwired = new TransferMarketViewModel(false, 0, 3, false, 0, 0, 0, 0, 0, 25, 0, 0, players, clubs, 100_000);
             Assert.That(TransferOfferCheck.Check(in unwired, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.TransfersUnavailable));
             Assert.That(TransferOfferCheck.Check(in closed, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.WindowClosed));
             Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 0, 0, 1, true)), Is.EqualTo(TransferOfferIssue.None), "zero fee and wage are legal");
@@ -721,4 +727,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): SubmitTransfer outcomes/refusals/no-autosave, sources, copy and flow guards. |
 // | 1.1     | 2026-11-05 | —      | H1: long.MaxValue contract wage projects (saturated) and formats; money above int.MaxValue formats; long.MinValue debt clamps. H2: third fee-1 sale to one buyer is SquadFull with buyer-named copy; club rows carry SquadCount; EveryOutcome covers both directions. |
 // | 1.2 | 2026-11-05 | — | M5: committed/remaining finance fields, row CurrentAbility and IsAvailable asserted against their owners (availability with a bounded-progress non-vacuity guard). M8: goalkeepers sold until SquadDepleted at >= 18 players, new copy. L5: wage-bill both branches. L6: contracted seller asserted, refused outcomes leave the balance, distinct squad counts in the copy fixture, ClubPrice drift note. M2: OfferCheck/Issue/Result copy. |
+// | 1.3 | 2026-11-05 | — | T1 view-model headroom is supplied as owner data. |
 #endregion

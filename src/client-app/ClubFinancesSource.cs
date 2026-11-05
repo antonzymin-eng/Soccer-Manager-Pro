@@ -1,6 +1,6 @@
 // File:     src/client-app/ClubFinancesSource.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (L5: wage-bill tracked flag)
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8, docs/design/ux-s2-transfers-finances.md
 //           §2 (R1, R2, R9, R12), Club Finances #40 FR-FN-026, UI / Client Framework #38 FR-UI-006,
@@ -99,6 +99,7 @@ namespace TacticalDirector.ClientApp
                 finances.WageBillAggregate,
                 wages,
                 count,
+                loop.RemainingTransferBudget(session.ManagedClubId),
                 saturated,
                 // #40 KD-5: FinancesViewModel.WageBillAggregate has no producer yet, so it is never a tracked figure.
                 // Flip this only when that producer lands; the copy then shows the value instead of "not tracked yet".
@@ -112,4 +113,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): revision-cached Club Finances source. |
 // | 1.1     | 2026-11-05 | —      | H1: contract-wage sum saturates at long.MaxValue (flagged) instead of a checked overflow that wedged publication. |
 // | 1.2     | 2026-11-05 | —      | L5: passes IsWageBillTracked = false explicitly (#40 KD-5: no wage-bill producer). |
+// | 1.3 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

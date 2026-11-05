@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (M1-M4: typed offer refusals, projection isolation, cleanup/failure paths)
+// Modified: 2026-11-05 (AR-2: T1 live owner refusal and stale-market completed-sale regression.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -180,7 +180,41 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
-        public void PlayerReachableOfferMistakes_AreRefusedWithTypedReasons_NeverReachingTheWorker()
+        public void StaleMarket_RepeatedCompletedSale_IsTypedRefusalWithoutStateChange()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel before = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(before, true);
+            var offer = new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(before), 1L, 0L, 1, false);
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.TransferMarket)
+                    throw new InvalidOperationException("injected stale market");
+            };
+            h.Career.SubmitTransfer(in offer);
+            h.Finish();
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome);
+            Assert.AreSame(before.Players, h.Career.TransferMarket.Players);
+            ClubFinancesViewModel afterSale = h.Career.Finances;
+            Assert.AreEqual(TransferOfferIssue.None, TransferOfferCheck.Check(in before, in offer), "stale hint still permits it");
+            h.Career.SubmitTransfer(in offer);
+            h.Finish();
+            Assert.AreEqual(TransferOfferIssue.WrongDirection, h.Career.LastTransferResult.Issue);
+            Assert.IsFalse(h.Career.LastTransferResult.HasOutcome);
+            Assert.IsNull(h.Career.LastError);
+            Assert.AreEqual(afterSale.Balance, h.Career.Finances.Balance);
+            Assert.AreEqual(afterSale.ContractCount, h.Career.Finances.ContractCount);
+            Assert.AreEqual(afterSale.CommittedTransferSpend, h.Career.Finances.CommittedTransferSpend);
+            h.Career.ProjectionProbe = null;
+            h.Career.SubmitTransfer(in offer);
+            h.Finish();
+            Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount);
+        }
+
+        [Test]
+        public void PlayerReachableOfferMistakes_AreRefusedByTheWorker_WithTypedReasons()
         {
             using var h = new Harness();
             h.Start();
@@ -215,11 +249,13 @@ namespace TacticalDirector.ClientApp.Tests
             {
                 string label = "player " + offer.PlayerId + " club " + offer.CounterpartyClubId + " fee " + offer.Fee
                     + ", wage " + offer.WagePerPeriod + ", length " + offer.LengthSeasons + ", buy " + offer.IsBuy;
-                Assert.AreEqual(expected, TransferOfferCheck.Check(in before, in offer), label + " (pure check)");
+                Assert.AreNotEqual(TransferOfferIssue.None, TransferOfferCheck.Check(in before, in offer), label + " (non-authoritative hint)");
                 h.Career.SubmitTransfer(in offer);
-                Assert.AreEqual(0, h.Work.Count, "nothing is queued for the worker: " + label);
+                Assert.AreEqual(1, h.Work.Count, "live diagnosis runs on the worker: " + label);
+                h.Finish();
                 Assert.IsFalse(h.Career.IsBusy);
-                Assert.AreEqual(++revision, h.Career.Revision, "a refusal publishes exactly one change");
+                revision += 2;
+                Assert.AreEqual(revision, h.Career.Revision, "acceptance and completion publish changes");
                 Assert.IsTrue(h.Career.LastTransferResult.HasValue);
                 Assert.IsFalse(h.Career.LastTransferResult.HasOutcome, "#31 was never reached");
                 Assert.AreEqual(expected, h.Career.LastTransferResult.Issue, label);
@@ -362,7 +398,7 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
-        public void ClosedWindow_IsRefusedSynchronouslyWithTypedReason_NothingQueued_M4c()
+        public void ClosedWindow_IsRefusedByTheWorkerWithTypedReason_M4c()
         {
             using var h = new Harness();
             h.Start();
@@ -379,7 +415,8 @@ namespace TacticalDirector.ClientApp.Tests
             var offer = new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 1L, 1_000L, 1, true);
             Assert.AreEqual(TransferOfferIssue.WindowClosed, TransferOfferCheck.Check(in closed, in offer));
             h.Career.SubmitTransfer(in offer);
-            Assert.AreEqual(0, h.Work.Count, "nothing is queued");
+            Assert.AreEqual(1, h.Work.Count);
+            h.Finish();
             Assert.IsFalse(h.Career.IsBusy);
             Assert.AreEqual(TransferOfferIssue.WindowClosed, h.Career.LastTransferResult.Issue);
             Assert.IsFalse(h.Career.LastTransferResult.HasOutcome);
@@ -710,4 +747,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2     | 2026-11-05 | —      | §5-P8: nine-screen composition; worker-run SubmitTransfer publishes its typed outcome and fresh market/finance snapshots. |
 // | 1.3     | 2026-11-05 | —      | H1: out-of-range offer terms (wage above the [CROSS] #40 ceiling, negatives, zero length) are refused before the worker; the inclusive bound still reaches #31. |
 // | 1.4     | 2026-11-05 | —      | M1: a failing projection keeps its last good view and the committed outcome publishes (injected probe). M2: player-reachable offer mistakes are typed refusals (H1 test rewritten); programmer errors stay exceptions. M4: quit reset, no stale result after a failed submit, closed-window refusal, OpenTransfers clears the result. |
+// | 1.5 | 2026-11-05 | — | T1 live owner refusal and stale-market completed-sale regression. |
 #endregion
