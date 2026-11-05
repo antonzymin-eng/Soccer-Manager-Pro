@@ -1,8 +1,9 @@
 # System XI — S2 Transfers and Club Finances: Gate A audit and Gates B–C design
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026\
-**Version:** 0.3\
+**Last Updated:** November 5, 2026 (v0.4 — T5: owner preflight, actual copy and capacity-hint limits; detailed plan remains UX status authority.)
+**Last Updated (prior):** November 5, 2026\
+**Version:** 0.4\
 **Status:** GATE A RECORDED; GATES B–C DRAFTED, owner answered Q1–Q3 (November 5); host-free client half LANDED and reviewed (§7); Gates D–J not started\
 **Purpose:** audit the transfer and club-finance capabilities against the tree of the day and draft the
 task flow and information design for the two PM-3 screens the owner added to scope on November 4, 2026
@@ -19,9 +20,9 @@ budget) and the opt-in P7b career binding (not yet compiled on the pinned Unity 
 `FUTURE-BLOCKED`, qualified `HOST-UNVERIFIED` where code has not run in Unity. Every row names the symbol
 it was verified against.
 
-`ux-detailed-plan.md` §8.1 (September 6) and `ux-experience-architecture.md` list Transfers and Finances as
-`FUTURE-BLOCKED / SPEC-ONLY`. That was true then. #31 T0–T2 and #40 T0–T3b2 have since landed, so the rows
-below supersede those two labels for this journey.
+`ux-detailed-plan.md` §8.1 remains the authority for current UX status; its November 5 refresh records
+Transfers/Finances as DESIGNABLE with LIVE host-free client code and HOST-UNVERIFIED rendering.
+This supplement supplies journey evidence and draft Gates B–C; it does not supersede the plan.
 
 ## 2. Gate A — capability classification
 
@@ -65,12 +66,12 @@ Home.
 | A4 | Renew or release a contract | `FUTURE-BLOCKED` | No #31 seam (re-signing is deep tier, §3.7) |
 | A5 | AI clubs bidding for the manager's players | `FUTURE-BLOCKED` | No autonomous producer (#31 FR-TX-024) |
 
-Caller-contract failures throw rather than return (F4 window closed, F6 unknown player or club, wrong
-direction, malformed terms). The screen must make them unreachable: offer only open-window, valid
-choices, never rely on catching them. The client does so with `TransferOfferCheck`, which returns a typed
-`TransferOfferIssue` before any #31 call (§7). #31 also accepts any non-negative wage and relates none to #40's
-`WageBudget` (ERR-031-016, open for an owner decision); until that is decided the client bounds the wage
-itself (§7).
+Caller-contract failures still throw at SubmitBid (F4/F6); the authoritative preflight is now #31
+`Diagnose` via `SeasonLoop.DiagnoseTransferBid` / `CareerSession.DiagnoseTransfer`, run on the serialized
+career worker against live state immediately before mutation (ERR-031-017 / ERR-030-059). It publishes
+mapped typed refusals and never submits an invalid/stale offer. The UI `TransferOfferCheck` is only a
+non-authoritative snapshot hint. #31 sets no wage upper bound; the worker separately enforces the
+client's interim 0..50000000 policy pending ERR-031-016. Invariant/integration defects remain fail-loud.
 
 ### 2.3 Client, navigation and host
 
@@ -107,7 +108,7 @@ answers (§5). No phantom action is proposed.
   - `SquadDepleted` — "That club cannot release him: it would be left without a complete starting eleven."
 - **Blocked paths:** window closed (list stays readable, buying disabled, "Next window opens at the start
   of next season"); a career operation running (busy notice, controls disabled); an offer the client refuses
-  with a typed reason (§7: e.g. "The wage must be between 0 and 50,000,000 per period.").
+  with a typed reason (§7: e.g. "The wage must be between 0 and 50000000 per period.").
 - **Back:** returns to Career Home. Nothing is pending, so leaving never abandons anything.
 - **Completion:** the result message, with the list refreshed from a new snapshot. Not autosaved (Q2):
   the next round's autosave or a manual save keeps the deal; the existing save-compatibility warning applies.
@@ -143,9 +144,10 @@ answers (§5). No phantom action is proposed.
    time.
 5. Offer panel for the selected row: fee field, wage and contract length (defaults
    `DefaultWagePerPeriod` 1,000, `DefaultContractSeasons` 3), buying-club picker on tab B only, and one
-   primary action "Make offer". Disabled with a stated reason when the window is closed, the squad is
-   full (buy), the chosen buyer's squad is full (sale; from `TransferClubRow.SquadCount`) or a career operation is
-   running.
+   primary action "Make offer". The draft host design may disable it with a reason using window,
+   busy and capacity snapshot hints. `TransferOfferCheck` itself does not check either the managed
+   squad's capacity (buy) or the buyer's capacity (sale); no single implemented disable rule covers
+   those cases. #31's authoritative destination-capacity gate returns `SquadFull`. Unity pages remain pending.
 6. Result line under the panel (persistent until the next action), plus the busy notice.
 
 Focus order: header → tabs → filters → list → offer panel → result → Back. The list and the panel reuse
@@ -179,7 +181,7 @@ Q3 no counter figure for PM-3. The questions as asked are kept below.
 Gate A–C (§§1–5) made no spec, code, schema or navigation change by themselves. Contract renewal, AI-initiated
 bids, scouting knowledge (#32) and the counterparty ledger stay out of scope.
 
-## 7. As built: host-free client half and its review (v0.3)
+## 7. As built: host-free client half and its review
 
 Landed in `b04c19a`, then corrected by two review rounds (`c1b43e0`, `b57c6cf`); contract in
 [`interactive-unity-client-design.md`](../tracking/interactive-unity-client-design.md) §5-P8. This section
@@ -189,39 +191,44 @@ records what the code now does where §§3–4 drafted it.
   *either* #31's typed `TransferSubmissionOutcome` *or* a client `TransferOfferIssue` refusal. It replaces the
   earlier `LastTransferOutcome`, so the copy knows the deal's direction (buy or sale) without the page keeping
   the offer.
-- **Typed refusals before #31.** `TransferOfferCheck.Check(market, offer)` returns the first failing
-  `TransferOfferIssue` (transfers available, window open, player listed, direction, counterparty, fee, wage,
-  length) and copy is `transfer.issue.*`. The page calls it to disable the action and explain why; the
-  coordinator calls the same method before queueing work. A refusal bumps `Revision`, never reaches the worker
-  and never calls #31. A closed window is the typed `WindowClosed` refusal at the coordinator; the session
-  (`CareerSession.SubmitTransfer`) still throws for it, as a backstop.
+- **Owner-backed typed refusals.** #31 `Diagnose` on the worker is authoritative. It runs through the
+  session/loop wrappers against live state, then mapped `TransferOfferIssue` values are published without
+  calling SubmitBid. Cached UI `TransferOfferCheck` is only a hint, with its documented window/player/
+  direction/counterparty/fee/wage/length order. Its order can differ from the owner's legacy exception order.
+  A stale market cannot authorize a repeated completed sale. The worker additionally enforces the interim
+  client wage ceiling; the built copy is "The wage must be between 0 and 50000000 per period."
 - **Term bounds (client guard, not a game rule).** Fee ≥ 0; wage in 0..`MAX_OFFER_WAGE_PER_PERIOD`
   (50,000,000, inclusive; `[CROSS]` #40 `ClubFinancesBudgetCeilingMax`); length ≥ 1 season. The wage bound exists
   because #31 accepts any non-negative wage (ERR-031-016, Open): a wage of `long.MaxValue` was Accepted and
   overflowed the Club Finances projection.
 - **Independent projections.** The five views (Home, New Career, Load, Transfers, Finances) project
   independently; a failing one keeps its last good value and its message goes to `LastProjectionError`, apart
-  from `LastError`. The transfer result always publishes, so a committed deal is never hidden. A failed Home
-  projection skips the success navigation.
+  from `LastError`. The transfer result always publishes, so a committed deal is never hidden. Entry operations
+  (Start/Load/Continue) whose Home projection fails release the held career,
+  keep the current form/menu and publish localized LastError; the autosave remains available for Continue.
+  The Unity notice consumes LastProjectionError after LastError; Quit clears it.
 - **Rows and finances.** `TransferClubRow.SquadCount` lets a sale show a full buyer. The contracted-wage total
   saturates at `long.MaxValue` and is flagged (`IsContractedWagesSaturated`, copy "more than {0} per period").
   The #40 wage-bill line is shown only when `IsWageBillTracked` (false today, #40 KD-5), otherwise "not
-  tracked yet". Remaining budget comes from one shared helper, `TransferBudgetRule`, for both screens.
+  tracked yet". Both sources take remaining budget from `SeasonLoop.RemainingTransferBudget`, backed by #31's
+  single owner calculation; view models carry that value as data. `TransferBudgetRule` was deleted.
 - **Money copy.** Money formats through the formatter's new non-negative `long` argument type `L`
   (`S0TextRole` / `S0TextFormatter`); S0 roles and content hash are unchanged.
 - **Dispatch.** The Transfers screen registers a null dispatcher; `SubmitTransfer` is a composition-root
   operation onto `SeasonLoop.SubmitTransferBid`, sanctioned by ERR-038-006 (#38 Appendix C.2). It needs no
   framework change beyond that amendment.
-- **Known limitation.** The Unity shell has no roots for screens 8 and 9 yet. `ClientShellBehaviour`
-  (v1.7) now rejects wiring if the flow reaches a screen it has no root for, instead of showing a blank
+- **Known limitation.** The Unity shell has no roots for screens 8 and 9 yet. `ClientShellBehaviour` now rejects wiring if the flow reaches a screen it has no root for, instead of showing a blank
   screen; the Unity pages remain pending the P7b host compile (C4).
-- **Tests.** `CareerTransfersTests` 17 and `ClientCareerCoordinatorTests` 23 test attributes; full ClientApp
-  **252 passed / 0 failed / 3 skipped**.
+- **Tests.** Owner issue/SubmitBid agreement, live wrapper/headroom reads, stale-market repeated-sale
+  refusal, failed-entry rollback, five projection-retention paths, Home unblocking, long-cell cache updates,
+  hint order, saturation boundaries and S0 identity are covered. Current measured results and mutation
+  evidence are recorded in the landing changelogs; this supplement is not the test-count ledger.
 
 ## Version history
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.4 | 2026-11-05 | T5: owner preflight, actual copy and capacity-hint limits; detailed plan remains UX status authority. |
 | 0.3 | 2026-11-05 | Brought up to the built client after both review rounds: §7 as-built record (TransferResult, TransferOfferCheck/Issue, wage bound and ERR-031-016, independent projections, SquadCount, saturated wages, `L` money type, Unity shell limitation, test counts); SquadDepleted copy is the complete-starting-eleven rule; a sale's SquadFull is the buyer's and the offer panel is also disabled for a full buyer; window arithmetic corrected (last day = opening + 37); #32 fog dependency recorded on R4/R5/R10. |
 | 0.2 | 2026-11-05 | Owner answers Q1 (b) estimated value, Q2 (b) no autosave, Q3 no counter figure; flows and layout updated. |
 | 0.1 | 2026-11-05 | Gate A audit of transfers/finances at `ad05b76`; draft Gate B flows and Gate C layout; owner questions Q1–Q3. |

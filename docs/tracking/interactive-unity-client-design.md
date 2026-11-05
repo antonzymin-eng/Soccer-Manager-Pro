@@ -1,5 +1,7 @@
 # Interactive Unity Client — High-Level Implementation Plan
 
+**Last Updated:** November 5, 2026 (v0.42 — T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage.)
+
 > **Created:** 2026-07-23
 > **Status:** DESIGN SUPPLEMENT — plan adversarial-review CONVERGED (AR-1 3H+2M+1L → AR-2 0H+0M+3L →
 > AR-3 1H+2M+1L → AR-4 clean → AR-5 0H+2M+3L → AR-6 clean → AR-7 1H+2M+1L → AR-8 clean, see Version
@@ -829,13 +831,13 @@ rate band, corpus fit or perf baseline is perturbed.
 4. **Settings / accessibility** (#49 runtime) and **suspension attention** (#44 has the data; no
    per-club unavailability projection is admitted yet) — both `FUTURE-BLOCKED` for Career Home.
 
-### P8 — Transfer and club-finance screens (PM-3, roadmap D-13) — host-free half LANDED 2026-11-05, reviewed (AR-1 fixes)
+### P8 — Transfer and club-finance screens (PM-3, roadmap D-13) — host-free half LANDED 2026-11-05, AR-2 T1–T4 fixes recorded
 
 **Governance.** The owner put transfer and finance screens into PM-3 on November 4, 2026 (roadmap D-13).
 This section extends §5-P7 on the same precedent: #31 and #40 are APPROVED **and implemented**
-(`src/transfers/`, `src/club-finances/`), so #38 §7.1's data-spec gate is met. UX authority is
-[`ux-s2-transfers-finances.md`](../design/ux-s2-transfers-finances.md) (Gate A recorded; Gates B–C
-drafted). The owner answered its Q1–Q3 on November 5, 2026:
+(`src/transfers/`, `src/club-finances/`), so #38 §7.1's data-spec gate is met. UX status authority is
+[`ux-detailed-plan.md`](../design/ux-detailed-plan.md) §8.1; the journey audit and draft Gates B–C are in
+[`ux-s2-transfers-finances.md`](../design/ux-s2-transfers-finances.md). The owner answered its Q1–Q3 on November 5, 2026:
 
 | ID | Decision | Implementation consequence |
 |---|---|---|
@@ -843,66 +845,59 @@ drafted). The owner answered its Q1–Q3 on November 5, 2026:
 | **D-P8-2** saving | No autosave after a transfer. Autosave stays after rounds and rolls (D-P7-2). | `CareerSession.SubmitTransfer` never writes a slot. |
 | **D-P8-3** counter-offers | No counter figure in PM-3. | `CounterOffered` is shown as "close"; no #31 seam is filed. |
 
-**Host-free scope of this slice.** All in `src/client-app/`; no framework code or engine change (one #38 spec amendment, ERR-038-006, below):
+**Scope of this slice.** Host-free code spans `src/client-app/`, `src/transfers/` and `src/season-save/`.
+The Unity notice binding also consumes projection errors, pending pinned-host validation. The owner
+amendments are #31 FR-TX-030 (ERR-031-017), #30's observer seams (ERR-030-059), and #38 C.2
+(ERR-038-006). Framework and match-engine code are unchanged.
 
 - *Navigation.* `ClientScreens` gains `Transfers` (8) and `ClubFinances` (9). `ClientScreenFlow` gains
   a nine-registration constructor (`HasTransferScreens`) and four moves, each from or back to Career Home:
   `OpenTransfers` / `CloseTransfers` and `OpenClubFinances` / `CloseClubFinances` (Push / Pop, so Back and
   Quit keep their P7 meaning). `ClientScreenVisibility` maps both ids. The seven-registration constructor
   is unchanged.
-- *Runtime.* `CareerSession.SubmitTransfer(in Offer)` is one operation (busy, `Revision`++) that throws
-  on a closed window or unwired #31 before calling #31 (a backstop: the coordinator's typed refusal below
-  means the UI never reaches it), then returns #31's typed `TransferSubmissionOutcome` unchanged
-  (FR-TX-025). No autosave (D-P8-2).
-- *Sources.* `TransferMarketSource` → `TransferMarketViewModel`: window, ceiling, committed spend,
-  remaining, squad count against `CLUB_SQUAD_SIZE`, default terms, one row per league player (club,
-  name, position, age, current ability, availability, estimated value, managed contract). `ClubFinancesSource`
-  → `ClubFinancesViewModel`: #40 `FinanceView` plus committed spend and the managed contracts' wage
-  total, with `WageBillAggregate` passed through unchanged (it has no producer yet, #40 KD-5) and gated by
-  `IsWageBillTracked` (false today: the line reads "not tracked yet"). The contracted-wage total saturates at
-  `long.MaxValue` and is flagged (`IsContractedWagesSaturated`). `TransferClubRow.SquadCount` carries each
-  club's #28 squad count so a sale can show a full buyer. Remaining budget comes from one helper,
-  `TransferBudgetRule`, for both view models. Both sources are sim-thread reads cached on `Revision`, like
-  `CareerHomeSource`.
-- *Coordinator.* `ClientCareerCoordinator` registers both screens, publishes both view models in its
-  immutable snapshot, and runs `SubmitTransfer` on the career worker like `SaveTo`. It is a coordinator
-  operation, not an `IntentKind` (`ManagerIntent` cannot carry offer terms and `ui-framework` does not
-  reference `Transfers`); the Transfers screen registers a null dispatcher. This is sanctioned by the #38
-  amendment ERR-038-006 (FR-UI-010 note, Appendix C.2: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid`),
-  so the earlier "no framework change" claim is superseded: the amendment is spec text only, with no
-  framework code change. The result is kept as `LastTransferResult` (`TransferResult`: the offer plus either
-  #31's typed outcome or a `TransferOfferIssue` refusal) until the next operation. The five views project
-  independently: a failing one keeps its last good value and reports in `LastProjectionError`, apart from
-  `LastError`; a failed Home projection skips the success navigation; the transfer result always publishes.
-- *Typed refusals.* `TransferOfferCheck.Check` (pure; the page calls it to disable the action, the
-  coordinator calls it before queueing) returns a typed `TransferOfferIssue` (`TransfersUnavailable`,
-  `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`,
-  `LengthTooShort`). A refusal is a value, not an exception: it bumps `Revision`, never reaches the worker or
-  #31. A closed window is the typed `WindowClosed` refusal here (the session still throws as a backstop).
-  Term bounds: fee ≥ 0, wage 0..`MAX_OFFER_WAGE_PER_PERIOD` inclusive (50,000,000, `[CROSS]` #40
-  `ClubFinancesBudgetCeilingMax`; a client guard, not a game rule), length ≥ 1. The wage bound is interim:
-  #31 accepts any non-negative wage and relates none to #40's `WageBudget` (ERR-031-016, Open for an owner
-  decision); a `long.MaxValue` wage was Accepted and overflowed the Club Finances projection.
+- *Runtime.* `CareerSession.SubmitTransfer(in Offer)` remains one busy/revision operation through
+  `SeasonLoop.SubmitTransferBid`, returning #31 outcomes unchanged and never autosaving (D-P8-2).
+  `CareerSession.DiagnoseTransfer` and `SeasonLoop.DiagnoseTransferBid` expose #31 FR-TX-030's pure
+  preflight on the worker (ERR-031-017 / ERR-030-059). SubmitBid shares that diagnosis and preserves its
+  existing caller-contract exceptions as the final backstop. No #31 wage upper bound is added.
+- *Sources.* `TransferMarketSource` projects window, owner ceiling/committed/remaining budget,
+  squad/club counts and player/contract rows with estimated value. `ClubFinancesSource` projects #40's
+  finance view plus #31 contract wages, saturating only when the exact total exceeds long.MaxValue.
+  WageBillAggregate stays "not tracked yet" while its #40 producer is absent. Both sources take
+  remaining budget from `SeasonLoop.RemainingTransferBudget` (the #31 owner calculation); immutable
+  view models carry it as data. The client formula helper `TransferBudgetRule` and its meta were deleted.
+- *Coordinator.* The nine-screen route and null Transfers dispatcher are sanctioned by #38 C.2
+  (ERR-038-006). `SubmitTransfer` runs on the serialized career worker: live #31 Diagnose first,
+  then the interim client wage ceiling, then submission only on success. #31 issues map to localized
+  TransferOfferIssue/TransferResult refusals; a repeated sale after a failed market projection is
+  refused with LastError null and unchanged state. Results publish even if a projection fails.
+  The five views refresh independently and each failed view retains its last good data; Home also
+  unblocks progress. LastProjectionError is visible in the Unity notice after LastError. Failed
+  Start/Load/Continue Home projection keeps the entry screen, sets localized LastError and clears the
+  holder/career snapshots; Start's autosave stays on disk for Continue. Quit clears projection errors.
+- *Snapshot hints and policy.* `TransferOfferCheck` is a non-authoritative UI hint over cached facts
+  plus the client's wage policy, with its documented check order. It does not check either squad
+  capacity. The worker's owner diagnosis is authoritative and can use a different order. Fee ≥ 0,
+  length ≥ 1 and wage ≥ 0 belong to #31; the additional client wage ceiling is 50000000 per period
+  (ERR-031-016, open owner decision). #31 remains unbounded above. Capacity/negotiation/budget/release
+  results stay typed owner outcomes; invariant/integration defects still throw.
 - *Copy.* Outcome, refusal and label text in `CareerScreenText` under `ui.career.transfer.*` /
   `ui.career.finance.*`; `transfer.issue.*` carries the refusals. `SquadFull` is split by direction (a
   sale's is the buyer's, named); `SquadDepleted` states the real rule, a complete starting eleven. Money
   formats through the formatter's new non-negative `long` argument type `L` (`S0TextRole` /
   `S0TextFormatter`); the S0 roles and content hash are unchanged.
 
-**Tests (landed November 5, 2026; extended by both review rounds).** `CareerTransfersTests` (17 test attributes at v1.2; the original 10 were): an accepted genesis buy at the club's
-price moves the player, budget and rows; rejected / counter-offered / over-budget outcomes pass through
-unchanged and mutate nothing; an accepted sale credits the balance without touching the ceiling; an
-accepted transfer leaves the autosave bytes unchanged (fails if `SubmitTransfer` autosaves); a closed window
-is refused by the session with its own message (fails if the guard is removed, because #31's F4 throw
-would then answer); rows cover the league with #31's `ValuePlayer` and are cached between operations;
-finances match #40's view and the contract wage total; every outcome has a distinct message; flow moves are
-guarded. Plus `ClientCareerCoordinatorTests` (worker-run offer publishes its outcome and fresh snapshots
-only on `Refresh`, never navigates) and `ClientScreenVisibilityTests` (both flags, nine-screen round trip,
-id 10 refused). The review rounds added tests for each typed refusal, the wage bound and saturation, projection isolation, displayed fields against their owners, and the sale/buy copy split (guarded lines mutation-checked); `ClientCareerCoordinatorTests` now has 23 test attributes. ClientApp 224 → 237 (landing) → 241 (H fixes) → **252 passed** / 0 failed / 3 skipped (current full result).
+**Tests.** Owner diagnosis covers every issue and a valid offer and agrees with SubmitBid; existing
+#31 tests retain their legacy exception contract. Client tests cover owner wrapper/headroom reads,
+no transfer autosave, typed worker refusals (including stale-market repeated-sale), entry projection
+rollback, all five projection retention paths, Home unblocking, hint check order, exact/saturated wage
+boundaries, long formatter cache updates and the S0 role-type identity. New behavior guards are
+mutation-checked with the guarded code removed/changed and then restored. Measured suite and mutation
+results live in CHANGELOG / CHANGELOG-src; Unity-host validation remains separate.
 
 **Not in this slice.** The Unity pages, roots and the seven-to-nine-root wiring wait until the P7b binding
 compiles on the pinned host; until then no Unity control reaches the new screens. **Known limitation:**
-`ClientShellBehaviour` (v1.7) rejects wiring if the flow reaches a screen it has no root for (screens 8/9 until
+`ClientShellBehaviour` rejects wiring if the flow reaches a screen it has no root for (screens 8/9 until
 their roots exist) instead of silently blanking. Contract renewal,
 AI-initiated bids, counter figures and the counterparty ledger stay out (Gate A A4/A5/R11, ERR-031-013).
 
@@ -1177,6 +1172,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.42 | 2026-11-05 | T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage. |
 | 0.41 | 2026-11-05 | §5-P8 brought up to the code after two review rounds (`c1b43e0`, `b57c6cf`): `TransferResult` / `LastTransferResult` replaces `LastTransferOutcome`; `TransferOfferCheck` + `TransferOfferIssue` typed refusals (closed window refused at the coordinator, the session still throws); wage bound 0..50,000,000 (ERR-031-016 filed Open) and fee/length rules; independent projections with `LastProjectionError`; `SquadCount`, saturated wage line, `IsWageBillTracked`, `L` money type; D-P8-1 fog condition on #32; "no framework change" superseded by ERR-038-006 (#38 Appendix C.2); Unity shell rejection recorded as the known limitation; ClientApp 252 / 0 / 3. |
 | 0.40 | 2026-11-05 | §5-P8 host-free half landed: screen ids 8/9, four moves, `CareerSession.SubmitTransfer`, `TransferMarketSource` / `ClubFinancesSource`, coordinator operation and copy; tests recorded. Unity pages pending P7b host compile. |
 | 0.39 | 2026-11-05 | New §5-P8: transfer and club-finance screens, owner decisions D-P8-1..3 (estimated value, no autosave, no counter figure) and the host-free slice. |

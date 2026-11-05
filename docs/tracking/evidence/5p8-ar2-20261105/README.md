@@ -1,11 +1,12 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.3 — T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected.)
+**Last Updated:** November 5, 2026 (v1.4 — T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence.)
+**Last Updated (prior):** November 5, 2026 (v1.3 — T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected.)
 **Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.3\
+**Version:** 1.4\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
 
@@ -81,6 +82,19 @@ The original appendix amendment is correctly v0.4, T1's revision v0.5, and this 
 The ERR-038-006 row carries the corrected rationale, worker diagnosis and version sequence.
 Documentation consistency and drift checks pass; production/test source is identical to the passed T3 tree.
 
+## T5 — documentation authority and close-out
+
+The detailed UX plan v1.37 owns the current S2 status; the journey supplement v0.4 supplies audit/design
+evidence without overriding it. §5-P8 (client plan v0.42) describes the T1–T4 implementation. Maintained
+currency chains in open issues, roadmap v0.97 and the file manifest were synchronized. The ERR-031-016
+original client guard count is five; T1's worker policy is separately named. The unsupported original
+per-test pre-fix execution claim is withdrawn; actual AR-2 mutation checks remain recorded above.
+
+Docs only. Documentation consistency and drift pass. Latest full source results remain Transfers79/0/0,
+ClientApp266/0/3, SeasonSave553/0/4 (passed/failed/skipped). The optional broader recurring-defect lint
+still reports 82 pre-existing errors; T4 removed its pre-existing #38 duplicate-version error.
+No new source/header lint error was introduced. Unity Editor compile and UI runtime remain unverified.
+
 ## Version History
 
 | Version | Date | Author | Notes |
@@ -89,3 +103,4 @@ Documentation consistency and drift checks pass; production/test source is ident
 | 1.1 | 2026-11-05 | — | T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result. |
 | 1.2 | 2026-11-05 | — | T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene. |
 | 1.3 | 2026-11-05 | — | T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected. |
+| 1.4 | 2026-11-05 | — | T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence. |
