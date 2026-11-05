@@ -8,7 +8,7 @@
 > **Measurement closeout — October 17:** [Linux .NET / frozen-observer evidence](evidence/w8-b-20261015/measurement-closeout/README.md) answers the count and restricted-spell questions: 348/348 → 126/126 hand claims/distributions; every spell clears on player touch; twelve opponent-touch windows include eight shots and six goals. No execution gap or stuck restriction observed; no causal balance claim. Historical pre-merge record; final-head CI passed and #511 subsequently merged as recorded above.
 
 > **Created:** September 25, 2026  
-> **Status:** **B contract and implementation landed in PR #511, merge `c0ffd0d2`.** Final-head CI passed at `a43bbc1c`; governing Unity `e58577de` and all #466 live-wiring obligations are met. The adopted post-law Linux B baseline and remaining attribution limitations are in [results v1.6](w8-b-implementation-results.md). #5/#11 remain overall DRAFT beyond their approved W8 B amendments; C requires its own owner decision; D-07 landed in PR #515.
+> **Status:** **B contract and implementation landed in PR #511, merge `c0ffd0d2`.** Final-head CI passed at `a43bbc1c`; governing Unity `e58577de` and all #466 live-wiring obligations are met. The adopted post-law Linux B baseline and remaining attribution limitations are in [results v1.7](w8-b-implementation-results.md). #5/#11 remain overall DRAFT beyond their approved W8 B amendments; C requires its own owner decision; D-07 landed in PR #515.
 > **Historical production audit anchor:** `c50726e67a6636cdc27a7abbc7ae91a1f5c29295` (PR #455 merge; packet's pre-A investigation), not current `main` or the latest A/B comparison anchor. Stage-A results and the later clock-correction baseline are owned by `w8-stage-a-baseline-results.md`; the fresh pre-B anchor is frozen under roadmap §5.1 step 6.
 > **Local branch update — October 15, 2026:** six-policy wiring and the three host obligations above are implemented on `feat/w8-b-goalkeeper-distribution`, with canonical CONTACT / W5 / F-05 / restore locks and a measured A→B record. The first arm exposed a missed in-flight foot-action handover; corrected source `e54335b0` interrupts it in Resolve. See [implementation and evidence](w8-b-implementation-results.md). This October 15 status is historical: publication is PR #511 and the October 17 host record now validates the live runtime tree; the final docs-head CI and merge later completed as recorded above.
 >
@@ -387,8 +387,10 @@ The total selector must operate identically in B and C; a no-receiver policy sta
 at source `1d3cebf3`, Linux SDK 8.0.426 / CLR 8.0.32. All six adopted B fingerprints and complete
 plain/observed digest, ball and event streams match. The full data are committed in LFS.
 The shared [rule 1.1 protocol](evidence/pre-c-control-20261104/PROTOCOL.md) and `policy-freeze.json`
-exclude abstract BallLoose outcomes from physical touches and retain both verified same-frame
-clearings. The review changes none of the 126 release decisions or 12 selected windows.
+exclude abstract BallLoose outcomes from physical touches, censor follow-up at the recorded
+full-time whistle as well as capture end, and retain both verified same-frame clearings.
+The review changes none of the 126 release decisions or 12 selected windows. Carry both short-range
+opponent receptions into the C football-realism review; they do not establish a law effect.
 
 Before the result-bearing B→C comparison, freeze a read-only supplementary instrument and its
 window-selection rules. Run it in **both arms** on the same Linux .NET lane, six seeds, constructor,
@@ -478,6 +480,7 @@ cause rather than self-cancellation.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
+| 0.38 | November 5, 2026 | Pre-C re-review | State frozen full-time censoring and retain the two short-range opponent receptions for C realism review; no capture, policy or gameplay change. |
 | 0.37 | November 4, 2026 | Pre-C control | Link full retained/replayable B control and reviewed analysis rule 1.1 for C; no gameplay change or match rerun. |
 | 0.36 | 2026-10-18 | D-07 landed | PR #515 merge 1a3b4271, CI green, pinned Unity met at a7800579; OD-W8-1 outside-area requirement met outside C; six-seed census 0 D-07 free kicks, B digests unchanged; avoidance residual tracked in open-issues. C still unapproved. |
 | 0.35 | 2026-10-18 | landed B | PR #511 merge c0ffd0d2, final-head CI/host met; post-law baseline adopted; both B→C arms must log exact physical touches and shot/scoring teams, with release-window danger comparison. C and D-07 remain separate. |

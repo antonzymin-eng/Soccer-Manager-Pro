@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
+
 > **November 4 — Pre-C review closeout (v0.90):** Retain all per-tick digest bytes in the committed LFS capture; pointer-only hygiene checks verify strict LFS reference OIDs without bulk downloads. Portable replay/rebuild commands and analysis rule 1.1 are frozen before C. Abstract BallLoose tackle outcomes are excluded from physical touches; all 126 release decisions and 12 selected windows remain identical. Both same-frame clearings are explained by executor-before-first-touch ordering. [Reviewed control](evidence/pre-c-control-20261104/README.md). No gameplay change or new full-match capture.
 
 > **November 4 — Pre-C control complete (v0.89):** Linux .NET control at `1d3cebf3` reproduces all six adopted post-law W8 B digests in both plain and observed runs. The source/runtime/configuration and exact-touch/team observer are frozen; all six full digest, ball and event streams match. [Evidence](evidence/pre-c-control-20261104/README.md). W8 C is the next engine item.
@@ -499,6 +501,8 @@ decided.
    equality across 324,000 ticks per seed ([evidence](evidence/pre-c-control-20261104/README.md)). C must
    use this declared lane, instrument and reviewed analysis rule **1.1** for its paired comparison
    (step 8's measurement obligation); `policy-freeze.json` pins the eligibility/window interpretation.
+   That rule excludes non-contact BallLoose outcomes and censors follow-up at the recorded full-time
+   whistle or capture end; neither correction changes the 126 release decisions or 12 selected windows.
 2. **W8 C (L).** Implement [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
    and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)
    as written; cite them rather than paraphrasing the corner rule. The next free snapshot version is
@@ -909,6 +913,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
 | v0.89 | November 4, 2026 | Close engine lane item 1: freeze Pre-C source/runtime/configuration and exact-touch/team observer at `1d3cebf3`; reproduce all six adopted post-law B digests in plain and observed Linux .NET captures; verify full digest/ball/event neutrality and retain raw attribution/order evidence. W8 C implementation and its paired/host validation remain next. |
 | v0.88 | November 3, 2026 | Consolidate PRs #532/#533/#534 against main #535: retain revised and ratified no-Early-Access ordering, D-11 no-mid-match-save amendment and D-P7-6 draft v0.6; archive the completed #526 host gap; client design v0.33. Parallel v0.85 records below retain their provenance. |

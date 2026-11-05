@@ -55,8 +55,9 @@ at source `1d3cebf3` reproduces all six adopted fingerprints on Linux SDK 8.0.42
 with full per-tick digest, ball and event equality in plain/observed arms. The complete capture is
 retained in LFS and replayable from a checkout. C must reuse the instrument and
 [analysis rule 1.1](evidence/pre-c-control-20261104/PROTOCOL.md), pinned by `policy-freeze.json`:
-abstract BallLoose outcomes are not physical touches; both documented same-frame clearings remain
-eligible. All 126 release decisions and the 12 selected windows are unchanged by that review correction.
+abstract BallLoose outcomes are not physical touches; follow-up windows stop at the recorded
+full-time whistle as well as capture end; both documented same-frame clearings remain eligible.
+All 126 release decisions and the 12 selected windows are unchanged by these review corrections.
 
 Before the result-bearing B→C comparison, freeze a read-only supplementary instrument and its
 window-selection rules. Run it in **both arms** on the same Linux .NET lane, six seeds, constructor,
@@ -466,6 +467,7 @@ pending; step 7 is not marked landed.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.7 | November 5, 2026 | State the already frozen full-time window censoring alongside the BallLoose exclusion; unchanged control data, rule 1.1 and selections. |
 | 1.6 | November 4, 2026 | Link the reviewed frozen Pre-C control, complete LFS digest evidence and shared rule 1.1 before C; no gameplay change or new matches. |
 | 1.5 | October 18, 2026 | PR #511 merged c0ffd0d2; adopt post-law B digests, record 50/47 corpus and 14-proxy/12-spell follow-up with missing attribution limits; require exact touch/team logging in both B→C arms. No rerun or code change. |
 | 1.4 | October 17, 2026 | Same Linux .NET lane and exact frozen observer; twelve matching fingerprints, all hand claims/distributions reconciled, 126 restricted spells and twelve opponent-touch windows; no gameplay change. |

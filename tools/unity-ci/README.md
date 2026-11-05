@@ -1,7 +1,7 @@
 # tools/unity-ci — Unity-specific PR gates
 
 > **Created:** July 22, 2026
-> **Updated:** October 14, 2026
+> **Updated:** November 5, 2026
 > **Purpose:** CI checks the pre-Unity pure-C# gate (`tools/dotnet-ci`) does not
 > cover, now that the repo carries a real Unity 6 project (`ProjectSettings/`,
 > `Packages/`, `.meta` files, asmdefs). Runs on Linux, no Unity install required.
@@ -19,6 +19,25 @@ The Unity Test Runner job (`unity-tests`, EditMode + PlayMode inside real Unity
 6) lives in `.github/workflows/ci.yml`. It is **gated on the `UNITY_LICENSE`
 secret**: it runs once `UNITY_LICENSE` / `UNITY_EMAIL` / `UNITY_PASSWORD` repo
 secrets are configured, and is cleanly **skipped** (PR stays green) until then.
+
+## Unity LFS downloads
+
+The two `unity-tests` matrix modes check out with `lfs: false`, initialize Git LFS
+locally, then pull all normal LFS payloads with only
+`docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz` excluded.
+The 98,741,732-byte match capture remains a pointer; Unity assets and native
+libraries still materialize. Full evidence replay uses its own narrow pull in
+`docs/tracking/evidence/pre-c-control-20261104/REPRODUCE.md`.
+
+Validated November 5, 2026 in a pointer-only staged merge checkout: the exact CI
+pull commands materialized all three other LFS files with matching OIDs, while
+the capture remained its 133-byte pointer. The 37-directory evidence checker
+passed before and after. This checks the download step, not Unity execution.
+
+This avoids downloading the capture for each Unity mode. It does not remove the
+36,531,896-byte prior capture or the current capture from existing LFS storage;
+their two distinct OIDs total 135,273,628 bytes. These repository-local sizes do
+not establish the owner's account-wide LFS quota or usage.
 
 ## Why `.meta` integrity is a hard gate
 
