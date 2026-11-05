@@ -1,6 +1,6 @@
 // File:     src/client-app/TransferMarketViewModel.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (H2: TransferClubRow.SquadCount)
+// Modified: 2026-11-05 (L2: shared budget headroom helper)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1),
 //           docs/design/ux-s2-transfers-finances.md §2 (R1–R8) / §3.1–§3.2, Transfers #31 FR-TX-025,
@@ -144,7 +144,7 @@ namespace TacticalDirector.ClientApp
         /// <summary>Fees already committed in this window.</summary>
         public readonly long CommittedSpend;
 
-        /// <summary>What a buy may still cost: ceiling minus committed spend, the check #31 makes.</summary>
+        /// <summary>What a buy may still cost: ceiling minus committed spend, the check #31 makes (<see cref="TransferBudgetRule"/>).</summary>
         public readonly long RemainingBudget;
 
         /// <summary>Players the managed club holds.</summary>
@@ -181,7 +181,7 @@ namespace TacticalDirector.ClientApp
             WindowCloseDay = windowCloseDay;
             TransferCeiling = transferCeiling;
             CommittedSpend = committedSpend;
-            RemainingBudget = transferCeiling - committedSpend;
+            RemainingBudget = TransferBudgetRule.Remaining(transferCeiling, committedSpend);
             ManagedSquadCount = managedSquadCount;
             SquadCapacity = squadCapacity;
             DefaultWagePerPeriod = defaultWagePerPeriod;
@@ -202,4 +202,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): Transfers view model, player and club rows. |
 // | 1.1     | 2026-11-05 | —      | H2: TransferClubRow.SquadCount so a sale can show a full buyer; HasSquadRoom doc no longer says a sale is never squad-limited. |
+// | 1.2     | 2026-11-05 | —      | L2: RemainingBudget through the shared TransferBudgetRule helper. |
 #endregion

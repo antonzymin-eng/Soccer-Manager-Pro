@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (H1 long money end to end; H2 sale-direction SquadFull copy)
+// Modified: 2026-11-05 (M2 issue copy; M3 Result; M8 SquadDepleted wording; L5 wage-bill line)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -67,14 +67,25 @@ namespace TacticalDirector.ClientApp
             R("transfer.outcome.InsufficientBudget", "Not enough budget: {0} remaining.", "L"),
             R("transfer.outcome.SquadFull.buy", "Your squad is full ({0}). Sell a player first.", "I"),
             R("transfer.outcome.SquadFull.sell", "{0} has no room in its squad ({1}).", "SI"),
-            R("transfer.outcome.SquadDepleted.buy", "That club cannot release him without dropping below a matchday squad."),
-            R("transfer.outcome.SquadDepleted.sell", "You cannot drop below a matchday squad."),
+            // SquadDepleted is #31's complete-starting-eleven predicate (SquadRating.CanFieldStartingEleven via
+            // SeasonTransferRoster.CanRelease), not a head count (M8).
+            R("transfer.outcome.SquadDepleted.buy", "That club cannot release him: it would be left without a complete starting eleven."),
+            R("transfer.outcome.SquadDepleted.sell", "You cannot sell him: your squad would be left without a complete starting eleven."),
+            // Client-side offer refusals (TransferOfferIssue): the offer never reaches #31 (M2).
+            R("transfer.issue.TransfersUnavailable", "Transfers are not available in this career."),
+            R("transfer.issue.WindowClosed", "The transfer window is closed."),
+            R("transfer.issue.UnknownPlayer", "That player is no longer listed."),
+            R("transfer.issue.WrongDirection", "This offer does not match the club that holds the player."),
+            R("transfer.issue.WrongCounterparty", "Choose a different club for this offer."),
+            R("transfer.issue.FeeNegative", "The fee cannot be negative."),
+            R("transfer.issue.WageOutOfRange", "The wage must be between 0 and {0} per period.", "L"),
+            R("transfer.issue.LengthTooShort", "The contract must last at least one season."),
             R("finance.balance", "Balance: {0}", "L"), R("finance.balance.debt", "Balance: overdrawn by {0}", "L"),
             R("finance.transfer", "Transfer budget: {0} (committed {1}, remaining {2})", "LLL"),
             R("finance.wage", "Wage budget: {0}", "L"),
             R("finance.contracts", "Contracted wages: {0} per period across {1} contracts", "LI"),
             R("finance.contracts.saturated", "Contracted wages: more than {0} per period across {1} contracts", "LI"),
-            R("finance.wagebill", "Wage bill: not tracked yet"),
+            R("finance.wagebill", "Wage bill: not tracked yet"), R("finance.wagebill.tracked", "Wage bill: {0} per period", "L"),
             R("finance.settlement", "Budgets are set again at the end of each season.")
         };
         /// <summary>Creates an admitted lifetime-fixed career formatter, optionally with authored pseudo-locale rows.</summary>
@@ -185,6 +196,38 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        /// <summary>
+        /// The single result line for a published <see cref="TransferResult"/> (M3): #31's outcome worded by the
+        /// result's own offer, or the localized client refusal. Empty for a result without a value.
+        /// </summary>
+        /// <exception cref="ArgumentException">A sale's SquadFull names a buyer the market does not list.</exception>
+        public string Result(in TransferResult result, in TransferMarketViewModel market)
+        {
+            if (!result.HasValue) return "";
+            return result.HasOutcome ? Outcome(result.Outcome, in result.Offer, in market) : Issue(result.Issue);
+        }
+
+        /// <summary>The localized sentence for a client-side offer refusal (M2); the page shows it beside the disabled action.</summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="issue"/> is <see cref="TransferOfferIssue.None"/> or unknown.</exception>
+        public string Issue(TransferOfferIssue issue)
+        {
+            switch (issue)
+            {
+                case TransferOfferIssue.WageOutOfRange:
+                    return Text.Format("transfer.issue", "transfer.issue.WageOutOfRange", ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD);
+                case TransferOfferIssue.TransfersUnavailable:
+                case TransferOfferIssue.WindowClosed:
+                case TransferOfferIssue.UnknownPlayer:
+                case TransferOfferIssue.WrongDirection:
+                case TransferOfferIssue.WrongCounterparty:
+                case TransferOfferIssue.FeeNegative:
+                case TransferOfferIssue.LengthTooShort:
+                    return Label("transfer.issue." + issue);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(issue), issue, "Not a refusal reason.");
+            }
+        }
+
         /// <summary>The read-only Club Finances lines (§5-P8), in the Gate C order.</summary>
         public string Finances(in ClubFinancesViewModel finances)
         {
@@ -199,7 +242,10 @@ namespace TacticalDirector.ClientApp
             s.AppendLine().Append(Text.Format("finance.contracts",
                 finances.IsContractedWagesSaturated ? "finance.contracts.saturated" : "finance.contracts",
                 finances.ContractedWages, finances.ContractCount));
-            s.AppendLine().Append(Label("finance.wagebill"));
+            // #40 KD-5: no wage-bill producer yet, so the source leaves IsWageBillTracked false and the figure is never shown.
+            s.AppendLine().Append(finances.IsWageBillTracked
+                ? Text.Format("finance.wagebill", "finance.wagebill.tracked", finances.WageBillAggregate)
+                : Label("finance.wagebill"));
             s.AppendLine().Append(Label("finance.settlement"));
             return s.ToString();
         }
@@ -239,4 +285,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1 | 2026-11-04 | — | Localized slot composition, neutral selection/change copy, D-10 disclosure and distinct row cache keys. |
 // | 1.2 | 2026-11-05 | — | §5-P8: transfer/finance roles, window/budget/row/outcome/finance formatting; outcomes keyed by #31's typed result. |
 // | 1.3 | 2026-11-05 | — | H1: money roles use the L (long) type, no int cast; long.MinValue debt clamps to long.MaxValue; saturated-wage line. H2: SquadFull split into .buy/.sell (buyer named); Outcome takes the submitted Offer. |
+// | 1.4 | 2026-11-05 | — | M2: transfer.issue.* roles + Issue(). M3: Result(in TransferResult, in market). M8: SquadDepleted copy names the complete starting eleven. L5: wage-bill line gated on IsWageBillTracked (finance.wagebill.tracked role). |
 #endregion

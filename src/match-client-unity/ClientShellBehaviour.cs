@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-11-03 (P7b optional seven-root binding)
+// Modified: 2026-11-05 (L1: reject a screen this shell has no root for)
+// Modified (prior): 2026-11-03 (P7b optional seven-root binding)
 // Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
@@ -215,6 +216,11 @@ namespace TacticalDirector.MatchClientUnity
                 if (visibility.NewCareer) _newCareerRoot.SetActive(true);
                 if (visibility.LoadCareer) _loadCareerRoot.SetActive(true);
             }
+            // The Transfers / Club Finances screens (§5-P8) have no root on this shell yet. Without this check
+            // every root would deactivate and none activate: a silent blank screen instead of a rejection.
+            bool isRootShown = visibility.MainMenu || visibility.TacticsSetup || visibility.MatchView || visibility.PostMatchReport ||
+                (_enableCareer && (visibility.CareerHome || visibility.NewCareer || visibility.LoadCareer));
+            if (!isRootShown) RejectWiring("the current screen has no root bound on this shell.");
         }
 
         private void RequireReady(string action)
@@ -272,4 +278,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.4     | 2026-10-06 | —      | Consume stable lifecycle coordinator; renderer containment and outgoing-first visibility. |
 // | 1.5     | 2026-10-08 | —      | Compose the localized UGUI screens and apply visibility before view/focus refresh. |
 // | 1.6 | 2026-11-03 | — | Optional seven-root career composition, entropy and storage boundary. |
+// | 1.7 | 2026-11-05 | — | L1: ApplyCurrentScreen rejects wiring when the current screen (Transfers / Club Finances) has no root on this shell. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-11-05 (§5-P8: SubmitTransfer)
+// Modified: 2026-11-05 (L3: SubmitTransfer exception docs)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -326,10 +326,12 @@ namespace TacticalDirector.ClientApp
         /// autosaved (owner decision D-P8-2): the next round's autosave or a manual save keeps the deal.
         /// </summary>
         /// <exception cref="InvalidOperationException">An operation is already running; transfers are not
-        /// wired on this career; or the window is closed. The UI never offers a closed-window offer, so the
-        /// window is checked here rather than leaving #31's F4 throw as the control flow.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">A #31 caller-contract violation (F6): malformed
-        /// terms, an unknown club or player, or the wrong direction for the player's current club.</exception>
+        /// wired on this career; the window is closed (checked here rather than leaving #31's F4 throw as the
+        /// control flow); or the offer's direction does not match the player's current club (#31 F6,
+        /// <c>TransferCommands</c>).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">A #31 caller-contract violation (F6): malformed terms,
+        /// an unknown club or player, or a counterparty that is the managed club. The client's
+        /// <see cref="TransferOfferCheck"/> keeps every player-reachable case of these from getting here.</exception>
         public TransferSubmissionOutcome SubmitTransfer(in Offer offer)
         {
             BeginOperation(nameof(SubmitTransfer));
@@ -419,4 +421,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
 // | 1.5     | 2026-10-30 | —      | PR 521 merge: pass the saved #31 state into the resumed loop. |
 // | 1.6     | 2026-11-05 | —      | §5-P8: SubmitTransfer — one busy operation over SeasonLoop.SubmitTransferBid; closed window and unwired #31 refused first; no autosave (D-P8-2). |
+// | 1.7     | 2026-11-05 | —      | L3: SubmitTransfer exception docs — a wrong-direction offer is InvalidOperationException, not ArgumentOutOfRangeException. |
 #endregion

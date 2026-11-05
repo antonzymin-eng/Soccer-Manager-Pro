@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (H1: out-of-range offer terms never reach the worker)
+// Modified: 2026-11-05 (M1-M4: typed offer refusals, projection isolation, cleanup/failure paths)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -157,18 +157,22 @@ namespace TacticalDirector.ClientApp.Tests
             // A sale at fee 1 is at or below every club's value, so it is Accepted.
             h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, buyer, 1L, 0L, 1, false));
             Assert.IsTrue(h.Career.IsBusy);
-            Assert.IsNull(h.Career.LastTransferOutcome, "nothing is published before Refresh");
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue, "nothing is published before Refresh");
             Assert.AreSame(before.Players, h.Career.TransferMarket.Players, "the cached snapshot is untouched while work runs");
             h.Finish();
 
-            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferOutcome);
+            Assert.IsTrue(h.Career.LastTransferResult.HasOutcome);
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome);
+            Assert.AreEqual(own.PlayerId, h.Career.LastTransferResult.Offer.PlayerId, "M3: the result carries the submitted offer");
+            Assert.IsFalse(h.Career.LastTransferResult.Offer.IsBuy);
             Assert.IsNull(h.Career.LastError);
+            Assert.IsNull(h.Career.LastProjectionError);
             Assert.AreEqual(ClientScreens.Transfers, h.Flow.Current, "an offer never navigates");
             Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount);
             Assert.AreEqual(before.TransferCeiling, h.Career.Finances.TransferBudget);
 
             h.Career.CloseTransfers();
-            Assert.IsNull(h.Career.LastTransferOutcome, "leaving clears the result line");
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue, "leaving clears the result line");
             h.Career.OpenClubFinances();
             Assert.AreEqual(ClientScreens.ClubFinances, h.Flow.Current);
             h.Career.CloseClubFinances();
@@ -176,57 +180,249 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
-        public void OutOfRangeOfferTerms_AreRefusedBeforeTheWorker_WithNothingQueuedOrChanged()
+        public void PlayerReachableOfferMistakes_AreRefusedWithTypedReasons_NeverReachingTheWorker()
         {
             using var h = new Harness();
             h.Start();
             h.Career.OpenTransfers();
             TransferMarketViewModel before = h.Career.TransferMarket;
             ClubFinancesViewModel financesBefore = h.Career.Finances;
-            TransferPlayerRow target = default;
-            foreach (TransferPlayerRow row in before.Players)
-            {
-                if (!row.IsManaged) { target = row; break; }
-            }
+            TransferPlayerRow target = FirstRow(before, false);
+            TransferPlayerRow own = FirstRow(before, true);
+            int managed = before.ManagedClubId;
+            int otherClub = FirstOtherClub(before);
 
-            TransferPlayerRow own = default;
-            foreach (TransferPlayerRow row in before.Players)
-            {
-                if (row.IsManaged) { own = row; break; }
-            }
-
-            int revision = h.Career.Revision;
             long max = ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD;
             Assert.AreEqual(TacticalDirector.ClubFinances.ClubFinancesConstants.ClubFinancesBudgetCeilingMax, max,
                 "the guard is #40's ceiling, consumed read-only ([CROSS])");
+            // Terms (H1) and the M2 mistakes the player can reach: every one is a typed refusal, none an exception.
             var refused = new[]
             {
-                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, long.MaxValue, 1, true),
-                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, max + 1L, 1, true),
-                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, -1L, 1, true),
-                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, -1L, 1_000L, 1, true),
-                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, 1_000L, 0, true),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, long.MaxValue, 1, true), TransferOfferIssue.WageOutOfRange),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, max + 1L, 1, true), TransferOfferIssue.WageOutOfRange),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, -1L, 1, true), TransferOfferIssue.WageOutOfRange),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, -1L, 1_000L, 1, true), TransferOfferIssue.FeeNegative),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, 1_000L, 0, true), TransferOfferIssue.LengthTooShort),
+                (new TacticalDirector.Transfers.Offer(own.PlayerId, managed, 1L, 0L, 1, false), TransferOfferIssue.WrongCounterparty),
+                (new TacticalDirector.Transfers.Offer(own.PlayerId, 9999, 1L, 0L, 1, false), TransferOfferIssue.WrongCounterparty),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, otherClub == target.ClubId ? managed : otherClub, 1L, 0L, 1, true), TransferOfferIssue.WrongCounterparty),
+                (new TacticalDirector.Transfers.Offer(own.PlayerId, otherClub, 1L, 1_000L, 1, true), TransferOfferIssue.WrongDirection),
+                (new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 1L, 0L, 1, false), TransferOfferIssue.WrongDirection),
+                (new TacticalDirector.Transfers.Offer(-5, target.ClubId, 1L, 1_000L, 1, true), TransferOfferIssue.UnknownPlayer),
             };
-            foreach (TacticalDirector.Transfers.Offer offer in refused)
+            int revision = h.Career.Revision;
+            foreach ((TacticalDirector.Transfers.Offer offer, TransferOfferIssue expected) in refused)
             {
-                Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(in offer),
-                    "fee " + offer.Fee + ", wage " + offer.WagePerPeriod + ", length " + offer.LengthSeasons);
-                Assert.AreEqual(0, h.Work.Count, "nothing is queued for the worker");
+                string label = "player " + offer.PlayerId + " club " + offer.CounterpartyClubId + " fee " + offer.Fee
+                    + ", wage " + offer.WagePerPeriod + ", length " + offer.LengthSeasons + ", buy " + offer.IsBuy;
+                Assert.AreEqual(expected, TransferOfferCheck.Check(in before, in offer), label + " (pure check)");
+                h.Career.SubmitTransfer(in offer);
+                Assert.AreEqual(0, h.Work.Count, "nothing is queued for the worker: " + label);
                 Assert.IsFalse(h.Career.IsBusy);
-                Assert.AreEqual(revision, h.Career.Revision, "a refused offer publishes nothing");
-                Assert.IsNull(h.Career.LastTransferOutcome);
-                Assert.IsNull(h.Career.LastError);
+                Assert.AreEqual(++revision, h.Career.Revision, "a refusal publishes exactly one change");
+                Assert.IsTrue(h.Career.LastTransferResult.HasValue);
+                Assert.IsFalse(h.Career.LastTransferResult.HasOutcome, "#31 was never reached");
+                Assert.AreEqual(expected, h.Career.LastTransferResult.Issue, label);
+                Assert.AreEqual(offer.PlayerId, h.Career.LastTransferResult.Offer.PlayerId);
+                Assert.IsNull(h.Career.LastError, "no developer text reaches LastError");
                 Assert.AreSame(before.Players, h.Career.TransferMarket.Players, "the career snapshot is unchanged");
                 Assert.AreEqual(financesBefore.ContractedWages, h.Career.Finances.ContractedWages);
             }
 
-            // The bound is inclusive and the coordinator stays usable: a wage exactly at the ceiling reaches #31.
-            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(before), 1L, max, 1, false));
+            // The wage bound is inclusive and the coordinator stays usable: a wage exactly at the ceiling reaches #31.
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, otherClub, 1L, max, 1, false));
             Assert.AreEqual(1, h.Work.Count);
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue, "a queued offer clears the previous refusal");
             h.Finish();
-            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferOutcome);
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome);
             Assert.IsNull(h.Career.LastError);
             Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount);
+        }
+
+        [Test]
+        public void ProgrammerErrors_StayExceptions_WrongScreenAndBusy()
+        {
+            using var h = new Harness();
+            h.Start();
+            var offer = new TacticalDirector.Transfers.Offer(0, 0, 1L, 1L, 1, true);
+            Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(in offer), "not on Transfers");
+            h.Career.OpenTransfers();
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(market, true);
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(market), 1L, 0L, 1, false));
+            Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(in offer), "busy");
+            h.Finish();
+        }
+
+        [Test]
+        public void FailingProjection_KeepsItsLastGoodView_AndStillPublishesTheCommittedOutcomeAndOtherViews_M1()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel before = h.Career.TransferMarket;
+            ClubFinancesViewModel financesBefore = h.Career.Finances;
+            TransferPlayerRow own = FirstRow(before, true);
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.Finances) throw new InvalidOperationException("injected finance failure");
+            };
+
+            // A fee-1 sale is Accepted and credits the balance by 1, so a refreshed finance view would differ.
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(before), 1L, 0L, 1, false));
+            h.Finish();
+
+            Assert.IsFalse(h.Career.IsBusy);
+            Assert.IsNull(h.Career.LastError, "the operation itself succeeded");
+            Assert.IsTrue(h.Career.LastTransferResult.HasOutcome);
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome,
+                "an accepted transfer is never reported as failed");
+            Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount, "the other views refresh");
+            Assert.IsTrue(h.Career.Home.HasCareer);
+            Assert.IsFalse(h.Career.Home.IsProgressBlocked, "Home is unblocked again");
+            Assert.AreEqual(financesBefore.Balance, h.Career.Finances.Balance, "the failed view keeps its last good value");
+            StringAssert.Contains("Finances", h.Career.LastProjectionError);
+            StringAssert.Contains("injected finance failure", h.Career.LastProjectionError);
+
+            // A later clean operation refreshes the view and clears the note.
+            h.Career.ProjectionProbe = null;
+            h.Career.CloseTransfers();
+            h.Career.SaveTo(CareerSaveSlot.Manual1);
+            h.Finish();
+            Assert.IsNull(h.Career.LastProjectionError);
+            Assert.AreEqual(financesBefore.Balance + 1L, h.Career.Finances.Balance, "the fee-1 sale shows once projection recovers");
+        }
+
+        [Test]
+        public void FailingHomeProjection_RefusesStaleNavigation_ButKeepsTheCommittedCareer_M1()
+        {
+            using var h = new Harness();
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.Home) throw new InvalidOperationException("injected home failure");
+            };
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+            h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            h.Career.StartCareer();
+            h.Finish();
+            Assert.IsNull(h.Career.LastError);
+            StringAssert.Contains("Home", h.Career.LastProjectionError);
+            Assert.AreEqual(ClientScreens.NewCareer, h.Flow.Current, "no navigation onto a Career Home that could not be projected");
+            Assert.IsTrue(h.Career.Load.CanContinue, "the career was committed and autosaved");
+        }
+
+        [Test]
+        public void QuitToMainMenu_ResetsTheMarketFinancesAndPublishedResult_M4a()
+        {
+            // CloseTransfers clears the result, so the host-free flow move is used to reach Career Home with the
+            // result still published: the reset under test is then the quit's own.
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(market, true);
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(market), 1L, 0L, 1, false));
+            h.Finish();
+            Assert.IsTrue(h.Career.LastTransferResult.HasValue);
+            Assert.IsTrue(h.Career.TransferMarket.HasCareer && h.Career.Finances.HasCareer, "non-vacuity");
+            h.Flow.CloseTransfers();
+            h.Career.QuitToMainMenu();
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue, "quit resets the published result");
+            Assert.IsFalse(h.Career.TransferMarket.HasCareer);
+            Assert.IsFalse(h.Career.Finances.HasCareer);
+            Assert.IsFalse(h.Career.Home.HasCareer);
+        }
+
+        [Test]
+        public void FailedSubmitAfterAnAcceptedOne_PublishesNoStaleAcceptedResult_M4b()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(market, true);
+            TransferPlayerRow second = SecondRow(market, true);
+            int buyer = FirstOtherClub(market);
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, buyer, 1L, 0L, 1, false));
+            h.Finish();
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferResult.Outcome, "non-vacuity");
+            Assert.IsNull(h.Career.LastError);
+
+            // Every typed mistake is now refused before #31, so a worker failure is injected through the seam.
+            h.Career.WorkProbe = () => throw new InvalidOperationException("injected worker failure");
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(second.PlayerId, buyer, 1L, 0L, 1, false));
+            h.Finish();
+            h.Career.WorkProbe = null;
+
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue, "no stale Accepted survives a failed submit");
+            Assert.AreEqual("injected worker failure", h.Career.LastError);
+            Assert.IsFalse(h.Career.IsBusy);
+            Assert.AreEqual(ClientScreens.Transfers, h.Flow.Current);
+        }
+
+        [Test]
+        public void ClosedWindow_IsRefusedSynchronouslyWithTypedReason_NothingQueued_M4c()
+        {
+            using var h = new Harness();
+            h.Start();
+            for (int guard = 0; h.Career.TransferMarket.IsWindowOpen; guard++)
+            {
+                Assert.Less(guard, 500, "the summer window must close");
+                h.Career.Progress();
+                h.Finish();
+            }
+
+            h.Career.OpenTransfers();
+            TransferMarketViewModel closed = h.Career.TransferMarket;
+            TransferPlayerRow target = FirstRow(closed, false);
+            var offer = new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 1L, 1_000L, 1, true);
+            Assert.AreEqual(TransferOfferIssue.WindowClosed, TransferOfferCheck.Check(in closed, in offer));
+            h.Career.SubmitTransfer(in offer);
+            Assert.AreEqual(0, h.Work.Count, "nothing is queued");
+            Assert.IsFalse(h.Career.IsBusy);
+            Assert.AreEqual(TransferOfferIssue.WindowClosed, h.Career.LastTransferResult.Issue);
+            Assert.IsFalse(h.Career.LastTransferResult.HasOutcome);
+            Assert.IsNull(h.Career.LastError);
+        }
+
+        [Test]
+        public void OpenTransfers_ClearsThePreviousResult_M4d()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            TransferPlayerRow own = FirstRow(market, true);
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(market), 1L, 0L, 1, false));
+            h.Finish();
+            Assert.IsTrue(h.Career.LastTransferResult.HasValue, "non-vacuity");
+            h.Flow.CloseTransfers();   // leaves the coordinator's result in place, so only OpenTransfers can clear it
+            h.Career.OpenTransfers();
+            Assert.IsFalse(h.Career.LastTransferResult.HasValue);
+        }
+
+        private static TransferPlayerRow FirstRow(in TransferMarketViewModel market, bool managed)
+        {
+            foreach (TransferPlayerRow row in market.Players)
+            {
+                if (row.IsManaged == managed) return row;
+            }
+
+            throw new AssertionException("no row");
+        }
+
+        private static TransferPlayerRow SecondRow(in TransferMarketViewModel market, bool managed)
+        {
+            bool skipped = false;
+            foreach (TransferPlayerRow row in market.Players)
+            {
+                if (row.IsManaged != managed) continue;
+                if (skipped) return row;
+                skipped = true;
+            }
+
+            throw new AssertionException("no second row");
         }
 
         private static int FirstOtherClub(in TransferMarketViewModel market)
@@ -513,4 +709,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1     | 2026-11-04 | —      | Retain the underlying load failure when navigation becomes stale. |
 // | 1.2     | 2026-11-05 | —      | §5-P8: nine-screen composition; worker-run SubmitTransfer publishes its typed outcome and fresh market/finance snapshots. |
 // | 1.3     | 2026-11-05 | —      | H1: out-of-range offer terms (wage above the [CROSS] #40 ceiling, negatives, zero length) are refused before the worker; the inclusive bound still reaches #31. |
+// | 1.4     | 2026-11-05 | —      | M1: a failing projection keeps its last good view and the committed outcome publishes (injected probe). M2: player-reachable offer mistakes are typed refusals (H1 test rewritten); programmer errors stay exceptions. M4: quit reset, no stale result after a failed submit, closed-window refusal, OpenTransfers clears the result. |
 #endregion

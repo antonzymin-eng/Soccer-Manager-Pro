@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerTransfersTests.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (H1 unbounded-wage totality; H2 sale-direction SquadFull)
+// Modified: 2026-11-05 (M5 source-field assertions; M8 SquadDepleted; L5/L6 copy and test strength)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1..3),
 //           docs/design/ux-s2-transfers-finances.md §2–§4, Transfers #31 FR-TX-025, Club Finances #40
@@ -59,6 +59,10 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.That(moved.ClubId, Is.EqualTo(session.ManagedClubId));
             Assert.That(moved.IsManaged && moved.HasContract, Is.True, "the buy inserted his managed contract");
             Assert.That(moved.ContractWagePerPeriod, Is.EqualTo(before.DefaultWagePerPeriod));
+
+            ClubFinancesViewModel finances = new ClubFinancesSource(holder).Project();
+            Assert.That(finances.CommittedTransferSpend, Is.EqualTo(price), "the finance view shows #31's committed fees");
+            Assert.That(finances.RemainingTransferBudget, Is.EqualTo(100_000L - price));
         }
 
         [Test]
@@ -69,7 +73,9 @@ namespace TacticalDirector.ClientApp.Tests
             var holder = new CareerSessionHolder();
             holder.Set(session);
             var market = new TransferMarketSource(holder);
+            var finances = new ClubFinancesSource(holder);
             TransferMarketViewModel before = market.Project();
+            ClubFinancesViewModel cashBefore = finances.Project();
             TransferPlayerRow target = CheapestOtherClubPlayer(before);
             long price = ClubPrice(session, target.PlayerId, buy: true);
 
@@ -88,6 +94,9 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.That(after.CommittedSpend, Is.Zero, "no refused outcome commits spend");
             Assert.That(after.ManagedSquadCount, Is.EqualTo(before.ManagedSquadCount));
             Assert.That(RowOf(after, target.PlayerId).ClubId, Is.EqualTo(target.ClubId));
+            ClubFinancesViewModel cashAfter = finances.Project();
+            Assert.That(cashAfter.Balance, Is.EqualTo(cashBefore.Balance), "no refused outcome moves the #40 balance");
+            Assert.That(cashAfter.ContractCount, Is.EqualTo(cashBefore.ContractCount));
         }
 
         [Test]
@@ -101,7 +110,8 @@ namespace TacticalDirector.ClientApp.Tests
             var finances = new ClubFinancesSource(holder);
             TransferMarketViewModel before = market.Project();
             ClubFinancesViewModel cashBefore = finances.Project();
-            TransferPlayerRow own = FirstManagedPlayer(before);
+            TransferPlayerRow own = FirstContractedManagedPlayer(before);
+            Assert.That(own.HasContract, Is.True, "non-vacuity: the sold player held a contract");
             int buyer = FirstOtherClub(before);
             long price = ClubPrice(session, own.PlayerId, buy: false, buyer: buyer);
 
@@ -111,7 +121,7 @@ namespace TacticalDirector.ClientApp.Tests
             ClubFinancesViewModel cashAfter = finances.Project();
             Assert.That(cashAfter.Balance, Is.EqualTo(cashBefore.Balance + price));
             Assert.That(cashAfter.TransferBudget, Is.EqualTo(cashBefore.TransferBudget), "only settlement sets the ceiling (FR-FN-003)");
-            Assert.That(cashAfter.ContractCount, Is.EqualTo(cashBefore.ContractCount - (own.HasContract ? 1 : 0)));
+            Assert.That(cashAfter.ContractCount, Is.EqualTo(cashBefore.ContractCount - 1), "the sale removed his contract");
             Assert.That(market.Project().ManagedSquadCount, Is.EqualTo(before.ManagedSquadCount - 1));
         }
 
@@ -215,6 +225,59 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void SellingGoalkeepersUntilSquadDepleted_IsACompleteElevenRule_NotAHeadCount_M8()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            var market = new TransferMarketSource(holder);
+            TransferMarketViewModel start = market.Project();
+            var keepers = new System.Collections.Generic.List<TransferPlayerRow>();
+            foreach (TransferPlayerRow row in start.Players)
+            {
+                if (row.IsManaged && row.Position == PlayerPosition.Goalkeeper) keepers.Add(row);
+            }
+
+            Assert.That(keepers.Count, Is.GreaterThanOrEqualTo(2), "non-vacuity: the squad carries goalkeepers to sell");
+            Offer refusedOffer = default;
+            TransferMarketViewModel at = start;
+            bool depleted = false;
+            for (int i = 0; i < keepers.Count && !depleted; i++)
+            {
+                at = market.Project();
+                int buyer = -1;
+                foreach (TransferClubRow club in at.Clubs)
+                {
+                    if (!club.IsManaged && club.SquadCount < at.SquadCapacity) { buyer = club.ClubId; break; }
+                }
+
+                Assert.That(buyer, Is.GreaterThanOrEqualTo(0), "a buyer with room exists");
+                var offer = new Offer(keepers[i].PlayerId, buyer, 1L, 0L, 1, false);
+                TransferSubmissionOutcome outcome = session.SubmitTransfer(offer);
+                if (outcome == TransferSubmissionOutcome.SquadDepleted)
+                {
+                    depleted = true;
+                    refusedOffer = offer;
+                }
+                else
+                {
+                    Assert.That(outcome, Is.EqualTo(TransferSubmissionOutcome.Accepted), "goalkeeper " + i);
+                }
+            }
+
+            Assert.That(depleted, Is.True, "selling the last spare goalkeepers eventually leaves no complete eleven");
+            TransferMarketViewModel after = market.Project();
+            Assert.That(after.ManagedSquadCount, Is.GreaterThanOrEqualTo(18),
+                "the refusal is the starting-eleven predicate, not a head-count limit");
+            Assert.That(after.ManagedSquadCount, Is.EqualTo(at.ManagedSquadCount), "the refused sale changed nothing");
+            Assert.That(RowOf(after, refusedOffer.PlayerId).IsManaged, Is.True);
+
+            Assert.That(new CareerScreenText().Outcome(TransferSubmissionOutcome.SquadDepleted, in refusedOffer, in after),
+                Is.EqualTo("You cannot sell him: your squad would be left without a complete starting eleven."));
+        }
+
+        [Test]
         public void HugeContractWage_LegalAtTransfers_StillProjectsAndFormats_H1()
         {
             using var temp = new TempSlots();
@@ -293,6 +356,9 @@ namespace TacticalDirector.ClientApp.Tests
                 Assert.That(row.ClubId, Is.EqualTo(owner));
                 Assert.That(row.EstimatedValue, Is.EqualTo(PlayerValuation.ValuePlayer(in record.Attributes, record.Age)), "D-P8-1");
                 Assert.That(row.IsManaged, Is.EqualTo(owner == session.ManagedClubId));
+                Assert.That(row.CurrentAbility, Is.EqualTo(session.Loop.Progression.LifecycleView(owner, row.PlayerId).CurrentAbility),
+                    "the row shows #28's current ability");
+                Assert.That(row.CurrentAbility, Is.GreaterThan(0), "non-vacuity: a zero ability would hide a dropped field");
                 if (!row.IsManaged)
                 {
                     Assert.That(row.HasContract, Is.False, "only managed contracts exist at minimal #31");
@@ -300,6 +366,35 @@ namespace TacticalDirector.ClientApp.Tests
             }
 
             Assert.That(source.Project().Players, Is.SameAs(market.Players), "unchanged revision → cached");
+        }
+
+        [Test]
+        public void MarketRows_ShowEachPlayersAvailability_FromTheCareerState()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            var source = new TransferMarketSource(holder);
+            Assert.That(session.Loop.Career, Is.Not.Null, "the production injury dial is armed in StartNew");
+            TransferMarketViewModel market = source.Project();
+            bool sawUnavailable = false;
+            for (int step = 0; step < 2000 && !sawUnavailable; step++)
+            {
+                session.Progress();
+                market = source.Project();
+                foreach (TransferPlayerRow row in market.Players)
+                {
+                    if (!row.IsAvailable) { sawUnavailable = true; break; }
+                }
+            }
+
+            Assert.That(sawUnavailable, Is.True, "non-vacuity: an injury occurs within the bounded progress");
+            foreach (TransferPlayerRow row in market.Players)
+            {
+                Assert.That(row.IsAvailable, Is.EqualTo(session.Loop.Career.IsAvailable(row.ClubId, row.PlayerId)),
+                    "player " + row.PlayerId);
+            }
         }
 
         [Test]
@@ -323,6 +418,7 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.That(view.TransferBudget, Is.EqualTo(ledger.TransferBudget));
             Assert.That(view.WageBudget, Is.EqualTo(ledger.WageBudget));
             Assert.That(view.WageBillAggregate, Is.EqualTo(ledger.WageBillAggregate));
+            Assert.That(view.IsWageBillTracked, Is.False, "#40 KD-5: no wage-bill producer yet");
             Assert.That(view.ContractCount, Is.EqualTo(contracts.Length));
             Assert.That(view.ContractCount, Is.GreaterThan(0), "non-vacuity: genesis seeds managed contracts (FR-TX-028)");
             Assert.That(view.ContractedWages, Is.EqualTo(wages));
@@ -335,11 +431,12 @@ namespace TacticalDirector.ClientApp.Tests
         public void EveryOutcome_HasItsOwnMessage_InBothDirections()
         {
             var text = new CareerScreenText();
-            var market = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 40_000, 25, 25, 1_000, 3,
+            // Distinct counts so each asserted field is provably the one the copy reads: manager 23, capacity 25, buyer 24.
+            var market = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 40_000, 23, 25, 1_000, 3,
                 new System.Collections.ObjectModel.ReadOnlyCollection<TransferPlayerRow>(new TransferPlayerRow[0]),
                 new System.Collections.ObjectModel.ReadOnlyCollection<TransferClubRow>(new[]
                 {
-                    new TransferClubRow(0, "Managed FC", true, 25), new TransferClubRow(7, "Buyer Town", false, 25)
+                    new TransferClubRow(0, "Managed FC", true, 23), new TransferClubRow(7, "Buyer Town", false, 24)
                 }));
             var buy = new Offer(1, 7, 1L, 1_000L, 1, true);
             var sell = new Offer(2, 7, 1L, 0L, 1, false);
@@ -356,16 +453,17 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains("60000", text.Outcome(TransferSubmissionOutcome.InsufficientBudget, in buy, in market));
             string fullBuy = text.Outcome(TransferSubmissionOutcome.SquadFull, in buy, in market);
             string fullSell = text.Outcome(TransferSubmissionOutcome.SquadFull, in sell, in market);
-            StringAssert.Contains("Your squad", fullBuy);
-            StringAssert.Contains("25", fullBuy);
+            Assert.That(fullBuy, Is.EqualTo("Your squad is full (25). Sell a player first."), "capacity, not the manager's count");
             Assert.That(fullSell, Is.EqualTo("Buyer Town has no room in its squad (25)."), "a sale's F5 is the buyer's squad");
             StringAssert.DoesNotContain("Your squad", fullSell);
+            Assert.That(text.Outcome(TransferSubmissionOutcome.SquadDepleted, in buy, in market),
+                Is.EqualTo("That club cannot release him: it would be left without a complete starting eleven."));
             Assert.That(text.Outcome(TransferSubmissionOutcome.SquadDepleted, in sell, in market),
-                Is.Not.EqualTo(text.Outcome(TransferSubmissionOutcome.SquadDepleted, in buy, in market)));
+                Is.EqualTo("You cannot sell him: your squad would be left without a complete starting eleven."));
             var unknownBuyer = new Offer(2, 99, 1L, 0L, 1, false);
             Assert.Throws<ArgumentException>(() => text.Outcome(TransferSubmissionOutcome.SquadFull, in unknownBuyer, in market));
             StringAssert.Contains("44", text.Window(in market));
-            Assert.That(market.HasSquadRoom, Is.False);
+            Assert.That(market.HasSquadRoom, Is.True, "23 of 25");
         }
 
         [Test]
@@ -377,6 +475,80 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains("not tracked yet", debt);
             StringAssert.Contains("3000", debt);
             Assert.That(text.Finances(default), Is.Empty);
+        }
+
+        [Test]
+        public void WageBillLine_FollowsTheTrackedFlag_BothBranches_L5()
+        {
+            var text = new CareerScreenText();
+            string untracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3));
+            StringAssert.Contains("Wage bill: not tracked yet", untracked);
+            StringAssert.DoesNotContain("777", untracked, "an untracked aggregate is never shown");
+
+            string tracked = text.Finances(new ClubFinancesViewModel("Test FC", 1, 100, 0, 50, 777, 3_000, 3, isWageBillTracked: true));
+            StringAssert.Contains("Wage bill: 777 per period", tracked);
+            StringAssert.DoesNotContain("not tracked yet", tracked);
+        }
+
+        [Test]
+        public void OfferCheck_NamesEachMistake_AndTheCopySaysIt_M2()
+        {
+            var players = new System.Collections.ObjectModel.ReadOnlyCollection<TransferPlayerRow>(new[]
+            {
+                new TransferPlayerRow(1, 7, "Seller", "A Player", PlayerPosition.Forward, 25, 100, true, 1_000, false, false, 0, 0),
+                new TransferPlayerRow(2, 0, "Managed FC", "B Player", PlayerPosition.Forward, 25, 100, true, 1_000, true, true, 500, 2),
+            });
+            var clubs = new System.Collections.ObjectModel.ReadOnlyCollection<TransferClubRow>(new[]
+            {
+                new TransferClubRow(0, "Managed FC", true, 23), new TransferClubRow(7, "Seller", false, 23), new TransferClubRow(8, "Other", false, 23)
+            });
+            TransferMarketViewModel open = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs);
+            TransferMarketViewModel closed = new TransferMarketViewModel(true, 0, 60, false, 0, 44, 100_000, 0, 23, 25, 1_000, 3, players, clubs);
+            long max = ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD;
+            Assert.That(TransferOfferCheck.Check(default, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.TransfersUnavailable));
+            var unwired = new TransferMarketViewModel(false, 0, 3, false, 0, 0, 0, 0, 0, 25, 0, 0, players, clubs);
+            Assert.That(TransferOfferCheck.Check(in unwired, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.TransfersUnavailable));
+            Assert.That(TransferOfferCheck.Check(in closed, new Offer(1, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.WindowClosed));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 0, 0, 1, true)), Is.EqualTo(TransferOfferIssue.None), "zero fee and wage are legal");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 1, max, 1, true)), Is.EqualTo(TransferOfferIssue.None), "the wage bound is inclusive");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(2, 8, 1, 0, 1, false)), Is.EqualTo(TransferOfferIssue.None));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(3, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.UnknownPlayer));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(2, 7, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.WrongDirection), "buying your own player");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 8, 1, 0, 1, false)), Is.EqualTo(TransferOfferIssue.WrongDirection), "selling another club's player");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 8, 1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.WrongCounterparty), "buy from a club that is not his");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(2, 0, 1, 0, 1, false)), Is.EqualTo(TransferOfferIssue.WrongCounterparty), "sale to the managed club");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(2, 99, 1, 0, 1, false)), Is.EqualTo(TransferOfferIssue.WrongCounterparty), "sale to an unlisted club");
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, -1, 1, 1, true)), Is.EqualTo(TransferOfferIssue.FeeNegative));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 1, -1, 1, true)), Is.EqualTo(TransferOfferIssue.WageOutOfRange));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 1, max + 1, 1, true)), Is.EqualTo(TransferOfferIssue.WageOutOfRange));
+            Assert.That(TransferOfferCheck.Check(in open, new Offer(1, 7, 1, 1, 0, true)), Is.EqualTo(TransferOfferIssue.LengthTooShort));
+
+            var text = new CareerScreenText();
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach (TransferOfferIssue issue in Enum.GetValues(typeof(TransferOfferIssue)))
+            {
+                if (issue == TransferOfferIssue.None)
+                {
+                    Assert.Throws<ArgumentOutOfRangeException>(() => text.Issue(issue));
+                    continue;
+                }
+
+                string sentence = text.Issue(issue);
+                Assert.That(sentence, Is.Not.Empty);
+                Assert.That(seen.Add(sentence), Is.True, issue + " repeats another sentence");
+                StringAssert.DoesNotContain("F6", sentence, "no developer text");
+            }
+
+            StringAssert.Contains(max.ToString(), text.Issue(TransferOfferIssue.WageOutOfRange));
+
+            // One result line: the outcome worded by the result's own offer, or the refusal.
+            var sell = new Offer(2, 7, 1, 0, 1, false);
+            Assert.That(text.Result(default, in open), Is.Empty);
+            Assert.That(text.Result(TransferResult.FromOutcome(in sell, TransferSubmissionOutcome.SquadDepleted), in open),
+                Is.EqualTo("You cannot sell him: your squad would be left without a complete starting eleven."));
+            Assert.That(text.Result(TransferResult.FromRefusal(in sell, TransferOfferIssue.WindowClosed), in open),
+                Is.EqualTo("The transfer window is closed."));
+            Assert.Throws<ArgumentException>(() => TransferResult.FromRefusal(in sell, TransferOfferIssue.None));
         }
 
         // ── flow ─────────────────────────────────────────────────────────────────────────────────────
@@ -419,6 +591,9 @@ namespace TacticalDirector.ClientApp.Tests
 
         // The club's acceptance price, computed exactly as TransferCommands.SubmitBid computes it. The UI never
         // shows it (D-P8-1); the test needs it to build deterministic Accepted / CounterOffered offers.
+        // This deliberately mirrors #31's private pricing (positional stock excluding the player, then
+        // PlayerValuation.CounterpartyValue). If #31 changes its pricing, the Accepted / CounterOffered
+        // assertions above fail loudly, which is the intended drift alarm: update this helper with #31.
         private static long ClubPrice(CareerSession session, int playerId, bool buy, int buyer = -1)
         {
             Assert.That(session.Loop.Progression.TryFindPlayer(playerId, out PlayerRecord record, out int owner), Is.True);
@@ -487,6 +662,19 @@ namespace TacticalDirector.ClientApp.Tests
             throw new AssertionException("no managed player");
         }
 
+        private static TransferPlayerRow FirstContractedManagedPlayer(in TransferMarketViewModel market)
+        {
+            foreach (TransferPlayerRow row in market.Players)
+            {
+                if (row.IsManaged && row.HasContract)
+                {
+                    return row;
+                }
+            }
+
+            throw new AssertionException("no contracted managed player");
+        }
+
         private static int FirstOtherClub(in TransferMarketViewModel market)
         {
             foreach (TransferClubRow club in market.Clubs)
@@ -532,4 +720,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): SubmitTransfer outcomes/refusals/no-autosave, sources, copy and flow guards. |
 // | 1.1     | 2026-11-05 | —      | H1: long.MaxValue contract wage projects (saturated) and formats; money above int.MaxValue formats; long.MinValue debt clamps. H2: third fee-1 sale to one buyer is SquadFull with buyer-named copy; club rows carry SquadCount; EveryOutcome covers both directions. |
+// | 1.2 | 2026-11-05 | — | M5: committed/remaining finance fields, row CurrentAbility and IsAvailable asserted against their owners (availability with a bounded-progress non-vacuity guard). M8: goalkeepers sold until SquadDepleted at >= 18 players, new copy. L5: wage-bill both branches. L6: contracted seller asserted, refused outcomes leave the balance, distinct squad counts in the copy fixture, ClubPrice drift note. M2: OfferCheck/Issue/Result copy. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (H1: offer terms validated before the worker)
+// Modified: 2026-11-05 (M1 independent projections; M2 typed offer refusal; M3 TransferResult)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -43,25 +43,48 @@ namespace TacticalDirector.ClientApp
         private TransferMarketSource _transferSource;
         private ClubFinancesSource _financesSource;
         private SeasonCommandDispatcher _dispatcher;
-        private TransferSubmissionOutcome? _workerTransferOutcome;   // written and read on the worker only
+        private TransferResult _workerTransferResult;   // written and read on the worker only
         private Completion _completion;
         private Action _afterSuccess;
         private ScreenId _operationScreen;
         private bool _initialized;
         private bool _disposed;
 
+        /// <summary>The five projected views; names the failing one for the test seam and the projection note.</summary>
+        internal enum ProjectionKind
+        {
+            Home,
+            NewCareer,
+            Load,
+            TransferMarket,
+            Finances,
+        }
+
         private sealed class Completion
         {
             internal bool HasSnapshot;
             internal bool Initialized;
+            // A view is replaced on the UI thread only when its own projection succeeded (M1); otherwise the
+            // last good published view stays.
+            internal bool HasHome;
             internal CareerHomeViewModel Home;
+            internal bool HasNewCareer;
             internal NewCareerViewModel NewCareer;
+            internal bool HasLoad;
             internal LoadCareerViewModel Load;
+            internal bool HasTransferMarket;
             internal TransferMarketViewModel TransferMarket;
+            internal bool HasFinances;
             internal ClubFinancesViewModel Finances;
-            internal TransferSubmissionOutcome? TransferOutcome;
+            internal TransferResult TransferResult;
             internal string Error;
+            internal string ProjectionError;
         }
+
+        // Test seams (internal): called on the worker, before the work and before each projection. A throw is
+        // handled exactly like a real failure of that step.
+        internal Action WorkProbe;
+        internal Action<ProjectionKind> ProjectionProbe;
 
         /// <summary>Creates a coordinator without touching disk; call Initialize after flow composition.</summary>
         public ClientCareerCoordinator(string directory,
@@ -92,16 +115,24 @@ namespace TacticalDirector.ClientApp
         /// <summary>Cached Club Finances snapshot (§5-P8), refreshed after every career operation.</summary>
         public ClubFinancesViewModel Finances { get; private set; }
         /// <summary>
-        /// The typed #31 outcome of the last completed <see cref="SubmitTransfer"/>; null after any other
-        /// operation or move, and when the submission itself failed (then <see cref="LastError"/> says why).
+        /// The result line of the last <see cref="SubmitTransfer"/> (M3): the submitted offer plus #31's typed
+        /// outcome, or the typed client refusal (<see cref="TransferResult.Issue"/>) when the offer never
+        /// reached #31. <c>default</c> (no value) after any other operation or move, and when the worker failed
+        /// (then <see cref="LastError"/> says why).
         /// </summary>
-        public TransferSubmissionOutcome? LastTransferOutcome { get; private set; }
+        public TransferResult LastTransferResult { get; private set; }
         /// <summary>True from operation acceptance through UI consumption, including a queued-but-not-started worker.</summary>
         public bool IsBusy { get; private set; }
         /// <summary>True after slot recovery and source creation complete successfully.</summary>
         public bool IsInitialized => _initialized;
         /// <summary>Persistent operation/load error, cleared only after a successful operation.</summary>
         public string LastError { get; private set; }
+        /// <summary>
+        /// Why one or more cached views could not be refreshed after the last operation (M1), or null. The
+        /// operation itself succeeded and its committed outcome is published; each failed view keeps its last
+        /// good value. Replaced by every completed operation, so a later clean refresh clears it.
+        /// </summary>
+        public string LastProjectionError { get; private set; }
         /// <summary>UI change counter; idle polling does not allocate or increment it.</summary>
         public int Revision { get; private set; }
         /// <summary>Whether Main Menu can start Continue now.</summary>
@@ -257,7 +288,7 @@ namespace TacticalDirector.ClientApp
         {
             RequireScreen(ClientScreens.CareerHome);
             _flow.OpenTransfers();
-            LastTransferOutcome = null;
+            LastTransferResult = default;
             Revision++;
         }
 
@@ -266,7 +297,7 @@ namespace TacticalDirector.ClientApp
         {
             RequireScreen(ClientScreens.Transfers);
             _flow.CloseTransfers();
-            LastTransferOutcome = null;
+            LastTransferResult = default;
             Revision++;
         }
 
@@ -288,32 +319,35 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>
         /// Submits one buy or sell offer off-thread through <see cref="CareerSession.SubmitTransfer"/> (§5-P8).
-        /// The typed outcome arrives in <see cref="LastTransferOutcome"/> on the next <see cref="Refresh"/>;
-        /// it is not autosaved (D-P8-2). Terms are checked on the UI thread before any work is queued: fee and
-        /// wage non-negative, wage at most <see cref="ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD"/>, length at
-        /// least one season. #31 bounds no wage, and an unbounded one committed by #31 would reach every finance
-        /// projection (H1), so out-of-range terms never reach #31.
+        /// The result arrives in <see cref="LastTransferResult"/> on the next <see cref="Refresh"/>; it is not
+        /// autosaved (D-P8-2). The offer is first checked on the UI thread against the cached market with
+        /// <see cref="TransferOfferCheck.Check"/> (the page calls the same method to disable the action). A
+        /// player-reachable mistake (closed window, wrong direction or counterparty, fee, wage or length out of
+        /// range) is refused synchronously: nothing is queued, #31 is never reached, and
+        /// <see cref="LastTransferResult"/> holds the typed <see cref="TransferOfferIssue"/> at once. The wage
+        /// bound matters because #31 bounds no wage and an unbounded one would reach every finance projection (H1).
         /// </summary>
-        /// <exception cref="InvalidOperationException">Not on Transfers, busy, the cached window is closed, or the
-        /// offer's terms are out of range (the UI must prevent all of these; nothing is queued).</exception>
+        /// <exception cref="InvalidOperationException">Not on Transfers, or an operation is running (programmer
+        /// errors: the UI must not offer the action).</exception>
         public void SubmitTransfer(in Offer offer)
         {
             RequireScreen(ClientScreens.Transfers);
-            if (!TransferMarket.IsWindowOpen) throw new InvalidOperationException("The transfer window is closed.");
-            RequireOfferTerms(in offer);
             Offer accepted = offer;
-            LastTransferOutcome = null;
-            Begin(() => { _workerTransferOutcome = _holder.Require().SubmitTransfer(in accepted); return true; });
-        }
+            TransferMarketViewModel market = TransferMarket;
+            TransferOfferIssue issue = TransferOfferCheck.Check(in market, in accepted);
+            if (issue != TransferOfferIssue.None)
+            {
+                LastTransferResult = TransferResult.FromRefusal(in accepted, issue);
+                Revision++;
+                return;
+            }
 
-        private static void RequireOfferTerms(in Offer offer)
-        {
-            if (offer.Fee < 0) throw new InvalidOperationException("The offer fee cannot be negative.");
-            if (offer.WagePerPeriod < 0) throw new InvalidOperationException("The offered wage cannot be negative.");
-            if (offer.WagePerPeriod > ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD)
-                throw new InvalidOperationException("The offered wage cannot exceed "
-                    + ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD + " per period.");
-            if (offer.LengthSeasons < 1) throw new InvalidOperationException("The contract must last at least one season.");
+            LastTransferResult = default;
+            Begin(() =>
+            {
+                _workerTransferResult = TransferResult.FromOutcome(in accepted, _holder.Require().SubmitTransfer(in accepted));
+                return true;
+            });
         }
 
         /// <summary>Quits the idle career context; saving is an explicit action, never implied by this move.</summary>
@@ -325,7 +359,7 @@ namespace TacticalDirector.ClientApp
             Home = default;
             TransferMarket = default;
             Finances = default;
-            LastTransferOutcome = null;
+            LastTransferResult = default;
             Revision++;
         }
 
@@ -359,9 +393,10 @@ namespace TacticalDirector.ClientApp
         private void Complete(Func<bool> work)
         {
             var result = new Completion();
-            _workerTransferOutcome = null;
+            _workerTransferResult = default;
             try
             {
+                WorkProbe?.Invoke();
                 if (!work()) result.Error = _loadSource.Project().LastError ?? "The career operation did not complete.";
             }
             catch (Exception exception)
@@ -370,28 +405,50 @@ namespace TacticalDirector.ClientApp
             }
             try
             {
-                // Sources are read only by the worker after all mutation has stopped.
+                // Sources are read only by the worker after all mutation has stopped. Each view is projected
+                // independently (M1): a throwing source costs only its own refresh, never the committed
+                // outcome or the other views.
                 if (_slots != null)
                 {
-                    result.Home = _homeSource.Project();
-                    result.NewCareer = _setup.Project();
-                    result.Load = _loadSource.Project();
-                    result.TransferMarket = _transferSource.Project();
-                    result.Finances = _financesSource.Project();
-                    result.TransferOutcome = _workerTransferOutcome;
                     result.Initialized = true;
                     result.HasSnapshot = true;
+                    result.TransferResult = _workerTransferResult;
+                    result.HasHome = TryProject(ProjectionKind.Home, _homeSource, out result.Home, result);
+                    result.HasNewCareer = TryProject(ProjectionKind.NewCareer, _setup, out result.NewCareer, result);
+                    result.HasLoad = TryProject(ProjectionKind.Load, _loadSource, out result.Load, result);
+                    result.HasTransferMarket = TryProject(ProjectionKind.TransferMarket, _transferSource, out result.TransferMarket, result);
+                    result.HasFinances = TryProject(ProjectionKind.Finances, _financesSource, out result.Finances, result);
                 }
             }
             catch (Exception exception)
             {
-                result.Error = exception.Message;
+                // Only reachable if the bookkeeping itself fails; the operation error stays distinct.
+                result.ProjectionError = Note(result.ProjectionError, exception.Message);
             }
             finally
             {
                 Publish(result);
             }
         }
+
+        private bool TryProject<T>(ProjectionKind kind, IViewModelSource<T> source, out T view, Completion result)
+            where T : struct
+        {
+            try
+            {
+                ProjectionProbe?.Invoke(kind);
+                view = source.Project();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                view = default;
+                result.ProjectionError = Note(result.ProjectionError, kind + ": " + exception.Message);
+                return false;
+            }
+        }
+
+        private static string Note(string existing, string next) => existing == null ? next : existing + " " + next;
 
         private void Publish(Completion completion)
         {
@@ -414,15 +471,18 @@ namespace TacticalDirector.ClientApp
                 if (result == null) return;
                 if (result.HasSnapshot)
                 {
-                    Home = result.Home;
-                    NewCareer = result.NewCareer;
-                    Load = result.Load;
-                    TransferMarket = result.TransferMarket;
-                    Finances = result.Finances;
-                    LastTransferOutcome = result.TransferOutcome;
+                    // A view whose projection failed keeps its last good value (M1); Home alone must be unblocked.
+                    if (result.HasHome) Home = result.Home;
+                    else if (Home.HasCareer) Home = Home.WithProgressBlocked(false);
+                    if (result.HasNewCareer) NewCareer = result.NewCareer;
+                    if (result.HasLoad) Load = result.Load;
+                    if (result.HasTransferMarket) TransferMarket = result.TransferMarket;
+                    if (result.HasFinances) Finances = result.Finances;
+                    LastTransferResult = result.TransferResult;
                     _initialized = result.Initialized;
                 }
                 else if (Home.HasCareer) Home = Home.WithProgressBlocked(false);
+                LastProjectionError = result.ProjectionError;
                 LastError = result.Error;
                 IsBusy = false;
                 Action navigation = _afterSuccess;
@@ -434,7 +494,9 @@ namespace TacticalDirector.ClientApp
                     LastError = LastError == null ? staleScreen : LastError + " " + staleScreen;
                     return;
                 }
-                if (LastError == null) navigation?.Invoke();
+                // Navigation also needs the Home view it lands on to have refreshed (M1): the operation committed,
+                // so the failure is reported in LastProjectionError rather than navigating onto a stale screen.
+                if (LastError == null && (result.HasHome || !result.HasSnapshot)) navigation?.Invoke();
             }
         }
 
@@ -470,4 +532,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-11-04 | —      | Preserve the operation error when stale-screen navigation is refused. |
 // | 1.2     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances registrations, worker snapshots, four moves and SubmitTransfer (typed outcome, no autosave); flow must carry nine screens. |
 // | 1.3     | 2026-11-05 | —      | H1: SubmitTransfer refuses out-of-range terms (fee/wage < 0, wage > [CROSS] MAX_OFFER_WAGE_PER_PERIOD, length < 1) before Begin; nothing reaches the worker. |
+// | 1.4     | 2026-11-05 | —      | M1: the five views project independently (a failing one keeps its last good view; LastProjectionError records it apart from LastError); the transfer result always publishes. M2: SubmitTransfer refuses player-reachable offer mistakes synchronously through TransferOfferCheck (typed, no exception, nothing queued); the H1 term checks moved into it. M3: LastTransferOutcome replaced by LastTransferResult (offer + outcome or typed refusal). |
 #endregion
