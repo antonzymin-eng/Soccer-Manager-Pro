@@ -29,10 +29,16 @@ The 98,741,732-byte match capture remains a pointer; Unity assets and native
 libraries still materialize. Full evidence replay uses its own narrow pull in
 `docs/tracking/evidence/pre-c-control-20261104/REPRODUCE.md`.
 
-Validated November 5, 2026 in a pointer-only staged merge checkout: the exact CI
-pull commands materialized all three other LFS files with matching OIDs, while
-the capture remained its 133-byte pointer. The 37-directory evidence checker
-passed before and after. This checks the download step, not Unity execution.
+Manual scratch-checkout validation on November 5, 2026 executed the CI LFS
+pull commands: all three other LFS files materialized with matching OIDs,
+while the capture remained its 133-byte pointer. The 37-directory evidence
+checker passed before and after. This validates the command behavior in that
+scratch environment only; it does not establish GitHub Actions runner behavior.
+
+GitHub CI run 42125144759 passed the Linux functional and tooling gates, but
+the Unity `unity-tests` job was skipped because `UNITY_LICENSE` was not set.
+Consequently, the revised LFS download step has **not executed in Unity CI**.
+A future licensed Unity CI run is needed to validate it on the actual runner.
 
 This avoids downloading the capture for each Unity mode. It does not remove the
 36,531,896-byte prior capture or the current capture from existing LFS storage;
