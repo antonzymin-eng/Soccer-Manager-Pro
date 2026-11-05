@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-11-05 (L1: reject a screen this shell has no root for)
+// Modified: 2026-11-05 (AR-2: T6: prevent refresh and visibility callbacks after wiring rejection.)
 // Modified (prior): 2026-11-03 (P7b optional seven-root binding)
 // Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
@@ -132,7 +132,7 @@ namespace TacticalDirector.MatchClientUnity
             {
                 _coordinator.Refresh(Time.time);
                 if (_coordinator.IsRejected) RejectWiring("required pitch renderer was lost.");
-                else { ApplyCurrentScreen(); _screens.Refresh(); }
+                else { ApplyCurrentScreen(); if (!_wiringRejected) _screens.Refresh(); }
             }
             catch (Exception exception)
             {
@@ -185,6 +185,7 @@ namespace TacticalDirector.MatchClientUnity
 
         private void ApplyCurrentScreen()
         {
+            if (_wiringRejected || _coordinator == null) return;
             ClientScreenVisibility visibility;
             try
             {
@@ -279,4 +280,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.5     | 2026-10-08 | —      | Compose the localized UGUI screens and apply visibility before view/focus refresh. |
 // | 1.6 | 2026-11-03 | — | Optional seven-root career composition, entropy and storage boundary. |
 // | 1.7 | 2026-11-05 | — | L1: ApplyCurrentScreen rejects wiring when the current screen (Transfers / Club Finances) has no root on this shell. |
+// | 1.8 | 2026-11-05 | — | T6: prevent refresh and visibility callbacks after wiring rejection. |
 #endregion

@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 5, 2026 — T5: Close-out T1–T5: authoritative UX S2 status refreshed, supplement/copy/capacity claims corrected, owner preflight and projection recovery documented in client plan v0.42. Maintained pointers synchronized (UX plan v1.37, roadmap v0.97, ERR log v2.101); new/deleted and modified source inventory recorded. T1 owns validation/headroom; T2 restores entry consistency; T3 closes behavior guards; T4 reconciles #38. No save/snapshot schema, RNG stream/domain/draw-site/order change. Docs-only: doc consistency, metadata and drift pass. Latest full source gates: Transfers 79/0/0, ClientApp 266/0/3, SeasonSave 553/0/4; 28 mutants killed/restored across T1–T3. Pinned Unity compile/runtime remains unverified.
+**Last Updated:** November 5, 2026 — T6: Block shell refresh/visibility after wiring rejection; clamp displayed transfer headroom and format the full uint close day. ClientShell v1.8, CareerScreenText v1.6, CareerTransfersTests v1.5; evidence v1.5. No save/snapshot schema, RNG stream/domain/draw-site/order change. Generated build passed; ClientApp 269/0/3; focused 56/0; four additional mutants killed/restored; documentation/meta/drift pass. Pinned Unity compile/runtime remains unverified.
+
+**Last Updated (prior):** November 5, 2026 — T5: Close-out T1–T5: authoritative UX S2 status refreshed, supplement/copy/capacity claims corrected, owner preflight and projection recovery documented in client plan v0.42. Maintained pointers synchronized (UX plan v1.37, roadmap v0.97, ERR log v2.101); new/deleted and modified source inventory recorded. T1 owns validation/headroom; T2 restores entry consistency; T3 closes behavior guards; T4 reconciles #38. No save/snapshot schema, RNG stream/domain/draw-site/order change. Docs-only: doc consistency, metadata and drift pass. Latest full source gates: Transfers 79/0/0, ClientApp 266/0/3, SeasonSave 553/0/4; 28 mutants killed/restored across T1–T3. Pinned Unity compile/runtime remains unverified.
 
 **Last Updated (prior):** November 5, 2026 — T4: ERR-038-006 bookkeeping: FR-UI-010/C.2 explain the deliberate dependency choice and running-loop command scope; P7b lifecycle/save/navigation routes are explicit. Appendix amendment corrected to v0.4, T1 to v0.5, current v0.6; §7 dispatcher wording and missing transfer seam corrected. No save/snapshot schema, RNG stream/domain/draw-site/order change. Docs-only: doc consistency and drift pass; prior full source gates unchanged (ClientApp 266/0/3). Pinned Unity compile/runtime remains unverified.
 
@@ -4652,11 +4654,11 @@ Update this manifest when:
 
 ## §5-P8 AR-2 source inventory
 
-Current after T1–T5, November 5, 2026. No assembly was added.
+Current after T1–T6, November 5, 2026. No assembly was added.
 
 | File | Version | Record |
 |---|---|---|
-| `src/client-app/CareerScreenText.cs` | v1.5 | Modified in T1–T3; behavior and tests described in the task changelog. |
+| `src/client-app/CareerScreenText.cs` | v1.6 | T6 clamps displayed headroom and formats the full uint window close day. |
 | `src/client-app/CareerSession.cs` | v1.8 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/ClientCareerCoordinator.cs` | v1.6 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/ClubFinancesSource.cs` | v1.3 | Modified in T1–T3; behavior and tests described in the task changelog. |
@@ -4666,10 +4668,11 @@ Current after T1–T5, November 5, 2026. No assembly was added.
 | `src/client-app/TransferOfferCheck.cs` | v1.1 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/TransferOfferIssue.cs` | v1.1 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/TransferResult.cs` | v1.1 | Modified in T1–T3; behavior and tests described in the task changelog. |
-| `src/client-app/tests/CareerTransfersTests.cs` | v1.4 | Modified in T1–T3; behavior and tests described in the task changelog. |
+| `src/client-app/tests/CareerTransfersTests.cs` | v1.5 | T6 pins all three remaining-budget slots and the full uint close day. |
 | `src/client-app/tests/ClientCareerCoordinatorTests.cs` | v1.7 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/tests/ClientScreenVisibilityTests.cs` | v1.4 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/client-app/tests/S0TextFormatterTests.cs` | v1.3 | Modified in T1–T3; behavior and tests described in the task changelog. |
+| `src/match-client-unity/ClientShellBehaviour.cs` | v1.8 | T6 blocks refresh/visibility after wiring rejection; pinned host unverified. |
 | `src/match-client-unity/S0ScreensBehaviour.Career.cs` | v1.2 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/season-save/SeasonLoop.cs` | v1.47 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/season-save/tests/SeasonTransfersT2Tests.cs` | v1.8 | Modified in T1–T3; behavior and tests described in the task changelog. |
@@ -4678,4 +4681,4 @@ Current after T1–T5, November 5, 2026. No assembly was added.
 | `src/transfers/tests/TransfersT0Tests.cs` | v1.12 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/transfers/TransferBidIssue.cs.meta` | New | Fresh 32-hex GUID, no trailing newline. |
 | `src/client-app/TransferBudgetRule.cs` and `.meta` | Deleted | Owner headroom read replaces the client formula. |
-| `docs/tracking/evidence/5p8-ar2-20261105/README.md` | v1.4 | Executed positive/mutation evidence and platform limits. |
+| `docs/tracking/evidence/5p8-ar2-20261105/README.md` | v1.5 | Executed positive/mutation evidence and platform limits. |

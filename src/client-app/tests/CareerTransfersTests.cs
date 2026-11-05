@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerTransfersTests.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
+// Modified: 2026-11-05 (AR-2: T6: pin zero-clamped money slots and full uint window close day.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1..3),
 //           docs/design/ux-s2-transfers-finances.md §2–§4, Transfers #31 FR-TX-025, Club Finances #40
@@ -27,6 +27,30 @@ namespace TacticalDirector.ClientApp.Tests
     public sealed class CareerTransfersTests
     {
         // ── CareerSession.SubmitTransfer ─────────────────────────────────────────────────────────────
+
+        [TestCase(-1L)]
+        [TestCase(long.MinValue)]
+        public void DisplayedRemainingBudget_ClampsAtZeroInEveryMoneySlot(long remaining)
+        {
+            var market = new TransferMarketViewModel(true, 0, 1, true, 0, 44, 100, 101, 23, 25,
+                1_000, 3, null, null, remaining);
+            var finances = new ClubFinancesViewModel("Club", 1, 100, 101, 50, 0, 0, 0, remaining);
+            var offer = new Offer(1, 2, 1, 0, 1, true);
+            var text = new CareerScreenText();
+            StringAssert.Contains("Remaining budget: 0 of 100.", text.Budget(in market));
+            Assert.AreEqual("Not enough budget: 0 remaining.",
+                text.Outcome(TransferSubmissionOutcome.InsufficientBudget, in offer, in market));
+            string expected = text.Finances(new ClubFinancesViewModel("Club", 1, 100, 101, 50, 0, 0, 0, 0));
+            Assert.AreEqual(expected, text.Finances(in finances));
+        }
+
+        [Test]
+        public void WindowCloseDay_FormatsTheFullUnsignedRange()
+        {
+            var market = new TransferMarketViewModel(true, 0, 1, true, 0, uint.MaxValue, 100, 0, 23, 25,
+                1_000, 3, null, null, 100);
+            Assert.AreEqual("Transfer window open until day 4294967295.", new CareerScreenText().Window(in market));
+        }
 
         [Test]
         public void GenesisBuy_AtTheClubsPrice_IsAccepted_AndMovesThePlayerBudgetAndRows()
@@ -763,4 +787,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2 | 2026-11-05 | — | M5: committed/remaining finance fields, row CurrentAbility and IsAvailable asserted against their owners (availability with a bounded-progress non-vacuity guard). M8: goalkeepers sold until SquadDepleted at >= 18 players, new copy. L5: wage-bill both branches. L6: contracted seller asserted, refused outcomes leave the balance, distinct squad counts in the copy fixture, ClubPrice drift note. M2: OfferCheck/Issue/Result copy. |
 // | 1.3 | 2026-11-05 | — | T1 view-model headroom is supplied as owner data. |
 // | 1.4 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
+// | 1.5 | 2026-11-05 | — | T6: pin zero-clamped money slots and full uint window close day. |
 #endregion

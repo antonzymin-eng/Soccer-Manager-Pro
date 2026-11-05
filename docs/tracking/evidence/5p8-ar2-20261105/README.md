@@ -1,12 +1,13 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.4 — T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence.)
+**Last Updated:** November 5, 2026 (v1.5 — T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits.)
+**Last Updated (prior):** November 5, 2026 (v1.4 — T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence.)
 **Last Updated (prior):** November 5, 2026 (v1.3 — T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected.)
 **Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.4\
+**Version:** 1.5\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
 
@@ -95,6 +96,25 @@ ClientApp266/0/3, SeasonSave553/0/4 (passed/failed/skipped). The optional broade
 still reports 82 pre-existing errors; T4 removed its pre-existing #38 duplicate-version error.
 No new source/header lint error was introduced. Unity Editor compile and UI runtime remain unverified.
 
+## T6 — display and rejected-wiring hardening
+
+The generated solution build passes with zero errors (five existing warnings). The focused formatting
+set passes 56 tests; the restored positive set passes after the four temporary mutants below.
+Full ClientApp: 269 passed, 0 failed, 3 skipped.
+
+| Temporary mutation | Guard exercised | Observed result |
+|---|---|---|
+| Remove budget-header clamp | `DisplayedRemainingBudget_ClampsAtZeroInEveryMoneySlot` | Negative remaining budget appeared. |
+| Remove insufficient-budget outcome clamp | Same test, exact outcome copy | Negative remaining budget appeared. |
+| Remove finances remaining-budget clamp | Same test, full finances comparison | Negative remaining budget appeared. |
+| Restore checked uint-to-int close-day conversion | `WindowCloseDay_FormatsTheFullUnsignedRange` | uint.MaxValue threw instead of formatting. |
+
+All four mutants were killed and restored (32 across T1–T6). The two Unity shell guards were inspected
+statically: ApplyCurrentScreen returns after rejection or before coordinator initialization; Update does
+not refresh screens after ApplyCurrentScreen rejects wiring. This Unity binding is excluded from the
+Linux generated solution. Editor compilation, Console, root-visibility runtime and target player build
+remain unverified; no Unity readiness or pinned-host timing certification is claimed.
+
 ## Version History
 
 | Version | Date | Author | Notes |
@@ -104,3 +124,4 @@ No new source/header lint error was introduced. Unity Editor compile and UI runt
 | 1.2 | 2026-11-05 | — | T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene. |
 | 1.3 | 2026-11-05 | — | T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected. |
 | 1.4 | 2026-11-05 | — | T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence. |
+| 1.5 | 2026-11-05 | — | T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits. |

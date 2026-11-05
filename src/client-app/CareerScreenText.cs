@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
+// Modified: 2026-11-05 (AR-2: T6: clamp displayed headroom and format full uint window close day.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -50,7 +50,7 @@ namespace TacticalDirector.ClientApp
             // long) end to end: #31 accepts any non-negative wage, so an amount above int.MaxValue is legal data and
             // must format, never throw (H1).
             R("transfers", "Transfers"), R("finances", "Club finances"),
-            R("transfer.window.open", "Transfer window open until day {0}.", "I"),
+            R("transfer.window.open", "Transfer window open until day {0}.", "L"),
             R("transfer.window.closed", "Transfer window closed. The next window opens at the start of next season."),
             R("transfer.budget", "Remaining budget: {0} of {1}.", "LL"),
             R("transfer.squad", "Squad: {0} / {1}", "II"),
@@ -140,12 +140,12 @@ namespace TacticalDirector.ClientApp
         }
         /// <summary>Window line for the Transfers header (§5-P8).</summary>
         public string Window(in TransferMarketViewModel market) => market.IsWindowOpen
-            ? Text.Format("transfer.window", "transfer.window.open", checked((int)market.WindowCloseDay))
+            ? Text.Format("transfer.window", "transfer.window.open", (long)market.WindowCloseDay)
             : Label("transfer.window.closed");
 
         /// <summary>Budget and squad lines for the Transfers header.</summary>
         public string Budget(in TransferMarketViewModel market) =>
-            Text.Format("transfer.budget", "transfer.budget", market.RemainingBudget, market.TransferCeiling)
+            Text.Format("transfer.budget", "transfer.budget", Math.Max(0L, market.RemainingBudget), market.TransferCeiling)
             + Environment.NewLine
             + Text.Format("transfer.squad", "transfer.squad", market.ManagedSquadCount, market.SquadCapacity);
 
@@ -181,7 +181,7 @@ namespace TacticalDirector.ClientApp
             switch (outcome)
             {
                 case TransferSubmissionOutcome.InsufficientBudget:
-                    return Text.Format("transfer.outcome", "transfer.outcome.InsufficientBudget", market.RemainingBudget);
+                    return Text.Format("transfer.outcome", "transfer.outcome.InsufficientBudget", Math.Max(0L, market.RemainingBudget));
                 case TransferSubmissionOutcome.SquadFull:
                     return offer.IsBuy
                         ? Text.Format("transfer.outcome", "transfer.outcome.SquadFull.buy", market.SquadCapacity)
@@ -238,7 +238,7 @@ namespace TacticalDirector.ClientApp
                 ? Text.Format("finance.balance", "finance.balance.debt", finances.Balance == long.MinValue ? long.MaxValue : -finances.Balance)
                 : Text.Format("finance.balance", "finance.balance", finances.Balance));
             s.AppendLine().Append(Text.Format("finance.transfer", "finance.transfer", finances.TransferBudget,
-                finances.CommittedTransferSpend, finances.RemainingTransferBudget));
+                finances.CommittedTransferSpend, Math.Max(0L, finances.RemainingTransferBudget)));
             s.AppendLine().Append(Text.Format("finance.wage", "finance.wage", finances.WageBudget));
             s.AppendLine().Append(Text.Format("finance.contracts",
                 finances.IsContractedWagesSaturated ? "finance.contracts.saturated" : "finance.contracts",
@@ -288,4 +288,5 @@ namespace TacticalDirector.ClientApp
 // | 1.3 | 2026-11-05 | — | H1: money roles use the L (long) type, no int cast; long.MinValue debt clamps to long.MaxValue; saturated-wage line. H2: SquadFull split into .buy/.sell (buyer named); Outcome takes the submitted Offer. |
 // | 1.4 | 2026-11-05 | — | M2: transfer.issue.* roles + Issue(). M3: Result(in TransferResult, in market). M8: SquadDepleted copy names the complete starting eleven. L5: wage-bill line gated on IsWageBillTracked (finance.wagebill.tracked role). |
 // | 1.5 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
+// | 1.6 | 2026-11-05 | — | T6: clamp displayed headroom and format full uint window close day. |
 #endregion
