@@ -1,6 +1,6 @@
 // File:     src/client-app/TransferMarketSource.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05
+// Modified: 2026-11-05 (H2: club rows carry squad counts)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1),
 //           docs/design/ux-s2-transfers-finances.md §2 (R1–R8), UI / Client Framework #38 §3.1
@@ -70,15 +70,15 @@ namespace TacticalDirector.ClientApp
             Array.Sort(clubIds);
 
             var clubs = new TransferClubRow[clubIds.Length];
-            for (int c = 0; c < clubIds.Length; c++)
-            {
-                clubs[c] = new TransferClubRow(clubIds[c], session.ClubName(clubIds[c]), clubIds[c] == managed);
-            }
-
             TransfersState transfers = loop.TransfersSnapshot();
             ProgressionEngine progression = loop.Progression;
             if (transfers == null || progression == null)
             {
+                for (int c = 0; c < clubIds.Length; c++)
+                {
+                    clubs[c] = new TransferClubRow(clubIds[c], session.ClubName(clubIds[c]), clubIds[c] == managed, 0);
+                }
+
                 return new TransferMarketViewModel(
                     false, managed, loop.CurrentWorldDay, false, 0, 0, 0, 0, 0,
                     PlayerDatabaseConstants.CLUB_SQUAD_SIZE, 0, 0,
@@ -93,6 +93,7 @@ namespace TacticalDirector.ClientApp
             {
                 squads[c] = progression.SquadFor(clubIds[c]);
                 total += squads[c].Count;
+                clubs[c] = new TransferClubRow(clubIds[c], session.ClubName(clubIds[c]), clubIds[c] == managed, squads[c].Count);
             }
 
             var rows = new TransferPlayerRow[total];
@@ -154,4 +155,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): revision-cached Transfers source. |
+// | 1.1     | 2026-11-05 | —      | H2: each TransferClubRow carries its #28 squad count, read from the same squads as the player rows. |
 #endregion

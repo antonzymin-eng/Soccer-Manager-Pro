@@ -1,6 +1,6 @@
 // File:     src/client-app/TransferMarketViewModel.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05
+// Modified: 2026-11-05 (H2: TransferClubRow.SquadCount)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1),
 //           docs/design/ux-s2-transfers-finances.md §2 (R1–R8) / §3.1–§3.2, Transfers #31 FR-TX-025,
@@ -93,12 +93,20 @@ namespace TacticalDirector.ClientApp
         /// <summary>True for the managed club (never a counterparty).</summary>
         public readonly bool IsManaged;
 
+        /// <summary>
+        /// Players the club holds (#28 roster count; 0 when the career carries no #31 state). A sale needs the
+        /// buyer below <see cref="TransferMarketViewModel.SquadCapacity"/>: #31's F5 check is against the
+        /// destination, so a full buyer returns SquadFull.
+        /// </summary>
+        public readonly int SquadCount;
+
         /// <summary>Creates one club row.</summary>
-        public TransferClubRow(int clubId, string name, bool isManaged)
+        public TransferClubRow(int clubId, string name, bool isManaged, int squadCount)
         {
             ClubId = clubId;
             Name = name;
             IsManaged = isManaged;
+            SquadCount = squadCount;
         }
     }
 
@@ -182,7 +190,10 @@ namespace TacticalDirector.ClientApp
             Clubs = clubs;
         }
 
-        /// <summary>True when a buy could fit the squad (a sale is never limited by squad size).</summary>
+        /// <summary>
+        /// True when a buy could fit the managed squad. A sale is limited by the buyer's squad instead
+        /// (<see cref="TransferClubRow.SquadCount"/>).
+        /// </summary>
         public bool HasSquadRoom => HasCareer && ManagedSquadCount < SquadCapacity;
     }
 }
@@ -190,4 +201,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): Transfers view model, player and club rows. |
+// | 1.1     | 2026-11-05 | —      | H2: TransferClubRow.SquadCount so a sale can show a full buyer; HasSquadRoom doc no longer says a sale is never squad-limited. |
 #endregion

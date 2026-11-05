@@ -1,13 +1,15 @@
 // File:     src/client-app/tests/CareerTransfersTests.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05
+// Modified: 2026-11-05 (H1 unbounded-wage totality; H2 sale-direction SquadFull)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1..3),
 //           docs/design/ux-s2-transfers-finances.md §2–§4, Transfers #31 FR-TX-025, Club Finances #40
 //           FR-FN-026, Code Standards #20
 // Purpose:  Locks the host-free transfer/finance half: CareerSession.SubmitTransfer passes #31's typed
 //           outcome through, refuses a closed window before #31, and never autosaves; the two sources read
-//           the owners' state; the copy formats every outcome; the flow's moves are guarded.
+//           the owners' state; the copy formats every outcome; the flow's moves are guarded. H1: a contract
+//           wage up to long.MaxValue (legal at #31) still projects and formats. H2: a sale to a full buyer
+//           reads as the buyer's squad, never the manager's.
 
 using System;
 using System.IO;
@@ -157,6 +159,112 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.That(RowOf(market.Project(), target.PlayerId).ClubId, Is.EqualTo(stillThere.ClubId));
         }
 
+        [Test]
+        public void ThirdSaleToTheSameBuyer_IsSquadFull_AndTheCopyNamesTheBuyerNotYourSquad()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            var market = new TransferMarketSource(holder);
+            TransferMarketViewModel before = market.Project();
+            int buyer = FirstOtherClub(before);
+            TransferClubRow buyerBefore = ClubOf(before, buyer);
+            Assert.That(buyerBefore.SquadCount, Is.EqualTo(before.SquadCapacity - 2), "non-vacuity: genesis squads hold capacity - 2");
+            Assert.That(ClubOf(before, session.ManagedClubId).SquadCount, Is.EqualTo(before.ManagedSquadCount));
+
+            // Sell from the managed club's most-stocked position so the release-side check (ERR-031-007,
+            // SquadDepleted) cannot fire before the buyer-side F5 check under test.
+            var stock = new int[Enum.GetValues(typeof(PlayerPosition)).Length];
+            foreach (TransferPlayerRow row in before.Players)
+            {
+                if (row.IsManaged) stock[(int)row.Position]++;
+            }
+
+            int deepest = 0;
+            for (int p = 1; p < stock.Length; p++)
+            {
+                if (stock[p] > stock[deepest]) deepest = p;
+            }
+
+            var own = new TransferPlayerRow[3];
+            int found = 0;
+            foreach (TransferPlayerRow row in before.Players)
+            {
+                if (row.IsManaged && (int)row.Position == deepest && found < own.Length)
+                {
+                    own[found++] = row;
+                }
+            }
+
+            Assert.That(found, Is.EqualTo(3));
+            Assert.That(session.SubmitTransfer(new Offer(own[0].PlayerId, buyer, 1L, 0L, 1, false)), Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            Assert.That(session.SubmitTransfer(new Offer(own[1].PlayerId, buyer, 1L, 0L, 1, false)), Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            TransferMarketViewModel full = market.Project();
+            Assert.That(ClubOf(full, buyer).SquadCount, Is.EqualTo(full.SquadCapacity), "the club row shows the full buyer");
+
+            var third = new Offer(own[2].PlayerId, buyer, 1L, 0L, 1, false);
+            Assert.That(session.SubmitTransfer(third), Is.EqualTo(TransferSubmissionOutcome.SquadFull));
+            TransferMarketViewModel after = market.Project();
+            Assert.That(after.ManagedSquadCount, Is.EqualTo(before.ManagedSquadCount - 2), "the manager's squad is not full");
+            Assert.That(after.HasSquadRoom, Is.True);
+
+            string message = new CareerScreenText().Outcome(TransferSubmissionOutcome.SquadFull, in third, in after);
+            StringAssert.Contains(buyerBefore.Name, message);
+            StringAssert.DoesNotContain("Your squad", message);
+        }
+
+        [Test]
+        public void HugeContractWage_LegalAtTransfers_StillProjectsAndFormats_H1()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            var market = new TransferMarketSource(holder);
+            var finances = new ClubFinancesSource(holder);
+            TransferMarketViewModel before = market.Project();
+            Assert.That(finances.Project().ContractedWages, Is.GreaterThan(0L), "non-vacuity: genesis contracts carry wages");
+            TransferPlayerRow target = CheapestOtherClubPlayer(before);
+
+            // #31's own seam bounds no wage; only the coordinator does (ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD).
+            Assert.That(session.SubmitTransfer(new Offer(target.PlayerId, target.ClubId,
+                ClubPrice(session, target.PlayerId, buy: true), long.MaxValue, 1, true)), Is.EqualTo(TransferSubmissionOutcome.Accepted));
+
+            ClubFinancesViewModel view = finances.Project();
+            Assert.That(view.ContractedWages, Is.EqualTo(long.MaxValue));
+            Assert.That(view.IsContractedWagesSaturated, Is.True, "the exact sum exceeds long and says so");
+            TransferMarketViewModel after = market.Project();
+            TransferPlayerRow bought = RowOf(after, target.PlayerId);
+            Assert.That(bought.ContractWagePerPeriod, Is.EqualTo(long.MaxValue));
+
+            var text = new CareerScreenText();
+            StringAssert.Contains("Contracted wages: more than 9223372036854775807 per period", text.Finances(in view));
+            StringAssert.Contains("Contract: 9223372036854775807 per period", text.Player(0, in bought));
+            StringAssert.Contains("Remaining budget:", text.Budget(in after));
+        }
+
+        [Test]
+        public void MoneyAboveIntMaxValue_FormatsAsLong_AndDebtAtLongMinValueClamps()
+        {
+            var text = new CareerScreenText();
+            long big = 3_000_000_000L;
+            Assert.That(text.Text.Format("wage", "finance.wage", big), Is.EqualTo("Wage budget: 3000000000"));
+            string lines = text.Finances(new ClubFinancesViewModel("Test FC", big, big, 0, big, 0, big, 1));
+            StringAssert.Contains("Balance: 3000000000", lines);
+            StringAssert.Contains("Contracted wages: 3000000000 per period across 1 contracts", lines);
+            var row = new TransferPlayerRow(1, 2, "Club", "A Player", PlayerPosition.Forward, 25, 100, true, big, true, true, big, 2);
+            StringAssert.Contains("estimated value 3000000000 | Contract: 3000000000 per period, 2 seasons", text.Player(0, in row));
+
+            // -long.MinValue has no long; the debt line clamps to long.MaxValue instead of overflowing.
+            StringAssert.Contains("overdrawn by 9223372036854775807",
+                text.Finances(new ClubFinancesViewModel("Test FC", long.MinValue, 0, 0, 0, 0, 0, 0)));
+
+            Assert.Throws<ArgumentException>(() => text.Text.Format("wage", "finance.wage", -1L), "L stays non-negative");
+            Assert.Throws<ArgumentException>(() => text.Text.Format("wage", "finance.wage", (object)1), "L is exact: an int is refused");
+            Assert.DoesNotThrow(() => new S0TextRole("test.long", "{0:D}", "L"), "L admits the integer D format");
+        }
+
         // ── sources ──────────────────────────────────────────────────────────────────────────────────
 
         [Test]
@@ -224,22 +332,38 @@ namespace TacticalDirector.ClientApp.Tests
         // ── copy ─────────────────────────────────────────────────────────────────────────────────────
 
         [Test]
-        public void EveryOutcome_HasItsOwnMessage()
+        public void EveryOutcome_HasItsOwnMessage_InBothDirections()
         {
             var text = new CareerScreenText();
             var market = new TransferMarketViewModel(true, 0, 3, true, 0, 44, 100_000, 40_000, 25, 25, 1_000, 3,
                 new System.Collections.ObjectModel.ReadOnlyCollection<TransferPlayerRow>(new TransferPlayerRow[0]),
-                new System.Collections.ObjectModel.ReadOnlyCollection<TransferClubRow>(new TransferClubRow[0]));
-            var seen = new System.Collections.Generic.HashSet<string>();
-            foreach (TransferSubmissionOutcome outcome in Enum.GetValues(typeof(TransferSubmissionOutcome)))
+                new System.Collections.ObjectModel.ReadOnlyCollection<TransferClubRow>(new[]
+                {
+                    new TransferClubRow(0, "Managed FC", true, 25), new TransferClubRow(7, "Buyer Town", false, 25)
+                }));
+            var buy = new Offer(1, 7, 1L, 1_000L, 1, true);
+            var sell = new Offer(2, 7, 1L, 0L, 1, false);
+            foreach (Offer offer in new[] { buy, sell })
             {
-                Assert.That(seen.Add(text.Outcome(outcome, true, in market)), Is.True, outcome + " repeats another message");
+                var seen = new System.Collections.Generic.HashSet<string>();
+                foreach (TransferSubmissionOutcome outcome in Enum.GetValues(typeof(TransferSubmissionOutcome)))
+                {
+                    Assert.That(seen.Add(text.Outcome(outcome, in offer, in market)), Is.True,
+                        outcome + (offer.IsBuy ? " (buy)" : " (sell)") + " repeats another message");
+                }
             }
 
-            StringAssert.Contains("60000", text.Outcome(TransferSubmissionOutcome.InsufficientBudget, true, in market));
-            StringAssert.Contains("25", text.Outcome(TransferSubmissionOutcome.SquadFull, true, in market));
-            Assert.That(text.Outcome(TransferSubmissionOutcome.SquadDepleted, false, in market),
-                Is.Not.EqualTo(text.Outcome(TransferSubmissionOutcome.SquadDepleted, true, in market)));
+            StringAssert.Contains("60000", text.Outcome(TransferSubmissionOutcome.InsufficientBudget, in buy, in market));
+            string fullBuy = text.Outcome(TransferSubmissionOutcome.SquadFull, in buy, in market);
+            string fullSell = text.Outcome(TransferSubmissionOutcome.SquadFull, in sell, in market);
+            StringAssert.Contains("Your squad", fullBuy);
+            StringAssert.Contains("25", fullBuy);
+            Assert.That(fullSell, Is.EqualTo("Buyer Town has no room in its squad (25)."), "a sale's F5 is the buyer's squad");
+            StringAssert.DoesNotContain("Your squad", fullSell);
+            Assert.That(text.Outcome(TransferSubmissionOutcome.SquadDepleted, in sell, in market),
+                Is.Not.EqualTo(text.Outcome(TransferSubmissionOutcome.SquadDepleted, in buy, in market)));
+            var unknownBuyer = new Offer(2, 99, 1L, 0L, 1, false);
+            Assert.Throws<ArgumentException>(() => text.Outcome(TransferSubmissionOutcome.SquadFull, in unknownBuyer, in market));
             StringAssert.Contains("44", text.Window(in market));
             Assert.That(market.HasSquadRoom, Is.False);
         }
@@ -376,6 +500,19 @@ namespace TacticalDirector.ClientApp.Tests
             throw new AssertionException("no other club");
         }
 
+        private static TransferClubRow ClubOf(in TransferMarketViewModel market, int clubId)
+        {
+            foreach (TransferClubRow club in market.Clubs)
+            {
+                if (club.ClubId == clubId)
+                {
+                    return club;
+                }
+            }
+
+            throw new AssertionException("club " + clubId + " is not listed");
+        }
+
         private static TransferPlayerRow RowOf(in TransferMarketViewModel market, int playerId)
         {
             foreach (TransferPlayerRow row in market.Players)
@@ -394,4 +531,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-05 | —      | Initial creation (§5-P8): SubmitTransfer outcomes/refusals/no-autosave, sources, copy and flow guards. |
+// | 1.1     | 2026-11-05 | —      | H1: long.MaxValue contract wage projects (saturated) and formats; money above int.MaxValue formats; long.MinValue debt clamps. H2: third fee-1 sale to one buyer is SquadFull with buyer-named copy; club rows carry SquadCount; EveryOutcome covers both directions. |
 #endregion

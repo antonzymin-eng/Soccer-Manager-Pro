@@ -1,19 +1,21 @@
 // File:     src/client-app/ClientAppConstants.cs
 // Created:  2026-08-07
-// Modified: 2026-11-05 (§5-P8 Transfers and Club Finances screen ids)
+// Modified: 2026-11-05 (H1: [CROSS] client wage guard)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a (screen-catalogue home, owner
 //           decision 2026-08-07), §5-P7 (career screens, save slots), UI / Client Framework #38
 //           §3.2 (FR-UI-010), Code Standards #20
-// Purpose:  Constant catalogue for the client-app assembly: the four screens' [FIXED] identity values.
-//           Presentation-only — nothing here reaches the simulation, the snapshot digest, or any
-//           determinism surface.
+// Purpose:  Constant catalogue for the client-app assembly: the screens' [FIXED] identity values and the
+//           [CROSS] client-side offer guard. Presentation-only — nothing here reaches the simulation, the
+//           snapshot digest, or any determinism surface.
+
+using TacticalDirector.ClubFinances;
 
 namespace TacticalDirector.ClientApp
 {
     /// <summary>
-    /// Constant catalogue for the client application. Every value here is screen identity, never a sim
-    /// constant: this assembly registers no RNG stream, no domain tag, no <c>SubsystemOrdinal</c>, and
+    /// Constant catalogue for the client application. Every value here is screen identity or a client input
+    /// guard, never a sim constant: this assembly registers no RNG stream, no domain tag, no <c>SubsystemOrdinal</c>, and
     /// holds no persistent sim state — the same posture as <c>UiFrameworkConstants</c> (FR-UI-022).
     /// <para>
     /// The ids live in this assembly rather than <c>ui-framework</c> because FR-UI-010 is explicit that
@@ -77,6 +79,20 @@ namespace TacticalDirector.ClientApp
         public const int CAREER_SLOT_META_FORMAT_VERSION = 2;
 
         #endregion
+
+        #region Cross
+
+        /// <summary>
+        /// [CROSS] Highest wage per period the client lets an offer carry: #40's [GT] sanity ceiling for
+        /// projected transfer and wage budgets (<c>ClubFinancesConstants.ClubFinancesBudgetCeilingMax</c>,
+        /// Spec #40 Appendix A), consumed read-only. A client input guard only, not a game rule: #31 itself
+        /// accepts any non-negative wage and compares none against #40's wage budget (H1; ERR-031 gap open
+        /// for an owner decision). The guard keeps an unbounded wage out of #31, so committed contract wages
+        /// stay far from the long range every finance projection and money string relies on.
+        /// </summary>
+        public static readonly long MAX_OFFER_WAGE_PER_PERIOD = ClubFinancesConstants.ClubFinancesBudgetCeilingMax;
+
+        #endregion
     }
 }
 
@@ -89,4 +105,6 @@ namespace TacticalDirector.ClientApp
 // | 1.2     | 2026-10-27 | —      | PR 519 review: CAREER_SLOT_META_FORMAT_VERSION 1 → 2 (sidecar  |
 // |         |            |        | records the nested sub-blob format stamp).                     |
 // | 1.3     | 2026-11-05 | —      | §5-P8: SCREEN_ID_TRANSFERS (8), SCREEN_ID_CLUB_FINANCES (9).   |
+// | 1.4     | 2026-11-05 | —      | H1: [CROSS] MAX_OFFER_WAGE_PER_PERIOD = #40                    |
+// |         |            |        | ClubFinancesBudgetCeilingMax (client offer guard).             |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (§5-P8: Transfers / Club Finances snapshots and SubmitTransfer)
+// Modified: 2026-11-05 (H1: offer terms validated before the worker)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -289,16 +289,31 @@ namespace TacticalDirector.ClientApp
         /// <summary>
         /// Submits one buy or sell offer off-thread through <see cref="CareerSession.SubmitTransfer"/> (§5-P8).
         /// The typed outcome arrives in <see cref="LastTransferOutcome"/> on the next <see cref="Refresh"/>;
-        /// it is not autosaved (D-P8-2).
+        /// it is not autosaved (D-P8-2). Terms are checked on the UI thread before any work is queued: fee and
+        /// wage non-negative, wage at most <see cref="ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD"/>, length at
+        /// least one season. #31 bounds no wage, and an unbounded one committed by #31 would reach every finance
+        /// projection (H1), so out-of-range terms never reach #31.
         /// </summary>
-        /// <exception cref="InvalidOperationException">Not on Transfers, busy, or the cached window is closed.</exception>
+        /// <exception cref="InvalidOperationException">Not on Transfers, busy, the cached window is closed, or the
+        /// offer's terms are out of range (the UI must prevent all of these; nothing is queued).</exception>
         public void SubmitTransfer(in Offer offer)
         {
             RequireScreen(ClientScreens.Transfers);
             if (!TransferMarket.IsWindowOpen) throw new InvalidOperationException("The transfer window is closed.");
+            RequireOfferTerms(in offer);
             Offer accepted = offer;
             LastTransferOutcome = null;
             Begin(() => { _workerTransferOutcome = _holder.Require().SubmitTransfer(in accepted); return true; });
+        }
+
+        private static void RequireOfferTerms(in Offer offer)
+        {
+            if (offer.Fee < 0) throw new InvalidOperationException("The offer fee cannot be negative.");
+            if (offer.WagePerPeriod < 0) throw new InvalidOperationException("The offered wage cannot be negative.");
+            if (offer.WagePerPeriod > ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD)
+                throw new InvalidOperationException("The offered wage cannot exceed "
+                    + ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD + " per period.");
+            if (offer.LengthSeasons < 1) throw new InvalidOperationException("The contract must last at least one season.");
         }
 
         /// <summary>Quits the idle career context; saving is an explicit action, never implied by this move.</summary>
@@ -454,4 +469,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-11-03 | —      | P7b worker ownership, immutable publication and guarded career navigation. |
 // | 1.1     | 2026-11-04 | —      | Preserve the operation error when stale-screen navigation is refused. |
 // | 1.2     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances registrations, worker snapshots, four moves and SubmitTransfer (typed outcome, no autosave); flow must carry nine screens. |
+// | 1.3     | 2026-11-05 | —      | H1: SubmitTransfer refuses out-of-range terms (fee/wage < 0, wage > [CROSS] MAX_OFFER_WAGE_PER_PERIOD, length < 1) before Begin; nothing reaches the worker. |
 #endregion

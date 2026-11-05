@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (§5-P8 transfer operation)
+// Modified: 2026-11-05 (H1: out-of-range offer terms never reach the worker)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -173,6 +173,70 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(ClientScreens.ClubFinances, h.Flow.Current);
             h.Career.CloseClubFinances();
             Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current);
+        }
+
+        [Test]
+        public void OutOfRangeOfferTerms_AreRefusedBeforeTheWorker_WithNothingQueuedOrChanged()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.OpenTransfers();
+            TransferMarketViewModel before = h.Career.TransferMarket;
+            ClubFinancesViewModel financesBefore = h.Career.Finances;
+            TransferPlayerRow target = default;
+            foreach (TransferPlayerRow row in before.Players)
+            {
+                if (!row.IsManaged) { target = row; break; }
+            }
+
+            TransferPlayerRow own = default;
+            foreach (TransferPlayerRow row in before.Players)
+            {
+                if (row.IsManaged) { own = row; break; }
+            }
+
+            int revision = h.Career.Revision;
+            long max = ClientAppConstants.MAX_OFFER_WAGE_PER_PERIOD;
+            Assert.AreEqual(TacticalDirector.ClubFinances.ClubFinancesConstants.ClubFinancesBudgetCeilingMax, max,
+                "the guard is #40's ceiling, consumed read-only ([CROSS])");
+            var refused = new[]
+            {
+                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, long.MaxValue, 1, true),
+                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, max + 1L, 1, true),
+                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, -1L, 1, true),
+                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, -1L, 1_000L, 1, true),
+                new TacticalDirector.Transfers.Offer(target.PlayerId, target.ClubId, 50_000L, 1_000L, 0, true),
+            };
+            foreach (TacticalDirector.Transfers.Offer offer in refused)
+            {
+                Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(in offer),
+                    "fee " + offer.Fee + ", wage " + offer.WagePerPeriod + ", length " + offer.LengthSeasons);
+                Assert.AreEqual(0, h.Work.Count, "nothing is queued for the worker");
+                Assert.IsFalse(h.Career.IsBusy);
+                Assert.AreEqual(revision, h.Career.Revision, "a refused offer publishes nothing");
+                Assert.IsNull(h.Career.LastTransferOutcome);
+                Assert.IsNull(h.Career.LastError);
+                Assert.AreSame(before.Players, h.Career.TransferMarket.Players, "the career snapshot is unchanged");
+                Assert.AreEqual(financesBefore.ContractedWages, h.Career.Finances.ContractedWages);
+            }
+
+            // The bound is inclusive and the coordinator stays usable: a wage exactly at the ceiling reaches #31.
+            h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(before), 1L, max, 1, false));
+            Assert.AreEqual(1, h.Work.Count);
+            h.Finish();
+            Assert.AreEqual(TacticalDirector.Transfers.TransferSubmissionOutcome.Accepted, h.Career.LastTransferOutcome);
+            Assert.IsNull(h.Career.LastError);
+            Assert.AreEqual(before.ManagedSquadCount - 1, h.Career.TransferMarket.ManagedSquadCount);
+        }
+
+        private static int FirstOtherClub(in TransferMarketViewModel market)
+        {
+            foreach (TransferClubRow club in market.Clubs)
+            {
+                if (!club.IsManaged) return club.ClubId;
+            }
+
+            throw new AssertionException("no other club");
         }
 
         [Test]
@@ -448,4 +512,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-11-03 | —      | P7b deterministic worker/UI publication and navigation regression cases. |
 // | 1.1     | 2026-11-04 | —      | Retain the underlying load failure when navigation becomes stale. |
 // | 1.2     | 2026-11-05 | —      | §5-P8: nine-screen composition; worker-run SubmitTransfer publishes its typed outcome and fresh market/finance snapshots. |
+// | 1.3     | 2026-11-05 | —      | H1: out-of-range offer terms (wage above the [CROSS] #40 ceiling, negatives, zero length) are refused before the worker; the inclusive bound still reaches #31. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/S0TextRole.cs
 // Created:  2026-10-08
-// Modified: 2026-11-03
+// Modified: 2026-11-05 (L: non-negative long argument type for money)
 // Author:   —
 // Spec:     S0 binding contracts §4, Code Standards #20
 // Purpose:  Immutable identity, base pattern and typed positional schema for a client-owned text role.
@@ -10,7 +10,10 @@ using TacticalDirector.Localization;
 
 namespace TacticalDirector.ClientApp
 {
-    /// <summary>One static role or composite pattern; S/string, I/nonnegative int and F/finite float.</summary>
+    /// <summary>
+    /// One static role or composite pattern; S/string, I/nonnegative int, L/nonnegative long and F/finite float.
+    /// No <c>ui.s0.*</c> role uses L, so the S0 role set and its content hash are unchanged by the type.
+    /// </summary>
     public sealed class S0TextRole
     {
         /// <summary>Creates a client-owned schema; construction also validates its base pattern.</summary>
@@ -25,7 +28,7 @@ namespace TacticalDirector.ClientApp
             BasePattern = basePattern ?? throw new ArgumentNullException(nameof(basePattern));
             ArgumentTypes = argumentTypes ?? throw new ArgumentNullException(nameof(argumentTypes));
             foreach (char type in ArgumentTypes)
-                if (type != 'S' && type != 'I' && type != 'F')
+                if (type != 'S' && type != 'I' && type != 'L' && type != 'F')
                     throw new ArgumentException("Unknown S0 argument type.");
             S0TextFormatter.ValidatePattern(this, BasePattern);
         }
@@ -42,4 +45,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Typed S0 static/pattern schema. |
 // | 1.1 | 2026-11-03 | — | Reuse typed schemas in a separate career namespace. |
+// | 1.2 | 2026-11-05 | — | H1: admit the L (non-negative long) argument type so career money formats without an int cast. |
 #endregion

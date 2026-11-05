@@ -1,6 +1,6 @@
 // File:     src/client-app/S0TextFormatter.cs
 // Created:  2026-10-08
-// Modified: 2026-11-03
+// Modified: 2026-11-05 (L: non-negative long argument type)
 // Author:   —
 // Spec:     S0 binding contracts §§4.1–4.4, Localization #49 KD-5, Code Standards #20
 // Purpose:  Admit all authored patterns before publishing a fixed-context formatter; cache typed role output.
@@ -168,6 +168,17 @@ namespace TacticalDirector.ClientApp
             return Format(cell, suffix, new object[] { argument });
         }
 
+        /// <summary>
+        /// Reuses an unchanged non-negative long cell (an L role, e.g. career money) before boxing or allocating
+        /// an argument array.
+        /// </summary>
+        public string Format(string cell, string suffix, long argument)
+        {
+            if (argument >= 0 && _cache.TryGetValue(cell, out CacheEntry cached) && cached.Role == suffix && cached.Arguments.Length == 1 && cached.Arguments[0] is long value && value == argument)
+                return cached.Text;
+            return Format(cell, suffix, new object[] { argument });
+        }
+
         /// <summary>Reuses an unchanged finite float cell before boxing or allocating an argument array.</summary>
         public string Format(string cell, string suffix, float argument)
         {
@@ -222,7 +233,7 @@ namespace TacticalDirector.ClientApp
             {
                 object value = arguments[i];
                 char type = role.ArgumentTypes[i];
-                if ((type == 'S' && !(value is string)) || (type == 'I' && (!(value is int n) || n < 0)) || (type == 'F' && (!(value is float f) || float.IsNaN(f) || float.IsInfinity(f))))
+                if ((type == 'S' && !(value is string)) || (type == 'I' && (!(value is int n) || n < 0)) || (type == 'L' && (!(value is long l) || l < 0)) || (type == 'F' && (!(value is float f) || float.IsNaN(f) || float.IsInfinity(f))))
                     throw new ArgumentException("S0 argument type/value differs from the role schema.");
             }
         }
@@ -255,7 +266,7 @@ namespace TacticalDirector.ClientApp
                     throw new ArgumentException("Invalid S0 argument index: " + role.Key.Value);
                 string format = parts.Length == 2 ? parts[1] : "";
                 char type = role.ArgumentTypes[index];
-                if (format.Length != 0 && !((type == 'I' && format == "D") || (type == 'F' && format == "F1")))
+                if (format.Length != 0 && !(((type == 'I' || type == 'L') && format == "D") || (type == 'F' && format == "F1")))
                     throw new ArgumentException("Invalid S0 argument format: " + role.Key.Value);
                 seen[index] = true;
                 p = end;
@@ -271,4 +282,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Strict admission, invariant typed formatting, cell caches and loaded manifest. |
 // | 1.1 | 2026-11-03 | — | Reuse strict admission/cache with isolated career content; S0 defaults preserved. |
+// | 1.2 | 2026-11-05 | — | H1: L (non-negative long) admission, D format and a long Format overload; S0 roles/hash unchanged. |
 #endregion
