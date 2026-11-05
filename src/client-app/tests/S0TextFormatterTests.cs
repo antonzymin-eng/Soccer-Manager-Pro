@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/S0TextFormatterTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-28 (owner decision: register count 151)
+// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
 // Modified (prior): 2026-10-22 (Gate J J-01/J-02: register count 150)
 // Author:   —
 // Spec:     S0 binding contracts §4, I-Q16, Code Standards #20
@@ -16,6 +16,17 @@ namespace TacticalDirector.ClientApp.Tests
     public sealed class S0TextFormatterTests
     {
         [Test]
+        public void LongCell_ChangedValueReformats_RepeatReturnsTheSameInstance()
+        {
+            S0TextFormatter formatter = new CareerScreenText().Text;
+            string five = formatter.Format("wage", "finance.wage", 5L);
+            string six = formatter.Format("wage", "finance.wage", 6L);
+            Assert.AreNotEqual(five, six);
+            Assert.AreEqual("Wage budget: 6", six);
+            Assert.AreSame(six, formatter.Format("wage", "finance.wage", 6L));
+        }
+
+        [Test]
         public void LoadedCompiledCatalogueHasStableManifestAndEveryRoleIsCovered()
         {
             var a = new S0TextFormatter();
@@ -25,7 +36,10 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(151, S0ScreenContent.All.Count);
             var localizer = new Localizer(S0ScreenContent.CreateBaseCatalogue(), null, S0ScreenContent.Coverage());
             foreach (S0TextRole role in S0ScreenContent.All)
+            {
                 Assert.AreEqual(role.BasePattern, localizer.Resolve(role.Key), role.Key.Value);
+                StringAssert.DoesNotContain("L", role.ArgumentTypes, "ui.s0.* identity excludes career money roles");
+            }
         }
 
         [TestCase("{0", "S")]
@@ -135,4 +149,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-08 | —      | Admission, fallback, reordered outcomes and fixed-context caches. |
 // | 1.1     | 2026-10-22 | —      | Gate J J-01/J-02: compiled register count 141 -> 150. |
 // | 1.2     | 2026-10-28 | —      | Owner decision of October 28: compiled register count 150 -> 151 (`action.close`). |
+// | 1.3 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 #endregion

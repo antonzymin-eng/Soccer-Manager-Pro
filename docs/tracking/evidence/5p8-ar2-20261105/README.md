@@ -1,9 +1,10 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
+**Last Updated:** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
+**Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.1\
+**Version:** 1.2\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
 
@@ -51,9 +52,29 @@ The entry tests retain the original screen, clear career snapshots, preserve the
 verify Continue remains available. The Unity notice-chain edit was statically inspected; pinned-host
 compilation/runtime is still pending.
 
+## T3 — test gaps and hygiene
+
+ClientApp full suite: 266 passed, 0 failed, 3 skipped. The focused positive set passed 84 tests,
+including the same restored set after the mutants. Production code is unchanged by this task.
+
+| Temporary mutation | Guard exercised | Observed result |
+|---|---|---|
+| Force each failed projection's assignment (Home, NewCareer, Load, TransferMarket, Finances) | `FailedProjection_PreservesItsNonDefaultView` (five cases) | All five mutants failed a non-default retained-field assertion. |
+| Remove failed-Home unblocking | `FailedHomeAfterProgress_PreservesCareerAndUnblocksProgress` | Progress remained blocked. |
+| Remove the long cache's value comparison | `LongCell_ChangedValueReformats_RepeatReturnsTheSameInstance` | 6L incorrectly reused 5L text. |
+| Remove the UI hint's window check, then its fee check | `HintCheckOrder_WindowAndFeePrecedeTheWagePolicy` | Each mutant lost the promised first issue. |
+| Change wage saturation > to >= | `ContractWageSum_ExactlyLongMaxIsExact_OneMoreUnitSaturates` | Exact long.MaxValue was incorrectly flagged. |
+| Remove the saturated flag assignment | Same wage-boundary test | One extra unit was not flagged. |
+| Change the S0 minute role from I to L | `LoadedCompiledCatalogueHasStableManifestAndEveryRoleIsCovered` | The new ui.s0 argument-type identity assertion failed. |
+
+All 12 mutants were killed and restored. The dead FirstManagedPlayer helper was removed; headers now
+name nine screens and §5-P8; the harness and shutdown threads are background threads, preserving timeout
+assertions while allowing a failed test host to terminate.
+
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-11-05 | — | T1 executed owner, worker and headroom mutation checks; Linux/Unity boundary recorded. |
 | 1.1 | 2026-11-05 | — | T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result. |
+| 1.2 | 2026-11-05 | — | T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene. |

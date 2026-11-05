@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerTransfersTests.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (AR-2: T1 view-model headroom is supplied as owner data.)
+// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1..3),
 //           docs/design/ux-s2-transfers-finances.md §2–§4, Transfers #31 FR-TX-025, Club Finances #40
@@ -281,6 +281,53 @@ namespace TacticalDirector.ClientApp.Tests
 
             Assert.That(new CareerScreenText().Outcome(TransferSubmissionOutcome.SquadDepleted, in refusedOffer, in after),
                 Is.EqualTo("You cannot sell him: your squad would be left without a complete starting eleven."));
+        }
+
+        [Test]
+        public void ContractWageSum_ExactlyLongMaxIsExact_OneMoreUnitSaturates()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder(); holder.Set(session);
+            var market = new TransferMarketSource(holder);
+            var finances = new ClubFinancesSource(holder);
+            long existing = finances.Project().ContractedWages;
+            Assert.Greater(existing, 0L);
+            TransferPlayerRow first = CheapestOtherClubPlayer(market.Project());
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, session.SubmitTransfer(new Offer(
+                first.PlayerId, first.ClubId, ClubPrice(session, first.PlayerId, true), long.MaxValue - existing, 1, true)));
+            ClubFinancesViewModel exact = finances.Project();
+            Assert.AreEqual(long.MaxValue, exact.ContractedWages);
+            Assert.IsFalse(exact.IsContractedWagesSaturated, "exact maximum is representable");
+            TransferPlayerRow second = CheapestOtherClubPlayer(market.Project());
+            long fee = ClubPrice(session, second.PlayerId, true);
+            Assert.LessOrEqual(fee, market.Project().RemainingBudget, "second buy is affordable");
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, session.SubmitTransfer(new Offer(
+                second.PlayerId, second.ClubId, fee, 1L, 1, true)));
+            ClubFinancesViewModel overflow = finances.Project();
+            Assert.AreEqual(long.MaxValue, overflow.ContractedWages);
+            Assert.IsTrue(overflow.IsContractedWagesSaturated, "one unit above maximum is flagged");
+        }
+
+        [Test]
+        public void HintCheckOrder_WindowAndFeePrecedeTheWagePolicy()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder(); holder.Set(session);
+            var source = new TransferMarketSource(holder);
+            TransferMarketViewModel open = source.Project();
+            TransferPlayerRow target = CheapestOtherClubPlayer(open);
+            var twoFaults = new Offer(target.PlayerId, target.ClubId, -1L, -1L, 1, true);
+            Assert.AreEqual(TransferOfferIssue.FeeNegative, TransferOfferCheck.Check(in open, in twoFaults));
+            for (int guard = 0; source.Project().IsWindowOpen; guard++)
+            {
+                Assert.Less(guard, 500, "the summer window must close");
+                session.Progress();
+            }
+            TransferMarketViewModel closed = source.Project();
+            var badWage = new Offer(target.PlayerId, target.ClubId, 1L, -1L, 1, true);
+            Assert.AreEqual(TransferOfferIssue.WindowClosed, TransferOfferCheck.Check(in closed, in badWage));
         }
 
         [Test]
@@ -655,19 +702,6 @@ namespace TacticalDirector.ClientApp.Tests
             return best;
         }
 
-        private static TransferPlayerRow FirstManagedPlayer(in TransferMarketViewModel market)
-        {
-            foreach (TransferPlayerRow row in market.Players)
-            {
-                if (row.IsManaged)
-                {
-                    return row;
-                }
-            }
-
-            throw new AssertionException("no managed player");
-        }
-
         private static TransferPlayerRow FirstContractedManagedPlayer(in TransferMarketViewModel market)
         {
             foreach (TransferPlayerRow row in market.Players)
@@ -728,4 +762,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1     | 2026-11-05 | —      | H1: long.MaxValue contract wage projects (saturated) and formats; money above int.MaxValue formats; long.MinValue debt clamps. H2: third fee-1 sale to one buyer is SquadFull with buyer-named copy; club rows carry SquadCount; EveryOutcome covers both directions. |
 // | 1.2 | 2026-11-05 | — | M5: committed/remaining finance fields, row CurrentAbility and IsAvailable asserted against their owners (availability with a bounded-progress non-vacuity guard). M8: goalkeepers sold until SquadDepleted at >= 18 players, new copy. L5: wage-bill both branches. L6: contracted seller asserted, refused outcomes leave the balance, distinct squad counts in the copy fixture, ClubPrice drift note. M2: OfferCheck/Issue/Result copy. |
 // | 1.3 | 2026-11-05 | — | T1 view-model headroom is supplied as owner data. |
+// | 1.4 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 #endregion

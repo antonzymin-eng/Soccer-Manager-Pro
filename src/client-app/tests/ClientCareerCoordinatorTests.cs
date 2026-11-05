@@ -1,8 +1,8 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
+// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
 // Author:   —
-// Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), Code Standards #20
+// Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
 
 using System;
@@ -39,7 +39,7 @@ namespace TacticalDirector.ClientApp.Tests
             internal void RunWorker()
             {
                 Action work = Work.Dequeue();
-                var worker = new Thread(() => work());
+                var worker = new Thread(() => work()) { IsBackground = true };
                 worker.Start();
                 Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)), "Career operation did not finish.");
             }
@@ -288,6 +288,68 @@ namespace TacticalDirector.ClientApp.Tests
             h.Career.SubmitTransfer(new TacticalDirector.Transfers.Offer(own.PlayerId, FirstOtherClub(market), 1L, 0L, 1, false));
             Assert.Throws<InvalidOperationException>(() => h.Career.SubmitTransfer(in offer), "busy");
             h.Finish();
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        public void FailedProjection_PreservesItsNonDefaultView(int failedKind)
+        {
+            using var h = new Harness();
+            h.Start();
+            CareerHomeViewModel home = h.Career.Home;
+            NewCareerViewModel setup = h.Career.NewCareer;
+            LoadCareerViewModel load = h.Career.Load;
+            TransferMarketViewModel market = h.Career.TransferMarket;
+            ClubFinancesViewModel finances = h.Career.Finances;
+            Assert.IsNotEmpty(home.ManagedClubName);
+            Assert.IsTrue(setup.HasSelection);
+            Assert.IsNotNull(load.Slots);
+            Assert.IsNotNull(market.Players);
+            Assert.IsNotEmpty(finances.ClubName);
+            h.Career.ProjectionProbe = kind =>
+            {
+                if ((int)kind == failedKind) throw new InvalidOperationException("injected projection failure");
+            };
+            h.Career.SaveTo(CareerSaveSlot.Manual1); h.Finish();
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNotNull(h.Career.LastProjectionError);
+            switch ((ClientCareerCoordinator.ProjectionKind)failedKind)
+            {
+                case ClientCareerCoordinator.ProjectionKind.Home:
+                    Assert.AreEqual(home.ManagedClubName, h.Career.Home.ManagedClubName); break;
+                case ClientCareerCoordinator.ProjectionKind.NewCareer:
+                    Assert.IsTrue(h.Career.NewCareer.HasSelection);
+                    Assert.AreSame(setup.Clubs, h.Career.NewCareer.Clubs); break;
+                case ClientCareerCoordinator.ProjectionKind.Load:
+                    Assert.AreSame(load.Slots, h.Career.Load.Slots); break;
+                case ClientCareerCoordinator.ProjectionKind.TransferMarket:
+                    Assert.AreSame(market.Players, h.Career.TransferMarket.Players); break;
+                case ClientCareerCoordinator.ProjectionKind.Finances:
+                    Assert.AreEqual(finances.ClubName, h.Career.Finances.ClubName); break;
+            }
+        }
+
+        [Test]
+        public void FailedHomeAfterProgress_PreservesCareerAndUnblocksProgress()
+        {
+            using var h = new Harness();
+            h.Start();
+            string club = h.Career.Home.ManagedClubName;
+            h.Career.ProjectionProbe = kind =>
+            {
+                if (kind == ClientCareerCoordinator.ProjectionKind.Home)
+                    throw new InvalidOperationException("injected home failure");
+            };
+            h.Career.Progress();
+            Assert.IsTrue(h.Career.Home.IsProgressBlocked);
+            h.Finish();
+            Assert.IsTrue(h.Career.Home.HasCareer);
+            Assert.IsFalse(h.Career.Home.IsProgressBlocked);
+            Assert.AreEqual(club, h.Career.Home.ManagedClubName);
+            Assert.IsNull(h.Career.LastError);
         }
 
         [Test]
@@ -736,7 +798,7 @@ namespace TacticalDirector.ClientApp.Tests
             career.Initialize();
             using var entered = new ManualResetEventSlim();
             using var finished = new ManualResetEventSlim();
-            var shutdown = new Thread(() => { entered.Set(); career.Dispose(); finished.Set(); });
+            var shutdown = new Thread(() => { entered.Set(); career.Dispose(); finished.Set(); }) { IsBackground = true };
             shutdown.Start();
             Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(5)));
             try
@@ -807,4 +869,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.4     | 2026-11-05 | —      | M1: a failing projection keeps its last good view and the committed outcome publishes (injected probe). M2: player-reachable offer mistakes are typed refusals (H1 test rewritten); programmer errors stay exceptions. M4: quit reset, no stale result after a failed submit, closed-window refusal, OpenTransfers clears the result. |
 // | 1.5 | 2026-11-05 | — | T1 live owner refusal and stale-market completed-sale regression. |
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
+// | 1.7 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 #endregion

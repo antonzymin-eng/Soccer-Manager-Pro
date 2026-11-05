@@ -1,10 +1,10 @@
 // File:     src/client-app/tests/ClientScreenVisibilityTests.cs
 // Created:  2026-09-04
-// Modified: 2026-11-05 (§5-P8 Transfers / Club Finances)
+// Modified: 2026-11-05 (AR-2: T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene.)
 // Author:   —
-// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b,
+// Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b / §5-P7 / §5-P8,
 //           UI / Client Framework #38 §3.2, Code Standards #20 §12 rule 1
-// Purpose:  Locks seven-screen visibility and the career graph's presentation transitions.
+// Purpose:  Locks nine-screen visibility and the career graph's presentation transitions.
 
 using System;
 
@@ -127,4 +127,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1     | 2026-09-06 | —      | Remove redundant same-namespace using after PR review.         |
 // | 1.2     | 2026-11-03 | —      | P7b: career visibility through actual navigation; invalid ids. |
 // | 1.3     | 2026-11-05 | —      | §5-P8: Transfers / Club Finances flags, nine-screen navigation round trip, id 10 refused. |
+// | 1.4 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 #endregion
