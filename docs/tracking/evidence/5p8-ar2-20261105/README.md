@@ -1,10 +1,11 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
+**Last Updated:** November 5, 2026 (v1.3 — T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected.)
+**Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.2\
+**Version:** 1.3\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks.
 
@@ -71,6 +72,15 @@ All 12 mutants were killed and restored. The dead FirstManagedPlayer helper was 
 name nine screens and §5-P8; the harness and shutdown threads are background threads, preserving timeout
 assertions while allowing a failed test host to terminate.
 
+## T4 — #38 bookkeeping
+
+Documentation only. FR-UI-010 and Appendix C.2 state the actual dependency choice and define a career
+command as running-loop mutation. C.2 explicitly lists P7b save/load/preview/creation operations outside
+that definition; §7 qualifies intent/coordinator routing and removes transfer from missing seams.
+The original appendix amendment is correctly v0.4, T1's revision v0.5, and this correction v0.6.
+The ERR-038-006 row carries the corrected rationale, worker diagnosis and version sequence.
+Documentation consistency and drift checks pass; production/test source is identical to the passed T3 tree.
+
 ## Version History
 
 | Version | Date | Author | Notes |
@@ -78,3 +88,4 @@ assertions while allowing a failed test host to terminate.
 | 1.0 | 2026-11-05 | — | T1 executed owner, worker and headroom mutation checks; Linux/Unity boundary recorded. |
 | 1.1 | 2026-11-05 | — | T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result. |
 | 1.2 | 2026-11-05 | — | T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene. |
+| 1.3 | 2026-11-05 | — | T4: #38 dependency rationale, lifecycle scope and appendix version collision corrected. |
