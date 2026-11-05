@@ -1,7 +1,7 @@
 # UI / Client Framework #38 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** October 18, 2026 (v0.3 — ERR-038-005: Appendix C season rows for day advance and the season roll)
+**Last Updated:** November 5, 2026 (v0.3 — ERR-038-006: Appendix C.2 lists payload-carrying career commands (SubmitTransfer → SubmitTransferBid))
 **Version:** 0.3
 **Status:** APPROVED
 
@@ -57,6 +57,20 @@ is split across dispatchers by owning surface — the **match-tactics** dispatch
 | `StartNextSeason` | season | #30 `SeasonLoop.RollToNextSeason()` (ERR-038-005) | none |
 | any management action whose owning-spec seam is not built | — | **throws** (F3) | filed against the owning spec (KD-4) |
 
+### Appendix C.2 — Career commands that carry a payload (ERR-038-006)
+
+`ManagerIntent` cannot carry offer terms, and `ui-framework` does not reference the owning assembly
+(FR-UI-001), so a payload-carrying career command is a **composition-root coordinator operation** onto one
+named public owner seam (FR-UI-010 amendment). It adds no mutation path (FR-UI-003); a seam that does not
+exist is filed against the owner (FR-UI-020). Intents remain the route for payload-free and match commands.
+
+| Coordinator operation (`src/client-app`) | Session call | Public owner seam (verified) | Typed result | Typed client refusals |
+|---|---|---|---|---|
+| `ClientCareerCoordinator.SubmitTransfer(in Offer)` | `CareerSession.SubmitTransfer` | #30 `SeasonLoop.SubmitTransferBid(in Offer)` → #31 FR-TX-025 UI seam | #31 `TransferSubmissionOutcome` (`Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull`, `SquadDepleted`), published as `TransferResult` | `TransferOfferIssue` (`TransfersUnavailable`, `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`, `LengthTooShort`), from `TransferOfferCheck`, before any #31 call |
+
+A refusal is a value, not an exception: it never reaches the worker and never calls the seam. The seam's
+own caller-contract exceptions (#31 F4/F6) stay unreachable from the screen.
+
 ## Appendix D — Worked navigation transition (§3.5)
 
 `MainMenu`=0, `MatchView`=1, `Tactics`=2 registered; `stack=[0]`:
@@ -78,4 +92,5 @@ substrate the framework pins.
 | 0.1 | 2026-07-22 | — | Initial appendices: constant catalogue, observation→VM projection table, intent→seam routing table, worked navigation transition. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-10-18 | — | ERR-038-005: the season dispatcher's rows extended to `AdvanceDay → AdvanceDays(1)` and `StartNextSeason → RollToNextSeason()`, and `AdvanceRound` notes the no-argument overload. Additive; no existing row changed meaning. Landed with the code (`IntentKind` 4–6, `IntentRouting`, `client-app/SeasonCommandDispatcher`). |
+| 0.3 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
 #endregion

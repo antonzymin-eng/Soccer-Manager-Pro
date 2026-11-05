@@ -12,7 +12,40 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 5, 2026 — **Transfer and finance screens: host-free client half (§5-P8).**
+> **Last Updated:** November 5, 2026 — **Transfer and finance screens: two review rounds, two ERRs, docs brought up to the code (§5-P8).**
+> The first adversarial review of the host-free client (`b04c19a`) found two Highs, fixed in `c1b43e0`, and a set of
+> Mediums and Lows, fixed in `b57c6cf`. **H1:** #31 accepts any non-negative wage, so a buy with fee 50,000 and wage
+> `long.MaxValue` was Accepted and committed, then overflowed the Club Finances projection and wedged publication of every
+> later state (reproduced in review). The coordinator now refuses wages outside 0..50,000,000 (`[CROSS]` #40
+> `ClubFinancesBudgetCeilingMax`) before any #31 call, the contracted-wage total saturates and is flagged, and money
+> formats through a new non-negative `long` argument type `L` (S0 roles and content hash unchanged). #31's text is
+> untouched: **ERR-031-016** is filed Open for an owner decision (bound the wage in #31, relate it to `WageBudget` once
+> the wage bill has a producer, or require consumers to be total). **H2:** a sale to a full buying club said "Your squad
+> is full"; `SquadFull` copy is now split by direction and names the buyer, and club rows carry `SquadCount`. **Mediums/Lows:**
+> `TransferOfferCheck` + `TransferOfferIssue` refuse player-reachable mistakes as typed values (a closed window is a typed
+> `WindowClosed` refusal at the coordinator; the session still throws) and a refusal bumps `Revision` without reaching the
+> worker; the coordinator publishes `TransferResult` (offer plus outcome or refusal) instead of `LastTransferOutcome`; the
+> five views project independently (`LastProjectionError`) so one failure no longer hides a committed deal, and a failed
+> Home projection skips the success navigation; `SquadDepleted` copy states the real rule (a complete starting eleven);
+> wage-bill line gated on `IsWageBillTracked`; one shared `TransferBudgetRule`; the Unity shell now rejects wiring when the
+> flow reaches a screen it has no root for (screens 8/9 until their roots exist; recorded as the known limitation).
+> **Specs and docs:** **ERR-038-006** (RESOLVED, same commit) amends the APPROVED #38 (FR-UI-010 note, §3.3, §7.1 row,
+> new Appendix C.2; each file 0.2 → 0.3, approval status unchanged): payload-carrying career commands are sanctioned as
+> composition-root coordinator operations onto a named public owner seam, with `SubmitTransfer` →
+> `SeasonLoop.SubmitTransferBid` as the first entry; FR-UI-003 and FR-UI-020 stand. `ux-s2-transfers-finances.md` 0.2 → 0.3
+> (as-built section, corrected window arithmetic: last open day is opening + 37, SquadDepleted and sale SquadFull copy,
+> #32 fog dependency recorded on R4/R5/R10: external-player ability and estimated value read truth until #32 T0, identical
+> today because fog is off at its minimal tier) and `interactive-unity-client-design.md` 0.40 → 0.41 (§5-P8 and D-P8-1;
+> the earlier "no framework change" claim is superseded by ERR-038-006), with citation chains moved to v0.41. New open
+> issue `transfer-wage-unbounded` (ERR-031-016); active count 39 → 40. **Measured:** ClientApp 237 → 241 (`c1b43e0`) → 252
+> passed / 0 failed / 3 skipped (`b57c6cf`); the guarded lines were mutation-checked in the code commits. This
+> documentation pass changed no code and did not rerun the suite. **Determinism:** no schema, save-format, RNG stream,
+> domain-tag, draw-site or draw-order change; the new `L` type does not alter the S0 content hash. **Negative/known:** the
+> Unity pages for screens 8 and 9 do not exist and nothing compiled on the pinned Unity host; the wage bound is a client
+> guard, not a game rule. **Gate:** ClientApp.Tests 252 passed / 0 failed / 3 skipped (from the code commits); full-tree
+> gate not rerun in this doc pass.
+
+> **Last Updated (prior):** November 5, 2026 — **Transfer and finance screens: host-free client half (§5-P8).**
 > `client-app` gains screen ids Transfers (8) and Club Finances (9), a nine-registration `ClientScreenFlow`
 > with four guarded Career Home moves, `CareerSession.SubmitTransfer` (one busy operation over #31's UI seam
 > that returns its typed outcome unchanged, refuses a closed window itself and never autosaves, D-P8-2),

@@ -1,8 +1,8 @@
 # UI / Client Framework #38 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+2L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** November 5, 2026 (v0.3 — ERR-038-006: FR-UI-010 sanctions payload-carrying career commands as composition-root coordinator operations)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -34,7 +34,14 @@
 - **FR-UI-009** — `NavigationShell` MUST be a deterministic screen-registration + transition state
   machine (push/pop/replace), fully testable without Unity (no UGUI dependency in the state machine).
 - **FR-UI-010** — A screen MUST be registered as `{ view-model source, command dispatcher }`; the shell
-  MUST NOT hard-code any screen.
+  MUST NOT hard-code any screen. *(ERR-038-006 amendment.)* A **payload-carrying career command** — one
+  whose arguments a `ManagerIntent` cannot carry and whose owner the framework may not reference (layering,
+  FR-UI-001) — MAY instead be a **composition-root coordinator operation**: a public method of the client
+  composition layer (`src/client-app`) that calls one named **public** owner seam. Such an operation is
+  still bound by FR-UI-003 (public seam only, no UI-side mutation path) and FR-UI-020 (a missing seam is
+  filed against the owner), and it MUST be listed, with its seam and its typed result and refusals, in
+  Appendix C's career-command table. The screen then registers a null dispatcher; payload-free career
+  commands and every match command stay `ManagerIntent`s (Appendix C, first table).
 - **FR-UI-011** — A transition to an unregistered screen id MUST fail loud (F2), never silently no-op;
   likewise a `Pop` below the root screen MUST fail loud (the shell never empties its stack).
 
@@ -124,4 +131,5 @@ readonly struct MatchFrameView { /* immutable ball + agents + score snapshot */ 
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial FR set (FR-UI-001..023), data structures, failure modes F1–F6. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
 #endregion

@@ -1,8 +1,8 @@
 # UI / Client Framework #38 — Section 7: Forward Extensions
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+2L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** November 5, 2026 (v0.3 — ERR-038-006: the Transfer screen row no longer reads #31 as unbuilt)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -19,7 +19,7 @@ is the phantom-consumer trap). Each registers into the `NavigationShell` and bin
 | Post-match report | #37 `MatchAnalyticsResult` | (read-only) | #37 (APPROVED) |
 | Season/league screen | #30 table + calendar VM | `AdvanceAndPlayNextRound` | #30 (APPROVED) |
 | Squad screen | #27 roster VM | selection seam | #27 (APPROVED) + a selection seam |
-| Transfer screen | #31 transfer VM | transfer-action seam | **#31 (not built)** — the seam is #31's to add (KD-4) |
+| Transfer screen | #31 transfer VM | transfer-action seam | **#31 built (T0–T2)** — the seam is `SeasonLoop.SubmitTransferBid` (FR-TX-025); reached through the client coordinator's `SubmitTransfer`, not an intent (Appendix C career-command table, ERR-038-006) |
 | Training / scouting | #29 / #32 VMs | their action seams | **#29 / #32 (not built)** |
 
 The framework does **not** author any of these VMs or dispatchers now (KD-2). A screen whose owning-spec
@@ -59,4 +59,5 @@ A screen composes independent read-only inputs, each owned elsewhere:
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial forward extensions: the Wave-7 screen-spec roadmap (data-spec gating), the UGUI-host binding, the #37/#48/#49 composition seam, generalization seams. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
 #endregion

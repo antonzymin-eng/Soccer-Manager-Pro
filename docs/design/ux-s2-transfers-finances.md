@@ -2,8 +2,8 @@
 
 **Created:** November 5, 2026\
 **Last Updated:** November 5, 2026\
-**Version:** 0.2\
-**Status:** GATE A RECORDED; GATES B–C DRAFTED, owner answered Q1–Q3 (November 5); Gates D–J not started\
+**Version:** 0.3\
+**Status:** GATE A RECORDED; GATES B–C DRAFTED, owner answered Q1–Q3 (November 5); host-free client half LANDED and reviewed (§7); Gates D–J not started\
 **Purpose:** audit the transfer and club-finance capabilities against the tree of the day and draft the
 task flow and information design for the two PM-3 screens the owner added to scope on November 4, 2026
 (roadmap D-13: "PM-3 includes transfer and finance screens").\
@@ -31,17 +31,25 @@ below supersede those two labels for this journey.
 |---|---|---|---|
 | R1 | Managed club's transfer ceiling | `DESIGNABLE` | `SeasonLoop.AvailableTransferBudget(clubId)` (`SeasonLoop.cs:742`), the season ceiling; 100,000 at genesis (ERR-040-004) |
 | R2 | Spend already committed this window | `DESIGNABLE` | `SeasonLoop.TransfersSnapshot().CommittedSpendThisWindow` (`:770`, a detached clone). Remaining = R1 − R2, exactly the check `TransferCommands.SubmitBid` makes |
-| R3 | Window open/closed and its dates | `DESIGNABLE` | `TransfersSnapshot().ActiveWindow` (`OpenWorldDay`, `CloseWorldDay`, `IsWindowOpen(day)`) and `SeasonLoop.CurrentWorldDay` (`:573`). Summer window only; it closes `SummerWindowInSeasonDays` (38) days after the opening fixture |
-| R4 | Every club's players: name, age, position, attributes | `DESIGNABLE` | `SeasonLoop.Progression.SquadFor(clubId)` → `PlayerRecord` (`FirstName`, `LastName`, `Age`, `Position`, `Attributes`) |
-| R5 | Player current ability | `DESIGNABLE` | `ProgressionEngine.LifecycleView(clubId, playerId).CurrentAbility` |
+| R3 | Window open/closed and its dates | `DESIGNABLE` | `TransfersSnapshot().ActiveWindow` (`OpenWorldDay`, `CloseWorldDay`, `IsWindowOpen(day)`) and `SeasonLoop.CurrentWorldDay` (`:573`). Summer window only; it stays open for `SummerWindowInSeasonDays` (38) days from the opening fixture day, so the last open day is the opening fixture day + 37 (`TransferWindow.SummerWindowFor`; genesis opening day 7 gives [0, 44]) |
+| R4 | Every club's players: name, age, position, attributes | `DESIGNABLE` (truth read; fog note below) | `SeasonLoop.Progression.SquadFor(clubId)` → `PlayerRecord` (`FirstName`, `LastName`, `Age`, `Position`, `Attributes`) |
+| R5 | Player current ability | `DESIGNABLE` (truth read; fog note below) | `ProgressionEngine.LifecycleView(clubId, playerId).CurrentAbility` |
 | R6 | Club names | `DESIGNABLE` | `League.Clubs` (`Club.Name`) |
 | R7 | Managed players' contracts (wage, seasons left) | `DESIGNABLE` | `TransfersSnapshot().ContractsSnapshot()` / `TryGetContract`. A player can be un-contracted (ERR-031-009) and stays sellable |
 | R8 | Player availability (injury) | `DESIGNABLE` | `PlayerCareerStates.IsAvailable(clubId, playerId)`; an injury travels with a transferred player |
 | R9 | Club finances: balance, transfer and wage budget, wage bill | `DESIGNABLE` | `SeasonLoop.FinanceView(clubId)` → `FinancesViewModel` (`Balance`, `TransferBudget`, `WageBudget`, `WageBillAggregate`) |
-| R10 | A player's price | `DESIGNABLE` (Q1 answered: estimated value) | No #31 read surface names a price. `PlayerValuation.ValuePlayer(attributes, age)` is #31's public base value; the acceptance pivot is `CounterpartyValue` = base × the counterparty's positional-need multiplier, computed inside `SubmitBid` |
+| R10 | A player's price | `DESIGNABLE` (Q1 answered: estimated value; truth read, fog note below) | No #31 read surface names a price. `PlayerValuation.ValuePlayer(attributes, age)` is #31's public base value; the acceptance pivot is `CounterpartyValue` = base × the counterparty's positional-need multiplier, computed inside `SubmitBid` |
 | R11 | Counter-offer amount | `FUTURE-BLOCKED` | `TransferSubmissionOutcome.CounterOffered` carries no amount; only that the fee is inside the per-mille band around value (`NegotiationEngine.EvaluateOffer`). Showing an amount needs a #31 seam (FR-UI-020 / #38 KD-4) |
 | R12 | Wage bill matching the contracts | `FUTURE-BLOCKED` | `WageBillAggregate` has no producer at Stage 2 (#40 KD-5): contracts carry wages but the finance view shows a 0 wage bill. Display it as "not tracked yet" or hide it |
 | R13 | Season revenue so far | `FUTURE-BLOCKED` | `ClubFinances.SeasonRevenueAccrued` exists but `FinancesViewModel` does not expose it; daily revenue is default-off (#40 T3b2) |
+
+**Fog dependency on #32 (M7).** #32 (APPROVED, no assembly) KD-2 states that manager-side surfaces read only
+`KnownPlayer`, with fog covering *external* players' attributes (`scouting-player-knowledge/section-1.md`). R4, R5
+and R10 read external players' true attributes, true `CurrentAbility` and `ValuePlayer` of true attributes. At
+#32's minimal tier fog is off, so what the screen shows is identical today, and reading truth is the correct
+behaviour under "do not wire an assembly-less specification ahead of its T0 landing". Once #32 T0 lands,
+external-player CA and estimated value MUST switch to `KnownPlayer`; a value-from-knowledge seam would then be
+filed against #31/#32 (FR-UI-020 / KD-4), not added client-side. Recorded as a condition on D-P8-1.
 
 All reads are **sim-thread only** (`SeasonLoop` THREAD SAFETY note). The client must take them on the
 P7b career worker and publish an immutable snapshot, as `ClientCareerCoordinator` already does for Career
@@ -51,7 +59,7 @@ Home.
 
 | # | Action | Classification | Evidence |
 |---|---|---|---|
-| A1 | Buy a player (club, fee, wage, length) | `DESIGNABLE` | `SeasonLoop.SubmitTransferBid(in Offer)` (`:802`), the #31 FR-TX-025 UI seam. Typed outcomes: `Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull` (25), `SquadDepleted` (seller would drop below a matchday squad) |
+| A1 | Buy a player (club, fee, wage, length) | `DESIGNABLE` | `SeasonLoop.SubmitTransferBid(in Offer)` (`:802`), the #31 FR-TX-025 UI seam. Typed outcomes: `Accepted`, `Rejected`, `CounterOffered`, `InsufficientBudget`, `SquadFull` (25 for a buy; on a sale it is the **buyer's** squad), `SquadDepleted` (the seller would be left without a complete starting eleven, not merely a head count) |
 | A2 | Sell a player to a chosen club | `DESIGNABLE` | Same seam, `Offer.IsBuy = false`, counterparty = buying club; the buyer's need sets its value |
 | A3 | Withdraw / cancel an offer | not needed | Bids are synchronous; nothing stays pending (#31 minimal has no negotiation state) |
 | A4 | Renew or release a contract | `FUTURE-BLOCKED` | No #31 seam (re-signing is deep tier, §3.7) |
@@ -59,7 +67,10 @@ Home.
 
 Caller-contract failures throw rather than return (F4 window closed, F6 unknown player or club, wrong
 direction, malformed terms). The screen must make them unreachable: offer only open-window, valid
-choices, never rely on catching them.
+choices, never rely on catching them. The client does so with `TransferOfferCheck`, which returns a typed
+`TransferOfferIssue` before any #31 call (§7). #31 also accepts any non-negative wage and relates none to #40's
+`WageBudget` (ERR-031-016, open for an owner decision); until that is decided the client bounds the wage
+itself (§7).
 
 ### 2.3 Client, navigation and host
 
@@ -93,9 +104,10 @@ answers (§5). No phantom action is proposed.
   - `Rejected` — "Too far from their valuation."
   - `InsufficientBudget` — shows the remaining budget.
   - `SquadFull` — "Your squad is full (25). Sell a player first."
-  - `SquadDepleted` — "That club cannot release him without dropping below a matchday squad."
+  - `SquadDepleted` — "That club cannot release him: it would be left without a complete starting eleven."
 - **Blocked paths:** window closed (list stays readable, buying disabled, "Next window opens at the start
-  of next season"); a career operation running (busy notice, controls disabled).
+  of next season"); a career operation running (busy notice, controls disabled); an offer the client refuses
+  with a typed reason (§7: e.g. "The wage must be between 0 and 50,000,000 per period.").
 - **Back:** returns to Career Home. Nothing is pending, so leaving never abandons anything.
 - **Completion:** the result message, with the list refreshed from a new snapshot. Not autosaved (Q2):
   the next round's autosave or a manual save keeps the deal; the existing save-compatibility warning applies.
@@ -105,8 +117,9 @@ answers (§5). No phantom action is proposed.
 - **Entry:** Transfers → "Your squad" tab.
 - **Decision:** pick one of the manager's players, pick a buying club, enter a fee (pre-filled with the estimated value),
   submit.
-- **Outcomes:** as in 3.1; `SquadDepleted` here means "You cannot drop below a matchday squad."
-  `InsufficientBudget` cannot occur on a sale (AI clubs' budgets are not checked; counterparty-ledger
+- **Outcomes:** as in 3.1, with two sale-side messages. `SquadFull` here is the **buyer's**: "{buyer} has no room
+  in its squad ({capacity})." `SquadDepleted` here means "You cannot sell him: your squad would be left without
+  a complete starting eleven." `InsufficientBudget` cannot occur on a sale (AI clubs' budgets are not checked; counterparty-ledger
   interim, ERR-031-013).
 - **Blocked paths and back:** as in 3.1.
 
@@ -131,7 +144,8 @@ answers (§5). No phantom action is proposed.
 5. Offer panel for the selected row: fee field, wage and contract length (defaults
    `DefaultWagePerPeriod` 1,000, `DefaultContractSeasons` 3), buying-club picker on tab B only, and one
    primary action "Make offer". Disabled with a stated reason when the window is closed, the squad is
-   full (buy) or a career operation is running.
+   full (buy), the chosen buyer's squad is full (sale; from `TransferClubRow.SquadCount`) or a career operation is
+   running.
 6. Result line under the panel (persistent until the next action), plus the busy notice.
 
 Focus order: header → tabs → filters → list → offer panel → result → Back. The list and the panel reuse
@@ -162,12 +176,52 @@ Q3 no counter figure for PM-3. The questions as asked are kept below.
 
 ## 6. What this does not change
 
-No spec, code, schema or navigation change is made by this document. Contract renewal, AI-initiated
+Gate A–C (§§1–5) made no spec, code, schema or navigation change by themselves. Contract renewal, AI-initiated
 bids, scouting knowledge (#32) and the counterparty ledger stay out of scope.
+
+## 7. As built: host-free client half and its review (v0.3)
+
+Landed in `b04c19a`, then corrected by two review rounds (`c1b43e0`, `b57c6cf`); contract in
+[`interactive-unity-client-design.md`](../tracking/interactive-unity-client-design.md) §5-P8. This section
+records what the code now does where §§3–4 drafted it.
+
+- **Result.** The coordinator publishes `LastTransferResult` (`TransferResult`): the submitted offer plus
+  *either* #31's typed `TransferSubmissionOutcome` *or* a client `TransferOfferIssue` refusal. It replaces the
+  earlier `LastTransferOutcome`, so the copy knows the deal's direction (buy or sale) without the page keeping
+  the offer.
+- **Typed refusals before #31.** `TransferOfferCheck.Check(market, offer)` returns the first failing
+  `TransferOfferIssue` (transfers available, window open, player listed, direction, counterparty, fee, wage,
+  length) and copy is `transfer.issue.*`. The page calls it to disable the action and explain why; the
+  coordinator calls the same method before queueing work. A refusal bumps `Revision`, never reaches the worker
+  and never calls #31. A closed window is the typed `WindowClosed` refusal at the coordinator; the session
+  (`CareerSession.SubmitTransfer`) still throws for it, as a backstop.
+- **Term bounds (client guard, not a game rule).** Fee ≥ 0; wage in 0..`MAX_OFFER_WAGE_PER_PERIOD`
+  (50,000,000, inclusive; `[CROSS]` #40 `ClubFinancesBudgetCeilingMax`); length ≥ 1 season. The wage bound exists
+  because #31 accepts any non-negative wage (ERR-031-016, Open): a wage of `long.MaxValue` was Accepted and
+  overflowed the Club Finances projection.
+- **Independent projections.** The five views (Home, New Career, Load, Transfers, Finances) project
+  independently; a failing one keeps its last good value and its message goes to `LastProjectionError`, apart
+  from `LastError`. The transfer result always publishes, so a committed deal is never hidden. A failed Home
+  projection skips the success navigation.
+- **Rows and finances.** `TransferClubRow.SquadCount` lets a sale show a full buyer. The contracted-wage total
+  saturates at `long.MaxValue` and is flagged (`IsContractedWagesSaturated`, copy "more than {0} per period").
+  The #40 wage-bill line is shown only when `IsWageBillTracked` (false today, #40 KD-5), otherwise "not
+  tracked yet". Remaining budget comes from one shared helper, `TransferBudgetRule`, for both screens.
+- **Money copy.** Money formats through the formatter's new non-negative `long` argument type `L`
+  (`S0TextRole` / `S0TextFormatter`); S0 roles and content hash are unchanged.
+- **Dispatch.** The Transfers screen registers a null dispatcher; `SubmitTransfer` is a composition-root
+  operation onto `SeasonLoop.SubmitTransferBid`, sanctioned by ERR-038-006 (#38 Appendix C.2). It needs no
+  framework change beyond that amendment.
+- **Known limitation.** The Unity shell has no roots for screens 8 and 9 yet. `ClientShellBehaviour`
+  (v1.7) now rejects wiring if the flow reaches a screen it has no root for, instead of showing a blank
+  screen; the Unity pages remain pending the P7b host compile (C4).
+- **Tests.** `CareerTransfersTests` 17 and `ClientCareerCoordinatorTests` 23 test attributes; full ClientApp
+  **252 passed / 0 failed / 3 skipped**.
 
 ## Version history
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.3 | 2026-11-05 | Brought up to the built client after both review rounds: §7 as-built record (TransferResult, TransferOfferCheck/Issue, wage bound and ERR-031-016, independent projections, SquadCount, saturated wages, `L` money type, Unity shell limitation, test counts); SquadDepleted copy is the complete-starting-eleven rule; a sale's SquadFull is the buyer's and the offer panel is also disabled for a full buyer; window arithmetic corrected (last day = opening + 37); #32 fog dependency recorded on R4/R5/R10. |
 | 0.2 | 2026-11-05 | Owner answers Q1 (b) estimated value, Q2 (b) no autosave, Q3 no counter figure; flows and layout updated. |
 | 0.1 | 2026-11-05 | Gate A audit of transfers/finances at `ad05b76`; draft Gate B flows and Gate C layout; owner questions Q1–Q3. |

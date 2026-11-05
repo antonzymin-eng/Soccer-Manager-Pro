@@ -14,7 +14,28 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 5, 2026 (UTC) — (v2.222 — **§5-P8 transfer/finance host-free half.**
+> **Last Updated:** November 5, 2026 (UTC) — (v2.223 — **§5-P8 review fixes (`c1b43e0`, `b57c6cf`).**
+> New `client-app` (v1.0 each, with metas): `TransferOfferIssue.cs` (enum `None`, `TransfersUnavailable`,
+> `WindowClosed`, `UnknownPlayer`, `WrongDirection`, `WrongCounterparty`, `FeeNegative`, `WageOutOfRange`,
+> `LengthTooShort`), `TransferOfferCheck.cs` (pure `Check(in TransferMarketViewModel, in Offer)`),
+> `TransferResult.cs` (offer + `HasOutcome`/`Outcome` or `Issue`; `FromOutcome`, `FromRefusal`),
+> `TransferBudgetRule.cs` (internal `Remaining(ceiling, committed)`). Modified: `ClientAppConstants.cs` v1.4
+> (`[CROSS]` `MAX_OFFER_WAGE_PER_PERIOD` = #40 `ClubFinancesBudgetCeilingMax`), `ClientCareerCoordinator.cs` v1.4
+> (`LastTransferOutcome` replaced by `LastTransferResult`; `SubmitTransfer` refuses through `TransferOfferCheck`
+> before `Begin`; five views project independently, `LastProjectionError`; failed Home projection skips the success
+> navigation), `CareerSession.cs` v1.7 (exception docs), `CareerScreenText.cs` v1.4 (`L` money roles,
+> `transfer.issue.*` + `Issue()`, `Result(in TransferResult, in market)`, `SquadFull` split `.buy`/`.sell`, SquadDepleted
+> complete-starting-eleven copy, saturated-wage and `finance.wagebill.tracked` lines), `S0TextRole.cs` v1.2 and
+> `S0TextFormatter.cs` v1.2 (non-negative `long` argument type `L`; S0 roles and content hash unchanged),
+> `TransferMarketSource.cs` v1.1 and `TransferMarketViewModel.cs` v1.2 (`TransferClubRow.SquadCount`, shared headroom),
+> `ClubFinancesSource.cs` v1.2 (saturating contract-wage sum, `IsWageBillTracked = false`) and
+> `ClubFinancesViewModel.cs` v1.2 (`IsContractedWagesSaturated`, `IsWageBillTracked`), and
+> `match-client-unity/ClientShellBehaviour.cs` v1.7 (`ApplyCurrentScreen` rejects wiring when the current screen has
+> no root). Tests: `CareerTransfersTests.cs` v1.2 (17 test attributes), `ClientCareerCoordinatorTests.cs` v1.4 (23).
+> ClientApp 237 → 241 → 252 passed / 0 failed / 3 skipped. ERR-031-016 (Open) and ERR-038-006 (RESOLVED) filed;
+> no schema, save-format or RNG change.)
+
+> **Last Updated (prior):** November 5, 2026 (UTC) — (v2.222 — **§5-P8 transfer/finance host-free half.**
 > New `client-app`: `TransferMarketViewModel.cs` (+ `TransferPlayerRow`, `TransferClubRow`),
 > `ClubFinancesViewModel.cs`, `TransferMarketSource.cs`, `ClubFinancesSource.cs` (v1.0 each, with metas).
 > Modified: `ClientAppConstants.cs` v1.3 (`SCREEN_ID_TRANSFERS` 8, `SCREEN_ID_CLUB_FINANCES` 9),
@@ -2863,6 +2884,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.223 | 2026-11-05 | — | §5-P8 AR-1 fixes: 4 new `client-app` files (`TransferOfferIssue`, `TransferOfferCheck`, `TransferResult`, `TransferBudgetRule`, v1.0), 10 modified `client-app` files (`ClientAppConstants` 1.4, `ClientCareerCoordinator` 1.4, `CareerSession` 1.7, `CareerScreenText` 1.4, `S0TextRole` 1.2, `S0TextFormatter` 1.2, `TransferMarketSource` 1.1, `TransferMarketViewModel` 1.2, `ClubFinancesSource` 1.2, `ClubFinancesViewModel` 1.2), `match-client-unity/ClientShellBehaviour` 1.7, tests `CareerTransfersTests` 1.2 / `ClientCareerCoordinatorTests` 1.4. ClientApp.Tests 237 → 241 → 252 passed / 0 failed / 3 skipped (code commits `c1b43e0`, `b57c6cf`); Unity shell not compiled on the pinned host; no schema/save/RNG change. |
 | 2.222 | 2026-11-05 | — | §5-P8 host-free transfer/finance half: 4 new `client-app` files, 8 modified, 1 new test file, 2 modified. ClientApp.Tests 224 → 237 passed / 0 failed / 3 skipped; full-tree build 0 errors; Unity meta integrity OK. Other suites not rerun: no other assembly references client-app (match-client-unity is outside the Linux gate). |
 | 2.221 | 2026-11-04 | — | ERR-040-004: `ClubFinances.cs` v1.5 / `FinanceStep.cs` v1.10 seed genesis ceilings with the zero-prize base; tests `ClubFinancesT0Tests` v1.4, `ClubFinancesT2BootstrapTests` v1.3, `SeasonTransfersT2Tests` v1.7, `SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8. Full Linux gate: every suite passed except SeasonSave.Tests, whose 9 failures were assertions pinning the old zero genesis ceilings (`SeasonDailyRevenueTests` in-season helper, `SeasonLoopFinanceTests` bootstrap and ledger checks). Those now expect the base values (`SeasonDailyRevenueTests` v1.1, `SeasonLoopFinanceTests` v1.8) and SeasonSave.Tests reran 552 passed / 0 failed / 4 skipped. Same gate: MatchEngine 841/0/16, ClientApp 224/0/3, ClubFinances 70/0/0, Transfers 69/0/0; build 0 errors. |
 | 2.220 | 2026-11-04 | — | ERR-028-026 measurement: `CareerDriftDiagnosticTests.cs` v1.0 (env-gated `TD_CAREER_DRIFT`, catalogued `career-drift`); test-only, no production change. SeasonSave.Tests 551 passed / 0 failed / 4 skipped (the new diagnostic skips without `TD_CAREER_DRIFT`); Unity meta integrity OK; full Linux gate not rerun (the change is confined to SeasonSave.Tests and tooling). |
