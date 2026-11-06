@@ -5,9 +5,12 @@ Created November 6, 2026. Purpose: record the implementation of owner-approved
 and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c).
 Base: `b6505350`. No `[GT]` changes, new gameplay RNG draws or policy changes.
 
-**Status: implemented; paired Linux comparison passed; fresh full Linux run has zero failures; owner-arranged host validation pending.** Pinned-host Unity 6000.4.9f1 compilation and
-whole-assembly MatchEngine EditMode remain required. This cloud environment has the Linux .NET
-toolchain, with no Unity Editor or pinned-host connection exposed. No Unity validation is claimed.
+**Status: implemented; paired Linux comparison passed; fresh full Linux run has zero failures; pinned-host Unity validation passed at `fdbbff5a`.**
+Unity 6000.4.9f1 compiled the PR head from an empty `Library` with 0 `error CS`, and the unfiltered
+`TacticalDirector.MatchEngine.Tests` EditMode run gave 939 passed / 0 failed / 16 skipped /
+1 existing inconclusive ([host receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). The
+implementation and Linux work were authored in a cloud environment without Unity; the host run was
+made separately on the owner's machine.
 
 The implementation uses snapshot **v28**. #11 owns a per-slot signed 64-bit
 `HandControlStartFrame` with inactive sentinel −1, captured at each successful aerial, dive or smother
@@ -42,7 +45,7 @@ file format stays v3.
 | Final full-time structural checks | 4 passed (sentinel/future clock and in-flight active-clock checks retained at full time) |
 | Final tactical-clock regression fixture | 17 passed |
 | Native pre-commit hook | Exceeded its fixed 60-second budget; receipt retained. Local handoff commit uses a per-command hook bypass after independent checks, not a passing-hook claim |
-| Pinned-host Unity compile and whole MatchEngine EditMode | **Pending: owner will have Claude run on the local host** |
+| Pinned-host Unity compile and whole MatchEngine EditMode | **Passed at `fdbbff5a`:** full import from an empty `Library`, 0 `error CS`, three known warnings; 956 results, **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** in 1,792 s; `W8CHandControlTests` 99/99; source porcelain empty throughout ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)) |
 
 `W8CHandControlTests` covers exact 0/479/480/481 frames, legal CONTACT for all three delivery kinds,
 admission at 480 versus 481, production-policy and defensive in-flight cancellation, terminal drain,
@@ -129,8 +132,14 @@ Use the final source tree, Unity **6000.4.9f1**, and the established pinned-host
 recursive `Assets/Scripts` reimport; inspect the full compile interval in Editor.log, including
 `error CS` lines logged as type Log. Then run **all of `TacticalDirector.MatchEngine.Tests` in
 EditMode**, preserving XML, Editor.log, source identity and the result summary. A green Linux test run
-does not satisfy this host requirement. The roadmap's C closeout remains open until the host receipt
-is available. The paired Linux comparison is complete.
+does not satisfy this host requirement. The paired Linux comparison is complete.
+
+**Completed November 6, 2026** at `fdbbff5a` (src tree `3a457778`): fresh detached worktree, empty
+`Library`, `Assets/Scripts` junction to its own `src`, then an unfiltered whole-assembly EditMode run.
+Results and redacted Editor logs are in
+[`evidence/host-w8c-fdbbff5a-20261106/`](evidence/host-w8c-fdbbff5a-20261106/README.md). Unity's
+process exit code is 2 only because its runner counts the existing inconclusive case; the XML records
+0 failed. C closeout on the roadmap follows the PR merge.
 
 ## Version history
 
@@ -142,3 +151,4 @@ is available. The paired Linux comparison is complete.
 | 1.3 | November 6, 2026 | Native pre-commit hook reached the fixed 60-second timeout; receipt retained and local handoff commit uses a per-command hook bypass after independent checks. |
 | 1.4 | November 6, 2026 | Merge main af116839 Pre-C control/tooling without simulation-source changes; preserve both evidence sets. All 126 release and 12 clearing identities agree; one parry/pickup classification correction aligns both applied-touch counts to 16,264 without changing outcomes. |
 | 1.5 | November 6, 2026 | PR #542: release-only omission of two fixture hooks proven by build/IL, 16 exact-480 CONTACT restore cases, 143 affected passes and fresh full Linux 940 passed / 0 failed / 16 skipped / 1 existing inconclusive. Host Unity and published-head CI remain pending. |
+| 1.6 | November 6, 2026 | Pinned-host Unity 6000.4.9f1 at `fdbbff5a`: clean full-import compile and whole MatchEngine EditMode 939 passed / 0 failed / 16 skipped / 1 existing inconclusive; receipt `evidence/host-w8c-fdbbff5a-20261106/` (39 registered directories). |
