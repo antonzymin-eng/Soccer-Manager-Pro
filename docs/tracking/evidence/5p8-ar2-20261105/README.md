@@ -1,7 +1,8 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.7 — M1 optional-empty #40 restore fix executed on Linux CI; Unity, mutation kill-check and full-scope review pending.)
+**Last Updated:** November 5, 2026 (v1.8 — AR-2 M1 restore mutation killed in two empty-block cases and restored 4/4; Unity and independent full-scope review pending.)
+**Last Updated (prior):** November 5, 2026 (v1.7 — M1 optional-empty #40 restore fix executed on Linux CI; Unity, mutation kill-check and full-scope review pending.)
 **Last Updated (prior):** November 5, 2026 (v1.6 — AR-1 M1 save-resume capability refusal, DOC-L1–L4 repairs and executed verification; fresh full adversarial verification pending.)
 **Last Updated (prior):** November 5, 2026 (v1.5 — T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits.)
 **Last Updated (prior):** November 5, 2026 (v1.4 — T5: UX authority, current implementation/citation sync and T1–T5 close-out evidence.)
@@ -9,12 +10,13 @@
 **Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.7\
+**Version:** 1.8\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks and subsequent AR-1 review fixes.
 
 The historical T1–T6 and AR-1 mutation source base is `c05cbe5` on `work`; the later AR-2 M1
-restore fix was exercised by CI at `d35bf396` and has not had a negative mutation run.
+restore fix was exercised by CI at `d35bf396` and its negative/positive mutation check was
+subsequently executed on an isolated non-merge branch (see the v1.8 evidence below).
 Each historical mutant below was applied temporarily, compiled, and
 executed against the named test; a compilation error was not accepted as a killed mutant. The original
 source was restored in a `finally` block and the positive regression was rerun. No match-engine file,
@@ -192,11 +194,27 @@ Transfers **79 / 0 / 0**, ClubFinances **70 / 0 / 0**. Static gates including sp
 manifest registration, metadata checks and C# format passed. All four new ClientApp
 restore cases are included in the 275 passing tests. The GitHub Unity test job was **skipped**.
 
+**Restore mutation kill-check (executed, isolated branch):** In [test-only PR #541](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/541),
+commit `299019620b7fc29af30cc19823802ff6844f4a96` temporarily replaced
+`SeasonLoop.Restore` in `CareerSession.Rebuild` with the ordinary `new SeasonLoop`
+constructor. The targeted [negative run 42141685472](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/42141685472)
+compiled and ran the four `ResumedFinances_UseOwnerMigrationOrKeepSavedValues` cases:
+**2 failed / 2 passed**. Exactly `(False,False)` (Continue with empty finance block) and
+`(False,True)` (Load with empty finance block) failed at
+`ClientCareerCoordinatorTests.cs:316` because TransferMarket/Finances projections reported
+`Club finances are not initialized on this SeasonLoop`. Both populated cases passed.
+This is the intended behavioral failure, not a compile error or a wrong-slot failure.
+
+The source was then restored byte-for-byte at isolated commit
+`91f95b269b4988ebd883a80c4599df95350dd496`;
+`CareerSession.cs` has the same Git blob SHA
+`18bd6b2839ae29769a8de246e206e24af4fe89e9` as production PR #539.
+The [restored positive run 42141855943](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/42141855943)
+passed **4/4**, no failures. The temporary PR was closed, never merged, and
+the mutant never existed on PR #539 or `main`.
+
 **Not executed / not certified here:**
 
-- The restore kill-check (temporarily reverting `Rebuild` to the ordinary constructor and showing
-  both empty-block cases fail, followed by positive rerun) has **not been performed**.
-  Prior mutation checks in T1–T6 and AR-1 are historical checks of other source changes.
 - **No pinned-host Unity 6000.4.9f1 Editor compile or affected EditMode run** certifies this P7/P8
   source tree. The Linux-generated `.NET` solution and skipped Unity CI job are not substitutes.
 - The **71 earlier focused Codex tests were not committed or reconstructed**. Four new saved
@@ -211,7 +229,7 @@ restore cases are included in the 275 passing tests. The GitHub Unity test job w
 
 This evidence supplements, rather than replaces, the older T1–T6 and AR-1 experiments above.
 Subsequent documentation-only commits may carry this *source-tree* result when the SHA stays
-identical. All outstanding Unity and negative-mutation checks must be recorded separately.
+identical. The restore mutation is now recorded above; Unity and independent full-scope approval remain outstanding.
 
 ## Version History
 
@@ -225,3 +243,4 @@ identical. All outstanding Unity and negative-mutation checks must be recorded s
 | 1.5 | 2026-11-05 | — | T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits. |
 | 1.6 | 2026-11-05 | — | AR-1 M1 save-resume capability refusal and one killed/restored mutant; DOC-L1–L4 repairs; full ClientApp 271/0/3; fresh full adversarial verification pending. |
 | 1.7 | 2026-11-05 | — | AR-2 M1 restore fix; Linux gate at d35bf396 PASS including ClientApp 275/0/3; source tree pinned; 71 uncommitted cases not recovered, negative mutation/Unity/final review pending. |
+| 1.8 | 2026-11-05 | — | Isolated restore mutation run 42141685472: exactly 2 empty cases fail for missing finances, 2 populated cases pass. Byte-identical restore and positive run 42141855943: 4/4 pass. Unity/final independent review pending. |
