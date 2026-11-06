@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-05 (AR-2 review: use the #30 owner Restore path for legacy empty #40 finance blocks.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
 //           Season & Competition Loop #30 §3.3–§3.5 / §4, league-bootstrap-design.md KD-9,
@@ -17,6 +17,7 @@ using TacticalDirector.LivingWorld;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.SeasonSave;
+using TacticalDirector.Transfers;
 
 namespace TacticalDirector.ClientApp
 {
@@ -206,9 +207,11 @@ namespace TacticalDirector.ClientApp
             League league = LeagueBootstrap.Generate(worldSeed, contents.Season.ClubCount);
             PlayerCareerStates career = PlayerCareerStates.FromBlocks(
                 contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs, injuryOccurrenceEnabled: true);
-            var loop = new SeasonLoop(
+            // The owner Restore seam alone migrates a supported legacy empty #40 block.
+            // Generic SeasonLoop composition deliberately leaves empty finances unwired.
+            SeasonLoop loop = SeasonLoop.Restore(
                 contents.World,
-                contents.Season,
+                SeasonStateCodec.Encode(contents.Season),
                 mode,
                 career,
                 null,
@@ -318,6 +321,49 @@ namespace TacticalDirector.ClientApp
             }
         }
 
+        /// <summary>Read-only #31 diagnosis on the career worker before submitting an offer.</summary>
+        public TransferBidIssue DiagnoseTransfer(in Offer offer) => _loop.DiagnoseTransferBid(in offer);
+
+        /// <summary>
+        /// Submits one manager transfer offer through #31's UI seam (<c>SeasonLoop.SubmitTransferBid</c>,
+        /// FR-TX-025) and returns its typed outcome unchanged (§5-P8). Ordinary results — rejected,
+        /// counter-offered, over budget, squad full or depleted — are outcomes, not exceptions. Not
+        /// autosaved (owner decision D-P8-2): the next round's autosave or a manual save keeps the deal.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">An operation is already running; transfers are not
+        /// wired on this career; the window is closed (checked here rather than leaving #31's F4 throw as the
+        /// control flow); or the offer's direction does not match the player's current club (#31 F6,
+        /// <c>TransferCommands</c>).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">A #31 caller-contract violation (F6): malformed terms,
+        /// an unknown club or player, or a counterparty that is the managed club. The client's
+        /// worker-side owner diagnosis keeps player-reachable cases from getting here.</exception>
+        public TransferSubmissionOutcome SubmitTransfer(in Offer offer)
+        {
+            BeginOperation(nameof(SubmitTransfer));
+            try
+            {
+                TransfersState transfers = _loop.TransfersSnapshot();
+                if (transfers == null)
+                {
+                    throw new InvalidOperationException("Transfers are not wired on this career.");
+                }
+
+                if (!transfers.ActiveWindow.IsWindowOpen(_loop.CurrentWorldDay))
+                {
+                    throw new InvalidOperationException(
+                        "The transfer window is closed (day " + _loop.CurrentWorldDay + "; window "
+                        + transfers.ActiveWindow.OpenWorldDay + "-" + transfers.ActiveWindow.CloseWorldDay + ").");
+                }
+
+                return _loop.SubmitTransferBid(in offer);
+            }
+            finally
+            {
+                IsBusy = false;
+                Revision++;
+            }
+        }
+
         /// <summary>The display name of <paramref name="clubId"/>.</summary>
         public string ClubName(int clubId) => _league.ClubAt(clubId).Name;
 
@@ -379,4 +425,8 @@ namespace TacticalDirector.ClientApp
 // | 1.4     | 2026-10-29 | —      | PR 522 review: a failed rebuild invalidates the slot too, so   |
 // |         |            |        | Continue cannot get stuck on it (MarkDamaged is reversible).   |
 // | 1.5     | 2026-10-30 | —      | PR 521 merge: pass the saved #31 state into the resumed loop. |
+// | 1.6     | 2026-11-05 | —      | §5-P8: SubmitTransfer — one busy operation over SeasonLoop.SubmitTransferBid; closed window and unwired #31 refused first; no autosave (D-P8-2). |
+// | 1.7     | 2026-11-05 | —      | L3: SubmitTransfer exception docs — a wrong-direction offer is InvalidOperationException, not ArgumentOutOfRangeException. |
+// | 1.8 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
+// | 1.9 | 2026-11-05 | — | AR-2 M1: resume through SeasonLoop.Restore so optional-empty persisted finances migrate only at the owner restore boundary. |
 #endregion

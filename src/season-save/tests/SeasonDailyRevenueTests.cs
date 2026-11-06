@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonDailyRevenueTests.cs
 // Created:  2026-10-13
-// Modified: 2026-10-13
+// Modified: 2026-11-04 (ERR-040-004 genesis ceilings)
 // Author:   —
 // Spec:     Club Finances & Economy #40 §3.7 / §5.10; Season Loop #30 §3.3; Code Standards #20
 // Purpose:  Locks non-zero daily totals, saved continuation, atomic retry and completed-season attribution.
@@ -234,8 +234,9 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 Assert.That(entries[club].Finances.SeasonRevenueAccrued, Is.EqualTo(expected[club]));
                 Assert.That(entries[club].Finances.Balance, Is.EqualTo(500_000L + expected[club]));
-                Assert.That(entries[club].Finances.TransferBudget, Is.Zero);
-                Assert.That(entries[club].Finances.WageBudget, Is.Zero);
+                // Daily revenue never touches the ceilings: they stay at the ERR-040-004 genesis values.
+                Assert.That(entries[club].Finances.TransferBudget, Is.EqualTo(ClubFinancesConstants.BaseTransferBudget));
+                Assert.That(entries[club].Finances.WageBudget, Is.EqualTo(ClubFinancesConstants.BaseWageBudget));
                 Assert.That(entries[club].Finances.WageBillAggregate, Is.Zero);
                 Assert.That(entries[club].Finances.FfpBalanceWindow, Is.Zero);
             }
@@ -274,4 +275,5 @@ namespace TacticalDirector.SeasonSave.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-13 | —      | T3b2 non-zero count, save/restore, retry, fixture and season-attribution locks. |
+// | 1.1     | 2026-11-04 | —      | ERR-040-004: in-season ceilings stay at the genesis base values, not zero. |
 #endregion

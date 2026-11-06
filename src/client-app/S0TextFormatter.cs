@@ -1,6 +1,6 @@
 // File:     src/client-app/S0TextFormatter.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-11-05 (L: non-negative long argument type)
 // Author:   —
 // Spec:     S0 binding contracts §§4.1–4.4, Localization #49 KD-5, Code Standards #20
 // Purpose:  Admit all authored patterns before publishing a fixed-context formatter; cache typed role output.
@@ -100,15 +100,24 @@ namespace TacticalDirector.ClientApp
         }
 
         internal S0TextFormatter(TemplateCatalogue baseCatalogue, TemplateCatalogue.StaticRow[] selectedRows, LocaleId? selectedLocale)
+            : this(S0ScreenContent.All, "ui.s0.", baseCatalogue, selectedRows, selectedLocale)
         {
-            foreach (S0TextRole role in S0ScreenContent.All)
-                _roles.Add(role.Key.Value.Substring("ui.s0.".Length), role);
+        }
+
+        internal S0TextFormatter(IReadOnlyList<S0TextRole> roles, string prefix, TemplateCatalogue baseCatalogue,
+            TemplateCatalogue.StaticRow[] selectedRows, LocaleId? selectedLocale)
+        {
+            var keys = new LocalizationKey[roles.Count];
+            for (int i = 0; i < keys.Length; i++) keys[i] = roles[i].Key;
+            var coverage = new CatalogueCoverage(keys);
+            foreach (S0TextRole role in roles)
+                _roles.Add(role.Key.Value.Substring(prefix.Length), role);
             TemplateCatalogue selected = null;
             if (selectedRows != null)
             {
                 foreach (TemplateCatalogue.StaticRow row in selectedRows)
                 {
-                    string suffix = row.Key.Value.StartsWith("ui.s0.", StringComparison.Ordinal) ? row.Key.Value.Substring("ui.s0.".Length) : "";
+                    string suffix = row.Key.Value.StartsWith(prefix, StringComparison.Ordinal) ? row.Key.Value.Substring(prefix.Length) : "";
                     if (!_roles.TryGetValue(suffix, out S0TextRole role))
                         throw new ArgumentException("Unknown S0 authored role: " + row.Key.Value);
                     ValidatePattern(role, row.Text);
@@ -117,16 +126,16 @@ namespace TacticalDirector.ClientApp
                 selected = new TemplateCatalogue(selectedLocale ?? new LocaleId("qps-ploc"), selectedRows);
             }
 
-            var localizer = new Localizer(baseCatalogue, selected, S0ScreenContent.Coverage());
+            var localizer = new Localizer(baseCatalogue, selected, coverage);
             var canonical = new StringBuilder();
-            var baseOnly = new Localizer(baseCatalogue, null, S0ScreenContent.Coverage());
-            foreach (S0TextRole role in S0ScreenContent.All)
+            var baseOnly = new Localizer(baseCatalogue, null, coverage);
+            foreach (S0TextRole role in roles)
             {
                 // Validate base even when a translation would hide its defect.
                 ValidatePattern(role, baseOnly.Resolve(role.Key));
                 string pattern = localizer.Resolve(role.Key);
                 ValidatePattern(role, pattern);
-                string suffix = role.Key.Value.Substring("ui.s0.".Length);
+                string suffix = role.Key.Value.Substring(prefix.Length);
                 _patterns.Add(suffix, pattern);
                 canonical.Append(role.Key.Value).Append('|').Append(role.ArgumentTypes).Append('|').Append(pattern.Length).Append(':').Append(pattern).Append('\n');
             }
@@ -155,6 +164,17 @@ namespace TacticalDirector.ClientApp
         public string Format(string cell, string suffix, int argument)
         {
             if (argument >= 0 && _cache.TryGetValue(cell, out CacheEntry cached) && cached.Role == suffix && cached.Arguments.Length == 1 && cached.Arguments[0] is int value && value == argument)
+                return cached.Text;
+            return Format(cell, suffix, new object[] { argument });
+        }
+
+        /// <summary>
+        /// Reuses an unchanged non-negative long cell (an L role, e.g. career money) before boxing or allocating
+        /// an argument array.
+        /// </summary>
+        public string Format(string cell, string suffix, long argument)
+        {
+            if (argument >= 0 && _cache.TryGetValue(cell, out CacheEntry cached) && cached.Role == suffix && cached.Arguments.Length == 1 && cached.Arguments[0] is long value && value == argument)
                 return cached.Text;
             return Format(cell, suffix, new object[] { argument });
         }
@@ -213,7 +233,7 @@ namespace TacticalDirector.ClientApp
             {
                 object value = arguments[i];
                 char type = role.ArgumentTypes[i];
-                if ((type == 'S' && !(value is string)) || (type == 'I' && (!(value is int n) || n < 0)) || (type == 'F' && (!(value is float f) || float.IsNaN(f) || float.IsInfinity(f))))
+                if ((type == 'S' && !(value is string)) || (type == 'I' && (!(value is int n) || n < 0)) || (type == 'L' && (!(value is long l) || l < 0)) || (type == 'F' && (!(value is float f) || float.IsNaN(f) || float.IsInfinity(f))))
                     throw new ArgumentException("S0 argument type/value differs from the role schema.");
             }
         }
@@ -246,7 +266,7 @@ namespace TacticalDirector.ClientApp
                     throw new ArgumentException("Invalid S0 argument index: " + role.Key.Value);
                 string format = parts.Length == 2 ? parts[1] : "";
                 char type = role.ArgumentTypes[index];
-                if (format.Length != 0 && !((type == 'I' && format == "D") || (type == 'F' && format == "F1")))
+                if (format.Length != 0 && !(((type == 'I' || type == 'L') && format == "D") || (type == 'F' && format == "F1")))
                     throw new ArgumentException("Invalid S0 argument format: " + role.Key.Value);
                 seen[index] = true;
                 p = end;
@@ -261,4 +281,6 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Strict admission, invariant typed formatting, cell caches and loaded manifest. |
+// | 1.1 | 2026-11-03 | — | Reuse strict admission/cache with isolated career content; S0 defaults preserved. |
+// | 1.2 | 2026-11-05 | — | H1: L (non-negative long) admission, D format and a long Format overload; S0 roles/hash unchanged. |
 #endregion

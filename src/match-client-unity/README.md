@@ -348,3 +348,44 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 | PR #470 review fix | October 5, 2026 | Roots under an inactive ancestor are refused; compile and ClientApp EditMode results recorded. |
 | PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
 | PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |
+
+## P7b career binding candidate — November 3, 2026
+
+Source candidate only; not compiled or exercised in the pinned editor. The default scene remains
+PM-1 because `ClientShellBehaviour._enableCareer` defaults to false. No scene/settings asset was edited.
+
+To validate in an isolated host checkout:
+
+1. Under the same always-active shell that owns `S0ScreensBehaviour`, create three independent roots:
+   Career Home, New Career, Load Career. Save all three inactive, outside every other screen root.
+2. Assign them to the shell's new serialized fields and enable career binding. Keep the original four
+   roots, renderer, font and camera assignments. The shared seven-root validator rejects missing,
+   duplicated, nested, initially-active non-menu and inactive-ancestor roots.
+3. Force recursive source reimport; verify zero compiler errors in Unity **6000.4.9f1** before Play.
+   MatchClientUnity now explicitly references SeasonSave; it remains excluded from the Linux shim.
+4. Check async storage initialization, retry after an inaccessible save directory, New/club selection,
+   Start/autosave, Continue, all four picker states, each manual slot, Back, and explicit unsaved return.
+   Saves live under `Application.persistentDataPath/careers`; seed entropy enters only at the host boundary.
+5. During queued/running progress, confirm busy feedback and disabled changes/navigation, including
+   the demo action; no duplicate operation or UI hang. Matchday still resolves on Career Home.
+6. Verify the actual updated result/table after a round, autosave failure feedback, manual-save retry,
+   damaged/incompatible slots, and repeat new/load/quit cycles.
+7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, smallest
+   desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
+   career labels. All career pages use the existing wrapped/scrolled factory and shared focus rings.
+8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content
+   identity and report return behavior are preserved. No Career Home → Match or Report → Career Home
+   edge is granted; the D-P7-6 contract remains PROPOSED.
+
+Career copy lives under `ui.career.*` in `CareerScreenText`, independently of reviewed `ui.s0.*`.
+The shared formatter admits both catalogues with the existing typed-placeholder and caching rules.
+Career copy/layout is a binding candidate, not S1 Gate-G/H/I approval. Record source identity, actual
+loaded copy identity, compile/EditMode and runtime receipts before claiming host acceptance.
+
+**Known shutdown limitation:** `ClientCareerCoordinator.Dispose` waits on the main thread, without a
+timeout, for accepted career work to finish. During engine-resolved matchday work this can leave the
+application unresponsive until the full round completes (about two minutes at the recorded compute
+rate). The operation cannot currently be cancelled safely. Releasing its owner on a timeout could
+interrupt saving or race career mutation, so a responsive shutdown requires a separate asynchronous
+lifetime/cancellation design. The future D-P7-6 finish/save/exit flow must address that requirement;
+the current P7b binding does not implement it. Verify shutdown explicitly on the pinned host.

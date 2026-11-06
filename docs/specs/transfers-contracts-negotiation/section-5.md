@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** October 21, 2026 (v0.16 — AR round 5, ERR-031-015: the unposted counterparty is the interim option (b), not a decision (test renamed); new T-TX-BID-009 gate-order and full-contract-set locks; T-TX-REKEY-003 is an allow-list; the BID-008/NEU-001 scans state what they see; §5.7 re-pointed)
+**Last Updated:** November 5, 2026 (v0.17 — ERR-031-017: add executed FR-TX-030 diagnosis/headroom tests and traceability.)
+**Last Updated (prior):** October 21, 2026 (v0.16 — AR round 5, ERR-031-015: the unposted counterparty is the interim option (b), not a decision (test renamed); new T-TX-BID-009 gate-order and full-contract-set locks; T-TX-REKEY-003 is an allow-list; the BID-008/NEU-001 scans state what they see; §5.7 re-pointed)
 **Last Updated (prior):** October 20, 2026 (v0.15 — AR round 5, ERR-031-014 note: T-TX-REKEY-005 names its #28 `PlayerRecord` leg, which compares the weak-foot rating as well as the `[1,20]` attributes)
 **Last Updated (prior):** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: §5.7 gains the explicit FR-TX-001..029 traceability table; T-TX-BID-008 and the RNG scan restated to what is asserted)
 **Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: T-TX-NEU-001 restated and re-locked; T-TX-DET-003, T-TX-BID-008, T-TX-REKEY-003 live; T-TX-REKEY-005 claims match what is asserted)
@@ -13,7 +14,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — T1 locks live: T-TX-DET-001, T-TX-FAIL-001)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 residual review cleanup and T2 hook obligation)
 **Last Updated (prior):** September 14, 2026 (v0.5 — PR #407 review corrections and stronger valuation/atomicity locks; prior v0.4 T0 football/Codex locks, v0.3 AR-6, v0.2 AR-3/AR-4, v0.1 initial)
-**Version:** 0.16
+**Version:** 0.17
 **Status:** APPROVED
 
 ---
@@ -33,6 +34,14 @@
 - **T-TX-OFF-001** — `EvaluateOffer` is draw-free and three-way: exact value accepts; inside the configured band
   counters; beyond it rejects, mirrored for buy/sell.
 - **T-TX-OFF-002 (F6 / Codex P2)** — direct evaluator calls reject malformed wage/length terms.
+
+- **T-TX-DIAG-001 (FR-TX-030, ERR-031-017)** — `TransfersT0Tests.Diagnose_IsReadOnly_AndAgreesWithSubmitBid`
+  covers each of the eight issues and None, pins exception-type agreement and unchanged serialized state.
+  The valid case accepts long.MaxValue wage: no #31 upper bound. The live #30 wrapper is exercised by
+  `SeasonTransfersT2Tests.TransferObserverWrappers_UseLiveOwnershipAndOwnerHeadroomWithoutMutation`.
+- **T-TX-BUDGET-001 (FR-TX-030, ERR-031-017)** —
+  `TransfersT0Tests.RemainingBudget_AfterBuy_IsTheHeadroomUsedBySubmitBid` and the same #30 wrapper test
+  pin ceiling minus committed spend before/after a buy; the existing BID-003 test pins SubmitBid's gate.
 
 ## 5.2 Integration — the bid pipeline (KD-2/KD-7, atomic)
 
@@ -213,6 +222,7 @@ below (AR round 4, ERR-031-014: G15's FR → test direction was a bare assertion
 | FR-TX-027 | T-TX-DET-001: `TransfersT1Tests.RoundTrip_NonDefaultMidWindowState_IsFieldIdentical`, `SeasonSaveTransfersTests.SaveLoad_ThroughTheLoop_RoundTripsNonDefaultTransfersState_AndResumesIt`; T-TX-DET-003: `SeasonTransfersT2Tests.TwoRunsOverIdenticalTransferActivity_ProduceByteIdenticalState` |
 | FR-TX-028 | T-TX-INIT-001: `SeasonTransfersT2Tests.CreateLoop_WithAProgressionStore_SeedsOneGenesisContractPerManagedPlayer`, `ALoadNeverReSeeds_TheResumedLoopCarriesTheSavedContracts`, `TransfersT2Tests.CreateAtGenesis_SeedsOneContractPerPlayer_AtTheGenesisTerms`; T-TX-DET-002: `TheRoll_AgesContracts_ResetsSpend_RedrawsTheWindow_AndKeepsTheCareerSaveable` |
 | FR-TX-029 | T-TX-DEP-001: `TransfersT0Tests.SubmitBid_AReleaseThatDepletesTheSellingSquad_ReturnsSquadDepleted_WithNoMutation`; T-TX-NORMAL-001; T-TX-FIN-001: `SeasonTransfersT2Tests.AFullDestination_IsSquadFull_AndADepletedSeller_IsSquadDepleted` |
+| FR-TX-030 | T-TX-DIAG-001 and T-TX-BUDGET-001 above: nine owner diagnosis cases, read-only snapshot, SubmitBid agreement and post-buy headroom; live #30 wrapper test. All executed and mutation-checked in the AR-2 T1 landing. |
 
 
 Every T-TX-* id in this section
@@ -242,4 +252,5 @@ re-key hook was deleted at ERR-031-005.)*
 | 0.14 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L4/R4-L1): §5.7 asserted that every FR maps to a test but listed only a few; it now carries the explicit 29-row table (every cited test name grep-verified against `src/`). T-TX-BID-008 (c) also scans `stsfld`/`ldflda`/`ldsflda` and (b) unwraps `Nullable<>`/generic arguments; the RNG-type scan is renamed `…RegistersNoRngStream…` and its claim narrowed to FR-TX-016/G3, with a separate clock/entropy/SplitMix-literal scan. |
 | 0.15 | 2026-10-20 | — | AR round 5 (S-L6, ERR-031-014 note): T-TX-REKEY-005 names the #28 `PlayerRecord` leg (id, names, age, position, every `[1,20]` attribute) and adds `WeakFootRating`, which `PlayerAttributes.ToArray()` excludes; the lock is `SeasonTransfersT2Tests.AssertSameRecord`. No requirement changed. |
 | 0.16 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-A/D/E/G): the unposted counterparty is the recorded interim option (b), not "by design" — `…_ByDesign` renamed `…_InTheInterimMinimalTier` in BID-008 and FIN-001 (owner decision open, §7.2); new T-TX-BID-009 locks the F9-before-F5 and F6-before-F4 gate order and the full-contract-set pre-check (each mutation-verified); T-TX-REKEY-003 becomes an allow-list of the four asmdef references; the BID-008 IL-scan wording states only the opcodes it sees and gains a stobj/initobj whole-value scan; the NEU-001 scan covers every `Stopwatch` and `RandomNumberGenerator`/`RNGCryptoServiceProvider` member and any member taking a `DeterministicRngService`/`RngStreamState` parameter; §5.7 re-points FR-TX-006 to T-TX-BID-001 (where the `TransferBudget`-unchanged assertion lives), FR-TX-009's gate order to T-TX-BID-009, and FR-TX-011/013 to REKEY-003. The header `Version` had lagged the history (0.14 against rows to 0.15) and now reads 0.16. |
+| 0.17 | 2026-11-05 | — | ERR-031-017: add executed FR-TX-030 diagnosis/headroom tests and traceability. |
 #endregion

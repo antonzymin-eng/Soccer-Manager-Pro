@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/transfers/TransferCommands.cs
 // Created:  2026-09-12
-// Modified: 2026-10-21
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 // Author:   —
 // Specs:    Spec #20 §3.5/§3.6.2 (constructor injection, style/docs)
 //           Spec #31 §3.1-§3.4, FR-TX-001..010/020..025 (atomic SubmitBid pipeline)
@@ -44,36 +44,12 @@ namespace TacticalDirector.Transfers
                 throw new ArgumentNullException(nameof(state));
             }
 
-            ValidateOffer(in offer, state.ManagedClubId);
-            if (!_roster.CarriesClub(offer.CounterpartyClubId))
-            {
-                // ERR-031-010: an unknown counterparty is a caller-contract bug (F6). Unguarded, a sale to
-                // a club with no roster valued at maximum scarcity and moved the player out of the league.
-                throw new ArgumentOutOfRangeException(
-                    nameof(offer), offer.CounterpartyClubId, "CounterpartyClubId is not a club of this league (F6).");
-            }
-
-            if (!state.ActiveWindow.IsWindowOpen(worldDay))
-            {
-                throw new InvalidOperationException("Transfer command is outside the active transfer window (F4).");
-            }
-
-            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player, out int ownerClubId)
-                || player.PlayerId != offer.PlayerId)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId, "PlayerId is outside the current #27 club universe (F6).");
-            }
-
+            // ERR-031-017: the same owner diagnosis backs both the worker preflight and this command.
+            TransferBidIssue issue = Diagnose(in offer, worldDay, state);
+            if (issue != TransferBidIssue.None) ThrowBidIssue(in offer, issue);
+            _roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player, out int _);
             int fromClubId = offer.IsBuy ? offer.CounterpartyClubId : state.ManagedClubId;
             int toClubId = offer.IsBuy ? state.ManagedClubId : offer.CounterpartyClubId;
-
-            // ERR-031-005: ownership is the roster's answer, never the id's arithmetic. Ids are stable
-            // across transfers and post-genesis ids come from #28's monotonic cursor, so the packed
-            // clubId*CLUB_SQUAD_SIZE+local formula describes only a player's genesis club.
-            if (ownerClubId != fromClubId)
-            {
-                throw new InvalidOperationException("Offer direction does not match the player's current club ownership (F6).");
-            }
 
             int rawSamePositionCount = _roster.CountPlayersAtPosition(offer.CounterpartyClubId, player.Position);
             if (rawSamePositionCount < 0 || rawSamePositionCount > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
@@ -106,15 +82,9 @@ namespace TacticalDirector.Transfers
 
             if (offer.IsBuy)
             {
-                long budget = FinanceLedger.AvailableTransferBudget(in finances);
-                long committed = state.CommittedSpendThisWindow;
-                if (committed < 0 || committed > budget)
-                {
-                    throw new InvalidOperationException("Committed transfer spend is outside the #40 budget invariant.");
-                }
-
-                // ERR-031-002: affordability is an ordinary result and must precede checked finance staging.
-                if (offer.Fee > budget - committed)
+                long remaining = RemainingTransferBudget(in finances, state);
+                // ERR-031-002: affordability precedes checked finance staging.
+                if (offer.Fee > remaining)
                 {
                     return TransferSubmissionOutcome.InsufficientBudget;
                 }
@@ -203,15 +173,57 @@ namespace TacticalDirector.Transfers
             }
         }
 
-        private static void ValidateOffer(in Offer offer, int managedClubId)
+        /// <summary>
+        /// Pure, read-only owner preflight (ERR-031-017). Returns the first caller-contract issue in the
+        /// legacy SubmitBid order: ids, terms, counterparty, window, roster ownership. No wage ceiling.
+        /// </summary>
+        public TransferBidIssue Diagnose(in Offer offer, uint worldDay, TransfersState state)
         {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+            if (offer.PlayerId < 0) return TransferBidIssue.UnknownPlayer;
+            if (offer.CounterpartyClubId < 0) return TransferBidIssue.UnknownCounterparty;
+            if (offer.Fee < 0) return TransferBidIssue.FeeNegative;
+            if (offer.WagePerPeriod < 0) return TransferBidIssue.WageNegative;
+            if (offer.LengthSeasons < 1) return TransferBidIssue.LengthTooShort;
+            if (offer.CounterpartyClubId == state.ManagedClubId) return TransferBidIssue.ManagedCounterparty;
+            if (!_roster.CarriesClub(offer.CounterpartyClubId)) return TransferBidIssue.UnknownCounterparty;
+            if (!state.ActiveWindow.IsWindowOpen(worldDay)) return TransferBidIssue.WindowClosed;
+            if (!_roster.TryGetPlayer(offer.PlayerId, out PlayerRecord player, out int ownerClubId)
+                || player.PlayerId != offer.PlayerId) return TransferBidIssue.UnknownPlayer;
+            int fromClubId = offer.IsBuy ? offer.CounterpartyClubId : state.ManagedClubId;
+            return ownerClubId == fromClubId ? TransferBidIssue.None : TransferBidIssue.WrongDirection;
+        }
+
+        /// <summary>Owner headroom in money units: #40 ceiling minus #31 committed spend (unwired state contributes zero spend).</summary>
+        public static long RemainingTransferBudget(in ClubFinancesState finances, TransfersState state)
+        {
+            long budget = FinanceLedger.AvailableTransferBudget(in finances);
+            long committed = state?.CommittedSpendThisWindow ?? 0;
+            if (committed < 0 || committed > budget)
+                throw new InvalidOperationException("Committed transfer spend is outside the #40 budget invariant.");
+            return budget - committed;
+        }
+
+        private static void ThrowBidIssue(in Offer offer, TransferBidIssue issue)
+        {
+            // Preserve the exact legacy exception type, parameter, actual value and message.
             Offer.ValidateTerms(in offer);
-            if (offer.CounterpartyClubId == managedClubId)
+            switch (issue)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(offer),
-                    offer.CounterpartyClubId,
-                    "CounterpartyClubId must name a different club (F6).");
+                case TransferBidIssue.ManagedCounterparty:
+                    throw new ArgumentOutOfRangeException(nameof(offer), offer.CounterpartyClubId,
+                        "CounterpartyClubId must name a different club (F6).");
+                case TransferBidIssue.UnknownCounterparty:
+                    throw new ArgumentOutOfRangeException(nameof(offer), offer.CounterpartyClubId,
+                        "CounterpartyClubId is not a club of this league (F6).");
+                case TransferBidIssue.WindowClosed:
+                    throw new InvalidOperationException("Transfer command is outside the active transfer window (F4).");
+                case TransferBidIssue.UnknownPlayer:
+                    throw new ArgumentOutOfRangeException(nameof(offer), offer.PlayerId,
+                        "PlayerId is outside the current #27 club universe (F6).");
+                case TransferBidIssue.WrongDirection:
+                    throw new InvalidOperationException("Offer direction does not match the player's current club ownership (F6).");
+                default: throw new ArgumentOutOfRangeException(nameof(issue));
             }
         }
 
@@ -239,4 +251,5 @@ namespace TacticalDirector.Transfers
 // | 1.5     | 2026-10-20 | —      | #31 T2: unknown counterparty fails loud (ERR-031-010); an un-contracted managed player is sellable (ERR-031-009); a release that leaves a club below a matchday squad returns SquadDepleted before any staging (ERR-031-007). |
 // | 1.6     | 2026-10-20 | —      | AR round 4 (R4-L5, ERR-031-014): the constructor summary no longer calls the roster port "future" — the #30 adapter has landed. |
 // | 1.7     | 2026-10-21 | —      | AR round 5 L-H (ERR-031-015): a buy with a full contract set (ContractCount >= CLUB_SQUAD_SIZE) fails loud beside the duplicate-contract pre-check, before the roster commit — InsertContract's cap check would otherwise throw after the irreversible commit. |
+// | 1.8 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

@@ -1,8 +1,9 @@
 # UI / Client Framework #38 — Section 3: Contracts & Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+2L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** November 5, 2026 (v0.4 — ERR-038-006: owner worker diagnosis precedes transfer mutation; UI check is non-authoritative.)
+**Last Updated (prior):** November 5, 2026 (v0.3 — ERR-038-006: §3.3 notes the composition-root career-command route)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -58,6 +59,16 @@ route(intent):
 The dispatcher can call **only** the public seams above (the assembly boundary hides sim internals);
 an unmapped intent throws (F3) — never invented UI-side (KD-4).
 
+**Career commands that carry a payload (ERR-038-006).** `ManagerIntent` carries only the match and
+day-granular season payloads. A career command whose arguments it cannot carry (the first instance is a
+transfer offer: fee, wage, length, counterparty) is not an intent: the composition root exposes it as a
+coordinator operation that calls one public owner seam (FR-UI-010 amendment, Appendix C career-command
+table). The route is unchanged in kind — a public seam, run on the career worker, never a UI-side mutation —
+and any player-reachable refusal is typed and happens before the mutation seam is called.
+For transfers, the authoritative check is #31 `Diagnose` on the same serialized worker against live state
+(ERR-031-017); `TransferOfferCheck` is only a snapshot hint plus the client wage policy. A failed market
+projection cannot authorize a stale offer. Invariant/integration defects retain fail-loud behavior.
+
 **Threading (FR-UI-023 / KD-3): a live-match command MUST be marshaled onto the sim thread, not called
 cross-thread.** During a live streamed match the `MatchEngine` is owned by the streamer's tick thread
 (the only caller of `RunTick`), and the public seams are **not** documented cross-thread-safe (e.g.
@@ -110,4 +121,6 @@ substrate the framework pins (KD-2).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial contracts: projection model, navigation state machine, dispatch routing, match-view cadence + worked transition. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+2L; M-1 match-view reads streamer frame, M-2 cross-thread command marshaling FR-UI-023/F6, L-1 dispatcher split, L-2 Pop-below-root) → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-11-05 | — | ERR-038-006: payload-carrying career commands are sanctioned as composition-root (client-app) coordinator operations onto a named public owner seam; FR-UI-003 and FR-UI-020 unchanged; intents stay the route for payload-free and match commands. First instance: `SubmitTransfer` → `SeasonLoop.SubmitTransferBid` (#31 FR-TX-025). Additive; approval status unchanged. |
+| 0.4 | 2026-11-05 | — | ERR-038-006: owner worker diagnosis precedes transfer mutation; UI check is non-authoritative. |
 #endregion

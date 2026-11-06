@@ -1,10 +1,10 @@
 # System XI UX Validation Protocol
 
 **Created:** September 11, 2026  
-**Last Updated:** October 5, 2026\
-**Version:** 0.37\
+**Last Updated:** November 4, 2026\
+**Version:** 0.38\
 **Status:** F4 + S0 A–F COMPLETE — G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF\
-**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.30 §F4 and Gates E–G\
+**Execution authority:** [`ux-detailed-plan.md`](ux-detailed-plan.md) v1.36 §F4 and Gates E–G\
 **Shared interaction baseline:** [`ux-shared-system.md`](ux-shared-system.md) v0.4\
 **Evidence baseline:** [`ux-baseline-evidence.md`](ux-baseline-evidence.md) v0.3
 
@@ -96,9 +96,13 @@ participant error. Prescribed task coverage therefore has no "honestly testable"
 
 ### 3.2 S1 participant tasks
 
-S1 is the PM-2 / Early Access season-loop journey from `ux-detailed-plan.md` §7:
+S1 is the current PM-2 season-loop journey from `ux-detailed-plan.md` §7. The November 4 owner
+D-11 decision defers interactive career matches/delegation until staff ships; the later interactive
+journey needs its own reviewed delta. Current tasks follow:
 
-`Launch → New/Continue/Load → Career Home/Season → inspect/prepare/advance → Match → Report → Career Home/Season → Save/Continue`
+`Launch → New/Continue/Load → Career Home/Season → inspect readiness/advance → Resolve round on Home → Read result/table → Save/Continue`
+
+All eight task IDs and per-participant requirements remain. No S0 evidence or waiver is reused.
 
 The following task IDs operationalize the minimum outcomes in `ux-detailed-plan.md` §7.6 without
 inventing a control path or unresolved product rule:
@@ -107,11 +111,11 @@ inventing a control path or unresolved product rule:
 |---|---|---|
 | S1-T1 | Start or resume the supported career mode. | Participant enters the supported career state through the behavior admitted by the prototype; unresolved New/Continue/Load product choices are recorded as dependencies rather than invented. |
 | S1-T2 | Identify the next match and current league position. | Participant can report both from the Career Home/Season surface without developer knowledge of #30 internals. |
-| S1-T3 | Reach the preparation context for the next match. | Participant reaches the admitted preparation surface without moderator navigation help. |
+| S1-T3 | Inspect the readiness context for the next fixture. | Participant reaches admitted Home/fixture/squad readiness information without moderator navigation help. No career Tactics Setup or interactive match entry is required in current PM-2. |
 | S1-T4 | Progress correctly toward the next match. | Participant identifies the action that advances the season and can explain what will progress before committing. |
-| S1-T5 | Complete one round through the match and report loop. | Participant reaches the match, completes the supported match/report path, and returns to Career Home/Season. |
+| S1-T5 | Resolve one round from Career Home and read the result. | Participant chooses the supported Home round-resolution action, understands busy/completion feedback and reaches the completed result/table on Home. No separate interactive Match/Report route is implied. |
 | S1-T6 | Understand the changed result and league table after the round. | Participant can identify the completed result and explain the visible league-position/table change. |
-| S1-T7 | Save, quit and resume according to the product promise. | Participant completes the supported persistence flow exactly as admitted by the prototype; unresolved save/continue promises block Gate F rather than being cosmetically simulated as live. |
+| S1-T7 | Save, quit and resume according to the product promise. | Participant saves a coherent career before/after a completed round on Home, quits and loads/Continues that career. No active-match save is promised. Any missing prescribed persistence outcome still blocks Gate F rather than being simulated as live. |
 | S1-T8 | Find settings/accessibility. | Participant locates the admitted settings/accessibility surface or the prototype records the explicit implementation dependency if that surface is not yet live. |
 
 The same Gate-F no-skip rule applies to S1. A prescribed S1 task with an unresolved dependency remains
@@ -962,6 +966,7 @@ S0 Gate G passed for pinned v0.4 in §9.1 and the owner-approved v0.5 delta in �
 | 0.35 | October 4, 2026 | Mirrors explicit owner acceptance of the Gate-I handoff PASS at a1eae56 in journey §14.11. Technical review and owner decision remain distinct; prior approval/evidence records and planned QA unchanged. |
 | 0.36 | October 5, 2026 | Execution pointer v1.29 and #470 foundation merge/next consumed implementation recorded; validation rules, approval pins and all planned I-Q evidence unchanged. |
 | 0.37 | October 5, 2026 | PR #479 review corrections: execution pointer v1.30 and implementation plan v0.2; approval records, evidence and all I-Q planned status unchanged. |
+| 0.38 | November 4, 2026 | Apply owner D-11 current-PM-2 Home-resolution scope to S1-T3/T5/T7; retain all eight IDs, denominator, independent participant and gate rules. Future interactive/delegation validation remains separate; existing S0 records and pins unchanged. |
 
 **October 5, 2026 — implementation sequencing pointer:** #470 foundation merged
 at f276f700 after green PR CI and recorded pinned-host compile/ClientApp evidence.

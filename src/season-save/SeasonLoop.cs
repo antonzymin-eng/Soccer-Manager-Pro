@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-10-20 (AR round 5 L17/S-L2/S-L4/S-L5 — v1.46: doc comments only — Progression names the mutators' real visibility,
+// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 //           the constructor/Restore/RollToNextSeason/SubmitTransferBid exception docs list every confirmed cause, ActiveMatch and
 //           AvailableTransferBudget are sim-thread-only, AvailableTransferBudget is the season CEILING.)
 //           Prior: 2026-10-20 (AR round 4 S4-L2/L3/L5 — v1.45: the constructor's KD-4 refusal is SeasonCalendar.RequireCursorInvariant; RollToNextSeason's
@@ -825,6 +825,23 @@ namespace TacticalDirector.SeasonSave
             }
 
             return outcome;
+        }
+
+        /// <summary>Read-only #31 bid diagnosis against live roster/window state. SIM-THREAD ONLY (ERR-030-059).</summary>
+        public TransferBidIssue DiagnoseTransferBid(in Offer offer)
+        {
+            if (_transfers == null || _progression == null)
+                throw new System.InvalidOperationException("Transfers are not wired on this loop.");
+            return new TransferCommands(new SeasonTransferRoster(_progression, _career))
+                .Diagnose(in offer, _world.CurrentWorldTick, _transfers);
+        }
+
+        /// <summary>Read-only owner transfer headroom for a club. SIM-THREAD ONLY (ERR-030-059).</summary>
+        public long RemainingTransferBudget(int clubId)
+        {
+            ClubFinances.ClubFinances finances = SeasonFinanceRuntime.StageFor(_finances, clubId, out int _);
+            return TransferCommands.RemainingTransferBudget(in finances,
+                _transfers != null && _transfers.ManagedClubId == clubId ? _transfers : null);
         }
 
         /// <summary>
@@ -2551,4 +2568,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.44 | 2026-10-20 | — | AR round 4 M13 (ERR-028-028 widening): doc comment on Progression only — every mutator (AdvanceDay, PrepareSeasonBoundary, CommitSeasonBoundary, CanMovePlayer/MovePlayer) is internal. No behaviour change. |
 // | 1.45 | 2026-10-20 | — | AR round 4 S4-L2/L3/L5: the constructor's KD-4 refusal delegates to SeasonCalendar.RequireCursorInvariant (shared with League.CreateLoop; ParamName stays "season"); RollToNextSeason's ArgumentException doc lists all four (d″) causes and #28's worldDay-span refusal, plus SummerWindowFor's ArgumentOutOfRangeException; TransfersSnapshot and FinanceView state that they are sim-thread-only. |
 // | 1.46 | 2026-10-20 | — | AR round 5 (doc comments only, no behaviour change): L17 Progression's doc names the mutators' real visibility (internal to PlayerProgression, visible to SeasonSave and the test assemblies via InternalsVisibleTo; CanMovePlayer is a predicate); S-L2 the constructor, Restore, RollToNextSeason and SubmitTransferBid list the InvalidOperationException / ArgumentException causes confirmed in source (cursor-vs-clock band, PrepareSettlement and StageFor uninitialized finances, #28 Prepare, PrepareRosterSync, BeginNextSeason); S-L4 ActiveMatch and AvailableTransferBudget are sim-thread-only; S-L5 AvailableTransferBudget is documented as the season ceiling (headroom = ceiling - TransfersSnapshot().CommittedSpendThisWindow). |
+// | 1.47 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 #endregion

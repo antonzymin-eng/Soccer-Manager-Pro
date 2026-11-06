@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesT0Tests.cs
 // Created:  2026-09-04
-// Modified: 2026-09-08
+// Modified: 2026-11-04 (ERR-040-004: genesis ceilings)
 // Author:   —
 // Specs:    Spec #20 §3.6.2, §3.9.4 (style/docs; general-test allocation carve-out)
 //           Spec #40 §5 (T0-coverable acceptance contract)
@@ -23,13 +23,17 @@ namespace TacticalDirector.ClubFinances.Tests
     {
         /// <summary>Locks the pre-first-season behavior-neutral identity.</summary>
         [Test]
-        public void CreateInitial_IsBehaviourNeutralIdentity()
+        public void CreateInitial_SeedsTheZeroPrizeBaseCeilings()
         {
+            // T-FN-NEU-002 as amended by ERR-040-004: genesis budgets are the ceilings a zero-prize,
+            // identity-board settlement would set; everything else stays at its identity value.
             ClubFinances finances = ClubFinances.CreateInitial(ClubFinancesConstants.StartingClubBalance);
 
             Assert.That(finances.Balance, Is.EqualTo(500_000L));
-            Assert.That(finances.TransferBudget, Is.Zero);
-            Assert.That(finances.WageBudget, Is.Zero);
+            Assert.That(finances.TransferBudget, Is.EqualTo(ClubFinancesConstants.BaseTransferBudget));
+            Assert.That(finances.TransferBudget, Is.EqualTo(100_000L), "catalogue default BASE_TRANSFER_BUDGET");
+            Assert.That(finances.WageBudget, Is.EqualTo(ClubFinancesConstants.BaseWageBudget));
+            Assert.That(finances.WageBudget, Is.EqualTo(50_000L), "catalogue default BASE_WAGE_BUDGET");
             Assert.That(finances.WageBillAggregate, Is.Zero);
             Assert.That(finances.SeasonRevenueAccrued, Is.Zero);
             Assert.That(finances.FfpBalanceWindow, Is.Zero);
@@ -301,4 +305,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // | 1.0     | 2026-09-04 | —      | Initial #40 T0 acceptance coverage. |
 // | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
 // | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
+// | 1.4     | 2026-11-04 | —      | ERR-040-004: CreateInitial seeds the zero-prize base ceilings (T-FN-NEU-002 amended). |
 #endregion
