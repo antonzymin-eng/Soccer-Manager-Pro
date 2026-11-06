@@ -209,9 +209,9 @@ namespace TacticalDirector.ClientApp
                 contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs, injuryOccurrenceEnabled: true);
             // The owner Restore seam alone migrates a supported legacy empty #40 block.
             // Generic SeasonLoop composition deliberately leaves empty finances unwired.
-            SeasonLoop loop = SeasonLoop.Restore(
+            SeasonLoop loop = new SeasonLoop(
                 contents.World,
-                SeasonStateCodec.Encode(contents.Season),
+                contents.Season,
                 mode,
                 career,
                 null,
