@@ -1,0 +1,23 @@
+{
+  "baseCommit": "b6505350c76968b15decaf5e56c37cc1b1ba2707",
+  "arm": "B",
+  "sourceFiles": {
+    "src/goalkeeper-mechanics/GoalkeeperConstants.cs": "d8718d01b471152ffa7a6fc6109150d521951d92605600c24fe4f1b94427155a",
+    "src/goalkeeper-mechanics/GoalkeeperMechanics.cs": "e467567afb96844a4e79826d312e5be4504020c8e000c1622d3333b009cb63c6",
+    "src/goalkeeper-mechanics/GoalkeeperStateMachine.cs": "1fbf9dd44aa357a2d2a41994bddb033ab5bf29b3f67a69cb686f7c46793bfc11",
+    "src/goalkeeper-mechanics/GoalkeeperTickState.cs": "d13378eebb7ae0f1edecb0c0cb7295d203074f3528e6309f19aff5b9413355ec",
+    "src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs": "b1db09bf789287d892554a0eafbde24a165fe3aed13abcfc8fd89c28883b3795",
+    "src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs": "baf174673bd36d8da0eed35954c350e23573f36a9f9e419cd3ffada146d033af",
+    "src/match-engine/MatchEngine.GoalkeeperDistribution.cs": "8c82a28339c74e93ef146a26c0ab98db7aa0579e3c845a3aa6b38ec2f3036159",
+    "src/match-engine/MatchEngine.KeeperHandlingLaw.cs": "ce34d53fc586bf8f0d1b94d2488d7267146aa3c0d8c6522f88f9d4e75547acf1",
+    "src/match-engine/MatchEngine.cs": "8857bac3e4758f4254d321ab65d30135303e9d913fec4ffb6c990df89793f658",
+    "src/match-engine/MatchEngineConstants.cs": "6b025405f7b508a28cdf6373eca86f3fa2b546e3ada4f2dee507fff28a5c7a61",
+    "src/match-engine/tests/GoalkeeperBaselineSlotTests.cs": "83aff37dd50834fb2c4622f441f34552af28cfe768c0e0a4f6d8e3a4d71a86a6",
+    "src/match-engine/tests/GoalkeeperClockCorrectionTests.cs": "002f0cc3b7267cf55c3bb7b8e838896fe9d62d0535a6d7cc4244f22beda03315",
+    "src/match-engine/tests/KeeperOutsideAreaHandlingTests.cs": "ac17f4aed62cb45bccb7fad66a8c3a02b7b16c0c9c79ca1c80d3086f068e6a46",
+    "src/match-engine/tests/KeeperRehandlingLawTests.cs": "a31ca7c5bb546711df9c563f6f179fb5e5db8483c8b2e504a01ab961c91928e9",
+    "src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs": "93732225b4cc4d5ba42052195ebe1ab2283fc75c24c7b55a3c3ba240481cf142",
+    "src/match-engine/tests/W8BDistributionDiagnosticTests.cs": "39dd43b34b456459254f6fd92f9dc917cd04bfd5af9a127046bb845d47590697",
+    "src/match-engine/tests/W8BDistributionTests.cs": "6421d1b8c1fc03de34943be1c902eb60bd787755451badde8afd8c31c8185220"
+  }
+}

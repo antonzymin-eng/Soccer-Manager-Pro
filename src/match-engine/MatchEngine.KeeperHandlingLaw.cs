@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.KeeperHandlingLaw.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Created:  2026-10-16
 // Modified: 2026-10-18
 // Author:   —
@@ -113,18 +114,25 @@ namespace TacticalDirector.MatchEngine
                 lateral <= MatchEngineConstants.GOAL_AREA_DEPTH_M + halfGoal)
                 spot.x = ownX + AttackDirectionX(team) * MatchEngineConstants.GOAL_AREA_DEPTH_M;
 
-            // The handling whistle wins this frame. A captured AI-phase tackle candidate must
-            // not survive into a second restart/card after play has already restarted.
+            return FinishKeeperWhistle(spot, 1 - team, RestartCue.FreeKick,
+                inside ? RestartAwardedEvent.INDIRECT_FREE_KICK : RestartAwardedEvent.DIRECT_FREE_KICK,
+                recordIndirectTaker: inside);
+        }
+
+        // Both keeper offences end Resolve through this exact order (#11 §3.8.5).
+        private bool FinishKeeperWhistle(Vector2 spot, int awardedTeam, RestartCue cue,
+            byte restartKind, bool recordIndirectTaker)
+        {
+            TestOnly_KeeperWhistleFinishCount++;
             _foulCandidateFound = false;
             _foulCandidateIsDecided = false;
-            ApplyRestart(spot, 1 - team, RestartCue.FreeKick);
+            ApplyRestart(spot, awardedTeam, cue);
             _gkHoldTicks = 0;
             _gkReleasedAgentId = MatchEngineConstants.NO_POSSESSION;
             _gkReleaseCooldownRemaining = 0;
-            if (inside) _indirectKickTaker = _possessingAgentId;
+            if (recordIndirectTaker) _indirectKickTaker = _possessingAgentId;
             var evt = new RestartAwardedEvent(
-                inside ? RestartAwardedEvent.INDIRECT_FREE_KICK : RestartAwardedEvent.DIRECT_FREE_KICK,
-                (byte)(1 - team), new Vector3(spot.x, spot.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+                restartKind, (byte)awardedTeam, new Vector3(spot.x, spot.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             EventBus.Publish(in evt);
             // Both Physics carries and Resolve collision corrections must end the frame before
             // any stale executor can release the ball or another captured foul can act.
@@ -193,4 +201,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 // | 1.2 | 2026-10-18 | — | D-07 option A: general outside-area contacts/carries, shared geometry and pending-state validation. |
 // | 1.3 | 2026-10-18 | — | D-07 review: goal-line overhang is on the line; restart spot clamped to the pitch; carries compare against the previous attached position. |
+// | 1.4 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

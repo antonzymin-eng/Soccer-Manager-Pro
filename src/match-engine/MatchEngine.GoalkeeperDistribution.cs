@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.GoalkeeperDistribution.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Created:  2026-10-15
 // Modified: 2026-10-15
 // Author:   —
@@ -64,7 +65,7 @@ namespace TacticalDirector.MatchEngine
 
                 int windup = Mathf.CeilToInt(GoalkeeperDistribution.ComputeWindupMs(delivery)
                     * DeterministicSimConstants.PHYSICS_TICK_HZ / 1000f);
-                if (!DistributionContactFits(frame, claimTick, windup)) continue;
+                if (!DistributionContactFits(frame, _goalkeeper.GetHandControlStartFrame(team), windup)) continue;
 
                 int receiver = SelectDistributionReceiver(keeper, team, policy);
                 Vector3 target = receiver < 0 ? GoalkeeperDistributionFallback(team)
@@ -102,14 +103,11 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private bool DistributionContactFits(int frame, int claimTick, int windup)
+        private static bool DistributionContactFits(int frame, long handControlStartFrame, int windup)
         {
-            int contact = frame + windup + 1;
-            int handBoundary = (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS)
-                * GoalkeeperConstants.FramesPerTacticalTick;
-            // Resolve has not yet incremented the inherited possession guard on this frame.
-            int dropBoundary = frame + MatchEngineConstants.GkMaxHoldTicks - _gkHoldTicks - 1;
-            return contact < handBoundary && contact < dropBoundary;
+            // The executor's first decrement runs in this commit frame's Resolve.
+            return handControlStartFrame >= 0 && frame >= handControlStartFrame
+                && (long)frame + windup <= handControlStartFrame + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES;
         }
 
         private int SelectDistributionReceiver(int keeper, int team, GkDistributionPolicy policy)
@@ -159,21 +157,6 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        private void CancelExpiredGoalkeeperDistributions()
-        {
-            if (!_gkHeadingEnabled) return;
-            GoalkeeperTickState state = _goalkeeper.CaptureState();
-            for (int team = 0; team < MatchEngineConstants.TEAM_COUNT; team++)
-            {
-                int keeper = _gkAgentIds[team];
-                if (keeper < 0 || !state.DistributionPending[team]) continue;
-                int boundary = (state.ClaimTick[team] + GoalkeeperConstants.GK_HOLD_MAX_TICKS)
-                    * GoalkeeperConstants.FramesPerTacticalTick;
-                if ((int)_clock.CurrentTick >= boundary || _gkHoldTicks + 1 >= MatchEngineConstants.GkMaxHoldTicks)
-                    _passExecutors[keeper].CancelGoalkeeperDistribution();
-            }
-        }
-
         private void CompleteGoalkeeperDistribution(int keeper, in GoalkeeperDistributionRequest request,
             in GoalkeeperDistributionFeedback feedback)
         {
@@ -204,4 +187,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-15 | —      | W8 B producer, deterministic selector, live guard budget and Resolve completion. |
+// | 1.1 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

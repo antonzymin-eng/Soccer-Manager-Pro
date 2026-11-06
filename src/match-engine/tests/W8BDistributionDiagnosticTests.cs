@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/W8BDistributionDiagnosticTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (Unity host: lazy external shot/distribution ordinals)
 // Created:  2026-10-15
 // Modified: 2026-10-16
@@ -213,7 +214,7 @@ namespace TacticalDirector.MatchEngine
                     {
                         Assert.Less(feedback.ContactFrame - claimFrame, 360, "ordinary voluntary CONTACT before inherited drop");
                         Assert.Greater(feedback.ContactFrame - claimFrame, 0);
-                        Assert.Less(feedback.ContactFrame, (claimFrame / 6 + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * 6, "CONTACT before earlier #11 guard");
+                        Assert.LessOrEqual(feedback.ContactFrame, claimFrame + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES, "CONTACT by the hand-control limit");
                         Assert.AreEqual(0, _claimContacts[keeper], "one launch per hand claim");
                         _claimContacts[keeper]++;
                     }
@@ -349,4 +350,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.3 | 2026-10-15 | — | Raw rejection/cancellation/completion timing and retained-possession status; explicit pending-at-end censor rows; four identity/neutrality locks. |
 // | 1.4 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
 // | 1.5 | 2026-10-16 | — | Resolve external shot/distribution ordinals lazily and check registration when attaching the census. |
+// | 1.6 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

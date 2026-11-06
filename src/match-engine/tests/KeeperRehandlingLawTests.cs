@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/KeeperRehandlingLawTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Created:  2026-10-16
 // Modified: 2026-10-16
 // Author:   —
@@ -266,18 +267,15 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
-        public void SixSecondHandDrop_IsFeetOnly_WithoutRehandlingSanction(int team)
+        public void LegacyFeetGuard_DoesNotDropAHandEpisode(int team)
         {
             MatchEngine engine = W8BDistributionTests.Fixture(GkDistributionPolicy.SlowDown, team, false);
             int keeper = team * 11;
             for (int i = 0; i < MatchEngineConstants.GkMaxHoldTicks; i++) engine.TestOnly_RunGoalkeeperReleaseRule();
-            Assert.AreEqual(-1, engine.PossessingAgentId);
-            Assert.AreEqual(keeper, engine.TestOnly_ReleasedHandKeeper);
-            engine.TestOnly_RunPhysicsPhase();
-            engine.TestOnly_RunResolvePhase();
             Assert.AreEqual(keeper, engine.PossessingAgentId);
-            Assert.IsFalse(engine.TestOnly_GoalkeeperState.ClaimIntentActive[team]);
-            Assert.AreEqual(RestartCue.None, engine.RestartAppliedThisTick);
+            Assert.AreEqual(-1, engine.TestOnly_ReleasedHandKeeper);
+            Assert.AreEqual(0, engine.TestOnly_GkHoldTicks);
+            Assert.AreEqual(1001L, engine.TestOnly_GoalkeeperState.HandControlStartFrame[team]);
         }
 
         private static MatchEngine Released(int team)
@@ -308,4 +306,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-16 | — | Own-release handling, actual body touch, smother rejection, IFK and restore. |
 // | 1.1 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 1.2 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

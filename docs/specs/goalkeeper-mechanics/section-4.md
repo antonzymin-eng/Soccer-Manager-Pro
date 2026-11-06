@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.6
-**Last Updated:** October 29, 2026 (v0.6 — ERR-011-021: read-only `handControlStartFrame` accessor row; `DistributeIntent` producer and `releaseTickEarliest` annotations; review round 5: phantom pass-intent surfaces replaced)
+**Version:** 0.7
+**Last Updated:** November 6, 2026 (v0.7 — W8 C accessor implementation status; no normative interface change)
 **Status:** DRAFT
 **Purpose:** Establish the architectural file layout, the input /
 output interface contracts, the determinism compliance surface,
@@ -61,7 +61,7 @@ source file per Spec #19 §3 convention.
 | `EventBus.Publish<BallClaimedEvent>(evt)` | #17 | §3.2.1 | §3.5 catch / §3.6 / §3.7 |
 | `EventBus.Publish<DistributionExecutedEvent>(evt)` (published by the Match Engine in its registered Resolve phase after the successful #5 CONTACT, not by #11) | #17 | §3.2.1 | §3.8.3 |
 | `EventBus.Publish<GoalkeeperRushEvent>(evt)` | #17 | §3.2.1 | §3.7 |
-| Read-only accessor for a keeper slot's `handControlStartFrame` (`long` 60 Hz frame) and its validity (inactive sentinel); #11 owns and writes the value, the Match Engine only reads it (specified, not implemented; ERR-011-021) | Match Engine / #11 | §3.8.5 | Match Engine Resolve eight-second hand-control check |
+| Read-only accessor for a keeper slot's `handControlStartFrame` (`long` 60 Hz frame) and its validity (inactive sentinel); #11 owns and writes the value, the Match Engine only reads it (`GoalkeeperMechanics.GetHandControlStartFrame`, implemented in v28; host validation pending; ERR-011-021) | Match Engine / #11 | §3.8.5 | Match Engine Resolve eight-second hand-control check |
 | `GoalkeeperDistributionRequest` host seam (`TryStartGoalkeeperDistribution`; the composition root translates `DistributeIntent` structurally, #11 does not reference the #5 assembly); owned by the Match Engine | #5 | §2.4.4 / §3.8.13 | §3.8.3 |
 | `Heading.SubmitGKIntent(headerIntent)` | #10 | (used when a GK head save occurs; payload routed via Decision Tree #8 GK branches per KD-4) | §3.6 head-route |
 
@@ -228,3 +228,4 @@ t   0ms │            │ #3 hand-ball contact event fires
 | 0.4 | September 27, 2026 | ERR-011-018 | §4 input table and §4.6.1 replace the phantom `PositioningAI.GetGKBaselineSlot` with the real #12 `GetFormationSlot(keeperEntityId)` surface delivered through `UpdateBaselineSlot` (§3.3.0.1). | spec + code, same commit |
 | 0.5 | October 16, 2026 | — | ERR-011-020: host-owned CanUseHands query and actual-contact authorization port | PR #511 |
 | 0.6 | October 29, 2026 | W8 C spec application / ERR-011-021 | §4.3 gains the read-only `handControlStartFrame` accessor row consumed by the Match Engine §3.8.5 Resolve check (specified, not implemented). The `DecisionTree.GetGKIntent` row notes that `DistributeIntent` is produced by the Match Engine + #21 (ERR-011-016). §4.6.1's `releaseTickEarliest` countdown is annotated as policy scheduling only. Review round 5: the §4.1 `GoalkeeperDistribution.cs` cell no longer claims pass-intent emission, the §4.3 phantom pass-consumer row is replaced by the #5 `GoalkeeperDistributionRequest` host seam (Match Engine-owned, §3.8.3), and the `DistributionExecutedEvent` row names the Match Engine's Resolve-phase publication after CONTACT. | W8 C contract v0.5 |
+| 0.7 | November 6, 2026 | — | Name the implemented exact-frame accessor; v28 implementation authored, governing host validation pending. No normative interface change. | — |

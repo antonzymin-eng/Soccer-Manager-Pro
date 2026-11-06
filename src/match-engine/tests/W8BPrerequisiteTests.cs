@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/W8BPrerequisiteTests.cs
 // Created:  2026-10-13
+// Modified: 2026-11-06 (W8 C: canonical restore includes #11's active hand clock)
 // Modified: 2026-10-14 (PR #506 review: host initiation keyed by request.AgentId; out-of-range id fails loud)
 // Modified (prior): 2026-10-13 (F-05 replay: state-derived CONTACT and sequential reference/restore)
 // Author:   —
@@ -9,6 +10,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.MatchEngine
@@ -117,10 +119,18 @@ namespace TacticalDirector.MatchEngine
         public void CanonicalRestore_PreservesOriginalReceiver_ForExactlyOnceF05()
         {
             var original = new MatchEngine(Seed);
+            original.EnableGkHeading();
             original.TestOnly_SetPossession(HomeKeeper);
             GoalkeeperDistributionRequest request = Request(HomeReceiver, windupFrames: 3);
             Assert.IsTrue(original.TestOnly_StartGoalkeeperDistribution(
                 in request, out GoalkeeperDistributionFeedback ignored));
+            GoalkeeperTickState hand = original.TestOnly_GoalkeeperState;
+            hand.States[0] = GoalkeeperState.Distributing;
+            hand.HandControlStartFrame[0] = 0;
+            hand.ClaimTick[0] = 0;
+            hand.ReleaseTickEarliest[0] = 1;
+            hand.DistributionPending[0] = true;
+            original.TestOnly_RestoreGoalkeeperState(in hand);
             original.RunTick(); // Real Snapshot phase with WINDUP remaining 2.
             SnapshotHeader header = original.CaptureDurableHeader();
             SnapshotPayload payload = original.CaptureDurablePayload();
@@ -336,4 +346,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.2     | 2026-10-13 | —      | Intermediate restore probe moved invalidation into checkpoint; superseded by 1.3. |
 // | 1.1     | 2026-10-13 | —      | Assert emitted F-05 warning on ordinary and canonical-restore CONTACT; retain one report per kick. |
 // | 1.0     | 2026-10-13 | —      | W8 B #466 pre-wiring host/identity/feedback/F-05 locks. |
+// | 1.5 | 2026-11-06 | — | W8 C/v28: forced distribution restore fixtures stage the owning #11 hand state, exact clock and accepted-request wait latch. |
 #endregion

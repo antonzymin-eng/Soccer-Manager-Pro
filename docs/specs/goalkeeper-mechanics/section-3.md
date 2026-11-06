@@ -1,8 +1,8 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Last Updated:** October 29, 2026 (v0.24 — ERR-011-021: W8 C eight-second Law-12 hand-control offence, §3.8.5; six-second rule retired)
-**Version:** 0.24
+**Last Updated:** November 6, 2026 (v0.25 — W8 C implementation status; no normative rule change)
+**Version:** 0.25
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -1351,7 +1351,8 @@ reaching pitch coordinates past `gkPos.x` while still in
 ## 3.8 Distribution Generation (KD-6, KD-16; W8 B)
 
 **W8 C amendment APPROVED by owner, October 29, 2026:** the eight-second hand-control offence, §3.8.5
-(ERR-011-021). Specified, not yet implemented.
+(ERR-011-021). Implementation authored in snapshot v28; governing host validation remains pending.
+See the [implementation record](../../tracking/w8-c-implementation-results.md).
 
 **W8 amendment approval:** **W8 B amendment APPROVED by owner, September 26, 2026.** The overall #11 specification remains DRAFT; this approval applies only to the W8 B amendment bundle (#11 §3.8, #5 §2.4.4 / §3.8.13, and #21 FR-TI-022 / §3.4.1). B production wiring is authorized only after PR #461 merges.
 
@@ -1613,18 +1614,12 @@ attempt is insufficient.
 
 **Owner approval:** Anton Zymin approved the W8 C wording on October 29, 2026, with the
 recommended eligibility predicate ([contract v0.5](../../tracking/w8-c-law12-amendment-draft.md)).
-This subsection is the normative home of that wording. **Implementation status:** specified, not yet
-implemented. Until the C implementation landing, code still runs the W8 B backstops: the six-second
-tactical no-intent signal and the Match Engine's 360-frame ground drop for any keeper possession.
-The B hand-distribution budget lives at two further sites in
-`src/match-engine/MatchEngine.GoalkeeperDistribution.cs`, handled at C as follows. `DistributionContactFits`
-(commit/retry admission: CONTACT strictly before both the `GK_HOLD_MAX_TICKS` boundary and the
-ground-drop boundary) is replaced by the §3.8.4 admission predicate
-`currentFrame + WindupFrames ≤ handControlStartFrame + GK_HAND_CONTROL_MAX_FRAMES`, which gates the first
-commit and every retry. `CancelExpiredGoalkeeperDistributions` (cancels a pending distribution at either
-B boundary) is **removed for hand episodes**: this subsection's elapsed-481 corner is the only hand
-deadline and it cancels any request still in flight, so a pre-executor guard would only cancel a
-distribution that is still legal at elapsed 480.
+This subsection is the normative home of that wording. **Implementation status:** authored in
+snapshot v28; see the [implementation and validation record](../../tracking/w8-c-implementation-results.md).
+The exact-frame clock, Resolve corner, feet-only legacy guard and §3.8.4 admission predicate are
+implemented. `CancelExpiredGoalkeeperDistributions` and the tactical six-second hand-timeout signal
+are removed. Pinned-host compilation and whole MatchEngine EditMode remain required; Linux results
+are supplementary. This status update changes no approved normative rule.
 
 **Governing rule.** IFAB Laws of the Game 2026/27, Law 12.3 and Law 17.1: a goalkeeper who controls
 the ball with the hands/arms inside their own penalty area for more than eight seconds concedes a
@@ -1943,3 +1938,4 @@ standard rebound physics.
 | 0.22 | October 18, 2026 | — | D-07 option A: general outside-area hand contacts/carries, inclusive mirrored ball geometry, DFK precedence and existing pending-state reuse | owner-directed implementation |
 | 0.23 | October 18, 2026 | — | D-07 review fixes: §3.1.4 `distanceOutside` formula; acquisition snap of a legal catch is not a carry, carries sanction only an outward move; a ball overhanging its own goal line (≤ r) is on the line; restart spot clamped onto the pitch; worked examples | PR #515 review |
 | 0.24 | October 29, 2026 | W8 C spec application / ERR-011-021 | Owner-approved (October 29) eight-second hand-control offence: new §3.8.5 (exact 60 Hz claim-frame clock at the three claim sites, four-part eligibility (five after review round 1) with predicate 4 = no §3.1.4 offence for the episode, Resolve check after §3.1.4 and before C3 executors, 480 legal / 481 corner, atomic CONTACT release, corner side rule with high-Y tie, legacy 360-frame guard feet-only with no hand exception and base duration retagged `[EST]`, durable-state rules). §3.1.1 six-second no-intent row retired and timeout restated as a Resolve infringement; §3.4.2 `GK_HOLD_MAX_TICKS` replaced by `GK_HAND_CONTROL_MAX_FRAMES` = 480 `[FIXED]`; §3.8.3 retry predicate and §3.8.4 budget re-derived against elapsed 480 with new worked examples. Specified, not yet implemented; W8 B backstops stay in code until C lands. Adversarial-review follow-up (same day): the §3.8.5 implementation-status paragraph also names the W8 B budget sites `DistributionContactFits` and `CancelExpiredGoalkeeperDistributions` that C must replace; #5 (ERR-005-003) and #21 (ERR-021-008) retry/timing citations are back-propagated to the §3.8.4 480-frame predicate. Adversarial review round 1: eligibility is now five predicates (new predicate 5, ball not wholly out of play, so a completed boundary crossing precedes the corner); exact Resolve slot (after the post-reattachment §3.1.4 re-check, before `ApplyFoulIfCaptured`, foul candidate discarded, frame ends); `handControlStartFrame` is #11-owned `long` state read by the engine; repeated-offence sentence points at §7.3; presentation-only countdown and no-challenge statements added; §3.1.1 `HandsOnBall → Recovering` teardown row added (29 rows); W8 B-only scoping of the ground-drop prose; v0.13–v0.23 citation. Review fix: §3.8.3/§3.8.4 candidate CONTACT is `currentFrame + WindupFrames` (no `+ 1`; the executor's first decrement runs in Resolve of the commit frame, #5 §3.8.13 item 4 and the W8 B test pin), the predicate gates the first commit and retries; first-attempt 294 frames (186 margin), alignment example CONTACT at 390, late-cancel (a) 384, (b) `1,398 + 84 = 1,482` refused and `WindupFrames ≤ 82` fits; W8 B `+ 1` kept as a B-code description. Review round 2: C removes `CancelExpiredGoalkeeperDistributions` for hand episodes and replaces `DistributionContactFits` with the §3.8.4 predicate; the sanction leaves one `Cancelled` terminal drained next frame (no CONTACT, `Completed` or `DistributionExecutedEvent`); normative live-iff invariant between `handControlStartFrame` and the hand states, with snapshot-reader rejection; `int` frame-domain limit (~414 days) stated; windup constants cited as §3.4.7. Review round 3: only a successful claim sets `handControlStartFrame` (same-state writes and the retained-cancel return preserve it); the single `Cancelled` terminal is conditional on a request in flight, which is unreachable at elapsed ≥ 481 in production (defensive case via a `TestOnly_` seam or crafted restore); admission predicate added to the §3.8 producer list and the §3.1.1 `HandsOnBall → Distributing` row; `DistributionExecutedEvent.WindupMs` is the configured windup; example (a) is a retained cancellation at CONTACT; the maximum-delay example is a Kick policy at `D = 35`; dead `D = 0` clause dropped; first-attempt regression fails on any `6·D + W > 480`; `Distributing → Recovering` row names the DFK and corner causes. Review round 4: §3.8.5 requires one shared whistle-finish helper for the §3.1.4 whistle and the corner, with its nine steps in the landed order; the live-iff restore check is on #11 state alone with the engine checking possessor and `Controlled` separately; a restore-time rejection rule for an in-flight #5 request (no active clock, or remaining windup putting CONTACT past the 480-frame limit), with the defensive in-flight-at-481 state unreachable in production and built by tests only through `TestOnly_` seams (the "crafted restore" route is withdrawn); the teardown bullet drains a `Cancelled` terminal through `FinishDistribution` rather than clearing it; predicate 4 stated as structurally implied and kept as a defensive guard; the §3.1.1 retained-cancel row says cancelled without a kick, at CONTACT under C. Review round 5: predicate 5 is structurally implied at Stage 0 and kept as a defensive guard (the precedence example is recast as an eligibility-function case); the admission predicate states that the candidate is the policy's own delivery with no late fallback Roll; the inactive clock sentinel is −1 (as `_claimTick`), the live-iff clause is `0 ≤ handControlStartFrame ≤ currentFrame` with a range check `currentFrame − handControlStartFrame ≤ 480`, both run in the snapshot reader; the in-flight-at-481 state is unreachable in production and built only through `TestOnly_` seams; the whistle-finish helper returns `bool` with a `recordIndirectTaker` flag and the #5 cancellation happens inside `ApplyRestart`; the feet-guard hand-to-feet reset is stated as defensive. Review round 6 (October 30, 2026): §3.8.5 gains a normative Full-time rule: full time is a freeze, not a teardown, so the hand state, its clock and any #5 WINDUP stay frozen and no corner fires, including at elapsed 481 on the final-whistle tick; when the restored `_matchEnded` is true the snapshot reader skips the range check and in-flight check (b) and keeps the structural checks, run once the whole body is read; production-unreachability statements are scoped to a live match. Review round 7: the Sanction paragraph's "every accepted request reaches CONTACT by elapsed 480" is scoped to a live match (a request frozen at full time never reaches CONTACT). | W8 C contract v0.5 |
+| 0.25 | November 6, 2026 | — | W8 C implementation authored in schema v28; link implementation/validation record and distinguish outstanding pinned-host validation. No normative rule change. | — |

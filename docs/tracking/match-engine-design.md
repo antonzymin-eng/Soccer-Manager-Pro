@@ -1,5 +1,7 @@
 # Match Engine — Tick Orchestrator Composition Root (Design Note)
 
+> **November 6 — W8 C implementation authored (2.23):** the code half of item 19 uses snapshot v28; [implementation and validation](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain outstanding. No normative contract change.
+
 > **October 29 — W8 C Law-12 contract applied (2.22, specified, not implemented):** owner-approved eight-second hand-control offence, [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021) / ERR-011-021. Item 19 lists the engine obligations; §5.Z.16's "Law 12's six-second rule" is corrected below it. Code is unchanged until the C implementation landing.
 
 > **October 16 — PR #511 re-handling amendment (2.21):** owner-approved own-release sanction at `fff7cf5b`, now supplemented with feet-only avoidance and same-frame foul disposal. Snapshot body **v27** supersedes B's v26; outer save format stays v3. The v26 and corrected-B measurements below are historical pre-law records. [#11 contract](../specs/goalkeeper-mechanics/section-3.md#313-own-release-hand-restriction-err-011-020) and [restart contract](match-flow-completion-design.md#51-keeper-own-release-re-handling). The isolated post-law six-seed comparison is complete at `751b1143`: 126 distributions, 114 receiver controls, zero same-keeper hand returns and zero restricted contacts/sanctions. The [post-B Linux baseline](evidence/w8-b-20261015/rehandling/README.md) is recorded; final-head CI/Unity remain pending; D-07 general outside-area handling is separate.
@@ -7,7 +9,7 @@
 
 > **Created:** June 15, 2026
 > **W8 B status:** **Approved six-policy wiring is implemented locally at `e54335b0`; the frozen comparison is complete and the full-sweep observer correction is validated. Final-head Unity 6000.4.9f1 validation remains pending.** See [implementation / evidence](w8-b-implementation-results.md). The historical #466 substrate compile does not validate this new source.
-> **Last Updated:** October 29, 2026 (v2.22 — W8 C Law-12 contract applied, specified not implemented; see item 19.)
+> **Last Updated:** November 6, 2026 (v2.23 — W8 C implementation status; see item 19 and the validation record.)
 > **Last Updated (prior):** October 15, 2026 (v2.20 — live six-policy branch and measured e54335b0 comparison; final 86a9496e test/comment-only closeout; fresh full CI / Unity validation pending.)
 > **Prior update:** September 28, 2026 (v2.19 — §5.Z.7 item 3 closed: FM-08 is Warning since W2 (Aug 12), so the 12 CI scenarios that declared it via blanket `ignoreFailingMessages` no longer suppress Error logs. Measured: only #6 FM-03 surfaced, downgraded by PR #467; 12/12 pass with it.)
 > **Prior W8 landing record:** September 27, 2026 (v2.18 — W8 B landing record: corrected head 795ca64 passed CI 36337174267 including the functional gate; Unity skipped normally. Codec proof test v1.22 now uses distinct non-default AgentId/TeamId/request-target/effective-target sentinels. Test/tracking only; no runtime/schema/RNG change. Landing-record head requires its own CI.)
@@ -411,7 +413,7 @@ requires adding read/restore seams — parallel to
 18. PR #460's exact-digest evidence proves only the assignment-only pre-B helper. Once B attaches
     teardown/cause logic, B must prove those semantics directly; the old neutrality citation does not
     extend across this change.
-19. **W8 C (approved October 29, 2026; ERR-011-021; specified, not implemented).** #11 records the
+19. **W8 C (approved October 29, 2026; ERR-011-021; implementation authored, host validation pending).** #11 records the
     exact 60 Hz hand-claim frame (`handControlStartFrame`, a `long` held beside `_claimTick`) at its
     three claim sites and serializes it with its tick-state capture in the next available snapshot
     schema; the engine only reads it. In Resolve, immediately after the post-collision-reattachment
@@ -2129,3 +2131,4 @@ question Step 0 exists to ask.
 | 0.3     | 2026-06-16 | —      | Second self-AR fix pass (1M+2L). M: snapshot serialization of DecisionTree/executor internal state machines requires get/restore seams those subsystems do not yet expose (parallel to RngStreamState) — recorded as a Phase C/D prerequisite in §2.6. L: collision-feedback boot seed corrected to the standing-at-rest value (`isGrounded = true`), not a blanket "no contact" that would make agents airborne on tick 1. L: §2.4 phase-entry wording tightened (AI/Input carve-outs made explicit). (Note: the Linux compile/test gate could not be executed locally — no .NET SDK in this environment; it runs in CI on push. This change is docs-only and adds no code to the tree.) |
 | 0.2     | 2026-06-15 | —      | Self-adversarial-review fix pass (1H+3M+2L). H-1: collision↔movement one-tick-lag ordering contract documented (buffers seeded at boot, serialized, latency accepted). M-1: EventBus `BeginPhase(PhaseId.AI)` moved to end of Intent phase so the AI phase is entered every tick (orchestrator skips `_runAI` on non-stride ticks). M-2: cross-tick state (held MovementCommands, collision-feedback buffers, DecisionTree/executor state) added to the §2.6 snapshot field set. L-1: stride-timing corrected — first processed tick is 1, first AI evaluation is tick 6 (Advance runs first). L-2: per-agent-instance-vs-shared-evaluator verification required before Phase D. Plus: MatchContext home-perspective ball-zone caution (ERR-008-002 regression guard). |
 | 0.1     | 2026-06-15 | —      | Initial design note. Composition-root architecture, phase→subsystem wiring, boot sequence, phased delivery A–F, risks. |
+| 2.23 | 2026-11-06 | — | W8 C code authored in snapshot v28; implementation/validation record linked. Pinned-host compile and whole MatchEngine EditMode remain open. No normative rule change. |

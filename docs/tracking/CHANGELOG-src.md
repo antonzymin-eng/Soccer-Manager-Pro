@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 2, 2026 (UTC) — (v2.218 — **Comment-only: `src/living-world/WorldStore.cs` v1.7 → v1.8.** The `WorldSeed` XML summary still said the seed "is the only value in a save file from which a league's rosters can be regenerated. Squads are not persisted"; the `PROG` block has carried the evolving roster since #28 T1 (season frame v5). It now says the seed rebuilds club identity on resume and keys seed-derived draws such as #41's injury occurrence. No symbol, seam or behaviour changed. Found while checking #50, whose §1.4(c) quotes this comment — see `docs/tracking/CHANGELOG.md`.)
+> **Last Updated:** November 6, 2026 (UTC) — (v2.219 — **W8 C / ERR-011-021 implemented, host validation pending.** #11 owns the exact 60 Hz hand-claim frame, schema v28; Resolve awards the eight-second corner before CONTACT through the shared keeper whistle-finish path. Admission permits elapsed-480 CONTACT, the legacy stall guard becomes feet-only, and restore preserves full-time freezes while rejecting corrupt clocks/ownership/budgets. Mirrored law, replay, boundary and claim-path tests added. The initial full Linux MatchEngine run was 917/3/16; three pre-C restore fixtures missing a hand episode were corrected and all 127 affected cases pass. The owner is arranging Claude local-host validation. [Implementation and validation record](w8-c-implementation-results.md); Linux evidence is supplementary and the required pinned-host compile plus whole MatchEngine EditMode remain open.)
+
+> **Last Updated (prior):** November 2, 2026 (UTC) — (v2.218 — **Comment-only: `src/living-world/WorldStore.cs` v1.7 → v1.8.** The `WorldSeed` XML summary still said the seed "is the only value in a save file from which a league's rosters can be regenerated. Squads are not persisted"; the `PROG` block has carried the evolving roster since #28 T1 (season frame v5). It now says the seed rebuilds club identity on resume and keys seed-derived draws such as #41's injury occurrence. No symbol, seam or behaviour changed. Found while checking #50, whose §1.4(c) quotes this comment — see `docs/tracking/CHANGELOG.md`.)
 
 > **Last Updated (prior):** October 30, 2026 (UTC) — (v2.217 — **PR #526 reconciled with merged career PR #521.** Keep main's mandatory XFER sub-blob and season frame format 8, including its updated XML summary; the earlier comment correction to 7 is superseded. Preserve consolidation diagnostics and the transfer/progression/client implementation. No executable source conflict resolution was needed.)
 
@@ -2826,6 +2828,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.219 | 2026-11-06 | — | W8 C exact-frame hand-control offence and v28 snapshot; Linux regression evidence, paired comparison and pinned-host status in w8-c-implementation-results.md. |
 | 2.218 | 2026-11-02 | — | Comment-only: `WorldStore.cs` v1.8 corrects the `WorldSeed` summary's stale "squads are not persisted" (the `PROG` block has carried the roster since #28 T1). No behaviour change. |
 | 2.217 | 2026-10-30 | — | Reconcile consolidation with merged #521; preserve main season format 8 and its corrected summary. No executable source changes in the conflict resolution. |
 | 2.216 | 2026-10-30 | — | Consolidate #441 observation-only callback/arrival diagnostics, S0 movement test and comment correction; preserve main HTTP close fix. No gameplay/schema/RNG change. |

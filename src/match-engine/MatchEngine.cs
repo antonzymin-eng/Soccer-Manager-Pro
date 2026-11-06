@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
@@ -5626,6 +5627,12 @@ namespace TacticalDirector.MatchEngine
 
             // Collision correction can carry a held ball across the area boundary after Physics.
             if (ApplyPendingKeeperHandlingOffence()) return;
+            if (TestOnly_PostReattachmentBall.HasValue)
+            {
+                _ball = TestOnly_PostReattachmentBall.Value;
+                TestOnly_PostReattachmentBall = null;
+            }
+            if (ApplyKeeperHandControlOffence()) return;
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
             // deflection latch survives the tick; existing GK reaction fields remain the only state.
@@ -5637,8 +5644,6 @@ namespace TacticalDirector.MatchEngine
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
             ApplyFoulIfCaptured();
-
-            CancelExpiredGoalkeeperDistributions();
 
             // C3 — advance any in-flight executors. Idle executors no-op; only a pass/shot started via
             // the TestOnly_ seam (or, from Phase D, the AI dispatcher) is mid-lifecycle here.
@@ -5975,11 +5980,9 @@ namespace TacticalDirector.MatchEngine
         /// from each side. Deterministic and allocation-free.</para>
         /// </summary>
         /// <summary>
-        /// Inherited six-second keeper-possession stall safeguard (§5.Z.15), retained unchanged
-        /// by W8 B for both feet and hands. Voluntary hand distribution now releases through #5
-        /// CONTACT before this backstop; an inherited firing drops the ball at the keeper's feet.
-        /// Legacy release counters remain serialized, without adding a new collection exclusion.
-        /// Current-law hand timeout and the separate feet-only safeguard belong to W8 C.
+        /// Provisional six-second feet-possession anti-stall guard (#11 §3.8.5).
+        /// Live hand episodes reset this counter and are adjudicated before executors by Law 12.
+        /// A feet-guard firing drops the ball at ground height without a restart.
         /// </summary>
         private void EnforceGoalkeeperReleaseRule()
         {
@@ -5993,12 +5996,14 @@ namespace TacticalDirector.MatchEngine
             }
 
             int holder = _possessingAgentId;
-            if (holder == MatchEngineConstants.NO_POSSESSION || !_isGoalkeeper[holder])
+            if (holder == MatchEngineConstants.NO_POSSESSION || !_isGoalkeeper[holder]
+                || HasGoalkeeperHandControl(holder))
             {
                 _gkHoldTicks = 0;
                 return;
             }
 
+            if (TestOnly_SuppressFeetGuard) return;
             _gkHoldTicks++;
             if (_gkHoldTicks < MatchEngineConstants.GkMaxHoldTicks)
             {
@@ -6903,6 +6908,9 @@ namespace TacticalDirector.MatchEngine
             // excluded — instrumentation derivable from the tick number, not gameplay state.
             // TestOnly_HeaderArrivalObserver is an optional diagnostic callback. Simulation never
             // consumes its output; it has no serialized state and is reattached by the test driver.
+            // W8 C's TestOnly_PostReattachmentBall / TestOnly_SuppressFeetGuard are fixture-only
+            // inputs with no gameplay writer (inactive by default); TestOnly_KeeperWhistleFinishCount
+            // is observation-only. None belongs to a production replay or the canonical payload.
             // PHASE-D FLAG: the AI phase still does NOT write per-agent form/fatigue context into
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
@@ -7632,6 +7640,7 @@ namespace TacticalDirector.MatchEngine
             }
 
             ReadHandlingLawState(buf, ref o);
+            ValidateRestoredKeeperHandControl();
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -8697,6 +8706,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, s.RequiredReactionMs[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, s.ShotEventPending[i]);
                 CanonicalSerializer.WriteI32(buf, ref o, s.ClaimTick[i]);
+                CanonicalSerializer.WriteI64(buf, ref o, s.HandControlStartFrame[i]);
                 CanonicalSerializer.WriteI32(buf, ref o, s.ReleaseTickEarliest[i]);
                 CanonicalSerializer.WriteI32(buf, ref o, s.RecoveryCooldownEndTick[i]);
             }
@@ -8736,6 +8746,7 @@ namespace TacticalDirector.MatchEngine
             var requiredReactionMs = new float[cap];
             var shotEventPending = new bool[cap];
             var claimTick = new int[cap];
+            var handControlStartFrame = new long[cap];
             var releaseTickEarliest = new int[cap];
             var recoveryCooldownEndTick = new int[cap];
 
@@ -8822,6 +8833,7 @@ namespace TacticalDirector.MatchEngine
                 requiredReactionMs[i] = CanonicalSerializer.ReadF32(buf, ref o);
                 shotEventPending[i] = CanonicalSerializer.ReadBool(buf, ref o);
                 claimTick[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                handControlStartFrame[i] = unchecked((long)CanonicalSerializer.ReadU64(buf, ref o));
                 releaseTickEarliest[i] = CanonicalSerializer.ReadI32(buf, ref o);
                 recoveryCooldownEndTick[i] = CanonicalSerializer.ReadI32(buf, ref o);
             }
@@ -8851,7 +8863,8 @@ namespace TacticalDirector.MatchEngine
                 claimTick: claimTick,
                 releaseTickEarliest: releaseTickEarliest,
                 recoveryCooldownEndTick: recoveryCooldownEndTick,
-                distributionPending: distributionPending));
+                distributionPending: distributionPending,
+                handControlStartFrame: handControlStartFrame));
         }
 
         /// <summary>Serializes the Heading (#10) orchestrator's per-agent cross-tick state
@@ -11196,4 +11209,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.12 | 2026-10-18 | — | D-07: penalise outside-area hand carries after attachment and collision correction, before executor CONTACT. |
 // | 2.13 | 2026-10-18 | — | D-07 review: hand acquisition snap is not a carry; carries whistle only when the held ball moves out or farther out. |
 // | 2.14 | 2026-10-20 | — | #441: null-by-default diagnostic callback immediately before Heading.Update samples its actual world before Resolve can collect or deflect it. No gameplay/schema/RNG change; digest-neutrality locked. |
+// | 2.15 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion
