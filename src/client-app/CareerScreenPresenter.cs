@@ -26,6 +26,7 @@ namespace TacticalDirector.ClientApp
         private readonly string _directory;
         private readonly RoundResolutionMode _mode;
         private readonly Action<Action> _schedule;
+        private readonly Action _beforeSnapshot;
         private readonly object _handoff = new object();
         private CareerSaveSlots _slots;
         private CareerHomeSource _home;
@@ -37,6 +38,7 @@ namespace TacticalDirector.ClientApp
         private Action _after;
         private bool _disposed;
         private bool _workerRunning;
+        private bool _hasUnsavedProgress;
 
         private sealed class Completion
         {
@@ -46,17 +48,20 @@ namespace TacticalDirector.ClientApp
             internal string Error;
             internal bool Succeeded;
             internal bool HasSnapshots;
+            internal bool HasSnapshotWarning;
+            internal bool HasUnsavedProgress;
         }
 
         /// <summary>Constructs a binding with a background worker; initialization is explicitly requested after flow attachment.</summary>
         public CareerScreenPresenter(string directory) : this(directory, RoundResolutionMode.ManagedThroughEngine,
             action => ThreadPool.QueueUserWorkItem(_ => action())) { }
 
-        internal CareerScreenPresenter(string directory, RoundResolutionMode mode, Action<Action> schedule)
+        internal CareerScreenPresenter(string directory, RoundResolutionMode mode, Action<Action> schedule, Action beforeSnapshot = null)
         {
             _directory = directory ?? throw new ArgumentNullException(nameof(directory));
             _mode = mode;
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
+            _beforeSnapshot = beforeSnapshot;
         }
 
         /// <summary>The last complete Career Home snapshot, safe to render while a worker runs.</summary>
@@ -69,8 +74,16 @@ namespace TacticalDirector.ClientApp
         public bool IsBusy { get; private set; }
         /// <summary>True once the slot store and sources have been opened successfully.</summary>
         public bool IsReady { get; private set; }
-        /// <summary>Persistent operation failure; a new explicit operation clears it.</summary>
+        /// <summary>Developer diagnostic only; player feedback uses localized generic roles. Cleared by a new operation.</summary>
         public string Error { get; private set; }
+        /// <summary>True when screen-data refresh failed; refresh before another progress or save action.</summary>
+        public bool HasSnapshotWarning { get; private set; }
+        /// <summary>Whether the last worker action committed successfully, independent of projection refresh.</summary>
+        public bool LastOperationSucceeded { get; private set; }
+        /// <summary>True when the active career has progress not secured by a successful save.</summary>
+        public bool HasUnsavedProgress { get; private set; }
+        /// <summary>True while the player is deciding whether to discard unsaved progress.</summary>
+        public bool PendingQuit { get; private set; }
         /// <summary>The confirmed manual save, retained until another operation.</summary>
         public CareerSaveSlot? SavedSlot { get; private set; }
         /// <summary>An occupied manual slot awaiting explicit overwrite confirmation.</summary>
@@ -127,7 +140,7 @@ namespace TacticalDirector.ClientApp
         public void StartCareer()
         {
             RequireScreen(ClientScreens.NewCareer);
-            Begin(() => { _new.Start(); return true; }, _flow.StartCareer);
+            Begin(() => { _new.Start(); _hasUnsavedProgress = _holder.Require().LastAutosaveError != null; return true; }, _flow.StartCareer);
         }
 
         /// <summary>Opens the picker immediately, then refreshes its slot states off-thread.</summary>
@@ -149,20 +162,21 @@ namespace TacticalDirector.ClientApp
         public void ContinueCareer()
         {
             RequireScreen(ClientScreens.MainMenu);
-            Begin(_load.TryContinue, _flow.ContinueCareer);
+            Begin(() => { bool loaded = _load.TryContinue(); if (loaded) _hasUnsavedProgress = false; return loaded; }, _flow.ContinueCareer);
         }
 
         /// <summary>Loads a selected ready slot; failure keeps the picker and current career intact.</summary>
         public void LoadSlot(CareerSaveSlot slot)
         {
             RequireScreen(ClientScreens.LoadCareer);
-            Begin(() => _load.TryLoad(slot), _flow.EnterLoadedCareer);
+            Begin(() => { bool loaded = _load.TryLoad(slot); if (loaded) _hasUnsavedProgress = false; return loaded; }, _flow.EnterLoadedCareer);
         }
 
         /// <summary>Dispatches the one legal progress action through the existing season dispatcher.</summary>
         public void Progress()
         {
             RequireScreen(ClientScreens.CareerHome);
+            RequireCurrentSnapshot();
             ManagerIntent intent;
             switch (Home.NextAction)
             {
@@ -180,18 +194,28 @@ namespace TacticalDirector.ClientApp
             RequireScreen(ClientScreens.CareerHome);
             if (!IntentRouting.IsSeasonIntent(intent.Kind))
                 throw new InvalidOperationException("The career dispatcher accepts only season intents.");
+            RequireCurrentSnapshot();
             ManagerIntent command = intent;
-            Begin(() => { _dispatcher.Dispatch(in command); return true; });
+            Begin(() =>
+            {
+                _hasUnsavedProgress = true;
+                _dispatcher.Dispatch(in command);
+                if (command.Kind != IntentKind.AdvanceDay)
+                    _hasUnsavedProgress = _holder.Require().LastAutosaveError != null;
+                return true;
+            });
         }
 
         /// <summary>Requests a manual save, asking before replacing any occupied or unreadable slot.</summary>
         public void RequestSave(CareerSaveSlot slot)
         {
             RequireScreen(ClientScreens.CareerHome);
+            RequireCurrentSnapshot();
             if (slot < CareerSaveSlot.Manual1 || slot > CareerSaveSlot.Manual3)
                 throw new ArgumentOutOfRangeException(nameof(slot));
             if (Load.Slots[(int)slot].State != CareerSlotState.Empty)
             {
+                PendingQuit = false;
                 PendingOverwrite = slot;
                 Revision++;
                 return;
@@ -213,6 +237,7 @@ namespace TacticalDirector.ClientApp
         private void Save(CareerSaveSlot slot) => Begin(() =>
         {
             _holder.Require().SaveTo(slot);
+            _hasUnsavedProgress = false;
             return true;
         }, () => SavedSlot = slot);
 
@@ -222,9 +247,43 @@ namespace TacticalDirector.ClientApp
             RequireIdle();
             if (_flow.Current == ClientScreens.NewCareer) _flow.CancelNewCareer();
             else if (_flow.Current == ClientScreens.LoadCareer) _flow.CancelLoadCareer();
-            else if (_flow.Current == ClientScreens.CareerHome) { _flow.QuitToMainMenu(); _holder.Clear(); Home = default; }
+            else if (_flow.Current == ClientScreens.CareerHome)
+            {
+                if (HasUnsavedProgress) PendingQuit = true;
+                else QuitCareer();
+            }
             else throw new InvalidOperationException("No career Back action here.");
             PendingOverwrite = null;
+            Revision++;
+        }
+
+        /// <summary>Confirms discarding the explicitly disclosed unsaved progress.</summary>
+        public void ConfirmQuit()
+        {
+            RequireScreen(ClientScreens.CareerHome);
+            if (!PendingQuit) throw new InvalidOperationException("No discard confirmation is pending.");
+            QuitCareer();
+            Revision++;
+        }
+
+        /// <summary>Dismisses discard confirmation and retains the active career.</summary>
+        public void CancelQuit() { RequireIdle(); PendingQuit = false; Revision++; }
+
+        private void QuitCareer()
+        {
+            _flow.QuitToMainMenu();
+            _holder.Clear();
+            Home = default;
+            HasUnsavedProgress = _hasUnsavedProgress = false;
+            PendingQuit = false;
+        }
+
+        /// <summary>Records a synchronous action failure for persistent, localized player feedback.</summary>
+        public void ReportActionFailure(Exception exception)
+        {
+            if (exception == null) throw new ArgumentNullException(nameof(exception));
+            if (_disposed) return;
+            Error = exception.Message;
             Revision++;
         }
 
@@ -233,6 +292,7 @@ namespace TacticalDirector.ClientApp
             RequireIdle(false);
             IsBusy = true;
             Error = null;
+            PendingQuit = false;
             SavedSlot = null;
             PendingOverwrite = null;
             Home = Home.WithProgressBlocked(true);
@@ -255,6 +315,7 @@ namespace TacticalDirector.ClientApp
                         catch (Exception e) { result.Error = e.Message; }
                         try
                         {
+                            _beforeSnapshot?.Invoke();
                             _load?.RefreshAfterOperation(result.Succeeded);
                             result.Home = _home?.Project() ?? default;
                             result.New = _new?.Project() ?? default;
@@ -262,7 +323,12 @@ namespace TacticalDirector.ClientApp
                             result.HasSnapshots = true;
                             if (!result.Succeeded && result.Error == null) result.Error = result.Load.LastError;
                         }
-                        catch (Exception e) { result.Error = e.Message; result.Succeeded = false; }
+                        catch (Exception e)
+                        {
+                            result.Error = result.Error ?? e.Message;
+                            result.HasSnapshotWarning = true;
+                        }
+                        result.HasUnsavedProgress = _hasUnsavedProgress;
                     }
                     finally
                     {
@@ -302,12 +368,20 @@ namespace TacticalDirector.ClientApp
                 }
                 else Home = Home.WithProgressBlocked(false);
                 Error = result.Error;
+                HasSnapshotWarning = result.HasSnapshotWarning;
+                LastOperationSucceeded = result.Succeeded;
+                HasUnsavedProgress = result.HasUnsavedProgress;
                 IsBusy = false;
                 Action after = _after;
                 _after = null;
                 if (result.Succeeded) after?.Invoke();
                 Revision++;
             }
+        }
+
+        private void RequireCurrentSnapshot()
+        {
+            if (HasSnapshotWarning) throw new InvalidOperationException("Refresh the career screen before another progress or save action.");
         }
 
         private void RequireIdle(bool requireReady = true)
@@ -339,4 +413,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b single-worker actions, cached projections, errors and overwrite confirmation. |
+// | 1.1     | 2026-11-06 | —      | Separate committed work from projection failure; protect stale views and confirm dirty quit. |
 #endregion

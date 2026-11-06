@@ -1,6 +1,6 @@
 // File:     src/client-app/S0FocusNavigation.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08 (explicit Match View order)
+// Modified: 2026-11-06
 // Author:   —
 // Spec:     S0 journey §14.3, I-Q15, Code Standards #20
 // Purpose:  Host-free focus traversal, composite pitch entry and current feedback target decisions.
@@ -22,6 +22,30 @@ namespace TacticalDirector.ClientApp
             Action,
             /// <summary>One member of the pitch's single Tab-entry group.</summary>
             PitchMarker
+        }
+
+        /// <summary>A career focus decision over binding facts; None preserves selection and scroll.</summary>
+        public enum CareerFocusTarget
+        {
+            /// <summary>Leave selection and scroll unchanged.</summary>
+            None,
+            /// <summary>A newly entered page's heading.</summary>
+            Heading,
+            /// <summary>The action that completed, restored without scrolling.</summary>
+            Invoker,
+            /// <summary>The safe cancel action in an open confirmation.</summary>
+            Confirmation
+        }
+
+        /// <summary>Blank clicks and busy controls never redirect to the page heading.</summary>
+        public static CareerFocusTarget CareerRecovery(bool screenChanged, bool hasSelection,
+            bool selectionAllowed, bool isBusy, bool hasConfirmation, bool canRestoreInvoker)
+        {
+            if (screenChanged) return CareerFocusTarget.Heading;
+            if (hasConfirmation && !selectionAllowed) return CareerFocusTarget.Confirmation;
+            if (canRestoreInvoker && !isBusy) return CareerFocusTarget.Invoker;
+            if (!hasSelection || selectionAllowed || isBusy) return CareerFocusTarget.None;
+            return CareerFocusTarget.Heading;
         }
 
         /// <summary>Only actions and the current pitch entry participate in Tab traversal.</summary>
@@ -116,4 +140,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed focus policy for action/anchor/pitch traversal, dialog selectors and retained feedback. |
 // | 1.1     | 2026-10-08 | —      | Explicit logical Tab order with anchor entry at the next listed hierarchy successor (journey §9.3). |
+// | 1.1     | 2026-11-06 | —      | Career focus policy preserves blank selections and busy invokers. |
 #endregion

@@ -49,6 +49,7 @@ namespace TacticalDirector.ClientApp
         internal S0DemoFixture Fixture => _fixture;
 
         /// <summary>Constructs one shell with explicit renderer and admitted approved fixture.</summary>
+        /// <remarks>Ownership of the optional career presenter transfers to this coordinator, which disposes it on teardown.</remarks>
         public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture, CareerScreenPresenter career = null)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
@@ -212,4 +213,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
 // | 1.2     | 2026-11-06 | —      | P7b seven-screen composition with lifetime-stable career registrations. |
+// | 1.3     | 2026-11-06 | —      | Document transfer of career presenter ownership to the coordinator. |
 #endregion

@@ -117,14 +117,16 @@ namespace TacticalDirector.ClientApp
             for (int i = 0; i < keys.Length; i++) keys[i] = roles[i].Key;
             var coverage = new CatalogueCoverage(keys);
             foreach (S0TextRole role in roles)
-                _roles.Add(role.Key.Value.Substring("ui.s0.".Length), role);
+                _roles.Add(role.Suffix, role);
             TemplateCatalogue selected = null;
             if (selectedRows != null)
             {
                 foreach (TemplateCatalogue.StaticRow row in selectedRows)
                 {
-                    string suffix = row.Key.Value.StartsWith("ui.s0.", StringComparison.Ordinal) ? row.Key.Value.Substring("ui.s0.".Length) : "";
-                    if (!_roles.TryGetValue(suffix, out S0TextRole role))
+                    S0TextRole role = null;
+                    foreach (S0TextRole candidate in roles)
+                        if (candidate.Key == row.Key) { role = candidate; break; }
+                    if (role == null)
                         throw new ArgumentException("Unknown S0 authored role: " + row.Key.Value);
                     ValidatePattern(role, row.Text);
                 }
@@ -141,7 +143,7 @@ namespace TacticalDirector.ClientApp
                 ValidatePattern(role, baseOnly.Resolve(role.Key));
                 string pattern = localizer.Resolve(role.Key);
                 ValidatePattern(role, pattern);
-                string suffix = role.Key.Value.Substring("ui.s0.".Length);
+                string suffix = role.Suffix;
                 _patterns.Add(suffix, pattern);
                 canonical.Append(role.Key.Value).Append('|').Append(role.ArgumentTypes).Append('|').Append(pattern.Length).Append(':').Append(pattern).Append('\n');
             }
@@ -277,4 +279,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Strict admission, invariant typed formatting, cell caches and loaded manifest. |
 // | 1.1     | 2026-11-06 | —      | Reuse admitted formatting for the independent career role catalogue. |
+// | 1.2     | 2026-11-06 | —      | Resolve formatter-local suffixes and exact full keys across namespaces. |
 #endregion

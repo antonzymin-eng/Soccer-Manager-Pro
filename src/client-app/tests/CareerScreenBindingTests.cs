@@ -57,6 +57,7 @@ namespace TacticalDirector.ClientApp.Tests
         [Test]
         public void EveryCareerRole_AdmitsExpandedLocaleAndFormatsItsTypedSchema()
         {
+            foreach (S0TextRole role in CareerScreenText.All) StringAssert.StartsWith("ui.career.", role.Key.Value);
             var rows = new TemplateCatalogue.StaticRow[CareerScreenText.All.Count];
             for (int i = 0; i < rows.Length; i++)
             {
@@ -66,14 +67,13 @@ namespace TacticalDirector.ClientApp.Tests
             S0TextFormatter text = S0TextFormatter.ForRoles(CareerScreenText.All, rows, new LocaleId("qps-ploc"));
             foreach (S0TextRole role in CareerScreenText.All)
             {
-                string suffix = role.Key.Value.Substring("ui.s0.".Length);
+                string suffix = role.Suffix;
                 var arguments = new object[role.ArgumentTypes.Length];
                 for (int i = 0; i < arguments.Length; i++) arguments[i] = role.ArgumentTypes[i] == 'I' ? (object)3 : "Long Club Name With Several Words";
                 string formatted = arguments.Length == 0 ? text.Label(suffix) : text.Format(suffix, suffix, arguments);
                 StringAssert.StartsWith("[Expanded career text: ", formatted);
                 StringAssert.DoesNotContain("{", formatted);
             }
-            Assert.DoesNotThrow(() => new S0PresentationConfiguration(2f));
         }
 
         [Test]
@@ -85,6 +85,29 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains("Incompatible", text.Slot(CareerSlotSummary.Without(CareerSaveSlot.Manual3, CareerSlotState.Incompatible)));
             Assert.AreEqual("Autosave", text.SlotName(CareerSaveSlot.Autosave));
             Assert.AreEqual("Manual slot 3", text.SlotName(CareerSaveSlot.Manual3));
+        }
+
+        [TestCase(false, false, false, false, false, false, S0FocusNavigation.CareerFocusTarget.None)]
+        [TestCase(false, true, false, true, false, false, S0FocusNavigation.CareerFocusTarget.None)]
+        [TestCase(false, false, false, false, false, true, S0FocusNavigation.CareerFocusTarget.Invoker)]
+        [TestCase(false, true, true, false, false, false, S0FocusNavigation.CareerFocusTarget.None)]
+        [TestCase(false, false, false, false, true, false, S0FocusNavigation.CareerFocusTarget.Confirmation)]
+        [TestCase(true, false, false, false, false, false, S0FocusNavigation.CareerFocusTarget.Heading)]
+        public void CareerFocus_BlankClicksAndBusyActionsPreserveViewport(bool changed, bool selected,
+            bool allowed, bool busy, bool confirmation, bool restore, S0FocusNavigation.CareerFocusTarget expected)
+        {
+            Assert.AreEqual(expected, S0FocusNavigation.CareerRecovery(changed, selected, allowed, busy, confirmation, restore));
+        }
+
+        [Test]
+        public void PlayerErrorRoles_ContainNoDiagnosticInterpolation()
+        {
+            var formatter = S0TextFormatter.ForRoles(CareerScreenText.All);
+            var text = new CareerScreenText(formatter);
+            StringAssert.Contains("Try again", text.Label("reason.error"));
+            StringAssert.Contains("screen could not refresh", text.Label("reason.refresh_error"));
+            StringAssert.Contains("Autosave failed", text.Label("reason.autosave_error"));
+            Assert.Throws<ArgumentException>(() => text.Format("error", "reason.error", "private file path"));
         }
 
         [Test]
@@ -110,4 +133,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b root, copy and pseudo-locale regressions. |
+// | 1.1     | 2026-11-06 | —      | Cover focus decisions, safe error roles and namespace admission; remove layout overclaim. |
 #endregion

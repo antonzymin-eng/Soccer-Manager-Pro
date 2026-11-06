@@ -1,6 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 6, 2026 — P7b independent binding candidate: new career presenter/text, UGUI view and two regression suites (with metas); tracked scene gains three inactive roots. New docs: `docs/agent-guides/unity-project-context.md` and `docs/tracking/p7b-bindings-validation.md`. See the validation record for the host acceptance boundary.
+**Last Updated:** November 6, 2026 — P7b review corrections in existing client presenter/text/focus/formatter, career UGUI views and regression files. No new paths or removals; implementation status and owner decisions synchronized in the P7b validation record, §5-P7, open issues and context.
+
+
+**Last Updated (prior):** November 6, 2026 — P7b independent binding candidate: new career presenter/text, UGUI view and two regression suites (with metas); tracked scene gains three inactive roots. New docs: `docs/agent-guides/unity-project-context.md` and `docs/tracking/p7b-bindings-validation.md`. See the validation record for the host acceptance boundary.
 
 **Last Updated (prior):** November 5, 2026 — **Pre-C re-review and #537 merge on `codex/pre-c-control`.** Preserve `host-1d3cebf3-20261105/` and the 36-file Pre-C evidence inventory; 37 registered evidence directories in total. Modified: `.github/workflows/ci.yml` and `tools/unity-ci/README.md` (exclude the capture from Unity LFS pulls), `tools/tests/test_evidence_manifests.py` (37 directories), roadmap v0.91, W8 results v1.7 and decision v0.38 (full-time censoring summary), `CHANGELOG.md` and this manifest. No additional paths or capture/policy changes beyond the merged #537 evidence set; no shipping source, asset, package or project-setting change.
 

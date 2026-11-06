@@ -137,6 +137,8 @@ namespace TacticalDirector.ClientApp.Tests
             _view.CancelOverwrite();
             Assert.AreEqual(sequence, _temp.Slots.Describe(CareerSaveSlot.Manual2).Sequence);
             _view.Back();
+            Assert.IsTrue(_view.PendingQuit);
+            _view.ConfirmQuit();
             Run(_view.ContinueCareer);
             Assert.AreEqual(savedDay, _view.Home.WorldDay);
             _view.RequestSave(CareerSaveSlot.Manual2);
@@ -166,7 +168,7 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
-        public void PickerFailure_PreservesCareerAndBackReturnsToMenu()
+        public void PickerFailure_RemainsOnPickerAndCanCancelOrRetry()
         {
             Start();
             _view.Back();
@@ -174,6 +176,10 @@ namespace TacticalDirector.ClientApp.Tests
             Run(() => _view.LoadSlot(CareerSaveSlot.Manual3));
             Assert.AreEqual(ClientScreens.LoadCareer, _flow.Current);
             Assert.IsNotEmpty(_view.Error);
+            Assert.IsFalse(_view.Home.HasCareer);
+            _view.Back();
+            Assert.AreEqual(ClientScreens.MainMenu, _flow.Current);
+            Run(_view.OpenLoad);
             Run(() => _view.LoadSlot(CareerSaveSlot.Autosave));
             Assert.AreEqual(ClientScreens.CareerHome, _flow.Current);
             Assert.IsTrue(_view.Home.HasCareer);
@@ -226,6 +232,114 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void StartCommittedBeforeSnapshotFailure_EntersHomeAndCannotStartTwice()
+        {
+            bool failSnapshot = false;
+            Action pending = null;
+            using var view = new CareerScreenPresenter(_temp.Directory, RoundResolutionMode.QuickSimAll,
+                work => pending = work, () => { if (failSnapshot) throw new IOException("snapshot read failed"); });
+            ClientScreenFlow flow = Attach(view);
+            view.Initialize(); pending(); view.Refresh();
+            view.OpenNew(CareerTestSupport.WORLD_SEED); pending(); view.Refresh();
+            view.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            failSnapshot = true;
+            view.StartCareer(); pending(); view.Refresh();
+            long savedSequence = _temp.Slots.Describe(CareerSaveSlot.Autosave).Sequence;
+            Assert.AreEqual(ClientScreens.CareerHome, flow.Current,
+                "A publication failure cannot turn a committed Start into a failed Start.");
+            Assert.IsTrue(view.HasSnapshotWarning);
+            Assert.Throws<InvalidOperationException>(view.StartCareer);
+            Assert.Throws<InvalidOperationException>(view.Progress);
+            Assert.Throws<InvalidOperationException>(() => view.RequestSave(CareerSaveSlot.Manual1));
+            Assert.AreEqual(savedSequence, _temp.Slots.Describe(CareerSaveSlot.Autosave).Sequence);
+            failSnapshot = false;
+            view.RefreshSlots(); pending(); view.Refresh();
+            Assert.IsTrue(view.Home.HasCareer);
+            Assert.IsFalse(view.HasSnapshotWarning);
+        }
+
+        [Test]
+        public void SavedBeforeSnapshotFailure_RemainsSavedAndBlocksUnconfirmedOverwrite()
+        {
+            bool failSnapshot = false;
+            bool failSchedule = false;
+            Action pending = null;
+            using var view = new CareerScreenPresenter(_temp.Directory, RoundResolutionMode.QuickSimAll,
+                work => { if (failSchedule) throw new InvalidOperationException("scheduler unavailable"); pending = work; }, () => { if (failSnapshot) throw new IOException("private file path"); });
+            Attach(view);
+            view.Initialize(); pending(); view.Refresh();
+            view.OpenNew(CareerTestSupport.WORLD_SEED); pending(); view.Refresh();
+            view.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            view.StartCareer(); pending(); view.Refresh();
+            view.Progress(); pending(); view.Refresh();
+            failSnapshot = true;
+            view.RequestSave(CareerSaveSlot.Manual1); pending(); view.Refresh();
+            Assert.AreEqual(CareerSaveSlot.Manual1, view.SavedSlot);
+            Assert.IsFalse(view.HasUnsavedProgress);
+            Assert.IsTrue(view.LastOperationSucceeded);
+            Assert.IsTrue(view.HasSnapshotWarning);
+            Assert.AreEqual(CareerSlotState.Ready, _temp.Slots.Describe(CareerSaveSlot.Manual1).State);
+            Assert.Throws<InvalidOperationException>(() => view.RequestSave(CareerSaveSlot.Manual1));
+            view.ReportActionFailure(new InvalidOperationException("blocked stale action"));
+            Assert.IsTrue(view.HasSnapshotWarning);
+            failSchedule = true;
+            view.RefreshSlots();
+            Assert.IsFalse(view.IsBusy);
+            Assert.IsTrue(view.HasSnapshotWarning, "A failed refresh dispatch cannot validate old slot metadata.");
+            Assert.Throws<InvalidOperationException>(() => view.RequestSave(CareerSaveSlot.Manual1));
+            failSchedule = false;
+            failSnapshot = false;
+            view.RefreshSlots(); pending(); view.Refresh();
+            view.RequestSave(CareerSaveSlot.Manual1);
+            Assert.AreEqual(CareerSaveSlot.Manual1, view.PendingOverwrite);
+        }
+
+        [Test]
+        public void UnsavedDay_QuitMustBeConfirmedAndCancelKeepsProgress()
+        {
+            Start();
+            Run(_view.Progress);
+            uint day = _view.Home.WorldDay;
+            Assert.IsTrue(_view.HasUnsavedProgress);
+            _view.Back();
+            Assert.IsTrue(_view.PendingQuit);
+            Assert.AreEqual(ClientScreens.CareerHome, _flow.Current);
+            _view.CancelQuit();
+            Assert.IsFalse(_view.PendingQuit);
+            Assert.AreEqual(day, _view.Home.WorldDay);
+            _view.Back();
+            _view.ConfirmQuit();
+            Assert.AreEqual(ClientScreens.MainMenu, _flow.Current);
+            Assert.IsFalse(_view.Home.HasCareer);
+        }
+
+        [Test]
+        public void SuccessfulSave_ClearsUnsavedProgressAndAllowsImmediateQuit()
+        {
+            Start();
+            Run(_view.Progress);
+            Assert.IsTrue(_view.HasUnsavedProgress);
+            Run(() => _view.RequestSave(CareerSaveSlot.Manual3));
+            Assert.IsFalse(_view.HasUnsavedProgress);
+            _view.Back();
+            Assert.IsFalse(_view.PendingQuit);
+            Assert.AreEqual(ClientScreens.MainMenu, _flow.Current);
+        }
+
+        [Test]
+        public void ActionFailure_IsPersistentWithoutDiscardingPendingOverwrite()
+        {
+            Start();
+            Run(() => _view.RequestSave(CareerSaveSlot.Manual1));
+            _view.RequestSave(CareerSaveSlot.Manual1);
+            _view.ReportActionFailure(new IOException("private file path"));
+            Assert.IsNotEmpty(_view.Error);
+            Assert.AreEqual(CareerSaveSlot.Manual1, _view.PendingOverwrite);
+            _view.Refresh();
+            Assert.IsNotEmpty(_view.Error);
+        }
+
+        [Test]
         public void FailedStorageInitialization_CanBeRetried()
         {
             string path = Path.Combine(_temp.Directory, "blocked");
@@ -260,4 +374,5 @@ namespace TacticalDirector.ClientApp.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b worker, navigation, recovery, confirmation and lifetime regressions. |
+// | 1.1     | 2026-11-06 | —      | Regress publication faults, stale dispatch, dirty quit and the actual picker graph. |
 #endregion

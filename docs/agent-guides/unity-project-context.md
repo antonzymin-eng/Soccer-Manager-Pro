@@ -14,3 +14,5 @@ Created: 2026-11-06. Purpose: concise repository onboarding for client work.
 - Validation: narrow generated-project NUnit tests first, then `bash tools/run-tests-local.sh --pr`. `tools/unity-ci/check-meta-integrity.sh` checks tracked metadata. Pinned-editor compile and real-scene interaction/layout checks remain necessary for Unity-only changes.
 
 Version 1.0 (2026-11-06): repository-backed client onboarding; no Editor inspection claimed.
+
+Version 1.1 (2026-11-06): owner accepts safe teardown waiting for P7b; cooperative cancellation is separate. Quit confirms unsaved progress. Worker success and snapshot publication have separate outcomes; refresh a stale view before progress/save. Career localization uses `ui.career.*`.

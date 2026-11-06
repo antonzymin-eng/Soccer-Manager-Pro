@@ -614,13 +614,9 @@ namespace TacticalDirector.MatchClientUnity
                 if (_careerState != null) _demo.interactable = !_careerState.IsBusy;
                 if (_career != null && CareerScreensView.IsCareerScreen(_view.Screen))
                 {
-                    if (_lastScreen != _view.Screen)
-                    {
-                        _lastScreen = _view.Screen;
-                        Focus(_career.HeadingFor(_view.Screen));
-                    }
-                    Selectable current = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
-                    if (!IsAllowed(current)) Focus(_career.ConfirmationFocus ?? _career.HeadingFor(_view.Screen));
+                    bool screenChanged = _lastScreen != _view.Screen;
+                    _lastScreen = _view.Screen;
+                    RecoverCareerFocus(screenChanged);
                     Keyboard();
                     return;
                 }
@@ -1178,8 +1174,27 @@ namespace TacticalDirector.MatchClientUnity
                 Reveal(scroll, item.transform as RectTransform);
         }
 
+        private void RecoverCareerFocus(bool screenChanged)
+        {
+            if (EventSystem.current == null) return;
+            Selectable current = EventSystem.current.currentSelectedGameObject?.GetComponent<Selectable>();
+            Selectable invoker = _career.TakeCompletedInvoker();
+            bool restore = IsAllowed(invoker) && (!IsAllowed(current) || current == invoker);
+            var target = S0FocusNavigation.CareerRecovery(screenChanged, current != null, IsAllowed(current),
+                _careerState.IsBusy, _career.ConfirmationFocus != null, restore);
+            if (target == S0FocusNavigation.CareerFocusTarget.Heading) Focus(_career.HeadingFor(_view.Screen));
+            else if (target == S0FocusNavigation.CareerFocusTarget.Confirmation) Focus(_career.ConfirmationFocus);
+            else if (target == S0FocusNavigation.CareerFocusTarget.Invoker)
+                EventSystem.current.SetSelectedGameObject(invoker.gameObject);
+        }
+
         private void RecoverFocus()
         {
+            if (_career != null && CareerScreensView.IsCareerScreen(_view.Screen))
+            {
+                RecoverCareerFocus(false);
+                return;
+            }
             if (EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null)
                 return;
             Selectable current = EventSystem.current.currentSelectedGameObject.GetComponent<Selectable>();
@@ -1359,4 +1374,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
 // | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 // | 1.13    | 2026-11-06 | —      | P7b career views share S0 layout, keyboard traversal, focus recovery and disposal. |
+// | 1.14    | 2026-11-06 | —      | P7b review: retain focus/scroll, restore invokers, localize errors and confirm unsaved quit. |
 #endregion

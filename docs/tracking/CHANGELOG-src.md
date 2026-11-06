@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 6, 2026 (UTC) — (v2.219 — P7b independent career bindings: seven-screen composition, cached worker handoff, localized career UGUI pages, slot states, overwrite confirmation and failure feedback. No engine or save-schema change. Pinned Unity acceptance remains due; see `p7b-bindings-validation.md`.)
+> **Last Updated:** November 6, 2026 (UTC) — (v2.220 — P7b review corrections: preserve career viewport/focus and invokers; separate committed work from failed projection; static localized failures and independent career key namespace; confirm unsaved quit. Owner accepts safe teardown waiting and defers cooperative cancellation to season-loop work. Unity verification remains outstanding.)
+
+> **Last Updated (prior):** November 6, 2026 (UTC) — (v2.219 — P7b independent career bindings: seven-screen composition, cached worker handoff, localized career UGUI pages, slot states, overwrite confirmation and failure feedback. No engine or save-schema change. Pinned Unity acceptance remains due; see `p7b-bindings-validation.md`.)
 
 > **Last Updated (prior):** November 2, 2026 (UTC) — (v2.218 — **Comment-only: `src/living-world/WorldStore.cs` v1.7 → v1.8.** The `WorldSeed` XML summary still said the seed "is the only value in a save file from which a league's rosters can be regenerated. Squads are not persisted"; the `PROG` block has carried the evolving roster since #28 T1 (season frame v5). It now says the seed rebuilds club identity on resume and keys seed-derived draws such as #41's injury occurrence. No symbol, seam or behaviour changed. Found while checking #50, whose §1.4(c) quotes this comment — see `docs/tracking/CHANGELOG.md`.)
 
@@ -2828,6 +2830,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.220 | 2026-11-06 | — | P7b review corrections and owner decisions; separate operation/publication outcomes, focus continuity, safe feedback and unsaved quit confirmation. |
 | 2.219 | 2026-11-06 | — | P7b independent career binding candidate and regressions; pinned Unity compile/runtime acceptance still due. |
 | 2.218 | 2026-11-02 | — | Comment-only: `WorldStore.cs` v1.8 corrects the `WorldSeed` summary's stale "squads are not persisted" (the `PROG` block has carried the roster since #28 T1). No behaviour change. |
 | 2.217 | 2026-10-30 | — | Reconcile consolidation with merged #521; preserve main season format 8 and its corrected summary. No executable source changes in the conflict resolution. |

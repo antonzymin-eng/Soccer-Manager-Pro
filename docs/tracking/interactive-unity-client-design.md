@@ -775,9 +775,13 @@ rate band, corpus fit or perf baseline is perturbed.
    (`S0TextFormatter`/focus/layout) and its pseudo-locale/text-scale checks. **Matchday under
    `ManagedThroughEngine` runs a real 90-minute match synchronously (~2 minutes of compute, roadmap C1)**,
    so the binding must run `Execute` off the UI thread and render `IsProgressBlocked`; that threading is
-   binding work, not a decision — the session already refuses re-entry. P7b also extends `ClientScreenVisibility` (today an exhaustive
-   four-screen projection that fails loud on the career ids — correct while the shell builds the
-   four-screen flow) and builds the seven-registration `ClientScreenFlow`.
+   binding work, not a decision — the session already refuses re-entry. **November 6 implementation status:**
+   the binding candidate now extends `ClientScreenVisibility` to seven roots and builds the
+   seven-registration `ClientScreenFlow`. Review fixes preserve scroll/focus and separate committed
+   operations from projection failures. The owner accepted waiting for running work on teardown;
+   cancellable matchdays remain separate season-loop work. The owner requested confirmation before
+   Quit to Main Menu discards unsaved progress. Pinned-editor compile and runtime/layout acceptance
+   remain open: [implementation and review validation](p7b-bindings-validation.md).
 2. **The interactive career-fixture seam (D-P7-6)** — owned by #30 / `season-save`: play the managed
    fixture through `MatchSession` and fold its `MatchResult` into the round. When it exists, the career
    gains `CareerHome → TacticsSetup` and `PostMatchReport → CareerHome` as **new named moves**, never a
@@ -1074,6 +1078,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| P7b implementation status | 2026-11-06 | Seven-root binding candidate and review fixes; owner accepts safe teardown waiting for now and requests discard confirmation. Cancellation remains separate; pinned Unity verification still due. Contract version unchanged. |
 | 0.33 | November 3, 2026 | Consolidate the D-P7-5 checkpoint extension and D-P7-6 draft v0.6 / amended D-11 from parallel v0.32 branches. No contract approval or runtime change. |
 | 0.32 | 2026-11-03 | D-P7-5 annotated: roadmap D-10 extended on November 3, 2026, so saves stay breakable until the owner's release-readiness checkpoint (D-14: no Early Access planned). The incompatible-slot behaviour is unchanged. Documentation only. |
 | 0.32 (branch-local #534) | 2026-11-02 | **D-P7-6 contract moved to a #30 amendment draft; D-11 amended.** A review of the v0.31 bullet contract against `SeasonLoop` found it incomplete (substitutions vs the starting-XI inputs to #41 appearances and #44 ban serving; the card fold outside the engine snapshot; engine boot and per-tick card observation across assemblies). §5-P7 *Remaining* item 2 now points to the PROPOSED draft `d-p7-6-interactive-career-match-amendment-draft.md` v0.6. The owner amended D-11 the same day: no mid-match saves; quitting a match abandons it and returns to Career Home with the round unplayed (`Match → CareerHome` move); the starting eleven stays automatic. The D-P7-6 row is updated to match. Documentation only. |
