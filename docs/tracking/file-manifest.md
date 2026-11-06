@@ -1,7 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
+**Last Updated:** November 5, 2026 — **Pre-C re-review and #537 merge on `codex/pre-c-control`.** Preserve `host-1d3cebf3-20261105/` and the 36-file Pre-C evidence inventory; 37 registered evidence directories in total. Modified: `.github/workflows/ci.yml` and `tools/unity-ci/README.md` (exclude the capture from Unity LFS pulls), `tools/tests/test_evidence_manifests.py` (37 directories), roadmap v0.91, W8 results v1.7 and decision v0.38 (full-time censoring summary), `CHANGELOG.md` and this manifest. No additional paths or capture/policy changes beyond the merged #537 evidence set; no shipping source, asset, package or project-setting change.
 
-**Last Updated:** November 5, 2026 — **Pinned-host Unity compile and living-world EditMode at `main` `1d3cebf3`.** **New evidence directory** `docs/tracking/evidence/host-1d3cebf3-20261105/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract), `tools/tests/test_evidence_manifests.py` (36 registered directories), `docs/tracking/CHANGELOG.md` and this manifest. No source, asmdef, package or project-setting change.
+**Last Updated (prior):** November 5, 2026 — **Pinned-host Unity compile and living-world EditMode at `main` `1d3cebf3`.** **New evidence directory** `docs/tracking/evidence/host-1d3cebf3-20261105/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract), `tools/tests/test_evidence_manifests.py` (36 registered directories), `docs/tracking/CHANGELOG.md` and this manifest. No source, asmdef, package or project-setting change.
+
+**Last Updated (prior):** November 4, 2026 — **Pre-C control review closeout on `codex/pre-c-control`.** The 36-file evidence table below inventories the complete retained capture, original as-run archive, portable tools and reviewed policy. Modified: `.gitattributes`, `.githooks/pre-commit` (Git 2.52 offline LFS snapshot), `tools/dotnet-ci/check_evidence_manifests.py`, `tools/dotnet-ci/README.md`, `tools/tests/test_evidence_manifests.py`, the roadmap, both W8 B→C follow-up records, `CHANGELOG.md` and this manifest. Four superseded scratch-only scripts move into `as-run-v1.tar.xz`; no shipping source, asset, package or project-setting change.
 
 **Last Updated (prior):** November 3, 2026 — **Consolidate PRs #532, #533 and #534 against remote main #535.** Roadmap v0.88 preserves November 3 ratified no-Early-Access ordering plus amended D-11; client design v0.33 combines D-P7-5 checkpoint and D-P7-6 draft v0.6 (still PROPOSED). Retain C6 §7 records and WorldStore comment-only correction. Archive #526 technical gap using #535 pinned-host evidence; late-validation exception remains, index 39 active / 74 archived. Preserve parallel version histories with provenance. No runtime, save-format, schema or RNG changes.
 
@@ -4550,6 +4553,49 @@ Added October 30, 2026 (cross-document consistency review at `38395f8`). These t
 | `src/player-database/tests/SquadTests.cs` | `Squad` constructor guards and snapshot-copy invariant |
 | `src/player-progression/tests/PlayerProgressionConstantsTests.cs` | #28 constant-catalogue invariant locks (shapes/derivations independent of `[GT]` magnitudes) |
 | `src/player-progression/tests/RegenGeneratorTests.cs` | T-PG-REG-001/003: regen determinism, `PROGRESSION_REGEN_FIELDS` budget, bounds, room-to-grow contract |
+
+## Pre-C control evidence — November 4, 2026
+
+Created November 4, 2026. Purpose: retain the reproducible B control and shared rule 1.1 before C.
+
+| Path | Role |
+| --- | --- |
+| `docs/tracking/evidence/pre-c-control-20261104/FrozenW8.cs.txt` | Exact original W8 Census source; Git blob 520ba31c |
+| `docs/tracking/evidence/pre-c-control-20261104/PROTOCOL.md` | Rule 1.1: applied-touch eligibility, ordering, censoring and B/C population contract |
+| `docs/tracking/evidence/pre-c-control-20261104/Program.cs.txt` | Exact as-run CLR capture runner and contact classifier; never shipping source |
+| `docs/tracking/evidence/pre-c-control-20261104/README.md` | Control verdict, six fingerprints, attribution, same-frame explanation and coverage limits |
+| `docs/tracking/evidence/pre-c-control-20261104/REPRODUCE.md` | Checkout-only full reanalysis plus optional portable Linux source rebuild commands |
+| `docs/tracking/evidence/pre-c-control-20261104/SHA256SUMS` | Complete tracked-file integrity manifest; LFS payload hash also serves as pointer OID |
+| `docs/tracking/evidence/pre-c-control-20261104/analysis.json` | Full digest/ball/ledger equality, counts and rule 1.1 selection result |
+| `docs/tracking/evidence/pre-c-control-20261104/analysis.log` | Full replay analyzer summary and PASS status |
+| `docs/tracking/evidence/pre-c-control-20261104/analyze.py` | Strict full-stream verifier and applied-touch selector; explicit PARTIAL mode |
+| `docs/tracking/evidence/pre-c-control-20261104/as-run-v1.tar.xz` | Original committed tools, protocol and outputs, including the old LFS pointer |
+| `docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz` | Git LFS object: all 108 per-arm raw files, including complete per-tick digest arrays |
+| `docs/tracking/evidence/pre-c-control-20261104/classifier-tests.log` | Original six contact-classifier assertion results |
+| `docs/tracking/evidence/pre-c-control-20261104/closeout.py` | Portable scratch-only CSV/review-bundle formatter; rejects partial validation |
+| `docs/tracking/evidence/pre-c-control-20261104/evidence-check-tests.log` | Original capture completeness/nonterminal-divergence regression results |
+| `docs/tracking/evidence/pre-c-control-20261104/expected.json` | The six adopted historical post-law B v27 terminal fingerprints |
+| `docs/tracking/evidence/pre-c-control-20261104/freeze-verification.log` | Original post-capture source, assembly, CLR and exit-code verification |
+| `docs/tracking/evidence/pre-c-control-20261104/freeze.json` | Immutable as-run source/runtime/configuration/compile/binary identities |
+| `docs/tracking/evidence/pre-c-control-20261104/observed-build-accepted.log` | Observed source-copy full build; zero errors, three existing CS0649 warnings |
+| `docs/tracking/evidence/pre-c-control-20261104/observed-build-final-v2.log` | Observed final incremental build after classifier preflight correction |
+| `docs/tracking/evidence/pre-c-control-20261104/observer-only.patch` | Exact scratch producer overlay for ordered physical contacts and event copies |
+| `docs/tracking/evidence/pre-c-control-20261104/per-match.csv` | Six paired terminal fingerprints, stream parity and goals/shots/releases |
+| `docs/tracking/evidence/pre-c-control-20261104/plain-build-accepted.log` | Unmodified source-copy full build and existing warning evidence |
+| `docs/tracking/evidence/pre-c-control-20261104/plain-build-final-v2.log` | Plain final incremental capture build |
+| `docs/tracking/evidence/pre-c-control-20261104/policy-freeze.json` | Reviewed pre-C rule 1.1 code/protocol and complete capture identity pin |
+| `docs/tracking/evidence/pre-c-control-20261104/preflight-attempts.tar.xz` | Failed/superseded preparation receipts and original classifier attempt provenance |
+| `docs/tracking/evidence/pre-c-control-20261104/prepare.py` | Portable Git-source reconstruction, exact observer checks and optional pinned SDK/CLR builds |
+| `docs/tracking/evidence/pre-c-control-20261104/review-validation.log` | Review fixes: complete and pointer-only checks, replay and portability evidence |
+| `docs/tracking/evidence/pre-c-control-20261104/review.json` | All 126 decisions unchanged; two same-frame contact witnesses and unexercised-path counts |
+| `docs/tracking/evidence/pre-c-control-20261104/review.py` | Reproduce original-decision parity, same-frame witnesses and rule freeze checks |
+| `docs/tracking/evidence/pre-c-control-20261104/run.py` | Prepared-input verifier and isolated per-seed B capture launcher |
+| `docs/tracking/evidence/pre-c-control-20261104/runs.json` | Original twelve capture commands, UTC times and successful exit codes |
+| `docs/tracking/evidence/pre-c-control-20261104/selected-windows.csv` | Twelve exact opponent-touch windows with order, duration and team-attributed counts |
+| `docs/tracking/evidence/pre-c-control-20261104/selection-tests.log` | Original selection-boundary test results before review expansion |
+| `docs/tracking/evidence/pre-c-control-20261104/test_evidence_checks.py` | Capture loss/duplication, missing/truncated digest and partial-mode regression checks |
+| `docs/tracking/evidence/pre-c-control-20261104/test_selection.py` | Same-frame, team-first, cutoff, censoring and non-contact tackle regression checks |
+| `docs/tracking/evidence/pre-c-control-20261104/windows.json` | All 126 releases, first-other decisions, own touches and raw follow-up event memberships |
 
 ## Maintenance Rule
 

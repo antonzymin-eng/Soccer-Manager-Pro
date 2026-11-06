@@ -1,0 +1,28 @@
+Review validation — November 4, 2026 (Pacific)
+
+Original captured games, Program.cs.txt, FrozenW8.cs.txt, observer-only.patch and freeze.json unchanged.
+Complete retained capture: 108 per-arm files, including all 12 digest-array paths.
+Full reanalysis: PASS; six adopted fingerprints in both arms; all digest/ball/ledger streams equal.
+Publish reconciliation: 23,948 records, exactly once each.
+Rule 1.1: 37 abstract BallLoose outcomes excluded; 126 release decisions and 12 windows unchanged.
+Same-frame review: frames 24126 and 24378; positive approach dot, within 1 m reach; order 2 release, 5 touch, 6 clearing.
+Corpus limits: zero headers and zero rejected hand-contact gates; no physical producer coverage claimed for those paths.
+Selection/evidence regressions: 19 Python tests passed.
+Portable preparation: exact original source archive reproduced with LFS smudging disabled.
+Portable rebuild: both arms built, zero errors; three pre-existing CS0649 warnings each.
+Portable runtime checks: dotnet host and every CLR file match original frozen hashes.
+Portable smoke: 1,000 frames per arm; digest/ball/ledger bytes identical; not a new full-match capture.
+Rebuilt classifier: six assertions passed.
+Missing digest negative case: default analysis fails; explicit --skip-digests reports PARTIAL and passed=null for every seed and overall.
+Partial closeout: rejected with exit 2; cannot produce a passing bundle.
+Cross-document consistency: PASS, no stale version citation or cardinality.
+
+Final checkout and hygiene checks:
+python3 tools/dotnet-ci/check_evidence_manifests.py: PASS with the materialized capture (33 manifests, 36 registered directories).
+Same checker against a staged-tree pointer-only checkout: PASS with no LFS payload download; strict reference OID only.
+python3 -m unittest discover -s tools/tests -p test_evidence_manifests.py -v in pointer-only checkout: 22 passed.
+REPRODUCE.md first block, excluding network pull and using a verified local copy of its sole LFS payload, in a separate staged-tree checkout: PASS; 19 tests; all six cmp commands byte-identical.
+python3 -m unittest discover -s tools/tests -p test_*.py: 351 passed after Git 2.52 hook correction. Initial failure was the existing unavailable-filter fixture: write-tree invoked the intentionally failing process filter; index-tree creation now disables LFS filters.
+python3 tools/assembly-tier-check.py --repo .: PASS (38 production folders, no upward edge).
+python3 tools/doc-consistency-check.py --repo .: PASS.
+bash tools/unity-ci/check-binaries.sh: PASS.

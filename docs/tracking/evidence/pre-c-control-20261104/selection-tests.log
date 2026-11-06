@@ -1,0 +1,12 @@
+test_end_inclusive_truncation_and_no_later_event (test_selection.SelectionTests.test_end_inclusive_truncation_and_no_later_event) ... ok
+test_first_teammate_excludes_later_opponent (test_selection.SelectionTests.test_first_teammate_excludes_later_opponent) ... ok
+test_overlap_preserves_membership (test_selection.SelectionTests.test_overlap_preserves_membership) ... ok
+test_own_touches_preserved_and_507_is_inclusive (test_selection.SelectionTests.test_own_touches_preserved_and_507_is_inclusive) ... ok
+test_rejected_attempt_is_not_a_touch (test_selection.SelectionTests.test_rejected_attempt_is_not_a_touch) ... ok
+test_restart_censors_before_later_touch (test_selection.SelectionTests.test_restart_censors_before_later_touch) ... ok
+test_same_frame_order_and_goal_credit (test_selection.SelectionTests.test_same_frame_order_and_goal_credit) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.000s
+
+OK

@@ -1,0 +1,170 @@
+[
+  {
+    "arm": "observed",
+    "seed": "0F1E2D3C4B5A6978",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0F1E2D3C4B5A6978",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/0F1E2D3C4B5A6978"
+    ],
+    "startedUtc": "2026-11-04T22:24:40.754430+00:00",
+    "endedUtc": "2026-11-04T22:27:16.927362+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "0F1E2D3C4B5A6978",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0F1E2D3C4B5A6978",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/0F1E2D3C4B5A6978"
+    ],
+    "startedUtc": "2026-11-04T22:24:40.753569+00:00",
+    "endedUtc": "2026-11-04T22:27:17.162029+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "observed",
+    "seed": "00000000D1A6D05E",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000D1A6D05E",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/00000000D1A6D05E"
+    ],
+    "startedUtc": "2026-11-04T22:27:17.163073+00:00",
+    "endedUtc": "2026-11-04T22:30:01.572499+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "00000000D1A6D05E",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000D1A6D05E",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/00000000D1A6D05E"
+    ],
+    "startedUtc": "2026-11-04T22:27:16.927753+00:00",
+    "endedUtc": "2026-11-04T22:30:04.000668+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "0000000000000001",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000000000001",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/0000000000000001"
+    ],
+    "startedUtc": "2026-11-04T22:30:01.573150+00:00",
+    "endedUtc": "2026-11-04T22:32:15.412401+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "observed",
+    "seed": "0000000000000001",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000000000001",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/0000000000000001"
+    ],
+    "startedUtc": "2026-11-04T22:30:04.001276+00:00",
+    "endedUtc": "2026-11-04T22:32:19.814084+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "00000000ABCDEF12",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000ABCDEF12",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/00000000ABCDEF12"
+    ],
+    "startedUtc": "2026-11-04T22:32:15.412944+00:00",
+    "endedUtc": "2026-11-04T22:34:58.776232+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "observed",
+    "seed": "00000000ABCDEF12",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000ABCDEF12",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/00000000ABCDEF12"
+    ],
+    "startedUtc": "2026-11-04T22:32:19.814349+00:00",
+    "endedUtc": "2026-11-04T22:35:06.211967+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "0000000099887766",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000099887766",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/0000000099887766"
+    ],
+    "startedUtc": "2026-11-04T22:34:58.777084+00:00",
+    "endedUtc": "2026-11-04T22:37:14.332184+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "observed",
+    "seed": "0000000099887766",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000099887766",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/0000000099887766"
+    ],
+    "startedUtc": "2026-11-04T22:35:06.212192+00:00",
+    "endedUtc": "2026-11-04T22:37:19.743019+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "plain",
+    "seed": "000000005A5A5A5A",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/plain/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "000000005A5A5A5A",
+      "plain",
+      "/workspace/work/pre-c-control/results/plain/000000005A5A5A5A"
+    ],
+    "startedUtc": "2026-11-04T22:37:14.332996+00:00",
+    "endedUtc": "2026-11-04T22:39:15.740274+00:00",
+    "exitCode": 0
+  },
+  {
+    "arm": "observed",
+    "seed": "000000005A5A5A5A",
+    "command": [
+      "/workspace/.cloud-tools/dotnet/dotnet",
+      "/workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "000000005A5A5A5A",
+      "observed",
+      "/workspace/work/pre-c-control/results/observed/000000005A5A5A5A"
+    ],
+    "startedUtc": "2026-11-04T22:37:19.743614+00:00",
+    "endedUtc": "2026-11-04T22:39:21.136311+00:00",
+    "exitCode": 0
+  }
+]

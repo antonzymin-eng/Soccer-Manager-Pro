@@ -38,7 +38,12 @@ checkout_index_no_lfs_smudge() {
 # refresh only paths whose index blobs changed, so MSBuild can reuse bin/obj
 # outputs instead of seeing the entire source tree as freshly touched.
 LC_ALL=C git -C "$ROOT" ls-files > "$CURRENT_MANIFEST"
-CURRENT_TREE="$(git -C "$ROOT" write-tree)"
+# Git 2.52 can invoke clean/process filters while refreshing the index for
+# write-tree. The snapshot must use the staged blobs even with unavailable LFS
+# payloads, so keep this index-only operation independent of those filters too.
+CURRENT_TREE="$(GIT_LFS_SKIP_SMUDGE=1 git -C "$ROOT" \
+  -c filter.lfs.process= -c filter.lfs.clean= \
+  -c filter.lfs.smudge= -c filter.lfs.required=false write-tree)"
 PREVIOUS_TREE=""
 if [ -f "$INDEX_TREE_FILE" ]; then
   PREVIOUS_TREE="$(tr -d '\r\n' < "$INDEX_TREE_FILE")"
