@@ -1,0 +1,22 @@
+# Source identity — pinned-host Unity run at fdbbff5a (PR #542 head)
+# The run script recorded tree hashes and counted
+# `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`
+# lines before the compile, after the compile and after the EditMode run.
+
+commit: fdbbff5a5d1f9303d59455eec35a07101e2a3fdc
+parent: 0f77c76d57748001b965c788b4c9c568287a2921 (0f77c76d, merge of main af116839 into the W8 C branch)
+tree repo: 03ee4f3927486eeeaf19d32e6d530bdd8d4b03eb
+tree src: 3a45777801dd32221249c5d935dda87e492ee8d9
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain lines before compile: 0
+Library present before compile: no
+compile start: 2026-11-06T21:36:18Z
+compile exit: 0 end: 2026-11-06T21:37:59Z
+porcelain lines after compile: 0
+tests start: 2026-11-06T21:37:59Z
+tests exit: 2 end: 2026-11-06T22:08:05Z
+porcelain lines after tests: 0
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src (fresh detached worktree)

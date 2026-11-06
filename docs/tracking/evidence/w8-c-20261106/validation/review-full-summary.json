@@ -1,0 +1,15 @@
+{
+  "result": "completed with zero failures",
+  "passed": 940,
+  "failed": 0,
+  "skipped": 16,
+  "inconclusive": 1,
+  "trx_result_entries": 957,
+  "console_total": 956,
+  "duration_console": "34.8409 minutes",
+  "filter": null,
+  "inconclusive_test": "ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice",
+  "inconclusive_reason": "Existing Assume.That requires >30 connecting challenges; corpus has 15 (won=4 loose=10 foul=1). Same outcome and counts in the initial full run. VSTest console omits this inconclusive result from its total; TRX records it as NotExecuted.",
+  "unity_result": null,
+  "github_ci_result": null
+}

@@ -1,0 +1,19 @@
+{
+  "mergedMain": "af11683913e88cc4621686fbe3f659625398decb",
+  "preCControl": "docs/tracking/evidence/pre-c-control-20261104",
+  "simulationSourceUnchangedInMain": true,
+  "arms": {
+    "B": {
+      "canonicalReleaseIdentitiesMatch": 126,
+      "selectedClearingIdentitiesMatch": 12,
+      "appliedTouchCount": 16264,
+      "ownOpponentEventCountsMatch": true
+    },
+    "C": {
+      "canonicalReleaseIdentitiesMatch": 126,
+      "selectedClearingIdentitiesMatch": 12,
+      "appliedTouchCount": 16264,
+      "ownOpponentEventCountsMatch": true
+    }
+  }
+}
