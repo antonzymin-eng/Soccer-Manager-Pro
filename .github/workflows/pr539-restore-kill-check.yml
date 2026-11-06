@@ -1,0 +1,26 @@
+# TEMPORARY NEGATIVE CONTROL for PR #539. This branch/PR must NEVER be merged.
+name: PR539 restore mutation negative control
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  restore-kill:
+    name: Restore empty-block cases (expected failures)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generate SDK projects
+        run: python3 tools/dotnet-ci/generate_projects.py
+      - name: Run only four restore cases (mutant intentionally fails two)
+        run: >
+          dotnet test src/client-app/tests/client-app-tests.gen.csproj
+          --filter FullyQualifiedName~ResumedFinances_UseOwnerMigrationOrKeepSavedValues
+          --logger "console;verbosity=normal"
