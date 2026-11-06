@@ -5627,11 +5627,7 @@ namespace TacticalDirector.MatchEngine
 
             // Collision correction can carry a held ball across the area boundary after Physics.
             if (ApplyPendingKeeperHandlingOffence()) return;
-            if (TestOnly_PostReattachmentBall.HasValue)
-            {
-                _ball = TestOnly_PostReattachmentBall.Value;
-                TestOnly_PostReattachmentBall = null;
-            }
+            ApplyHandControlFixtureState();
             if (ApplyKeeperHandControlOffence()) return;
 
             // W4: consume an APPLIED flight change immediately in this Resolve phase. No pending
@@ -11210,4 +11206,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.13 | 2026-10-18 | — | D-07 review: hand acquisition snap is not a carry; carries whistle only when the held ball moves out or farther out. |
 // | 2.14 | 2026-10-20 | — | #441: null-by-default diagnostic callback immediately before Heading.Update samples its actual world before Resolve can collect or deflect it. No gameplay/schema/RNG change; digest-neutrality locked. |
 // | 2.15 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
+// | 2.16 | 2026-11-06 | — | PR #542 review: conditional editor/development/test call for the post-attachment ball fixture; release Resolve omits it. |
 #endregion

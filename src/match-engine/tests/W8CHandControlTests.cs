@@ -100,6 +100,82 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(-1L, engine.TestOnly_GoalkeeperState.HandControlStartFrame[team]);
         }
 
+        [TestCase(0, GoalkeeperDeliveryVariant.Roll, 0, false)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Roll, 0, false)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Throw, 0, false)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Throw, 0, false)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Kick, 0, false)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Kick, 0, false)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Kick, 84, false)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Kick, 84, false)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Roll, 0, true)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Roll, 0, true)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Throw, 0, true)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Throw, 0, true)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Kick, 0, true)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Kick, 0, true)]
+        [TestCase(0, GoalkeeperDeliveryVariant.Kick, 84, true)]
+        [TestCase(1, GoalkeeperDeliveryVariant.Kick, 84, true)]
+        public void RestoreWindup_ContactExactlyAt480_IsAcceptedAndReplaysOnce(
+            int team, GoalkeeperDeliveryVariant delivery, int forcedWindup, bool lastWindupTick)
+        {
+            MatchEngine engine = Holding(team);
+            DeliveryKind kind = delivery == GoalkeeperDeliveryVariant.Roll ? DeliveryKind.Roll
+                : delivery == GoalkeeperDeliveryVariant.Throw ? DeliveryKind.Throw : DeliveryKind.Kick;
+            int windup = forcedWindup > 0 ? forcedWindup
+                : Mathf.CeilToInt(GoalkeeperDistribution.ComputeWindupMs(kind) * 60f / 1000f);
+            int contactFrame = Claim + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES;
+            int commitFrame = contactFrame - windup;
+            Assert.IsTrue(MatchEngine.TestOnly_DistributionContactFits(commitFrame, Claim, windup));
+            StartDefensiveRequest(engine, team, commitFrame, delivery, windup);
+            engine.TestOnly_SetPhysicsFrame(commitFrame - 1);
+            engine.RunTick(); // First decrement runs in the commit frame.
+            int framesToCheckpoint = lastWindupTick ? windup - 1 : windup / 2;
+            for (int i = 0; i < framesToCheckpoint; i++) engine.RunTick();
+            PassExecutorState saved = engine.TestOnly_PassExecutorState(team * 11);
+            Assert.AreEqual(lastWindupTick ? 0 : windup - 1 - framesToCheckpoint,
+                saved.WindupFramesRemaining);
+            Assert.AreEqual((long)contactFrame,
+                (long)engine.CurrentTick + saved.WindupFramesRemaining + 1,
+                "The saved remaining windup must put CONTACT on the last legal frame.");
+            SnapshotHeader header = engine.CaptureDurableHeader();
+            SnapshotPayload payload = engine.CaptureDurablePayload();
+            int continuation = contactFrame - (int)engine.CurrentTick + 2;
+            var reference = new byte[continuation][];
+            int completed = 0;
+            engine.TestOnly_W8BTerminalFeedbackObserver = (id, feedback, missing) =>
+            {
+                Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, feedback.Kind);
+                Assert.AreEqual(contactFrame, feedback.ContactFrame);
+                completed++;
+            };
+            for (int i = 0; i < continuation; i++)
+            {
+                engine.RunTick(); reference[i] = engine.CurrentSnapshotDigest;
+                Assert.AreEqual(0, Count<RestartAwardedEvent>(engine));
+            }
+            Assert.AreEqual(1, completed);
+
+            // Replay sequentially: restoring an engine resets the process-global EventBus.
+            MatchEngine restored = MatchEngine.RestoreFromSnapshot(header, payload, engine.MatchSeed);
+            Assert.AreEqual((long)Claim, restored.TestOnly_GoalkeeperState.HandControlStartFrame[team]);
+            completed = 0;
+            restored.TestOnly_W8BTerminalFeedbackObserver = (id, feedback, missing) =>
+            {
+                Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Completed, feedback.Kind);
+                Assert.AreEqual(contactFrame, feedback.ContactFrame);
+                completed++;
+            };
+            for (int i = 0; i < continuation; i++)
+            {
+                restored.RunTick();
+                CollectionAssert.AreEqual(reference[i], restored.CurrentSnapshotDigest);
+                Assert.AreEqual(0, Count<RestartAwardedEvent>(restored));
+            }
+            Assert.AreEqual(1, completed);
+            Assert.AreEqual(-1L, restored.TestOnly_GoalkeeperState.HandControlStartFrame[team]);
+        }
+
         [TestCase(0)] [TestCase(1)]
         public void AcceptedWindupAt481_CancelsOnceAndDrainsNextResolve(int team)
         {
@@ -436,13 +512,14 @@ namespace TacticalDirector.MatchEngine
             return engine;
         }
 
-        private static void StartDefensiveRequest(MatchEngine engine, int team, int frame, GoalkeeperDeliveryVariant delivery)
+        private static void StartDefensiveRequest(MatchEngine engine, int team, int frame,
+            GoalkeeperDeliveryVariant delivery, int windupFrames = 1)
         {
             var request = new GoalkeeperDistributionRequest
             {
                 AgentId = team * 11, TeamId = team, Delivery = delivery, TargetAgentId = -1,
                 TargetPosition = new Vector3(team == 0 ? 35f : 70f, 34f, 0f), EmittedPower01 = 0.5f,
-                ReleaseHeightM = 0.2f, WindupFrames = 1, FrameNumber = frame
+                ReleaseHeightM = 0.2f, WindupFrames = windupFrames, FrameNumber = frame
             };
             Assert.IsTrue(engine.TestOnly_StartGoalkeeperDistribution(in request, out _));
             GoalkeeperTickState state = engine.TestOnly_GoalkeeperState;
@@ -505,4 +582,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-11-06 | — | Mirrored W8 C exact-boundary, precedence, CONTACT, feet and v28 restore coverage. |
+// | 1.1 | 2026-11-06 | — | PR #542 review: exact-480 CONTACT round-trip from mid-windup and the last windup tick for both teams and all deliveries, including the 84-frame maximum. |
 #endregion

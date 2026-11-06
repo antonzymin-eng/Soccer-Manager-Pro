@@ -8,7 +8,9 @@ This evidence does not establish a pinned-host Unity compile or Unity EditMode r
 B is `b6505350` (schema v27). C is the implementation over B (schema v28). Both captures use the
 same .NET SDK 8.0.426 / Linux / Debug lane, default constructor and tactics, `EnableGkHeading()`,
 six frozen seeds, 324,000 frames each. No tuning changes. The source snapshots in the isolated
-copies predate later comment/documentation and extra test assertions; runtime behavior is identical.
+copies predate later comment/documentation, extra test assertions and conditional fixture-hook
+gating. Editor/development gameplay behavior is identical; the two unused fixture hooks are now
+omitted from release execution.
 
 `SHA256SUMS` is the complete tracked-file manifest. `probe/frozen-inputs.txt` preserves the original
 pre-capture freeze hashes and paths. The frozen W8 observer is byte-identical to its committed source;
@@ -74,14 +76,33 @@ The initial full Linux MatchEngine assembly run finished: **917 passed / 3 faile
 (42 min 59 s). All three failures were old forced-distribution restore fixtures that omitted the
 #11 hand episode and therefore violated v28's structural requirement. The fixtures were corrected
 without changing production validation. The affected SnapshotRestore, W8BPrerequisite, W8CHandControl
-and clock fixtures now pass **127/127**. Both receipts are in `validation/`; no fresh all-green
-whole-assembly run or Unity result is claimed. The owner will have Claude run the required pinned-host
-Unity compile and whole MatchEngine EditMode locally.
+and clock fixtures first passed **127/127**. The review follow-up below raises the affected total to
+**143/143**. A fresh unfiltered whole MatchEngine Linux run completes with **940 passed, 0 failed,
+16 skipped and 1 inconclusive** in 34.8409 minutes. The console omits the inconclusive case from
+its 956-test total; TRX retains all 957 entries. The existing tackle foul-share assumption requires
+more than 30 connecting challenges, but has 15 (won 4, loose 10, foul 1), identical to the initial
+run. The other 16 skips are existing opt-in diagnostics. Both full-run receipts are retained under
+`validation/`, including `match-engine-final.trx.xz`, `match-engine-final.log.xz` and
+`review-full-summary.json`. No Unity result is claimed. The owner will have Claude run the required
+pinned-host Unity compile and whole MatchEngine EditMode locally.
 
 The native pre-commit hook exceeded its fixed 60-second wall-clock budget while running its staged
 snapshot sweep. Its receipt is `validation/precommit-timeout.log.xz`; it is not a passing hook run.
 The local handoff commit uses a per-command hook bypass after the independent compile, focused tests,
 full Linux failure reconciliation and repository checks above. No test or predicate was disabled.
+
+## PR #542 review validation
+
+Sixteen new exact-480 CONTACT snapshot cases exercise both teams, all delivery kinds and the
+maximum 84-frame windup. Saves are captured mid-windup and at zero remaining windup ticks.
+Each restored continuation matches the original digests, completes once at frame 480 and awards
+no corner. The four affected restore/prerequisite/C/clock fixtures pass **143/143**.
+
+The ball-injection field and whistle counter, together with both runtime call sites, are conditional
+on editor/development/test compilation. A release build with only `TRACE` defined passes. The
+retained metadata/IL probe verifies that release has neither field nor call, while development
+retains both calls exactly once. These fixture-only changes preserve the paired capture's gameplay
+behavior and snapshot contract; the six-seed capture was not rerun.
 
 ## Merge with landed Pre-C control
 

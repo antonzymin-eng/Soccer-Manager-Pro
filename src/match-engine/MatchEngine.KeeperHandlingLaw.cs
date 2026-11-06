@@ -123,7 +123,7 @@ namespace TacticalDirector.MatchEngine
         private bool FinishKeeperWhistle(Vector2 spot, int awardedTeam, RestartCue cue,
             byte restartKind, bool recordIndirectTaker)
         {
-            TestOnly_KeeperWhistleFinishCount++;
+            RecordKeeperWhistleForTests();
             _foulCandidateFound = false;
             _foulCandidateIsDecided = false;
             ApplyRestart(spot, awardedTeam, cue);
@@ -202,4 +202,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.2 | 2026-10-18 | — | D-07 option A: general outside-area contacts/carries, shared geometry and pending-state validation. |
 // | 1.3 | 2026-10-18 | — | D-07 review: goal-line overhang is on the line; restart spot clamped to the pitch; carries compare against the previous attached position. |
 // | 1.4 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
+// | 1.5 | 2026-11-06 | — | PR #542 review: omit the fixture-only whistle counter call from release execution. |
 #endregion

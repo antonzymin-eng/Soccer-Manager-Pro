@@ -5,7 +5,7 @@ Created November 6, 2026. Purpose: record the implementation of owner-approved
 and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c).
 Base: `b6505350`. No `[GT]` changes, new gameplay RNG draws or policy changes.
 
-**Status: implemented; paired Linux comparison passed; owner-arranged host validation pending.** Pinned-host Unity 6000.4.9f1 compilation and
+**Status: implemented; paired Linux comparison passed; fresh full Linux run has zero failures; owner-arranged host validation pending.** Pinned-host Unity 6000.4.9f1 compilation and
 whole-assembly MatchEngine EditMode remain required. This cloud environment has the Linux .NET
 toolchain, with no Unity Editor or pinned-host connection exposed. No Unity validation is claimed.
 
@@ -28,10 +28,14 @@ file format stays v3.
 | Pre-change W8 B / outside-handling / re-handling baseline | 193 passed, 0 failed |
 | Whole generated .NET solution compile | Passed; the final scoped gate built with 0 warnings / 0 errors. The earlier cold build and B reproduced 3 existing `ActionSelector.SelectionMetadata` CS0649 warnings |
 | Focused MatchEngine law, W8 B, handling, clock and snapshot suite | 317 passed, 0 failed before the final four eligibility cases |
-| Final W8 C fixture | 83 passed, 0 failed |
+| Final W8 C fixture after PR review | 99 passed, 0 failed |
 | Goalkeeper assembly | 111 passed, 0 failed, 27 existing deferred/skipped cases |
 | Whole MatchEngine Linux assembly, initial run | 917 passed / 3 failed / 16 skipped in 42 min 59 s; all three failures were forced restore fixtures missing the newly required #11 hand episode |
-| Affected fixtures after correction | 127 passed / 0 failed: all SnapshotRestore, W8BPrerequisite, W8CHandControl and GoalkeeperClockCorrection cases. No production change or fresh whole-assembly rerun |
+| Initial affected fixtures after correction | 127 passed / 0 failed: all SnapshotRestore, W8BPrerequisite, W8CHandControl and GoalkeeperClockCorrection cases; production validation unchanged |
+| Final affected fixtures after PR review | 143 passed / 0 failed, including 16 new exact-480 CONTACT round-trips |
+| Fresh whole MatchEngine Linux assembly | **940 passed / 0 failed / 16 skipped / 1 inconclusive**, 34.8409 minutes; no filter or exclusions. Console omits the inconclusive case; TRX retains all 957 entries |
+| Release fixture-hook build and IL inspection | Passed: no ball-injection/counter fields or call sites in release execution; both retained exactly once in development |
+| Evidence integrity and tooling tests | Passed: 38 registered directories, 22 unit tests |
 | Assembly graph | Passed; no upward references or cycle |
 | Unity metadata / documentation consistency | Passed |
 | Scoped lower-level repository gate | Passed: 83 W8 C cases and 15 claim-path cases; not a full PR policy run |
@@ -86,7 +90,38 @@ The whole-assembly run finished with 917 passed, 3 failed and 16 skipped. Its fa
 state. The fixtures now enable GK wiring and stage the owning `Distributing` state, exact claim
 frame and accepted-request wait latch. The validator is unchanged. All 127 cases in the affected
 restore/prerequisite/C/clock fixtures pass after correction. The original full-run receipt and final
-focused receipt are preserved; a fresh green whole-assembly run is not claimed.
+focused receipt are preserved. After the review follow-up below, a fresh unfiltered whole-assembly
+run completes with **940 passed, 0 failed, 16 skipped and 1 inconclusive** in 34.8409 minutes.
+Its TRX, console log and summary are retained alongside the initial failed receipt.
+
+The console reports 956 tests (940 passed + 16 skipped); the TRX has 957 result entries because it
+also retains `ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice` as inconclusive/`NotExecuted`.
+That existing test uses `Assume.That(connected > 30)` and the corpus has 15 connecting challenges
+(won 4, loose 10, foul 1). The initial full run has the identical assumption result and counts.
+The 16 other skipped cases are existing opt-in diagnostics. No predicate or test was disabled.
+This is a successful zero-failure Linux run, not a claim that every discovered case passed.
+
+## PR #542 review follow-up
+
+Main `af116839` is merged locally, resolving the file-manifest and roadmap conflicts while
+preserving both evidence directories. The evidence registry test expects **38**, the merged total.
+
+The post-reattachment ball injection and shared whistle-finish counter are now compiled only for
+`UNITY_EDITOR`, `DEVELOPMENT_BUILD` or `UNITY_INCLUDE_TESTS`. Their call sites use matching
+`Conditional` attributes. A release build with only `TRACE` defined passes; metadata/IL inspection
+confirms both fields and both calls are absent. The development build retains each call exactly once.
+This preserves fixture behavior without adding either hook to release execution.
+
+Sixteen new snapshot round-trip cases cover CONTACT exactly at claim frame + 480, from both a
+mid-windup save and a save with zero remaining windup ticks. They exercise both teams, all three
+delivery kinds and the maximum 84-frame kick windup. Original and restored continuations have
+identical snapshot digests, emit exactly one completion on frame 480 and award no corner.
+The affected restore/prerequisite/C/clock suites pass **143/143**.
+
+The published head initially had no GitHub workflow runs or commit statuses. Its pull-request
+workflow targets main; GitHub cannot run that event while the PR has merge conflicts. Publishing
+the conflict-resolved head is needed before checking CI again. Local Linux results do not establish
+a GitHub or Unity result.
 
 ## Host handoff
 
@@ -106,3 +141,4 @@ is available. The paired Linux comparison is complete.
 | 1.2 | November 6, 2026 | Full Linux run 917/3/16; three pre-C invalid restore fixtures corrected, 127 affected tests pass. Owner will arrange Claude local-host Unity validation. |
 | 1.3 | November 6, 2026 | Native pre-commit hook reached the fixed 60-second timeout; receipt retained and local handoff commit uses a per-command hook bypass after independent checks. |
 | 1.4 | November 6, 2026 | Merge main af116839 Pre-C control/tooling without simulation-source changes; preserve both evidence sets. All 126 release and 12 clearing identities agree; one parry/pickup classification correction aligns both applied-touch counts to 16,264 without changing outcomes. |
+| 1.5 | November 6, 2026 | PR #542: release-only omission of two fixture hooks proven by build/IL, 16 exact-480 CONTACT restore cases, 143 affected passes and fresh full Linux 940 passed / 0 failed / 16 skipped / 1 existing inconclusive. Host Unity and published-head CI remain pending. |

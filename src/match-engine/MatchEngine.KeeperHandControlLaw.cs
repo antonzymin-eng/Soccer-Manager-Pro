@@ -18,14 +18,38 @@ namespace TacticalDirector.MatchEngine
     public sealed partial class MatchEngine
     {
         // Fixture controls/observations: inactive in ordinary matches, excluded from snapshot state.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
         internal BallState? TestOnly_PostReattachmentBall;
+        internal int TestOnly_KeeperWhistleFinishCount { get; private set; }
+#endif
         internal bool TestOnly_SuppressFeetGuard;
         internal int TestOnly_GkReleasedAgentId => _gkReleasedAgentId;
         internal ulong TestOnly_CardSeverityCursor => _rng.GetStreamState(_cardSeverityStreamIndex).RngCursor;
         internal void TestOnly_ResetGoalkeeperSlot(int team) => _goalkeeper.ResetSlot(team);
         internal static bool TestOnly_DistributionContactFits(int frame, long start, int windup) =>
             DistributionContactFits(frame, start, windup);
-        internal int TestOnly_KeeperWhistleFinishCount { get; private set; }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        [System.Diagnostics.Conditional("UNITY_INCLUDE_TESTS")]
+        private void ApplyHandControlFixtureState()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            if (!TestOnly_PostReattachmentBall.HasValue) return;
+            _ball = TestOnly_PostReattachmentBall.Value;
+            TestOnly_PostReattachmentBall = null;
+#endif
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        [System.Diagnostics.Conditional("UNITY_INCLUDE_TESTS")]
+        private void RecordKeeperWhistleForTests()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            TestOnly_KeeperWhistleFinishCount++;
+#endif
+        }
 
         internal bool TestOnly_IsKeeperHandControlOffenceEligible(int keeper) =>
             IsKeeperHandControlOffenceEligible(keeper);
@@ -87,4 +111,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-11-06 | — | Exact-frame Law-12 corner, defensive eligibility, v28 restore and full-time freeze. |
+// | 1.1 | 2026-11-06 | — | PR #542 review: omit the ball-injection and whistle-counter fields and their calls from release builds; retain the spec-required editor/development/test seams. |
 #endregion
