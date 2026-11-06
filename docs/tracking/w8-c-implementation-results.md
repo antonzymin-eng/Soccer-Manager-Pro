@@ -105,3 +105,4 @@ is available. The paired Linux comparison is complete.
 | 1.1 | November 6, 2026 | Six B fingerprints reproduced; exact B/C gameplay equality and identical canonical-release danger windows. Superseded marker analysis retained; host remains blocked. |
 | 1.2 | November 6, 2026 | Full Linux run 917/3/16; three pre-C invalid restore fixtures corrected, 127 affected tests pass. Owner will arrange Claude local-host Unity validation. |
 | 1.3 | November 6, 2026 | Native pre-commit hook reached the fixed 60-second timeout; receipt retained and local handoff commit uses a per-command hook bypass after independent checks. |
+| 1.4 | November 6, 2026 | Merge main af116839 Pre-C control/tooling without simulation-source changes; preserve both evidence sets. All 126 release and 12 clearing identities agree; one parry/pickup classification correction aligns both applied-touch counts to 16,264 without changing outcomes. |

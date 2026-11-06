@@ -82,3 +82,20 @@ The native pre-commit hook exceeded its fixed 60-second wall-clock budget while 
 snapshot sweep. Its receipt is `validation/precommit-timeout.log.xz`; it is not a passing hook run.
 The local handoff commit uses a per-command hook bypass after the independent compile, focused tests,
 full Linux failure reconciliation and repository checks above. No test or predicate was disabled.
+
+## Merge with landed Pre-C control
+
+Main `af116839` adds the reviewed Pre-C control and tooling, with no `src` change against B.
+The merge preserves both evidence sets and updates the registry to 38 directories. The bridge
+in `pre-c-control-bridge.json` verifies that **all 126 canonical release identities and all 12 selected
+clearing identities** match the landed control in both arms. The event counts and outcomes match too.
+
+The landed contact-consumption rule exposed one over-deduplicated row in the earlier derived touch
+count: seed `0F1E2D3C4B5A6978`, frame 28,278, keeper 0's hand parry followed by a separate loose pickup.
+The raw capture retained both; the classifier now consumes a contact only once, so the pickup after
+its parry response counts separately. Both arms have **16,264 applied touches**, agreeing with the
+landed control. The previous 16,263-count summary is preserved in
+`classification-before-main-bridge.json`. No release selection or window event total changes.
+The derivation also adopts the landed rule-1.1 restart/full-time censoring; it changes no selected
+window on this corpus. The 1,943,994 live pre-full-time frames are reported separately from the
+1,944,000 nominal simulated frames. Capture data and gameplay source were not changed or rerun.

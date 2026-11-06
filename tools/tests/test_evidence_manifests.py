@@ -46,6 +46,68 @@ def _git(repo: Path, *args: str) -> str:
 
 
 class EvidenceManifestTests(unittest.TestCase):
+    def _lfs_case(self, root: Path, *, pointer: bytes, designated: bool = True) -> None:
+        subprocess.run(["git", "init", "-b", "main", str(root)], check=True, capture_output=True)
+        folder = root / "docs/tracking/evidence/case"
+        folder.mkdir(parents=True)
+        (folder / "capture.xz").write_bytes(pointer)
+        (folder / "SHA256SUMS").write_text(f"{_digest(b'payload')}  capture.xz\n")
+        if designated:
+            (root / ".gitattributes").write_text("*.xz filter=lfs -text\n")
+        _git(root, "-c", "filter.lfs.process=", "-c", "filter.lfs.clean=", "-c",
+             "filter.lfs.required=false", "add", ".")
+
+    def _pointer(self, digest: str | None = None) -> bytes:
+        return ("version https://git-lfs.github.com/spec/v1\n"
+                f"oid sha256:{digest or _digest(b'payload')}\nsize 7\n").encode()
+
+    def test_pointer_only_checkout_verifies_lfs_oid(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._lfs_case(root, pointer=self._pointer())
+            self.assertEqual([], _errors(checker, root))
+
+    def test_pointer_oid_mismatch_fails(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._lfs_case(root, pointer=self._pointer("0" * 64))
+            self.assertTrue(any("SHA-256 mismatch" in e for e in _errors(checker, root)))
+
+    def test_pointer_requires_lfs_designation(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._lfs_case(root, pointer=self._pointer(), designated=False)
+            self.assertTrue(any("not designated Git LFS" in e for e in _errors(checker, root)))
+
+    def test_malformed_pointer_fails_closed(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        for pointer in [self._pointer().replace(b"size 7", b"size -7"),
+                        self._pointer() + b"untrusted trailing data\n",
+                        self._pointer().replace(b"oid sha256:", b"oid sha1:")]:
+            with self.subTest(pointer=pointer), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._lfs_case(root, pointer=pointer)
+                self.assertTrue(any("malformed Git LFS pointer" in e for e in _errors(checker, root)))
+
+    def test_materialized_lfs_payload_is_hashed_and_tampering_fails(self) -> None:
+        checker = _load_checker()
+        _register(checker, "case", checker.FULL_MANIFEST)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._lfs_case(root, pointer=self._pointer())
+            capture = root / "docs/tracking/evidence/case/capture.xz"
+            capture.write_bytes(b"payload")
+            self.assertEqual([], _errors(checker, root))
+            capture.write_bytes(b"corrupt")
+            self.assertTrue(any("SHA-256 mismatch" in e for e in _errors(checker, root)))
+
     def test_current_repository_evidence_contracts_pass(self) -> None:
         completed = subprocess.run(
             [sys.executable, str(SCRIPT), "--repo", str(ROOT)],
@@ -55,7 +117,7 @@ class EvidenceManifestTests(unittest.TestCase):
         )
         self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
         self.assertIn("Evidence integrity contracts: PASS", completed.stdout)
-        self.assertIn("37 registered directories", completed.stdout)
+        self.assertIn("38 registered directories", completed.stdout)
 
     def test_full_manifest_fails_on_digest_mismatch(self) -> None:
         checker = _load_checker()

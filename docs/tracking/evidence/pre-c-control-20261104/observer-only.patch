@@ -1,0 +1,166 @@
+--- a/src/match-engine/MatchEngine.cs
++++ b/src/match-engine/MatchEngine.cs
+@@ -4296,6 +4296,7 @@
+             switch (outcome)
+             {
+                 case TackleOutcome.BallWon:
++                    PreCObserve("touch:tackle-won", tackler, _ball.Position);
+                     TakeControlledPossession(tackler);
+                     ClearPassInFlight();
+                     _tackleFlag[carrier] = true;
+@@ -4303,6 +4304,7 @@
+                     break;
+ 
+                 case TackleOutcome.BallLoose:
++                    PreCObserve("touch:tackle-loose", tackler, _ball.Position);
+                     // Dispossessed, but nobody has it. The ball is left exactly where it lies and the
+                     // ordinary loose-ball paths (first touch while it moves, pickup once it settles)
+                     // decide who gets it — which is what makes this a 50-50 rather than a slower way of
+@@ -6555,6 +6557,7 @@
+ 
+             // Assemble the per-touch context, evaluate, and apply. ApplyTouchResult writes the displaced
+             // ball state via the adapter; the host owns the possession transition from the outcome.
++            PreCObserve("touch:first-touch", toucher, _ball.Position);
+             RecordPlayerBallTouch(toucher);
+             FirstTouchContext context = BuildFirstTouchContext(toucher);
+             FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
+@@ -6684,6 +6687,7 @@
+ 
+             if (claimer != MatchEngineConstants.NO_POSSESSION)
+             {
++                PreCObserve("touch:loose-pickup", claimer, _ball.Position);
+                 TakeControlledPossession(claimer);
+                 ObserveW8(W8StageAKind.LoosePickup, claimer);
+             }
+@@ -9402,6 +9406,7 @@
+ 
+             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+             {
++                _engine.PreCObserve("touch:pass-contact", agentId, ball.Position);
+                 _engine.RecordPlayerBallTouch(agentId);
+                 _engine.ObserveW8(W8StageAKind.PassKick, agentId,
+                     _engine._passExecutors[agentId].InFlightTargetAgentId);
+@@ -9498,6 +9503,7 @@
+ 
+             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+             {
++                _engine.PreCObserve("touch:shot-contact", agentId, ball.Position);
+                 _engine.RecordPlayerBallTouch(agentId);
+                 _engine.ObserveW8(W8StageAKind.ShotKick, agentId);
+                 // Canonical attack-+X frame → world frame. Both are free vectors, so both negate.
+@@ -9586,6 +9592,7 @@
+             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
+             {
+                 if (_engine._pendingHandlingOffender >= 0) return;
++                _engine.PreCObserve("gk-heading-contact", agentId, _engine._ball.Position);
+                 _engine.RecordPlayerBallTouch(agentId);
+                 _engine.ObserveW8(W8StageAKind.GkHeadingKick, agentId);
+                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
+@@ -9601,11 +9608,17 @@
+             public bool CanUseHands(int teamId) =>
+                 _engine._releasedHandKeeper < 0 || _engine._teamIds[_engine._releasedHandKeeper] != teamId;
+ 
+-            public bool TryHandContact(int agentId, Vector3 contactPosition) =>
+-                _engine.TryKeeperHandContact(agentId, contactPosition);
++            public bool TryHandContact(int agentId, Vector3 contactPosition)
++            {
++                _engine.PreCObserve("hand-attempt", agentId, contactPosition);
++                bool applied = _engine.TryKeeperHandContact(agentId, contactPosition);
++                if (applied) _engine.PreCObserve("touch:hand-contact", agentId, contactPosition);
++                return applied;
++            }
+ 
+             public void SetPossessor(int agentId)
+             {
++                _engine.PreCObserve("hand-claim-response", agentId, _engine._ball.Position);
+                 _engine.ObserveW8(W8StageAKind.HandClaim, agentId);
+                 _engine.TakeControlledPossession(agentId);
+             }
+--- a/src/match-engine/MatchEngine.KeeperHandlingLaw.cs
++++ b/src/match-engine/MatchEngine.KeeperHandlingLaw.cs
+@@ -27,7 +27,9 @@
+         private void RecordPlayerBallTouch(int agentId)
+         {
+             if (_pendingHandlingOffender >= 0 || agentId < 0 || agentId >= MatchEngineConstants.SQUAD_SIZE) return;
++            int preCBefore = _releasedHandKeeper;
+             if (_releasedHandKeeper != agentId) _releasedHandKeeper = MatchEngineConstants.NO_POSSESSION;
++            if (preCBefore != _releasedHandKeeper) PreCObserve("restriction-clear:touch", agentId, _ball.Position);
+             if (_indirectKickTaker != agentId) _indirectKickTaker = MatchEngineConstants.NO_POSSESSION;
+         }
+ 
+@@ -38,7 +40,7 @@
+             GoalkeeperState state = _goalkeeper.GetState(team);
+             if (_gkAgentIds[team] == agentId &&
+                 (state == GoalkeeperState.HandsOnBall || state == GoalkeeperState.Distributing))
+-                _releasedHandKeeper = agentId;
++                { _releasedHandKeeper = agentId; PreCObserve("release", agentId, _ball.Position); }
+         }
+ 
+         // Actual #11 catch/parry/deflection/spill contacts and continuous carries share this gate.
+@@ -139,6 +141,7 @@
+ 
+         private void ClearHandlingLawAtRestart()
+         {
++            PreCObserve("restriction-end:restart", _releasedHandKeeper, _ball.Position);
+             _releasedHandKeeper = MatchEngineConstants.NO_POSSESSION;
+             _pendingHandlingOffender = MatchEngineConstants.NO_POSSESSION;
+             _pendingHandlingPosition = Vector3.zero;
+--- a/src/match-engine/MatchEngine.PreCObservation.cs
++++ b/src/match-engine/MatchEngine.PreCObservation.cs
+@@ -0,0 +1,16 @@
++// Created 2026-11-04. Scratch-only observation overlay; no canonical state.
++using System;
++using UnityEngine;
++namespace TacticalDirector.MatchEngine {
++public sealed partial class MatchEngine {
++internal Action<string,int,Vector3,Vector3,int,int,int> PreCObserver;
++internal void PreCAttach(Action<string,int,Vector3,Vector3,int,int,int> observer) {
++ PreCObserver=observer;
++ _collisionSystem.PreCAppliedTouchObserver=(id,contact,position)=>observer("touch:body-applied",id,contact,position,_releasedHandKeeper,_pendingHandlingOffender,_indirectKickTaker);
++}
++private void PreCObserve(string kind,int id,Vector3 contact) {
++ if(PreCObserver==null)return;
++ Vector3 position=id>=0 ? new Vector3(_agents[id].Position.x,_agents[id].Position.y,0f):Vector3.zero;
++ PreCObserver(kind,id,contact,position,_releasedHandKeeper,_pendingHandlingOffender,_indirectKickTaker);
++}
++}}
+--- a/src/collision-system/CollisionSystem.cs
++++ b/src/collision-system/CollisionSystem.cs
+@@ -99,6 +99,7 @@
+         /// <summary>Per-call scratch: agents whose confirmed contact applied a ball response.
+         /// Reset before every UpdateCollisions; never inferred from coarse observation contacts.</summary>
+         public uint AppliedBallTouchMask { get; private set; }
++        public System.Action<int, Vector3, Vector3> PreCAppliedTouchObserver;
+ 
+         /// <summary>
+         /// Captures the system's complete cross-tick state — the set of agent pairs in contact as of
+@@ -570,6 +571,7 @@
+             // actually-applied Ball Physics response becomes the keeper new-threat signal.
+             if (BallCollisionHandler.OnAgentCollision(ref ball, in data))
+             {
++                PreCAppliedTouchObserver?.Invoke(agentId, contactPoint, snap.Position);
+                 AppliedBallTouchMask |= 1u << agentId;
+                 ballDeflected = true; // OR-reduce across AGENT_BALL contacts in this call.
+             }
+--- a/src/event-system/EventBus.cs
++++ b/src/event-system/EventBus.cs
+@@ -27,6 +27,7 @@
+     /// </summary>
+     public static class EventBus
+     {
++        public static Action<byte, byte[]> PreCPublishObserver;
+         private static readonly ProfilerMarker s_drainTickMarker =
+             new ProfilerMarker("EventSystem.DrainTick");
+         private static readonly ProfilerMarker s_serializeLedgerMarker =
+@@ -354,6 +355,11 @@
+                 IntraPhaseDrawIndex  = drawIdx,
+                 StructSize           = structSize,
+             };
++            if (PreCPublishObserver != null) {
++                byte[] preCCopy = new byte[structSize];
++                Array.Copy(buf, slotOffset, preCCopy, 0, structSize);
++                PreCPublishObserver(ordinal, preCCopy);
++            }
+         }
+ 
+         // ── Lifecycle guard ───────────────────────────────────────────────────────────

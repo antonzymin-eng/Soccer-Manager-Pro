@@ -1,6 +1,12 @@
 # Path to Playable — Implementation Roadmap
 
-> **November 6 — W8 C implementation authored (v0.89):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
+> **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
+
+> **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
+
+> **November 4 — Pre-C review closeout (v0.90):** Retain all per-tick digest bytes in the committed LFS capture; pointer-only hygiene checks verify strict LFS reference OIDs without bulk downloads. Portable replay/rebuild commands and analysis rule 1.1 are frozen before C. Abstract BallLoose tackle outcomes are excluded from physical touches; all 126 release decisions and 12 selected windows remain identical. Both same-frame clearings are explained by executor-before-first-touch ordering. [Reviewed control](evidence/pre-c-control-20261104/README.md). No gameplay change or new full-match capture.
+
+> **November 4 — Pre-C control complete (v0.89):** Linux .NET control at `1d3cebf3` reproduces all six adopted post-law W8 B digests in both plain and observed runs. The source/runtime/configuration and exact-touch/team observer are frozen; all six full digest, ball and event streams match. [Evidence](evidence/pre-c-control-20261104/README.md). W8 C is the next engine item.
 
 > **November 3 — consolidated roadmap v0.88:** PRs #532/#533/#534 reconciled with main #535. The current sequence is the November 3 ratified revision below; D-11 uses the November 2 no-mid-match-save amendment. D-P7-6 v0.6 remains PROPOSED. The #526 host technical gap is resolved; its process exception is archived.
 
@@ -485,15 +491,20 @@ decided.
    its whole test assembly, which is cheap, so run that rather than the single fixture (v0.85).
    #526 merged without this record: [resolved process exception](open-issues-resolved.md#pr526-host-evidence-gap). The change
    is a null-by-default observation hook with digest-neutrality locked, so no whole-assembly
-   MatchEngine run is owed (item 3). This first host job is complete; the pre-C control capture is next.
+   MatchEngine run is owed (item 3). This first host job is complete; the Pre-C control also completed November 4 ([evidence](evidence/pre-c-control-20261104/README.md)). W8 C is next on the engine lane.
 2. **Owner decisions.** D-13 (PM-3 product scope and the integrity choices) before PM-3
    implementation; D-15 (depth-phase order) at PM-2. D-08 is decided (November 3).
 
 **Engine lane (dependency order; independent of the career lane until PM-2).**
 
-1. **Pre-C control (S).** After shared item 1: pin source, runtime, configuration and the read-only
-   exact-touch/team instrument; prove neutrality; reproduce the adopted post-law B baseline. Both B→C
-   arms run on the same declared Linux .NET lane (step 8's measurement obligation).
+1. **Pre-C control (S).** ✅ **Done November 4, 2026** at `1d3cebf3` on Linux .NET SDK 8.0.426 /
+   CLR 8.0.32. Source, runtime, configuration and the read-only exact-touch/team instrument are frozen;
+   all six adopted post-law B digests reproduce in both arms, with full per-tick digest, ball and event
+   equality across 324,000 ticks per seed ([evidence](evidence/pre-c-control-20261104/README.md)). C must
+   use this declared lane, instrument and reviewed analysis rule **1.1** for its paired comparison
+   (step 8's measurement obligation); `policy-freeze.json` pins the eligibility/window interpretation.
+   That rule excludes non-contact BallLoose outcomes and censors follow-up at the recorded full-time
+   whistle or capture end; neither correction changes the 126 release decisions or 12 selected windows.
 2. **W8 C (L).** Implement [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
    and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)
    as written; cite them rather than paraphrasing the corner rule. The next free snapshot version is
@@ -904,6 +915,11 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+
+| v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
+| v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
+| v0.89 | November 4, 2026 | Close engine lane item 1: freeze Pre-C source/runtime/configuration and exact-touch/team observer at `1d3cebf3`; reproduce all six adopted post-law B digests in plain and observed Linux .NET captures; verify full digest/ball/event neutrality and retain raw attribution/order evidence. W8 C implementation and its paired/host validation remain next. |
+| v0.88 | November 3, 2026 | Consolidate PRs #532/#533/#534 against main #535: retain revised and ratified no-Early-Access ordering, D-11 no-mid-match-save amendment and D-P7-6 draft v0.6; archive the completed #526 host gap; client design v0.33. Parallel v0.85 records below retain their provenance. |
 | v0.87 | November 3, 2026 | **§5.1a ordering RATIFIED** by Anton Zymin. It is now the ordering authority (status paragraph and §5.1 intro updated); the §5.1 step table keeps exit criteria and history. It approves no contract, authorizes no gameplay or tuning, does not amend KD-W1 and does not un-park the D-14 list. D-13 and D-15 remain pending. |
 | v0.88 | November 3, 2026 | Consolidate PRs #532/#533/#534 against main #535: retain revised and ratified no-Early-Access ordering, D-11 no-mid-match-save amendment and D-P7-6 draft v0.6; archive the completed #526 host gap; client design v0.33. Parallel v0.85 records below retain their provenance. |
 | v0.86 | November 3, 2026 | **No Early Access planned.** Owner decisions: D-14 (no Early Access at this time; release work parked until an owner-called release-readiness checkpoint), D-08 (PM-2 engine = W8 C + #434/#440; #441/W9/W10 do not block PM-2; no PM-2 freeze), D-09 (ERR-030-034 shape gap recorded as a known PM-2 limitation; resolved with the governed final recapture in the depth phase), D-10 extended to the checkpoint, D-13 reframed as PM-3 product scope; D-15 (depth-phase order) pending until PM-2. §5.1a revised: quick-sim check (recapture + mean bar, refit on failure) replaces the PM-2 freeze/refit; PM-3 and a tranche-based depth phase follow; the November 2 after-PM-2 list is parked. §5.1 rows 10–12 and D6 annotated. League-bootstrap supplement v1.12 and client design v0.32 record D-09 and D-10. |
@@ -1004,4 +1020,4 @@ which is now the critical path to **PM-1** and to any calibrated table:
 | v0.3 | July 25, 2026 | Adversarial-review corrections: engine test count 306 → 321 (both occurrences); C1's per-match / per-season figures relabelled **lower bounds** — they multiply the certified *median* per-tick cost by the tick count, but wall-clock tracks the *mean* and p99 = 2.5669 ms, so the true cost is higher (the infeasibility conclusion only strengthens). |
 | v0.2 | July 25, 2026 | **B6 renderer decision taken: option (b)** — extend the existing browser client; Unity P4–P6 follows when host access exists. **A1 (#30 T0) LANDED** — the season value types, fixture scheduler, league table, calendar, board, match-outcome payload, season state and view model, with 77 new tests (season-save 20 → 97) and the full gate green. C5's prediction held on the first landing: implementation surfaced **ERR-030-010** (§3.1's parity venue rule vs the §3.7 / Appendix C worked tables), filed and patched same commit. |
 | v0.1 | July 25, 2026 | Initial roadmap: PM-1/PM-2/PM-3 milestone ladder with testable exit criteria; existing-floor inventory; Track S / Track C split; five quantified constraints (C1 season-sim infeasibility at ~16.3 h/season and the ≲10 ms quick-sim budget; C1a the ~9 h calibration corpus; C2 the host block and the browser fallback; C3 `RosterGenerator` deferring #47; C4 save-migration debt; C5 spec-defect latency); Phase A–D work breakdown anchored to each spec's own §7 T-phase plan; the §6 finding that zero new numbered specs are required to reach PM-2; the B6 renderer decision point with a recommendation; dependency graph; risk register. |
-| v0.89 | November 6, 2026 | W8 C implementation authored in snapshot v28; link its validation record. Required pinned-host compile/whole MatchEngine EditMode and C closeout remain open. No sequencing or gameplay authority change. |
+| v0.92 | November 6, 2026 | W8 C implementation authored in snapshot v28; link its validation record. Required pinned-host compile/whole MatchEngine EditMode and C closeout remain open. No sequencing or gameplay authority change. |

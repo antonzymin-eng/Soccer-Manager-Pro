@@ -31,11 +31,16 @@ for arm in ['B','C']:
   for r in raw:
    for k in ['frame','order','agent','team','scoringTeam','restrictionKeeper']:r[k]=int(r[k])
   touchkinds={'body','first-touch','hand','pass','shot-touch','heading-or-gk','acquire'}
-  touches=[];lastphysical=None
+  touches=[];lastphysical=None;effectConsumed=False
   for r in raw:
    if r['kind'] not in touchkinds:continue
-   duplicate=(lastphysical is not None and (r['frame'],r['agent'])==(lastphysical['frame'],lastphysical['agent']) and ((r['kind']=='acquire' and lastphysical['kind'] in {'hand','first-touch'}) or (r['kind']=='heading-or-gk' and lastphysical['kind']=='hand')))
-   if not duplicate:touches.append(r);lastphysical=r
+   same=lastphysical is not None and (r['frame'],r['agent'])==(lastphysical['frame'],lastphysical['agent'])
+   duplicate=same and not effectConsumed and ((r['kind']=='acquire' and lastphysical['kind'] in {'hand','first-touch'}) or (r['kind']=='heading-or-gk' and lastphysical['kind']=='hand'))
+   if duplicate:
+    # A contact is consumed once: a parry response followed by loose pickup is two contacts.
+    effectConsumed=True
+    continue
+   touches.append(r);lastphysical=r;effectConsumed=False
   touchN+=len(touches)
   # The frozen capture marker follows an unbraced keeper-state if and therefore emits
   # for every keeper kick. Join to unchanged frozen-W8 hand-episode end identities;
@@ -63,20 +68,22 @@ for arm in ['B','C']:
    else:assert e['scoringTeam']==mark[0]['scoringTeam']
   for release in releases:
    key=lambda r:(r['frame'],r['order'])
-   other=next((t for t in touches if key(t)>key(release) and t['agent']!=release['agent']),None)
+   restart=next((r for r in raw if r['kind']=='restart' and key(r)>key(release)),None)
+   stop=min(key(restart) if restart else (324000,-1),(324000,-1))
+   other=next((t for t in touches if key(release)<key(t)<stop and t['agent']!=release['agent']),None)
    if other is None or other['team']==release['team'] or other['frame']-release['frame']>507:continue
    wid=f"{arm}:{seed}:{release['frame']}:{release['order']}:{release['agent']}"
    end=other['frame']+600
-   row={'windowId':wid,'seed':seed,'keeper':release['agent'],'keeperTeam':release['team'],'releaseFrame':release['frame'],'releaseOrder':release['order'],'clearingFrame':other['frame'],'clearingOrder':other['order'],'clearingAgent':other['agent'],'clearingKind':other['kind'],'endFrame':min(324000,end),'complete':end<=324000,'overlap':False,'ownShots':0,'opponentShots':0,'ownGoals':0,'opponentGoals':0}
+   row={'windowId':wid,'seed':seed,'keeper':release['agent'],'keeperTeam':release['team'],'releaseFrame':release['frame'],'releaseOrder':release['order'],'clearingFrame':other['frame'],'clearingOrder':other['order'],'clearingAgent':other['agent'],'clearingKind':other['kind'],'endFrame':min(323999,end),'complete':end<324000,'overlap':False,'ownShots':0,'opponentShots':0,'ownGoals':0,'opponentGoals':0}
    for e in canonical:
-    if (e['frame'],e['order']) <= key(other) or e['frame']>end:continue
+    if (e['frame'],e['order']) <= key(other) or e['frame']>end or e['frame']>=324000:continue
     team=e['creditedTeam'] if e['kind']=='shot' else e['scoringTeam']
     group=('own' if team==release['team'] else 'opponent')+('Shots' if e['kind']=='shot' else 'Goals')
     row[group]+=1;unique[group].add(e['eventId']);members.append({'windowId':wid,**e,'relativeTeam':'keeper' if team==release['team'] else 'opponent'})
    windows.append(row)
  for i,w in enumerate(windows):
   w['overlap']=any(i!=j and w['seed']==v['seed'] and max(w['clearingFrame'],v['clearingFrame'])<=min(w['endFrame'],v['endFrame']) for j,v in enumerate(windows))
- stats={'handReleases':releasesN,'physicalTouchRowsAfterDuplicateEffects':touchN,'selectedWindows':len(windows),'completeWindows':sum(w['complete'] for w in windows),'censoredWindows':sum(not w['complete'] for w in windows),'overlappingWindows':sum(w['overlap'] for w in windows),'playedFrames':6*324000,'corpusGoals':allgoals,'corpusShots':allshots,'corpusGoalsPer600Frames':allgoals*600/(6*324000),'uniqueSelectedEvents':{k:len(v) for k,v in unique.items()},'uniqueShots':len(unique['ownShots']|unique['opponentShots']),'uniqueGoals':len(unique['ownGoals']|unique['opponentGoals']),'windowMembershipTotals':{k:sum(w[k] for w in windows) for k in unique},'perWindow':{k:sum(w[k] for w in windows)/len(windows) if windows else None for k in unique}}
+ stats={'handReleases':releasesN,'physicalTouchRowsAfterDuplicateEffects':touchN,'selectedWindows':len(windows),'completeWindows':sum(w['complete'] for w in windows),'censoredWindows':sum(not w['complete'] for w in windows),'overlappingWindows':sum(w['overlap'] for w in windows),'playedFrames':6*324000,'livePreFreezeFrames':6*323999,'corpusGoalsPer600LiveFrames':allgoals*600/(6*323999),'corpusGoals':allgoals,'corpusShots':allshots,'corpusGoalsPer600Frames':allgoals*600/(6*324000),'uniqueSelectedEvents':{k:len(v) for k,v in unique.items()},'uniqueShots':len(unique['ownShots']|unique['opponentShots']),'uniqueGoals':len(unique['ownGoals']|unique['opponentGoals']),'windowMembershipTotals':{k:sum(w[k] for w in windows) for k in unique},'perWindow':{k:sum(w[k] for w in windows)/len(windows) if windows else None for k in unique}}
  result['arms'][arm]=stats
  for label,rows in [('canonical-releases',canonicalReleases),('windows',windows),('memberships',members)]:
   if rows:
