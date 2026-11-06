@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientMatchCoordinatorTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-15 (Match Flow §6: deferred roster change)
+// Modified: 2026-11-06
 // Modified (prior): 2026-10-06
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
@@ -57,6 +57,27 @@ namespace TacticalDirector.ClientApp.Tests
                 Failure = null;
                 if (ThrowOnDetach) throw new InvalidOperationException("detach failure");
             }
+        }
+
+        [Test]
+        public void CareerComposition_RegistersStableSourcesAndBlocksDemoDuringWorkerOwnership()
+        {
+            using var temp = new TempSlots();
+            Action pending = null;
+            var career = new CareerScreenPresenter(temp.Directory, TacticalDirector.SeasonSave.RoundResolutionMode.QuickSimAll,
+                work => pending = work);
+            using var shell = new ClientMatchCoordinator(new Renderer(), S0DemoFixture.CreateApproved(), career);
+            Assert.IsTrue(shell.Flow.HasCareerScreens);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.MainMenu).ViewModelSource);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.CareerHome).ViewModelSource);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.NewCareer).ViewModelSource);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.LoadCareer).ViewModelSource);
+            career.Initialize();
+            Assert.Throws<InvalidOperationException>(shell.OpenTacticsSetup);
+            pending(); career.Refresh();
+            shell.OpenTacticsSetup();
+            shell.CancelTacticsSetup();
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.CareerHome).ViewModelSource);
         }
 
         [Test]
@@ -409,4 +430,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-06 | —      | Restore keeps BootRoster before any substitution; after one (either team) restore and playback continue while BootRoster refuses. |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution leaves the roster unchanged until a restart; the driver log records acceptance, not application. |
+// | 1.3     | 2026-11-06 | —      | P7b shared-flow registrations and demo/worker ownership regression. |
 #endregion

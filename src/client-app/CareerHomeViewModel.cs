@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerHomeViewModel.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-11-06
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (Career Home), ux-detailed-plan.md
 //           §7.5 (information hierarchy), ux-experience-architecture.md §5–§7, Season & Competition
@@ -163,6 +163,14 @@ namespace TacticalDirector.ClientApp
             TableClubNames = tableClubNames;
         }
 
+        /// <summary>Copies this immutable snapshot with binding-owned progress blocking during worker execution.</summary>
+        public CareerHomeViewModel WithProgressBlocked(bool blocked) => !HasCareer ? default : new CareerHomeViewModel(
+            ManagedClubId, ManagedClubName, SeasonNumber, WorldDay, RoundsPlayed, RoundCount,
+            LeaguePosition, in ManagedRow, ObjectiveTargetPosition, IsObjectiveOnTrack, JobSecurityPerMille,
+            InjuredPlayerCount, HasNextFixture, NextOpponentId, NextOpponentName, NextFixtureIsHome,
+            NextFixtureRoundIndex, NextFixtureDay, DaysUntilNextMatchday, NextAction, blocked,
+            in LastChange, LastResultOpponentName, AutosaveError, Table, TableClubNames);
+
         /// <summary>True once every round is played (the boundary roll is next).</summary>
         public bool IsSeasonComplete => HasCareer && RoundsPlayed >= RoundCount;
     }
@@ -171,4 +179,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): the Career Home projection.          |
+// | 1.1     | 2026-11-06 | —      | Immutable busy projection for the background binding. |
 #endregion

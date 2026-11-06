@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-10-08 (P5b screens)
+// Modified: 2026-11-06
 // Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
@@ -9,6 +9,7 @@
 //           gate-compiled client-app decisions, applies the resulting visibility, and forwards UI events.
 
 using System;
+using System.IO;
 
 using Unity.Profiling;
 using UnityEngine;
@@ -19,14 +20,14 @@ using TacticalDirector.UiFramework;
 namespace TacticalDirector.MatchClientUnity
 {
     /// <summary>
-    /// Binds the host-free <see cref="ClientScreenFlow"/> onto four Unity scene roots. The navigation
+    /// Binds the host-free <see cref="ClientScreenFlow"/> onto seven Unity scene roots. The navigation
     /// graph, structural wiring rules, initial-active hygiene, and exhaustive visibility mapping all
     /// live in gate-compiled <c>client-app</c>; this type only collects Unity instance/ancestor facts,
     /// applies booleans, and forwards UI events (§12 rule 1).
     /// <para>The localized screens consume the coordinator for Start, explicit report acknowledgement
     /// and Return; the renderer owns only its attached generated visuals.</para>
     /// <para>
-    /// Place this component on an always-active GameObject outside all four screen roots. The pure
+    /// Place this component on an always-active GameObject outside all seven screen roots. The pure
     /// validator refuses a shell on or beneath a root, roots nested inside each other, and any
     /// non-Main-Menu root saved active. That last rule is UI hygiene only: it prevents an authored
     /// stacked-canvas state before the shell applies authoritative visibility; it is not a lifecycle
@@ -37,11 +38,15 @@ namespace TacticalDirector.MatchClientUnity
     public sealed class ClientShellBehaviour : MonoBehaviour
     {
         private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("ClientShellBehaviour.Update");
-        [Header("P5b screen roots — mutually exclusive children of an always-active shell")]
+        [Header("Client screen roots — mutually exclusive children of an always-active shell")]
         [SerializeField] private GameObject _mainMenuRoot;
         [SerializeField] private GameObject _tacticsSetupRoot;
         [SerializeField] private GameObject _matchViewRoot;
         [SerializeField] private GameObject _postMatchReportRoot;
+
+        [SerializeField] private GameObject _careerHomeRoot;
+        [SerializeField] private GameObject _newCareerRoot;
+        [SerializeField] private GameObject _loadCareerRoot;
 
         [SerializeField] private MatchClientBehaviour _matchRenderer;
         [SerializeField] private S0ScreensBehaviour _screens;
@@ -57,12 +62,9 @@ namespace TacticalDirector.MatchClientUnity
             ClientShellRootSnapshot matchView = CaptureSnapshot(_matchViewRoot);
             ClientShellRootSnapshot postMatchReport = CaptureSnapshot(_postMatchReportRoot);
 
-            ClientShellWiringFault fault = ClientShellWiringValidator.Validate(
-                in shell,
-                in mainMenu,
-                in tacticsSetup,
-                in matchView,
-                in postMatchReport);
+            ClientShellWiringFault fault = ClientShellWiringValidator.Validate(shell,
+                mainMenu, tacticsSetup, matchView, postMatchReport,
+                CaptureSnapshot(_careerHomeRoot), CaptureSnapshot(_newCareerRoot), CaptureSnapshot(_loadCareerRoot));
             if (fault != ClientShellWiringFault.None)
             {
                 RejectWiring("host-free shell validation returned " + fault + ".");
@@ -75,10 +77,11 @@ namespace TacticalDirector.MatchClientUnity
                 RejectWiring("pitch renderer must be assigned on or beneath Match View.");
                 return;
             }
-            _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved());
+            var career = new CareerScreenPresenter(Path.Combine(Application.persistentDataPath, "Careers"));
+            _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved(), career);
             ApplyCurrentScreen();
             if (_screens == null) { RejectWiring("localized screen binding is required."); return; }
-            try { _screens.Initialize(_coordinator, _mainMenuRoot, _tacticsSetupRoot, _matchViewRoot, _postMatchReportRoot, _matchRenderer, ApplyCurrentScreen); }
+            try { _screens.Initialize(_coordinator, _mainMenuRoot, _tacticsSetupRoot, _matchViewRoot, _postMatchReportRoot, _matchRenderer, ApplyCurrentScreen, _careerHomeRoot, _newCareerRoot, _loadCareerRoot); career.Initialize(); }
             catch (Exception exception) { RejectWiring("screen construction failed: " + exception.Message); Debug.LogException(exception, this); }
         }
 
@@ -104,6 +107,7 @@ namespace TacticalDirector.MatchClientUnity
             if (_wiringRejected || _coordinator == null) return;
             try
             {
+                _coordinator.Career.Refresh();
                 _coordinator.Refresh(Time.time);
                 if (_coordinator.IsRejected) RejectWiring("required pitch renderer was lost.");
                 else { ApplyCurrentScreen(); _screens.Refresh(); }
@@ -170,10 +174,16 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
+            if (!visibility.CareerHome) _careerHomeRoot.SetActive(false);
+            if (!visibility.NewCareer) _newCareerRoot.SetActive(false);
+            if (!visibility.LoadCareer) _loadCareerRoot.SetActive(false);
             if (!visibility.MainMenu) _mainMenuRoot.SetActive(false);
             if (!visibility.TacticsSetup) _tacticsSetupRoot.SetActive(false);
             if (!visibility.MatchView) _matchViewRoot.SetActive(false);
             if (!visibility.PostMatchReport) _postMatchReportRoot.SetActive(false);
+            if (visibility.CareerHome) _careerHomeRoot.SetActive(true);
+            if (visibility.NewCareer) _newCareerRoot.SetActive(true);
+            if (visibility.LoadCareer) _loadCareerRoot.SetActive(true);
             if (visibility.MainMenu) _mainMenuRoot.SetActive(true);
             if (visibility.TacticsSetup) _tacticsSetupRoot.SetActive(true);
             if (visibility.MatchView) _matchViewRoot.SetActive(true);
@@ -201,6 +211,9 @@ namespace TacticalDirector.MatchClientUnity
                 DeactivateIfAssigned(_tacticsSetupRoot);
                 DeactivateIfAssigned(_matchViewRoot);
                 DeactivateIfAssigned(_postMatchReportRoot);
+                DeactivateIfAssigned(_careerHomeRoot);
+                DeactivateIfAssigned(_newCareerRoot);
+                DeactivateIfAssigned(_loadCareerRoot);
                 Debug.LogError("ClientShellBehaviour rejected wiring: " + reason, this);
             }
         }
@@ -228,4 +241,5 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | an inactive ancestor are refused rather than shown blank.      |
 // | 1.4     | 2026-10-06 | —      | Consume stable lifecycle coordinator; renderer containment and outgoing-first visibility. |
 // | 1.5     | 2026-10-08 | —      | Compose the localized UGUI screens and apply visibility before view/focus refresh. |
+// | 1.6     | 2026-11-06 | —      | P7b compose career binding, validate seven roots and apply outgoing-first visibility. |
 #endregion

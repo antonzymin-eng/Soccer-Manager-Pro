@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-10-29 (PR #518 owner report: one fixed-height playback reason, so Faster never resizes the pitch)
+// Modified: 2026-11-06
 // Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
@@ -31,6 +31,9 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField]
         private float _textScale = 1f;
         private S0ScreenPresenter _view;
+        private CareerScreensView _career;
+        private Button _demo;
+        private CareerScreenPresenter _careerState;
         private Action _applyVisibility;
         private S0UiFactory _ui;
         private readonly List<GameObject> _owned = new List<GameObject>();
@@ -109,7 +112,7 @@ namespace TacticalDirector.MatchClientUnity
         public int PitchLayoutFailureCount { get; private set; }
 
         /// <summary>Called explicitly after the shell admits roots and creates its coordinator, before playback.</summary>
-        public void Initialize(ClientMatchCoordinator coordinator, GameObject menu, GameObject setup, GameObject match, GameObject report, MatchClientBehaviour renderer, Action applyVisibility)
+        public void Initialize(ClientMatchCoordinator coordinator, GameObject menu, GameObject setup, GameObject match, GameObject report, MatchClientBehaviour renderer, Action applyVisibility, GameObject careerHome = null, GameObject newCareer = null, GameObject loadCareer = null)
         {
             if (_view != null)
                 throw new InvalidOperationException("S0 screen binding already initialized.");
@@ -130,7 +133,13 @@ namespace TacticalDirector.MatchClientUnity
             RectTransform m = _ui.Panel("Menu entry", Page(menu, out _menuScroll, S0UiConstants.ENTRY_MAX_WIDTH), true);
             _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
             _ui.Label(m, L("context.menu"));
-            Control(m, L("action.demo"), _view.OpenSetup, _menuScroll, S0UiFactory.ControlKind.Primary);
+            _careerState = coordinator.Career;
+            if (_careerState != null)
+                _career = new CareerScreensView(_ui, _font, _careerState, coordinator.Flow, m, _menuScroll,
+                    careerHome, newCareer, loadCareer, _owned.Add,
+                    (item, scroll, action) => Register(item, scroll, action ? S0FocusNavigation.Role.Action : S0FocusNavigation.Role.Anchor),
+                    () => { _applyVisibility(); Refresh(); });
+            _demo = Control(m, L("action.demo"), _view.OpenSetup, _menuScroll);
             RectTransform s = _ui.Panel("Setup entry", Page(setup, out _setupScroll, S0UiConstants.ENTRY_MAX_WIDTH));
             _setupHeading = Heading(s, L("heading.setup"), _setupScroll);
             _ui.Label(s, L("context.setup"));
@@ -601,6 +610,21 @@ namespace TacticalDirector.MatchClientUnity
             {
                 if (_view == null || _disposed)
                     return;
+                _career?.Refresh();
+                if (_careerState != null) _demo.interactable = !_careerState.IsBusy;
+                if (_career != null && CareerScreensView.IsCareerScreen(_view.Screen))
+                {
+                    if (_lastScreen != _view.Screen)
+                    {
+                        _lastScreen = _view.Screen;
+                        Focus(_career.HeadingFor(_view.Screen));
+                    }
+                    Selectable current = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
+                    if (!IsAllowed(current)) Focus(_career.ConfirmationFocus ?? _career.HeadingFor(_view.Screen));
+                    Keyboard();
+                    return;
+                }
+                if (_lastScreen != _view.Screen) { _revision = -1; }
                 _view.Refresh();
                 if (_revision != _view.Revision)
                 {
@@ -1129,7 +1153,7 @@ namespace TacticalDirector.MatchClientUnity
             }
         }
 
-        private bool IsAllowed(Selectable item) => item != null && item.gameObject.activeInHierarchy && item.IsInteractable() && (!_dialog.activeSelf || item.transform.IsChildOf(_dialog.transform));
+        private bool IsAllowed(Selectable item) => item != null && item.gameObject.activeInHierarchy && item.IsInteractable() && (!_dialog.activeSelf || item.transform.IsChildOf(_dialog.transform)) && (_career == null || _career.Allows(item));
         private bool IsTabStop(Selectable item)
         {
             if (!IsAllowed(item) || !_focusRoles.TryGetValue(item, out S0FocusNavigation.Role role))
@@ -1171,7 +1195,7 @@ namespace TacticalDirector.MatchClientUnity
                         return;
                     }
                 }
-                Focus(_dialog.activeSelf ? DialogInitialFocus() : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _view.IsFullTime ? _report : _pause.IsInteractable() ? _pause : _matchHeading);
+                Focus(_career != null && CareerScreensView.IsCareerScreen(_view.Screen) ? _career.ConfirmationFocus ?? _career.HeadingFor(_view.Screen) : _dialog.activeSelf ? DialogInitialFocus() : _view.Screen == ClientScreens.MainMenu ? _menuHeading : _view.Screen == ClientScreens.TacticsSetup ? _setupHeading : _view.Screen == ClientScreens.PostMatchReport ? _reportHeading : _view.IsFullTime ? _report : _pause.IsInteractable() ? _pause : _matchHeading);
             }
         }
 
@@ -1213,7 +1237,12 @@ namespace TacticalDirector.MatchClientUnity
                 }
             }
 
-            if (Input.GetKeyDown(KeyCode.Escape) && _dialog.activeSelf)
+            if (Input.GetKeyDown(KeyCode.Escape) && _career?.ConfirmationFocus != null)
+            {
+                _keyboardFocus = true;
+                _career.CancelConfirmation();
+            }
+            else if (Input.GetKeyDown(KeyCode.Escape) && _dialog.activeSelf)
             {
                 _keyboardFocus = true;
                 CancelDialog();
@@ -1329,4 +1358,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.10    | 2026-10-28 | —      | Owner decision (October 28): a control that opens or closes content in place keeps one title with a ▸/▾ glyph (covered substitute when the font lacks it). The "Match statistics" title is the statistics toggle, replacing the separate Open/Close statistics button and its heading; the plain heading returns only at full time, when the toggle is hidden. "Earlier change feedback (N)" and "Compare all seven Mentalities" show the same glyph. Labels are composed at build, or when the earlier count or state changes. |
 // | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
 // | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
+// | 1.13    | 2026-11-06 | —      | P7b career views share S0 layout, keyboard traversal, focus recovery and disposal. |
 #endregion

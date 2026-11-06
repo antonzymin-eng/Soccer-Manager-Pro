@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientMatchCoordinator.cs
 // Created:  2026-10-06
-// Modified: 2026-10-08 (P5b screens)
+// Modified: 2026-11-06
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Consumes one lifecycle with transaction, accepted-frame end barrier and repeat-match teardown.
@@ -28,8 +28,10 @@ namespace TacticalDirector.ClientApp
         private bool _rejected;
         private bool _disposed;
         private long _attachmentId;
-        /// <summary>One fixed five-move graph with lifetime-stable registrations.</summary>
+        /// <summary>One screen graph with lifetime-stable match and optional career registrations.</summary>
         public ClientScreenFlow Flow { get; }
+        /// <summary>Optional independent career binding on the same screen graph.</summary>
+        public CareerScreenPresenter Career { get; }
         /// <summary>Current setup draft; reset on cancel/re-entry.</summary>
         public Mentality DraftMentality { get; private set; } = Mentality.Balanced;
         /// <summary>Stable source/dispatcher registered for Match View.</summary>
@@ -47,15 +49,24 @@ namespace TacticalDirector.ClientApp
         internal S0DemoFixture Fixture => _fixture;
 
         /// <summary>Constructs one shell with explicit renderer and admitted approved fixture.</summary>
-        public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture)
+        public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture, CareerScreenPresenter career = null)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
-            var menu = new ScreenRegistration(ClientScreens.MainMenu, null, null);
+            var menu = new ScreenRegistration(ClientScreens.MainMenu, career, null);
             var setup = new ScreenRegistration(ClientScreens.TacticsSetup, null, null);
             var match = new ScreenRegistration(ClientScreens.MatchView, MatchView, MatchView);
             var report = new ScreenRegistration(ClientScreens.PostMatchReport, Report, null);
-            Flow = new ClientScreenFlow(in menu, in setup, in match, in report);
+            Career = career;
+            if (career == null) Flow = new ClientScreenFlow(in menu, in setup, in match, in report);
+            else
+            {
+                var home = new ScreenRegistration(ClientScreens.CareerHome, career, career);
+                var newCareer = new ScreenRegistration(ClientScreens.NewCareer, career, null);
+                var load = new ScreenRegistration(ClientScreens.LoadCareer, career, null);
+                Flow = new ClientScreenFlow(in menu, in setup, in match, in report, in home, in newCareer, in load);
+                career.AttachFlow(Flow);
+            }
         }
 
         /// <summary>Opens a fresh Balanced draft without constructing a session.</summary>
@@ -181,6 +192,7 @@ namespace TacticalDirector.ClientApp
         }
         private void RequireReady()
         {
+            if (Career != null && Career.IsBusy) throw new InvalidOperationException("Career work is in progress.");
             if (_disposed || _rejected) throw new InvalidOperationException("The client shell is disposed or rejected.");
         }
         /// <summary>Quiesces playback, invalidates callbacks, clears handles and detaches visuals; idempotent.</summary>
@@ -188,6 +200,7 @@ namespace TacticalDirector.ClientApp
         {
             if (_disposed) return;
             _rejected = true;
+            Career?.Dispose();
             ClearOwnedMatch();
             _disposed = true;
         }
@@ -198,4 +211,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
+// | 1.2     | 2026-11-06 | —      | P7b seven-screen composition with lifetime-stable career registrations. |
 #endregion

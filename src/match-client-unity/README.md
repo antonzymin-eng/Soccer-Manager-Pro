@@ -1,5 +1,11 @@
 # `TacticalDirector.MatchClientUnity` — Unity-only render/UGUI skin
 
+**P7b (2026-11-06):** Career Home, New Career, Load Career and Main Menu entries
+are bound in the tracked scene. Long work uses the host-free `CareerScreenPresenter`
+worker handoff; `CareerScreensView` shares S0 typography, layout and focus. Saves use
+`Application.persistentDataPath/Careers`. Pinned-host compile/runtime checks are still
+required; see `docs/tracking/p7b-bindings-validation.md`.
+
 **Status:** P4b (the render/camera/click binding) **LANDED** —
 `MatchClientBehaviour.cs`, landed across **5 adversarial-review rounds** (findings
 H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) now has a complete screen candidate; pinned-host screen acceptance and the on-host half of P6 remain open. See `docs/tracking/interactive-unity-client-design.md` for the full

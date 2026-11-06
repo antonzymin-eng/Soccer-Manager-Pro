@@ -1,6 +1,6 @@
 // File:     src/client-app/LoadCareerSource.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-11-06
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2, D-10),
 //           ux-experience-architecture.md §7, UI / Client Framework #38 §3.1, Code Standards #20
@@ -89,6 +89,8 @@ namespace TacticalDirector.ClientApp
             return true;
         }
 
+        internal void RefreshAfterOperation(bool clearError) => Rebuild(clearError ? null : _view.LastError);
+
         private void Rebuild(string error)
         {
             CareerSlotSummary[] rows = _slots.List();
@@ -105,4 +107,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7).                                      |
+// | 1.1     | 2026-11-06 | —      | Refresh slot metadata after worker operations while retaining load failures. |
 #endregion

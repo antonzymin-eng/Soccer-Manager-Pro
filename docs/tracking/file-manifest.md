@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 5, 2026 — **Pre-C re-review and #537 merge on `codex/pre-c-control`.** Preserve `host-1d3cebf3-20261105/` and the 36-file Pre-C evidence inventory; 37 registered evidence directories in total. Modified: `.github/workflows/ci.yml` and `tools/unity-ci/README.md` (exclude the capture from Unity LFS pulls), `tools/tests/test_evidence_manifests.py` (37 directories), roadmap v0.91, W8 results v1.7 and decision v0.38 (full-time censoring summary), `CHANGELOG.md` and this manifest. No additional paths or capture/policy changes beyond the merged #537 evidence set; no shipping source, asset, package or project-setting change.
+**Last Updated:** November 6, 2026 — P7b independent binding candidate: new career presenter/text, UGUI view and two regression suites (with metas); tracked scene gains three inactive roots. New docs: `docs/agent-guides/unity-project-context.md` and `docs/tracking/p7b-bindings-validation.md`. See the validation record for the host acceptance boundary.
+
+**Last Updated (prior):** November 5, 2026 — **Pre-C re-review and #537 merge on `codex/pre-c-control`.** Preserve `host-1d3cebf3-20261105/` and the 36-file Pre-C evidence inventory; 37 registered evidence directories in total. Modified: `.github/workflows/ci.yml` and `tools/unity-ci/README.md` (exclude the capture from Unity LFS pulls), `tools/tests/test_evidence_manifests.py` (37 directories), roadmap v0.91, W8 results v1.7 and decision v0.38 (full-time censoring summary), `CHANGELOG.md` and this manifest. No additional paths or capture/policy changes beyond the merged #537 evidence set; no shipping source, asset, package or project-setting change.
 
 **Last Updated (prior):** November 5, 2026 — **Pinned-host Unity compile and living-world EditMode at `main` `1d3cebf3`.** **New evidence directory** `docs/tracking/evidence/host-1d3cebf3-20261105/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (new full-coverage contract), `tools/tests/test_evidence_manifests.py` (36 registered directories), `docs/tracking/CHANGELOG.md` and this manifest. No source, asmdef, package or project-setting change.
 
@@ -3709,6 +3711,8 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 |------|---------|
 | `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine in the landed #470 foundation |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
+| `CareerScreensView.cs` | P7b UGUI pages, menu entries and shared S0 focus/layout binding |
+| `CareerScreensView.cs.meta` | Stable Unity asset identity |
 | `ClientShellBehaviour.cs` | LANDED #470 at f276f700; foundation v1.3, host-fact/visibility/event binding with inactive-ancestor refusal; Main Menu ↔ Tactics Setup only; pinned compile 0 errors and ClientApp.Tests 26/26 recorded; full lifecycle/screens remain due |
 | `ClientShellBehaviour.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `MatchClientBehaviour.cs` | **P4b, LANDED August 15, 2026** — the PlayerLoop host: owns a `MatchSession`, reads `TryGetLatestFrame` each `Update` via the new `LiveFrameLatch`, and binds `AgentRenderModel`/`BallRenderModel`/`PitchMarking` onto scene objects (transforms, `MaterialPropertyBlock` colour, camera pose, a ground-click ray). States and enforces the prefab contract (neutral root; flat-vs-volumetric unit sizing; the colour-property name; no world-space `LineRenderer`) at instantiation, rejecting the client by name+reason rather than throwing into a live `MonoBehaviour`. Four AR rounds landed against it: round 1 (H1-H3 + 9M + 5L), round 2 (H4-H6, then M10-M13/L6-L8), round 3 (0H + M14-M18/L9-L11), round 4 (0H + M19-M22/L12-L13) — see this file's own `VersionHistory` block for the per-finding detail. Excluded from the `dotnet-ci` gate by design (above); reviewed by hand |
@@ -3758,7 +3762,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `ClientScreenVisibility.cs` | Exhaustive four-screen visibility projection; unknown ids fail loud |
+| `ClientScreenVisibility.cs` | Exhaustive seven-screen visibility projection; unknown ids fail loud |
 | `ClientScreenVisibility.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `tests/ClientShellWiringValidatorTests.cs` | v1.1: nine host-free validation/immutability cases; passed in Unity EditMode (ClientApp.Tests 26/26) |
 | `tests/ClientShellWiringValidatorTests.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
@@ -3811,6 +3815,14 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
+| `CareerScreenPresenter.cs` | P7b single-worker actions and cached sources, completion handoff, overwrite confirmation and persistent feedback |
+| `CareerScreenPresenter.cs.meta` | Stable Unity asset identity |
+| `CareerScreenText.cs` | Independent localized career register using shared S0 formatting |
+| `CareerScreenText.cs.meta` | Stable Unity asset identity |
+| `tests/CareerScreenPresenterTests.cs` | P7b action, worker, save/load recovery and disposal regressions |
+| `tests/CareerScreenPresenterTests.cs.meta` | Stable Unity asset identity |
+| `tests/CareerScreenBindingTests.cs` | Seven-root visibility/structure, typed copy and pseudo-locale admission |
+| `tests/CareerScreenBindingTests.cs.meta` | Stable Unity asset identity |
 | `CareerHomeViewModel.cs` | Career Home projection (§7.5: changed / attention / next / progress + table) |
 | `CareerHomeViewModel.cs.meta` | Stable Unity asset identity |
 | `CareerHomeSource.cs` | Revision-cached Career Home source |

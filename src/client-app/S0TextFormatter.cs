@@ -1,6 +1,6 @@
 // File:     src/client-app/S0TextFormatter.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08
+// Modified: 2026-11-06
 // Author:   —
 // Spec:     S0 binding contracts §§4.1–4.4, Localization #49 KD-5, Code Standards #20
 // Purpose:  Admit all authored patterns before publishing a fixed-context formatter; cache typed role output.
@@ -33,14 +33,15 @@ namespace TacticalDirector.ClientApp
         }
 
         /// <summary>Admits equivalent punctuation fallbacks before Resolve/hash when a packaged font lacks a glyph.</summary>
-        public static S0TextFormatter WithGlyphCoverage(Func<char, bool> glyphAvailable)
+        public static S0TextFormatter WithGlyphCoverage(Func<char, bool> glyphAvailable, IReadOnlyList<S0TextRole> roles = null)
         {
             if (glyphAvailable == null)
                 throw new ArgumentNullException(nameof(glyphAvailable));
-            var rows = new TemplateCatalogue.StaticRow[S0ScreenContent.All.Count];
+            roles = roles ?? S0ScreenContent.All;
+            var rows = new TemplateCatalogue.StaticRow[roles.Count];
             for (int i = 0; i < rows.Length; i++)
             {
-                S0TextRole role = S0ScreenContent.All[i];
+                S0TextRole role = roles[i];
                 var pattern = new StringBuilder();
                 foreach (char c in role.BasePattern)
                 {
@@ -96,12 +97,26 @@ namespace TacticalDirector.ClientApp
                 rows[i] = new TemplateCatalogue.StaticRow(role.Key, pattern.ToString());
             }
 
-            return new S0TextFormatter(new TemplateCatalogue(LocaleId.BaseLocale, rows), null, null);
+            return new S0TextFormatter(new TemplateCatalogue(LocaleId.BaseLocale, rows), null, null, roles);
         }
 
-        internal S0TextFormatter(TemplateCatalogue baseCatalogue, TemplateCatalogue.StaticRow[] selectedRows, LocaleId? selectedLocale)
+        /// <summary>Reuses the S0 admission, typed formatting and pseudo-locale system for an independent screen catalogue.</summary>
+        public static S0TextFormatter ForRoles(IReadOnlyList<S0TextRole> roles,
+            TemplateCatalogue.StaticRow[] selectedRows = null, LocaleId? selectedLocale = null)
         {
-            foreach (S0TextRole role in S0ScreenContent.All)
+            var rows = new TemplateCatalogue.StaticRow[roles.Count];
+            for (int i = 0; i < rows.Length; i++) rows[i] = new TemplateCatalogue.StaticRow(roles[i].Key, roles[i].BasePattern);
+            return new S0TextFormatter(new TemplateCatalogue(LocaleId.BaseLocale, rows), selectedRows, selectedLocale, roles);
+        }
+
+        internal S0TextFormatter(TemplateCatalogue baseCatalogue, TemplateCatalogue.StaticRow[] selectedRows, LocaleId? selectedLocale,
+            IReadOnlyList<S0TextRole> roles = null)
+        {
+            roles = roles ?? S0ScreenContent.All;
+            var keys = new LocalizationKey[roles.Count];
+            for (int i = 0; i < keys.Length; i++) keys[i] = roles[i].Key;
+            var coverage = new CatalogueCoverage(keys);
+            foreach (S0TextRole role in roles)
                 _roles.Add(role.Key.Value.Substring("ui.s0.".Length), role);
             TemplateCatalogue selected = null;
             if (selectedRows != null)
@@ -117,10 +132,10 @@ namespace TacticalDirector.ClientApp
                 selected = new TemplateCatalogue(selectedLocale ?? new LocaleId("qps-ploc"), selectedRows);
             }
 
-            var localizer = new Localizer(baseCatalogue, selected, S0ScreenContent.Coverage());
+            var localizer = new Localizer(baseCatalogue, selected, coverage);
             var canonical = new StringBuilder();
-            var baseOnly = new Localizer(baseCatalogue, null, S0ScreenContent.Coverage());
-            foreach (S0TextRole role in S0ScreenContent.All)
+            var baseOnly = new Localizer(baseCatalogue, null, coverage);
+            foreach (S0TextRole role in roles)
             {
                 // Validate base even when a translation would hide its defect.
                 ValidatePattern(role, baseOnly.Resolve(role.Key));
@@ -261,4 +276,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Strict admission, invariant typed formatting, cell caches and loaded manifest. |
+// | 1.1     | 2026-11-06 | —      | Reuse admitted formatting for the independent career role catalogue. |
 #endregion

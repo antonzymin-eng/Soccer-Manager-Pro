@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 6 — P7b implementation candidate (v0.92):** Independent career bindings and seven-root shell wiring are present. Worker handoff, slot states and overwrite confirmation are covered by host-free regressions. Pinned-editor compilation and runtime acceptance remain open; [validation and host handoff](p7b-bindings-validation.md). D-P7-6 and S1 approvals remain separate.
+
 > **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
 
 > **November 4 — Pre-C review closeout (v0.90):** Retain all per-tick digest bytes in the committed LFS capture; pointer-only hygiene checks verify strict LFS reference OIDs without bulk downloads. Portable replay/rebuild commands and analysis rule 1.1 are frozen before C. Abstract BallLoose tackle outcomes are excluded from physical touches; all 126 release decisions and 12 selected windows remain identical. Both same-frame clearings are explained by executor-before-first-touch ordering. [Reviewed control](evidence/pre-c-control-20261104/README.md). No gameplay change or new full-match capture.
@@ -522,7 +524,7 @@ decided.
 
 1. **P7b independent bindings (M).** Career Home, New Career, Load Career, Main Menu entries, screen
    visibility, save-slot states, busy/error handling; long work off the UI thread. Does not wait for
-   D-P7-6.
+   D-P7-6. Implementation candidate present November 6; [validation and host handoff](p7b-bindings-validation.md), with pinned-host acceptance still due.
 2. **D-P7-6 contract, then implementation (L).** Contract first: the PROPOSED #30 amendment draft
    [`d-p7-6-interactive-career-match-amendment-draft.md`](d-p7-6-interactive-career-match-amendment-draft.md)
    (#41/#44 participation errata; no save-format change), then the seam and the interactive route under
@@ -913,6 +915,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.92 | November 6, 2026 | P7b independent binding candidate: seven-root shell, worker-owned career operations, localized pages, slot states and overwrite confirmation. Pinned Unity compile/runtime acceptance remains due; no D-P7-6 or S1 approval claimed. |
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
 | v0.89 | November 4, 2026 | Close engine lane item 1: freeze Pre-C source/runtime/configuration and exact-touch/team observer at `1d3cebf3`; reproduce all six adopted post-law B digests in plain and observed Linux .NET captures; verify full digest/ball/event neutrality and retain raw attribution/order evidence. W8 C implementation and its paired/host validation remain next. |
