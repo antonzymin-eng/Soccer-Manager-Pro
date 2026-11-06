@@ -1,6 +1,6 @@
 // File:     src/client-app/TransferMarketViewModel.cs
 // Created:  2026-11-05
-// Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
+// Modified: 2026-11-05 (AR-3 L1: clarify optional-empty transfer save compatibility.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P8 (D-P8-1),
 //           docs/design/ux-s2-transfers-finances.md §2 (R1–R8) / §3.1–§3.2, Transfers #31 FR-TX-025,
@@ -120,7 +120,7 @@ namespace TacticalDirector.ClientApp
         /// <summary>True when a career is active.</summary>
         public readonly bool HasCareer;
 
-        /// <summary>True when the career carries #31 state (always, for a career started or resumed by the client).</summary>
+        /// <summary>True when the career carries #31 state. New careers carry it, but supported optional-empty #31 saves can resume without it.</summary>
         public readonly bool IsTransfersWired;
 
         /// <summary>The managed club's id.</summary>
@@ -204,4 +204,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-11-05 | —      | H2: TransferClubRow.SquadCount so a sale can show a full buyer; HasSquadRoom doc no longer says a sale is never squad-limited. |
 // | 1.2     | 2026-11-05 | —      | L2: RemainingBudget through the shared TransferBudgetRule helper. |
 // | 1.3 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
+// | 1.4 | 2026-11-05 | — | AR-3 L1: document valid resumed careers without an optional #31 block; no logic change. |
 #endregion

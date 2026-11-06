@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientScreenFlow.cs
 // Created:  2026-08-07
-// Modified: 2026-11-05 (§5-P8: Transfers / Club Finances moves)
+// Modified: 2026-11-05 (AR-3 L2: clarify PM-1-only five-edge summary.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b (navigation graph),
 //           §5-P7 (career entry/exit moves), §5-P8 (Transfers / Club Finances moves),
@@ -25,11 +25,11 @@ namespace TacticalDirector.ClientApp
     ///    └──────────────────ReturnToMainMenu (Pop)────────────────────────── PostMatchReport
     /// </code>
     /// <para>
-    /// The shell is privately owned, so these five moves are the <b>only</b> navigation surface — the
-    /// graph is enforced by encapsulation, not convention. Each move guards on the screen it departs
-    /// from and throws otherwise (the <c>NavigationShell</c> fail-loud posture, FR-UI-011): a binding
-    /// that wires a button to the wrong move fails at the click, not by silently landing on a wrong
-    /// screen.
+    /// These five moves are the complete <b>PM-1 match-screen graph</b> built by the four-registration
+    /// constructor. The seven- and nine-registration constructors add the career and transfer/finance
+    /// moves documented below. All moves remain encapsulated here; each guards its departure screen and
+    /// throws otherwise (the <c>NavigationShell</c> fail-loud posture, FR-UI-011), so a button wired to
+    /// the wrong move fails rather than navigating to an unintended screen.
     /// </para>
     /// <para>
     /// Two edges are <c>Replace</c>, deliberately. TacticsSetup → MatchView replaces because a running
@@ -375,4 +375,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | Tactics/Match deliberately absent (D-P7-6). The PM-1 graph and |
 // |         |            |        | its four-registration constructor are unchanged.               |
 // | 1.2     | 2026-11-05 | —      | §5-P8: nine-registration constructor and four Career Home ↔ Transfers / Club Finances moves. |
+// | 1.3     | 2026-11-05 | —      | AR-3 L2: qualify the five-edge summary as PM-1-only; P7/P8 moves are also part of this class. |
 #endregion

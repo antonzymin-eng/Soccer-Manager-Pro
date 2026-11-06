@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2 review: finance restore composition and four Continue/Load regression cases.)
+// Modified: 2026-11-05 (AR-3 M1: assert one localized career formatter is retained for binding.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -14,6 +14,7 @@ using System.Threading;
 using NUnit.Framework;
 
 using TacticalDirector.ClubFinances;
+using TacticalDirector.Localization;
 using TacticalDirector.SeasonSave;
 using TacticalDirector.Transfers;
 
@@ -105,6 +106,25 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsTrue(career.IsInitialized);
             Assert.IsFalse(career.IsBusy);
             Assert.AreEqual(CareerSaveSlots.SlotCount, career.Load.Slots.Count);
+        }
+
+        [Test]
+        public void InjectedCareerCopy_IsTheSharedAdmittedFormatterForUiBinding()
+        {
+            var selectedRows = new[]
+            {
+                new TemplateCatalogue.StaticRow(
+                    new LocalizationKey("ui.career.new"), "[Translated new career]"),
+                new TemplateCatalogue.StaticRow(
+                    new LocalizationKey("ui.career.entry.failed"), "[Translated entry failure]")
+            };
+            var localized = new CareerScreenText(selectedRows, new LocaleId("qps-ploc"));
+            using var h = new Harness(localized);
+
+            Assert.AreSame(localized, h.Career.ScreenText,
+                "The host binding must consume the exact formatter used for coordinator error copy.");
+            Assert.AreEqual("[Translated new career]", h.Career.ScreenText.Label("new"));
+            Assert.AreEqual("[Translated entry failure]", h.Career.ScreenText.Label("entry.failed"));
         }
 
         [Test]
@@ -1065,4 +1085,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.7 | 2026-11-05 | — | T3: projection retention, long-cache/order/saturation boundaries and test-host hygiene. |
 // | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
 // | 1.9 | 2026-11-05 | — | AR-2 M1: four Continue/Load cases covering empty #40 migration, nondefault populated preservation, complete finance state, market projections and accepted offers. |
+// | 1.10 | 2026-11-05 | — | AR-3 M1: localized career formatter identity is retained and exposed for the Unity binding. |
 #endregion

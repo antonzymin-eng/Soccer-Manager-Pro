@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-1 M1: typed refusal for resumed careers without live transfer capability.)
+// Modified: 2026-11-05 (AR-3: expose single admitted career text instance to the Unity view binding.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -112,6 +112,13 @@ namespace TacticalDirector.ClientApp
             _mode = mode;
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
         }
+
+        /// <summary>
+        /// The lifetime-fixed admitted career copy shared with its UI binding. The binding must use this
+        /// instance rather than constructing a separate base-locale formatter, so labels and coordinator
+        /// errors cannot disagree about the selected locale.
+        /// </summary>
+        public CareerScreenText ScreenText => _screenText;
 
         /// <summary>Cached Career Home snapshot; progress is blocked immediately when work is accepted.</summary>
         public CareerHomeViewModel Home { get; private set; }
@@ -559,4 +566,5 @@ namespace TacticalDirector.ClientApp
 // | 1.5 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.7 | 2026-11-05 | — | AR-1 M1: check live transfer capability before owner diagnosis and publish TransfersUnavailable for supported optional-empty saves. |
+// | 1.8 | 2026-11-05 | — | AR-3 M1: expose the admitted career formatter to the Unity view binding, preventing duplicate default-locale construction. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T2: visible projection errors and consistent failed-entry rollback.)
+// Modified: 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
 // Purpose:  Career UGUI adapter over cached coordinator snapshots; no worker or domain-state reads.
@@ -53,7 +53,7 @@ namespace TacticalDirector.MatchClientUnity
             GameObject setup, GameObject load, Func<ulong> seed)
         {
             _career = career;
-            _careerText = new CareerScreenText();
+            _careerText = career.ScreenText;
             CareerControl(menu, C("new"), () => career.OpenNewCareer(seed()), _menuScroll);
             _careerContinue = CareerControl(menu, C("continue"), career.ContinueCareer, _menuScroll);
             CareerControl(menu, C("load"), career.OpenLoadCareer, _menuScroll);
@@ -151,4 +151,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.0 | 2026-11-03 | — | Persistent career pages, menu entries, cached binding and shared keyboard focus. |
 // | 1.1 | 2026-11-04 | — | Separate selected-club status from the Start action and cache club rows independently. |
 // | 1.2 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
+// | 1.3 | 2026-11-05 | — | AR-3 M1: display labels use the same admitted CareerScreenText instance as coordinator failure copy. |
 #endregion
