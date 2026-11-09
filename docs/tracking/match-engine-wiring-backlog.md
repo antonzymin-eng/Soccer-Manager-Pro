@@ -352,9 +352,11 @@ for B→C. The owner has placed part (i) in PM-2 scope; PM-2 inclusion of
 **Owner-approved scope reduction, November 9, 2026:** part (i) now selects positioning's
 formation at kickoff and keeps it fixed for the match, retaining FR-PA-039. Duty still routes
 per player throughout. In-match formation switching and formation-dependent lineup selection
-remain separate follow-ups. The [preflight](w-434-formation-duty-preflight.md) is documentation
-only; its proposed initialization boundary, request semantics, snapshot v29 and comparison
-contract await owner decisions. #434 is not implemented by this record; #440 is unchanged.
+remain separate follow-ups. The [preflight](w-434-formation-duty-preflight.md) v1.3 now
+records owner acceptance of P1–P4, the lineup limitation and the 120-match fallback.
+Formation/Duty implementation is authored with world-state v29; validation/capture
+are in progress under the [frozen capture protocol](evidence/formation-duty-20261109/PROTOCOL.md).
+#440 is unchanged; no completion or pinned-host certification is claimed.
 
 **Preflight review revision, November 9, 2026:** v1.1 expands the retained F442 identity/lineup
 limitations, dispositions the `SquadRating` reads, and proposes non-default formation/Duty
@@ -818,6 +820,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.44 | 2026-11-09 | — | #434 P1–P4 and slot limitation accepted in-session; runtime/spec/tests authored, full validation/capture pending. No #440 change. |
 | 1.43 | 2026-11-09 | — | #434 preflight v1.2: new formation-translation work correctly identified, conditional base reuse, C0–C9 matrix, explicit budget and stop-versus-characterization distinction. Decisions remain pending; no gameplay change. |
 | 1.42 | 2026-11-09 | — | #434 preflight v1.1: eight-read inventory, full slot-risk disclosure, non-default characterization, encoding alternatives, initialization/client/provenance corrections and prior-commit CI receipts. Gameplay decisions remain pending. |
 | 1.41 | 2026-11-09 | — | Records owner-approved kickoff-only #434 scope and documentation-only preflight. Kickoff boundary, mixed requests, v29 encoding and comparison contract are proposals awaiting owner decisions. No gameplay implementation or #440 change. |

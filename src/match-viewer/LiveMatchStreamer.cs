@@ -1,6 +1,6 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
-// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy)
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
@@ -399,7 +399,8 @@ namespace TacticalDirector.MatchViewer
                 _engine.MatchEnded,
                 _engine.CurrentPeriod,
                 _lastRestart,
-                pending);
+                pending,
+                _engine.Formations);
         }
 
         /// <summary>
@@ -657,4 +658,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | a non-default ticksPerSecond.                                  |
 // | 1.9     | 2026-10-06 | —      | Capture identity with position/cues under the existing tick gate. |
 // | 1.10    | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): copies the engine pending queue into each captured frame under the tick gate; never exposes engine arrays. |
+// | 1.11 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

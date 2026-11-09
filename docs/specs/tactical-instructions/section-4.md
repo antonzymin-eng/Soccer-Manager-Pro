@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 4: Architecture & Integration
 
 **Created:** June 20, 2026
-**Last Updated:** June 20, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** November 9, 2026 (v0.2 — ERR-021-009: complete mixed-request acceptance with separately exposed fixed effective formation.)
+**Version:** 0.2
 **Status:** APPROVED (June 20, 2026)
 
 ---
@@ -67,6 +67,21 @@ interface tree, same-/downward-layer data flow uses direct fields, not interface
 - Snapshot field set + ordering owned here (Appendix B), `SNAPSHOT_SCHEMA_VERSION` bump at T2 (FR-TI-028).
 - All factories produce identity behaviour (FR-TI-031), so the layer is a safe no-op until populated.
 
+### 4.6.1 Kickoff-effective versus requested formation (ERR-021-009)
+
+Accept the complete pending tactic at the normal AI stride, including mixed
+formation/mentality requests. Mentality and every other routed non-formation field
+apply normally. The requested formation is stored in active/pending TeamTactic;
+the effective positioning formation remains the separately serialized kickoff choice
+for this match. Expose both to presentation; label the effective formation as in use
+and a differing request as held for this match. Do not promise next-match persistence.
+A second-half kickoff and restore keep the effective kickoff family.
+
+Example: F4231 at kickoff, then a request for F433/VeryAttacking: requested F433,
+effective F4231, mentality VeryAttacking after the stride. The #12 snapshot derives
+positional roles from F4231 and per-agent Duty from the active PlayerTactic.
+Duty remains agent-owned through rotation, not inherited from an exchanged slot.
+
 ## 4.7 Cross-spec validation checks (authored at Stage 1 alongside the seams)
 
 1. `TacticPassing/Pressing/TriggerMask/Formation` map onto a valid subsystem enum (or clamp per F5).
@@ -79,4 +94,5 @@ interface tree, same-/downward-layer data flow uses direct fields, not interface
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-20 | — | Assembly placement, file layout, routing contract, determinism boundaries. |
+| 0.2 | November 9, 2026 | — | ERR-021-009: complete mixed-request acceptance with separately exposed fixed effective formation. |
 #endregion

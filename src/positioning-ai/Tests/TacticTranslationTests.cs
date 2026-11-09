@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/TacticTranslationTests.cs
 // Created:  2026-06-29
-// Modified: 2026-08-08
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-016 / FR-TI-031; Positioning AI #12 §3.5; Code Standards #20
 // Purpose:  Locks the #21 → #12 T2 consumer seam: TacticWidth / TacticDefWidth → lateral-
@@ -16,6 +16,16 @@ namespace TacticalDirector.PositioningAI.Tests
     [TestFixture]
     internal class TacticTranslationTests
     {
+        [TestCase(TacticFormation.F442, FormationFamily.F442)]
+        [TestCase(TacticFormation.F433, FormationFamily.F433)]
+        [TestCase(TacticFormation.F4231, FormationFamily.F4231)]
+        [TestCase((TacticFormation)3, FormationFamily.F442)]
+        [TestCase((TacticFormation)255, FormationFamily.F442)]
+        public void Formation_UsesNamedConsumerMapping_AndLiveFallback(TacticFormation input, FormationFamily expected)
+        {
+            Assert.AreEqual(expected, TacticTranslation.ToFormationFamily(input));
+        }
+
         // ── §3.4: each width maps onto its catalogue scalar (direct ordinal lookup) ──
 
         [Test]
@@ -94,4 +104,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // | Version | Date       | Author       | Notes                                                     |
 // | 1.0     | 2026-06-29 | —            | Initial file. |
 // | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+// | 1.2 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

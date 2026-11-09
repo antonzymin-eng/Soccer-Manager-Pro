@@ -1,8 +1,8 @@
 # Positional Rotations Specification #25 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 8, 2026
-**Last Updated:** July 10, 2026 (v0.3 — §2.4 back-props filed: ERR-021-007 / ERR-012-009; append order pinned)
-**Version:** 0.3
+**Last Updated:** November 9, 2026 (v0.4 — ERR-025-001: count-prefixed v29 rotation blocks and effective-family-first restore.)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -64,8 +64,22 @@ formation table; Appendix A enumerates rows per `FormationFamily`.
 
 At wiring: per agent `SlotIndex` (int32, roster order) + per agent `LastComposedTarget` (float32
 X, float32 Y, roster order — PASS-1 H-1) + per pair (`TriggerDwellTicks` int32, `Rotated` byte,
-`HoldTicksRemaining` int32, table-row order) + the dial byte via `WriteTeamTactic`. Field order
+`HoldTicksRemaining` int32, table-row order) + the existing int32 dial encoding via `WriteTeamTactic`. Field order
 pinned in Appendix B.
+
+**ERR-025-001 — world-state v29.** The existing uncounted block assumes five rows;
+F4231 has six. Before all positioning state, serialize each team's kickoff-initialized
+byte and effective #21 formation int32 immediately after the world schema/tick.
+Restore validates/selects the matching catalogue before hysteresis or rotation reads.
+Each contiguous rotation block starts with int32 row count; require exactly 5 for
+F442/F433 or 6 for F4231 and bounds-check remaining bytes by division before reading.
+The three existing blocks remain in order. Restore binding/cache/rows verbatim;
+never reseed after loading. A false initialized flag is valid only at synthetic tick 0
+with F442; normal tick-0 committed saves remain empty. Reject undefined boolean/family,
+uninitialized positive tick, invalid count, truncation and v28. Outer save format 3
+and header schema 1 do not change. Appendix B is the byte authority.
+`RotationFreedom` is byte-backed in #21 but the shipped `WriteTeamTactic` encoding is
+int32; this landing preserves that existing wire encoding.
 
 ## 2.4 Cross-spec back-props (filed at `APPROVED`)
 
@@ -93,4 +107,5 @@ pinned in Appendix B.
 | 0.1 | 2026-07-08 | — | Initial FR set (18), pair-state model, permutation-restore gate, failure modes. |
 | 0.2 | 2026-07-08 | — | PASS-1 fixes: §2.2.4 serialized `LastComposedTarget` cache + FR-RO-013 amendment (H-1); FR-RO-004 outer-gate wording (M-1); F6 pair-state gates (L-2). |
 | 0.3 | 2026-07-10 | — | §2.4 back-props FILED and landed atomically with `APPROVED`: ERR-021-007 / ERR-012-009 (spec-error-log.md v1.30); §2.2.1 append order PINNED (after `BuildUpStructure`). |
+| 0.4 | November 9, 2026 | — | ERR-025-001: count-prefixed v29 rotation blocks and effective-family-first restore. |
 #endregion

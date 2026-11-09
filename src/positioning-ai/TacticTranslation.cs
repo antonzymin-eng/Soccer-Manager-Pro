@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/TacticTranslation.cs
 // Created:  2026-06-29
-// Modified: 2026-06-29
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-016 / FR-TI-025 / FR-TI-031; Positioning AI #12 §3.5
 // Purpose:  Consumer-side (T2) translation seam: resolves a #21 TacticWidth / TacticDefWidth onto
@@ -41,6 +41,28 @@ namespace TacticalDirector.PositioningAI
             => TacticalInstructionsConstants.DefWidthScalar[
                    ClampIndex((int)defWidth, TacticalInstructionsConstants.DefWidthScalar.Length)];
 
+        /// <summary>Kickoff formation translation; unknown live input uses F442 (FR-PA-043, ERR-012-013).</summary>
+        public static FormationFamily ToFormationFamily(TacticFormation formation)
+        {
+            switch (formation)
+            {
+                case TacticFormation.F433: return FormationFamily.F433;
+                case TacticFormation.F4231: return FormationFamily.F4231;
+                default: return FormationFamily.F442;
+            }
+        }
+
+        /// <summary>Maps a selected local family to the #21 observation/snapshot representation.</summary>
+        public static TacticFormation ToTacticFormation(FormationFamily formation)
+        {
+            switch (formation)
+            {
+                case FormationFamily.F433: return TacticFormation.F433;
+                case FormationFamily.F4231: return TacticFormation.F4231;
+                default: return TacticFormation.F442;
+            }
+        }
+
         private static int ClampIndex(int index, int count)
         {
             if (index < 0) return 0;
@@ -53,4 +75,5 @@ namespace TacticalDirector.PositioningAI
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-06-29 | —      | Initial T2 consumer seam: TacticWidth / TacticDefWidth → #12      |
 // |         |            |        |   lateral-compactness scalar (direct ordinal lookup, §3.1 F5).    |
+// | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

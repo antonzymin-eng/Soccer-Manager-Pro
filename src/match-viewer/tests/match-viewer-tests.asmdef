@@ -8,7 +8,8 @@
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "TacticalDirector.TacticalInstructions"
     ],
     "includePlatforms": [
         "Editor"

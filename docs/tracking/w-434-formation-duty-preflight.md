@@ -3,8 +3,8 @@
 **Created:** November 9, 2026
 **Purpose:** Resolve the kickoff-only formation contract, snapshot encoding and default-tactics
 comparison before implementing #434 part (i).
-**Version:** 1.2
-**Status:** OWNER DECISIONS REQUIRED — documentation only; no gameplay implementation or capture.
+**Version:** 1.3
+**Status:** APPROVED for implementation — owner answered “Yes” in this session on November 9, 2026.
 **Analyzed base:** `d4b026aa951432d342217314b8c4d49b53a19e7d` (`main`, W8 C / PR #542).
 **Branch:** `codex/434-formation-duty`.
 
@@ -13,7 +13,7 @@ comparison before implementing #434 part (i).
 The owner explicitly approved the kickoff-only scope reduction in this session on November 9,
 2026: “I approved scope reduction. Begin implementation”. That approves choosing each team's
 positioning formation before play and keeping it for the match, with Duty routing throughout.
-It reduces the original runtime-switching brief. It does not approve the recommendations below.
+It reduces the original runtime-switching brief. The owner subsequently approved the recommendations below.
 FR-PA-039 remains unchanged; in-match formation switching and its settling/mapping rules are a
 follow-up outside this PM-2 landing. D-05/D-08 still govern the separate #434 and #440 landings.
 
@@ -23,10 +23,9 @@ the session attachment `codex-prompt-434-440 (3).md`; this stop is reproduced he
 version label is needed to understand it. The approval quote above is an agent-attested record of
 the direct owner message in this session, not an independently signed repository receipt. No public
 transcript or owner-authored GitHub approval comment is claimed. Scope approval is already given;
-P1–P4, including P4's D-05 digest exception and the slot-mapping limitation in §2, remain pending.
+P1–P4, including the one-off append-last exception, structural comparison, C0–C9 matrix, conditional base reuse, 120-match fallback ceiling and no numeric plausibility bands, are approved. The owner explicitly accepted the §2 roster-index slot mismatch.
 
-No approved specification, gameplay code, schema constant,
-test assertion, seed, tuning value or historical evidence is changed here. #440 has not started.
+Implementation follows this contract. Historical evidence and tuning remain frozen. #440 has not started.
 
 | Decision | Recommendation | Consequence requiring owner acceptance |
 | --- | --- | --- |
@@ -35,8 +34,7 @@ test assertion, seed, tuning value or historical evidence is changed here. #440 
 | P3 — serialization | Prefer option B: world-state v29 with formation metadata before state restoration and a contiguous count-prefixed rotation block. Option A retains the original split-row trailer proposal. Both reject v28. | B keeps writer/reader order symmetric but needs an explicit exception to the snapshot procedure's append-only rule. A preserves offsets but permanently splits F4231 state and requires deferred restore. Neither migrates v28. |
 | P4 — validation | Exact default-tactics equality after structural byte alignment, plus the C0–C9 matrix, conditional base-reference reuse and declared budget in §5. | Raw hashes differ; accept only enumerated format exclusions and acknowledge the roster-slot limitations. Non-default football metrics have no established numeric acceptance bands here; report them as characterization for normal owner PR review. |
 
-Please decide P1–P4 before gameplay implementation. P3/P4 are proposals, not an approved revision
-of D-05's historical raw-digest rule. The B→C window is closed, so no exception inside it is sought.
+Accepted choices: P1 implicit first-RunTick; P2 option (b); P3 Option B with the one-off layout exception; P4 structural comparison and declared capture plan, including the 120-match fallback. This session approval revises D-05 for this landing only. The B→C window stays closed.
 
 ## 2. Source inventory and routing decisions
 
@@ -574,3 +572,5 @@ run is presented as a passing-current-head or Unity-host claim for v1.2.
 | 1.0 | November 9, 2026 | Owner-approved kickoff-only scope recorded; P1–P4 recommendations, production-read inventory, append-only v29 proposal and exact comparison/validation plan. No gameplay implementation. |
 | 1.1 | November 9, 2026 | Closes review gaps: all eight production reads, complete slot-mismatch disclosure, C0–C6 characterization, two encoding options with a conditional preference for contiguous blocks, structural comparison, explicit-lock alternative, accurate client copy and session-approval provenance. Decisions remain pending; no gameplay change. |
 | 1.2 | November 9, 2026 | Corrects the false existing-translation claim; specifies new mapping/fallback tests and #12 amendment. Replaces the matrix with C0–C9, one-sided mirrored Duty and both-F4231 cases, conditional base reuse, explicit budgets and hard stops versus descriptive metrics. P1–P4 and slot-table acknowledgment remain pending. |
+
+| 1.3 | November 9, 2026 | Records the owner’s direct “Yes” approving P1–P4, the 120-match fallback, no numeric bands and the roster-index lineup limitation. Implementation authorized. |
