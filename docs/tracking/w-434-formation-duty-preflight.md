@@ -3,7 +3,7 @@
 **Created:** November 9, 2026
 **Purpose:** Resolve the kickoff-only formation contract, snapshot encoding and default-tactics
 comparison before implementing #434 part (i).
-**Version:** 1.0
+**Version:** 1.1
 **Status:** OWNER DECISIONS REQUIRED — documentation only; no gameplay implementation or capture.
 **Analyzed base:** `d4b026aa951432d342217314b8c4d49b53a19e7d` (`main`, W8 C / PR #542).
 **Branch:** `codex/434-formation-duty`.
@@ -17,23 +17,34 @@ It reduces the original runtime-switching brief. It does not approve the recomme
 FR-PA-039 remains unchanged; in-match formation switching and its settling/mapping rules are a
 follow-up outside this PM-2 landing. D-05/D-08 still govern the separate #434 and #440 landings.
 
-This is v4's required preflight stop. No approved specification, gameplay code, schema constant,
+This document defines the preflight stop: prepare the inventory, recommendations and validation
+contract, then wait for owner decisions P1–P4 before changing gameplay. The original task brief was
+the session attachment `codex-prompt-434-440 (3).md`; this stop is reproduced here so no external
+version label is needed to understand it. The approval quote above is an agent-attested record of
+the direct owner message in this session, not an independently signed repository receipt. No public
+transcript or owner-authored GitHub approval comment is claimed. Scope approval is already given;
+P1–P4, including P4's D-05 digest exception and the slot-mapping limitation in §2, remain pending.
+
+No approved specification, gameplay code, schema constant,
 test assertion, seed, tuning value or historical evidence is changed here. #440 has not started.
 
 | Decision | Recommendation | Consequence requiring owner acceptance |
 | --- | --- | --- |
 | P1 — kickoff boundary | Capture the final pre-match pending formation at the first `RunTick` entry, while the clock is still 0, before the orchestrator advances to frame 1. Initialize that formation in place before any frame is simulated. | Formation boot initialization is distinct from committing the complete pending tactic, which stays on the existing first AI stride at frame 6. |
 | P2 — mid-match requests | Option (b): accept the full requested tactic at the usual tactical stride; positioning always uses a separately serialized kickoff formation. | Mixed formation/mentality requests still apply mentality and all other fields. Requested formation may differ from effective formation; expose both accurately to the client. |
-| P3 — serialization | World-state schema v28 → v29, retaining the five legacy rotation rows at their existing positions and appending a formation/extra-row trailer. No migration. | New format rejects v28 bodies; v29 reader uses deferred restoration so it selects the catalogue before decoding the saved rotation state. |
-| P4 — identity | Default-tactics equality of every existing world-state byte except the body schema word, plus exact possession, ball, trajectories and complete canonical ledgers. Validate the appended trailer separately. | Raw snapshot-chain hashes differ. Exclude only the enumerated format/identity consequences in §5; do not exclude whole subsystems. |
+| P3 — serialization | Prefer option B: world-state v29 with formation metadata before state restoration and a contiguous count-prefixed rotation block. Option A retains the original split-row trailer proposal. Both reject v28. | B keeps writer/reader order symmetric but needs an explicit exception to the snapshot procedure's append-only rule. A preserves offsets but permanently splits F4231 state and requires deferred restore. Neither migrates v28. |
+| P4 — validation | Exact default-tactics equality after structural byte alignment, plus the preregistered formation/Duty characterization matrix in §5. | Raw hashes differ; accept only enumerated format exclusions and acknowledge the roster-slot limitations. Non-default results need owner review; they are not identity claims. |
 
 Please decide P1–P4 before gameplay implementation. P3/P4 are proposals, not an approved revision
 of D-05's historical raw-digest rule. The B→C window is closed, so no exception inside it is sought.
 
 ## 2. Source inventory and routing decisions
 
-`rg -n STAGE0_FORMATION src/ --glob '*.cs'` finds five production read expressions in
-[MatchEngine.cs](../../src/match-engine/MatchEngine.cs), across four logical sites:
+Run `rg -n STAGE0_FORMATION src/ --glob '*.cs'`, then classify declarations, comments and tests
+separately. There are eight production read expressions: five in
+[MatchEngine.cs](../../src/match-engine/MatchEngine.cs) across four logical sites, plus three in
+[SquadRating.cs](../../src/match-engine/SquadRating.cs). The constant's declaration/configuration
+in `MatchEngineConstants.cs:590–591` is not another read site.
 
 | Base location | Current purpose | Proposed decision |
 | --- | --- | --- |
@@ -41,6 +52,9 @@ of D-05's historical raw-digest rule. The B→C window is closed, so no exceptio
 | `MatchEngine.cs:1390` | Reconstruct the base lineup from a roster on restore. | Keep `STAGE0_FORMATION`. Do not select different player identities from a subsequently requested tactic. |
 | `MatchEngine.cs:2011` and `:2012` | Select each squad's starters/bench during `ConfigureSquads`. | Keep `STAGE0_FORMATION`, for both teams. Formation-dependent lineup selection is a separate identity/restore change. |
 | `MatchEngine.cs:4428` | Choose positional roles when filling the #12 snapshot. | Use the effective kickoff formation, not the active tactic's potentially different requested formation. |
+| `SquadRating.cs:76`, `StartingElevenMean` | Rate the selected starting eleven; used by season/quick-sim callers. | Keep `STAGE0_FORMATION` so the rating describes the same F442-selected eleven. |
+| `SquadRating.cs:105`, `CanFieldStartingEleven` | Check lineup feasibility for availability composition and transfer/season callers. | Keep `STAGE0_FORMATION`; changing only this probe would disagree with the lineup the engine selects. |
+| `SquadRating.cs:192`, `StartingElevenPlayerIds` | Project selected starter identities for availability and appearance/discipline accounting. | Keep `STAGE0_FORMATION`; do not silently change the identity set while kickoff/restore selection stays fixed. |
 
 Additional consumers and seams:
 
@@ -64,9 +78,37 @@ Additional consumers and seams:
 
 The initial player-to-slot mapping remains roster-local index `k` → catalogue row `k`, seeded by
 `SeedFromFormation`; it is not a role-fit assignment algorithm. After seeding, only #25's existing
-rotation controller mutates bindings (#12 §3.7.1 / #25 §4.4). An F442-selected forward can therefore
-occupy an attacking-midfield slot in F4231. Disclose this and retain lineup selection and runtime
-switch mapping as named follow-ups at implementation closeout.
+rotation controller mutates bindings (#12 §3.7.1 / #25 §4.4).
+
+The full positional-slot consequences, from the shipped catalogue row orders, are:
+
+| Index | F442-selected slot occupant | F433 destination | F4231 destination |
+| --- | --- | --- | --- |
+| 0 | GK | GK | GK |
+| 1 | LB | LB | LB |
+| 2 | CB1 | CB1 | CB1 |
+| 3 | CB2 | CB2 | CB2 |
+| 4 | RB | RB | RB |
+| 5 | LM | DM | DM1 |
+| 6 | CM1 | CM1 | DM2 |
+| 7 | CM2 | CM2 | LAM |
+| 8 | RM | LW | CAM |
+| 9 | ST1 | ST | RAM |
+| 10 | ST2 | RW | ST |
+
+These labels identify catalogue slots, not verified natural left/right positions of individual
+players. `LineupSelector` chooses by coarse `PlayerPosition`/line and rating, not specialist
+LM/DM/RAM proficiency. Nevertheless, an F442-selected midfielder moves to the F433 left-wing
+slot and an F442-selected forward moves to the F4231 right attacking-midfield slot; the left
+midfield occupant becomes a holding midfielder in either family. This materially changes team
+shape and responsibilities. The earlier one-forward example understated the limitation.
+
+Keeping lineup selection fixed remains the scoped proposal, not evidence that these mappings
+are football-plausible. Owner acceptance of P1–P4 must acknowledge this table. If unacceptable,
+stop and explicitly reopen the lineup-selection scope, including `SquadRating`, availability,
+rating, appearance and restore consumers; do not quietly widen this landing. Verify the mapping
+with a distinct-squad identity fixture and characterize non-default formations under §5. Retain
+lineup selection and runtime switch mapping as named follow-ups at implementation closeout.
 
 ## 3. Kickoff boundary and caller behavior
 
@@ -102,6 +144,17 @@ that hot path. F442 initialization must skip reseeding entirely to preserve the 
 hysteresis, slots and cached targets. Restore may allocate as the existing cold factory does,
 but must configure the family before applying saved hysteresis and rotation state.
 
+**Alternative P1 boundary:** add an explicit idempotent kickoff-lock method and call it from
+`MatchSession.BootEngine` immediately after `ManagerAdaptation.ApplyKickoff`. This makes the
+transition visible to the composition root and avoids hiding it in `RunTick`. It must also cover
+direct-engine callers: either every caller must lock before its first tick, or `RunTick` must
+provide the same one-time fallback. The strict explicit-only version breaks existing direct
+call patterns unless all are updated; the fallback version has two entry points to one guarded
+operation. The implicit first-`RunTick` option remains preferred for the smaller API/caller change;
+the explicit-plus-fallback option is reasonable if the owner prefers lifecycle visibility. Neither
+option may lock before the final boot applier or re-lock after frame 0. Test equivalence through
+MatchSession and direct-engine entry paths and a refusal/clear result for attempted late locking.
+
 ### P2: accept requested tactics, keep effective formation fixed
 
 Recommendation (b) retains `SetTeamTactic`'s current void staging API and stride semantics. A request
@@ -119,8 +172,10 @@ It also preserves the command application path in
 when a command is accepted, and `WithMentality` copies its other fields. Keep that cache as request
 state. Add a concrete read surface for the effective formation on MatchEngine and copy it into
 [LiveMatchFrame](../../src/match-viewer/LiveMatchFrame.cs) through the existing frame producer.
-Any current formation display reads that effective field; retain the request separately and show
-that formation changes take effect next match when a differing request is presented. Do not report
+Any current formation display reads that effective field; retain the request separately. For a
+differing request, say that the formation stays fixed for this match. Do not promise that the
+request is saved for the next match: S0 currently submits mentality changes and copies Formation,
+and no cross-match persistence for such requests has been established. Do not report
 a formation switch as applied merely because the whole tactic was accepted. Test the ordinary
 mentality dialog in [S0ScreenPresenter](../../src/client-app/S0ScreenPresenter.cs) and a mixed command.
 
@@ -130,88 +185,170 @@ engine, mutation interface, command driver, client acknowledgement and AI adapta
 acceptance also needs an outcome identifying which field was refused. A silent partial update or
 new gameplay exception is not a suitable substitute. This larger API change is why (b) is preferred.
 
-## 4. P3: append-only v29 world-state encoding
+## 4. P3: two v29 encodings and their lasting costs
 
 Current world-state version is 28; the match-save file format is 3 and deterministic-sim header
-schema is 1. Only the world-state body version is proposed to change. D-10 permits rejecting old
-saves; neither the outer save format nor the #16 header needs a bump for this proposal.
+schema is 1. Both proposals change only the world-state body to 29, rejecting v28 without
+migration under D-10. Neither the outer save format nor the #16 header needs a bump.
 
 The old rotation region has no count: per team it writes 11 binding int32 values, 11 XY float32
-targets and five `(int32 dwell, byte rotated, int32 hold)` records. Each row is 9 bytes, so this
-region is `44 + 88 + 45 = 177` bytes per team. Merely changing its iteration bound to six would
-shift later data, and old v28 non-F442 requested tactics cannot disambiguate it.
+targets and five `(int32 dwell, byte rotated, int32 hold)` records. Each row is 9 bytes, so the
+region is `44 + 88 + 45 = 177` bytes per team. Old v28 non-F442 requested tactics cannot tell a
+reader to consume six rows; the old controller still wrote five.
 
-Recommended encoding respects the snapshot procedure's instruction to append new fields last:
+### Option A — retain the split-row trailer from v1.0
 
-1. Preserve the entire existing body field order, including exactly five rotation rows per team
-   at the existing rotation offsets. These are rows 0–4 of the selected catalogue.
-2. After the current final handling-law block and before the canonical event ledger, append a
-   trailer in team order 0 then 1:
+Keep the entire existing body order, including five rotation rows per team at their old offsets.
+Append `(initialized byte, effective formation int32, extra-row count int32, extra row states)`
+per team after the final handling-law block and before the ledger. Extra count is 0 for F442/F433
+and 1 for F4231, with each extra state encoded as dwell int32 / rotated byte / hold int32.
+The extra sizes are 18 bytes for two default teams, 27 for one F4231 team, or 36 for two F4231
+teams. These are encoding sizes, not gameplay constants.
 
-   | Field | Encoding | Rule |
-   | --- | --- | --- |
-   | Kickoff initialization complete | byte boolean | False only for an uninitialized tick-0 body; true in every completed-frame capture. |
-   | Effective kickoff formation | int32 #21 `TacticFormation` ordinal | Valid shipped family; translate through #12's mapping. |
-   | Extra rotation-row count | int32 | Exactly catalogue row count minus five: 0 for F442/F433, 1 for F4231. |
-   | Extra row states | repeated int32 dwell, byte rotated, int32 hold | Catalogue rows 5 onward, preserving existing validating restore seams. |
+This follows the existing append-only procedure and makes the default comparison especially
+simple: retain base body bytes except the version word, then validate the appended 18 bytes.
+Its costs are permanent: F4231 row 5 is separated from rows 0–4, the reader must retain offsets
+and defer hysteresis/rotation restoration until the trailer selects the catalogue, and a future
+catalogue change must understand both regions. This is not a compatibility benefit: v28 is
+rejected either way. It is offset stability and a one-time comparison convenience purchased
+with a more complex enduring format. The writer and reader cease to be straightforward
+line-for-line mirrors. Do not present A as the only acceptable encoding.
 
-The trailer adds 18 bytes for two default teams, 27 bytes for one F4231 team, or 36 for two F4231
-teams. These are encoding sizes, not gameplay constants. Pin fixed legacy row count 5 and derived
-row width 9 with source tags in the owning constant catalogue; no new tunable is proposed.
+### Option B — contiguous count-prefixed rotation blocks (preferred)
 
-The reader must first validate schema 29, then parse the legacy prefix while retaining the byte
-locations of positioning hysteresis and the fixed-size rotation blocks. Do not interpret rotation
-state through the boot F442 controller. After reading/validating the trailer, select each live
-positioning object's family/catalogue, then restore the saved hysteresis, binding, target cache,
-five legacy rows and any extra rows through their validating seams. The extra rows are state,
-even at `RotationFreedom.Off`; never discard them. This deferred restore avoids reseeding over
-loaded state or reading six rows from a five-row prefix.
+After the existing schema word and tick, write both teams' kickoff metadata in team order:
+`initialized byte`, then `effective TacticFormation int32`. The metadata is available before
+any positioning hysteresis is decoded, so the reader selects the family/catalogue first.
+Keep the remaining existing logical field order. At each team's rotation block write:
 
-Validate exact count/family agreement, enum validity, bounds against `payload.BytesWritten`,
-finite cached targets, permutation and pair-state invariants. Use division-based count bounds,
-not overflow-prone `count * width` checks. Preserve the final event-ledger tag/count boundary
-checks. A malformed count, truncated trailer or unknown family fails closed.
+| Field | Encoding | Validation |
+| --- | --- | --- |
+| Rotation row count | int32 | Exactly the selected catalogue's count: 5/5/6; bounded by the existing family cap. |
+| Agent-to-slot binding | 11 int32 values | Valid permutation, same semantics/order as v28. |
+| Last composed targets | 11 pairs of float32 | Finite, loaded verbatim through the existing seam. |
+| All row states | `count` contiguous dwell int32 / rotated byte / hold int32 records | Existing pair-state invariant checks; catalogue row order, including row 5. |
 
-The first body read is the existing schema check (`DeserializeWorldState`); with a literal 29
-pin, a 28 body is rejected before tick, roster, rotation or trailer reads. Add a focused version
-test using otherwise valid current-build header metadata so the build-identity guard cannot mask
-the version rejection. This is a source-based proof plan, not an executed v29 test.
+The net additional default bytes are again 18: 10 for the two teams' kickoff metadata and 8 for
+row counts. One/two F4231 teams add another 9/18 bytes. The writer and reader follow the same
+order and restore each full contiguous block; no saved-row offset juggling or late reseed is
+needed. The costs are shifted offsets and a structural comparison tool rather than a prefix
+slice. v28 is rejected; no migration or mixed-version tolerance is added.
 
-## 5. P4: precise comparison contract
+B is preferred for maintainability, but requires explicit owner acceptance of an exception to
+[the snapshot-schema-bump procedure](../../.claude/skills/snapshot-schema-bump/SKILL.md), Step 2:
+“Append the new block **last** so no existing offset moves.” That instruction is the reason A
+was originally proposed. No implementation may silently choose B while claiming to follow the
+append-only instruction as written. P3 approval must name A or B and, for B, the narrowly scoped
+v29 layout exception; retain the procedure's symmetry, validation and test requirements.
 
-Use a new paired capture; do not modify `evidence/pre-c-control-20261104/`. Preserve its six seeds,
-324,000 calls per seed, default squads/attributes, shipping tactic defaults and frozen observer
-discipline. Pin SDK/runtime, flags, configuration, instrumentation source and hashes identically
-in both arms. Reproduce the historical control when required by its runtime/machine rule, then
-capture this base and implementation head separately. The historical B fingerprints are not the
-expected fingerprints of current C `main`.
+### Shared validation and rejection contract
 
-At default F442/Support, compare every frame with exact float-bit equality:
+For either encoding, an uninitialized tick-0 body has provisional F442 metadata/controller
+state and the pending setup tactic; initialized bodies never reselect formation. False
+initialization at tick greater than 0 is invalid. Requested Formation may differ from effective
+Formation under P2; do not require them to be equal after kickoff.
 
-- All agent positions, velocities and every other existing world-state byte, including tactic
-  state, AI/hysteresis state, all existing rotation rows/caches, counters, RNG cursors and clocks.
-- Possessor/team possession, every BallState field, and the complete canonical Tier A/B ledger
-  bytes and event identities/order. Scores and event counts alone are insufficient.
-- For base body length `L`, head bytes `[4,L)` must equal base bytes `[4,L)` byte for byte. The
-  first word must be the expected 28/29 respectively. Head's next 18 bytes must decode to two
-  explicit initialized/F442/zero-extra-row entries. Ledger bytes immediately after their respective body
-  boundaries must match exactly; relocation is not an event-field exclusion.
+Validate exact count/family agreement, enum/boolean validity and remaining payload bounds;
+use division-based count checks, not overflow-prone `count * width` guards. Preserve finite
+cache, permutation and pair-state validation and the final ledger tag/count boundary checks.
+Do not discard row states when `RotationFreedom.Off`. Reject unknown families, truncated bodies
+and malformed counts rather than silently defaulting a corrupt saved catalogue.
 
-The exhaustive cross-arm exceptions are:
+The first body read remains the schema check: a literal 29 pin rejects 28 before tick, roster,
+rotation or metadata reads. Add a focused version test with otherwise valid current-build
+header metadata so the build-identity guard cannot mask the version rejection. These are
+source-based proposals, not executed v29 tests or compatibility claims.
+
+## 5. P4: identity and non-default characterization
+
+Use a new paired capture; do not modify `evidence/pre-c-control-20261104/`. Preserve its six seeds
+from `expected.json`, 324,000 RunTick calls per seed, default squads/attributes and frozen observer
+discipline. Pin runtime, build flags, configuration, instrument source and hashes. Reproduce the
+historical control if its runtime/machine rule requires it, then capture this base and head
+separately. Historical B fingerprints are not the expected fingerprints of current C main.
+Record corpus manifests and all metric definitions before any result-bearing run.
+
+### Default-tactics identity, for either P3 encoding
+
+At F442/F442 and Support, compare each frame using exact bytes/float bits:
+
+- Every existing world-state field: agent trajectories/velocities, tactic and AI/hysteresis state,
+  all five existing rotation rows and caches, counters, RNG cursors and clocks. No subsystem is
+  excluded simply because a new prefix moved it.
+- Possessor/team possession, every BallState field, and complete canonical Tier A/B ledger bytes,
+  event identities and order. Scores or terminal summaries alone are insufficient.
+- Parse the base v28 and chosen head v29 with schema-specific span maps. Map each unchanged field
+  or block to its raw byte span, require complete coverage with no unexplained gaps/overlaps,
+  and compare matching spans byte for byte in their canonical order. For B, align around kickoff
+  metadata and the two row-count prefixes; all default row contents still match exactly.
+  For A, the existing body-prefix slice is an additional check, not a reason to weaken coverage.
+
+Freeze the comparator before capture. Test it with controlled perturbations of existing agent,
+ball, rotation/cache, AI, RNG and event bytes so misplaced offsets or blanket block masking fail.
+Also mutate each permitted new field/version/count to an invalid value and require failure.
+No conversion through rounded JSON floats or approximate equality is permitted.
+
+The exhaustive cross-arm exceptions and their independent checks are:
 
 | Exception | What is still checked |
 | --- | --- |
-| Body schema word, offsets 0–3 | Literal 28 on base and 29 on head. |
-| New trailer at the end of the body | Exact default encoding above, valid in non-default restore tests; no arbitrary masking. |
-| Payload length / ledger offset | Exact +18 bytes for defaults; full ledger comparison after structural alignment. |
-| Raw current/previous snapshot-chain digest values | Recompute and verify each arm's complete unmodified chain independently. The new preimage changes the current digest and all later links. |
-| BuildHash identity metadata | Record and validate each arm's own build hash; never pretend different binaries are one build or disable restore identity gates. |
+| Body schema word | Literal 28 on base and 29 on head. |
+| New kickoff metadata | Both teams initialized, effective F442, exact ordinal/boolean encoding. |
+| New count/extension fields | For B: each full row count is exactly 5; for A: each extra-row count is zero and no extra state is present. |
+| Payload length and changed offsets | Exact +18 default bytes under either proposal; full structural coverage and identical ledger bytes after alignment. |
+| Raw current/previous snapshot-chain digest values | Independently recompute and verify each arm's complete unmodified chain; the changed preimage changes subsequent links. |
+| BuildHash identity metadata | Validate each arm's own binary identity; never fake a common build hash or disable restore gates. |
 
-All other header fields, domain tags, runtime fingerprint, clocks and existing body bytes must
-match. A comparison-only normalized digest may summarize the retained common bytes; it is never
-a shipping digest or certification claim. Raw digests/traces remain preserved separately.
-This follows #21 FR-TI-031's explicit existing-world-state-subset identity precedent, subject to
-owner acceptance for this landing. Any unexplained difference is a stop, not a rebaseline.
+All other header fields, domain tags and runtime fingerprints must match. A comparison-only
+normalized digest may summarize the aligned common spans; it is not a shipping digest or
+certification claim. Retain the raw chains and traces. This uses #21 FR-TI-031's existing-state
+identity precedent, but is still an explicit P4 owner decision changing this landing's use of
+D-05's raw-digest condition. Scope approval alone does not approve it. Stop at any unexplained
+covered-byte difference; do not tune or rebaseline to obtain identity.
+
+### Non-default formations and Duty: preregistered characterization
+
+Default identity does not satisfy D-05's separate measured-landing obligation for newly active
+settings. In addition, preregister the following matrix on the same six seeds and 324,000 calls
+per seed, in both base and head. All tactic fields other than the named contrast stay at the
+frozen defaults; manager modes remain as in the frozen lane. In particular, baseline receives
+exactly the same requested Formation/Duty inputs as head, even though baseline formation and
+positioning Duty routing are inert. Existing other Duty consumers remain active in both arms.
+
+| Case | Home formation | Away formation | Outfield Duty | Purpose |
+| --- | --- | --- | --- | --- |
+| C0 | F442 | F442 | Support for both teams | Exact identity control. |
+| C1 | F433 | F442 | Support for both teams | Changed home formation in isolation. |
+| C2 | F442 | F433 | Support for both teams | Away-side counterpart. |
+| C3 | F4231 | F442 | Support for both teams | Changed home formation with six rotation rows. |
+| C4 | F442 | F4231 | Support for both teams | Away-side counterpart. |
+| C5 | F442 | F442 | Defend for all outfield agents on both teams | New Duty positioning effect without a formation change. |
+| C6 | F442 | F442 | Attack for all outfield agents on both teams | Opposite Duty positioning direction. |
+
+This is a proposed budget of 42 scenario-seed cases per code arm, 84 primary full-match runs or
+27,216,000 RunTick calls overall; these are design counts, not measured results. Observer-neutrality
+and determinism repeats add work and must be declared separately. No CPU-hour estimate is claimed.
+P4 acceptance includes this budget; do not silently drop contrasts or shorten runs if compute is
+unavailable. Obtain a revised declared capture plan first.
+
+Before capture, freeze definitions/denominators for team-attributed shots, goals, fouls, possession
+share/changes, out-of-play/stall exposure, and phase occupancy; freeze positional summaries by
+roster-local slot (longitudinal/lateral target, line-depth and minimum spacing). Retain per-frame
+positions, effective family, possession and full ball/event traces so each contrast proves that
+the selected formation actually became active. Report every seed and team plus aggregate and
+paired base/head deltas; keep scorer attribution distinct from scoring team. C1–C6 are
+characterization, not equality assertions or new statistical claims from six matches.
+
+Use the same pipeline/source/runtime in both arms. Freeze any football-plausibility acceptance
+bounds before results using an existing governing contract; where no approved bound applies,
+report the limitation and require owner review. Stop for invalid mapping/restore, unexplained
+mechanism or movement away from the declared plausibility criteria; do not calibrate, widen
+assertions or change seeds. Do not claim neutral tactics from unit tests alone.
+
+The frozen neutral-squad corpus can reveal geometry/role-routing effects, but cannot establish
+specialist player suitability or realistic-roster performance penalties. A distinct-squad
+identity/mapping fixture exposes the §2 limitation; accepting it remains an explicit scope
+tradeoff even if the neutral-squad six-seed numbers look plausible.
 
 ## 6. Spec amendments and Duty pipeline
 
@@ -224,7 +361,7 @@ before authoring and after integrating newer main. Never reuse the old draft's i
 | Owning spec | Proposed defect/amendment and affected text |
 | --- | --- |
 | #12 | Add the missing #21 Duty carrier and anchor-stage amendment in §3.7.1, with worked examples, test rows and version history. Clarify kickoff family seeding and fixed roster-local mapping in §3.1/§4 as needed; keep FR-PA-039 and the §7.7 switching deferral unchanged. |
-| #25 | Amend §2.3 / Appendix B to pin the five-row legacy prefix plus versioned formation/extra-row trailer and catalogue-aware deferred restore. Preserve cache/permutation semantics and every gameplay table. |
+| #25 | Amend §2.3 / Appendix B for the owner-selected v29 encoding: contiguous count-prefixed blocks (B), or the retained five-row-prefix/trailer alternative (A). Preserve cache/permutation semantics and every gameplay table. |
 | #21 | Clarify §3.1 formation routing and §4 integration: kickoff effective formation versus later requested tactics, mixed-request semantics, boot initialization and unchanged stride commits for the other fields. FR-TI-027 remains the in-match timing rule. |
 
 File separately owned ERR entries with spec/code back-propagation in the implementation commit;
@@ -251,7 +388,7 @@ After P1–P4 are accepted, add outcome tests in the existing suites:
 - `MatchEngineSnapshotSchemaTests` / `MatchEngineSnapshotRestoreTests`: v29 pin; effective-formation
   and initialization-flag single-field digest probes; every family including an active F4231 sixth row; non-default Duty
   continuation; saves before first AI stride; invalid enum/count/truncation; clean v28 rejection.
-- Two-run determinism and the separately preregistered six-seed paired contract in §5.
+- Two-run determinism, comparator fault-injection/coverage checks, a distinct-squad slot-identity fixture, and the preregistered C0–C6 six-seed paired matrix in §5.
 
 Use `bash tools/run-tests-local.sh --pr` for the eventual full implementation gate; report actual
 pass/fail/skip counts, quarantine state and owner-held RED verifier outcome. No skips, widened
@@ -259,11 +396,13 @@ assertions or seed changes are permitted to obtain green.
 
 **Preflight validation:** source inspection, live main/branch identity, version/ERR lookups,
 documentation consistency, relative-link validation, drift checks and `git diff --check` only.
-The full .NET gate, six-seed captures and Unity tests are not run for this documentation-only
-preflight; there are no gameplay measurements or pass counts to report. No host validation is
-claimed or requested for these text-only changes. Source/settings/assets remain at the base.
+The full .NET gate is not run locally; six-seed captures and Unity tests have not been run for
+this preflight. No gameplay measurements are claimed. GitHub's completed gate for the prior
+documentation commit is recorded separately in §8; it is not evidence of new gameplay behavior.
+No host validation is claimed or requested for these text-only changes. Source/settings/assets
+remain at the base.
 
-The normal local commit hook was attempted. Its checklist/schema surveys reported zero blocking
+For v1.0 the normal local commit hook was attempted. Its checklist/schema surveys reported zero blocking
 rows, but its lower-level executor stopped at restore with `dotnet: command not found`; no C# tests
 ran. This documentation-only draft uses a command-scoped hook bypass after the independent checks
 above. It is not a passing pre-commit or .NET-gate claim, changes no hook/test configuration, and
@@ -282,8 +421,38 @@ remaining lineup-selection and mid-match-switching follow-ups in open issues, an
 the roadmap, wiring backlog, manifests and source/change histories. #440 then begins with its
 own observer/design stage and owner stop before any #440 gameplay fix.
 
+## 8. Review disposition and completed prior-commit CI
+
+The v1.1 review changes are: full roster-slot disclosure (§2), non-default characterization (§5),
+the three `SquadRating` dispositions (§2), and the two encoding alternatives/costs (§4). The
+explicit-lock alternative (§3), accurate same-match client copy (§3), self-contained stop and
+session-only approval provenance (§1) address the remaining wording findings. Neither the review
+nor this revision approves P1–P4 or widens lineup selection.
+
+The previously pending jobs for **v1.0 head `2feb4b0d5514017c61ba73c584abc55a465969f8`** have finished:
+
+| Check | Observed result | Evidence |
+| --- | --- | --- |
+| PR functional gate, `bash tools/run-tests-local.sh --pr` | Completed / success | [run 42687026231, job 129396471132](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/42687026231/job/129396471132) |
+| Markdown link check | Completed / success | [job 129396471115](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/42687026231/job/129396471115) |
+| Unity test job | Skipped by the existing CI configuration | [same workflow](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/42687026231); no host pass claimed |
+
+The gate log reports an empty quarantine and an empty owner-held RED ledger. Selected console
+summaries are reproduced verbatim, not treated as a complete TRX census:
+
+```text
+Passed!  - Failed:     0, Passed:   134, Skipped:    13, Total:   147, Duration: 510 ms - TacticalDirector.PositioningAI.Tests.dll (net8.0)
+Passed!  - Failed:     0, Passed:   940, Skipped:    16, Total:   956, Duration: 31 m 56 s - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+```
+
+Retrieve the receipt with `gh run view 42687026231 --repo antonzymin-eng/Soccer-Manager-Pro
+--job 129396471132 --log` (as one command). No test, quarantine or CI configuration differs from
+the source base. Fresh CI for the v1.1 commit must be reported separately after publication;
+the successful v1.0 run is not a passing-head claim for a newer commit.
+
 ## Version history
 
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | November 9, 2026 | Owner-approved kickoff-only scope recorded; P1–P4 recommendations, production-read inventory, append-only v29 proposal and exact comparison/validation plan. No gameplay implementation. |
+| 1.1 | November 9, 2026 | Closes review gaps: all eight production reads, complete slot-mismatch disclosure, C0–C6 characterization, two encoding options with a conditional preference for contiguous blocks, structural comparison, explicit-lock alternative, accurate client copy and session-approval provenance. Decisions remain pending; no gameplay change. |

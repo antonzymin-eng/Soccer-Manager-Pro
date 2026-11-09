@@ -10,6 +10,13 @@
 
 ---
 
+> **UPDATED November 9, 2026, v1.42:** The documentation-only [#434 preflight
+> v1.1](w-434-formation-duty-preflight.md) includes all eight production formation reads,
+> full F442-to-F433/F4231 slot mappings and a proposed non-default six-seed characterization
+> matrix. It compares split-row and contiguous count-prefixed v29 encodings, conditionally
+> preferring the latter with an explicit append-only-procedure exception. P1–P4 and acceptance
+> of the disclosed mapping tradeoff remain owner decisions; no gameplay or #440 change.
+
 > **UPDATED November 9, 2026, v1.41:** The owner approved narrowing #434 part (i) to
 > kickoff-only formation plus live Duty routing; in-match formation switching is a separate
 > follow-up. The documentation-only [#434 preflight](w-434-formation-duty-preflight.md)
@@ -341,6 +348,12 @@ per player throughout. In-match formation switching and formation-dependent line
 remain separate follow-ups. The [preflight](w-434-formation-duty-preflight.md) is documentation
 only; its proposed initialization boundary, request semantics, snapshot v29 and comparison
 contract await owner decisions. #434 is not implemented by this record; #440 is unchanged.
+
+**Preflight review revision, November 9, 2026:** v1.1 expands the retained F442 identity/lineup
+limitations, dispositions the `SquadRating` reads, and proposes non-default formation/Duty
+characterization in addition to default identity. Two v29 encodings and their maintenance costs
+are presented for P3. The original documentation commit's Linux functional and Markdown-link CI
+jobs passed; this is not gameplay implementation or owner acceptance of P1–P4.
 
 **Durable evidence pointer:** `docs/tracking/evidence/pr439-w3/` preserves the result-bearing six-seed tables and run/artifact provenance. Its pre-W3 W3-specific zeros are explicitly structural placeholders, not measured activity; the table delta is not a pure W3 effect because the landing state also contains the W6 reattachment correction, #442/#443 merge and review-closure gameplay fixes. `docs/tracking/evidence/pr439-ref-archive/` preserves all 16 evidence-ref histories plus cited-run/ref/disposition ledgers. On 2026-09-25 all 16 `evidence/pr439-*` refs were deleted by the authorized exact-head atomic cleanup; `ref-disposition.tsv` records all 16 rows as `delete_now=true`, while `run-heads.tsv` remains the 15-row cited-run ledger. Deleted ref names remain provenance and their histories are retained in the archive.
 
@@ -792,6 +805,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.42 | 2026-11-09 | — | #434 preflight v1.1: eight-read inventory, full slot-risk disclosure, non-default characterization, encoding alternatives, initialization/client/provenance corrections and prior-commit CI receipts. Gameplay decisions remain pending. |
 | 1.41 | 2026-11-09 | — | Records owner-approved kickoff-only #434 scope and documentation-only preflight. Kickoff boundary, mixed requests, v29 encoding and comparison contract are proposals awaiting owner decisions. No gameplay implementation or #440 change. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
