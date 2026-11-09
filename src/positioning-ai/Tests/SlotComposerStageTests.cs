@@ -9,6 +9,8 @@
 //           the pitch clamp) — including the shared stage-order contract and the zero-dial
 //           identities.
 
+using System;
+
 using NUnit.Framework;
 using UnityEngine;
 
@@ -87,6 +89,12 @@ namespace TacticalDirector.PositioningAI.Tests
             }
             var result = Compose(snap, Phase.InPoss);
             Assert.AreEqual(control[0], result[0]);
+            if (duty == Duty.Support)
+                for (int i = 0; i < SquadSize; i++)
+                {
+                    CollectionAssert.AreEqual(BitConverter.GetBytes(control[i].x), BitConverter.GetBytes(result[i].x));
+                    CollectionAssert.AreEqual(BitConverter.GetBytes(control[i].y), BitConverter.GetBytes(result[i].y));
+                }
             for (int i = 1; i < SquadSize; i++)
             {
                 Assert.AreEqual(expected, result[i].x - control[i].x, 0.00001f, "slot " + i);

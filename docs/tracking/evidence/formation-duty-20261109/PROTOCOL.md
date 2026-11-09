@@ -1,4 +1,4 @@
-# #434 paired capture protocol 1.0
+# #434 paired capture protocol 1.1
 
 Created November 9, 2026. Freeze this file and the runner/comparator before any new
 #434 result-bearing run. Historical control reproduction uses its own existing freeze.
@@ -73,3 +73,17 @@ missing records, state/restore/invariant failures or default drift stop acceptan
 No post-result tuning or favorable-case exclusion. Full gate is exactly
 `bash tools/run-tests-local.sh --pr`; distinguish existing skips/inconclusives from
 new skips (none authorized). Unity host validation remains separately required.
+
+## Instrument review, before acceptance comparisons
+
+Version 1.1 adds the omitted per-physics-frame pass-flight witness (little-endian
+int32 receiver ID, int32 team-in-possession; −1 for none) and its per-team live-frame
+counts. It also adds exhaustive one-bit mutations at every byte of a real committed
+snapshot with an actual canonical event record. Every common-byte mutation must
+change alignment output; mutations in excluded metadata must reject. No field
+exclusion, case, seed, metric definition, denominator, production source or tuning
+changes. The preliminary v1.0 control batch was stopped uniformly during collection,
+before evaluating base/head identity. Preserve its attempts separately as aborted;
+all acceptance captures restart with the same v1.1 instrument in both arms. The
+original protocol/runner remain recoverable in commit 23f2fedb. Counts include every
+attempt; aborted runs are never counted as completed validation.

@@ -6,12 +6,16 @@
 // Purpose:  Kickoff formation lock, mixed requests, variable rotation rows and Duty replay.
 
 using System;
+using System.Reflection;
 
 using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 using TacticalDirector.PositioningAI;
+using TacticalDirector.PressingAI;
+using TacticalDirector.AttackingAI;
+using TacticalDirector.DefensiveAI;
 using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchEngine
@@ -29,6 +33,8 @@ namespace TacticalDirector.MatchEngine
                 TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
 
         [TestCase(0, TacticFormation.F433, FormationFamily.F433, 5)]
+        [TestCase(1, TacticFormation.F433, FormationFamily.F433, 5)]
+        [TestCase(0, TacticFormation.F4231, FormationFamily.F4231, 6)]
         [TestCase(1, TacticFormation.F4231, FormationFamily.F4231, 6)]
         [TestCase(0, (TacticFormation)255, FormationFamily.F442, 5)]
         public void FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(
@@ -41,6 +47,8 @@ namespace TacticalDirector.MatchEngine
             engine.RunTick();
             Assert.AreSame(positioning, engine.TestOnly_Positioning(team), "retained consumer views");
             Assert.AreEqual(expected, positioning.Formation);
+            Assert.AreEqual(AnchorCalculator.ComputeAnchor(PositioningAIConstants.GetFormationSlots(expected)[5]),
+                positioning.GetFormationSlot(team * 11 + 5), "selected anchor exists before first AI tick");
             Assert.AreEqual(rows, positioning.CaptureRotationState().PairCount);
             Assert.AreEqual(PositioningAI.TacticTranslation.ToTacticFormation(expected), engine.GetEffectiveFormation(team));
             Assert.AreEqual(requested, engine.GetRequestedFormation(team));
@@ -93,7 +101,11 @@ namespace TacticalDirector.MatchEngine
                 var rot = engine.TestOnly_Positioning(t).CaptureRotationState();
                 var binding = new int[11]; for (int i = 0; i < 11; i++) binding[i] = i;
                 // Exercise a non-identity binding and the final catalogue row, including F4231 row 5.
-                binding[5] = 6; binding[6] = 5; rot.RestoreBinding(binding);
+                var pairs = RotationAdjacencyCatalogue.GetPairs(PositioningAI.TacticTranslation.ToFormationFamily(formation));
+                binding[pairs[0].SlotA] = pairs[0].SlotB; binding[pairs[0].SlotB] = pairs[0].SlotA;
+                rot.RestoreBinding(binding);
+                var active = new RotationPairState { Rotated = true, HoldTicksRemaining = 10 };
+                rot.RestorePairState(0, in active);
                 var state = new RotationPairState { TriggerDwellTicks = 1 };
                 rot.RestorePairState(rot.PairCount - 1, in state);
             }
@@ -106,7 +118,10 @@ namespace TacticalDirector.MatchEngine
             var restored = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
             for (int t = 0; t < 2; t++)
             {
-                Assert.AreEqual(6, restored.TestOnly_SlotBinding(t, 5));
+                var pairs = RotationAdjacencyCatalogue.GetPairs(PositioningAI.TacticTranslation.ToFormationFamily(formation));
+                Assert.AreEqual(pairs[0].SlotB, restored.TestOnly_SlotBinding(t, pairs[0].SlotA));
+                Assert.IsTrue(restored.TestOnly_RotationPairState(t, 0).Rotated);
+                Assert.AreEqual(10, restored.TestOnly_RotationPairState(t, 0).HoldTicksRemaining);
                 int last = restored.TestOnly_Positioning(t).CaptureRotationState().PairCount - 1;
                 Assert.AreEqual(1, restored.TestOnly_RotationPairState(t, last).TriggerDwellTicks);
             }
@@ -117,6 +132,70 @@ namespace TacticalDirector.MatchEngine
             }
             Assert.AreEqual(Duty.Defend, restored.TestOnly_PositioningDuty(5));
             Assert.AreEqual(Duty.Attack, restored.TestOnly_PositioningDuty(16));
+        }
+
+        [Test]
+        public void SyntheticTickZero_UninitializedCanSelectFinalChoice()
+        {
+            var original = new MatchEngine(Seed);
+            var body = original.CapturePostSnapshotWorldState();
+            var restored = new MatchEngine(Seed);
+            restored.ApplyPostSnapshotWorldState(body, null);
+            restored.SetTeamTactic(0, Tactic(TacticFormation.F4231));
+            restored.RunTick();
+            Assert.AreEqual(TacticFormation.F4231, restored.GetEffectiveFormation(0));
+        }
+
+        [Test]
+        public void SyntheticTickZero_InitializedDoesNotResamplePendingFormation()
+        {
+            var original = new MatchEngine(Seed);
+            original.SetTeamTactic(0, Tactic(TacticFormation.F4231)); original.RunTick();
+            var body = original.CapturePostSnapshotWorldState();
+            // Synthetic clock-0 overlay with an explicitly initialized six-row family.
+            Array.Clear(body.PayloadBytes, sizeof(uint), sizeof(ulong));
+            var restored = new MatchEngine(Seed);
+            restored.ApplyPostSnapshotWorldState(body, null);
+            restored.SetTeamTactic(0, Tactic(TacticFormation.F433));
+            restored.RunTick();
+            Assert.AreEqual(TacticFormation.F4231, restored.GetEffectiveFormation(0));
+            Assert.AreEqual(6, restored.TestOnly_Positioning(0).CaptureRotationState().PairCount);
+        }
+
+        private static object Field(object instance, string name) =>
+            instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance);
+
+        [TestCase(0, TacticFormation.F433)]
+        [TestCase(1, TacticFormation.F433)]
+        [TestCase(0, TacticFormation.F4231)]
+        [TestCase(1, TacticFormation.F4231)]
+        public void AllPositioningConsumers_ReadTheSelectedFamily(int team, TacticFormation family)
+        {
+            var control = new MatchEngine(Seed);
+            for (int i = 0; i < 6; i++) control.RunTick();
+            var oldSlot = control.TestOnly_Positioning(team).GetFormationSlot(team * 11 + 5);
+            var engine = new MatchEngine(Seed); engine.SetTeamTactic(team, Tactic(family));
+            for (int i = 0; i < 6; i++) engine.RunTick();
+            var expected = engine.TestOnly_Positioning(team).GetFormationSlot(team * 11 + 5);
+            Assert.AreNotEqual(oldSlot, expected, "non-default family changes the target");
+            var press = ((PressingAITick[])Field(engine, "_pressing"))[team];
+            var attack = ((AttackingAITick[])Field(engine, "_attacking"))[team];
+            Assert.AreEqual(expected, ((PositioningAIView)Field(press, "_posAI")).GetFormationSlot(team * 11 + 5));
+            Assert.AreEqual(expected, ((PositioningAIView)Field(attack, "_posAI")).GetFormationSlot(team * 11 + 5));
+            var defensive = ((DefensiveSnapshot[])Field(engine, "_defSnapshots"))[team];
+            Assert.AreEqual(expected, defensive.Agents[team * 11 + 5].BaselineSlot);
+        }
+
+        [Test]
+        public void V28_IsRejectedBeforeAnyFormationStateIsDecoded()
+        {
+            var engine = new MatchEngine(Seed); engine.RunTick();
+            var payload = engine.CaptureDurablePayload();
+            Array.Copy(BitConverter.GetBytes(28u), payload.PayloadBytes, 4);
+            payload.PayloadBytes[12] = 255; // Must report version mismatch first.
+            var error = Assert.Throws<InvalidOperationException>(() => MatchEngine.RestoreFromSnapshot(
+                engine.CaptureDurableHeader(), payload, Seed));
+            StringAssert.Contains("Snapshot schema version 28", error.Message);
         }
 
         [TestCase(0, 2)] // invalid boolean
@@ -161,7 +240,8 @@ namespace TacticalDirector.MatchEngine
         [TestCase(-1)]
         [TestCase(6)]
         [TestCase(int.MaxValue)]
-        public void CorruptRotationCount_IsRejectedBeforeReadingRows(int invalidCount)
+        [TestCase(5)]
+        public void MalformedRotationBlock_RejectsCountOrTruncation(int invalidCount)
         {
             var engine = new MatchEngine(Seed); engine.RunTick();
             var payload = engine.CaptureDurablePayload();
@@ -179,6 +259,7 @@ namespace TacticalDirector.MatchEngine
             }
             Assert.GreaterOrEqual(offset, 0, "must locate a real serialized rotation block");
             Array.Copy(BitConverter.GetBytes(invalidCount), 0, payload.PayloadBytes, offset, 4);
+            if (invalidCount == 5) payload.BytesWritten = offset + 4;
             Assert.Throws<InvalidOperationException>(() => MatchEngine.RestoreFromSnapshot(
                 engine.CaptureDurableHeader(), payload, Seed));
         }

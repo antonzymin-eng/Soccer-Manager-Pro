@@ -46,14 +46,14 @@ def main():
  if a.stage=='probe':
   for s in SEEDS:
    for c in [1,2,3,4,9]:
-    for name in ['aligned.bin.gz','trajectory.bin.gz','ledger.bin.gz']:
+    for name in ['aligned.bin.gz','trajectory.bin.gz','ledger.bin.gz','team-possession.bin.gz']:
      ok=same(root/'base/C0'/s/'reuse'/name,root/'base'/('C'+str(c))/s/'reuse'/name);checks.append({'seed':s,'case':c,'stream':name,'equal':ok})
  elif a.stage=='control':
   for s in SEEDS:
    for arm in ['base','head']:
-    for name in ['digests.bin.gz','trajectory.bin.gz','ledger.bin.gz','geometry.bin.gz']:
+    for name in ['digests.bin.gz','trajectory.bin.gz','ledger.bin.gz','team-possession.bin.gz','geometry.bin.gz']:
      checks.append({'seed':s,'arm':arm,'stream':name,'equal':same(root/arm/'C0'/s/'plain'/name,root/arm/'C0'/s/'observed'/name)})
-   for name in ['aligned.bin.gz','trajectory.bin.gz','ledger.bin.gz','geometry.bin.gz']:
+   for name in ['aligned.bin.gz','trajectory.bin.gz','ledger.bin.gz','team-possession.bin.gz','geometry.bin.gz']:
     checks.append({'seed':s,'pair':'base/head','stream':name,'equal':same(root/'base/C0'/s/'observed'/name,root/'head/C0'/s/'observed'/name)})
  report={'stage':a.stage,'runs':len(records),'checks':checks,'passed':all(x['equal'] for x in checks)};(root/'analysis.json').write_text(json.dumps(report,indent=2)+'\n')
  if not report['passed']:raise ValueError('Paired comparison failed; no acceptance')
