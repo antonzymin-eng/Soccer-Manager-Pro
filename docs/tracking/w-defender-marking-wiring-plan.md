@@ -1,6 +1,6 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026 · **Version:** 0.4 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
+> **Created:** November 10, 2026 · **Version:** 0.5 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
 > **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
 > retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
 > formation/Duty scoring sensitivity.
@@ -134,6 +134,10 @@ Source: #543 `analysis/per-match-team.csv`.
   commit that files it, and re-run after every rebase.
 - At `d4b026aa` the script reports ERR-014-007 / ERR-008-026 / ERR-021-009 as next free. **#543 already
   uses ERR-021-009, ERR-012-013 and ERR-025-001.** Nothing here is a reservation.
+- **ERR-014-007 is intentionally unused (W13.0 landing, November 10, 2026).** This note named it as the
+  next free #14 id; `next_err_id.sh` greps `docs/` and so counted this very sentence as a use, and W13.0
+  filed #14 as **ERR-014-008** (D1) and **ERR-014-009** (D2). The gap is left, not renumbered, and
+  `spec-error-log.md` carries a tombstone row. Do not reuse it.
 - ERR-014-001 is cited in #8 §2.2.6 but has no index row found by grep.
 
 | Entry | Spec | Content | Commit |
@@ -682,3 +686,4 @@ acquisition/closure/boundary/restore/determinism, and the identity probe.
 | 0.2 | 2026-11-10 | — | Review round 1. PRESS/MOVE utility analysis and a priority-2 skip for marking agents moved into W13.1. The `GetBool` loader and its precedent are cited. The composer's displacement drop is replaced by Invariant 3 alone, with a boundary test. A per-team `MarkingScheme` roadmap (W13.2) is added. Delivery is ordered commits on one branch, with identity relative to post-W13.0 and evidence split between here and the frozen lane. The diagnosis becomes a non-blocking handoff, stratified by defending team, with R5. N = 60 is derived. Thresholds are justified; KD-W1, D-05 and the possession read are cited. Trimmed. |
 | 0.3 | 2026-11-10 | — | Review round 2 (editorial). Status moved to reviewed and awaiting owner decisions. A stop rule for pre-existing test failures is added to §9. The plan's manifest row moves to commit ④. The unscored INTERCEPT interaction is listed as a risk with a descriptive test. No design change. |
 | 0.4 | 2026-11-10 | — | Records the owner's acceptance of all thirteen recommended decisions. Code commits ②–⑨ may proceed in order. No design change. |
+| 0.5 | 2026-11-10 | — | W13.0 landing note: the ERR-014-007 gap (§2). No design change. |

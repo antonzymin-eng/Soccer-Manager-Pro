@@ -22,28 +22,20 @@ namespace TacticalDirector.DefensiveAI
     /// <see cref="DefensiveTeamId"/> to obtain own-team or opponent agents.
     ///
     /// <para>
-    /// <b>Frame contract (ERR-014-008, #14 §2.3).</b> Every position and velocity in this snapshot
-    /// (<see cref="BallPosition"/>, <see cref="BallVelocity"/>, <see cref="GkPosition"/>, and each
-    /// <see cref="DefensiveAgentSnapshot"/> <c>Position</c> / <c>Velocity</c> / <c>BaselineSlot</c>,
-    /// opponents included) is expressed in the <b>defending team's canonical attack-toward-+X frame</b>:
-    /// the defended goal-line is x = 0 and the goal being attacked is x = 105, for BOTH teams. The
-    /// composition root performs the away-team 180-degree pitch mirror before filling the snapshot, so
-    /// this is NOT world space. <see cref="DefensiveTeamId"/> identifies who is defending and which
-    /// agents are own-team; it says nothing about which goal is defended. Defensive AI must read the
-    /// defended goal from <see cref="IsOwnGoalAtX0"/>, never from the team id.
+    /// <b>Frame contract (ERR-014-008, #14 §2.3).</b> Defensive AI #14 is <b>canonical-only</b>. Every
+    /// position and velocity in this snapshot (<see cref="BallPosition"/>, <see cref="BallVelocity"/>,
+    /// <see cref="GkPosition"/>, and each <see cref="DefensiveAgentSnapshot"/> <c>Position</c> /
+    /// <c>Velocity</c> / <c>BaselineSlot</c>, opponents included) is expressed in the <b>defending team's
+    /// canonical attack-toward-+X frame</b>: the defended goal-line is x = 0 and the goal being attacked
+    /// is x = 105, for BOTH teams. That is a fixed invariant of the input, not a switch: #14 has no
+    /// "defends x = 105" mode, so a producer holding world-space data must rotate it (the away team's
+    /// 180-degree pitch mirror) BEFORE filling the snapshot, as the composition root does. This is NOT
+    /// world space. <see cref="DefensiveTeamId"/> identifies who is defending and which agents are
+    /// own-team; it says nothing about which goal is defended and must never be used to pick one.
     /// </para>
     /// </summary>
     public sealed class DefensiveSnapshot
     {
-        /// <summary>
-        /// True when the defended goal-line is x = 0 in this snapshot's frame. Always true: the frame
-        /// contract above places the defended goal at x = 0 for both teams (ERR-014-008). Every
-        /// <c>defendsX0</c> decision in #14 (threat ranking, runner direction, last-man selection,
-        /// tackle coverage depth, offside-trap half test and step-up depth) is sourced here, so the
-        /// frame is stated once and a future non-canonical producer has exactly one place to change.
-        /// </summary>
-        public static bool IsOwnGoalAtX0 => true;
-
         /// <summary>
         /// Tick index when this snapshot was captured. Used for F1 stale-perception detection
         /// (FR-DA-029): if snapshot.TickIndex &lt; lastProcessedTick, reuse previous tick output.
@@ -52,8 +44,7 @@ namespace TacticalDirector.DefensiveAI
 
         /// <summary>
         /// TeamId of the team running the defensive algorithm (0 = home, 1 = away). Identifies the own
-        /// team only; it does NOT select the defended goal (see the frame contract on the class and
-        /// <see cref="IsOwnGoalAtX0"/>).
+        /// team only; it does NOT select the defended goal (see the frame contract on the class).
         /// </summary>
         public int DefensiveTeamId;
 
@@ -154,4 +145,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.5     | 2026-11-10 | —      | ERR-014-008: documents the canonical-frame contract (own goal at x = 0 for |
 // |         |            |        |   both teams; positions were mis-documented as world space) and adds the   |
 // |         |            |        |   IsOwnGoalAtX0 frame accessor that replaces every team-id goal decision.  |
+// | 1.6     | 2026-11-10 | —      | W13.0 review M1: IsOwnGoalAtX0 removed. #14 is canonical-only — own goal at x = 0 is a    |
+// |         |            |        |   fixed frame invariant, not a per-producer switch; the unreachable x = 105 branches are  |
+// |         |            |        |   gone from production code.                                                              |
 #endregion

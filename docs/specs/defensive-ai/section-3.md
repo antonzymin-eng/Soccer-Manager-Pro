@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.7 — `ERR-014-009` (W13.0): §3.3.3 Step 1 / Step 7, §3.10.2 Invariant 3, §3.11.3 and §3.13 Step 5 — "retain current assignment" retains mode and target but refreshes `targetPosition` from the live snapshot; a retained target that is absent or inactive releases the mark to ZONAL at once (§2.2.2).)
-**Version:** 0.7
+**Last Updated:** November 10, 2026 (v0.8 — W13.0 review M1 / L2: Frame note and pseudocode annotations reworded — #14 is canonical-only, `team.defendsX0` is the constant true and the `x = 105` alternatives are not implemented; §3.11.3 notes that the vanished-target release resets the candidate accumulator.)
+**Version:** 0.8
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -24,16 +24,18 @@ is produced at Stage 0.
 (see §1.8, §4.1 for the same note). The rest of §3 is unaffected: its
 algorithms remain normative specification text pending Stage 1 activation.
 
-**Frame note (`ERR-014-008`, W13.0, November 10, 2026):** every `team.defendsX0`
-below is **read from the snapshot's frame** (§2.3 "Frame contract": the
-defending team's canonical attack-toward-+X frame, own goal at x = 0 for BOTH
-teams), which makes it **always true** in the engine. It is never inferred
-from the team id: for the away team the snapshot is already rotated, so
-`defendsX0 = (teamId == 0)` would apply the x = 105 branch to a snapshot whose
-defended goal is at x = 0 and invert threat ranking, runner direction,
-last-man selection, coverage depth and the trap's half test. The `x = 105`
-alternatives printed in this section are the formulas' generic definition for a
-non-canonical producer; no producer in the system selects them.
+**Frame note (`ERR-014-008`, W13.0, November 10, 2026; reworded by the W13.0
+review):** #14 is **canonical-only** (§2.3 "Frame contract": the defending
+team's canonical attack-toward-+X frame, own goal at x = 0 for BOTH teams, a
+fixed invariant of its input, not a switch). Every `team.defendsX0` below is
+therefore the constant **true**; it is never inferred from the team id — for
+the away team the snapshot is already rotated, so `defendsX0 = (teamId == 0)`
+would apply the x = 105 branch to a snapshot whose defended goal is at x = 0 and
+invert threat ranking, runner direction, last-man selection, coverage depth and
+the trap's half test. The `x = 105` alternatives printed in this section are the
+formulas' generic two-orientation statement; **#14 does not implement them**
+(production code uses x directly; the only surviving two-orientation code is
+`internal`, test-pinned and unreachable from production).
 
 ---
 
@@ -210,8 +212,7 @@ for each agent in holdShapePool (EntityId-ascending):
         if speed > RUNNER_VELOCITY_THRESHOLD_M_S:
             // Normalise: for team defending x=0, own-goal direction = -X
             //            for team defending x=105, own-goal direction = +X
-            // (team.defendsX0 is read from the snapshot frame — ERR-014-008; always
-            //  true for the canonical-frame snapshot the engine supplies)
+            // (team.defendsX0 is the constant true — #14 is canonical-only, ERR-014-008)
             // Use dot product of velocity with own-goal unit vector
             ownGoalDir = (team.defendsX0) ? Vector2(-1, 0) : Vector2(+1, 0)
             dot = dot(normalize(opponent.velocity.xy), ownGoalDir)
@@ -337,8 +338,7 @@ threat(opponent) = perceivedGoalProximity(opponent)
 ```
 // For team defending x=0: ownGoalCenter = (0.0, 34.0)
 // For team defending x=105: ownGoalCenter = (105.0, 34.0)
-// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008; always
-//  true for the canonical-frame snapshot the engine supplies)
+// (defendsX0 is the constant true — #14 is canonical-only, ERR-014-008)
 
 ownGoalCenter = (team.defendsX0) ? Vector2(0.0f, 34.0f) : Vector2(105.0f, 34.0f)
 
@@ -821,7 +821,7 @@ offsideStepDepth = min(offsideStepDepth, OFFSIDE_MAX_DEPTH_M)        // safety c
 
 // For team defending x=0: x increases = forward into opponent half
 // For team defending x=105: step is mirrored (decrease x)
-// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
+// (defendsX0 is the constant true — #14 is canonical-only, ERR-014-008)
 // currentLineDepth is always expressed as distToOwnGoal; convert back:
 // targetX = (team.defendsX0) ? offsideStepDepth : (105.0 − offsideStepDepth)
 
@@ -1041,7 +1041,7 @@ if directive.emergencyFlag AND distToOwnGoal(gkPos) > GK_EXPECTED_ZONE_MAX_X:
     // Abandoned zone center: midpoint of expected GK zone
     // For team defending x=0: zone = [0, GK_EXPECTED_ZONE_MAX_X]; center.x = 7.5
     // For team defending x=105: zone = [105-15, 105]; center.x = 97.5
-    // (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
+    // (defendsX0 is the constant true — #14 is canonical-only, ERR-014-008)
     abandonedZoneCenter = Vector2(
         (team.defendsX0) ? (GK_EXPECTED_ZONE_MAX_X / 2.0f)
                          : (105.0f − GK_EXPECTED_ZONE_MAX_X / 2.0f),
@@ -1295,6 +1295,8 @@ if assignments[a].mode != ZONAL AND hysteresis[a].dwellCounter > 0:
     // Retain current assignment (mode + target); skip candidate evaluation.
     // ERR-014-009: the caller then refreshes targetPosition from the live snapshot
     // (§2.2.2), or releases to ZONAL + resets hysteresis if the target is absent / inactive.
+    // The release resets the candidate accumulator too (holdTicks = 0, candidateMode = ZONAL),
+    // so re-acquisition pays a full MARK_DWELL_TICKS (ERR-014-009, W13.0 review L2).
     return
 
 // --- Post-evaluation hysteresis gate (called after §3.3 selects bestCandidate) ---
@@ -1567,3 +1569,4 @@ resolved May 18, 2026.
 | 0.5 | 2026-08-12 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): added §3.6.5 "Tackle Outcome Resolution" — #14 owns the tackle outcome (four-outcome abstract duel: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`) in addition to the intent, because neither original KD-6 delegate can accept dispatch (#8's `ActionType` ordinal space is exhausted; #3 defers slide-tackle collision to Stage 2). §3.6.1 Purpose corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch. §3.12 constants index extended with the eleven new §3.6.5.5 constants (ten `[GT]` + one `[FIXED]`) and the `[FIXED]` tag row. Top-of-file stage-binding statement gains a scoped exception note (§3.6.5 ships as Stage-0 runtime code; the rest of §3 is unaffected). Implemented in `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs`. |
 | 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: Frame note ahead of §3.1 and annotations at §3.3.3 Step 3, §3.5.2, §3.7.4 and §3.9.2. `team.defendsX0` is read from the snapshot frame (canonical attack-toward-+X, own goal at x = 0 for both teams — §2.3 Frame contract), never from the team id, so it is always true in the engine. No formula changes; the away team's inputs were already canonical, only the code's goal choice was wrong. Code: `DefensiveSnapshot.IsOwnGoalAtX0`, `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |
 | 0.7 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: retained assignments refresh `targetPosition` from the live snapshot (§2.2.2) — §3.3.3 Step 1 and Step 7, §3.10.2 Invariant 3 note, §3.11.3 pre-check and §3.13 Step 5 annotated; a retained target that is absent or `isActive == false` releases the mark to ZONAL at once with hysteresis reset (the dwell lock suppresses candidate thrash, it does not hold a mark on a player who has left the pitch). §3.11.6's thrash-prevention table is unchanged (its retained row keeps mode and target). Code: `MarkAssigner.RefreshRetained`. |
+| 0.8 | November 10, 2026 | AI agent (W13.0 review M1/L2) | Frame note and the four pseudocode annotations reworded: #14 is canonical-only, `team.defendsX0` is the constant true, the `x = 105` alternatives are not implemented (supersedes v0.6's "read from the snapshot frame" wording and the `IsOwnGoalAtX0` accessor, removed). §3.11.3 pre-check comment: the vanished-target release resets the candidate accumulator. |

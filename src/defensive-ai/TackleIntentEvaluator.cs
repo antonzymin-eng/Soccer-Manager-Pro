@@ -41,7 +41,6 @@ namespace TacticalDirector.DefensiveAI
             out int                tackleCount)
         {
             tackleCount = 0;
-            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             for (int p = 0; p < poolCount; p++)
             {
@@ -82,7 +81,7 @@ namespace TacticalDirector.DefensiveAI
                 // Coverage depth: own-team pool agents between agent and own goal
                 // within COVERAGE_DEPTH_CORRIDOR_M lateral band.
                 int coverageDepth = ComputeCoverageDepth(
-                    snapshot, poolBuffer, poolCount, aIdx, p, defendsX0);
+                    snapshot, poolBuffer, poolCount, aIdx, p);
 
                 // Last-man override: when truly last man, never COMMIT (§3.6.2 / §3.8).
                 bool isLastMan = isEmergency && (p == lastManPoolIndex);
@@ -106,11 +105,10 @@ namespace TacticalDirector.DefensiveAI
             int[]             poolBuffer,
             int               poolCount,
             int               agentSnapshotIdx,
-            int               agentPoolIdx,
-            bool              defendsX0)
+            int               agentPoolIdx)
         {
             ref readonly DefensiveAgentSnapshot agent = ref snapshot.Agents[agentSnapshotIdx];
-            float agentDistToGoal = LastManDetector.DistToOwnGoal(agent.Position.x, defendsX0);
+            float agentDistToGoal = LastManDetector.DistToOwnGoal(agent.Position.x);
             float agentY          = agent.Position.y;
             int   depth           = 0;
 
@@ -126,7 +124,7 @@ namespace TacticalDirector.DefensiveAI
                 ref readonly DefensiveAgentSnapshot t = ref snapshot.Agents[tIdx];
 
                 float yDiff       = Mathf.Abs(t.Position.y - agentY);
-                float tDistToGoal = LastManDetector.DistToOwnGoal(t.Position.x, defendsX0);
+                float tDistToGoal = LastManDetector.DistToOwnGoal(t.Position.x);
 
                 if (yDiff < DefensiveAIConstants.CoverageDepthCorridorM
                  && tDistToGoal < agentDistToGoal)
@@ -166,4 +164,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-11-10 | —      | ERR-014-008: coverage-depth defendsX0 from DefensiveSnapshot.IsOwnGoalAtX0 (canonical |
 // |         |            |        |   frame), not teamId == 0; the away team counted cover on the wrong side of the agent.  |
+// | 1.2     | 2026-11-10 | —      | W13.0 review M1: canonical-only; the defendsX0 parameter is gone (LastManDetector.DistToOwnGoal(x)). |
 #endregion

@@ -36,8 +36,6 @@ namespace TacticalDirector.DefensiveAI
             ref MarkDirective    directive,
             MarkAssignment[]     assignments)
         {
-            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
-
             // Update CurrentLineDepth mirror from snapshot.
             offsideState.CurrentLineDepth = snapshot.DefensiveLineDepth;
 
@@ -47,9 +45,9 @@ namespace TacticalDirector.DefensiveAI
 
             // Evaluate the four trigger conditions (§3.7.2).
             bool cond1 = snapshot.BallVelocity.magnitude < DefensiveAIConstants.OffsideBallSpeedThresholdMS;
-            bool cond2 = LastManDetector.DistToOwnGoal(snapshot.BallPosition.x, defendsX0)
+            bool cond2 = LastManDetector.DistToOwnGoal(snapshot.BallPosition.x)
                        > DefensiveAIConstants.HALF_LINE_X;
-            bool cond3 = ComputeDefenseLineSpread(snapshot, poolBuffer, poolCount, defendsX0)
+            bool cond3 = ComputeDefenseLineSpread(snapshot, poolBuffer, poolCount)
                        < DefensiveAIConstants.LineCoherenceThresholdM;
             bool cond4 = !snapshot.HasActivePrimaryPress;
 
@@ -76,7 +74,7 @@ namespace TacticalDirector.DefensiveAI
              && offsideState.CooldownTicksRemaining == 0)
             {
                 ExecuteStepUp(snapshot, poolBuffer, poolCount, currentTick,
-                              ref offsideState, ref directive, assignments, defendsX0);
+                              ref offsideState, ref directive, assignments);
             }
         }
 
@@ -89,18 +87,15 @@ namespace TacticalDirector.DefensiveAI
             int                currentTick,
             ref OffsideLineState offsideState,
             ref MarkDirective    directive,
-            MarkAssignment[]     assignments,
-            bool               defendsX0)
+            MarkAssignment[]     assignments)
         {
             // Compute step target depth (distToOwnGoal).
             float stepDepth = offsideState.CurrentLineDepth + DefensiveAIConstants.OffsideStepSizeM;
             stepDepth = Mathf.Max(stepDepth, snapshot.DefensiveLineDepth); // Never below #12 target.
             stepDepth = Mathf.Min(stepDepth, DefensiveAIConstants.OffsideMaxDepthM); // Safety ceiling.
 
-            // Convert distToOwnGoal to world-space x.
-            float targetX = defendsX0
-                ? stepDepth
-                : DefensiveAIConstants.PITCH_LENGTH_M - stepDepth;
+            // Canonical frame (own goal at x = 0): distToOwnGoal IS the x coordinate.
+            float targetX = stepDepth;
 
             // Issue ZONAL assignments to all DEFENSE-line agents (FR-DA-019).
             for (int p = 0; p < poolCount; p++)
@@ -141,8 +136,7 @@ namespace TacticalDirector.DefensiveAI
         private static float ComputeDefenseLineSpread(
             DefensiveSnapshot snapshot,
             int[]             poolBuffer,
-            int               poolCount,
-            bool              defendsX0)
+            int               poolCount)
         {
             float minX = float.MaxValue;
             float maxX = float.MinValue;
@@ -157,7 +151,7 @@ namespace TacticalDirector.DefensiveAI
                 if (a.Line != TacticalDirector.PositioningAI.LineId.Defense)
                     continue;
 
-                float d = LastManDetector.DistToOwnGoal(a.Position.x, defendsX0);
+                float d = LastManDetector.DistToOwnGoal(a.Position.x);
                 if (d < minX) minX = d;
                 if (d > maxX) maxX = d;
             }
@@ -182,4 +176,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.3     | 2026-11-10 | —      | ERR-014-008: defendsX0 from DefensiveSnapshot.IsOwnGoalAtX0 (canonical frame), not       |
 // |         |            |        |   teamId == 0. The away team's ball-in-opponent-half test, defence-line spread and          |
 // |         |            |        |   step-up x were computed against x = 105 although its snapshot has its goal at x = 0.      |
+// | 1.4     | 2026-11-10 | —      | W13.0 review M1: canonical-only; defendsX0 plumbing and the 105 - depth step-up branch removed. |
 #endregion

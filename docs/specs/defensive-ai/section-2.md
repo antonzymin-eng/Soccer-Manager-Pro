@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.5 — `ERR-014-009` (W13.0): §2.2.2 states that a RETAINED `MAN_MARK` / `INTERCEPT_RUNNER` assignment (dwell lock, same-target hold) still publishes the target's current perceived position each tick, and what happens when the retained target is absent or inactive.)
-**Version:** 0.5
+**Last Updated:** November 10, 2026 (v0.6 — W13.0 review M1 / L2: §2.3 Frame contract states #14 is canonical-only (own goal at x = 0 is a fixed invariant, not a switch; no "one place to change"); §2.2.2 states the vanished-target release also resets the candidate accumulator so re-acquisition pays a full `MARK_DWELL_TICKS`.)
+**Version:** 0.6
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -120,8 +120,12 @@ target is **absent from the snapshot or not `isActive`**, there is no position
 to publish: the assignment is **released to ZONAL immediately** (`mode = ZONAL`,
 `targetEntityId = null`, `targetPosition = formationSlot`) and the agent's
 `MarkHysteresisState` is reset exactly as on the §3.3.3 Step 6 ZONAL bypass.
-The dwell lock exists to suppress candidate thrash; it does not keep a mark on
-a player who has left the pitch. The rule is a pure function of the snapshot and
+The release resets the **candidate accumulator** as well as the dwell counter
+(`holdTicks = 0`, `candidateMode = ZONAL`, `candidateTargetId = null`), so
+re-acquiring any mark — including one on the very opponent who was the standing
+candidate when the old target vanished — pays a full `MARK_DWELL_TICKS` of
+consecutive preference again. The dwell lock exists to suppress candidate
+thrash; it does not keep a mark on a player who has left the pitch. The rule is a pure function of the snapshot and
 the prior assignment (deterministic; no RNG, no new state). *Example:* agent at
 slot (30.0, 34.0) marks opponent 40 committed at (40.0, 34.0) (10.0 m from the
 slot); during the lock the opponent runs to (49.0, 34.0): published
@@ -304,14 +308,18 @@ composition root performs the away team's 180° pitch rotation
 (`x' = 105 − x`, `y' = 68 − y`, velocities negated) before filling the
 snapshot, so the snapshot is **not** world space. The team id says who is
 defending and which agents are own-team; it does **not** say which goal is
-defended. Every `team.defendsX0` in §3 (threat proximity §3.5.2, runner
-direction §3.3.3 Step 3, last-man and advancing-attacker selection §3.8,
-GK-zone centre §3.9.2, tackle coverage depth §3.6.2, trap half test,
-line spread and step-up x §3.7) is therefore read from the snapshot's
-frame — in the engine always **true** — and never inferred from the team id.
-A producer that does not canonicalise would have to state its frame in the
-snapshot; none exists, so nothing is added (one place to change:
-`DefensiveSnapshot.IsOwnGoalAtX0`).
+defended. **#14 is canonical-only:** own goal at x = 0 is a fixed invariant of
+its input, not a switch, and #14 has no "defends x = 105" mode. A producer
+holding world-space data must rotate it into this frame before filling the
+snapshot; nothing in #14 can be told otherwise. Every `team.defendsX0` in §3
+(threat proximity §3.5.2, runner direction §3.3.3 Step 3, last-man and
+advancing-attacker selection §3.8, GK-zone centre §3.9.2, tackle coverage depth
+§3.6.2, trap half test, line spread and step-up x §3.7) is therefore the
+constant **true**: the code uses x directly and does not implement the
+`x = 105` alternatives, which are the formulas' generic two-orientation
+statement. (They survive only as `internal` test-pinned helpers,
+`LastManDetector.DistToOwnGoal(x, defendsX0)` / `ComputeAbandonedZoneCenter(defendsX0)`, unreachable from production.) It is never inferred from the
+team id.
 
 *Worked example.* Away defender at world (90.0, 30.0) with a home striker at
 world (80.0, 40.0). Canonical: defender (15.0, 38.0), striker (25.0, 28.0).
@@ -411,3 +419,4 @@ and F6 in #13 §2.4). No special failure mode is required because the
 | 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): §2.2.3 `TackleIntentRequest`'s "read by #8, which translates it into an `AgentAction` dispatched to Collision System #3" clause corrected — that dispatch has no working delegate; a committed intent is now resolved by #14 itself. Added §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome`, the two new public types backing §3.6.5's tackle-outcome resolution. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |
 | 0.4 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §2.3 gains the "Frame contract" paragraph and worked example. The snapshot is the defending team's canonical attack-toward-+X frame for BOTH teams (own goal at x = 0), as `MatchEngine.FillDefensiveSnapshot` has always supplied it; `defendsX0` is read from the frame, never from the team id. §3's `team.defendsX0` pseudocode is annotated to match (section-3 v0.6). Code: `DefensiveSnapshot.IsOwnGoalAtX0`; `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |
 | 0.5 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: §2.2.2 gains "Retained assignments" — a retained `MAN_MARK` / `INTERCEPT_RUNNER` refreshes `targetPosition` from the live snapshot every tick, and a retained target that is absent or inactive releases the mark to ZONAL at once (hysteresis reset). Matches the §2.2.2 sentence that `targetPosition` is the opponent's current perceived position, which §3.3.3 Step 1 / §3.11.3 contradicted by retaining the whole record (section-3 v0.7). Code: `MarkAssigner.RefreshRetained`. |
+| 0.6 | November 10, 2026 | AI agent (W13.0 review M1/L2) | §2.3 Frame contract reworded: #14 is canonical-only, the `x = 105` alternatives are not implemented, the "one place to change" claim and the `DefensiveSnapshot.IsOwnGoalAtX0` accessor are withdrawn (supersedes v0.4's wording). §2.2.2 Retained assignments: the vanished-target release resets the candidate accumulator (full `MARK_DWELL_TICKS` to re-acquire); covered by `VanishedTarget_ApplyGatePath_ReleasesAndResetsCandidateAccumulator`. |

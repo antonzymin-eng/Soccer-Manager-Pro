@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/TackleIntentDiagnosticTests.cs
 // Created:  2026-08-12
-// Modified: 2026-08-12
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Defensive AI #14 §3.6, Testing Strategy #19 (instrument class),
 //           match-engine wiring backlog (docs/tracking/match-engine-wiring-backlog.md) W2 / §1.1
@@ -149,9 +149,10 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine(
                 "  def | episodes | <=3m | <=2m | <=1.5m | poolElig | presser | intent | COMMIT | ballGap");
 
-            // Reported per DEFENDING team and never pooled: the coverage-depth "goal-side" term and
-            // LastManDetector.DefendsX0 are team-relative, and three home/away asymmetry defects have
-            // shipped in this tree because a fixture only ever used the home team (ERR-008-002).
+            // Reported per DEFENDING team and never pooled: #14 consumes a per-team canonical-frame
+            // snapshot (own goal at x = 0 for both teams; ERR-014-008 fixed the away team being given the
+            // wrong goal by a team-id test), and three home/away asymmetry defects have shipped in this
+            // tree because a fixture only ever used the home team (ERR-008-002).
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 TackleIntentCensus c = engine.TestOnly_TackleCensus(t);
@@ -231,4 +232,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | seed corpus. Runs BEFORE the wiring, because whether a wired       |
 // |         |            |        | tackle can fire at all rests on a rate nobody had measured (the    |
 // |         |            |        | C1 lesson; backlog §1.1 / W12). Assertion-free.                    |
+// | 1.1     | 2026-11-10 | —      | Comment only (W13.0 review L5): the per-team reporting note no longer cites the removed   |
+// |         |            |        | LastManDetector.DefendsX0(teamId); it names the canonical-frame contract (ERR-014-008).  |
 #endregion

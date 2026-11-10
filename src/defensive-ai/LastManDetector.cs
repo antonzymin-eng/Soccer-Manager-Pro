@@ -78,8 +78,6 @@ namespace TacticalDirector.DefensiveAI
             if (poolCount == 0)
                 return;
 
-            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
-
             // Find last-man candidate: minimum distToOwnGoal with EntityId ascending tie-break.
             float minDist     = float.MaxValue;
             int   lastManIdx  = -1;
@@ -92,7 +90,7 @@ namespace TacticalDirector.DefensiveAI
                 if (sIdx < 0)
                     continue;
 
-                float d = DistToOwnGoal(snapshot.Agents[sIdx].Position.x, defendsX0);
+                float d = DistToOwnGoal(snapshot.Agents[sIdx].Position.x);
                 if (d < minDist || (d == minDist && entityId < lastManId))
                 {
                     minDist    = d;
@@ -105,7 +103,7 @@ namespace TacticalDirector.DefensiveAI
                 return;
 
             // Evaluate last-man threat predicate.
-            float ballDist = DistToOwnGoal(snapshot.BallPosition.x, defendsX0);
+            float ballDist = DistToOwnGoal(snapshot.BallPosition.x);
             bool isThreat  = ballDist < (minDist + DefensiveAIConstants.LastManBallBufferM)
                           && ballDist > DefensiveAIConstants.LastManOwnHalfMinX;
 
@@ -130,7 +128,7 @@ namespace TacticalDirector.DefensiveAI
                 if (!a.IsActive)
                     continue;
 
-                float d = DistToOwnGoal(a.Position.x, defendsX0);
+                float d = DistToOwnGoal(a.Position.x);
                 if (d < minOppDist || (d == minOppDist && a.EntityId < advAttackerId))
                 {
                     minOppDist    = d;
@@ -146,11 +144,11 @@ namespace TacticalDirector.DefensiveAI
             if (snapshot.GkEntityId < 0)
                 return;
 
-            float gkDist = DistToOwnGoal(snapshot.GkPosition.x, defendsX0);
+            float gkDist = DistToOwnGoal(snapshot.GkPosition.x);
             if (gkDist > DefensiveAIConstants.GkExpectedZoneMaxX)
             {
                 result.IsGkOutOfZone      = true;
-                result.AbandonedZoneCenter = ComputeAbandonedZoneCenter(defendsX0);
+                result.AbandonedZoneCenter = ComputeAbandonedZoneCenter();
 
                 // Find pool agent (excluding last-man) with minimum cost to abandonedZoneCenter.
                 float minCost     = float.MaxValue;
@@ -184,13 +182,19 @@ namespace TacticalDirector.DefensiveAI
         // ── Helpers ──────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Distance from x to own goal-line (team-agnostic). Callers take <paramref name="defendsX0"/>
-        /// from <see cref="DefensiveSnapshot.IsOwnGoalAtX0"/> (the snapshot's frame contract), never from
-        /// a team id: the engine supplies both teams in their own canonical frame (ERR-014-008).
-        /// For defending-x0 teams: distToOwnGoal = x.
-        /// For defending-x105 teams: distToOwnGoal = 105 - x.
+        /// Distance from x to the defended goal-line. #14 is canonical-only (the snapshot places the
+        /// defended goal at x = 0 for both teams; see <see cref="DefensiveSnapshot"/>), so this is x
+        /// itself. Never derived from a team id (ERR-014-008).
         /// </summary>
-        public static float DistToOwnGoal(float x, bool defendsX0)
+        public static float DistToOwnGoal(float x) => x;
+
+        /// <summary>
+        /// Generic two-orientation form of <see cref="DistToOwnGoal(float)"/> from #14 §3.8 / Appendix B.
+        /// NOT reachable from production under the frame contract (every caller passes the canonical
+        /// frame, i.e. <c>defendsX0 == true</c>); retained <c>internal</c> only because the pre-existing
+        /// <c>GeometryHelperTests.DistToOwnGoal_BothTeamConventions</c> pins both branches.
+        /// </summary>
+        internal static float DistToOwnGoal(float x, bool defendsX0)
         {
             return defendsX0
                 ? x
@@ -206,19 +210,28 @@ namespace TacticalDirector.DefensiveAI
         }
 
         /// <summary>
-        /// Center of the abandoned GK zone in the snapshot frame. Callers pass
-        /// <see cref="DefensiveSnapshot.IsOwnGoalAtX0"/>.
-        /// For defending-x0: (GK_EXPECTED_ZONE_MAX_X / 2, PITCH_WIDTH / 2).
-        /// For defending-x105: (105 - GK_EXPECTED_ZONE_MAX_X / 2, PITCH_WIDTH / 2).
+        /// Center of the abandoned GK zone in the canonical frame: (GK_EXPECTED_ZONE_MAX_X / 2,
+        /// PITCH_WIDTH / 2) = (7.5, 34.0). #14 §3.9.2.
         /// </summary>
-        public static Vector2 ComputeAbandonedZoneCenter(bool defendsX0)
+        public static Vector2 ComputeAbandonedZoneCenter()
         {
-            float halfZone = DefensiveAIConstants.GkExpectedZoneMaxX * 0.5f;
-            float x        = defendsX0
-                ? halfZone
-                : DefensiveAIConstants.PITCH_LENGTH_M - halfZone;
-            float y        = DefensiveAIConstants.PITCH_WIDTH_M * 0.5f;
-            return new Vector2(x, y);
+            return new Vector2(
+                DefensiveAIConstants.GkExpectedZoneMaxX * 0.5f,
+                DefensiveAIConstants.PITCH_WIDTH_M * 0.5f);
+        }
+
+        /// <summary>
+        /// Generic two-orientation form of <see cref="ComputeAbandonedZoneCenter()"/> from #14 §3.9.2.
+        /// NOT reachable from production under the frame contract (<c>defendsX0 == true</c> always);
+        /// retained <c>internal</c> only because the pre-existing
+        /// <c>GeometryHelperTests.AbandonedZoneCenter_DefendingX0</c> calls it by this signature.
+        /// </summary>
+        internal static Vector2 ComputeAbandonedZoneCenter(bool defendsX0)
+        {
+            Vector2 canonical = ComputeAbandonedZoneCenter();
+            return defendsX0
+                ? canonical
+                : new Vector2(DefensiveAIConstants.PITCH_LENGTH_M - canonical.x, canonical.y);
         }
     }
 }
@@ -232,4 +245,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   defending team's canonical frame for BOTH teams, so the away team's last man, advancing |
 // |         |            |        |   attacker and GK-zone centre were resolved against the wrong goal. Now sourced from   |
 // |         |            |        |   DefensiveSnapshot.IsOwnGoalAtX0.                                                     |
+// | 1.3     | 2026-11-10 | —      | W13.0 review M1: #14 is canonical-only. DistToOwnGoal(x) / ComputeAbandonedZoneCenter() are |
+// |         |            |        |   the production forms; the bool defendsX0 forms become internal, marked unreachable under  |
+// |         |            |        |   the frame contract, and kept only because pre-existing GeometryHelperTests pin them.     |
 #endregion

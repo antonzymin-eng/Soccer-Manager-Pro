@@ -284,7 +284,7 @@ namespace TacticalDirector.DefensiveAI
                 return 0f;
 
             ref readonly DefensiveAgentSnapshot opp = ref snapshot.Agents[oIdx];
-            return MarkAssigner.ThreatScore(opp.Position, opp.PerceivedFirstTouch, DefensiveSnapshot.IsOwnGoalAtX0);
+            return MarkAssigner.ThreatScore(opp.Position, opp.PerceivedFirstTouch);
         }
 
         private static void DemoteToZonal(
@@ -312,4 +312,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.2     | 2026-11-10 | —      | ERR-014-008: TargetThreat (the demotion ranking of Invariants 1 and 2) takes defendsX0     |
 // |         |            |        |   from DefensiveSnapshot.IsOwnGoalAtX0, not the team id, so the away team demotes the     |
 // |         |            |        |   lowest-threat mark rather than the highest.                                              |
+// | 1.3     | 2026-11-10 | —      | W13.0 review M1: TargetThreat uses the canonical ThreatScore(oppPos, firstTouch). |
 #endregion
