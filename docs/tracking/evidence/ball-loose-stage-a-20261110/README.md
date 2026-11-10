@@ -4,17 +4,24 @@ Created November 10, 2026. This observation-only investigation measures main
 `d4b026aa951432d342217314b8c4d49b53a19e7d`; #434 remains an unmerged independent
 draft. Measured observer/analysis freeze: `15b110d19b6dcb22f1d35d314858cf3b69987030`.
 No gameplay fix, new approved parameter/policy, ERR, RNG draw or save-schema change.
-See [design v1.4](../../w-440-ball-loose-design.md#proposed-stage-b-experiment--owner-approval-required).
+See [design v1.5](../../w-440-ball-loose-design.md#proposed-stage-b-experiment--owner-approval-required).
 
-**Review follow-up: proposal only.** C is a measured experiment with proposed 25%
-ceilings for immediate original-tackler recovery and rapid original-carrier return
-in frames f+1..f+24. Only pooled results gate; team/seed and the former f+1..f+3
-slice are descriptive. A censored time-to-first-regain distribution extends through
-f+60. The proposed pooled coverage floor is 30 complete windows per gate, with no
-team quota; the fixed sample may end inconclusive. The design fixes all-episode denominators, censor-completion
-bounds, minimum coverage and stop/report/no-tuning rules before any new result.
-The proposed next experiment is 24 runs on an explicitly selected v29 base containing
-#543; none has begun. A static admission/save/off-tick audit makes schema-neutrality
+**Review follow-up: accepted protocol revisions; C remains proposed.** The owner
+accepted G2 through f+60, f+24 descriptive, twelve fixed seeds / 48 runs, the retained
+30 pooled complete-window floor and a 50% per-team review warning. The design records
+the reply and scope, lists all twelve seeds and derives the added six reproducibly
+before capture. Proposed pooled 25% caps remain for immediate original-tackler
+recovery and original-carrier entry-holding/acquisition during f+1..f+60. Per-team
+warnings use original-carrier-team episodes and observed K/N >= 50%; censor exposure
+is flagged separately. A warning requires explicit review even if pooled caps pass,
+without adding a team rejection cap or quota. The fixed batch can still end
+inconclusive. Time-to-first-regain bins and completion bounds, all-episode
+denominators and stop/report/no-tuning rules remain mandatory. Stage A's 5/37
+carrier-owned endpoints are not cumulative regains: all 37 regained in frame f.
+The next experiment requires an explicitly selected v29 base containing #543;
+none has begun. Source/run/storage freeze, caps, C policy and new parameter remain
+pending. A pass only permits owner review and cannot certify a physical contest:
+a ball nobody recovers can satisfy both caps. A static admission/save/off-tick audit makes schema-neutrality
 conditional on the fence being zero at every supported save/off-tick boundary; if
 it can affect a future consumer, serialize it and bump the next free world schema.
 Symmetric lockout is fallback only, requiring a separate owner decision. The Stage A
@@ -105,6 +112,12 @@ For reanalysis of this package, materialize its LFS payloads, copy `PASS.json` t
 Both direct gzip and indexed packed stores are supported by the shared reader.
 
 ## Validation and pending host
+
+**Tooling receipt scope:** the retained author log reports 354 tests run, no
+failures and no skips (354 passed). The independent reviewer reported 352 passed /
+0 failed / 2 skipped in their environment. These are distinct receipts, not a
+claim that skipped cases passed. Prior docs-only CI run 42901628974 at 90649807
+has completed successfully; this does not supply the pending Unity validation.
 
 The exact command `bash tools/run-tests-local.sh --pr` passes: all 37 assembly
 console summaries total **0 failed / 4487 passed / 225 existing skips**. MatchEngine

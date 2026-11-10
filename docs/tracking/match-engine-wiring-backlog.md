@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED November 10, 2026, v1.44 (branch-local #440 accepted protocol revisions):** [Design v1.5](w-440-ball-loose-design.md) records the owner reply accepting G2 through f+60, f+24 descriptive, twelve fixed seeds / 48 runs, the retained 30 pooled complete-window floor and a 50% per-team review warning. It fixes the expanded seed list before results and retains mandatory review after any pass. Pooled 25% caps, C mechanism/policy/new parameter and source/run freeze remain pending; no Stage B code/capture. Stage A definitions/results and governing Unity target 210ede77 are unchanged.
+
 > **UPDATED November 10, 2026, v1.43 (branch-local #440 protocol review):** [Design v1.4](w-440-ball-loose-design.md) proposes pooled-only 25% gates and f+1..f+24 carrier-return window, with geometric caveats and descriptive time-to-regain distribution through f+60. Team/seed and f+1..f+3 reports are descriptive; no team quota. Proposed 30 pooled coverage floor can end inconclusive. No gameplay/capture or approval; C/D and state audit remain as before. Exact-source CI 210ede77 is green; Unity remains pending.
 
 > **UPDATED November 10, 2026, v1.42 (branch-local #440 design follow-up):** [Design v1.3](w-440-ball-loose-design.md) proposes option C as a measured experiment, not a shipping decision: 25% / 25% ceilings, f+1..f+3, fixed denominators/censor/coverage rules and stop/report/no tuning. Static audit requires an identically zero frame-local fence at save/off-tick boundaries or serialization/schema bump. D is fallback only. No new game code/capture; owner approval remains required before Stage B.
@@ -784,6 +786,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.44 | 2026-11-10 | — | Owner accepts f+60/12 seeds/48 runs/30 pooled complete windows/50% team warning and review after a pass; design v1.5 freezes reproducible seeds. C/caps/policy/parameter/run freeze still pending; no code/capture. |
 | 1.43 | 2026-11-10 | — | Branch-local #440 proposed protocol: extended carrier window, pooled-only gates, censored first-regain reports; no new code/capture or approval. |
 | 1.42 | 2026-11-10 | — | Branch-local #440 design v1.3: bounded C proposal, conditional save/off-tick fence audit; D fallback only, owner stop before Stage B. |
 | 1.41 | 2026-11-10 | — | Branch-local #440 Stage A census complete; observer neutrality, 37 immediate re-picks, local gate pass. No gameplay fix; owner mechanism/parameter/policy and Unity pending. |

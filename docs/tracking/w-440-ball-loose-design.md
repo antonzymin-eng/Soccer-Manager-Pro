@@ -1,8 +1,8 @@
 # #440 BallLoose — Stage A investigation and proposed choices
 
 Created November 9, 2026. Purpose: freeze episode measurement, collect within-frame
-ownership chronology and present a concrete gameplay choice. Version 1.4.
-Status: Stage A measured; option C proposed as a bounded Stage B experiment. Protocol/limits/policy/parameter await owner approval; no gameplay code authorized.
+ownership chronology and present a concrete gameplay choice. Version 1.5.
+Status: Stage A measured; option C proposed as a bounded Stage B experiment. The owner accepted the revised window/sample/coverage/warning choices below; the complete C experiment, caps, gameplay policy/parameter and source/run freeze remain pending. No Stage B gameplay code or capture is authorized here.
 Branch `codex/440-ball-loose`; source baseline `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 #434 remains a separate draft; Stage A therefore measures main, not its unmerged head.
 
@@ -180,6 +180,14 @@ above unchanged. Existing [GT] values remain unchanged.
 
 ### Fixed experiment configuration and sample
 
+**Decision provenance — November 10, 2026:** after the independent review, the
+assistant recommended gating carrier return through f+60 while reporting f+24,
+freezing twelve seeds / 48 runs while retaining the 30-complete-window floor,
+adding a per-team warning at 50%, and retaining owner review after any numerical
+pass. The owner replied **"ok, proceed"**. This accepts those protocol revisions;
+it is not recorded as approval of the still-proposed 25% caps, 2.5 m/s knock,
+one-frame gameplay policy, shipping fix, run composition or a result-bearing run.
+
 - Select a **v29 base containing #543**, after merging or an explicitly approved
   stacked/rebased composition. Reconcile the shared source/history, LFS/CI and evidence
   registry changes; do not silently overwrite them. Current Stage A remains a v28
@@ -191,9 +199,9 @@ above unchanged. Existing [GT] values remain unchanged.
   coincident-position fallback. Above 0.5 m/s is not automatic reception: actual
   first touch also requires reach and an approaching ball. Do not predict certain
   BallWon or Missed outcomes from speed alone.
-- Same frozen six seeds, 324000 calls/seed, SDK 8.0.426 / CLR 8.0.32 and recorded
-  debug/default configuration in both arms. Twelve observed primary matches
-  (six before, six C) plus twelve disabled-observer controls = **24 full runs**.
+- **Twelve fixed seeds**, 324000 calls/seed, SDK 8.0.426 / CLR 8.0.32 and recorded
+  debug/default configuration in both arms. Twenty-four observed primary matches
+  (twelve before, twelve C) plus twenty-four disabled-observer controls = **48 full runs**.
   Off/on raw digests, trajectories/BallState, team witnesses, geometry and ledgers
   must match within each code arm. Gameplay identity between before and C is not
   expected. Pin source, binaries, runtime, observer and analysis before any run.
@@ -201,6 +209,36 @@ above unchanged. Existing [GT] values remain unchanged.
   shots/goals/fouls, frame-end and one-second ownership, teammate/opponent prefix
   recovery, censor causes and loose-window duration. A zero regain count alone
   does not certify a physical contest or football realism.
+
+The twelve-seed list is frozen before any Stage B result. Keep the original six
+seeds first, followed by six reproducibly derived additions in this order:
+
+| Position | Seed (hexadecimal uint64) | Selection |
+| --- | --- | --- |
+| 1 | `0000000000000001` | Original Stage A corpus |
+| 2 | `000000005A5A5A5A` | Original Stage A corpus |
+| 3 | `0000000099887766` | Original Stage A corpus |
+| 4 | `00000000ABCDEF12` | Original Stage A corpus |
+| 5 | `00000000D1A6D05E` | Original Stage A corpus |
+| 6 | `0F1E2D3C4B5A6978` | Original Stage A corpus |
+| 7 | `7361C8785767A4CB` | Addition 1 |
+| 8 | `C623F258655846D0` | Addition 2 |
+| 9 | `6523CE506810256F` | Addition 3 |
+| 10 | `4B13BA8B3F94FB8D` | Addition 4 |
+| 11 | `72964B73A4B0C71D` | Addition 5 |
+| 12 | `AAD9E2F8E3D7E98E` | Addition 6 |
+
+Addition i is the unsigned big-endian integer represented by the first eight
+bytes of SHA-256 of the UTF-8 string `SystemXI:#440:StageB:extra-seed:i`, with i
+replaced by its decimal value 1..6 and no newline. This is an experiment-selection
+rule, not a new game RNG or draw. All twelve values are distinct and nonzero;
+none of the additions has been inspected for match results in this revision.
+No substitution, successful-prefix selection or sample extension is permitted
+after capture starts. The additional seeds add coverage margin, not a guarantee:
+Stage A's 37 episodes came from a different base and do not predict the v29/C count.
+Before running, freeze the selected base, exact sources/binaries/runtime/observer/
+analysis, all 48 run identities and storage/recovery plan. The earlier storage
+interruption makes capacity planning necessary before this doubled batch.
 
 ### Two proposed numerical stop ceilings
 
@@ -213,32 +251,52 @@ The owner may change these proposals **before** the experiment is frozen.
 | Gate | Proposed maximum | Exact numerator/window |
 | --- | ---: | --- |
 | G1: immediate original-tackler recovery | **25%** | Episodes with any acquisition by the initiating tackler after BallLoose in physics frame f, before the first censor. Deduplicate by episode; count acquire-then-release even if the tackler does not hold at frame end. |
-| G2: short-horizon original-carrier recovery | **25%** | Episodes in which the old carrier holds at the entry to, or acquires at any point during, frames **f+1 through f+24 inclusive**, before censor. The first eligible frame is the nominal fence-lift frame f+1, not the later frame when every geometry/speed gate happens to admit a touch. |
+| G2: one-second original-carrier return | **25%** | Episodes in which the old carrier holds at the entry to, or acquires at any point during, frames **f+1 through f+60 inclusive**, before censor. The first eligible frame is the nominal fence-lift frame f+1, not the later frame when every geometry/speed gate happens to admit a touch. |
 
-G2 now spans the **first 24 nominally eligible physics frames (0.4 s of ticks)**.
-For f=120 it is 121–144 inclusive. The former f+1..f+3 gate is superseded;
-keep that 50 ms slice descriptive. Counting ownership at window entry prevents the
+G2 now spans the **first 60 nominally eligible physics frames (1 s of ticks)**.
+For f=120 it is 121–180 inclusive. The former f+1..f+3 and f+1..f+24 gates
+are superseded; retain both as descriptive checkpoints. Counting ownership at window entry prevents the
 before arm's same-frame regain from looking like zero return merely because no
 new acquisition edge occurs after frame 120. Report entry-holding and new-window
 acquisitions separately as well as their deduplicated union. Never shift the
 window to a later favorable geometry/speed admission opportunity.
 
-Window rationale: a stationary carrier and a ball starting at zero separation,
-travelling at constant 2.5 m/s, cover a 1.0 m reach in 1.0/2.5 = 0.4 s = 24 frames.
-The unbound 1.0 m defaults for FIRST_TOUCH_ACCEPTANCE_RADIUS_M and
-LooseBallPickupRadiusM motivate this reference, not a proof of ordinary-recovery
-eligibility or actual relative separation. Moving players,
-starting offset/direction, approaching-ball gates and deceleration can shorten or
-lengthen exposure; do not claim the ball stays in reach for at least 24 frames.
-This fixed diagnostic window is a proposed policy, not an escape guarantee or a
-new gameplay lockout. The carrier fence still lasts only frame f.
+Window rationale: the earlier 1.0 m / 2.5 m/s = 0.4 s = 24-frame reference assumes
+a stationary carrier, zero starting separation and constant ball speed. It does
+not bound recovery with moving players, approaching-ball gates or deceleration.
+The longer f+60 window catches delayed returns, including f+25..f+60; it is an
+accepted diagnostic choice, not a derived escape guarantee or gameplay lockout.
+The gameplay fence still lasts only frame f. Later returns can follow subsequent
+play, so this remains an episode-prefix metric, not a tackle-caused turnover rate.
 
-**Only the pooled six-seed candidate result gates.** Per-team and per-seed counts,
-completion bounds and episode totals remain mandatory descriptive reports, with
-no team-specific 25% gate or 10-per-team quota. Small clustered samples are not
-population estimates; pooling does not establish a nominal statistical error rate.
-The two 25% ceilings remain uncalibrated owner proposals, not empirical football
-rates. Both are still awaiting approval.
+Stage A's **5/37 carrier-owned one-second endpoints are not cumulative regains**.
+All 37 already regained during frame f. Preserve endpoint ownership, first-regain
+events and G2 entry-holding/within-window acquisitions as separate reports.
+
+**Only the pooled twelve-seed candidate result decides the numerical caps.**
+Mandatory per-team/per-seed reports and the team warning below accompany it;
+there is no team-specific 25% rejection gate or 10-per-team quota. Small clustered
+samples are not population estimates; pooling does not establish a nominal
+statistical error rate. The two 25% ceilings remain uncalibrated owner proposals,
+not empirical football rates. Both are still awaiting approval.
+
+### Per-team review warning — accepted, not another rejection cap
+
+For each gate in candidate C, partition episodes by the **original carrier's team**
+(home/away), including censored episodes, and report N, K, U, Z, complete windows
+and completion bounds using the definitions below. For N > 0, an observed-positive
+rate **K/N >= 50%** raises an explicit team warning (exactly **2*K >= N**).
+If the observed rate is below 50% but **2*(K+U) >= N**, flag possible threshold
+exposure due to censoring separately; do not call it an observed 50% rate. N=0 is
+reported as no team data, not 0%. Even a small denominator can raise a warning;
+print its counts and do not imply precision or silently add a per-team quota.
+
+For example, one team at 50% and the other at 0% with equal episode counts passes
+a pooled 25% cap but triggers this warning. A warning requires explicit owner
+disposition in the result review even if pooled caps pass. It is not a new hard
+rejection, tuning license, mirror-bug diagnosis or authorization to extend seeds.
+Before/C comparison, mirrored correctness fixtures and the per-seed breakdown
+remain necessary to investigate an asymmetry.
 
 ### Reported time to original-carrier regain
 
@@ -281,14 +339,14 @@ the censor. Censor after a completed window adds no U for that gate. A positive
 before censor stays in K, not U. G2 censors at/before f+1 can therefore leave the
 whole early-return window unknown.
 
-Proposed adequacy conditions, also requiring owner approval: at least **30 fully
+Accepted coverage choice for the proposed experiment: at least **30 fully
 observed windows per gate pooled**, with **no per-team minimum**, where complete
 means the window ended before censor (record this separately from K/U/Z because an
 early positive can be known even when the remainder is censored). If N=0 or this
 coverage is missing, stop as **inconclusive**. Do not extend seeds or horizons to
 reach the quota without a separately approved protocol amendment. A longer window
-can increase censoring and C can change episode counts; the fixed 24-run plan may
-therefore end inconclusive. Thirty is a proposed coverage floor, not a power
+can increase censoring and C can change episode counts; the fixed 48-run plan may
+therefore end inconclusive. Thirty is a coverage floor, not a power
 calculation or precision guarantee. The owner may change the fixed sample/floor
 before freezing the protocol, never in response to results.
 
@@ -296,7 +354,7 @@ before freezing the protocol, never in response to results.
 
 After each completed seed pair, check run integrity, observer neutrality and hard
 correctness; any failure stops immediately. Assess the numerical ceilings on the
-**candidate C observed arm only**, after the fixed six-seed batch completes.
+**candidate C observed arm only**, after the fixed twelve-seed batch completes.
 Do not stop early on a provisional rate or assume an unknown number of future
 episodes. The before arm is descriptive and is not a candidate acceptance gate.
 Disabled-observer replicas prove neutrality; they are not additional independent
@@ -314,7 +372,11 @@ On breach/inconclusive: retain completed and partial attempts, all episode keys,
 commands, counts, first failing pooled gate and source/runtime hashes; report and
 **stop**. Do not adjust 2.5 m/s, fence length, reach radii, sample selection, windows,
 censor rules or caps to manufacture a pass. No automatic D implementation or rerun.
-Passing these two gates only permits owner review of the full metric table; it
+Passing these two gates only permits owner review of the full metric table,
+including explicit disposition of team warnings. The gates are one-sided:
+a ball nobody recovers can satisfy both caps. Review contest/recovery timelines,
+unclaimed durations, endpoint states and all original metrics before judging the
+mechanic; do not add a favorable lower-bound gate after seeing results. A pass
 neither merges the PR nor establishes realism. The proposed scoped ordinary-recovery
 ban during frame f remains a separate correctness requirement: a violation is a
 failed implementation, not something tolerated up to 25%.
@@ -382,10 +444,13 @@ into D. No symmetric-lockout gameplay code is authorized.
 
 ## Owner stop
 
-Approve/revise the proposed pooled-only 25% / 25% caps, f+1..f+24 carrier window,
-descriptive f+1..f+3/time-to-regain reports, all-episode/censor-bound rules, 30 pooled
-complete-window floor, fixed 24-run plan, proposed new 2.5 m/s parameter and scoped
-ordinary-recovery policy before any Stage B code/capture. Source/save feasibility
+The owner accepted f+1..f+60 for G2, descriptive f+24, twelve seeds / 48 runs,
+the retained 30 pooled complete-window floor, the 50% team-review warning and
+mandatory review after a numerical pass. The seed list and selection rule above
+are now explicit. Approve/revise the remaining proposed pooled 25% / 25% caps,
+all-episode/censor-bound rules, new 2.5 m/s parameter and scoped ordinary-recovery
+policy, then freeze the selected v29 source/base and complete run setup before any
+Stage B code/capture. Source/save feasibility
 must still be proved by the eventual implementation tests. Then review results;
 no merge or tuning is implied by an experimental pass.
 
@@ -400,3 +465,5 @@ no merge or tuning is implied by an experimental pass.
 | 1.3 | November 10, 2026 | Owner-requested C experiment proposal: two 25% ceilings, exact early window, denominator/censor bounds, adequacy and stop/no-tuning rules; static save/off-tick audit and conditional schema requirement. D is fallback only; no gameplay/capture or approval claim. |
 
 | 1.4 | November 10, 2026 | Review revision, still proposed: G2 f+1..f+24 with geometric caveats and first-regain distribution; pooled-only gates, no per-team quota; retains proposed 30 pooled coverage floor and explicit inconclusive risk. No gameplay/capture or approval. |
+
+| 1.5 | November 10, 2026 | Owner accepts review recommendations: G2 through f+60, f+24 descriptive, twelve fixed seeds / 48 runs, retained 30 pooled complete-window floor, 50% per-team review warning and mandatory review after a pass. Records exact reply/scope and reproducible added seeds; distinguishes Stage A endpoints from cumulative regains. C/caps/policy/parameter/run freeze remain pending; no gameplay/capture. |
