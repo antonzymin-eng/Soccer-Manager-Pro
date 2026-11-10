@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/KeeperOutsideAreaHandlingTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Created:  2026-10-18
 // Modified: 2026-10-18 (review fixes)
 // Author:   —
@@ -63,6 +64,7 @@ namespace TacticalDirector.MatchEngine
             engine.TestOnly_ForceBallLoose(contact, Vector3.zero);
             GoalkeeperTickState state = engine.TestOnly_GoalkeeperState;
             state.States[team] = GoalkeeperState.Smothered;
+            state.HandControlStartFrame[team] = -1;
             engine.TestOnly_RestoreGoalkeeperState(in state);
             engine.TestOnly_RunPhysicsPhase();
             Assert.AreEqual(-1, engine.PossessingAgentId, "Illegal handling must not become possession.");
@@ -434,4 +436,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes |
 // | 1.0 | 2026-10-18 | — | D-07 outside-area handling, carries, inclusive boundaries and restore. |
 // | 1.1 | 2026-10-18 | — | Review: real catch composition with body outside, carry back/out, goal-line overhang and on-line DFK placement. |
+// | 1.2 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

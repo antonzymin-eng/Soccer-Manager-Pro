@@ -140,5 +140,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed focus policy for action/anchor/pitch traversal, dialog selectors and retained feedback. |
 // | 1.1     | 2026-10-08 | —      | Explicit logical Tab order with anchor entry at the next listed hierarchy successor (journey §9.3). |
-// | 1.1     | 2026-11-06 | —      | Career focus policy preserves blank selections and busy invokers. |
+// | 1.2     | 2026-11-06 | —      | Career focus policy preserves blank selections and busy invokers. |
 #endregion

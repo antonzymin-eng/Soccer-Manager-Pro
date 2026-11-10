@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreenPresenterTests.cs
 // Created:  2026-11-06
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UI / Client Framework #38, Code Standards #20
 // Purpose:  Lock worker handoff, guarded navigation, saved-slot recovery and overwrite behavior.
@@ -232,6 +232,85 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void DisposeWaitsForRealWorker_AndSuppressesLatePublicationAndNavigation()
+        {
+            using var temp = new TempSlots();
+            using var snapshotEntered = new ManualResetEventSlim();
+            using var releaseSnapshot = new ManualResetEventSlim();
+            bool blockSnapshot = false;
+            Action pending = null;
+            using var view = new CareerScreenPresenter(temp.Directory, RoundResolutionMode.QuickSimAll,
+                work => pending = work, () =>
+                {
+                    if (!blockSnapshot) return;
+                    snapshotEntered.Set();
+                    releaseSnapshot.Wait();
+                });
+            ClientScreenFlow flow = Attach(view);
+            view.Initialize(); pending(); view.Refresh();
+            view.OpenNew(CareerTestSupport.WORLD_SEED); pending(); view.Refresh();
+            view.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            blockSnapshot = true;
+            bool lastOperationSucceeded = view.LastOperationSucceeded;
+            view.StartCareer();
+            int revision = view.Revision;
+            var worker = new Thread(() => pending()) { IsBackground = true };
+            var shutdown = new Thread(view.Dispose) { IsBackground = true };
+            worker.Start();
+            bool shutdownStarted = false;
+            try
+            {
+                Assert.IsTrue(snapshotEntered.Wait(TimeSpan.FromSeconds(30)), "The real worker must reach the held operation.");
+                Assert.AreEqual(CareerSlotState.Ready, temp.Slots.Describe(CareerSaveSlot.Autosave).State,
+                    "Start committed, but the UI has not consumed its result.");
+                shutdown.Start();
+                shutdownStarted = true;
+                Assert.IsTrue(SpinWait.SpinUntil(() =>
+                    (shutdown.ThreadState & ThreadState.WaitSleepJoin) != 0, 5000),
+                    "Dispose must actually wait for the held worker, rather than return early.");
+                Assert.IsTrue(shutdown.IsAlive);
+                view.Refresh();
+                Assert.AreEqual(ClientScreens.NewCareer, flow.Current);
+                Assert.IsFalse(view.Home.HasCareer);
+            }
+            finally
+            {
+                releaseSnapshot.Set();
+                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)), "Worker must finish after release.");
+                if (shutdownStarted) Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(30)), "Dispose must finish after the worker.");
+            }
+            view.Refresh();
+            Assert.AreEqual(revision, view.Revision, "Disposed completion cannot publish a new UI revision.");
+            Assert.AreEqual(ClientScreens.NewCareer, flow.Current);
+            Assert.IsFalse(view.Home.HasCareer);
+            Assert.AreEqual(lastOperationSucceeded, view.LastOperationSucceeded);
+            Assert.Throws<InvalidOperationException>(view.StartCareer);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void RefusedProgressKeepsTheExistingDirtyStateAndCareer(bool alreadyDirty)
+        {
+            Start();
+            if (alreadyDirty) Run(_view.Progress);
+            uint day = _view.Home.WorldDay;
+            int rounds = _view.Home.RoundsPlayed;
+            long sequence = _view.Load.Slots[0].Sequence;
+            ManagerIntent refused = _view.Home.NextAction == CareerProgressAction.AdvanceDay
+                ? ManagerIntent.AdvanceRound() : ManagerIntent.AdvanceDay();
+            Run(() => _view.Dispatch(in refused));
+            Assert.IsNotEmpty(_view.Error);
+            Assert.IsFalse(_view.LastOperationSucceeded);
+            Assert.AreEqual(day, _view.Home.WorldDay);
+            Assert.AreEqual(rounds, _view.Home.RoundsPlayed);
+            Assert.AreEqual(sequence, _view.Load.Slots[0].Sequence);
+            Assert.AreEqual(alreadyDirty, _view.HasUnsavedProgress);
+            _view.Back();
+            Assert.AreEqual(alreadyDirty, _view.PendingQuit);
+            Assert.AreEqual(alreadyDirty ? ClientScreens.CareerHome : ClientScreens.MainMenu, _flow.Current);
+        }
+
+        [Test]
         public void StartCommittedBeforeSnapshotFailure_EntersHomeAndCannotStartTwice()
         {
             bool failSnapshot = false;
@@ -375,4 +454,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b worker, navigation, recovery, confirmation and lifetime regressions. |
 // | 1.1     | 2026-11-06 | —      | Regress publication faults, stale dispatch, dirty quit and the actual picker graph. |
+// | 1.2     | 2026-11-10 | —      | Real-worker teardown wait and late-completion suppression; refused progress preserves clean/dirty state. |
 #endregion

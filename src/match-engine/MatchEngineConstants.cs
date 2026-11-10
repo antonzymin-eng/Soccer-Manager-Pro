@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
@@ -321,7 +322,9 @@ namespace TacticalDirector.MatchEngine
         /// request/feedback state is reused; schema mismatch remains a fail-loud load refusal.</para>
         /// <para>v27 adds own-release handling history, a queued offence/contact point and the
         /// indirect-restart taker. No save-file format change.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 27;
+        /// <para>v28 adds #11 per-slot signed 64-bit hand-control start frames beside ClaimTick.
+        /// Live ownership and CONTACT budget are checked after decoding the full body; full time freezes timing.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 28;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -351,8 +354,8 @@ namespace TacticalDirector.MatchEngine
         /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
         public const int MATCH_LENGTH_MINUTES = 90;
 
-        /// <summary>[FIXED] Inherited keeper-possession backstop retained at six seconds by W8 B.
-        /// This is not current Law 12; C owns the hand-offence / feet-safeguard split.</summary>
+        /// <summary>[EST] Provisional legacy feet-possession anti-stall duration, seconds.
+        /// Value unchanged by W8 C; this is not a Law-12 deadline (#11 §3.8.5).</summary>
         public const float GK_MAX_HOLD_SECONDS = 6f;
 
         /// <summary>[FIXED] Six-yard-box depth from the goal line (Laws of the Game §1 — the goal
@@ -649,9 +652,8 @@ namespace TacticalDirector.MatchEngine
         public static readonly float LooseBallPickupRadiusM = Config.GetFloat("match-engine", "LooseBallPickupRadiusM", 1.0f);
 
         /// <summary>
-        /// [DERIVED] Ticks a goalkeeper may hold the ball before the engine forces a release — the Laws of
-        /// the Game (Law 12) six seconds, expressed at the 60 Hz physics rate. Derived rather than tuned
-        /// because it is a Law, not a balance lever.
+        /// [DERIVED] Legacy feet-possession anti-stall duration at the 60 Hz physics rate.
+        /// Hand episodes are excluded and use the separate Law-12 clock (#11 §3.8.5).
         /// Source constants: MatchEngineConstants.GK_MAX_HOLD_SECONDS,
         /// DeterministicSimConstants.PHYSICS_TICK_HZ.
         /// See <c>MatchEngine.EnforceGoalkeeperReleaseRule</c> and design note §5.Z.15.
@@ -1124,4 +1126,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.43 | 2026-10-15 | — | W8 B accepted-distribution wait latch: snapshot schema 25 → 26. |
 // | 1.44 | 2026-10-15 | — | Comment-only: distinguish retained B stall bookkeeping from current Law 12; values and tags unchanged. |
 // | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.46 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

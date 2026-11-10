@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperConstants.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-05-28
 // Modified: 2026-06-14
@@ -32,9 +33,9 @@ namespace TacticalDirector.GoalkeeperMechanics
     {
         #region Fixed
 
-        /// <summary>[FIXED] Maximum ticks a GK may hold the ball (6-second rule at 10 Hz tactical rate).
-        /// Laws of the Game; Goalkeeper Mechanics #11 §3.1 / FR-GK-028.</summary>
-        public const int GK_HOLD_MAX_TICKS = 60;
+        /// <summary>[FIXED] Eight seconds of hand control at 60 Hz; elapsed 480 is legal, 481 is an
+        /// opponents' corner. IFAB 2026/27 Law 12.3; #11 §3.8.5 / FR-GK-028.</summary>
+        public const int GK_HAND_CONTROL_MAX_FRAMES = 480;
 
         /// <summary>[FIXED] Milliseconds per second. Unit-conversion coefficient for ms ↔ s throughout §3.2–§3.8.</summary>
         public const float MS_PER_SECOND = 1000.0f;
@@ -555,4 +556,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | ERR-011-002 naming trap); it is keyed to ballThreateningOwnGoal. Value,   |
 // |     |            |   | behavior and digests unchanged.                                           |
 // | 1.7 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.8 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

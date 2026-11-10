@@ -143,3 +143,47 @@ admission proves no rendered-size, clipping or scroll behavior. Console/Editor
 compile, Play mode and these visual checks remain outstanding.
 
 Version 1.1 (2026-11-06): review corrections, owner decisions and regression record.
+
+
+## November 10 external-review follow-up
+
+The branch is reconciled with main `d4b026aa` (#542). Main's W8 C code and evidence remain;
+P7b source-history entries were renumbered to v2.221/v2.222 and its roadmap row to v0.93.
+The current follow-up is source history v2.223, roadmap v0.94 and client design v0.35.
+
+- A real Thread holds Start after the autosave commits and before its snapshots are published.
+  A second real Thread enters Dispose and is observed waiting. Releasing the operation lets both
+  finish; Refresh cannot publish a new revision, career view or navigation after disposal.
+  A controlled mutation deleting the wait failed that test at its explicit wait assertion; source
+  was immediately restored. Safe waiting remains the accepted behavior, with its existing UI-latency
+  limitation. This is not a responsive asynchronous-shutdown implementation.
+- Worker-side legality preflight refuses a wrong season action before setting the dirty flag.
+  Clean careers stay clean, existing dirty progress stays dirty, and day/round/save sequence remain
+  unchanged. If admitted work throws after it starts, dirty stays conservative because the current
+  synchronous loop can partially mutate before throwing; no rollback is inferred.
+- Demo match retains the approved first/primary menu position. Career Continue and the other new
+  menu actions are secondary; the binding does not claim owner approval to replace the S0 hierarchy.
+  The added career UI still needs its S1/host review.
+- Empty/damaged slot rows use the localized `slot.state` pattern. Completed-season text uses
+  Objective met / Objective missed from SeasonRollOutcome; current-season attention keeps its
+  On track / Below target copy. Expanded-locale tests cover reordered slot composition.
+- Version-history labels/formatting are corrected without discarding main's records.
+
+Focused presenter/binding checks: **34 passed / 0 failed** before the controlled wait mutation.
+The restored final runtime source, including the real-worker regression, passed the full repository
+PR gate on November 10:
+
+- `bash tools/run-tests-local.sh --pr`: **PASS**, 37 suites, **4,502 passed / 0 failed / 225 skipped**;
+  MatchEngine retains its existing inconclusive case (not included in the console totals).
+- ClientApp: **227 passed / 0 failed / 3 skipped**; UiFramework: **52 passed / 0 failed**.
+- Coverage scope resolved 19 assemblies, above the ceiling of 8; the runner disabled instrumentation
+  through its existing fallback. No coverage percentage is claimed.
+- Metadata integrity, layering, documentation consistency, version-collision checks and whitespace:
+  PASS. No runtime source changed after this PR run; subsequent edits record these receipts and
+  correct the Markdown version-table separator. The commit hook runs against the final staged tree.
+
+No Unity executable or connected Editor tool is available in this environment. The governing
+Unity 6000.4.9f1 Windows compile, actual menu hierarchy/focus/layout and scene checks remain due;
+main's W8 C host receipt does not cover these P7b files or the changed scene.
+
+Version 1.2 (2026-11-10): external-review fixes, source-backed shutdown coverage and main reconciliation.

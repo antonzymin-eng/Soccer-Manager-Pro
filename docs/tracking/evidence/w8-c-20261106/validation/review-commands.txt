@@ -1,0 +1,22 @@
+SDK activation: source /workspace/.cloud-tools/activate.sh
+Working directory: /workspace/Soccer-Manager-Pro
+
+Affected fixtures (all cases; 143 passed):
+dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-restore --filter 'FullyQualifiedName~MatchEngineSnapshotRestoreTests|FullyQualifiedName~W8BPrerequisiteTests|FullyQualifiedName~W8CHandControlTests|FullyQualifiedName~GoalkeeperClockCorrectionTests' --logger 'trx;LogFileName=review-targeted.trx' --results-directory work/w8c/review-targeted
+
+Fresh full MatchEngine run (no filter or exclusions):
+dotnet test src/match-engine/tests/match-engine-tests.gen.csproj --no-build --no-restore --logger 'console;verbosity=normal' --logger 'trx;LogFileName=match-engine-final.trx' --results-directory work/w8c/review-full
+
+Release without editor/development/test defines:
+dotnet build src/match-engine/match-engine.gen.csproj --no-restore -m:1 -c Release -p:DefineConstants=TRACE
+
+Release hook inspection: see probe/ReleaseHookInspection-README.md.
+
+Repository checks:
+python3 tools/doc-consistency-check.py
+python3 tools/assembly-tier-check.py
+bash tools/unity-ci/check-meta-integrity.sh
+bash tools/unity-ci/check-binaries.sh
+python3 tools/dotnet-ci/check_evidence_manifests.py
+python3 -m unittest discover -s tools/tests -p test_evidence_manifests.py
+git diff --check origin/main -- .

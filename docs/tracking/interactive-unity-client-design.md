@@ -1078,7 +1078,9 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
-| P7b implementation status | 2026-11-06 | Seven-root binding candidate and review fixes; owner accepts safe teardown waiting for now and requests discard confirmation. Cancellation remains separate; pinned Unity verification still due. Contract version unchanged. |
+|---|---|---|
+| 0.35 | 2026-11-10 | Reconcile current main; preserve Demo match as first primary menu entry, add real-worker teardown and refused-progress regressions, localize slot composition and final board verdicts. Pinned Unity verification remains due. |
+| 0.34 | 2026-11-06 | Seven-root binding candidate and review fixes; owner accepts safe teardown waiting for now and requests discard confirmation. Cancellation remains separate; pinned Unity verification still due. No D-P7-6 or S1 approval is claimed. |
 | 0.33 | November 3, 2026 | Consolidate the D-P7-5 checkpoint extension and D-P7-6 draft v0.6 / amended D-11 from parallel v0.32 branches. No contract approval or runtime change. |
 | 0.32 | 2026-11-03 | D-P7-5 annotated: roadmap D-10 extended on November 3, 2026, so saves stay breakable until the owner's release-readiness checkpoint (D-14: no Early Access planned). The incompatible-slot behaviour is unchanged. Documentation only. |
 | 0.32 (branch-local #534) | 2026-11-02 | **D-P7-6 contract moved to a #30 amendment draft; D-11 amended.** A review of the v0.31 bullet contract against `SeasonLoop` found it incomplete (substitutions vs the starting-XI inputs to #41 appearances and #44 ban serving; the card fold outside the engine snapshot; engine boot and per-tick card observation across assemblies). §5-P7 *Remaining* item 2 now points to the PROPOSED draft `d-p7-6-interactive-career-match-amendment-draft.md` v0.6. The owner amended D-11 the same day: no mid-match saves; quitting a match abandons it and returns to Career Home with the round unplayed (`Match → CareerHome` move); the starting eleven stays automatic. The D-P7-6 row is updated to match. Documentation only. |

@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
@@ -134,12 +134,12 @@ namespace TacticalDirector.MatchClientUnity
             _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
             _ui.Label(m, L("context.menu"));
             _careerState = coordinator.Career;
+            _demo = Control(m, L("action.demo"), _view.OpenSetup, _menuScroll, S0UiFactory.ControlKind.Primary);
             if (_careerState != null)
                 _career = new CareerScreensView(_ui, _font, _careerState, coordinator.Flow, m, _menuScroll,
                     careerHome, newCareer, loadCareer, _owned.Add,
                     (item, scroll, action) => Register(item, scroll, action ? S0FocusNavigation.Role.Action : S0FocusNavigation.Role.Anchor),
                     () => { _applyVisibility(); Refresh(); });
-            _demo = Control(m, L("action.demo"), _view.OpenSetup, _menuScroll);
             RectTransform s = _ui.Panel("Setup entry", Page(setup, out _setupScroll, S0UiConstants.ENTRY_MAX_WIDTH));
             _setupHeading = Heading(s, L("heading.setup"), _setupScroll);
             _ui.Label(s, L("context.setup"));
@@ -1375,4 +1375,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 // | 1.13    | 2026-11-06 | —      | P7b career views share S0 layout, keyboard traversal, focus recovery and disposal. |
 // | 1.14    | 2026-11-06 | —      | P7b review: retain focus/scroll, restore invokers, localize errors and confirm unsaved quit. |
+// | 1.15    | 2026-11-10 | —      | Restore Demo match as the first primary menu entry; career actions remain secondary. |
 #endregion

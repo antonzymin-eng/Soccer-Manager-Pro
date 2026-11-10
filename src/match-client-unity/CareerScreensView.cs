@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/CareerScreensView.cs
 // Created:  2026-11-06
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UI / Client Framework #38, Code Standards #20
 // Purpose:  Persistent UGUI career pages using shared S0 text, layout, controls and keyboard focus.
@@ -53,7 +53,7 @@ namespace TacticalDirector.MatchClientUnity
             _changed = changed;
             _register = register;
             Button(menu, "action.new", () => _state.OpenNew(NewSeed()), menuScroll);
-            _continue = Button(menu, "action.continue", _state.ContinueCareer, menuScroll, primary: true);
+            _continue = Button(menu, "action.continue", _state.ContinueCareer, menuScroll);
             Button(menu, "action.load", _state.OpenLoad, menuScroll);
             Button(menu, "action.refresh", _state.RefreshSlots, menuScroll);
             _retry = Button(menu, "action.retry", _state.Initialize, menuScroll);
@@ -298,5 +298,6 @@ namespace TacticalDirector.MatchClientUnity
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b shared wrapped/scrolled pages and retained controls. |
-// | 1.1    | 2026-11-06 | —      | P7b review: retain focus/scroll, restore invokers, localize errors and confirm unsaved quit. |
+// | 1.1     | 2026-11-06 | —      | P7b review: retain focus/scroll, restore invokers, localize errors and confirm unsaved quit. |
+// | 1.2     | 2026-11-10 | —      | Keep Continue secondary to the approved Demo match entry. |
 #endregion

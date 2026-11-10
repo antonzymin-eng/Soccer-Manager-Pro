@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenPresenter.cs
 // Created:  2026-11-06
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UI / Client Framework #38, Code Standards #20
 // Purpose:  Serialize career UI work on a worker and publish immutable snapshots on the client thread.
@@ -198,6 +198,11 @@ namespace TacticalDirector.ClientApp
             ManagerIntent command = intent;
             Begin(() =>
             {
+                CareerSession session = _holder.Require();
+                if (CareerProgress.ActionFor(command.Kind) != session.NextAction)
+                    throw new InvalidOperationException("The requested progress action is not legal now.");
+                // A known refusal has no effects. Once legal work starts, retain the conservative
+                // dirty state if it throws after partially mutating the synchronous season loop.
                 _hasUnsavedProgress = true;
                 _dispatcher.Dispatch(in command);
                 if (command.Kind != IntentKind.AdvanceDay)
@@ -414,4 +419,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b single-worker actions, cached projections, errors and overwrite confirmation. |
 // | 1.1     | 2026-11-06 | —      | Separate committed work from projection failure; protect stale views and confirm dirty quit. |
+// | 1.2     | 2026-11-10 | —      | Validate worker-side action legality before marking progress unsaved. |
 #endregion

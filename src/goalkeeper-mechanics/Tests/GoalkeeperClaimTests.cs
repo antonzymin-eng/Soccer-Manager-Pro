@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Created:  2026-08-03
 // Modified: 2026-08-03
@@ -73,6 +74,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.AreEqual(1, ball.ParkBallCount, "a claim must park the ball (ERR-011-008)");
             Assert.AreEqual(1, ball.SetPossessorCount, "a claim must record possession");
             Assert.AreEqual(0, ball.ApplyKickCount, "a claim must not kick the ball away");
+            Assert.AreEqual((long)gk.CaptureState().ContactStates[Gk0].ActualContactFrame,
+                gk.GetHandControlStartFrame(Gk0), "dive catch stores the exact physical contact frame");
         }
 
         [Test]
@@ -181,6 +184,38 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             gk.CommitClaimIntent(team, new ClaimIntent { AttemptCommittedTick = 3 }, EliteAttrs());
             Assert.IsTrue(gk.CaptureState().SaveIntentActive[team]);
             Assert.IsTrue(gk.HasActiveClaimIntent(team));
+        }
+
+        [TestCase(0, false)] [TestCase(1, false)]
+        [TestCase(0, true)] [TestCase(1, true)]
+        public void LawfulAerialOrSmotherClaim_StoresExactPhysicsFrame(int team, bool aerial)
+        {
+            var ballSystem = new RecordingBallSystem();
+            var gk = new GoalkeeperMechanics(ballSystem, new ZeroRng());
+            int keeper = GkAgentIds[team];
+            var agents = new AgentState[AgentCount];
+            agents[keeper] = AgentState.CreateAtPosition(new Vector2(team == 0 ? 8f : 97f, 34f), Vector2.right);
+            BallState ball = BallState.CreateAtPosition(new Vector3(agents[keeper].Position.x, 34f, 0.11f));
+            if (aerial)
+            {
+                gk.CommitClaimIntent(team, new ClaimIntent { AttemptCommittedTick = 16 }, EliteAttrs());
+                Assert.IsTrue(gk.ResolveClaimHandContact(team, keeper, 101, 101 * GoalkeeperConstants.FrameMs,
+                    ball, ball.Position, -1));
+            }
+            else
+            {
+                GoalkeeperTickState state = gk.CaptureState();
+                state.States[team] = GoalkeeperState.Smothered;
+                gk.RestoreState(in state);
+                gk.Update(101, 101 * GoalkeeperConstants.FrameMs, agents, ball, GkAgentIds);
+            }
+            Assert.AreEqual(GoalkeeperState.HandsOnBall, gk.GetState(team));
+            Assert.AreEqual(101L, gk.GetHandControlStartFrame(team));
+            Assert.AreEqual(16, gk.CaptureState().ClaimTick[team]);
+            gk.FinishDistribution(team, completed: false, possessionRetained: true, currentFrame: 200);
+            Assert.AreEqual(101L, gk.GetHandControlStartFrame(team), "retained reject/cancel preserves the claim frame");
+            gk.EndHandEpisodeOnPossessionLoss(team, 201);
+            Assert.AreEqual(-1L, gk.GetHandControlStartFrame(team));
         }
 
         // ── Fixture ──────────────────────────────────────────────────────────────────────
@@ -313,4 +348,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | resolves to exactly one ball-side action (park XOR kick).          |
 // | 1.1 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 1.2 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 1.3 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

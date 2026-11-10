@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreenBindingTests.cs
 // Created:  2026-11-06
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UI / Client Framework #38, Code Standards #20
 // Purpose:  Verify seven-screen visibility, career root hygiene, typed copy and expanded locale admission.
@@ -10,6 +10,7 @@ using System;
 using NUnit.Framework;
 
 using TacticalDirector.Localization;
+using TacticalDirector.SeasonSave;
 using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.ClientApp.Tests
@@ -87,6 +88,31 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual("Manual slot 3", text.SlotName(CareerSaveSlot.Manual3));
         }
 
+        [TestCase(CareerSlotState.Empty)]
+        [TestCase(CareerSlotState.Damaged)]
+        public void SlotStateUsesTranslatedWordOrderAndPunctuation(CareerSlotState state)
+        {
+            var rows = new[] { new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.slot.state"), "{1} < {0} >") };
+            var text = new CareerScreenText(S0TextFormatter.ForRoles(CareerScreenText.All, rows, new LocaleId("qps-ploc")));
+            string status = text.Label(state == CareerSlotState.Empty ? "slot.empty" : "slot.damaged");
+            Assert.AreEqual(status + " < Manual slot 1 >", text.Slot(CareerSlotSummary.Without(CareerSaveSlot.Manual1, state)));
+        }
+
+        [TestCase(true, "Objective met.")]
+        [TestCase(false, "Objective missed.")]
+        public void SeasonRollReportsTheCompletedObjectiveInsteadOfCurrentProgress(bool met, string verdict)
+        {
+            var roll = new SeasonRollOutcome(0, met ? 4 : 12, 10, met, 500, 500, 1, 42, 400);
+            CareerChange change = CareerChange.SeasonRolled(365, in roll);
+            var home = new CareerHomeViewModel(0, "Club", 1, 365, 0, 38, 1, default,
+                10, !met, 500, 0, false, 0, "", false, 0, 0, 0, CareerProgressAction.AdvanceDay,
+                false, in change, "", null, null, null);
+            var text = new CareerScreenText(S0TextFormatter.ForRoles(CareerScreenText.All));
+            StringAssert.Contains(verdict, text.Changed(home));
+            StringAssert.DoesNotContain("On track.", text.Changed(home));
+            StringAssert.DoesNotContain("Below target.", text.Changed(home));
+        }
+
         [TestCase(false, false, false, false, false, false, S0FocusNavigation.CareerFocusTarget.None)]
         [TestCase(false, true, false, true, false, false, S0FocusNavigation.CareerFocusTarget.None)]
         [TestCase(false, false, false, false, false, true, S0FocusNavigation.CareerFocusTarget.Invoker)]
@@ -134,4 +160,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b root, copy and pseudo-locale regressions. |
 // | 1.1     | 2026-11-06 | —      | Cover focus decisions, safe error roles and namespace admission; remove layout overclaim. |
+// | 1.2     | 2026-11-10 | —      | Translated slot composition and completed-season objective wording. |
 #endregion

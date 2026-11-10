@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B schema v26)
 // Created:  2026-06-16
@@ -75,8 +76,9 @@ namespace TacticalDirector.MatchEngine
             // dedicated goalkeeper-distribution PassExecutor execution mode/request/terminal feedback state,
             // v25 pending substitution queue, next sequence, and Law 3 window counters;
             // v26 accepted #5 goalkeeper-distribution wait latch;
-            // v27 own-release handling restriction, queued offence/contact and indirect taker.
-            Assert.AreEqual(27u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v27 own-release handling restriction, queued offence/contact and indirect taker;
+            // v28 exact per-keeper 64-bit hand-control start frame.
+            Assert.AreEqual(28u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -939,4 +941,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.23    | 2026-10-15 | —      | Match Flow §6.3 (PR #505): SNAPSHOT_SCHEMA_VERSION pin 24 → 25. |
 // | 1.24 | 2026-10-15 | — | W8 B snapshot-schema pin 25 → 26. |
 // | 1.25 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
+// | 1.26 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

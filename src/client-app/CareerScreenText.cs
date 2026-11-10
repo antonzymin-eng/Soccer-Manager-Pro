@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-06
-// Modified: 2026-11-06
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UI / Client Framework #38, Code Standards #20
 // Purpose:  Localized career copy and presentation over the existing immutable career projections.
@@ -63,11 +63,14 @@ namespace TacticalDirector.ClientApp
             new S0TextRole("slot.ready", "Ready", "", "ui.career."),
             new S0TextRole("slot.damaged", "Damaged: this save cannot be loaded.", "", "ui.career."),
             new S0TextRole("slot.incompatible", "Incompatible with this build. Save migration is unavailable.", "", "ui.career."),
+            new S0TextRole("slot.state", "{0}: {1}", "SS", "ui.career."),
             new S0TextRole("slot.summary", "{0}: {1}. {2}, season {3}, day {4}, rounds {5}/{6}, position {7}.", "SSSISIII", "ui.career."),
             new S0TextRole("home.summary", "{0} | Season {1} | Day {2} | Rounds {3}/{4} | Position {5}", "SISIII", "ui.career."),
             new S0TextRole("home.attention", "Injured players: {0}. Board target: position {1} or better. {2} Job security: {3}/1000.", "IISI", "ui.career."),
             new S0TextRole("objective.on", "On track.", "", "ui.career."),
             new S0TextRole("objective.off", "Below target.", "", "ui.career."),
+            new S0TextRole("objective.met", "Objective met.", "", "ui.career."),
+            new S0TextRole("objective.missed", "Objective missed.", "", "ui.career."),
             new S0TextRole("next.fixture", "{0} vs {1}, {2}. Matchday {3}, day {4}; {5} day(s) away.", "SSSISI", "ui.career."),
             new S0TextRole("next.home", "home", "", "ui.career."),
             new S0TextRole("next.away", "away", "", "ui.career."),
@@ -106,7 +109,7 @@ namespace TacticalDirector.ClientApp
                 default: throw new ArgumentOutOfRangeException(nameof(slot));
             }
             if (slot.State == CareerSlotState.Empty || slot.State == CareerSlotState.Damaged)
-                return SlotName(slot.Slot) + ": " + state;
+                return Format("slot." + slot.Slot, "slot.state", SlotName(slot.Slot), state);
             return Format("slot." + slot.Slot, "slot.summary", SlotName(slot.Slot), state, slot.ManagedClubName,
                 slot.SeasonNumber + 1, Number(slot.WorldDay), slot.RoundsPlayed, slot.RoundCount, slot.LeaguePosition);
         }
@@ -149,7 +152,7 @@ namespace TacticalDirector.ClientApp
                         change.ManagedResult.HomeGoals, change.ManagedResult.AwayGoals,
                         isHome ? home.LastResultOpponentName : home.ManagedClubName);
                 case CareerChangeKind.SeasonRolled: return Format("change", "change.roll", change.Roll.FinalPosition,
-                    change.Roll.TargetPosition, Label(change.Roll.ObjectiveMet ? "objective.on" : "objective.off"));
+                    change.Roll.TargetPosition, Label(change.Roll.ObjectiveMet ? "objective.met" : "objective.missed"));
                 default: return Label("change.none");
             }
         }
@@ -168,4 +171,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-06 | —      | P7b localized screen content, state reasons and complete data rows. |
 // | 1.1     | 2026-11-06 | —      | Independent career keys, localized generic failure copy and discard confirmation. |
+// | 1.2     | 2026-11-10 | —      | Localize empty/damaged slot composition and distinguish final objective verdicts. |
 #endregion
