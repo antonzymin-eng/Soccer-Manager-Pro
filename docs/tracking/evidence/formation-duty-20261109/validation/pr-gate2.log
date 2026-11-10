@@ -1,0 +1,595 @@
+== Testing Strategy PR pipeline ==
+Documentation audit policy: routine survey; canonical registry approval transitions are blocking
+Owner-held-red policy: execute separately and verify recorded diagnostics
+Coverage: XPlat Code Coverage (coverlet.collector)
+Coverage scope: changed src assemblies plus production references of changed test assemblies
+PR coverage base: d4b026aa951432d342217314b8c4d49b53a19e7d
+WARNING: PR coverage scope resolved 23 assemblies, exceeding the ceiling of 8; instrumentation disabled for this run and sentinel coverage settings emitted.
+PR coverage assemblies: none (scope ceiling fallback)
+Auditor: approval-checklist evidence (survey)
+checklist-auditor: 53 file(s), 1357 evidence row(s), 0 blocking, 991 survey/note [survey-only routine pipeline]
+Auditor: per-spec section-5 schema (survey)
+spec5-schema-auditor: 52 spec(s), 0 blocking, 331 survey/note [survey-only routine pipeline]
+Runner: tools/dotnet-ci/run-gate.sh (Linux shim, non-certifying)
+Owner-held RED ledger empty; ordinary sweep runs without owner-held exclusions.
+── Unity .meta integrity (blocking; mirrors CI) ─────────────────────
+Meta integrity OK: no managed-root missing/orphan metas, no duplicate GUIDs, and no malformed GUIDs across tracked Assets/ + src/.
+── Generate csproj/sln from asmdefs ──────────────────────────────────
+Generated 74 csproj (37 test projects) + tools/dotnet-ci/TacticalDirector.gen.sln
+── Restore ───────────────────────────────────────────────────────────
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+── Build (full tree; any compile error fails) ────────────────────────
+
+Build succeeded.
+    5 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:38.20
+── Test (blocking; explicit policy selection applied) ────────────────
+Coverage runsettings: /workspace/Soccer-Manager-Pro/artifacts/pr-coverage.runsettings
+Test run for /workspace/Soccer-Manager-Pro/src/agent-movement/Tests/bin/Debug/net8.0/TacticalDirector.AgentMovement.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Test run for /workspace/Soccer-Manager-Pro/src/attacking-ai/Tests/bin/Debug/net8.0/TacticalDirector.AttackingAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped InvariantEnforcer_RunsAfterAssignmentBeforePublish [104 ms]
+  Skipped Tick_InPossession_LooseBall_EmitsEmptyDirective [< 1 ms]
+  Skipped Determinism_90MinuteReplay_BitIdenticalDigest [< 1 ms]
+  Skipped Determinism_EntityIdIterationOrder_StableAcrossRuns [< 1 ms]
+  Skipped Determinism_HysteresisStateDigest_RoundTrip [37 ms]
+  Skipped Determinism_InvariantDemotion_IdenticalOrderAcross1000Runs [< 1 ms]
+  Skipped Determinism_RngDomainTagIsolation_NoCrossDomainBleed [< 1 ms]
+  Skipped Determinism_TransitionHoldState_RoundTrip [< 1 ms]
+  Skipped Integration_9AgentInPossession_CounterAttackProfile_FastestTiming [< 1 ms]
+  Skipped Integration_9AgentInPossession_DirectProfile_MaxThreeRunners [< 1 ms]
+  Skipped Integration_9AgentInPossession_PossessionProfile_InvariantsSatisfied [< 1 ms]
+  Skipped Integration_AllDefenseLineMembership_ZeroRunners [< 1 ms]
+  Skipped Integration_AntiChaosCombination_Resolved [< 1 ms]
+  Skipped Integration_DepthOffset_VerifiedAcrossAllThreeProfiles [< 1 ms]
+  Skipped Integration_Hysteresis_OscillationSuppressedOver10Ticks [< 1 ms]
+  Skipped Integration_OutOfPossession_SkipsAllComputation_5Ticks [< 1 ms]
+  Skipped Integration_OverloadDeclared_CorrectFlank [< 1 ms]
+  Skipped Integration_OverloadNotDeclared_WeakSideExcluded [< 1 ms]
+  Skipped Integration_PossessionToTransitionToOutOfPossession_15Ticks [< 1 ms]
+  Skipped Integration_WidthHolding_BothSides [< 1 ms]
+  Skipped Performance_PerTick_10Agents_CounterAttackProfile_Under0_1ms [< 1 ms]
+  Skipped Performance_PerTick_9Agents_PossessionProfile_Under0_1ms [< 1 ms]
+  Skipped Performance_PerTick_AntiChaosWorstCase_Under0_1ms [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_37.trx
+
+Passed!  - Failed:     0, Passed:    94, Skipped:     0, Total:    94, Duration: 748 ms - TacticalDirector.AgentMovement.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_38.trx
+
+Passed!  - Failed:     0, Passed:    67, Skipped:    23, Total:    90, Duration: 1 s - TacticalDirector.AttackingAI.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/client-app/tests/bin/Debug/net8.0/TacticalDirector.ClientApp.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_43.trx
+
+Passed!  - Failed:     0, Passed:   120, Skipped:     0, Total:   120, Duration: 1 s - TacticalDirector.BallPhysics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/club-finances/tests/bin/Debug/net8.0/TacticalDirector.ClubFinances.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_50.trx
+
+Passed!  - Failed:     0, Passed:    70, Skipped:     0, Total:    70, Duration: 608 ms - TacticalDirector.ClubFinances.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/collision-system/tests/bin/Debug/net8.0/TacticalDirector.CollisionSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AgentHitsBall_BallCollisionHandlerCalled [77 ms]
+  Skipped CornerKickClustering_PerformanceUnder500us [< 1 ms]
+  Skipped CrossSystem_CollisionTriggersAgentMovementStateChange [< 1 ms]
+  Skipped FullMatch90Minutes_NoCrashNoNaN [< 1 ms]
+  Skipped GroundedObstacle_RunnerStumbles [< 1 ms]
+  Skipped SameTeamCollision_ReducedMomentumNoFall [< 1 ms]
+  Skipped SprintingHitsStationary_StationaryKnockedBack [< 1 ms]
+  Skipped ThreeAgentsCluster_AllProcessedNoInfiniteLoop [< 1 ms]
+  Skipped TwoAgentsApproach_BothBounceBack [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_55.trx
+
+Passed!  - Failed:     0, Passed:    40, Skipped:     9, Total:    49, Duration: 4 s - TacticalDirector.CollisionSystem.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/decision-tree/Tests/bin/Debug/net8.0/TacticalDirector.DecisionTree.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Balance_HighFinishingStriker_SelectsShoot_InAttackingThird [85 ms]
+  Skipped Balance_HighPressing_IncreasesPressBehaviorShare [< 1 ms]
+  Skipped Balance_LowComposure_ShowsHigherSelectionVariance [< 1 ms]
+  Skipped Balance_ShortPassing_SelectsShortPassMoreOften [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_04.trx
+
+Passed!  - Failed:     0, Passed:   129, Skipped:     4, Total:   133, Duration: 1 s - TacticalDirector.DecisionTree.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/defensive-ai/Tests/bin/Debug/net8.0/TacticalDirector.DefensiveAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart [85 ms]
+  Skipped AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted [< 1 ms]
+  Skipped Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests [< 1 ms]
+  Skipped Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks [< 1 ms]
+  Skipped Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity [< 1 ms]
+  Skipped Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism [< 1 ms]
+  Skipped Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI [< 1 ms]
+  Skipped Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs [< 1 ms]
+  Skipped Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks [< 1 ms]
+  Skipped Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation [< 1 ms]
+  Skipped Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner [< 1 ms]
+  Skipped Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously [< 1 ms]
+  Skipped Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick [< 1 ms]
+  Skipped Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses [< 1 ms]
+  Skipped Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput [< 1 ms]
+  Skipped Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell [< 1 ms]
+  Skipped Integration_T_DA_068_GkReentryReleaseCoverGkZone [< 1 ms]
+  Skipped Integration_T_DA_069_PostTrapCooldownBlocksRefire [< 1 ms]
+  Skipped Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition [< 1 ms]
+  Skipped Integration_T_DA_071_PhaseChangeTakesEffectImmediately [< 1 ms]
+  Skipped Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget [< 1 ms]
+  Skipped Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick [< 1 ms]
+  Skipped Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_09.trx
+
+Passed!  - Failed:     0, Passed:    78, Skipped:    28, Total:   106, Duration: 1 s - TacticalDirector.DefensiveAI.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/deterministic-sim/tests/bin/Debug/net8.0/TacticalDirector.DeterministicSim.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped SaveLoad_MidTickSnapshot_SaveAndLoad [76 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_15.trx
+
+Passed!  - Failed:     0, Passed:    90, Skipped:     1, Total:    91, Duration: 1 s - TacticalDirector.DeterministicSim.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/discipline/tests/bin/Debug/net8.0/TacticalDirector.Discipline.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_21.trx
+
+Passed!  - Failed:     0, Passed:   146, Skipped:     0, Total:   146, Duration: 925 ms - TacticalDirector.Discipline.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/event-system/tests/bin/Debug/net8.0/TacticalDirector.EventSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped FR_EVT_006_CanonicalNoPaddingLayout_Stage0Plus1 [31 ms]
+  Skipped FR_EVT_012_SnapshotRoundTrip_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_013_TierB_Activation_Stage5Plus [< 1 ms]
+  Skipped FR_EVT_031_G1_PhaseDigestGolden_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_043_G2_CosmeticDropGolden_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_048_PerPublishZeroAllocation_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_072_Fixed64_Reverification_Stage5Plus [< 1 ms]
+  Skipped FR_EVT_077_ReplayIsolation_Stage1Plus [< 1 ms]
+  Skipped FR_EVT_080_UnknownOrdinalFixtureLoad_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_081_VersionIncompatibleFixtureLoad_Stage0Plus1 [< 1 ms]
+  Skipped Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable [63 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_25.trx
+
+Passed!  - Failed:     0, Passed:    54, Skipped:    10, Total:    64, Duration: 560 ms - TacticalDirector.EventSystem.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/first-touch/Tests/bin/Debug/net8.0/TacticalDirector.FirstTouch.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped CollisionToFirstTouchToBallPhysics_CompletePipeline [61 ms]
+  Skipped ConsecutiveTouches_OneTwoPass_BothEvaluateCorrectly [< 1 ms]
+  Skipped ControlledOutcome_AgentMovementReceivesDribblingModifier [< 1 ms]
+  Skipped EventEmission_FirstTouchEventPublishedOnContact [< 1 ms]
+  Skipped GoalkeeperFootControl_ProcessedNormally [< 1 ms]
+  Skipped PossessionChange_UpdatesTeamPossessionState [< 1 ms]
+  Skipped PressureQueryFromSpatialHash_ReturnsCorrectOpponents [< 1 ms]
+  Skipped ReplayDeterminism_IdenticalMatchStateProducesIdenticalResults [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_30.trx
+
+Passed!  - Failed:     0, Passed:    71, Skipped:     8, Total:    79, Duration: 683 ms - TacticalDirector.FirstTouch.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/goalkeeper-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.GoalkeeperMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped T_GK_C_001_NoSaveTypeSymbol [96 ms]
+  Skipped T_GK_C_002_ConstantTagVerification [< 1 ms]
+  Skipped T_GK_C_003_RngRoutingDiscipline [< 1 ms]
+  Skipped T_GK_C_004_PositioningAiConstantPromotion [< 1 ms]
+  Skipped T_GK_C_005_NoSystemRandom [< 1 ms]
+  Skipped T_GK_C_006_CrossReferenceResolution [< 1 ms]
+  Skipped T_GK_C_007_CrossClaimDuelIterationOrder [< 1 ms]
+  Skipped FailureCause_DisturbedInDuel_DuelDisturbanceAboveThreshold [< 1 ms]
+  Skipped FailureCause_MissedContact_BallOutsideReach [< 1 ms]
+  Skipped FailureCause_MistimedDive_DiveStartedTooEarly [< 1 ms]
+  Skipped FailureCause_OutOfReach_BallBeyondReachEnvelope [< 1 ms]
+  Skipped FailureCause_WrongDirection_DiveInWrongDirection [< 1 ms]
+  Skipped T_GK_I_001_OpenPlaySave [< 1 ms]
+  Skipped T_GK_I_002_FreeKickSave [< 1 ms]
+  Skipped T_GK_I_003_PenaltySave [< 1 ms]
+  Skipped T_GK_I_004_CornerCrossClaimHandPath [< 1 ms]
+  Skipped T_GK_I_005_CornerCrossClaimHeadPath [< 1 ms]
+  Skipped T_GK_I_006_OneVsOneConfrontation [< 1 ms]
+  Skipped T_GK_I_007_MistimedDiveNoBallChange [< 1 ms]
+  Skipped T_GK_I_008_RushAbortOnInterception [< 1 ms]
+  Skipped T_GK_I_009_SaveAndDistributionCycle [< 1 ms]
+  Skipped T_GK_I_010_DeterministicReplay [< 1 ms]
+  Skipped T_GK_I_011_PositioningBaselineSlotRatification [< 1 ms]
+  Skipped T_GK_V_001_MatchPeakHandlingLabelDistribution [< 1 ms]
+  Skipped T_GK_V_002_ReflexABDivergence [< 1 ms]
+  Skipped T_GK_V_003_FatigueGradient [< 1 ms]
+  Skipped T_GK_V_004_OneVsOneConversionRate [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_36.trx
+
+Passed!  - Failed:     0, Passed:   111, Skipped:    27, Total:   138, Duration: 1 s - TacticalDirector.GoalkeeperMechanics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/heading-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.HeadingMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Conformance_T_HE_C_001_NoHeaderTypeSymbolInSrc [50 ms]
+  Skipped Conformance_T_HE_C_002_ConstantTagVerification [< 1 ms]
+  Skipped Conformance_T_HE_C_003_RngRoutingDisciplineNoSystemRandom [< 1 ms]
+  Skipped Integration_T_HE_I_001_OpenPlayHeaderFromCrossProducesOutgoingVelocity [< 1 ms]
+  Skipped Integration_T_HE_I_002_CornerKickHeaderRoutesIdenticallyToOpenPlay [< 1 ms]
+  Skipped Integration_T_HE_I_003_FreeKickHeaderFarPostDownwardVolley [< 1 ms]
+  Skipped Integration_T_HE_I_004_GoalkeeperHeadedClearanceUsesStandardPipeline [< 1 ms]
+  Skipped Integration_T_HE_I_005_Contested2WayDuelWinnerAndLoserEmitCorrectEvents [< 1 ms]
+  Skipped Integration_T_HE_I_006_Contested3WayDuelTightAndLopsidedSubScenarios [< 1 ms]
+  Skipped Integration_T_HE_I_007_MistimedJumpEmitsFailedEventAndLeavesBalUnchanged [< 1 ms]
+  Skipped Integration_T_HE_I_008_OwnGoalShapeFlagPublishedToEventSystem [< 1 ms]
+  Skipped Integration_T_HE_I_009_DeterministicReplay1000TickByteIdentical [< 1 ms]
+  Skipped Validation_T_HE_V_001_22AgentMatchSegmentHeaderFrequencyAndTimingDistribution [< 1 ms]
+  Skipped Validation_T_HE_V_002_CornerABHeadingAttributeSensitivity [< 1 ms]
+  Skipped Validation_T_HE_V_003_FatigueGradientReducesOutgoingSpeedByTwelvePercent [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_41.trx
+
+Passed!  - Failed:     0, Passed:    75, Skipped:    15, Total:    90, Duration: 1 s - TacticalDirector.HeadingMechanics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/injuries-medical/tests/bin/Debug/net8.0/TacticalDirector.InjuriesMedical.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_47.trx
+
+Passed!  - Failed:     0, Passed:    76, Skipped:     0, Total:    76, Duration: 493 ms - TacticalDirector.InjuriesMedical.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/living-world/Tests/bin/Debug/net8.0/TacticalDirector.LivingWorld.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_51.trx
+
+Passed!  - Failed:     0, Passed:   129, Skipped:     0, Total:   129, Duration: 788 ms - TacticalDirector.LivingWorld.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/localization/tests/bin/Debug/net8.0/TacticalDirector.Localization.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_17_56.trx
+
+Passed!  - Failed:     0, Passed:    67, Skipped:     0, Total:    67, Duration: 1 s - TacticalDirector.Localization.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/match-analytics/Tests/bin/Debug/net8.0/TacticalDirector.MatchAnalytics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_18_01.trx
+
+Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 5 s - TacticalDirector.MatchAnalytics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/match-client-core/tests/bin/Debug/net8.0/TacticalDirector.MatchClientCore.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_18_11.trx
+
+Passed!  - Failed:     0, Passed:   192, Skipped:     0, Total:   192, Duration: 3 s - TacticalDirector.MatchClientCore.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/match-client-web/tests/bin/Debug/net8.0/TacticalDirector.MatchClientWeb.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_18_19.trx
+
+Passed!  - Failed:     0, Passed:    60, Skipped:     0, Total:    60, Duration: 4 s - TacticalDirector.MatchClientWeb.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel [62 ms]
+  Skipped FoulRateDiagnostic_ReportsRateVersusThreshold [11 ms]
+  Skipped GkContactRateDiagnostic_ReportsEpisodeAnatomy [< 1 ms]
+  Skipped GkRushDiagnostic_ReportsRushAnatomy [< 1 ms]
+  Skipped GkSaveDiagnostic_ReportsHandlingQualityCeiling [< 1 ms]
+  Skipped GkSaveDiagnostic_ReportsSaveFunnel [< 1 ms]
+  Skipped GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel [1 ms]
+  Skipped HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters [1 ms]
+  Skipped MatchBalanceDiagnostic_ReportsContactStream [1 ms]
+  Skipped MatchBalanceDiagnostic_ReportsScorelineAsymmetry [< 1 ms]
+  Skipped S0MovementDiagnostic_ReportsPlayerTravelAndSpread [40 ms]
+  Skipped S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs [1 ms]
+  Skipped S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit [10 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_16_46.trx
+
+Passed!  - Failed:     0, Passed:   192, Skipped:     3, Total:   195, Duration: 13 m 56 s - TacticalDirector.ClientApp.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/match-viewer/tests/bin/Debug/net8.0/TacticalDirector.MatchViewer.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_30_46.trx
+
+Passed!  - Failed:     0, Passed:    78, Skipped:     0, Total:    78, Duration: 7 s - TacticalDirector.MatchViewer.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/pass-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.PassMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AgentAttributes_ReadCorrectlyFromAgentState [25 ms]
+  Skipped ApplyKick_ClearsPossession_PostPass [< 1 ms]
+  Skipped ChipPass_ApplyKick_VelocityYLarge [< 1 ms]
+  Skipped Fatigue_PropagatesFromAgentStateToErrorCalculation [< 1 ms]
+  Skipped FullPassCycle_IdleToComplete_CorrectEventOrder [< 1 ms]
+  Skipped GroundPass_ApplyKick_CalledWithNonZeroVelocity [< 1 ms]
+  Skipped LoftedPass_ApplyKick_VelocityYPositive [42 ms]
+  Skipped PassAttemptEvent_PublishedOnContact [< 1 ms]
+  Skipped PassCompletedEvent_PublishedOnFollowThroughCompletion [< 1 ms]
+  Skipped ReplayDeterminism_IdenticalPassesProduceIdenticalResults [< 1 ms]
+  Skipped TackleInterrupt_FromCollision_CancelsPass [< 1 ms]
+  Skipped TackleInterrupt_PublishesCancelledNotAttempt [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_30_56.trx
+
+Passed!  - Failed:     0, Passed:    95, Skipped:    12, Total:   107, Duration: 736 ms - TacticalDirector.PassMechanics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/perception-system/Tests/bin/Debug/net8.0/TacticalDirector.PerceptionSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AgentBehindOpponentWall_IsPerceptionIsolated [62 ms]
+  Skipped AnticipationAttribute_ReadCorrectlyForShoulderCheckInterval [< 1 ms]
+  Skipped Awareness_BuildsOverFirstTicks_ColdStart [< 1 ms]
+  Skipped BallContactForcedRefresh_ReachesCorrectAgentsOnly [< 1 ms]
+  Skipped BallPosition_3DTo2DProjection_Correct [< 1 ms]
+  Skipped DecisionsAttribute_ReadCorrectlyFromPlayerAttributes [< 1 ms]
+  Skipped Determinism_100Heartbeats_IdenticalInputsProduceBytIdenticalSnapshots [< 1 ms]
+  Skipped EliteMidfielder_VsNoviceDefender_MeasurableFovDifference [< 1 ms]
+  Skipped Fov_RecomputedFreshEachHeartbeat [< 1 ms]
+  Skipped FovOrientation_FollowsAgentStateFacingDirection [< 1 ms]
+  Skipped FullHeartbeat_22Agents_AllSnapshotsProducedNoNulls [< 1 ms]
+  Skipped LrecTracking_NoMemoryLeakOverExtendedSimulation [3 ms]
+  Skipped Perception_NeverWritesToSpatialHash [< 1 ms]
+  Skipped PressureQuery_UsesDistinct3mRadiusCall [< 1 ms]
+  Skipped QueryRadius_ReturnsCorrectCandidateCount_SelfExcluded [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_01.trx
+
+Passed!  - Failed:     0, Passed:    54, Skipped:    15, Total:    69, Duration: 636 ms - TacticalDirector.PerceptionSystem.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/performance-optimization/tests/bin/Debug/net8.0/TacticalDirector.PerformanceOptimization.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_04.trx
+
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 191 ms - TacticalDirector.PerformanceOptimization.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/player-database/tests/bin/Debug/net8.0/TacticalDirector.PlayerDatabase.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_08.trx
+
+Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50, Duration: 506 ms - TacticalDirector.PlayerDatabase.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/player-progression/tests/bin/Debug/net8.0/TacticalDirector.PlayerProgression.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_13.trx
+
+Passed!  - Failed:     0, Passed:   193, Skipped:     0, Total:   193, Duration: 1 s - TacticalDirector.PlayerProgression.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/positioning-ai/Tests/bin/Debug/net8.0/TacticalDirector.PositioningAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Determinism_DigestStability_IdenticalInputs [31 ms]
+  Skipped Determinism_EntityIdPermutation_SameOutput [< 1 ms]
+  Skipped Determinism_RngIsolation_CrossSubsystem [< 1 ms]
+  Skipped Determinism_SaveLoad_ResumesIdentically [< 1 ms]
+  Skipped Integration_4231_TransToAtk_AMAdvances [< 1 ms]
+  Skipped Integration_F2Fallback_ValidArchetype [< 1 ms]
+  Skipped Integration_FullMatch_90Min_StateConsistency [< 1 ms]
+  Skipped Integration_LaneOverload_Resolved_BySpacing [< 1 ms]
+  Skipped Integration_OrchestratorNonInvocation_OfStage0Default [< 1 ms]
+  Skipped Integration_PhaseOscillationSuppressed [< 1 ms]
+  Skipped Integration_SubstitutionSentinel_Preserved [< 1 ms]
+  Skipped Performance_SpacingBudget_Under0_05ms [< 1 ms]
+  Skipped Performance_ZeroHeapAlloc_InHotPath [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_18.trx
+
+Passed!  - Failed:     0, Passed:   143, Skipped:    13, Total:   156, Duration: 952 ms - TacticalDirector.PositioningAI.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/pressing-ai/Tests/bin/Debug/net8.0/TacticalDirector.PressingAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AntiChaos_T_C_001_FourCandidatesInBallThirdOneDemotes [81 ms]
+  Skipped AntiChaos_T_C_002_BacklineFloorBlocksPrimaryPressPromotion [< 1 ms]
+  Skipped AntiChaos_T_C_003_CoverShadowBeyond25mRejectedAndDemoted [< 1 ms]
+  Skipped AntiChaos_T_C_004_CascadingViolationsResolveInThreeIterations [< 1 ms]
+  Skipped AntiChaos_T_C_005_UnresolvableCascadeTriggersF5Fallback [< 1 ms]
+  Skipped AntiChaos_T_C_006_RepeatedF5FallbackDoesNotCorruptHysteresisState [< 1 ms]
+  Skipped AntiChaos_T_C_007_BacklineBreachTriggersF5InOneIteration [< 1 ms]
+  Skipped Determinism_T_D_001_NinetyMinReplayBitIdenticalDigests [< 1 ms]
+  Skipped Determinism_T_D_002_EntityIdPermutedInputProducesIdenticalState [< 1 ms]
+  Skipped Determinism_T_D_003_HysteresisAndTriggerDigestContributionsNonEmpty [< 1 ms]
+  Skipped Determinism_T_D_004_TenConsecutiveRunsProduceSameFinalDigest [< 1 ms]
+  Skipped Determinism_T_D_005_SaveLoadMidPressDigestContinuity [< 1 ms]
+  Skipped Determinism_T_D_006_DomainTagIsolationPreservesStream [< 1 ms]
+  Skipped Integration_T_I_001_EachTriggerOutOfPossProducesActiveDirective [< 1 ms]
+  Skipped Integration_T_I_002_InPossPhaseBoundaryEmptiesDirective [< 1 ms]
+  Skipped Integration_T_I_003_PossessionTurnoverSequenceProducesCorrectEvolution [< 1 ms]
+  Skipped Integration_T_I_004_DisengageRoundTripOver50Ticks [< 1 ms]
+  Skipped Integration_T_I_005_SubstitutionPreservesLastPressAssignment [< 1 ms]
+  Skipped Integration_T_I_006_SimultaneousTriggersTieBreakByEntityId [< 1 ms]
+  Skipped Integration_T_I_007_ThreeAgentCostTieResolvesDeteterministicallyByEntityId [< 1 ms]
+  Skipped Integration_T_I_008_F5FallbackOnMaxDisplacementViolation [< 1 ms]
+  Skipped Integration_T_I_009_HysteresisStateSurvivesSaveRestoreRoundTrip [< 1 ms]
+  Skipped Integration_T_I_010_IdenticalInputsProduceBitIdenticalOutput [< 1 ms]
+  Skipped Performance_T_P_001_PerTickWallClockWithinBudget [< 1 ms]
+  Skipped Performance_T_P_002_ZeroHeapAllocationsOnHotPath [8 ms]
+  Skipped Performance_T_P_003_CoverShadowCandidateScanWithinCostBudget [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_24.trx
+
+Passed!  - Failed:     0, Passed:    65, Skipped:    26, Total:    91, Duration: 1 s - TacticalDirector.PressingAI.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/project-constants/tests/bin/Debug/net8.0/TacticalDirector.ProjectConstants.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_29.trx
+
+Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26, Duration: 516 ms - TacticalDirector.ProjectConstants.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/season-save/tests/bin/Debug/net8.0/TacticalDirector.SeasonSave.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes [40 ms]
+  Skipped Corpus_GeneratesTheRequestedSlice [1 ms]
+  Skipped Pilot_ExtremeDifferentialsAreDistinguishable [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_31_35.trx
+
+Passed!  - Failed:     0, Passed:   551, Skipped:     3, Total:   554, Duration: 11 m 25 s - TacticalDirector.SeasonSave.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/shot-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.ShotMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped BM007_PoorMechanicsHighPower_StumbleTriggered [47 ms]
+  Skipped AgentMovementInterface_AgentProperties_FrozenAtInitiating [< 1 ms]
+  Skipped BallPhysicsInterface_ApplyKick_CalledWithValidArguments [< 1 ms]
+  Skipped CollisionInterface_TackleInterruptDuringContact_DoesNotCancel [< 1 ms]
+  Skipped CollisionInterface_TackleInterruptDuringWindup_CancelsShot [< 1 ms]
+  Skipped CriticalDeterminism_IdenticalInputs_ProduceIdenticalOutputs [< 1 ms]
+  Skipped EndToEnd_ChipShotProfile_ProducesElevatedLaunchAngle [< 1 ms]
+  Skipped EndToEnd_DrivenShotProfile_ProducesLowAngleAndHighSpeed [< 1 ms]
+  Skipped EndToEnd_TopCornerPlacement_ProducesCorrectAimDirection [< 1 ms]
+  Skipped EndToEnd_WeakFootShot_HigherErrorAndLowerSpeedThanStrongFoot [< 1 ms]
+  Skipped EventInterface_ShotExecutedEvent_PublishedWithCompletePayload [< 1 ms]
+  Skipped EventInterface_TackleCancelled_PublishesCancelledNotExecuted [< 1 ms]
+  Skipped ShotAnimationData_PopulatedOnCompletion_NotPublished [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_05.trx
+
+Passed!  - Failed:     0, Passed:    89, Skipped:    12, Total:   101, Duration: 800 ms - TacticalDirector.ShotMechanics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/tactical-instructions/Tests/bin/Debug/net8.0/TacticalDirector.TacticalInstructions.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_10.trx
+
+Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 693 ms - TacticalDirector.TacticalInstructions.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/testing-strategy/Tests/bin/Debug/net8.0/TacticalDirector.TestingStrategy.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_16.trx
+
+Passed!  - Failed:     0, Passed:    33, Skipped:     0, Total:    33, Duration: 1 s - TacticalDirector.TestingStrategy.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/training-system/tests/bin/Debug/net8.0/TacticalDirector.TrainingSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_21.trx
+
+Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 370 ms - TacticalDirector.TrainingSystem.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/transfers/tests/bin/Debug/net8.0/TacticalDirector.Transfers.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_26.trx
+
+Passed!  - Failed:     0, Passed:    69, Skipped:     0, Total:    69, Duration: 504 ms - TacticalDirector.Transfers.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/src/ui-framework/Tests/bin/Debug/net8.0/TacticalDirector.UiFramework.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_43_31.trx
+
+Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 1 s - TacticalDirector.UiFramework.Tests.dll (net8.0)
+  Skipped ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice [40 ms]
+  Skipped PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace [< 1 ms]
+  Skipped ShotOutcomeDiagnostic_ReportsDistribution [< 1 ms]
+  Skipped TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier [< 1 ms]
+  Skipped W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates [< 1 ms]
+  Skipped W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings [1 ms]
+  Skipped W8StageADiagnostic_ReportsFrozenSixSeedBaseline [< 1 ms]
+Results File: /workspace/Soccer-Manager-Pro/artifacts/coverage/_6ba8905e2992_2026-11-10_00_18_27.trx
+
+Passed!  - Failed:     0, Passed:   973, Skipped:    16, Total:   989, Duration: 1 h - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+
+Attachments:
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/1960211b-57c4-4ea2-8342-ff7806d51eb3/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/0d862cec-edb9-49bd-9ff8-594ce1ce50db/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/59d0b510-0566-4964-b33c-655837c7ab8c/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/a3e6cfe1-7af5-4852-9ad6-192b2d890479/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/b824b248-ec4d-4db3-929c-6147d429f134/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/b193167e-edf2-45dd-aaba-98281bae417c/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/a926424a-511b-4861-82a7-d8d9b8934170/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/e6f09393-1a2a-49c7-b0c9-b99805aba50a/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/966cc7e7-db98-4153-b435-a73e1ebc032c/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/98a1303b-aba7-44e7-a321-a867fd80780b/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/7afbab76-e7f6-4034-9cb4-baf16b3cfa1d/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/a0e511d2-0afb-43ff-81b5-f8c50f2ec57f/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/c0fd9a78-44a0-4e3f-ae7b-b37ffd769bb4/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/ebbb8c78-6e2d-4379-b52c-629957debae7/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/0ddb57f0-fca0-41cf-9792-713773c9558b/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/eb935d88-b488-407b-aa71-7b5024f7f247/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/13e93215-05c6-436e-82e0-744c600db7e6/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/124f000a-2053-4e3c-894f-cca343f6daa5/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/31a07240-436f-4633-ba3f-e0d8b00958ed/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/8f9861df-2f35-4b36-9558-0d96263bc2e6/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/42366a95-b117-40a7-9aa1-92b32fb05b3b/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/747491af-b7e9-4d81-b236-b7757f53730e/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/6093ecb2-ef11-4ef5-9fe9-c821f050ecf8/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/6ead169a-cf82-448b-a15e-a304a6fb44ca/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/c77b1c70-5b9e-404b-aad4-bd10666125c4/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/40b502fb-d877-496d-a93a-86c4c0ffe51a/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/b77692d8-50ad-4e2e-be3c-cdace014bf52/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/73dc0a0c-50d1-406b-b9a2-853c67b6a2cd/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/8792b9aa-b410-41ee-9266-80112100b718/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/41eb6765-99cc-4d53-9963-57939dbc05c3/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/d960189b-9946-4eea-86ec-34cdc0208a60/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/32d55996-1fba-4824-9988-568c7036d746/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/8e0a6c52-d131-46f9-9a01-4f5c2b4513f2/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/b88d6dcc-89d3-470d-b63c-ae5f0825bec6/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/c09e4492-78d5-4e98-9dd0-796f4f92372b/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/259011cd-ae5f-4038-a627-cbc292fd0e6f/coverage.cobertura.xml
+  /workspace/Soccer-Manager-Pro/artifacts/coverage/e11007f7-6280-434c-80d3-19066c141cb4/coverage.cobertura.xml
+── Quarantine empty ─────────────────────────────────────────────────
+── Gate PASSED ──────────────────────────────────────────────────────

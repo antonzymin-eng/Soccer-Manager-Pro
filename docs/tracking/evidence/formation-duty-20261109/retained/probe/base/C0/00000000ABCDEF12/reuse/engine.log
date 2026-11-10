@@ -1,0 +1,4 @@
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=0.882 r=0.257m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=6 Outcome=Controlled q=0.825 r=0.330m PossessingID=6 InterceptingID=-1

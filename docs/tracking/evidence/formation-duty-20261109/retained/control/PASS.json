@@ -1,0 +1,547 @@
+{
+  "stage": "control",
+  "runs": 24,
+  "checks": [
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "base",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "base",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "base",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "base",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "base",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "head",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "arm": "head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "pair": "base/head",
+      "stream": "aligned.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "pair": "base/head",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "pair": "base/head",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "pair": "base/head",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "pair": "base/head",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    }
+  ],
+  "passed": true
+}

@@ -34,6 +34,8 @@ def geometry(path,summary):
     for x,y in vectors:
      if x==float('-inf') and y==float('-inf'):continue
      assert math.isfinite(x) and math.isfinite(y),(path,frame,t,x,y)
+     # Existing #12 SlotComposer clamp, not a new football acceptance band.
+     assert 0.5<=x<=104.5 and 0.5<=y<=67.5,('outfield slot outside #12 bounds',path,frame,t,x,y)
      active.append((x,y))
     if len(active)<2:continue
     xs,ys=zip(*active);minimum=min(math.dist(a,b) for a,b in itertools.combinations(active,2))

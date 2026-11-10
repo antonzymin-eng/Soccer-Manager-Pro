@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 10 — #434 implemented and measured (v0.93):** [Draft PR #543](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/543) implements kickoff-only formation/Duty. [Evidence](evidence/formation-duty-20261109/README.md): all six default pairs are exact after approved structural layout alignment; 90 primary matches and the full Linux gate pass. Non-default football metrics are descriptive with material scoring changes; owner review and pinned Unity validation remain open. Formation-aware lineup selection/runtime switching remain follow-ups. #440 stays independent and requires its Stage A owner decision before any gameplay fix.
+
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
 
 > **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
@@ -512,7 +514,7 @@ decided.
    full-time freeze exceptions. Host: compile plus whole-assembly MatchEngine EditMode (behaviour and
    layout change). Close the Linux B→C comparison before any other keeper gameplay landing.
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
-   final D-08. Land with separate attribution.
+   final D-08. Land with separate attribution. **#434: implemented/measured in draft PR #543; pinned Unity and owner football review pending.** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: separate main-based Stage A; no fix until its owner decision.**
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
@@ -915,6 +917,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.93 | November 10, 2026 | #434 implemented/measured in draft PR #543; six-seed default identity, 90 primary captures and full Linux gate pass. Host and owner football review pending; #440 remains separate Stage A. |
 
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
