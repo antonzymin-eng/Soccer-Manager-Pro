@@ -2828,6 +2828,193 @@ namespace TacticalDirector.DefensiveAI.Tests
             Assert.IsTrue(sawEmergency, "Scenario must exercise the last-man emergency (non-vacuous).");
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ERR-014-009  Retained non-ZONAL assignments track the LIVE target position
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// #14 §2.2.2: <c>TargetPosition</c> of a MAN_MARK / INTERCEPT_RUNNER assignment is the opponent's
+    /// current perceived position. Before ERR-014-009 a retained assignment (dwell lock, or the
+    /// same-target hold path) kept the position from the tick it was committed, so Invariant 3 tested a
+    /// stale point. Each case runs for team 0 and team 1 on identical canonical inputs.
+    /// </summary>
+    [TestFixture]
+    internal sealed class RetainedAssignmentRefreshTests
+    {
+        private const int AgentId = 10;
+        private const int OppId = 40;
+
+        private static DefensiveSnapshot Build(
+            int defendingTeam, Vector2 oppPos, int tick, bool oppActive = true, bool includeOpp = true)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            Vector2 slot = new Vector2(30.0f, 34.0f);
+
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[includeOpp ? 2 : 1];
+            agents[0] = SnapshotBuilder.MakeAgent(entityId: AgentId, teamId: own,
+                position: slot, baselineSlot: slot, line: LineId.Midfield);
+            if (includeOpp)
+            {
+                agents[1] = SnapshotBuilder.MakeAgent(entityId: OppId, teamId: opp,
+                    position: oppPos, isActive: oppActive, firstTouch: 14f);
+            }
+
+            // Ball deep in the opponent half and slow: no last-man emergency, no trap.
+            DefensiveSnapshot snapshot = SnapshotBuilder.Build(agents,
+                ballPosition: new Vector2(90.0f, 34.0f), ballVelocity: new Vector2(0.5f, 0f), tick: tick);
+            snapshot.DefensiveTeamId = defendingTeam;
+            return snapshot;
+        }
+
+        /// <summary>Commits MAN_MARK on the opponent through the dwell and returns the last tick used.</summary>
+        private static int Commit(
+            int defendingTeam, Vector2 oppPos, int[] pool, MarkAssignment[] assignments, MarkHysteresisState[] hysteresis)
+        {
+            int tick = 0;
+            for (; tick < DefensiveAIConstants.MarkDwellTicks; )
+            {
+                tick++;
+                MarkAssigner.Assign(Build(defendingTeam, oppPos, tick), pool, 1, tick, assignments, hysteresis);
+            }
+
+            Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode, "Precondition: MAN_MARK committed.");
+            Assert.AreEqual(OppId, assignments[0].TargetEntityId);
+            Assert.AreEqual(oppPos.x, assignments[0].TargetPosition.x, 1e-4f, "Commit stamps the live position.");
+            return tick;
+        }
+
+        /// <summary>The dwell lock retains the mark, but its TargetPosition follows the moving target.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void DwellLock_RetainedMarkTracksMovingTarget(int defendingTeam)
+        {
+            int[] pool = new int[] { AgentId };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            Vector2 oppPos = new Vector2(40.0f, 34.0f);
+            int tick = Commit(defendingTeam, oppPos, pool, assignments, hysteresis);
+            Assert.AreEqual(DefensiveAIConstants.MarkDwellTicks, hysteresis[0].DwellCounter, "Dwell lock armed.");
+
+            // The next MarkDwellTicks ticks are retained by the dwell lock; the opponent moves 1.5 m per tick.
+            for (int i = 1; i <= DefensiveAIConstants.MarkDwellTicks; i++)
+            {
+                tick++;
+                oppPos = new Vector2(40.0f + 1.5f * i, 34.0f - 0.5f * i);
+                MarkAssigner.Assign(Build(defendingTeam, oppPos, tick), pool, 1, tick, assignments, hysteresis);
+
+                Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode, $"retained tick {i}: mode");
+                Assert.AreEqual(OppId, assignments[0].TargetEntityId, $"retained tick {i}: target");
+                Assert.AreEqual(oppPos.x, assignments[0].TargetPosition.x, 1e-4f, $"retained tick {i}: live X");
+                Assert.AreEqual(oppPos.y, assignments[0].TargetPosition.y, 1e-4f, $"retained tick {i}: live Y");
+                Assert.AreEqual(tick, assignments[0].ValidThroughTick, $"retained tick {i}: stamped");
+            }
+        }
+
+        /// <summary>After the lock expires, the same-target hold path also publishes the live position.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void SameTargetPath_RetainedMarkTracksMovingTarget(int defendingTeam)
+        {
+            int[] pool = new int[] { AgentId };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            Vector2 oppPos = new Vector2(40.0f, 34.0f);
+            int tick = Commit(defendingTeam, oppPos, pool, assignments, hysteresis);
+
+            // Burn the dwell lock with the opponent stationary.
+            for (int i = 0; i < DefensiveAIConstants.MarkDwellTicks; i++)
+            {
+                tick++;
+                MarkAssigner.Assign(Build(defendingTeam, oppPos, tick), pool, 1, tick, assignments, hysteresis);
+            }
+            Assert.AreEqual(0, hysteresis[0].DwellCounter, "Dwell lock expired.");
+
+            // Now the candidate evaluation runs every tick and re-selects the same opponent.
+            oppPos = new Vector2(43.0f, 30.0f);
+            tick++;
+            MarkAssigner.Assign(Build(defendingTeam, oppPos, tick), pool, 1, tick, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode);
+            Assert.AreEqual(OppId, assignments[0].TargetEntityId);
+            Assert.AreEqual(43.0f, assignments[0].TargetPosition.x, 1e-4f, "same-target path: live X");
+            Assert.AreEqual(30.0f, assignments[0].TargetPosition.y, 1e-4f, "same-target path: live Y");
+        }
+
+        /// <summary>
+        /// Invariant 3 (20 m) must test the live position: the opponent runs from 10 m to 25 m from the
+        /// agent's slot while the dwell lock still holds the mark, and the mark is demoted on that tick
+        /// (before the fix the stale 10 m commit-time point kept it alive).
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void Invariant3_DemotesOnLiveDistanceDuringDwellLock(int defendingTeam)
+        {
+            DefensiveAITick tick = new DefensiveAITick();
+            Vector2 oppPos = new Vector2(40.0f, 34.0f);   // 10 m from the slot at (30, 34).
+            int t = 0;
+            for (; t < DefensiveAIConstants.MarkDwellTicks; )
+            {
+                t++;
+                tick.Tick(Build(defendingTeam, oppPos, t));
+            }
+
+            Assert.AreEqual(MarkMode.ManMark, tick.GetAssignment(AgentId).Mode, "Precondition: committed.");
+
+            // Inside the lock, 19 m from the slot: still under the 20 m limit, so kept and tracking.
+            t++;
+            oppPos = new Vector2(49.0f, 34.0f);
+            tick.Tick(Build(defendingTeam, oppPos, t));
+            Assert.AreEqual(MarkMode.ManMark, tick.GetAssignment(AgentId).Mode, "19 m is within Invariant 3.");
+            Assert.AreEqual(49.0f, tick.GetAssignment(AgentId).TargetPosition.x, 1e-4f);
+
+            // Still inside the lock, 25 m from the slot: the live distance breaches Invariant 3.
+            t++;
+            oppPos = new Vector2(55.0f, 34.0f);
+            tick.Tick(Build(defendingTeam, oppPos, t));
+            MarkAssignment demoted = tick.GetAssignment(AgentId);
+            Assert.AreEqual(MarkMode.Zonal, demoted.Mode,
+                "Invariant 3 must demote on the live 25 m distance even while the dwell lock holds.");
+            Assert.AreEqual(-1, demoted.TargetEntityId);
+        }
+
+        /// <summary>
+        /// A retained target that is no longer ACTIVE in the snapshot (sent off, substituted) has no
+        /// position to track: the mark is released to ZONAL at once, ignoring the dwell lock, and the
+        /// hysteresis state is reset (ERR-014-009).
+        /// </summary>
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void VanishedTarget_ReleasesMarkToZonalImmediately(int defendingTeam, bool targetAbsentFromSnapshot)
+        {
+            int[] pool = new int[] { AgentId };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            Vector2 oppPos = new Vector2(40.0f, 34.0f);
+            int tick = Commit(defendingTeam, oppPos, pool, assignments, hysteresis);
+            Assert.AreEqual(DefensiveAIConstants.MarkDwellTicks, hysteresis[0].DwellCounter);
+
+            tick++;
+            DefensiveSnapshot gone = targetAbsentFromSnapshot
+                ? Build(defendingTeam, oppPos, tick, includeOpp: false)
+                : Build(defendingTeam, oppPos, tick, oppActive: false);
+            MarkAssigner.Assign(gone, pool, 1, tick, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode, "Mark released at once despite the dwell lock.");
+            Assert.AreEqual(-1, assignments[0].TargetEntityId);
+            Assert.AreEqual(30.0f, assignments[0].TargetPosition.x, 1e-4f, "Released to the formation slot.");
+            Assert.AreEqual(34.0f, assignments[0].TargetPosition.y, 1e-4f);
+            Assert.AreEqual(tick, assignments[0].ValidThroughTick);
+            Assert.AreEqual(0, hysteresis[0].DwellCounter, "Hysteresis reset on release.");
+            Assert.AreEqual(0, hysteresis[0].HoldTicks);
+        }
+    }
 }
 
 #region VersionHistory
@@ -2864,4 +3051,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | identical outputs) of T-DA-013/016/021/026/027/035/038/041/045, a goal-proximity ranking  |
 // |         |            |        | case for MarkAssigner and Invariant 2, and a whole-pipeline twin. Every pre-existing      |
 // |         |            |        | test is unchanged.                                                                        |
+// | 1.7     | 2026-11-10 | —      | ERR-014-009: RetainedAssignmentRefreshTests (team 0 / team 1) — dwell-lock and same-target   |
+// |         |            |        | retained marks track the live target; Invariant 3 demotes on the live distance during a      |
+// |         |            |        | dwell lock; a vanished (inactive / absent) target releases the mark to ZONAL at once.        |
 #endregion

@@ -2,7 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §2.2.2, ERR-014-008, Code Standards #20
+// Spec:     Defensive AI #14 §2.2.2, ERR-014-008, ERR-014-009, Code Standards #20
 // Purpose:  Per-agent mark assignment for one tick. Written by DefensiveAITick;
 //           read by the match orchestrator and Decision Tree #8 §3.1.7/§3.1.9.
 
@@ -40,7 +40,8 @@ namespace TacticalDirector.DefensiveAI
         /// Target position (X, Y) for this assignment, in the defending team's canonical frame
         /// (own goal at x = 0, both teams; see <see cref="DefensiveSnapshot"/>).
         /// For ZONAL: agent's Positioning AI #12 formation slot.
-        /// For MAN_MARK / INTERCEPT_RUNNER: opponent's current perceived position from #7.
+        /// For MAN_MARK / INTERCEPT_RUNNER: opponent's current perceived position from #7,
+        /// refreshed every tick the assignment is published, retained ones included (ERR-014-009).
         /// For COVER_GK_ZONE: center of the abandoned GK zone.
         /// </summary>
         public Vector2 TargetPosition;
@@ -82,4 +83,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
 // | 1.1     | 2026-11-10 | —      | ERR-014-008: TargetPosition doc corrected from "world-space" to the canonical frame |
 // |         |            |        |   (doc-only; no behaviour change).                                                  |
+// | 1.2     | 2026-11-10 | —      | ERR-014-009: TargetPosition doc states retained MAN_MARK / INTERCEPT_RUNNER refresh it each tick. |
 #endregion

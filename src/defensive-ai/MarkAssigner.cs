@@ -2,7 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
+// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, ERR-014-008, ERR-014-009, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
 //           displacement cost (§3.4), and threat score (§3.5) for the HOLD_SHAPE pool.
 
@@ -59,6 +59,9 @@ namespace TacticalDirector.DefensiveAI
                 // as stale (FR-DA-029 / §2.2.2).
                 if (MarkHysteresis.PreCheck(ref assignments[p], ref hysteresis[p]))
                 {
+                    // ERR-014-009 / §2.2.2: a retained mark publishes the target's CURRENT position, so
+                    // Invariant 3 and any consumer see the live point rather than the commit-time one.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                     assignments[p].ValidThroughTick = currentTick;
                     continue;
                 }
@@ -86,12 +89,48 @@ namespace TacticalDirector.DefensiveAI
                 {
                     // Apply hysteresis gate (§3.11) before committing.
                     MarkHysteresis.ApplyGate(candidate, ref assignments[p], ref hysteresis[p]);
+
+                    // The gate may retain the current assignment (same target, or a competing
+                    // candidate still inside its dwell): refresh it as on the dwell-lock path.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                 }
 
                 // Stamp the agent EntityId and tick on the committed assignment.
                 assignments[p].AgentEntityId    = agentId;
                 assignments[p].ValidThroughTick = currentTick;
             }
+        }
+
+        // ── Retained-assignment refresh (ERR-014-009) ─────────────────────────
+
+        /// <summary>
+        /// Refreshes a retained MAN_MARK / INTERCEPT_RUNNER assignment from the live snapshot (#14 §2.2.2:
+        /// <c>TargetPosition</c> is the opponent's current perceived position, not the commit-time one).
+        /// When the retained target is absent from the snapshot or not active (sent off, substituted) there
+        /// is no position to publish, so the mark is released to ZONAL immediately (target -1, own
+        /// formation slot) and the hysteresis state is reset exactly as on the §3.3.3 Step 6 ZONAL bypass —
+        /// the dwell lock exists to suppress candidate thrash, not to hold a mark on a player who is gone.
+        /// ZONAL and COVER_GK_ZONE assignments are left untouched. Pure; no allocation.
+        /// </summary>
+        private static void RefreshRetained(
+            DefensiveSnapshot            snapshot,
+            in DefensiveAgentSnapshot    agent,
+            int                          currentTick,
+            ref MarkAssignment           assignment,
+            ref MarkHysteresisState      hysteresis)
+        {
+            if (assignment.Mode != MarkMode.ManMark && assignment.Mode != MarkMode.InterceptRunner)
+                return;
+
+            int oIdx = HoldShapePoolFilter.SnapshotIndexOf(snapshot, assignment.TargetEntityId);
+            if (oIdx >= 0 && snapshot.Agents[oIdx].IsActive)
+            {
+                assignment.TargetPosition = snapshot.Agents[oIdx].Position;
+                return;
+            }
+
+            assignment = MarkAssignment.MakeZonal(agent.EntityId, agent.BaselineSlot, currentTick);
+            MarkHysteresis.Reset(ref hysteresis);
         }
 
         // ── Candidate selection ───────────────────────────────────────────────
@@ -296,4 +335,8 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   not teamId == 0. ThreatScore gains a bool defendsX0 overload; the int teamId overload   |
 // |         |            |        |   is kept for source compatibility and ignores the id. The away team previously ranked    |
 // |         |            |        |   threat and runner direction against x = 105 while its snapshot has the goal at x = 0.   |
+// | 1.6     | 2026-11-10 | —      | ERR-014-009: a retained non-ZONAL assignment (dwell lock or same-target/held-candidate gate |
+// |         |            |        |   path) now refreshes TargetPosition from the live snapshot each tick (§2.2.2), so Invariant 3  |
+// |         |            |        |   tests the live point. A retained target that is absent or inactive releases the mark to    |
+// |         |            |        |   ZONAL at once and resets hysteresis. COVER_GK_ZONE / ZONAL untouched.                      |
 #endregion
