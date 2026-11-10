@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineFormationDutyTests.cs
 // Created:  2026-11-09
-// Modified: 2026-11-09
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     #12 FR-PA-039, ERR-012-013; #21 ERR-021-009; #25 ERR-025-001
 // Purpose:  Kickoff formation lock, mixed requests, variable rotation rows and Duty replay.
@@ -132,6 +132,31 @@ namespace TacticalDirector.MatchEngine
             }
             Assert.AreEqual(Duty.Defend, restored.TestOnly_PositioningDuty(5));
             Assert.AreEqual(Duty.Attack, restored.TestOnly_PositioningDuty(16));
+        }
+
+        [TestCase(0, 11)]
+        [TestCase(1, 11)]
+        [TestCase(0, 12)]
+        [TestCase(1, 12)]
+        public void Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(int team, int saveFrame)
+        {
+            var engine = new MatchEngine(Seed);
+            engine.SetTeamTactic(team, Tactic(TacticFormation.F4231));
+            for (int i = 0; i < 6; i++) engine.RunTick();
+            engine.SetTeamTactic(team, Tactic(TacticFormation.F442, Mentality.VeryAttacking));
+            while (engine.CurrentTick < (ulong)saveFrame) engine.RunTick();
+            var header = engine.CaptureDurableHeader(); var payload = engine.CaptureDurablePayload();
+            var reference = new byte[60][];
+            for (int i = 0; i < reference.Length; i++) { engine.RunTick(); reference[i] = engine.CurrentSnapshotDigest; }
+            var restored = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            Assert.AreEqual(TacticFormation.F4231, restored.GetEffectiveFormation(team));
+            Assert.AreEqual(TacticFormation.F442, restored.GetRequestedFormation(team));
+            Assert.AreEqual(6, restored.TestOnly_Positioning(team).CaptureRotationState().PairCount);
+            for (int i = 0; i < reference.Length; i++)
+            {
+                restored.RunTick();
+                CollectionAssert.AreEqual(reference[i], restored.CurrentSnapshotDigest, "frame " + i);
+            }
         }
 
         [Test]
@@ -284,4 +309,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-09 | —      | Kickoff lock, mixed requests, replay with six rotation rows, corruption and Support identity. |
+// | 1.1 | 2026-11-10 | — | Strengthens active/pending rotation replay, consumer views, synthetic tick-0 and exact Support byte assertions. |
 #endregion

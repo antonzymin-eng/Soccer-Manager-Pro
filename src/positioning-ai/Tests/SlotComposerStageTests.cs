@@ -291,4 +291,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // |         |            |        |   spacing invariant) + #23 dismark (exact FM-DM-02 offset, Off   |
 // |         |            |        |   identity, carrier/phase exclusion, clamp bounds).              |
 // | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
+// | 1.2 | 2026-11-09 | — | Strengthens active/pending rotation replay, consumer views, synthetic tick-0 and exact Support byte assertions. |
 #endregion
