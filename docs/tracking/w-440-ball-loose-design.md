@@ -1,8 +1,8 @@
 # #440 BallLoose — Stage A investigation and proposed choices
 
 Created November 9, 2026. Purpose: freeze episode measurement, collect within-frame
-ownership chronology and present a concrete gameplay choice. Version 1.2.
-Status: Stage A measured and observer neutrality proven; draft PR, Unity host pending. No gameplay fix or approved policy.
+ownership chronology and present a concrete gameplay choice. Version 1.3.
+Status: Stage A measured; option C proposed as a bounded Stage B experiment. Protocol/limits/policy/parameter await owner approval; no gameplay code authorized.
 Branch `codex/440-ball-loose`; source baseline `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 #434 remains a separate draft; Stage A therefore measures main, not its unmerged head.
 
@@ -131,7 +131,7 @@ filed until an owner-approved Stage B implementation lands with its amendment.
 | --- | --- | --- | --- | --- |
 | A — velocity only | Give a deterministic knocked ball a direction and speed, leaving all normal eligibility intact. Physical flight/first touch decide recovery. | `BALL_LOOSE_KNOCK_SPEED_M_S = 2.5` **[GT] (proposed)**, m/s, proposed authoring range (0,6]. At 60 Hz, 2.5/60 = 0.04167 m before the next integration. Direction away from tackler through contact, with the carrier's facing as the coincident-position fallback. | No new RNG; existing ball kinematics already serialize. No new persistent state. | More moving-ball contacts; opponent recovery may rise, but first touch can still restore the original carrier **in the same frame**. Does not guarantee the proposed policy. No guarantee of which team wins. |
 | B — bounded carrier exclusion | Exclude the dispossessed carrier from ordinary first-touch and passive-pickup admission for a short window. It gives other players a recovery opportunity, but the resting ball can make the nearest tackler the automatic winner. | `BALL_LOOSE_CARRIER_EXCLUSION_FRAMES = 6` **[GT] (proposed)**, physics frames, authoring range [1,60]. Loss at f=120 blocks frames 120–125; eligible at 126 (0.1 s). | No RNG. Carrier ID + expiry cross snapshots, so next free world-schema bump and restore validation would be required; allocate only on the eventual Stage B base. | Same-frame carrier regains become zero; opponent/teammate recovery rises. Substantial risk of converting BallLoose into BallWon, and a stationary ball may wait for immunity to expire. |
-| C — velocity plus one-frame carrier fence (recommended) | Combine A's physical knock with a one-frame fence on ordinary first-touch/pickup eligibility. The original carrier competes again on the next frame. This separates loss of control from immediate recovery without a multi-frame immunity advantage. | A's proposed 2.5 m/s parameter plus `BALL_LOOSE_CARRIER_FENCE_FRAMES = 1` **[FIXED] (proposed policy)**. Loss at f=120 blocks ordinary reacquisition only at 120; eligible at 121. | No RNG. A frame-local fence can be excluded from snapshots **only if** it resets before all next-frame consumers and cannot affect an off-tick operation; prove that in Stage B. Otherwise serialize and bump the next free schema. | Same-frame carrier regains zero; later recovery remains possible. Movement is physical; the one-frame fence may still favor the nearby tackler or merely defer the old carrier to the next frame. No forced winner is coded, but a near-automatic BallWon effect is a measured Stage B risk. Shots/goals/fouls have no reliable directional prediction; measure without tuning. |
+| C — velocity plus one-frame carrier fence (proposed experiment) | Combine A's physical knock with a one-frame fence on ordinary recovery admission, including applicable keeper paths. The original carrier competes again on the next frame. This separates loss of control from immediate recovery without a multi-frame immunity advantage. | A's proposed 2.5 m/s parameter plus `BALL_LOOSE_CARRIER_FENCE_FRAMES = 1` **[FIXED] (proposed policy)**. Loss at f=120 blocks ordinary reacquisition only at 120; eligible at 121. | No RNG. A frame-local fence can be excluded from snapshots **only if** it resets before all next-frame consumers and cannot affect an off-tick operation; prove that in Stage B. Otherwise serialize and bump the next free schema. | Same-frame carrier regains zero; later recovery remains possible. Movement is physical; the one-frame fence may still favor the nearby tackler or merely defer the old carrier to the next frame. No forced winner is coded, but a near-automatic BallWon effect is a measured Stage B risk. Shots/goals/fouls have no reliable directional prediction; measure without tuning. |
 
 These are new proposed parameters for the selected mechanic, not authorization to
 change any existing [GT] value or calibrate toward favorable football metrics.
@@ -154,7 +154,7 @@ Restart awards/censored frames remain law-governed, so an unconditional end-of-f
 carrier count need not be zero even when the scoped ordinary-recovery policy holds.
 The measured Stage A census supports fixing the immediate pickup seam. It cannot
 establish that an uncalibrated 2.5 m/s knock and one-frame exclusion create a realistic
-contest. Recommend C for the narrow policy and early restored eligibility, with
+contest. Propose measuring C for the narrow policy and early restored eligibility, with
 explicit Stage B reporting of near-automatic tackler wins and next-frame re-picks.
 Do not tune or declare realism from a zero tackle-frame regain count alone.
 
@@ -169,17 +169,187 @@ is fenced; A does not. No current spec is claimed to mandate it. If accepted,
 Stage B writes the exact policy and chosen mechanism into #14 §3.6.5 with a newly
 verified ERR ID and spec version history, in the same commit as the fix.
 
-## Stage B preregistration and stop
+## Proposed Stage B experiment — owner approval required
 
-Freeze tackle-frame regain count, tackle-frame end-owner split, fixed-horizon split,
-dispossessions/match, teammate recoveries/match, global holder changes/match,
-shots/goals/fouls per team/match before any Stage B run. Retain every seed and censored
-episode; no favorable exclusion or target fitting. Report paired six-seed changes
-with raw digests validated independently (gameplay identity is not expected).
+This section is a proposal, not an approved football acceptance contract or a
+result. No C/D gameplay code, new [GT] parameter, snapshot change, new match capture
+or outcome-based tuning is authorized by this document. C is an experiment to test
+whether a physical knock plus brief recovery restriction produces a useful loose
+ball; it is not accepted as a shipping fix. Keep the original Stage A definitions
+above unchanged. Existing [GT] values remain unchanged.
 
-After Stage A, publish the observation-only draft PR and measured note, then stop
-for the owner to choose a fix, approve its proposed new parameter and decide the
-scoped same-frame policy. No Stage B gameplay code is authorized by this note.
+### Fixed experiment configuration and sample
+
+- Select a **v29 base containing #543**, after merging or an explicitly approved
+  stacked/rebased composition. Reconcile the shared source/history, LFS/CI and evidence
+  registry changes; do not silently overwrite them. Current Stage A remains a v28
+  main-based historical record, not the new before arm.
+- C proposes the new uncalibrated knock speed **2.5 m/s [GT] (proposed, not approved)**,
+  range (0,6], and a **one-physics-frame carrier fence [FIXED] (proposed policy)**.
+  At f=120 the carrier is fenced at 120 and can compete again at 121. No new RNG.
+  Velocity direction is away from tackler through carrier, with facing as the
+  coincident-position fallback. Above 0.5 m/s is not automatic reception: actual
+  first touch also requires reach and an approaching ball. Do not predict certain
+  BallWon or Missed outcomes from speed alone.
+- Same frozen six seeds, 324000 calls/seed, SDK 8.0.426 / CLR 8.0.32 and recorded
+  debug/default configuration in both arms. Twelve observed primary matches
+  (six before, six C) plus twelve disabled-observer controls = **24 full runs**.
+  Off/on raw digests, trajectories/BallState, team witnesses, geometry and ledgers
+  must match within each code arm. Gameplay identity between before and C is not
+  expected. Pin source, binaries, runtime, observer and analysis before any run.
+- Report every seed/team and all original metrics, including global holder changes,
+  shots/goals/fouls, frame-end and one-second ownership, teammate/opponent prefix
+  recovery, censor causes and loose-window duration. A zero regain count alone
+  does not certify a physical contest or football realism.
+
+### Two proposed numerical stop ceilings
+
+Both caps below are **[EST] proposed experiment acceptance policies**, not empirical
+football rates and not game constants. They are chosen before any C result. A
+one-quarter cap requires immediate tackler wins and rapid carrier returns each to
+remain a minority, rather than relabeling most BallLoose episodes as BallWon/Missed.
+The owner may change these proposals **before** the experiment is frozen.
+
+| Gate | Proposed maximum | Exact numerator/window |
+| --- | ---: | --- |
+| G1: immediate original-tackler recovery | **25%** | Episodes with any acquisition by the initiating tackler after BallLoose in physics frame f, before the first censor. Deduplicate by episode; count acquire-then-release even if the tackler does not hold at frame end. |
+| G2: rapid original-carrier recovery | **25%** | Episodes in which the old carrier holds at the entry to, or acquires at any point during, frames **f+1, f+2, f+3**, before censor. The first eligible frame is the nominal fence-lift frame f+1, not the later frame when every geometry/speed gate happens to admit a touch. |
+
+The G2 window is exactly the **first three eligible physics frames (50 ms of ticks)**.
+For f=120 it is 121–123 inclusive. Counting ownership at window entry prevents the
+before arm's existing same-frame regain from being misleadingly reported as zero
+rapid return merely because no new acquisition edge occurs after frame 120. Report
+entry-holding and new-window acquisitions separately as well as their deduplicated
+union. Do not shift the window to a favorable later touch opportunity.
+
+Apply both caps to the pooled six-seed sample **and separately to each carrier team**;
+per-seed counts remain descriptive because the episode samples are small. These are
+finite-corpus rejection gates, not confidence intervals or population estimates.
+
+### Denominators, overlap and censoring
+
+For each code arm and carrier-team stratum, **N is every created BallLoose episode**,
+including episodes censored by restart/out-of-play/foul/half/full time, later tackle
+of any outcome, or capture end. Never remove difficult or censored episodes from N.
+Use the existing source-sequence key and first-censor ordering; no restart award
+counts as an ordinary recovery. A later tackle censors the old window before its
+effects and starts a new one only for BallLoose, so no edge is double-attributed.
+
+For each gate, keep disjoint counts:
+
+- **K**: a positive acquisition/entry-holding was actually observed before censor;
+- **U**: no positive observed, but censor truncated that gate's window;
+- **Z**: the whole gate window was observed without a positive.
+
+Require K+U+Z=N. Report observed-positive K/N and the censor-uncertainty interval
+**[K/N, (K+U)/N]**. These are completion bounds, not statistical confidence bounds.
+Do not assume censored episodes are successes/zeros, and do not infer events after
+the censor. Censor after a completed window adds no U for that gate. A positive
+before censor stays in K, not U. G2 censors at/before f+1 can therefore leave the
+whole early-return window unknown.
+
+Proposed adequacy conditions, also requiring owner approval: at least **30 fully
+observed windows per gate pooled** and **10 per carrier team**, where complete
+means the window ended before censor (record this separately from K/U/Z because an
+early positive can be known even when the remainder is censored). If N=0 or this
+coverage is missing, stop as **inconclusive**. Do not extend seeds or horizons to
+reach the quota without a separately approved protocol amendment.
+
+### Breach rule — stop, report, no tuning
+
+After each completed seed pair, check run integrity, observer neutrality and hard
+correctness; any failure stops immediately. Assess the numerical ceilings on the
+**candidate C observed arm only**, after the fixed six-seed batch completes.
+Do not stop early on a provisional rate or assume an unknown number of future
+episodes. The before arm is descriptive and is not a candidate acceptance gate.
+Disabled-observer replicas prove neutrality; they are not additional independent
+episodes in N. A confirmed final **K > 0.25 × N** in either candidate gate, pooled
+or by carrier team, is a breach: stop before any further experiment or variant.
+
+At final assessment, passing requires **(K+U)/N ≤ 0.25** for both gates, pooled and
+per carrier team, plus coverage and correctness. If K/N passes but the upper bound
+exceeds the cap, stop **inconclusive due to censoring**. Equality at 25% is allowed;
+use exact count inequalities (4×K versus N, and 4×(K+U) versus N), not rounded displays.
+The before arm is reported against the same windows/rules; its known defect is not
+new candidate acceptance. Only C's caps decide candidate rejection/continuation.
+
+On breach/inconclusive: retain completed and partial attempts, all episode keys,
+commands, counts, first failing gate/stratum and source/runtime hashes; report and
+**stop**. Do not adjust 2.5 m/s, fence length, reach radii, sample selection, windows,
+censor rules or caps to manufacture a pass. No automatic D implementation or rerun.
+Passing these two gates only permits owner review of the full metric table; it
+neither merges the PR nor establishes realism. The proposed scoped ordinary-recovery
+ban during frame f remains a separate correctness requirement: a violation is a
+failed implementation, not something tolerated up to 25%.
+
+## One-frame fence state/save audit — design feasibility, not implemented proof
+
+Audit baseline: `ce32b38078596c21adc14682357e0c47f83dd5f8`, production source identical
+to the measured Stage A observer. The proposed fence does not exist yet. Relevant
+paths (line references are this audited base):
+
+| Path | Current behavior / audit consequence |
+| --- | --- |
+| TickOrchestrator.RunTick, phases Input→Intent→AI→Physics→Resolve→Events→Snapshot | All ordinary per-frame mechanics precede snapshot commit. A fence can be bounded inside one RunTick, but only with explicit reset/clear invariants. |
+| MatchEngine.TryResolveTackles (4316–4325) | BallLoose happens in AI. Carrier fencing must be active before later Physics/Resolve acquisition. Preserve all affected carrier IDs if multiple episodes share a frame; do not overwrite one ID and release an earlier carrier. |
+| RunResolvePhase (5738, 5746) → private RunFirstTouch (6508) / RunLooseBallPickup (6663) | These two methods have no off-tick production caller. Candidate-admission guards here can be frame-local. A first-touch guard must act before Evaluate/Apply changes ball state, not undo a completed touch. |
+| TakeControlledPossession (9214), including goalkeeper adapter.SetPossessor (9646–9649) | This is wider than the two pickup paths. Keeper claim/save callers commit their own state around this void host call; silently dropping SetPossessor after reporting a successful claim is unsafe. Stage B must classify every open-play acquisition and guard admission before a successful mechanic commits. Audit targeted keeper cases, not only the 37 outfield-style observed episodes. |
+| ApplyRestart (5937–5960) → SetPossessingAgent | Law awards bypass ordinary pickup. Censor first, clear the fence before restart effects, and preserve the awarded taker. No blanket owner setter filter. |
+| CaptureDurableHeader/Payload (3136/3162) and CapturePostSnapshotWorldState / ApplyPostSnapshotWorldState (3179/3190) | Durable copies and the format-3 off-tick overlay operate at the completed-frame boundary. No live fence may alter an off-tick mutation, the overlay, or the next tick after restoring. |
+| SetTeamTactic / SetPlayerTactic / RequestSubstitution and test-only force possession (2866) | Off-tick staging/substitution/test operations must not inherit a previous frame's exclusion. A frame-number-only guard in a shared acquisition setter can remain live after RunTick returns and differ from a restored engine. Reject that implementation shape. |
+
+**Feasible schema-neutral design:** preallocate a fixed roster-sized mask (or an
+integer bit mask); zero it before the first Input consumer; arm/union carrier bits
+only during the tackle frame; clear at law stops/restarts and **before any Snapshot
+serialization**, and leave it zero after RunTick returns. A later tackle closes the
+old measurement episode but does not release its carrier fence: union all affected
+carriers for the frame until a law stop or frame-end clear. Analytical censoring
+and gameplay fence lifetime are distinct. Restrict reads to the
+current simulation's ordinary acquisition-admission paths. Snapshot, restore and
+off-tick public surfaces never consult a live mask. The mask is then identically
+zero at every supported save boundary and cannot cause future divergence.
+Do not add an expiry countdown that survives the frame, and do not reset gameplay
+ball kinematics: the knock itself already belongs to serialized BallState.
+
+**Conclusion:** a one-frame fence can be schema-neutral under that contract; merely
+calling it “one-frame” is not proof. This is a static feasibility audit, not a tested
+implementation. Before accepting a no-bump Stage B implementation, require:
+
+1. Mirrored first-touch/pickup and applicable keeper admission cases, including
+   multiple same-frame losses; every intended ordinary path observes the policy.
+2. Exact save/restore continuation at the tackle's committed boundary, next frame,
+   and an off-tick tactic/substitution overlay, compared with uninterrupted play.
+3. Test-only force-possession/off-tick operations after the boundary behave the same
+   in original and restored engines; no stale exclusion survives.
+4. Restart/foul/half/full-time early-return paths leave the mask cleared; law awards
+   remain unchanged. No unsupported mid-phase save/resume claim.
+5. Both observer modes preserve their own raw chain and deterministic replay.
+
+If a supported future consumer can read armed fence state after Snapshot or during
+an off-tick operation, or these proofs fail, it **is causal saved state**: serialize
+the full affected-ID state/expiry, allocate the next free world schema on the selected
+v29 base (currently v30), validate IDs/booleans/count/bounds/expiry/restore state and
+add digest single-field probes and exact continuation tests. Do not omit it to
+preserve a “cheap” experiment. Outer framing changes need separate justification.
+
+## Symmetric lockout — fallback only
+
+D remains unselected: investigate physical knock plus exclusion of carrier and
+tackler **only if C fails and the owner authorizes a new design**. Reuse the same
+stop definitions to compare candidates, with any new eligibility window frozen
+before a D run. A bare radius/speed duration does not guarantee separation from two
+moving players under deceleration; event-dependent exclusion needs an expiry/deadlock
+policy and generally adds saved state. Do not promise a contest or a no-save-state
+implementation, derive an unqualified escape guarantee, or automatically tune C
+into D. No symmetric-lockout gameplay code is authorized.
+
+## Owner stop
+
+Approve/revise the proposed 25% / 25% caps, f+1..f+3 window, all-episode/censor-bound
+and coverage rules, fixed 24-run plan, proposed new 2.5 m/s parameter and scoped
+ordinary-recovery policy before any Stage B code/capture. Source/save feasibility
+must still be proved by the eventual implementation tests. Then review results;
+no merge or tuning is implied by an experimental pass.
 
 | Version | Date | Notes |
 | --- | --- | --- |
@@ -188,3 +358,5 @@ scoped same-frame policy. No Stage B gameplay code is authorized by this note.
 | 1.1 | November 10, 2026 | Observer implemented and 20 definition/neutrality tests pass; release stripping verified. Exact [GT]/[FIXED] tag formatting corrected. Measurement definitions and proposed values unchanged; no full census yet. |
 
 | 1.2 | November 10, 2026 | All six seeds measured with exact observer neutrality and independent chronology audit; 37/37 passive same-frame regains. Retains storage interruption/recovery, per-seed metrics, candidate risks and pending owner/Unity decisions. Frozen definitions and proposed constants unchanged. |
+
+| 1.3 | November 10, 2026 | Owner-requested C experiment proposal: two 25% ceilings, exact early window, denominator/censor bounds, adequacy and stop/no-tuning rules; static save/off-tick audit and conditional schema requirement. D is fallback only; no gameplay/capture or approval claim. |
