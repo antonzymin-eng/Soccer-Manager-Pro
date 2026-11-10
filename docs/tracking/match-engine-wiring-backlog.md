@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
+> **UPDATED November 10, 2026, v1.41:** **W13 opened — Defensive AI #14's mark assignment moves no defender (cross-references C10).** W13.0 (two live #14 defects, `ERR-014-008` / `ERR-014-009`) is **landed on branch `claude/great-sagan-rpcmhp`, **unmerged** (commits `b91a8ce` D1, `5d99fa0` D2, `fd73de7` review fixes; the branch has been pushed; it is not merged)**; W13.1 (the wiring, switched off by default) is **not started**. Validation is the non-certifying Linux gate only; frozen-lane characterization, digest adoption and pinned-Unity validation are pending. Plan: [w-defender-marking-wiring-plan.md](w-defender-marking-wiring-plan.md).
+
+> **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
 > contract on the observed trajectories. A one- or two-physics-frame delayed take-off remains
@@ -505,6 +507,17 @@ was a passive mirror of the incoming ball — `TargetIntent` computed a real aim
 nothing downstream. Resolved as of `ERR-010-002`; the detection gap that let it ship unnoticed is
 not.
 
+### W13 — Defensive AI #14's mark assignment never moves a defender — ⚠️ **W13.0 LANDED ON BRANCH (UNMERGED); W13.1 NOT STARTED**
+**Evidence (plan §1.1, verified at main `d4b026aa`):** #14 assigns MAN_MARK / INTERCEPT_RUNNER / COVER_GK_ZONE every 10 Hz stride, but its assignments reach gameplay only through tackle intents (`TackleIntentEvaluator`, the assigned opponent within 3 m) and the trap's demotion of DEFENSE-line marks. The per-agent `GetAssignment` has no production caller, the team `MarkDirective` is read by nothing but a `TestOnly_` seam, and `MarkAssignment.TargetPosition` has no reader outside `defensive-ai` except the serializer. No invariant (1 back-line ZONAL, 2 ≤ 4 MAN_MARK, 3 20 m) constrains anything that moves today. **C10** (§4: `MarkAssigner` is ball-blind) is the same finding from the tackle side; no earlier item covered movement. The highest prior item was W12, so this is W13.
+
+**W13.0 — landed on branch `claude/great-sagan-rpcmhp`, **unmerged** (commits `b91a8ce` D1, `5d99fa0` D2, `fd73de7` review fixes; the branch has been pushed; it is not merged).** Two live defects found while verifying the plan: **D1 `ERR-014-008`** (the away team's #14 defended the wrong goal: `DefendsX0(teamId)` against a snapshot already in the defending team's canonical frame) and **D2 `ERR-014-009`** (retained marks kept their commit-time `TargetPosition`, blinding Invariant 3). Both were fixed with their spec text (#14 §1/§2/§3/§5) and tests; KD-W1 exempts defect fixes. D-05 (no behaviour-changing landing inside an open A→B / B→C window) was **not verified** from this checkout (the plan's OD-1 says to check `path-to-playable-roadmap.md` at commit time); the owner approved landing W13.0 first. **Validation to date is the non-certifying Linux `dotnet-ci` gate only.** Pending hand-offs, none run: the frozen-lane (SDK 8.0.426 / CLR 8.0.32) six-seed characterization and digest adoption (plan §9 ④, owner decision), and the pinned Unity 6000.4.9f1 compile and EditMode validation (`src/CLAUDE.md`).
+
+**Review item L3 (known limitation, not fixed):** `DefensiveAITick` computes tackle intents (Step 6) before the trap (Step 7) and Invariant 3 (Step 8), so a COMMIT can be published for a mark demoted in the same tick — more often now that Invariant 3 measures the live distance. Fix candidates (demote first, or drop intents for demoted marks) change tackle exposure again, so they follow the measurement.
+
+**Review item L7 — behavioural shifts to measure (do not tune):** away-team threat ranking / mark targets, INTERCEPT_RUNNER eligibility, last-man and COVER_GK_ZONE, coverage depth and the COMMIT / JOCKEY / HOLD mix, trap arming and step-up, Invariant 1/2 demotion order; both teams: Invariant 3 on the live distance inside a dwell lock, immediate release of a mark on a sent-off / absent target; downstream, the away tackle rate and foul / card exposure. **Every measurement taken before W13.0 is confounded for the away team** (#543 traces, #440 windows, the W2 tackle census, any home-versus-away comparison); re-capture before reading a stratum difference (plan rule R5).
+
+**Pending W13 work (plan §9 ⑤–⑨, none started):** **W13.1** `MarkTargetComposer` goal-side point (2 m, 1 m `TightMarking`), Invariant 4 (one marker per opponent), the `TacticalContext` per-agent carrier and the #8 MOVE override, a marking agent skipping PRESS priority 2, all behind `MarkMovementEnabled` (config `[GT]`, default off); **W13.1c** mark pace tier (OD-12); **W13.2** per-team `MarkingScheme` (a #21 field and a world-schema bump); **W13-F1** (`MarkTargetEntityId`), **F2** (between-lines pickup), **F4** (trap step-up after D4) — the plan defines no F3. Formation / Duty player controls stay blocked until the default flip (OD-2). The §3 retained-trace diagnosis is a hand-off to the #543 owner's agent and does not block code.
+
 ---
 
 ## 3. Class B — wired but starved (gate-level dormancy)
@@ -778,6 +791,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.41 | 2026-11-10 | — | **W13 opened (cross-references C10); W13.0 landed on branch `claude/great-sagan-rpcmhp`, unmerged** (`ERR-014-008` / `ERR-014-009`); W13.1 not started. Review L3 (intents computed before the demotion invariants) and the L7 shifts to measure recorded; every pre-fix measurement is confounded for the away team. Linux gate only; frozen-lane and pinned-Unity validation pending. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |

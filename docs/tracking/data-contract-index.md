@@ -117,7 +117,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Build identity (`buildHash`) | #16 §2.3.2 | `deterministic-sim`, `match-engine` | `BuildIdentity`, `BuildModule`, `SnapshotHeader.BuildHash`, `MatchEngineBuildIdentity` (declares the closure) |
 | Match world-state snapshot (the live one) | `match-engine-design.md` | `match-engine` | `SNAPSHOT_SCHEMA_VERSION` in `MatchEngineConstants` — **see §9 hazard 2** |
 | Match clock / phase | #16, #8 | `deterministic-sim`, `decision-tree` | `MatchClock`, `MatchPhase`, `MatchContext` |
-| Per-layer AI snapshots | #14, #15 | `defensive-ai`, `attacking-ai` | `DefensiveSnapshot`, `AttackingSnapshot`, and their `*AgentSnapshot` rows |
+| Per-layer AI snapshots | #14, #15 | `defensive-ai`, `attacking-ai` | `DefensiveSnapshot`, `AttackingSnapshot`, and their `*AgentSnapshot` rows. **`DefensiveSnapshot` frame contract (`ERR-014-008`):** every position and velocity is in the *defending team's canonical attack-toward-+X frame* (own goal at x = 0 for BOTH teams; the composition root rotates the away team before filling it), and #14 is canonical-only: the team id never selects a goal. Specified at #14 §2.3, documented on `DefensiveSnapshot`; `MatchEngine.FillDefensiveSnapshot` is the producer |
 | Match statistics | #37 §2.2 | `match-analytics` | `MatchAnalyticsResult`, `MatchAnalyticsAggregator`, `MatchEngineObservation` |
 
 > **Six of `#16 §2.3`'s nine names do not resolve to types — now filed as `ERR-016-009`.**
@@ -263,6 +263,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.7 | November 10, 2026 | W13.0 (`ERR-014-008`): the per-layer AI snapshots row states the `DefensiveSnapshot` canonical-frame contract. No other row changed; implementation is on branch `claude/great-sagan-rpcmhp`, unmerged. |
 | v1.6 | October 30, 2026 | Cross-document consistency review at `38395f8`: §8 still listed #44 and #49 as having no assembly although `src/discipline/` and `src/localization/` exist — both rows removed and pointed at instead (§3 discipline row, §7 localization row). §5: `SEASON_STATE_FORMAT_VERSION` re-pointed to `SeasonLoopConstants.cs` (it was never in `SeasonSaveConstants.cs`); `DISCIPLINE_SAVE_FORMAT_VERSION` and `CAREER_SLOT_META_FORMAT_VERSION` rows added. No version values added. |
 | v1.5 | October 21, 2026 | #31 T2 AR round 5 (ERR-031-015): the Manager-transfer-command row no longer says the counterparty ledger is untouched "by design" — it is the interim option (b) with the (a)-vs-(b) owner decision open (§7.2, open-issues `transfer-counterparty-ledger`). Pointer wording only; no contract changed. |
 | v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |
