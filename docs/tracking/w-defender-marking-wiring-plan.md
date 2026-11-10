@@ -1,534 +1,683 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026
-> **Version:** 0.1
-> **Status:** DRAFT — under review (planning only; no code, spec or tracking file is changed by this document)
-> **Purpose:** Make Defensive AI #14's mark assignment drive defender movement, and first diagnose, from
-> PR #543's retained traces, whether its absence explains the formation/Duty scoring sensitivity.
-> **Inputs:** main `d4b026aa`; draft PR #543 branch `origin/codex/434-formation-duty` (not merged).
-> **Toolchain note:** SDK 8.0.133 / runtime 8.0.33 is usable here for compile/test gates
-> (`bash tools/dotnet-ci/run-gate.sh --fast --test-filter <f>`); it is **not** the frozen-lane
-> toolchain (SDK 8.0.426 / CLR 8.0.32) and must not produce result-bearing six-seed captures. Nothing
-> in this plan was compiled, run or measured.
+> **Created:** November 10, 2026 · **Version:** 0.3 · **Status:** REVIEWED — awaiting owner decisions OD-1…OD-13; no code authorized by this document
+> **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
+> retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
+> formation/Duty scoring sensitivity.
+> **Base facts:** main `d4b026aa`. Draft PR #543 is `origin/codex/434-formation-duty` (unmerged).
+> Work lands as ordered commits on `claude/great-sagan-rpcmhp`; no PR unless the owner asks.
+> **Toolchain:** SDK 8.0.133 / runtime 8.0.33 is available here for compile/test gates only
+> (`bash tools/dotnet-ci/run-gate.sh --fast --test-filter <f>`). The frozen lane (SDK 8.0.426 / CLR 8.0.32,
+> six-seed captures) exists only in the #543 owner's environment. Nothing in this plan was compiled,
+> run or measured.
 
 ## 0. Recommendation in brief
 
-1. **Diagnose first** (§3): measurement-only Python over #543's retained traces; no new captures.
-2. **W13.0 — defect landing, separate PR, on main:** #14 computes "own goal" from team id while the
-   engine hands it a canonical frame, so the away team's assignments, last-man and tackle coverage use
-   the wrong goal (D1); retained assignments keep a stale target position (D2). Both are in the live
-   tackle chain; fix, characterize, adopt new digests.
-3. **W13.1 — wiring, on main, off by default:** a pure `MarkTargetComposer` (#14) turns a non-ZONAL
-   assignment into a goal-side point at a stand-off; the orchestrator mirrors it into a new per-agent
-   `TacticalContext` carrier; #8 `MOVE_TO_POSITION` uses it instead of the slot. A new anti-chaos
-   Invariant 4 (one marker per opponent) lands with it. Gated by a config-level `[GT]` that ships
-   `false`: exact identity at default, no snapshot schema change, no RNG.
-4. **Flip the default** only as a separate owner decision after the §10 six-seed measurement.
+1. **W13.0 (first commits): two live #14 defects, spec and code together.**
+   - D1: #14 resolves "own goal" from the team id, but the engine supplies the defending team's
+     canonical frame, so the away team uses the wrong goal.
+   - D2: retained assignments keep a stale target position.
+   - This is behaviour-changing at default and is characterized like any defect fix.
+2. **W13.1: wiring, switched off by default.**
+   - A pure #14 `MarkTargetComposer` turns a non-ZONAL assignment into a point 2 m goal-side of the
+     marked man (1 m with `TightMarking`).
+   - The orchestrator mirrors that point into a per-agent `TacticalContext` carrier, and #8
+     `MOVE_TO_POSITION` targets it.
+   - **A marking agent does not take PRESS priority 2**, the "nearest opponent within 8 m" option
+     (§4.5): without this rule, every marker would sprint onto his man from about 6 m.
+   - Anti-chaos Invariant 4 allows one marker per opponent.
+   - The gate is a config-level `[GT]` bool on the existing `Config.GetBool` pattern.
+   - There is no new state, no schema change and no RNG. Identity at default holds relative to the
+     post-W13.0 tree.
+3. **Diagnosis (§3) does not block code.** It gates #543's merge and sets §10's expectations; it is a
+   handoff to the #543 owner's agent. **Default flip** and **per-team scheme selection (W13.2)** are
+   separate owner decisions (§8).
 
 ## 1. Verified current state (main `d4b026aa`)
 
-### 1.1 The chain, link by link
+### 1.1 Chain, link by link
 
 | # | Link | Evidence | State |
 |---|---|---|---|
-| L1 | #12 slot: canonical slot → world slot → `TacticalContext.Stage0Default(worldSlot)` | `MatchEngine.cs:3821-3839`, mirror `:4781-4787` | live |
-| L2 | #13 press role → #14 snapshot `PressRole` | `MatchEngine.cs:4697`; exclusion `HoldShapePoolFilter.cs:357-366` (also GK, inactive) | live |
-| L3 | #14 snapshot fill: all 22 agents in the defending team's **canonical** attack-+X frame; `DefensiveTeamId = team`; `BaselineSlot`/`Line` from #12 | `MatchEngine.cs:4613-4703` (`:4629`, `:4689`, `:4694-4696`) | live |
-| L4 | #14 tick: phase gate (InPoss ⇒ all ZONAL) → pool → last-man/COVER_GK_ZONE overrides → `MarkAssigner.Assign` → tackle intent → offside trap → `InvariantEnforcer` | `DefensiveAITick.cs:145-150,153,178-238,247,250,258,263` | live |
-| L5 | Assignment: 15 m candidate radius × `MarkingOrientation` scalar, threat = x-proximity × FirstTouch, INTERCEPT_RUNNER > MAN_MARK > ZONAL, ties cost then EntityId | `MarkAssigner.cs:115-117,119-183,203-218,228-252` | live |
-| L6 | Hysteresis: 4-tick dwell to commit, 4-tick lock | `MarkHysteresis.cs:27-90`; `DefensiveAIConstants.cs:169` | live |
-| L7 | Orchestrator reads only `MarkDirective.OffensiveLineDepth` → `ctx.DefensiveLineDepth`, and sets `ctx.HasMarkDirective = !teamHasPossession` | `MatchEngine.cs:3801,3870-3871` | live / stub |
-| L8 | `HasMarkDirective` consumers | only `TestOnly_HasMarkDirective` (`MatchEngine.cs:3034`); field labelled stub `TacticalContext.cs:141-142` | **no consumer** |
-| L9 | Per-agent assignment → orchestrator (`GetAssignment`) | `DefensiveAITick.cs:309-319`; no production caller (grep) | **missing** |
-| L10 | #8 MOVE target = depth-adjusted own slot | `OptionGenerator.cs:725-749`, `TacticalContext.cs:196-201` | live, slot only |
-| L11 | #8 PRESS: carrier within 8 m, else **nearest opponent within 8 m** | `OptionGenerator.cs:753-818`; `UtilityWeights.cs:332` | live |
-| L12 | #8 INTERCEPT: ball-path geometry, no mark input | `OptionGenerator.cs:822-902` | live, no mark |
-| L13 | Movement command: MOVE → sprint ≥15 m / jog ≥6 m / walk; PRESS → `PressSprint` | `ActionDispatcher.cs:221-256`; `TacticalWeights.cs:53-54` | live |
-| L14 | Tackle intent only vs **assigned** opponent within 3 m | `TackleIntentEvaluator.cs:49,64`; `DefensiveAIConstants.cs:183` | live |
-| L15 | Tackle resolution reads #14 intents | `MatchEngine.cs:3628,4104,4157,4289` | live |
-| L16 | Directive `OffsideTrapActive`/`StepUpTargetDepth`/`EmergencyFlag`, `MarkAssignment.TargetPosition` | grep: no reader outside `defensive-ai` (serializer only, `MatchEngine.cs:8044-8073`) | **no consumer** |
+| L1 | #12 slot: canonical → world → `TacticalContext.Stage0Default(worldSlot)` | `MatchEngine.cs:3821-3839`, `:4781-4787` | live |
+| L2 | #13 role → #14 pool exclusion (also GK, inactive) | `MatchEngine.cs:4697`; `HoldShapePoolFilter.cs:357-366` | live |
+| L3 | #14 snapshot: 22 agents in the defending team's **canonical** frame, `DefensiveTeamId = team` | `MatchEngine.cs:4613-4703` (`:4629,4689,4694-4696`) | live |
+| L4 | #14 tick: InPoss ⇒ all ZONAL; pool; last-man/COVER_GK_ZONE; assign; tackle intent; trap; invariants | `DefensiveAITick.cs:145-150,153,178-238,247,250,258,263` | live |
+| L5 | Assignment: 15 m × `MarkingOrientation` scalar; threat = x-proximity × FirstTouch; priority INTERCEPT_RUNNER > MAN_MARK > ZONAL | `MarkAssigner.cs:115-117,119-183,203-218,228-252` | live |
+| L6 | Hysteresis: 4-tick dwell, 4-tick lock | `MarkHysteresis.cs:27-90`; `DefensiveAIConstants.cs:169` | live |
+| L7 | Orchestrator reads only `OffensiveLineDepth` → `ctx.DefensiveLineDepth`; sets `HasMarkDirective = !teamHasPossession` | `MatchEngine.cs:3801,3870-3871` | live / stub |
+| L8 | `HasMarkDirective` reader | `TestOnly_HasMarkDirective` only (`MatchEngine.cs:3034`); stub `TacticalContext.cs:141-142` | **none** |
+| L9 | Per-agent `GetAssignment` → orchestrator | `DefensiveAITick.cs:309-319`; no production caller | **missing** |
+| L10 | #8 MOVE target = depth-adjusted own slot | `OptionGenerator.cs:725-749`; `TacticalContext.cs:196-201` | live |
+| L11 | #8 PRESS: carrier ≤ 8 m, else nearest opponent ≤ 8 m | `OptionGenerator.cs:753-818`; `UtilityWeights.cs:332` | live |
+| L12 | #8 INTERCEPT: ball path only | `OptionGenerator.cs:822-902` | live |
+| L13 | Dispatch: MOVE sprint ≥ 15 m / jog ≥ 6 m / walk; PRESS → `PressSprint` | `ActionDispatcher.cs:221-256`; `TacticalWeights.cs:53-54` | live |
+| L14 | Tackle intent only vs the assigned opponent ≤ 3 m | `TackleIntentEvaluator.cs:49,64` | live |
+| L15 | Tackle resolution | `MatchEngine.cs:3628,4104,4289` | live |
+| L16 | Directive trap/emergency fields, `MarkAssignment.TargetPosition` | no reader outside `defensive-ai` except the serializer (`MatchEngine.cs:8044-8073`) | **none** |
 
-**Missing:** L8/L9 — nothing turns an assignment into a position. Assignments reach gameplay only
-through tackle intents (L14) and through the trap's demotion of DEFENSE-line marks to ZONAL
-(`OffsideTrapController.cs:85-136`), which removes those agents' tackle intents.
+Assignments reach gameplay only through tackle intents (L14). The trap also demotes DEFENSE-line marks
+to ZONAL (`OffsideTrapController.cs:85-136`), which removes their intents. `InvariantEnforcer`
+(Inv. 1 ≥ 3 back-line ZONAL, `:93-151`; Inv. 2 ≤ 4 MAN_MARK, INTERCEPT_RUNNER uncounted, `:156-197`;
+Inv. 3 target ≤ 20 m from slot, `:202-233`), `LastManDetector` (`:65-182`) and the trap (coherence
+8 m) constrain assignments only. **None constrains anything that moves today.** In the wiring backlog,
+C10 (`match-engine-wiring-backlog.md:627-632`) notes that `MarkAssigner` is ball-blind; no item covers
+movement. The highest existing item is W12, so this is **W13**.
 
-### 1.2 What the anti-chaos and line machinery guarantees today
+### 1.2 Defects and facts found while verifying
 
-| Item | Guarantee (code) | Constrains anything that moves? |
+- **D1 (live, home/away asymmetric).**
+  - `LastManDetector.DefendsX0(teamId) => teamId == 0` (`:190`) feeds `MarkAssigner.cs:41,205`,
+    `LastManDetector.cs:81`, `OffsideTrapController.cs:39` and `TackleIntentEvaluator.cs:44`.
+  - The snapshot is canonical (own goal x = 0 for both teams), yet `DefensiveSnapshot.cs:24` says world space.
+  - For the away team, #14 therefore inverts threat, runner direction, last man, coverage depth and the
+    trap's half test. No #14 test uses team 1 (`DefensiveAITests.cs:40`).
+  - The engine does not swap ends (`tactical-instructions/section-3.md:153`).
+  - Effect size is unmeasured.
+- **D2.** A retained non-ZONAL assignment keeps its commit-time `TargetPosition` (`MarkHysteresis.cs:39`
+  dwell lock; `:58` same-target path), against #14 §2.2.2 (`section-2.md:107-108`). Inv. 3 tests that
+  stale point.
+- **D3.** There is no exclusivity (#14 §3.3.3, `section-3.md:165-247`). With identical attributes,
+  every defender in range picks the deepest attacker.
+- **D4.** The trap treats normalized depth 0.5 (`MatchEngine.cs:4642-4644`) as metres, giving a
+  step-up target 3.5 m from goal. Its targets are not consumed by W13.1.
+- **D5 — de facto marking by PRESS today.**
+  - Any off-ball agent presses the nearest opponent within 8 m (`OptionGenerator.cs:789-803`) once he
+    is within about 6.2 m (§4.5).
+  - At mirrored F442 anchors, a CB is 3.44 m from a striker, so he presses him. The F4231 striker is
+    8.43 m from both CBs, which is outside 8 m.
+  - Possession is carrier-less on most frames: #543 C3 seed 1 has 31,668 controlled-ball frames of
+    323,999 live, while the team-possession witness covers 299,475.
+- **Restarts and substitutes.**
+  - Restarts are instantaneous: the taker is given possession at once (`MatchEngine.cs:5923-5955`).
+  - `MatchPhase` is always `OPEN_PLAY` (`:6463`).
+  - Substitutes reuse the agent index (`:1845`) and inherit #14 per-entity state.
+
+**Geometry** (anchors × 105 / × 68, `PositioningAIConstants.cs:300-393`; world, home attacking +X):
+
+| Claim | Arithmetic |
+|---|---|
+| F442 ST to CB 3.44 m | (81.9, 28.56) to (84.0, 25.84) |
+| F442 CMs coincide | home CM1 = away CM2 = (52.5, 25.84) |
+| F4231 ST 8.43 m from each CB, 2.1 m beyond them | (86.1, 34) to (84.0, 25.84 / 42.16) |
+| F4231 CAM 17.7 m from any opposing slot | (68.25, 34) to (52.5, 42.16) and (84.0, 25.84) |
+| Attack Duty | +3 m anchor x on #543 `SlotComposer`. Strikers move to x = 84.9, 0.9 m beyond the CB line and 2.85 m away |
+
+#543 goals, six matches, base → head, home / away:
+
+| Case | Home | Away |
 |---|---|---|
-| `InvariantEnforcer` Inv. 1 `MinBacklineAgents=3` | ≥3 DEFENSE-line pool agents ZONAL (`InvariantEnforcer.cs:93-151`) | No — assignments only |
-| Inv. 2 `MaxManMarkAssignments=4` | ≤4 MAN_MARK; INTERCEPT_RUNNER **not** counted (`:156-197`) | No |
-| Inv. 3 `MaxMarkDisplacementM=20` | non-ZONAL `TargetPosition` ≤20 m from `BaselineSlot` (`:202-233`) | No |
-| `HoldShapePoolFilter` | GK, PRIMARY_PRESS, COVER_SHADOW, inactive excluded (`:357-366`) | No |
-| `LastManDetector` | deepest pool agent gets INTERCEPT_RUNNER on most advanced attacker; COVER_GK_ZONE when GK > 15 m out (`LastManDetector.cs:65-182`) | Only via tackle intents (last man never COMMITs) |
-| `OffsideTrapController` / `LineCoherenceThresholdM=8` | trap arms on slow ball in opponent half, coherent line, no press; writes ZONAL target `x = step depth` (`:39-136`) | No (target unread) |
+| C3 home F4231 | 20 → 71 | 27 → 15 |
+| C4 away F4231 | 20 → 17 | 27 → 39 |
+| C1 home F433 | 20 → 53 | — |
+| C2 away F433 | — | 27 → 64 |
+| C5 home Defend | 24 → 5 | — |
+| C7 home Attack | 34 → 68 | — |
+| C8 away Attack | — | 26 → 57 |
 
-None of these constrain movement; they become live constraints only when L9 exists.
-**Backlog:** `match-engine-wiring-backlog.md:627-632` (C10) records that `MarkAssigner` has no ball
-model; no item covers the missing movement consumer. Highest item is W12, so this is **W13**.
-
-### 1.3 Defects and facts found while verifying (not in the brief)
-
-- **D1 — frame mismatch (live, home/away asymmetric).** `LastManDetector.DefendsX0(teamId) => teamId == 0`
-  (`LastManDetector.cs:190`) is used at `MarkAssigner.cs:41,205`, `LastManDetector.cs:81`,
-  `OffsideTrapController.cs:39`, `TackleIntentEvaluator.cs:44`. The snapshot is canonical (own goal at
-  x = 0 for **both** teams, `MatchEngine.cs:4615,4689`), but `DefensiveSnapshot.cs:24` documents world
-  space. For the away team #14 therefore takes x = 105 as its own goal: threat favours opponents near
-  the *other* goal, INTERCEPT_RUNNER fires for opponents running away, the "last man" is the most
-  advanced away player, and tackle coverage depth counts the wrong teammates. No #14 test uses
-  `DefensiveTeamId = 1` (only `DefensiveAITests.cs:40`, team 0). The engine does not swap ends
-  (#21 §3 text, `tactical-instructions/section-3.md:153`). Effect size is **unmeasured**; it is a
-  candidate contributor to the C3/C4 home/away asymmetry below, nothing more.
-- **D2 — stale target.** A retained non-ZONAL assignment keeps its commit-time `TargetPosition`
-  (`MarkHysteresis.cs:39` dwell lock; `:58` same-target path), contradicting #14 §2.2.2 ("opponent's
-  current perceived position", `section-2.md:107-108`). Inv. 3 tests that stale point.
-- **D3 — no exclusivity.** #14 §3.3.3 (`section-3.md:165-247`) lets several defenders pick the same
-  opponent; with identical attributes threat is x-only, so every defender in range picks the deepest
-  attacker. Harmless while nothing moves; a convergence pathology once it does.
-- **D4 — trap units.** `snap.DefensiveLineDepth` is `Clamp01(...)` = 0.5 at default
-  (`MatchEngine.cs:4642-4644`), but `OffsideTrapController.cs` treats it as metres (step depth
-  0.5 + 3 = 3.5 m from goal) and `MarkDirective.cs` documents metres. Not consumed by W13.1; follow-up ERR.
-- **D5 — de facto marking already exists.** PRESS priority 2 (nearest opponent ≤ 8 m) plus MOVE
-  suppression at 6 m (`UtilityWeights.cs:194-195`) already pull a defender onto any opponent within 8 m.
-- **Possession witness.** On #543 C3 seed 1, controlled-ball frames are 31,668 of 323,999 live; the
-  team-possession witness (carrier ∪ pass-in-flight receiver) covers 299,475. Use the witness.
-- **Substitutes reuse the agent index** (`MatchEngine.cs:1845`); #14 per-entity state is not reset, so a
-  substitute inherits the outgoing player's assignment/hysteresis.
-- **Restarts are instantaneous:** `ApplyRestart` gives possession to a taker at once
-  (`MatchEngine.cs:5923-5955`) and `MatchPhase` is always `OPEN_PLAY` (`:6463`). There is no dead-ball phase to exempt.
-
-### 1.4 Geometry claims (anchors × 105 / × 68; `PositioningAIConstants.cs:300-393`)
-
-| Claim | Computation (world, home attacking +X vs away F442) | Verified |
-|---|---|---|
-| F442 ST ↔ CB 3.5 m | ST1 (81.9, 28.56) vs away CB2 (84.0, 25.84): 3.44 m | yes |
-| F442 midfielders coincide | home CM1 (52.5, 25.84) = away CM2 world (52.5, 25.84) | yes |
-| F4231 ST 8.5 m from each CB, ~2 m beyond line | ST (86.1, 34) vs CBs (84.0, 25.84/42.16): 8.43 m; Δx 2.1 m | yes |
-| F4231 CAM ~18 m from any slot | CAM (68.25, 34) vs away CMs/CBs: 17.7 m | yes |
-| Attack Duty = F442 shape +3 m | `SlotComposer` on #543 adds `DutyForeOffsetM` {−3,0,+3} to anchor x | yes |
-
-With +3 m, home strikers sit at x = 84.9, i.e. 0.9 m **beyond** the away CB line, still 2.85 m away;
-home defenders move to x = 24, level with/ahead of away strikers (x = 23.1). The 8 m PRESS radius does
-not separate Duty from default; a goal-side hypothesis can (§3). #543 per-team goals (six matches,
-base → head): C3 home F4231 20 → 71 (away 27 → 15); C4 away F4231 away 27 → 39 (home 20 → 17); C1 home
-F433 20 → 53; C2 away F433 27 → 64; C5 home Defend 24 → 5; C7 home Attack 34 → 68; C8 away Attack
-26 → 57 (`analysis/per-match-team.csv` on #543).
+Source: #543 `analysis/per-match-team.csv`.
 
 ## 2. Spec position and ERR plan
 
-| Spec | What it says | Gap |
+| Spec | Says | Gap |
 |---|---|---|
-| #14 §4.4.4 (`section-4.md:158-180`) | orchestrator writes team-level `MarkDirective`; #8 "adjusts target via MarkAssignment" in MOVE and INTERCEPT | a team struct cannot carry a per-agent target; no formula |
-| #14 §4.5.1 (`:184-198`) | orchestrator composes per-agent #8 target from `GetAssignments()`; pressers keep #13 target | no composition rule; #13 targets have no consumer (backlog C1 note) |
-| #14 §2.2.2 (`section-2.md:86-111`) | `targetPosition` = current perceived opponent position | code stale (D2) |
-| #14 §3.3 / §3.10 | assignment + three invariants | no exclusivity (D3); no stand-off or goal-side |
-| #14 §3.5.2 (`section-3.md:316-320`) | `ownGoalCenter = defendsX0 ? (0,34) : (105,34)` | frame of `defendsX0` unstated (D1) |
-| #14 §7.1/§7.2 | activation preconditions; manual man-mark Stage 2+ | contradicts #21 §3.5 (FR-TI-023 approved request semantics) |
-| #8 §2.2.6 (`section-2-1-to-2-2.md:745-753,817`) | nullable team `MarkDirective?` | no per-agent target |
-| #8 §3.1.7.2 (`section-3-1.md:873-897`) | slot target; RUNNER override precedent | no MARK override |
-| #8 §3.1.9 | nothing about marks | INTERCEPT consumption unspecified |
-| #12 | slot authority; Duty offsets (on #543, ERR-012-013) | none for this landing |
-| #13 | press roles exclude agents from #14 pool | press targets unconsumed (separate item, C9) |
-| #21 §2.2.2/§3.4/§3.5 | `MarkingOrientation` scales radius; `TightMarking` "tighter mark distance"; `MarkTargetEntityId` request | #14 has no mark distance |
-| #23 | `MARKING_RADIUS_M = 3.0` defines "marked" for dismarking/FM-DM-03 (`PositioningAIConstants.cs:231`) | none; reuse as bound |
+| #14 §4.4.4 (`section-4.md:158-180`) | team `MarkDirective` written to #8; #8 "adjusts target via MarkAssignment" in MOVE and INTERCEPT | a team struct cannot carry a per-agent target; no formula |
+| #14 §4.5.1 (`:184-198`) | orchestrator composes per-agent target from `GetAssignments()`; pressers keep the #13 target | no rule; #13 targets unconsumed |
+| #14 §2.2.2, §3.3, §3.10, §3.5.2 | current-position target; assignment; three invariants; `ownGoalCenter = defendsX0 ? (0,34) : (105,34)` | D2; D3; no stand-off or goal-side; frame of `defendsX0` unstated (D1) |
+| #14 §7.2 vs #21 §3.5 | manual man-mark is Stage 2+, vs an approved request (FR-TI-023) | stage conflict |
+| #8 §2.2.6 (`section-2-1-to-2-2.md:745-753`), §3.1.7.2 (`section-3-1.md:873-897`), §3.1.8.2, §3.1.9 | nullable team `MarkDirective?`; RUNNER override precedent; press target selection | no per-agent target; no MARK override; press unaware of marks |
+| #21 §2.2.2/§3.4 | `TightMarking` is a "tighter mark distance"; `MarkingOrientation` is a radius scalar | #14 has no mark distance |
+| #23 | marked = opponent ≤ `MARKING_RADIUS_M` 3.0 (`PositioningAIConstants.cs:231`) | reused as a bound |
 
-**ERR entries** (allocate with `.claude/skills/err-file-and-backprop/scripts/next_err_id.sh <spec>` at
-authoring and again after every rebase; never treat an id here as reserved). At `d4b026aa` the script
-reports next free ERR-014-007, ERR-008-026, ERR-021-009, ERR-012-013 — but #543 already uses
-ERR-012-013, ERR-021-009 and ERR-025-001. ERR-014-001 is cited in #8 §2.2.6 but no index row was found
-by grep in `spec-error-log.md`.
+**ERR rows.**
+- Allocate each id with `.claude/skills/err-file-and-backprop/scripts/next_err_id.sh <spec>` in the
+  commit that files it, and re-run after every rebase.
+- At `d4b026aa` the script reports ERR-014-007 / ERR-008-026 / ERR-021-009 as next free. **#543 already
+  uses ERR-021-009, ERR-012-013 and ERR-025-001.** Nothing here is a reservation.
+- ERR-014-001 is cited in #8 §2.2.6 but has no index row found by grep.
 
-| Entry | Spec | Content | Lands with |
+| Entry | Spec | Content | Commit |
 |---|---|---|---|
-| E1 | #14 | D1 frame contract: snapshot is the defending team's canonical frame, own goal x = 0; `defendsX0` resolved from the snapshot, not the team id | W13.0 |
-| E2 | #14 | D2: refresh `TargetPosition` of retained non-ZONAL assignments to the live position each tick | W13.0 |
-| E3 | #14 | consumer contract: new §3.14 composition rule, §3.10 Invariant 4, §4.4.4/§4.5.1 rewritten to a per-agent carrier; stand-off constants; INTERCEPT consumption deferred by name | W13.1 |
-| E4 | #8 | §2.2.6 per-agent `MarkTarget` carrier; §3.1.7.2 MARK override (after RUNNER precedent) | W13.1 |
-| E5 | #21 | §3.4 maps `TightMarking` to #14's tight stand-off (back-prop of E3) | W13.1 |
-| E6 | #14/#21 | §7.2 vs #21 §3.5 stage conflict for `MarkTargetEntityId` | follow-up W13-F1 |
-| E7 | #14 | D4 trap depth units | follow-up W13-F4 |
+| E1 | #14 | D1: the snapshot frame is canonical; `defendsX0` comes from the frame, not the team id | W13.0 |
+| E2 | #14 | D2: refresh `TargetPosition` of retained non-ZONAL assignments to the live position | W13.0 |
+| E3 | #14 | §3.14 composition, §3.10 Invariant 4, §4.4.4/§4.5.1 per-agent carrier, stand-off constants; INTERCEPT consumption deferred | W13.1 |
+| E4 | #8 | §2.2.6 per-agent `MarkTarget`; §3.1.7.2 MARK override; §3.1.8.2 marking agents skip priority 2 | W13.1 |
+| E5 | #21 | §3.4 maps `TightMarking` to the tight stand-off | W13.1 |
+| E6 / E7 | #14 (+#21) | `MarkTargetEntityId` stage conflict / D4 trap units | follow-ups |
 
-## 3. Retained-trace diagnosis (measurement only; precedes gameplay code)
+## 3. Diagnosis — self-contained handoff (executor: the #543 owner's agent; does not block W13 code)
 
-**Question.** Does missing marking movement explain #543's formation and Duty sensitivity? Formation
-cases (C1–C4, C9) and Duty cases (C5–C8) are analysed and reported separately; never pooled.
+**Purpose.** Decide whether #543's sensitivity is consistent with missing marking movement. This is an
+input to #543's merge and to §10's expectations. The owner has already decided marking is wired either
+way. **D1 confound:** every #543 trace ran with the away team's #14 inverted. That bias reaches play
+only through away-defender tackle intents, the trap and last-man choices, but it is not negligible by
+assumption.
 
-**Data actually retained** (`Program.cs.txt:114-162`, `PROTOCOL.md`, `trace-index.json`, `analyze.py`):
+**Order.** The diagnosis runs on existing traces now, in parallel with W13.0, which changes no
+retained trace. Any conclusion resting on a home-versus-away comparison waits for a post-W13.0 recapture
+of C0/C3/C4 (frozen lane), per rule R5.
 
-| Stream | Record | Content |
+**Steps (verbatim):**
+1. Run `git worktree add ../w13diag origin/codex/434-formation-duty`, then
+   `git lfs pull --include "docs/tracking/evidence/formation-duty-20261109/retained/**/observed/traces.tar.xz"`.
+   This covers 84 needed archives (control base C0 ×6; matrix head C1–C9 ×6; matrix base C5–C8 ×6;
+   base C1–C4/C9 reuse base C0, as `analyze.py` does), about 3.6 GB.
+2. Commit `docs/tracking/evidence/marking-diagnosis-20261110/PROTOCOL.md` containing this section's
+   definitions and rules, unchanged or with owner amendments, **before decoding anything**.
+3. Write `analyze_marking.py` in the same directory. Read streams via
+   `tools/dotnet-ci/retained_trace_store.py` `open_trace(dir, name)`, exactly as `analyze.py:8-11`.
+   - `trajectory.bin`: 244 B/frame — 22 × (x, y) f32 **world**; ball 15 × f32; state i32; possessor i32.
+   - `team-possession.bin`: 8 B/frame — receiver i32, team i32 (−1 none).
+   - `geometry.bin`: 188 B per sample — frame i32; per team: phase i32 + 11 slot (x, y), **canonical**,
+     so away slots map to (105 − x, 68 − y).
+   - `ledger.bin`: per frame — count; then (ordinal u8, size i32, raw struct bytes).
+   - Source: `Program.cs.txt:114-162`.
+4. Get event field offsets for `ShotExecutedEvent`, `GoalAwardedEvent`, `RestartAwardedEvent`,
+   `CardIssuedEvent` and `SubstitutionEvent` from a one-file C# probe under the frozen toolchain
+   (`Marshal.OffsetOf`), plus ordinals via `EventRegistry.GetOrdinal<T>()`. Gate: decoded shots,
+   goals and fouls per team must equal every `summary.json`, otherwise stop.
+5. Write outputs: `per-stratum.csv`, `per-attacker.csv`, `shots.csv`, `goals.csv`, `verdicts.json` and
+   `README.md`. Every share is printed with its numerator and denominator. Run synthetic self-tests
+   first (mirror symmetry, slot mirroring, goal-side, own goal, uncertain link).
+
+**Frozen definitions.**
+- *Samples S.* Geometry frames (frame % 6 == 0, before full time), with positions read at the same
+  frames (10 Hz).
+- *Spell.* A maximal run of samples where team-possession = A.
+  - A spell is **restart-origin** if a `RestartAwardedEvent` awarded to A, or any `GoalAwardedEvent`,
+    lies in (previous sample, first sample]. A restart to A inside a spell starts a new spell.
+  - Primary metrics use **open-play-origin** spells; restart-origin spells are reported separately.
+  - Spells cut by full time are flagged censored.
+- *Final third of A.* Home: x ≥ 70.0; away: x ≤ 35.0 [DERIVED 105/3].
+- *Defenders.* Active outfield agents of D = 1 − A; a GK-included variant is also reported.
+  - An agent is inactive from a `CardIssuedEvent` with `CardKind` 1 or 2 onward
+    (`CardIssuedEvent.cs:38-40`; dismissals at `MatchEngine.cs:6323,6329`). Samples after any dismissal
+    form their own stratum.
+  - Substitutions (`SubstitutionEvent.cs:38-44`) are tallied; none are expected (Human managers).
+- *Attacker label.* Roster index k, the kickoff slot under #543's index mapping. #25 rotations are not
+  recoverable; this is a stated limitation.
+- **Stratification (mandatory).** Every metric is reported separately for **home defending** (away
+  attacks; #14 correct) and **away defending** (home attacks; #14 affected by D1).
+- **M1** — d_a = min_j |p_a − p_j| (m); p10/p25/p50/p75/p90 per (case, arm, stratum, k).
+- **M2** — E_r(a): the share of open-play samples with a in the final third and d_a > r, for
+  r = 3.0 (#14 `TackleEligibleRadiusM` = #23 radius), 6.0 (#8 `MOVE_PRESS_SUPPRESSION_DIST`),
+  8.0 (#8 `PRESS_TRIGGER_DISTANCE`) and 15.0 (#14 `ManMarkCandidateRadiusM`). Wording is "no defender
+  within r m", never "unmarked".
+- **M3** — goal-side: G_D = (0, 34) if D = 0, else (105, 34). Defender j is goal-side of a iff
+  |p_j − G_D| < |p_a − G_D|. Report the share where the nearest defender is goal-side, and E_r restricted
+  to goal-side defenders.
+- **M4** — M1–M3 recomputed on both teams' #12 slots.
+- **M5** — shots by shooter k, with d and goal-side status at the shot's ledger frame.
+- **M6** — goals, classified as:
+  - *linked*: the latest prior shot is by ScoringTeam with ShootingAgentId = Scorer, and the witness
+    never shows the conceding team between the shot and the goal;
+  - *own*: Scorer = −1, or the Scorer's team ≠ ScoringTeam (Scorer is `_lastHolderAgentId`,
+    `MatchEngine.cs:5842-5846`);
+  - *uncertain*: everything else.
+  Only linked goals are attributed to a slot.
+- **M7** — denominators: samples, spells and final-third entries per team.
+- **M8** — ball x at each open-play change of the witness to A (territory).
+
+**Comparisons.**
+- Pairs are by seed. Formation cases: head vs reused base C0. Duty cases (C5–C8): head vs their own base.
+- Formation and Duty results are never pooled.
+- Both teams' attackers are reported, because the changed team's defence changed too.
+
+**Decision rules.** These are frozen before decoding. They are descriptive with n = 6: a one-sided sign
+test reaches p = 0.016 only at 6 of 6. Each threshold below is an owner-approvable default, not a
+derived value.
+
+| Rule | Fires when | Then |
 |---|---|---|
-| `trajectory.bin` | 244 B/frame × 324,000 | 22 × (x, y) f32 **world** positions; ball pos/vel/spin/last-valid ×15 f32; ball state i32; possessing agent i32 |
-| `team-possession.bin` | 8 B/frame | pass-in-flight receiver i32; team in possession i32 (carrier's team else receiver's team, −1) |
-| `geometry.bin` | 188 B per 10 Hz sample (frame % 6 == 0, live) | frame i32; per team: #12 phase i32 + 11 slots (x, y) from `GetFormationSlot` — **canonical** frame, so away slots need `(105 − x, 68 − y)` |
-| `ledger.bin` | per frame: count, then (ordinal u8, size i32, raw bytes) | every Tier-A event: `ShotExecutedEvent` (ShootingAgentId, TeamId, ContactFrame…), `GoalAwardedEvent` (Scorer = `_lastHolderAgentId`, `MatchEngine.cs:5842-5846`; ScoringTeam), `RestartAwardedEvent`, `OffsideCalledEvent`, `CardIssuedEvent`, `SubstitutionEvent`, `FoulCommittedEvent`, `PossessionChangedEvent` |
-| `digests`/`aligned` | 32 B/frame | hashes only (raw snapshots not retained) |
+| R1 | For a formation case whose changed team scored more, that team's pooled E_8 rise (head − base) is ≤ 0 in ≥ 3 of 6 seeds | Marking proximity is refuted for that case. *3 of 6 = no better than a coin.* |
+| R2 | Slot exposure (M4) rises but position exposure (M2) rises in < 3 of 6 seeds | Existing movement already compensates the slots, so "missing movement" is refuted. *Same coin threshold.* |
+| R3 | Attackers whose E_8 rose produce < 50% of the changed team's shot increase | Marking is not the primary mechanism. *"Primary" = majority.* |
+| R4 | The Attack-Duty team's goal-side share does not fall and E_r does not rise in ≥ 4 of 6 seeds | Duty is not a marking effect; report M8. *A majority must show no change.* |
+| R5 | In mirrored pairs (C3/C4, C1/C2, C7/C8), the two strata's head − base deltas differ in sign in ≥ 3 of 6 seeds, **or** C0 shows a stratum difference of the same sign in ≥ 5 of 6 seeds | The result is "confounded (D1 candidate)": conclude only from the home-defending stratum, and recapture the pair after W13.0 |
 
-**Not retained:** agent velocities (finite-difference only), #14 assignments, press roles, DT actions,
-rotation state. So the diagnosis can test **exposure**, not **who was assigned**. Feasible without new
-captures: yes. Required matches: control base C0 ×6, matrix head C1–C9 ×6, matrix base C5–C8 ×6 = 84
-archives (base C1–C4, C9 reuse base C0, as `analyze.py` does). All 138 archives total 4.27 GB of LFS
-(pointers only in this checkout; not fetched). Reader: `tools/dotnet-ci/retained_trace_store.py` (on #543).
+A supporting result is that no rule fires. It prioritizes W13.1 but does not predict its size.
 
-**Frozen definitions** (commit as `docs/tracking/evidence/marking-diagnosis-<date>/PROTOCOL.md` before any decode):
-
-- *Sample set S:* geometry frames (frame % 6 == 0, before full time). Positions read at the same frames.
-- *Spell:* maximal run of samples with team-possession = A. A spell is **restart-origin** if a
-  `RestartAwardedEvent` for A or a `GoalAwardedEvent` falls in (previous sample, first sample]; a restart
-  awarded to A inside a spell starts a new spell. Primary metrics use **open-play-origin** spells only;
-  restart-origin spells are reported separately. Spells cut by full time are flagged censored.
-- *Final third of A:* world x ≥ 70.0 (A = 0) or x ≤ 35.0 (A = 1) [DERIVED 105/3].
-- *Defenders:* active outfield agents of D = 1 − A (GK excluded; a GK-included variant reported).
-  Agents are inactive from their dismissal record onward; samples after any dismissal are reported in a
-  separate stratum. Substitution records are tallied (none expected: Human managers, `PROTOCOL.md`).
-- *Attacker label:* roster index k (kickoff slot of the selected family; #543 maps roster index to slot
-  index). #25 rotations can swap roles mid-match and are not recoverable; stated as a limitation.
-- **M1** nearest-defender distance d_a = min_j |p_a − p_j| (m); per (case, arm, team, k): p10/p25/p50/p75/p90.
-- **M2** exposure E_r(a) = share of samples in open-play spells with a in the final third and d_a > r,
-  for r ∈ {3.0 (#14 `TackleEligibleRadiusM`, #23 `MARKING_RADIUS_M`), 6.0 (#8 `MOVE_PRESS_SUPPRESSION_DIST`),
-  8.0 (#8 `PRESS_TRIGGER_DISTANCE`), 15.0 (#14 `ManMarkCandidateRadiusM`)}. Labels say "no defender within
-  r m"; the word "unmarked" is not used.
-- **M3** goal-side: with defending-goal centre G_D = (0, 34) or (105, 34), j is goal-side of a iff
-  |p_j − G_D| < |p_a − G_D|. Report share of samples whose nearest defender is goal-side, and
-  exposure to "no goal-side defender within r".
-- **M4** slot counterpart: M1–M3 with both teams' #12 slots instead of positions.
-- **M5** shots by shooter roster index, with d and goal-side status at the shot's ledger frame.
-- **M6** goals: *linked* if the latest shot before the goal frame was by ScoringTeam with
-  ShootingAgentId = Scorer and the witness never shows the conceding team in between; *own goal* if
-  Scorer = −1 or team(Scorer) ≠ ScoringTeam; otherwise *uncertain* (deflection, rebound, shooter ≠
-  scorer). Only linked goals are attributed to a slot.
-- **M7** denominators: samples, spells, final-third entries per team; every share printed with its count.
-- **M8** regain x: x of the ball at each open-play change of the witness to A (territory check for Duty).
-- *Integrity gate:* decoded shots/goals/fouls per team must equal each `summary.json`; decode event
-  layouts from the C# structs with a self-test, else stop.
-
-**Comparisons.** Paired by seed: formation cases head vs reused base C0; Duty cases head vs their own
-measured base. Report the changed team's attackers **and** the opponent's attackers (the changed team's
-defensive shape changed too).
-
-**Decision rules (frozen; descriptive, n = 6, not significance tests):**
-- R1: for a formation case whose changed team scored more, the marking hypothesis is **refuted for that
-  case** if the changed team's pooled E_8 rise (head − base) is ≤ 0 in ≥ 3 of 6 seeds.
-- R2: if slot-based exposure (M4) rises but position-based exposure (M2) rises in < 3 of 6 seeds, base
-  slots are compensated by existing movement: "missing marking movement" is refuted as the mechanism.
-- R3: if attackers whose E_8 rose account for < 50% of the changed team's shot increase, marking is not
-  the primary mechanism.
-- R4 (Duty): if the Attack-Duty team's nearest-defender goal-side share does not fall and E_r does not
-  rise in ≥ 4 of 6 seeds, the Duty result is not a marking phenomenon; report M8 as the alternative.
-- Supporting result = none of R1–R4 fires. It justifies W13.1's priority; it does not predict its size.
-
-**Budget:** 0 captures; ≤ 3.6 GB LFS fetch; ≤ 4 CPU-hours of Python; about one agent-day to write
-the protocol, script and synthetic self-tests; one adversarial review of the protocol **before** decoding.
-**Optional Phase B (owner decision OD-9):** if Phase A is inconclusive, rerun C0/C3/C4/C7 with a
-read-only observer that adds per-sample `GetAssignment` mode/target to the #543 runner. These are new
-captures on the frozen toolchain (~200 s per match at Debug, `summary.json` `elapsedSeconds`).
+**Budget.** 0 captures, about 3.6 GB LFS, ≤ 4 CPU-hours Python, about one agent-day, and one protocol
+review before decoding. **Phase B** (OD-9, only if inconclusive) is a frozen-lane re-run of C0/C3/C4/C7
+with a read-only observer adding per-sample `GetAssignment` mode/target. That costs about 200 s per
+match (`summary.json` `elapsedSeconds`).
 
 ## 4. Design
 
-### 4.1 Layer ownership (AI → Mechanics → Physics preserved; no new interface)
+### 4.1 Layer ownership (AI → Mechanics → Physics; no interface added)
 
-| Piece | Owner | File |
-|---|---|---|
-| Frame contract, assignment, Invariant 4, goal-side composition | #14 `defensive-ai` (pure static, canonical frame) | `MarkAssigner.cs`, `InvariantEnforcer.cs`, new `MarkTargetComposer.cs` |
-| `TightMarking` → stand-off translation | #14 `TacticTranslation.cs` (consumer-side, KD-2 pattern) | existing file |
-| Gate, mirroring to world, per-agent write | composition root | `MatchEngine.RunMechanicsAI` / `FillDefensiveSnapshot` |
-| Carrier | #8 `TacticalContext` (`bool HasMarkTarget`, `Vector2 MarkTarget`, world m; zero value = identity) | `TacticalContext.cs` |
-| Use | #8 `OptionGenerator.GenerateMoveCandidate` | existing |
+| Piece | Owner |
+|---|---|
+| Frame contract, Invariant 4, goal-side composition (canonical, pure static) | #14: `MarkAssigner.cs`, `InvariantEnforcer.cs`, new `MarkTargetComposer.cs` |
+| `TightMarking` → stand-off | #14 `TacticTranslation.cs` (consumer-side, KD-2 pattern) |
+| Gate, possession test, mirroring, per-agent write | `MatchEngine.RunMechanicsAI` |
+| Carrier `bool HasMarkTarget; Vector2 MarkTarget` (world m; zero value = identity) | #8 `TacticalContext.cs` |
+| MOVE override; PRESS priority-2 skip for marking agents | #8 `OptionGenerator.cs` |
 
-The DT receives a position (a physical parameter), never a #14 type, so `decision-tree.asmdef` gains no
-reference. Producer and consumer are both specified by E3/E4; there is a struct field and no interface.
+The Decision Tree gets a position and a flag (physical parameters), never a #14 type, so
+`decision-tree.asmdef` gains no reference.
 
-### 4.2 Composition rule (per HOLD_SHAPE agent, each 10 Hz stride, canonical frame)
+### 4.2 Composition rule (per pool agent, once per 10 Hz stride, canonical frame)
 
-Inputs: assignment `a` from `GetAssignment(i)`, the team's `DefensiveSnapshot` (still valid after
-`Tick`), stand-off `s`. Output: canonical target `M`, or no target (agent keeps today's slot behaviour).
+**Step 1 — no target when any of these holds:**
+- the switch is off;
+- `a.Mode == Zonal`;
+- `a.ValidThroughTick != tick`;
+- the target is missing or `!IsActive`;
+- **the agent's team holds team possession.** Team possession is
+  `teamPossessor = _possessingAgentId >= 0 ? _possessingAgentId : _passInFlightReceiverId`, the
+  expression already formed once at `MatchEngine.cs:4443` (the C1 union). W13.1 hoists it into one
+  private helper used by `FillPositioningSnapshot` and the gate, which is behaviour-neutral.
+  - It is read once at `RunMechanicsAI` entry, before the team loop.
+  - `TryResolveTackles` (`:3628`) and the possession refresh (`:3636`) run after `RunMechanicsAI`
+    (`:3619`), and nothing inside it writes possession (`:3630-3635`).
+  - So both teams read the same stride's value: no home-before-away skew.
 
-1. No target if: switch off; `a.Mode == Zonal`; `a.ValidThroughTick != tick`; target index missing or
-   `!IsActive`; the agent's team holds team possession (carrier or pass-in-flight receiver, as C1).
-2. `CoverGkZone`: `M = a.TargetPosition` (abandoned-zone centre, (7.5, 34) canonical).
-3. `ManMark` / `InterceptRunner`: O = target's **live** snapshot position (not `TargetPosition`; D2),
-   G = (0, 34), v = G − O, L = |v|.
-   `M = O + (s / L)·v` if L > s, else `M = G`.
-4. Displacement cap: if |M − BaselineSlot| > `MaxMarkDisplacementM`, no target (the §3.10 Inv. 3 value).
-5. World target = `MirrorPitchIfAway(t, M)`; #8 clamps to the pitch (`PitchGeometry.ClampToPitch`) and
-   does **not** apply the `DefensiveLineDepth` adjustment to it.
+**Step 2 — `CoverGkZone`:** M = `a.TargetPosition` (the zone centre, (7.5, 34) canonical).
 
-Units: metres; s ∈ (0, 3.0) m (§6); L ∈ [0, 123.6] m; M is on the pitch after the clamp.
+**Step 3 — `ManMark` / `InterceptRunner`:**
+- O = the target's **live** snapshot position; G = (0, 34); v = G − O; L = |v|.
+- M = O + (s / L)·v if L > s, else M = G.
 
-**Worked example A (away CB marks home F4231 ST; brief's case).** Home ST world (86.1, 34) → away
-canonical O = (18.9, 34). Away CB1 slot (21.0, 25.84): distance 8.43 m ≤ 15 m, so a MAN_MARK candidate.
-v = (−18.9, 0), L = 18.9, s = 2.0 → M = (16.9, 34.0). |M − slot| = √(4.1² + 8.16²) = 9.13 m ≤ 20.
-World = (105 − 16.9, 68 − 34) = **(88.1, 34.0)**: between the ST (86.1) and the away goal (105).
-**Mirror (home CB marks away F4231 ST):** O = world (18.9, 34) = canonical → M = **(16.9, 34.0)** world.
-**Worked example B (off-centre, tight).** O = (20, 30): v = (−20, 4), L = 20.396; s = 2.0 →
-M = (18.039, 30.392); s = 1.0 → M = (19.019, 30.196).
-**Degenerate:** O = (1.0, 34.5), s = 2.0 → L = 1.118 ≤ s → M = (0, 34), then pitch clamp.
+**Step 4 — no separate cap.** The 20 m bound is enforced by Invariant 3 alone (§4.3).
 
-### 4.3 Invariant 4 — one marker per opponent (E3)
+**Step 5 — output:** world = `MirrorPitchIfAway(t, M)`. #8 clamps it to the pitch and does not apply
+the depth adjustment.
 
-After Inv. 1–3 inside the same ≤3-pass loop (`InvariantEnforcer.cs:62-80`): for any opponent targeted by
-more than one non-ZONAL assignment, keep the emergency override if present; otherwise keep the lowest
-displacement cost |agent − O|² (§3.4); a tie keeps the lower EntityId (FR-DA-014). Demote the rest to ZONAL
-(`DemoteToZonal`). Demotion is monotonic toward ZONAL, so the existing convergence argument holds.
-It is gated by a per-tick `DefensiveSnapshot.MarkMovementActive` input (not serialized), so default
-assignments, and therefore tackle intents, are unchanged.
-*Example:* away CM1 (id 17) at (45, 28) and CM2 (18) at (45, 40) both MAN_MARK the home CAM at canonical
-(36.75, 34) (10.2 m each). The costs tie at 104.06 m², so 17 keeps the CAM and 18 is demoted to ZONAL.
-Note that two CBs on one striker are already reduced to one by Inv. 1 (≥3 of the back four ZONAL).
+**Units and ranges:** m; s ∈ (0, 3.0); L ∈ [0, 123.6]; |M − O| ≤ s.
+
+**Worked examples.**
+- **A (away CB marks home F4231 ST).**
+  - ST world (86.1, 34) → canonical O = (18.9, 34).
+  - CB1 slot (21, 25.84) is 8.43 m away, so the ST is a candidate.
+  - v = (−18.9, 0), s = 2 → M = (16.9, 34) → world **(88.1, 34)**, between the ST and the goal at x = 105.
+  - Mirror (home CB): M = **(16.9, 34)** world.
+- **B (off-centre).** O = (20, 30), L = 20.396 → s = 2: M = (18.039, 30.392); s = 1: M = (19.019, 30.196).
+- **Degenerate.** O = (1.0, 34.5), L = 1.118 ≤ 2 → M = (0, 34), then pitch clamp.
+
+### 4.3 Invariants 3 and 4 after the D2 fix
+
+**Invariant 3** (`InvariantEnforcer.cs:202-233`) tests the **live** O after E2.
+- MAN_MARK → ZONAL is immediate, even during a dwell lock: demotion does not set `OverriddenThisTick`.
+- Re-acquisition needs `MarkDwellTicks` (4) consecutive preferring ticks. `ApplyGate` restarts the
+  candidate at `HoldTicks = 1`, because the commit reset `CandidateMode` to ZONAL (`MarkHysteresis.cs:53-90`).
+- So at the 20 m boundary the published mark cannot flap faster than one demotion per ≥ 4 strides.
+- With Step 4 removed (option 3 of drop / clamp / Inv. 3), there is one authority and its dwell is
+  the hysteresis. Since |M − O| ≤ s, a consumed target is always within 20 + s m of the slot.
+- *Rejected — drop on M:* that is a second, unhysteresed boundary offset by up to s, so it could
+  alternate every stride.
+- *Rejected — clamp to the 20 m circle:* it parks the marker at a point that is neither his slot nor
+  goal-side of his man.
+
+**Invariant 4** (E3) — one marker per opponent.
+- It runs after Invariants 1–3 inside the existing ≤ 3-pass loop (`:62-80`).
+- For a duplicated target: keep an emergency override if present; otherwise keep the lowest |agent − O|²
+  (§3.4); on a tie keep the lower EntityId (FR-DA-014). The others are demoted (`DemoteToZonal`).
+  Demotion is monotonic, so convergence holds.
+- It is gated by the per-tick input `DefensiveSnapshot.MarkMovementActive` (not serialized), so default
+  assignments and tackle intents are unchanged.
+- *Example:* away CMs 17 at (45, 28) and 18 at (45, 40) both mark the home CAM at canonical (36.75, 34).
+  Both are 10.2 m away, cost 104.06 m², so 17 keeps the CAM and 18 is demoted.
+- Two CBs on one striker are already reduced to one by Invariant 1.
 
 ### 4.4 Exemptions and interactions
 
-- **Pressers / GK / sent-off:** not in the pool (`HoldShapePoolFilter.cs:357-366`), so no target. Pressers
-  keep today's behaviour; #13 press targets remain unconsumed (separate item).
-- **Last man / cover:** emergency overrides are consumed as INTERCEPT_RUNNER (goal-side of the most
-  advanced attacker) and COVER_GK_ZONE (zone centre). They require D1 fixed first.
-- **In possession:** no targets (#14 emits all ZONAL on InPoss; the extra team-possession gate covers
-  the hysteresis lag of #12's phase dwell, `PhaseClassifier.cs:30-45`). Loose-ball transitions keep marks (#14 §3.1).
-- **Restarts:** the engine has no set-piece phase (§1.3), so marking applies as in open play. Set-piece
-  marking is #14 §7.5 (Stage 2+). The diagnosis and measurement tag restart-origin spells.
-- **Substitution:** the incoming player inherits the index and assignment (§1.3); a marker of a replaced
-  opponent marks the substitute. Locked by test, not changed.
-- **Offside line/trap:** a goal-side marker can drop behind the #12 line and play attackers onside. Trap
-  ZONAL targets are **not** consumed (ZONAL ⇒ slot) until D4 is fixed (W13-F4); the trap still demotes
-  DEFENSE-line marks. Offside calls are measured descriptively.
-- **#12 rotations / Duty:** these move the zonal slot and therefore `BaselineSlot` (displacement cap and
-  pool positions). The mark point ignores the marker's Duty. Attack-Duty defenders still drop goal-side.
-- **PRESS (D5):** near the mark point, MOVE urgency falls to its floor and PRESS on the nearest opponent
-  (≤ 8 m) usually wins, sprinting to the man's position. Goal-side therefore holds for the composed MOVE
-  target, not necessarily for the body. This is measured; mark-aware PRESS is follow-up W13-F3.
-- **INTERCEPT:** unchanged (E3 defers #8 §3.1.9 consumption by name).
-- **#23 dismarking:** default Off. When on, a marked attacker (opponent ≤ 3 m) nudges away
-  (`SlotComposer.cs:168-194`); the stand-off < 3 m makes markers visible to it. This is characterized, not tuned.
-- **#21 dials:** `MarkingOrientation` (radius ×0.8/1.0/1.2) becomes behavioural; `TightMarking` selects
-  the tight stand-off; `MarkTargetEntityId` is out of scope (W13-F1).
-- **#440 (PR #544, other owner):** markers near their man raise tackle and `BALL_LOOSE` exposure, and #440
-  changes who re-collects. No code interaction; the order of measurement matters (§11).
+- **Pressers, GK, sent-off agents:** outside the pool, so no target. #13 press targets stay unconsumed.
+- **Emergencies:** last man → INTERCEPT_RUNNER goal-side of the most advanced attacker; COVER_GK_ZONE →
+  the zone centre. Both are meaningful only after D1.
+- **In possession:** Step 1 applies. Loose-ball transitions keep marks (#14 §3.1).
+- **Restarts:** no set-piece phase exists, so marking applies as in open play. Set-piece marking is #14
+  §7.5, Stage 2+.
+- **Substitution:** the incoming player inherits the index and the mark (locked by test, not changed).
+- **Offside:** a goal-side marker can drop behind the #12 line and play attackers onside. Trap ZONAL
+  targets are not consumed until D4 is fixed.
+- **#12 rotations / Duty:** they move `BaselineSlot` only; the marker's own Duty does not move the mark point.
+- **#23 dismarking (default Off):** with s < 3 m, markers count as "marked" for the nudge
+  (`SlotComposer.cs:168-194`).
+- **#440 (PR #544, other owner):** more defenders within 3 m means more tackles and `BALL_LOOSE`
+  outcomes. Keep the two measurement windows separate.
 
-## 5. Marking varieties
+### 4.5 PRESS versus MOVE (central to W13.1)
 
-| Variety | In code today | First landing (W13.1) | Follow-up | #21 dial |
+The table covers marker-to-man distance d, scored per `UtilityScorer.cs:320-394`. Assumptions:
+- neutral attributes 10 ⇒ A = 9/19 (`DecisionContextAssembler.cs:86-151`), shifted 0.7368;
+- MEDIUM pressing, Balanced, Support;
+- loose ball (CONTESTED: phase ×1.0, no urgency), midfield zone;
+- the marker comes from the goal side, so his distance to the mark point is d − 2.
+
+Formulas:
+- MOVE = 0.40 × 0.7368^0.7 (0.8075) × max((d − 2)/15, 0.10) × [0.6 if an opponent is ≤ 6 m].
+- PRESS = 0.50 × 0.7368^0.8 (0.7833) × (1 − d/8).
+- Selection noise is ±0.0825 per option (`ComposureWeights.cs:22,29`; `ActionSelector.cs:52-62`).
+
+| d (m) | MOVE | PRESS | Choice |
+|---|---|---|---|
+| 8 | 0.129 | 0 → floor 0.01 | MOVE (noise can flip) |
+| 6.17 | 0.098 | 0.098 | crossover (no suppression) |
+| 6 | 0.052 (suppressed) | 0.098 | PRESS (noise can flip) |
+| 3 | 0.019 | 0.245 | PRESS, deterministic (margin 0.226 > 0.165) |
+| 2 | 0.019 | 0.294 | PRESS |
+| 1 | 0.019 | 0.343 | PRESS |
+
+Effects of other conditions:
+- With an opposing carrier, MOVE ×1.25 (`UtilityWeights.cs:200`) and PRESS ×1.2 (`TacticalWeights.cs:45`);
+  the same choices result.
+- In the own third, PRESS ×0.8 gives 0.196 at 3 m; still PRESS.
+
+**Stride by stride without a rule:**
+1. Strides 0–3: dwell. The F4231 ST is 8.43 m from the CB, so there is no press; the CB holds his slot.
+2. Stride 4: the mark commits. MOVE jogs toward M, 9.13 m away.
+3. Once d ≤ about 6.2 m, PRESS takes over and `PressSprint` (EMERGENCY braking, target lock) heads for
+   the man's **current** position: contact distance, not goal-side.
+4. Priority 2 picks the **nearest** opponent, so a marker can switch men, defeating Invariant 4.
+
+**Sprint cost.** Sustained sprinting drains the sprint reservoir at 0.12/s (`AgentMovementConstants.cs:128`):
+1.0 to the 0.20 floor (`:64`) takes 6.7 s. The aerobic pool drains at 0.006/s (`:140`), and the PRESS
+gate needs `AerobicPool > 0.20` (`DecisionContextAssembler.cs:83`). That is 133 s of cumulative
+pressing, after which the gate closes. So "marking" by pressing is both not goal-side and self-exhausting.
+
+**Today's default already does this for every agent.** Any defender within about 6 m of an off-ball
+opponent presses him. At F442 anchors a CB is 3.44 m from a striker, so the CB is in permanent press
+contact, which is plausibly why F442 strikers are contained and F4231's (8.43 m) are not. Marking
+without a rule would only **extend the reach** of that press from about 6 m to 15 m.
+
+**Decision (in W13.1, E4):** an agent with `HasMarkTarget` generates PRESS **only via priority 1**
+(the carrier within 8 m, which may be his man); priority 2 is skipped. Zonal agents are unchanged, and
+switch-off is byte-identical. MOVE then governs. Near the point, MOVE (0.019–0.032) is often the only
+off-ball option apart from INTERCEPT, so the marker holds 2 m goal-side and re-targets every stride.
+The rule's effect is checked by the closure test (§9) and by §10's goal-side metric.
+
+**Remaining gap — pace (OD-12).** Below 6 m from the point, MOVE walks: the cap is `JogEnter` 2.2 m/s
+(`AgentMovementSystem.cs:236,487-488`). An INTERCEPT_RUNNER man moves at > 3 m/s
+(`DefensiveAIConstants.cs:92`), so the marker falls behind until 6 m, then jogs at ≤ 5.8 m/s
+(`SprintEnter`, `AgentMovementSystem.cs:484-485`). A neutral sprinter reaches 7.5 + 9 × 2.7/19 = 8.78 m/s
+(`AgentLocomotion.cs:23-27`), so the runner gets past. Recommended W13.1c: for a mark target, the tier
+is the larger of the distance tier and the man's speed tier (via `JogEnter`/`SprintEnter` [CROSS #2]),
+carried as one extra float `MarkTargetSpeed`.
+
+## 5. Marking varieties and per-team selection
+
+| Variety | Today | W13.1 | Later | Selector |
 |---|---|---|---|---|
-| Zonal (slot) | live (all movement) | unchanged | — | — |
-| Mixed/hybrid: zonal back line ≥3, ≤4 man-marks, radius 15 m | assignment only | **moves** (goal-side) | — | `MarkingOrientation` |
-| Ball-oriented / man-oriented radius | radius scalar live in assignment | moves | raising Inv. 2 cap for ManOriented = owner decision | `MarkingOrientation` |
-| One marker per opponent | absent | Invariant 4 | — | — |
-| Tight vs loose | absent | stand-off 1.0 / 2.0 m | team-level tightness; `Marking` attribute (no consumer) | `TightMarking` (per player) |
-| Runner tracking | INTERCEPT_RUNNER assignment | moves goal-side of runner (live position) | pace tier for marks; predicted point | — |
-| Last-man / cover GK zone | assignment only | moves | — | — |
-| Specific opponent | serialized, unconsumed | — | W13-F1 (E6) | `MarkTargetEntityId` |
-| Coverage of an unassigned between-lines attacker | absent | — | W13-F2 attacker-centric pickup, conditional on §10 | — |
-| Mark-aware press | absent | — | W13-F3 | — |
-| Offside-trap step-up | ZONAL target, unread | — | W13-F4 after D4 | `OffsideTrap` |
-| Set-piece marking | absent | — | #14 §7.5 Stage 2+ | — |
+| Zonal | all movement | unchanged for zonal agents | W13.2 "Zonal" scheme = no mark targets | `MarkingScheme` (W13.2) |
+| Mixed (≥ 3 zonal back line, ≤ 4 man-marks, 15 m) | assignment only | moves, goal-side | — | default |
+| Ball- / man-oriented radius | radius live in assignment | moves | ManOriented raises Inv. 2 cap / lowers Inv. 1 (owner) | `MarkingOrientation` |
+| One marker per opponent | — | Inv. 4 | — | — |
+| Tight vs loose | — | 1.0 / 2.0 m | team tightness; `Marking` attribute (no consumer today) | `TightMarking` |
+| Runner tracking | assignment only | goal-side of the live position | W13.1c pace tier; lead point | — |
+| Last man / cover GK | assignment only | moves | — | — |
+| Specific opponent | serialized only | — | W13-F1 (E6) | `MarkTargetEntityId` |
+| Between-lines pickup | — | — | W13-F2, if §10 shows residual exposure | — |
+| Trap step-up | target unread | — | W13-F4 after D4 | `OffsideTrap` |
+
+**Per-team scheme roadmap.** W13.1's switch is engine-wide, so both teams mark or neither.
+
+- **W13.2** adds a #21 `TeamTactic.MarkingScheme` enum, `{Zonal, Mixed, ManOriented}`, append-only
+  (FR-TI-007).
+  - `Zonal`: no mark targets; assignments still feed tackles as today.
+  - `Mixed`: W13.1 behaviour.
+  - `ManOriented`: per-scheme `[GT]` invariant limits; a #14/#21 amendment.
+  - The default row is an owner decision tied to the flip.
+  - Once W13.2 exists, the engine-wide switch becomes "engine supports marking", and the scheme selects
+    behaviour per team.
+- **Cost:** `TeamTactic` is serialized state (#21 Appendix B order), so W13.2 needs a world-schema bump
+  that follows #543's v29 (v30, or whatever is next at landing) per
+  `.claude/skills/snapshot-schema-bump/SKILL.md`. It also needs an #21 Appendix B append, a
+  `PlayerTacticFileLoader`-style key and a client control (blocked until the flip anyway).
+- Reusing `MarkingOrientation` was rejected: a zonal value would have to be appended after
+  `ManOriented`, mixing two axes in one dial.
 
 ## 6. Constants
 
-New (KD-W1 allows new dials on a dead surface; **UN-CALIBRATED**, no tuning in this landing):
+New. KD-W1 is: "Do not land a `[GT]` change governing a subsystem that is not fully wired. Defect fixes,
+instruments, and measurement are unaffected" (`match-engine-wiring-backlog.md:88-90`). W2 read it as
+permitting new dials on a dead surface while forbidding tuning them (`DefensiveAIConstants.cs:205-209`).
+All values below are **UN-CALIBRATED**.
 
-| Name | Tag | Catalogue | Units | Value | Valid range / invariant |
+| Name | Tag | Catalogue | Units | Value | Range |
 |---|---|---|---|---|---|
-| `MarkStandoffM` | [GT] | `DefensiveAIConstants` (config `defensive-ai`) | m | 2.0 | `MarkStandoffTightM` < v < min(`TackleEligibleRadiusM`, `MARKING_RADIUS_M`) = 3.0 |
-| `MarkStandoffTightM` | [GT] | `DefensiveAIConstants` | m | 1.0 | 0 < v < `MarkStandoffM` |
-| `MarkMovementEnabled` | [GT] | `MatchEngineConstants` (config `match-engine`, `Config.GetBool`) | bool | false | {false, true}; flipping it is OD-2 |
-| own-goal centre (0, 34) canonical | [DERIVED] | `DefensiveAIConstants` | m | (0, `PITCH_WIDTH_M`/2) | from [CROSS #1 §1.2]; matches #14 §3.5.2 |
+| `MarkStandoffM` | [GT] | `DefensiveAIConstants` (`GetFloat`) | m | 2.0 | (`MarkStandoffTightM`, min(`TackleEligibleRadiusM`, `MARKING_RADIUS_M`) = 3.0) |
+| `MarkStandoffTightM` | [GT] | same | m | 1.0 | (0, `MarkStandoffM`) |
+| `MarkMovementEnabled` | [GT] | `MatchEngineConstants`, `Config.GetBool("match-engine", "MarkMovementEnabled", false)` | bool | false | {false, true} |
+| own-goal centre | [DERIVED] | `DefensiveAIConstants` | m | (0, `PITCH_WIDTH_M`/2) | from [CROSS #1 §1.2]; #14 §3.5.2 |
 
-The upper bound keeps a marker inside the tackle-intent radius and inside #23's "marked" radius. It is
-locked by a test. Names follow the catalogue's existing PascalCase `[GT]` convention.
+The loader exists: `GameplayConfig.GetBool` at `src/project-constants/GameplayConfig.cs:120`, tested
+in `GameplayConfigTests.cs:36,52,82`. The precedent copied is
+`ClubFinancesConstants.DeepRevenueEnabled = Config.GetBool("club-finances", "DeepRevenueEnabled", false)`,
+"[GT] sole … gate, default off" (`ClubFinancesConstants.cs:50-51`). Both were verified at `d4b026aa`
+with `git grep`.
 
-Newly live (values unchanged): `ManMarkCandidateRadiusM` 15, `RunnerVelocityThresholdMS` 3.0,
-`MarkDwellTicks` 4, `MinBacklineAgents` 3, `MaxManMarkAssignments` 4, `MaxMarkDisplacementM` 20,
-`LastManBallBufferM` 5, `LastManOwnHalfMinX` 5, `GkExpectedZoneMaxX` 15, `CoverGkZoneMaxTicks` 20
-(all [GT], `DefensiveAIConstants.cs`), `MarkingOrientationScalar` {0.80, 1.00, 1.20} ([GT], #21).
-`TackleEligibleRadiusM` and `MARKING_RADIUS_M` are read as [CROSS] bounds.
+**Newly live (values unchanged):**
+- [GT] in `DefensiveAIConstants.cs`: `ManMarkCandidateRadiusM` 15, `RunnerVelocityThresholdMS` 3.0,
+  `MarkDwellTicks` 4, `MinBacklineAgents` 3, `MaxManMarkAssignments` 4, `MaxMarkDisplacementM` 20,
+  `LastManBallBufferM` 5, `LastManOwnHalfMinX` 5, `GkExpectedZoneMaxX` 15, `CoverGkZoneMaxTicks` 20.
+- [GT] in #21: `MarkingOrientationScalar` {0.8, 1.0, 1.2}.
+- [CROSS] bounds: `TackleEligibleRadiusM`, `MARKING_RADIUS_M`, `JogEnter`, `SprintEnter` (W13.1c).
 
 ## 7. Determinism and snapshot
 
-- **No new cross-tick state.** The composer is a pure function of this stride's assignment and
-  snapshot. The assignment and hysteresis per entity are already serialized (`MatchEngine.cs:8044-8073`).
-  `_tacticalContexts` is rebuilt every stride and not serialized (grep). `MarkMovementActive` is
-  per-tick input. Therefore no `SNAPSHOT_SCHEMA_VERSION` change, and no v29 collision with #543 on
-  either base. Raw-digest identity at default is achievable.
-- **Activation is config-level.** It is a [GT] like `TackleContactRadiusM` (`MatchEngineConstants.cs:732`),
-  with an internal test seam like `TestOnly_ArmTackleChallenge` (`MatchEngine.cs:2730`). A per-match
-  flag in the `EnableGkHeading` style is serialized (`MatchEngine.cs:7183,7492`) and would force a
-  bump: 28 → 29 collides with #543, so it would have to land after #543 as v30. That route is not
-  recommended (OD-11). Hazard: a save restored under a different config diverges, as for any [GT].
-- **No RNG**, no domain tag, no draw-site or draw-order change. Iteration order is the EntityId-ascending
-  pool and the k-ascending orchestrator loop.
-- **Rates:** composition runs once per 10 Hz stride inside `RunMechanicsAI`; MOVE commands persist across
-  the 60 Hz frames as today. Nothing is added to the physics loop.
-- **Hot path:** structs, `in`/`out`, no LINQ, no allocation. `SnapshotIndexOf` is O(22). An allocation
-  test extends `Performance_T_DA_PERF_002`.
-- If OD-11 picks the serialized flag, follow `.claude/skills/snapshot-schema-bump/SKILL.md`: version
-  pin, symmetric write/read, single-field digest probe, round-trip test.
+- **No new cross-tick state.**
+  - The composer is pure.
+  - Assignment and hysteresis are already serialized (`MatchEngine.cs:8044-8073`).
+  - `_tacticalContexts` is rebuilt every stride and not serialized.
+  - `MarkMovementActive` is per-tick input.
+  - Result: no `SNAPSHOT_SCHEMA_VERSION` change and no collision with #543's v29.
+- **Activation is config-level** (`TackleContactRadiusM` pattern, `MatchEngineConstants.cs:732`), with
+  an internal per-engine seam like `TestOnly_ArmTackleChallenge` (`MatchEngine.cs:2730`). A per-match
+  flag in the `EnableGkHeading` style is serialized (`:7183,7492`) and would force a bump after v29
+  (OD-11). The hazard is that a save restored under different config diverges, as with any [GT].
+- **No RNG**, domain tag or draw change. Iteration is the EntityId-ascending pool and the k-ascending loop.
+- **Rates:** composition runs at 10 Hz in `RunMechanicsAI`; commands persist across 60 Hz frames as today.
+- **Hot path:** structs and `in`/`out`, no LINQ or allocation, O(22) lookups. Extend
+  `Performance_T_DA_PERF_002`.
 
-## 8. Rollout, base branch and default behaviour
+## 8. Rollout on `claude/great-sagan-rpcmhp`
 
-**Base: main for both code landings** (recommended; OD-3). Neither W13.0 nor W13.1 needs a non-default
-formation to be correct. Their unit tests and mirrored F442 engine tests run on main. #543's
-`MatchEngine.cs` hunks (around lines 319, 1043, 1552, 2305, 4425-4469, 6911-7057, 7347-7431 and
-7977-7995) do not overlap W13's (RunMechanicsAI 3760-3930, FillDefensiveSnapshot 4621-4704, test
-seams). No schema change, so rebasing either way is mechanical. F4231 engine tests and the §10 corpus
-need #543: run them after #543 merges, or on a throwaway integration branch main + #543 head (never landed).
-Basing on #543 instead would put formation tests in-tree immediately, but stacks review churn on an
-unmerged draft.
+**Order.** Commit ① (plan) is the only commit made so far. Code commits ②–⑨ follow owner approval of
+the §11 decisions. W13.0 then lands as one
+commit-group: spec, ERR and code together per `.claude/skills/err-file-and-backprop/`. W13.1 follows
+as a later group.
 
-| Option | Identity | Pros | Cons |
-|---|---|---|---|
-| (a) live by default | every baseline moves (`pre-c-control-20261104/expected.json`, scenario predicates) | simplest; no switch | mixes wiring with a behaviour change; one-shot adoption; must avoid open measurement windows as D-05 does for #434/#440 |
-| **(b) off by default (recommended)** | exact raw-digest identity at default, gameplay and serialized state, on main or #543 | follows the "exact identity at default, characterization for non-default" pattern (#434) and W2's "built, shipping disabled" | one config constant to flip later; a dead path until flipped |
+**Base.** The branch is at main `d4b026aa`. #543's `MatchEngine.cs` hunks (around 319, 1043, 1552, 2305,
+4425-4469, 6911-7057, 7347-7431, 7977-7995) do not overlap W13's (3610-3930, 4430-4446 helper,
+4621-4704, test seams). With no schema change, a later rebase or merge with #543 is mechanical. F4231
+tests and §10 need #543 merged first.
 
-The default flip is a separate measured owner decision after §10. It must not land inside an open
-measurement window (the D-05 rule, `match-engine-wiring-backlog.md:321-329`). Whether a W8 B→C window is
-open at landing time could not be determined from main and must be checked then.
-**W13.0 is behaviour-changing at default by nature** (a defect fix in the live tackle chain). It is a
-separate PR with its own six-seed characterization and digest adoption (OD-1).
-**Player-facing formation/Duty controls** stay blocked until the flip is accepted.
+**Default options.**
 
-## 9. Implementation steps
+| Option | Identity | Verdict |
+|---|---|---|
+| (a) live by default | every baseline moves (`pre-c-control-20261104/expected.json`, scenario predicates) | no — mixes wiring with a behaviour change |
+| **(b) off by default** | identity of gameplay and serialized bytes **relative to the post-W13.0 tip** (W13.0 itself changes defaults) | **yes**: the #434 "exact identity at default" pattern and W2's "shipping disabled" |
 
-Each step is one reviewable PR or commit. Tests run first with `run-gate.sh --fast --test-filter`, then
-the full Linux gate, then the pinned Unity host (src/CLAUDE.md). Every engine test runs as
-`[TestCase(0)] [TestCase(1)]` (home/away mirror).
+**Evidence for (b).**
+- Available here (SDK 8.0.133, non-certifying):
+  - unit/engine gates;
+  - two-run determinism, armed;
+  - snapshot-restore continuation;
+  - an env-gated probe (`TD_MARK_IDENTITY_PROBE=1`) that prints six-seed digests at frame 18,000 at the
+    W13.0 tip and the W13.1 tip. They must be equal.
+  - No production test pins gameplay digests today (grep: only `CertifiedPerfBaselineTests.cs`).
+- Frozen lane only (the #543 owner's environment):
+  - six-seed full-match terminal identity of the W13.1 switch-off build vs the W13.0 tip;
+  - W13.0's own six-seed characterization and digest adoption;
+  - §10.
+- Pinned Unity host: compile and EditMode (src/CLAUDE.md).
 
-**S0 — Diagnosis** (no `src/`). Add `docs/tracking/evidence/marking-diagnosis-<date>/` with
-`PROTOCOL.md` (frozen first), `analyze_marking.py` and synthetic self-tests (mirror, goal-side, own goal,
-uncertain link, slot mirroring). Then run and report. Gate: integrity totals match the `summary.json` files.
+**W13.0 vs D-05.**
+- KD-W1 exempts defect fixes (`match-engine-wiring-backlog.md:88-90`).
+- D-05 (`:321-329`) names #440/#434 and forbids behaviour-changing landings inside an A→B / B→C window.
+  By analogy W13.0 must not land inside an open window.
+- Main has W8 C merged (`d4b026aa`, PR #542), but whether its measurement window is closed is **not
+  verifiable here**; check `path-to-playable-roadmap.md` at commit time (OD-1).
+- The default flip (OD-2) is under the same rule. Formation/Duty player controls stay blocked until the
+  flip is accepted.
 
-**S1 — W13.0 (E1, E2), main.**
-- `DefensiveSnapshot.cs`: document the canonical frame. `LastManDetector.cs`, `MarkAssigner.cs`
-  (`ThreatScore` takes `defendsX0`), `TackleIntentEvaluator.cs`, `OffsideTrapController.cs` and
-  `InvariantEnforcer.cs` (`TargetThreat`): resolve `defendsX0` from the snapshot frame, never `teamId`.
-- `MarkAssigner.cs`: refresh `TargetPosition` from the live snapshot for retained non-ZONAL assignments.
-- #14 `section-2.md` §2.3, `section-3.md` §3.3/§3.5/§3.8 notes, version rows; ERR rows.
-- Tests (`DefensiveAITests.cs`): team-1 canonical twins of `T_DA_016`, `T_DA_035`, `T_DA_038`, `T_DA_041`
-  and `T_DA_021`/`026` (identical canonical inputs ⇒ identical outputs for team 0 and team 1). Add a
-  retained-assignment refresh test. `MatchEngineAwayTeamTests.cs`: a mirrored kickoff produces mirrored
-  #14 assignments (via a new `TestOnly_MarkAssignment(agentId)`).
-- Six-seed characterization on main (frozen toolchain lane): tackles, fouls, shots and goals per team,
-  descriptive. Adopt the new digests by owner decision.
+## 9. Ordered commits (each: narrow gate, then the full Linux gate; all engine tests `[TestCase(0)] [TestCase(1)]`)
 
-**S2 — Spec text (E3, E4, E5)**, authored and owner-reviewed before S3–S5. It lands in the same PR as the code.
-#14 new §3.14 (formula, worked examples A/B/degenerate, ranges), §3.10 Invariant 4 plus a worked example,
-§4.4.4/§4.5.1 rewrite, §6.1 constants. #8 §2.2.6 and §3.1.7.2. #21 §3.4 `TightMarking` row.
+**① This plan.** Doc only; add its file-manifest row at ④.
 
-**S3 — `defensive-ai`.**
-- `DefensiveAIConstants.cs`: + `MarkStandoffM`, `MarkStandoffTightM`, goal centre.
-- `TacticTranslation.cs`: + `MarkStandoffM(bool tight)`.
-- New `MarkTargetComposer.cs`: `static bool TryCompose(in MarkAssignment, DefensiveSnapshot, int tick, float s, out Vector2)`.
-- `DefensiveSnapshot.cs`: + `MarkMovementActive`. `InvariantEnforcer.cs`: Invariant 4 when active,
-  plus a final-check term.
-- Tests: worked examples to 1e-3; degenerate case; cap fallback; stale tick; inactive target;
-  COVER_GK_ZONE passthrough; stand-off invariant; Invariant 4 example (17 keeps, 18 demoted); gated-off
-  leaves every existing test unchanged; extend `Determinism_T_DA_DET_006` to four invariants;
-  zero-allocation.
+**Stop rule for every code commit.** If a pre-existing test fails after a change, or a scenario
+predicate moves, stop and report it to the owner with the failing output. Do not edit, widen, skip or
+quarantine an existing assertion, and do not tune a constant to recover it. This applies in particular
+to W13.0, which changes default behaviour in the live tackle chain.
 
-**S4 — `decision-tree`.**
-`TacticalContext.cs`: + `HasMarkTarget` and `MarkTarget`; `Stage0Default` seeds false.
-`OptionGenerator.cs`: MOVE target = clamp(MarkTarget) when set, else unchanged.
-Tests (`OptionGeneratorTests.cs`): unset ⇒ target equals the adjusted slot bit-for-bit; set ⇒ target and
-`DistanceToSlot` use MarkTarget; the depth adjustment is not applied.
+**② W13.0 — D1 + E1 (spec + ERR + code + tests).**
+- Code:
+  - `DefensiveSnapshot.cs`: document the frame.
+  - `LastManDetector.cs`, `MarkAssigner.cs` (`ThreatScore(…, bool defendsX0)`), `TackleIntentEvaluator.cs`,
+    `OffsideTrapController.cs`, `InvariantEnforcer.cs`: take `defendsX0` from the frame.
+  - #14 `section-2.md` §2.3 and `section-3.md` notes, with version rows.
+- Tests (`DefensiveAITests.cs`): team-1 twins of `T_DA_016/021/026/035/038/041`, with identical canonical
+  inputs giving identical outputs.
+- Tests (`MatchEngineAwayTeamTests.cs`): a mirrored kickoff gives mirrored assignments, via a new
+  `TestOnly_MarkAssignment`.
 
-**S5 — `match-engine`.**
-- `MatchEngineConstants.cs`: + `MarkMovementEnabled`.
-- `MatchEngine.cs`: `FillDefensiveSnapshot` sets `MarkMovementActive`; `RunMechanicsAI` composes and
-  mirrors per agent after `_defensive[t].Tick`; add `TestOnly_ArmMarkMovement(bool)` and
-  `TestOnly_MarkTarget(agentId)`.
-- New fixture `MatchEngineMarkingTests.cs`, extending the `MatchEngineMechanicsTests.cs` patterns
-  (`TestOnly_SetAgent`):
-  1. **Acquisition:** place the defending back four at slots and an attacker 8.43 m from both CBs and
-     2.1 m deeper (§1.4); the other team has possession ≥ 25 m away. Within `MarkDwellTicks` + 1 = 5
-     strides exactly one CB holds MAN_MARK on him, and `TestOnly_MarkTarget` equals worked example A
-     (mirrored for team 0).
-  2. **Closure:** the marker reaches ≤ `TackleEligibleRadiusM` (3.0 m) of the attacker within N strides.
-     Derive N in the test from #2's jog/walk tier speeds as ceil((d_jog/v_jog + d_walk/v_walk + 0.5 s) × 10),
-     where d = 9.13 m split at the 6 m jog threshold. Record the goal-side flag; do not assert it
-     physically (PRESS, §4.4).
-  3. **Invariants hold every stride:** ≥3 DEFENSE ZONAL, ≤4 MAN_MARK, no duplicate targets, consumed
-     target ≤ 20 m from slot.
-  4. **No targets** for GK, pressers, the possessing team, a sent-off agent, or with the switch off.
-  5. **Substitution and red card** during a mark: deterministic continuation; no target onto an
-     inactive agent.
-  6. **Snapshot/restore continuation:** armed, mid-dwell (non-zero hysteresis); restore into a fresh
-     armed engine; 600 frames give an identical digest chain (extend `MatchEngineSnapshotRestoreTests.cs`).
-  7. **Two-run determinism**, armed, 2 × 10 min (extend `MatchEngineDeterminismTests.cs`).
-  8. **Identity off:** `MatchEngineSnapshotDigestReferenceTests.cs` pins are unchanged; six-seed terminal
-     digests are unchanged versus the base commit (frozen lane).
+**③ W13.0 — D2 + E2.** `MarkAssigner.cs` refreshes retained `TargetPosition` from the live snapshot.
+Test: a retained assignment tracks a moving target; Invariant 3 demotes on the live distance.
 
-**S6 — after #543 merges:** in `MatchEngineMarkingTests.cs`, add home F4231 vs away F442 (and mirror) from
-kickoff: the ST acquires a marker in the first defensive spell. Also check `MatchEngineFormationDutyTests.cs`
-still passes with the switch armed.
+**④ W13.0 close-out.** The ERR log, backlog and the §12 subset. Frozen-lane characterization is a
+handoff; adopt digests by owner decision.
 
-**S7 — §10 measurement, then tracking close-out (§12).** The default flip is its own one-line PR.
+**⑤ W13.1 — E3/E4/E5 spec text + `defensive-ai` + tests.**
+- Code:
+  - `DefensiveAIConstants.cs`: the §6 constants.
+  - `TacticTranslation.cs`: `MarkStandoffM(bool)`.
+  - New `MarkTargetComposer.cs`:
+    `static bool TryCompose(in MarkAssignment, DefensiveSnapshot, int tick, float s, out Vector2)`.
+  - `DefensiveSnapshot.MarkMovementActive`.
+  - `InvariantEnforcer.cs`: Invariant 4 plus `AreAllSatisfied`.
+- Tests:
+  - Examples A/B/degenerate to 1e-3.
+  - Stale tick, inactive target, COVER_GK_ZONE passthrough.
+  - Stand-off invariant (tight < normal < 3.0).
+  - Invariant 4 example (17 keeps, 18 demoted).
+  - gated-off leaves every existing `DefensiveAITests` case unchanged.
+  - Extend `Determinism_T_DA_DET_006` to four invariants.
+  - Zero allocation.
 
-## 10. Post-wiring measurement
+**⑥ W13.1 — `decision-tree` + tests.**
+- Code: `TacticalContext.cs` adds `HasMarkTarget` and `MarkTarget`; `OptionGenerator.cs` adds the MOVE
+  override and skips priority 2 when `HasMarkTarget`.
+- Tests (`OptionGeneratorTests.cs`):
+  - Unset: MOVE target equals the adjusted slot bit-for-bit, and PRESS is unchanged.
+  - Set: MOVE targets MarkTarget without the depth adjustment; PRESS is absent with only a non-carrier
+    within 8 m, and present toward a carrier within 8 m.
 
-**Arms:** (i) W13 branch, switch off — identity proof: C0 ×6 full plus #543's probe pattern, exact digests
-versus the base. (ii) Switch armed — C0–C9 ×6 = 60 full matches. "Before" reuses the retained #543 head
-traces when (i) proves identity; otherwise rerun.
-**Instrument:** #543's read-only runner plus one stream `marking.bin` per 10 Hz sample: per agent mode
-(u8), target id (i8), `HasMarkTarget` (u8) and composed target (2 × f32). Arm through the config key bound
-before the first engine construction, declared in the protocol.
-**Metrics:** §3's M1–M8 with identical definitions (before/after comparable), plus assignment census
-(MAN_MARK/INTERCEPT shares, attackers with no marker while in the final third), tackle intents and
-resolutions, fouls, offsides per team, and the case-level sensitivity Δgoals and Δshots versus C0.
-**Hard stops:** NaN; any invariant breach above; a target on a GK, a presser, the possessing team or an
-inactive agent; any switch-off identity mismatch; determinism or restore failure; integrity totals.
-**Descriptive only:** every football metric. No realism bands are approved; the owner judges whether the
-formation/Duty sensitivity shrinks. **Budget:** 66 full captures × ~200 s Debug ≈ 3.7 CPU-h (two
-concurrent ≈ 2 h wall), ~2.8 GB LFS, an analysis rerun of §3's script, one review.
+**⑦ W13.1 — `match-engine` + tests.**
+- Code:
+  - `MatchEngineConstants.MarkMovementEnabled`.
+  - `MatchEngine.cs`: a possession helper shared with `:4443`; `FillDefensiveSnapshot` sets
+    `MarkMovementActive`; composition and mirroring after `_defensive[t].Tick`.
+  - Seams `TestOnly_ArmMarkMovement(bool)` and `TestOnly_MarkTarget(id)`.
+- New `MatchEngineMarkingTests.cs`, built on the `MatchEngineMechanicsTests.cs` patterns and `TestOnly_SetAgent`:
+  1. **Acquisition.** The back four sit at their slots; the attacker is 8.43 m from both CBs and 2.1 m
+     deeper; the carrier is at least 25 m away. Within `MarkDwellTicks` + 1 = 5 strides, exactly one CB
+     holds MAN_MARK, and the seam target equals example A (mirrored).
+  2. **Closure, N = 60 strides.** Needing to get within 1.0 m of M (so ≤ 3.0 m from a stationary man),
+     the walk-only worst case is:
+     - accelerate to 2.2 m/s at 2.0 m/s² (`AgentMovementConstants.cs:168`): 1.1 s, 1.21 m;
+     - then (9.13 − 1.0 − 1.21)/2.2 = 3.15 s;
+     - total 4.25 s ⇒ 43 strides, + 5 acquisition + 2 dispatch/turn margin + 10 (1 s safety) = 60.
+     Jogging only shortens it.
+     Assert d ≤ 3.0 m **and** the body is goal-side (|p_marker − G| < |p_man − G|), which now holds
+     because priority 2 is skipped.
+  3. **Boundary.** The man alternates 19.9 / 20.1 m from the CB's slot each stride. No MAN_MARK is
+     published on a > 20 m stride; ≥ `MarkDwellTicks` strides separate a demotion from the next
+     acquisition; a consumed target is ≤ 20 + s m from the slot.
+  4. **Invariants every stride:** ≥ 3 back-line ZONAL; ≤ 4 MAN_MARK; no duplicate targets.
+  5. **No target** for the GK, pressers, the possessing team (carrier and pass-in-flight receiver), a
+     sent-off agent, or with the switch off.
+  6. **Substitution and dismissal** during a mark continue deterministically.
+  7. **Restore continuation**, armed and mid-dwell, for 600 frames (`MatchEngineSnapshotRestoreTests.cs`).
+  8. **Two-run determinism**, armed, 2 × 10 min (`MatchEngineDeterminismTests.cs`).
+  9. **Identity probe** (§8).
+
+**⑧ W13.1c (if OD-12 approved).** The mark pace tier in #8 §3.5.6 (`ActionDispatcher.cs:221-241`),
+carrying `MarkTargetSpeed`. Test: a 5 m/s runner keeps its marker ≤ 3.0 m away for 30 strides.
+
+**⑨ Close-out (§12)**, then the frozen-lane §10 handoff. The flip is a later one-line commit after OD-2.
+**After #543 merges:** F4231 kickoff test — the ST acquires a marker in the first defensive spell — and
+`MatchEngineFormationDutyTests.cs` must still pass with the switch armed.
+
+## 10. Post-wiring measurement (frozen lane; after #543 and W13.1)
+
+**Arms:**
+- (i) Switch off, C0 ×6: exact digests vs the W13.0 tip.
+- (ii) Armed: C0–C9 ×6 = 60 full matches.
+- "Before" = the post-W13.0 recapture, or #543's retained traces where R5 did not fire.
+
+**Instrument.** #543's runner plus `marking.bin` per sample: mode u8, target i8, `HasMarkTarget` u8,
+target 2 × f32. It is armed through the config key, bound before the first engine construction.
+
+**Metrics.** §3's M1–M8 with identical definitions and strata. Also:
+- assignment census;
+- tackle intents and resolutions, fouls, offsides per team;
+- PRESS-on-non-carrier share by markers (must be 0);
+- Δgoals / Δshots per case vs C0.
+
+**Hard stops.** NaN; an invariant breach; a target on a GK, presser, possessing team or inactive agent;
+a switch-off digest mismatch; a determinism or restore failure; integrity totals.
+
+**Descriptive only.** Every football metric: no realism bands are approved. The owner judges whether
+the sensitivity shrinks.
+
+**Budget.** 66 captures × ~200 s ≈ 3.7 CPU-hours (~2 h wall at 2 concurrent), ~2.8 GB LFS, rerun of
+the §3 script.
 
 ## 11. Risks and open owner decisions
 
-Risks:
-- PRESS dominates the final approach, so goal-side is nominal (§4.4). Measured; W13-F3.
-- The radius is defender-centric: an F4231 CAM 17.7 m from all slots may stay unassigned, so the
-  structural advantage can persist. Measured; W13-F2.
-- Inv. 1 leaves one back-line marker against two strikers by design.
+**Risks:**
+- The 15 m radius is defender-centric: an F4231 CAM 17.7 m from all slots may stay free (W13-F2).
+- Invariant 1 leaves one back-line marker against two strikers.
 - Goal-side markers lower the offside line.
-- Runner tracking lags because the walk tier applies below 6 m.
-- W13.0 moves default baselines and the away tackle rate, which shifts foul/card exposure under KD-W1 —
-  measure, do not tune.
-- Scenario predicates (`sim_match_engine_close_chance`, `inposs_gate`, shot-outcome reachability) may
-  move at the flip, so run the scenario suite before OD-2.
-- #440's re-pick change interacts with tackle-generated loose balls; keep #440's and W13's measurement
-  windows separate.
-- **Testable on main alone:** D1/D2 unit and mirror tests, the composer, Invariant 4, the DT override,
-  F442 engine acquisition/closure/restore/determinism, switch-off identity, and a C0 assignment census.
+- W13.0 moves default baselines and the away tackle rate, and therefore foul/card exposure (measure,
+  do not tune).
+- Scenario predicates (`close_chance`, `inposs_gate`, shot-outcome reachability) may move at the flip,
+  so run the scenario suite before OD-2.
+- Skipping priority 2 removes markers from ad-hoc pressing of other nearby attackers; zonal agents
+  still press.
+- A config-level restore hazard.
+- INTERCEPT versus MOVE near the mark point is not scored in §4.5. A marker may leave his man for a
+  fast ball passing within intercept range. Commit ⑦ adds one engine case that records the chosen
+  option in that situation; it is descriptive, not asserted.
+
+**Testable on main alone:** D1/D2, the composer, Invariants 3 and 4, the DT override and PRESS rule, F442
+acquisition/closure/boundary/restore/determinism, and the identity probe.
 
 | ID | Decision | Recommendation |
 |---|---|---|
-| OD-1 | Land D1/D2 as separate W13.0 (changes default) vs gate them | separate, first; adopt digests after characterization |
+| OD-1 | W13.0 (default-changing defect fix) first, outside any open window | yes; adopt digests after frozen-lane characterization |
 | OD-2 | Default (a) live vs (b) off | (b); flip after §10 |
-| OD-3 | Base main vs #543 | main; formation tests and corpus after #543 merges |
-| OD-4 | Invariant 4 in first landing | yes (gated) |
-| OD-5 | Stand-off 2.0 / 1.0 m as un-calibrated [GT] | accept per KD-W1 (W2 precedent) |
+| OD-3 | Work on main-based branch; #543 merges first for F4231 tests/§10 | yes |
+| OD-4 | Invariant 4 in W13.1 (gated) | yes |
+| OD-5 | Stand-offs 2.0 / 1.0 m as un-calibrated [GT] | yes (KD-W1, W2 precedent) |
 | OD-6 | `MarkTargetEntityId` | follow-up W13-F1 with E6 |
-| OD-7 | Attacker-centric coverage pass | only if §10 shows residual exposure |
-| OD-8 | Mark-aware PRESS | only if §10 shows goal-side not held |
-| OD-9 | Phase B instrumented re-run | only if Phase A is inconclusive |
-| OD-10 | Approve §3 decision rules R1–R4 before decoding | approve as written or amend before data |
-| OD-11 | Config-level [GT] vs serialized per-match flag | config-level (no schema bump) |
+| OD-7 | Between-lines coverage pass | only if §10 shows residual exposure |
+| OD-8 | PRESS priority-2 skip for marking agents in W13.1 | **yes (decided in plan, §4.5); veto keeps the press-to-contact behaviour** |
+| OD-9 | Phase B instrumented re-run | only if §3 is inconclusive |
+| OD-10 | R1–R5 thresholds | approve or amend before decoding |
+| OD-11 | Config-level switch vs serialized per-match flag | config-level |
+| OD-12 | W13.1c mark pace tier | yes; otherwise runners outpace markers |
+| OD-13 | W13.2 per-team `MarkingScheme` (schema bump after v29), and its default row | schedule after the flip decision |
 
-## 12. Tracking-document changes for the landing
+## 12. Tracking-document changes (in ④ and ⑨)
 
-- `match-engine-wiring-backlog.md`: new Class-A item **W13 — defender marking never moves anyone**
-  (cross-reference C10), §5 sequence row, version row. W13-F1…F4 are listed as follow-ups. Re-check the
-  W number at landing.
-- `spec-error-log.md`: E1–E5 rows (E6/E7 when filed), version header chain.
-- `open-issues.md`: W13 entry; formation/Duty player controls blocked until OD-2 is accepted; the
-  #543 diagnosis result.
-- `file-manifest.md` (and `src-tree.md`): `MarkTargetComposer.cs`, `MatchEngineMarkingTests.cs`, the
-  evidence directories, this plan.
-- `CHANGELOG.md` and `CHANGELOG-src.md` header chains; `src/CLAUDE.md` bump per the
-  `landing-close-out` skill.
-- `data-contract-index.md`: the `TacticalContext` row (per-agent mark target carrier) and the
-  `DefensiveSnapshot` row (canonical frame, `MarkMovementActive`).
-- Spec version rows in #14 (`section-2/3/4/6.md`), #8 (`section-2-1-to-2-2.md`, `section-3-1.md`) and
-  #21 (`section-3.md`); `SPEC_INDEX.md` last-updated note only.
-- `path-to-playable-roadmap.md`: PM-2 note that formation/Duty controls wait on W13.
+- `match-engine-wiring-backlog.md`: Class-A **W13** (cross-reference C10), the follow-ups
+  W13.1c/W13.2/W13-F1…F4, a §5 row and a version row.
+- `spec-error-log.md`: E1–E5, plus the header chain.
+- `open-issues.md`: W13; formation/Duty controls blocked until OD-2; the diagnosis verdict.
+- `file-manifest.md` and `src-tree.md`: the new files, the evidence directory and this plan.
+- `CHANGELOG.md` and `CHANGELOG-src.md`, and `src/CLAUDE.md` per `landing-close-out`.
+- `data-contract-index.md`: the `TacticalContext` row (mark carrier) and `DefensiveSnapshot`
+  (frame, `MarkMovementActive`).
+- Spec version rows in #14 (§2/3/4/6), #8 (§2.2, §3.1) and #21 (§3), and the `SPEC_INDEX.md` note.
+- `path-to-playable-roadmap.md`: a PM-2 note that formation/Duty controls wait on W13.
 
 ## Version history
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-11-10 | — | Initial draft: verified chain at `d4b026aa`, defects D1–D5, retained-trace diagnosis design, composition rule with worked examples, Invariant 4, constants, rollout (base main, off by default), steps, measurement, decisions. Nothing compiled, run or measured. |
+| 0.1 | 2026-11-10 | — | Initial draft. |
+| 0.2 | 2026-11-10 | — | Review round 1. PRESS/MOVE utility analysis and a priority-2 skip for marking agents moved into W13.1. The `GetBool` loader and its precedent are cited. The composer's displacement drop is replaced by Invariant 3 alone, with a boundary test. A per-team `MarkingScheme` roadmap (W13.2) is added. Delivery is ordered commits on one branch, with identity relative to post-W13.0 and evidence split between here and the frozen lane. The diagnosis becomes a non-blocking handoff, stratified by defending team, with R5. N = 60 is derived. Thresholds are justified; KD-W1, D-05 and the possession read are cited. Trimmed. |
+| 0.3 | 2026-11-10 | — | Review round 2 (editorial). Status moved to reviewed and awaiting owner decisions. A stop rule for pre-existing test failures is added to §9. The plan's manifest row moves to commit ④. The unscored INTERCEPT interaction is listed as a risk with a descriptive test. No design change. |
