@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/MarkAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
+// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, ERR-014-008, ERR-014-009, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
 //           displacement cost (§3.4), and threat score (§3.5) for the HOLD_SHAPE pool.
 
@@ -38,7 +38,7 @@ namespace TacticalDirector.DefensiveAI
             MarkAssignment[]       assignments,
             MarkHysteresisState[]  hysteresis)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(snapshot.DefensiveTeamId);
+            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             for (int p = 0; p < poolCount; p++)
             {
@@ -59,6 +59,9 @@ namespace TacticalDirector.DefensiveAI
                 // as stale (FR-DA-029 / §2.2.2).
                 if (MarkHysteresis.PreCheck(ref assignments[p], ref hysteresis[p]))
                 {
+                    // ERR-014-009 / §2.2.2: a retained mark publishes the target's CURRENT position, so
+                    // Invariant 3 and any consumer see the live point rather than the commit-time one.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                     assignments[p].ValidThroughTick = currentTick;
                     continue;
                 }
@@ -86,12 +89,48 @@ namespace TacticalDirector.DefensiveAI
                 {
                     // Apply hysteresis gate (§3.11) before committing.
                     MarkHysteresis.ApplyGate(candidate, ref assignments[p], ref hysteresis[p]);
+
+                    // The gate may retain the current assignment (same target, or a competing
+                    // candidate still inside its dwell): refresh it as on the dwell-lock path.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                 }
 
                 // Stamp the agent EntityId and tick on the committed assignment.
                 assignments[p].AgentEntityId    = agentId;
                 assignments[p].ValidThroughTick = currentTick;
             }
+        }
+
+        // ── Retained-assignment refresh (ERR-014-009) ─────────────────────────
+
+        /// <summary>
+        /// Refreshes a retained MAN_MARK / INTERCEPT_RUNNER assignment from the live snapshot (#14 §2.2.2:
+        /// <c>TargetPosition</c> is the opponent's current perceived position, not the commit-time one).
+        /// When the retained target is absent from the snapshot or not active (sent off, substituted) there
+        /// is no position to publish, so the mark is released to ZONAL immediately (target -1, own
+        /// formation slot) and the hysteresis state is reset exactly as on the §3.3.3 Step 6 ZONAL bypass —
+        /// the dwell lock exists to suppress candidate thrash, not to hold a mark on a player who is gone.
+        /// ZONAL and COVER_GK_ZONE assignments are left untouched. Pure; no allocation.
+        /// </summary>
+        private static void RefreshRetained(
+            DefensiveSnapshot            snapshot,
+            in DefensiveAgentSnapshot    agent,
+            int                          currentTick,
+            ref MarkAssignment           assignment,
+            ref MarkHysteresisState      hysteresis)
+        {
+            if (assignment.Mode != MarkMode.ManMark && assignment.Mode != MarkMode.InterceptRunner)
+                return;
+
+            int oIdx = HoldShapePoolFilter.SnapshotIndexOf(snapshot, assignment.TargetEntityId);
+            if (oIdx >= 0 && snapshot.Agents[oIdx].IsActive)
+            {
+                assignment.TargetPosition = snapshot.Agents[oIdx].Position;
+                return;
+            }
+
+            assignment = MarkAssignment.MakeZonal(agent.EntityId, agent.BaselineSlot, currentTick);
+            MarkHysteresis.Reset(ref hysteresis);
         }
 
         // ── Candidate selection ───────────────────────────────────────────────
@@ -124,7 +163,7 @@ namespace TacticalDirector.DefensiveAI
                 if (!opp.IsActive)
                     continue;
 
-                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch, defensiveTeam);
+                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch, defendsX0);
 
                 // Check INTERCEPT_RUNNER eligibility (§3.3.3 Step 3).
                 float speed = opp.Velocity.magnitude;
@@ -200,10 +239,12 @@ namespace TacticalDirector.DefensiveAI
         /// Computes the threat score for an opponent. Defensive AI #14 §3.5.
         /// Output range [0, 1]; product of goal proximity and receiving attribute.
         /// </summary>
-        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        /// <param name="oppPos">Opponent position in the snapshot frame (m).</param>
+        /// <param name="perceivedFirstTouch">Perceived FirstTouch on the 1-20 scale.</param>
+        /// <param name="defendsX0">True when the defended goal-line is x = 0 in the snapshot frame
+        /// (<see cref="DefensiveSnapshot.IsOwnGoalAtX0"/>).</param>
+        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, bool defendsX0)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(defensiveTeamId);
-
             // Goal proximity: 1 - (xDist / PITCH_LENGTH_M). X-axis only (Stage 0).
             float ownGoalX = defendsX0 ? 0f : DefensiveAIConstants.PITCH_LENGTH_M;
             float xDist    = UnityEngine.Mathf.Abs(oppPos.x - ownGoalX);
@@ -215,6 +256,16 @@ namespace TacticalDirector.DefensiveAI
             float receivingAttr = (attr - 1f) / 19f;
 
             return proximity * receivingAttr;
+        }
+
+        /// <summary>
+        /// Source-compatibility overload for callers that still pass the defending team id. The id is
+        /// IGNORED: the snapshot frame, not the team, decides which goal is defended, so team 0 and
+        /// team 1 score identically (ERR-014-008). New code uses the <c>bool defendsX0</c> overload.
+        /// </summary>
+        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        {
+            return ThreatScore(oppPos, perceivedFirstTouch, DefensiveSnapshot.IsOwnGoalAtX0);
         }
 
         // ── Tie-break comparator ──────────────────────────────────────────────
@@ -280,4 +331,12 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   re-acquisition of the same opponent commit MAN_MARK immediately, skipping the dwell. |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition (FR-TI-033): MAN_MARK candidate radius scaled by                  |
 // |         |            |        |   TacticTranslation.MarkRadiusScalar(snapshot.MarkingOrientation); Balanced ⇒ ×1.0.     |
+// | 1.5     | 2026-11-10 | —      | ERR-014-008: defendsX0 taken from DefensiveSnapshot.IsOwnGoalAtX0 (canonical frame),  |
+// |         |            |        |   not teamId == 0. ThreatScore gains a bool defendsX0 overload; the int teamId overload   |
+// |         |            |        |   is kept for source compatibility and ignores the id. The away team previously ranked    |
+// |         |            |        |   threat and runner direction against x = 105 while its snapshot has the goal at x = 0.   |
+// | 1.6     | 2026-11-10 | —      | ERR-014-009: a retained non-ZONAL assignment (dwell lock or same-target/held-candidate gate |
+// |         |            |        |   path) now refreshes TargetPosition from the live snapshot each tick (§2.2.2), so Invariant 3  |
+// |         |            |        |   tests the live point. A retained target that is absent or inactive releases the mark to    |
+// |         |            |        |   ZONAL at once and resets hysteresis. COVER_GK_ZONE / ZONAL untouched.                      |
 #endregion

@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
 // Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
@@ -3002,6 +3003,15 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: the live per-team Defensive AI (#14) cross-tick state (D4 CaptureState seam).</summary>
         internal DefensiveTickState TestOnly_DefensiveState(int teamId) => _defensive[teamId].CaptureState();
+
+        /// <summary>Test-only (W13.0 / ERR-014-008): the committed Defensive AI (#14) <see cref="MarkAssignment"/>
+        /// for <paramref name="agentId"/> at the last AI tick, as published by that agent's own team's
+        /// <c>DefensiveAITick</c>. Mode, target id and <c>TargetPosition</c> are in the defending team's
+        /// canonical attack-+X frame (the <see cref="DefensiveSnapshot"/> frame contract), so a mirrored
+        /// kickoff must yield identical values for home agent k and away agent PLAYERS_PER_TEAM + k.
+        /// A ZONAL record with zero position is returned for an agent outside the pool.</summary>
+        internal MarkAssignment TestOnly_MarkAssignment(int agentId) =>
+            _defensive[_teamIds[agentId]].GetAssignment(agentId);
 
         /// <summary>Test-only: the live per-team Attacking AI (#15) cross-tick state (D4 CaptureState seam).</summary>
         internal AttackingTickState TestOnly_AttackingState(int teamId) => _attacking[teamId].CaptureState();
@@ -11207,4 +11217,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.14 | 2026-10-20 | — | #441: null-by-default diagnostic callback immediately before Heading.Update samples its actual world before Resolve can collect or deflect it. No gameplay/schema/RNG change; digest-neutrality locked. |
 // | 2.15 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 // | 2.16 | 2026-11-06 | — | PR #542 review: conditional editor/development/test call for the post-attachment ball fixture; release Resolve omits it. |
+// | 2.17 | 2026-11-10 | — | W13.0 / ERR-014-008: TestOnly_MarkAssignment read seam (per-team #14 committed assignment). No behaviour, schema or RNG change. |
 #endregion
