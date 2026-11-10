@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 6, 2026 (UTC) — (v2.220 — **PR #542 review follow-up.** Remove the two W8 C fixture fields and their Resolve/whistle calls from release builds with editor/development/test conditional compilation; development and release IL inspected. Add 16 exact-frame-480 CONTACT snapshot round-trips for both teams, all deliveries and the maximum kick windup. The affected restore/prerequisite/C/clock suites pass 143/143; fresh full Linux and pinned-host results are recorded in [the implementation record](w8-c-implementation-results.md). Merge main's Pre-C control, resolve both tracking conflicts and expect 38 registered evidence directories. No rule, snapshot version, policy, RNG or tuning change.)
+> **Last Updated:** November 10, 2026 — (v2.221, branch-local #440 Stage A — Development-only copied tackle/ownership/censor diagnostics and an environment-gated test-side episode collector. Twenty always-run tests pass; release metadata excludes all new observer types/fields/methods. No simulation writes, RNG, world-schema, tuning or package changes. Census and Unity validation are pending.)
+
+> **Last Updated (prior):** November 6, 2026 (UTC) — (v2.220 — **PR #542 review follow-up.** Remove the two W8 C fixture fields and their Resolve/whistle calls from release builds with editor/development/test conditional compilation; development and release IL inspected. Add 16 exact-frame-480 CONTACT snapshot round-trips for both teams, all deliveries and the maximum kick windup. The affected restore/prerequisite/C/clock suites pass 143/143; fresh full Linux and pinned-host results are recorded in [the implementation record](w8-c-implementation-results.md). Merge main's Pre-C control, resolve both tracking conflicts and expect 38 registered evidence directories. No rule, snapshot version, policy, RNG or tuning change.)
 
 > **Last Updated (prior):** November 6, 2026 (UTC) — (v2.219 — **W8 C / ERR-011-021 implemented, host validation pending.** #11 owns the exact 60 Hz hand-claim frame, schema v28; Resolve awards the eight-second corner before CONTACT through the shared keeper whistle-finish path. Admission permits elapsed-480 CONTACT, the legacy stall guard becomes feet-only, and restore preserves full-time freezes while rejecting corrupt clocks/ownership/budgets. Mirrored law, replay, boundary and claim-path tests added. The initial full Linux MatchEngine run was 917/3/16; three pre-C restore fixtures missing a hand episode were corrected and all 127 affected cases pass. The owner is arranging Claude local-host validation. [Implementation and validation record](w8-c-implementation-results.md); Linux evidence is supplementary and the required pinned-host compile plus whole MatchEngine EditMode remain open.)
 
@@ -2830,6 +2832,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.221 | 2026-11-10 | — | Branch-local #440 Stage A observer and 20 definition/neutrality tests; release-stripping proof. Capture pending. |
 | 2.220 | 2026-11-06 | — | PR #542: conditional fixture hooks with release IL proof, 16 exact-480 CONTACT restore cases, merged main and 38 evidence directories; current full Linux/host status in w8-c-implementation-results.md. |
 | 2.219 | 2026-11-06 | — | W8 C exact-frame hand-control offence and v28 snapshot; Linux regression evidence, paired comparison and pinned-host status in w8-c-implementation-results.md. |
 | 2.218 | 2026-11-02 | — | Comment-only: `WorldStore.cs` v1.8 corrects the `WorldSeed` summary's stale "squads are not persisted" (the `PROG` block has carried the roster since #28 T1). No behaviour change. |

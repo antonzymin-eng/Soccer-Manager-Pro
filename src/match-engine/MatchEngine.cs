@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
-// Modified: 2026-11-06 (W8 C / ERR-011-021)
+// Modified: 2026-11-10 (#440 Stage A: copied diagnostic chronology; no gameplay change)
+// Modified (prior): 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
@@ -3486,6 +3487,9 @@ namespace TacticalDirector.MatchEngine
         {
             if (!_secondHalfStarted && tick >= MatchEngineConstants.HALF_TIME_BOUNDARY_TICK)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+                ObserveBallLooseStageA(BallLooseStageAKind.HalfTime);
+#endif
                 _secondHalfStarted = true;
                 // §5.Z Phase H: the second-half kickoff is taken by the team that did NOT kick off the
                 // first half (Law 8), i.e. the away team — the boot kickoff is awarded to team 0.
@@ -3505,6 +3509,9 @@ namespace TacticalDirector.MatchEngine
             // jump straight to MATCH_TICKS_TOTAL on a fresh engine must still fire both transitions.
             if (!_matchEnded && tick >= MatchEngineConstants.MATCH_TICKS_TOTAL)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+                ObserveBallLooseStageA(BallLooseStageAKind.FullTime);
+#endif
                 _matchEnded = true;
                 // An unexecuted order cannot survive full time. The view observes removal.
                 _subRequestCount = 0;
@@ -4287,6 +4294,9 @@ namespace TacticalDirector.MatchEngine
 
             float uniform = TackleDrawUniform(tackler, carrier);
             TackleOutcome outcome = TackleOutcomeResolver.Resolve(in inputs, uniform);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Tackle, tackler, carrier, (int)outcome);
+#endif
 
             // The challenge was made whatever it produced, so the cooldown arms on every branch
             // INCLUDING Missed. Arming only on success would let a defender who keeps missing
@@ -5558,6 +5568,10 @@ namespace TacticalDirector.MatchEngine
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            if (_ball.State == BallStateType.OutOfPlay)
+                ObserveBallLooseStageA(BallLooseStageAKind.OutOfPlay);
+#endif
             if (_matchEnded)
             {
                 return;
@@ -5923,6 +5937,9 @@ namespace TacticalDirector.MatchEngine
         private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue,
             bool freeSubstitutionWindow = false, bool publishSubstitutionsNow = true)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Restart, awardedTeam, detail: (int)cue);
+#endif
             ClearHandlingLawAtRestart();
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
@@ -6238,6 +6255,9 @@ namespace TacticalDirector.MatchEngine
             }
 
             var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Foul, offender, victim);
+#endif
             EventBus.Publish(in foulEvt);
 
             byte? drawnKind = DetermineCardKind(v);
@@ -6561,6 +6581,9 @@ namespace TacticalDirector.MatchEngine
             FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
             _firstTouch.ApplyTouchResult(result, context);
             ObserveW8(W8StageAKind.FirstTouch, toucher, (int)result.PossessionOutcome);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.FirstTouch, toucher, detail: (int)result.PossessionOutcome);
+#endif
 
             switch (result.PossessionOutcome)
             {
@@ -6687,6 +6710,9 @@ namespace TacticalDirector.MatchEngine
             {
                 TakeControlledPossession(claimer);
                 ObserveW8(W8StageAKind.LoosePickup, claimer);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.LoosePickup, claimer);
+#endif
             }
         }
 
@@ -9151,6 +9177,10 @@ namespace TacticalDirector.MatchEngine
             {
                 EndGoalkeeperHandEpisode(previous);
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            if (previous != agentId)
+                ObserveBallLooseStageA(BallLooseStageAKind.Possession, previous: previous, next: agentId);
+#endif
         }
 
         /// <summary>
@@ -11207,4 +11237,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.14 | 2026-10-20 | — | #441: null-by-default diagnostic callback immediately before Heading.Update samples its actual world before Resolve can collect or deflect it. No gameplay/schema/RNG change; digest-neutrality locked. |
 // | 2.15 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 // | 2.16 | 2026-11-06 | — | PR #542 review: conditional editor/development/test call for the post-attachment ball fixture; release Resolve omits it. |
+// | 2.17 | 2026-11-10 | — | #440 Stage A development-only observer at tackle/ownership/censor boundaries. No gameplay, snapshot, RNG or tuning change. |
 #endregion
