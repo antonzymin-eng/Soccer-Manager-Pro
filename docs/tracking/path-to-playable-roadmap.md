@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 10 — #440 Stage A complete (v0.93, branch-local):** [Draft PR #544](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/544) measures main independently of #434. [Evidence](evidence/ball-loose-stage-a-20261110/README.md): exact observer neutrality, 37/37 passive same-frame carrier regains, complete endpoint/censor accounting and full Linux gate pass. This is not a gameplay landing. Fix mechanism, proposed parameter and scoped no-regain policy await owner decision; pinned Unity remains pending.
+
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
 
 > **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
@@ -512,7 +514,7 @@ decided.
    full-time freeze exceptions. Host: compile plus whole-assembly MatchEngine EditMode (behaviour and
    layout change). Close the Linux B→C comparison before any other keeper gameplay landing.
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
-   final D-08. Land with separate attribution.
+   final D-08. Land with separate attribution. **#440: observation-only Stage A complete in draft PR #544; [measured choices](w-440-ball-loose-design.md) await the owner before any gameplay fix. #434 remains an independent draft; neither is merged here.**
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
@@ -915,6 +917,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v0.93 | November 10, 2026 | Branch-local #440 Stage A complete: exact six-seed observer neutrality, 37/37 passive immediate regains and full Linux gate pass; owner and Unity pending. |
 
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |

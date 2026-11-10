@@ -1,0 +1,6 @@
+{
+  "sourceAndTestsCommit": "15b110d19b6dcb22f1d35d314858cf3b69987030",
+  "srcTree": "6384884fb7e555fdb99b0f945f7ff55f2e9d9b71",
+  "allSrcFilesIdenticalAtCloseout": true,
+  "scope": "All source/test files and asmdef/meta inputs under src; final closeout changes only evidence/tooling/tracking."
+}
