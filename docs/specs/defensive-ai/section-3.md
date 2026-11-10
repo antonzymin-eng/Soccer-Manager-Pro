@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): new §3.6.5 "Tackle Outcome Resolution" — #14 now resolves the tackle challenge outcome itself as a four-outcome abstract attribute duel, superseding the dead #8-mediates/#3-owns-contact delegation. §3.6.1 Purpose corrected. §3.12 constants index and tags table extended with the eleven new §3.6.5.5 constants and the `[FIXED]` tag. Top-of-file "no runtime code is produced at Stage 0" statement gains a scoped exception note for §3.6.5.)
-**Version:** 0.5
+**Last Updated:** November 10, 2026 (v0.6 — `ERR-014-008` (W13.0): new "Frame note" ahead of §3.1 — every `team.defendsX0` in this section is read from the snapshot frame (canonical attack-toward-+X, own goal at x = 0 for both teams; §2.3 Frame contract), never from the team id. §3.3.3 Step 3, §3.5.2, §3.7.4 and §3.9.2 pseudocode annotated. The x = 105 branches remain the generic formula definition.)
+**Version:** 0.6
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -23,6 +23,17 @@ is produced at Stage 0.
 `TackleOutcomeResolver.cs` ships as runtime code alongside this revision
 (see §1.8, §4.1 for the same note). The rest of §3 is unaffected: its
 algorithms remain normative specification text pending Stage 1 activation.
+
+**Frame note (`ERR-014-008`, W13.0, November 10, 2026):** every `team.defendsX0`
+below is **read from the snapshot's frame** (§2.3 "Frame contract": the
+defending team's canonical attack-toward-+X frame, own goal at x = 0 for BOTH
+teams), which makes it **always true** in the engine. It is never inferred
+from the team id: for the away team the snapshot is already rotated, so
+`defendsX0 = (teamId == 0)` would apply the x = 105 branch to a snapshot whose
+defended goal is at x = 0 and invert threat ranking, runner direction,
+last-man selection, coverage depth and the trap's half test. The `x = 105`
+alternatives printed in this section are the formulas' generic definition for a
+non-canonical producer; no producer in the system selects them.
 
 ---
 
@@ -195,6 +206,8 @@ for each agent in holdShapePool (EntityId-ascending):
         if speed > RUNNER_VELOCITY_THRESHOLD_M_S:
             // Normalise: for team defending x=0, own-goal direction = -X
             //            for team defending x=105, own-goal direction = +X
+            // (team.defendsX0 is read from the snapshot frame — ERR-014-008; always
+            //  true for the canonical-frame snapshot the engine supplies)
             // Use dot product of velocity with own-goal unit vector
             ownGoalDir = (team.defendsX0) ? Vector2(-1, 0) : Vector2(+1, 0)
             dot = dot(normalize(opponent.velocity.xy), ownGoalDir)
@@ -316,6 +329,8 @@ threat(opponent) = perceivedGoalProximity(opponent)
 ```
 // For team defending x=0: ownGoalCenter = (0.0, 34.0)
 // For team defending x=105: ownGoalCenter = (105.0, 34.0)
+// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008; always
+//  true for the canonical-frame snapshot the engine supplies)
 
 ownGoalCenter = (team.defendsX0) ? Vector2(0.0f, 34.0f) : Vector2(105.0f, 34.0f)
 
@@ -798,6 +813,7 @@ offsideStepDepth = min(offsideStepDepth, OFFSIDE_MAX_DEPTH_M)        // safety c
 
 // For team defending x=0: x increases = forward into opponent half
 // For team defending x=105: step is mirrored (decrease x)
+// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
 // currentLineDepth is always expressed as distToOwnGoal; convert back:
 // targetX = (team.defendsX0) ? offsideStepDepth : (105.0 − offsideStepDepth)
 
@@ -1017,6 +1033,7 @@ if directive.emergencyFlag AND distToOwnGoal(gkPos) > GK_EXPECTED_ZONE_MAX_X:
     // Abandoned zone center: midpoint of expected GK zone
     // For team defending x=0: zone = [0, GK_EXPECTED_ZONE_MAX_X]; center.x = 7.5
     // For team defending x=105: zone = [105-15, 105]; center.x = 97.5
+    // (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
     abandonedZoneCenter = Vector2(
         (team.defendsX0) ? (GK_EXPECTED_ZONE_MAX_X / 2.0f)
                          : (105.0f − GK_EXPECTED_ZONE_MAX_X / 2.0f),
@@ -1528,3 +1545,4 @@ resolved May 18, 2026.
 | 0.3 | May 17, 2026 | AI agent | PASS-2 adversarial review fix pass. PASS-2-H1: §3.13 now includes Step 3b that explicitly resets `overriddenThisTick = false` for all pool slots before Steps 4/4a set emergency overrides — without this, stale `true` values from the previous tick would cause Step 5 to incorrectly skip non-emergency agents. PASS-2-M1: §3.10.3 Invariant 1 demotion now checks `eligiblePool is empty` before calling `argmin` — if all non-ZONAL DEFENSE-line agents have `overriddenThisTick = true`, a `break` exits the pass loop and allows the F4 post-loop check to handle the residual invariant violation, rather than crashing on an empty argmin. |
 | 0.4 | 2026-07-07 | AI agent | Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`. |
 | 0.5 | 2026-08-12 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): added §3.6.5 "Tackle Outcome Resolution" — #14 owns the tackle outcome (four-outcome abstract duel: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`) in addition to the intent, because neither original KD-6 delegate can accept dispatch (#8's `ActionType` ordinal space is exhausted; #3 defers slide-tackle collision to Stage 2). §3.6.1 Purpose corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch. §3.12 constants index extended with the eleven new §3.6.5.5 constants (ten `[GT]` + one `[FIXED]`) and the `[FIXED]` tag row. Top-of-file stage-binding statement gains a scoped exception note (§3.6.5 ships as Stage-0 runtime code; the rest of §3 is unaffected). Implemented in `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs`. |
+| 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: Frame note ahead of §3.1 and annotations at §3.3.3 Step 3, §3.5.2, §3.7.4 and §3.9.2. `team.defendsX0` is read from the snapshot frame (canonical attack-toward-+X, own goal at x = 0 for both teams — §2.3 Frame contract), never from the team id, so it is always true in the engine. No formula changes; the away team's inputs were already canonical, only the code's goal choice was wrong. Code: `DefensiveSnapshot.IsOwnGoalAtX0`, `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |

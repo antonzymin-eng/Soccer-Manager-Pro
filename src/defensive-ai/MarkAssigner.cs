@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/MarkAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
+// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
 //           displacement cost (§3.4), and threat score (§3.5) for the HOLD_SHAPE pool.
 
@@ -38,7 +38,7 @@ namespace TacticalDirector.DefensiveAI
             MarkAssignment[]       assignments,
             MarkHysteresisState[]  hysteresis)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(snapshot.DefensiveTeamId);
+            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             for (int p = 0; p < poolCount; p++)
             {
@@ -124,7 +124,7 @@ namespace TacticalDirector.DefensiveAI
                 if (!opp.IsActive)
                     continue;
 
-                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch, defensiveTeam);
+                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch, defendsX0);
 
                 // Check INTERCEPT_RUNNER eligibility (§3.3.3 Step 3).
                 float speed = opp.Velocity.magnitude;
@@ -200,10 +200,12 @@ namespace TacticalDirector.DefensiveAI
         /// Computes the threat score for an opponent. Defensive AI #14 §3.5.
         /// Output range [0, 1]; product of goal proximity and receiving attribute.
         /// </summary>
-        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        /// <param name="oppPos">Opponent position in the snapshot frame (m).</param>
+        /// <param name="perceivedFirstTouch">Perceived FirstTouch on the 1-20 scale.</param>
+        /// <param name="defendsX0">True when the defended goal-line is x = 0 in the snapshot frame
+        /// (<see cref="DefensiveSnapshot.IsOwnGoalAtX0"/>).</param>
+        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, bool defendsX0)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(defensiveTeamId);
-
             // Goal proximity: 1 - (xDist / PITCH_LENGTH_M). X-axis only (Stage 0).
             float ownGoalX = defendsX0 ? 0f : DefensiveAIConstants.PITCH_LENGTH_M;
             float xDist    = UnityEngine.Mathf.Abs(oppPos.x - ownGoalX);
@@ -215,6 +217,16 @@ namespace TacticalDirector.DefensiveAI
             float receivingAttr = (attr - 1f) / 19f;
 
             return proximity * receivingAttr;
+        }
+
+        /// <summary>
+        /// Source-compatibility overload for callers that still pass the defending team id. The id is
+        /// IGNORED: the snapshot frame, not the team, decides which goal is defended, so team 0 and
+        /// team 1 score identically (ERR-014-008). New code uses the <c>bool defendsX0</c> overload.
+        /// </summary>
+        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        {
+            return ThreatScore(oppPos, perceivedFirstTouch, DefensiveSnapshot.IsOwnGoalAtX0);
         }
 
         // ── Tie-break comparator ──────────────────────────────────────────────
@@ -280,4 +292,8 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   re-acquisition of the same opponent commit MAN_MARK immediately, skipping the dwell. |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition (FR-TI-033): MAN_MARK candidate radius scaled by                  |
 // |         |            |        |   TacticTranslation.MarkRadiusScalar(snapshot.MarkingOrientation); Balanced ⇒ ×1.0.     |
+// | 1.5     | 2026-11-10 | —      | ERR-014-008: defendsX0 taken from DefensiveSnapshot.IsOwnGoalAtX0 (canonical frame),  |
+// |         |            |        |   not teamId == 0. ThreatScore gains a bool defendsX0 overload; the int teamId overload   |
+// |         |            |        |   is kept for source compatibility and ignores the id. The away team previously ranked    |
+// |         |            |        |   threat and runner direction against x = 105 while its snapshot has the goal at x = 0.   |
 #endregion

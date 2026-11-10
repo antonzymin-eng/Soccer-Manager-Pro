@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §2.2.3 `TackleIntentRequest` "read by" clause corrected — #8/#3 dispatch is dead; new §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome` structs added.)
-**Version:** 0.3
+**Last Updated:** November 10, 2026 (v0.4 — `ERR-014-008` (W13.0): new §2.3 "Frame contract" — every snapshot position, velocity and slot is in the defending team's canonical attack-toward-+X frame (own goal at x = 0, both teams); `defendsX0` is sourced from the frame, never from the team id.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -275,6 +275,33 @@ All inputs below are consumed as read-only values captured at the start of the
 | #14-internal | Prior `MarkHysteresisState[N]` | struct array | From previous tick; hysteresis transitions (FR-DA-015) |
 | #14-internal | Prior `OffsideLineState` | struct | From previous tick; step-up dwell and cooldown state (FR-DA-018) |
 
+**Frame contract (`ERR-014-008`).** Every position, velocity and formation slot
+in the §2.3 inputs above — the ball, the GK, and **both** teams' agents,
+opponents included — is expressed in the **defending team's canonical
+attack-toward-+X frame**: the goal #14 defends is at **x = 0** and the goal it
+attacks is at x = 105, for the home team **and** for the away team. The
+composition root performs the away team's 180° pitch rotation
+(`x' = 105 − x`, `y' = 68 − y`, velocities negated) before filling the
+snapshot, so the snapshot is **not** world space. The team id says who is
+defending and which agents are own-team; it does **not** say which goal is
+defended. Every `team.defendsX0` in §3 (threat proximity §3.5.2, runner
+direction §3.3.3 Step 3, last-man and advancing-attacker selection §3.8,
+GK-zone centre §3.9.2, tackle coverage depth §3.6.2, trap half test,
+line spread and step-up x §3.7) is therefore read from the snapshot's
+frame — in the engine always **true** — and never inferred from the team id.
+A producer that does not canonicalise would have to state its frame in the
+snapshot; none exists, so nothing is added (one place to change:
+`DefensiveSnapshot.IsOwnGoalAtX0`).
+
+*Worked example.* Away defender at world (90.0, 30.0) with a home striker at
+world (80.0, 40.0). Canonical: defender (15.0, 38.0), striker (25.0, 28.0).
+Striker `distToOwnGoal = 25.0 m` and `threat` proximity
+`1 − 25/105 = 0.762` — identical to a home defender whose snapshot holds the
+same two canonical points. Resolving the goal from the team id (`teamId == 0`)
+gives the away team `distToOwnGoal = 105 − 25 = 80.0 m` and proximity `0.238`
+— the inverted value this section corrects. *Valid range:* every x ∈ [0, 105],
+y ∈ [0, 68]; units metres.
+
 **Note on GK exclusion:** The GK's EntityId is known via #7 perception
 (`isGoalkeeper` flag or team roster). #14 filters it out before building
 the HOLD_SHAPE pool (FR-DA-009). The GK's position is still readable via
@@ -362,3 +389,4 @@ and F6 in #13 §2.4). No special failure mode is required because the
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §2.1 (37 FRs FR-DA-001..037), §2.2 (7 structs), §2.3 (inputs table), §2.4 (F1–F5 failure modes) authored. Data structure field definitions follow `pressing-ai/section-2.md` v0.2 readonly-struct convention. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H2: `MarkAssignment` struct (§2.2.2) now declares `overriddenThisTick` and `isManuallyAssigned` fields that were used in §3 algorithms but absent from struct definition; `targetEntityId` comment clarified to "null for ZONAL and COVER_GK_ZONE". H4: `MarkHysteresisState` struct (§2.2.4) rewritten to four-field definition matching §3.11.2 (`dwellCounter`, `candidateMode`, `candidateTargetId`, `holdTicks`); v0.1 had only `currentMode` + `dwellCounter`. M2: `OffsideLineState` struct (§2.2.5) now declares `coverGkZoneActiveTicks` field used in §3.9.2/§3.13 but missing from struct. M3: §2.3 inputs table row "Per-agent FirstTouch" corrected to "Per-opponent FirstTouch" (#14 reads opponents, not own-team agents). M6: `Tackling` description in §2.3 clarified to "Declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0". |
 | 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): §2.2.3 `TackleIntentRequest`'s "read by #8, which translates it into an `AgentAction` dispatched to Collision System #3" clause corrected — that dispatch has no working delegate; a committed intent is now resolved by #14 itself. Added §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome`, the two new public types backing §3.6.5's tackle-outcome resolution. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |
+| 0.4 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §2.3 gains the "Frame contract" paragraph and worked example. The snapshot is the defending team's canonical attack-toward-+X frame for BOTH teams (own goal at x = 0), as `MatchEngine.FillDefensiveSnapshot` has always supplied it; `defendsX0` is read from the frame, never from the team id. §3's `team.defendsX0` pseudocode is annotated to match (section-3 v0.6). Code: `DefensiveSnapshot.IsOwnGoalAtX0`; `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |

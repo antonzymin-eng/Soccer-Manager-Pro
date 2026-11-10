@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/DefensiveAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-30
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Defensive AI #14 §5, Code Standards #20
 // Purpose:  Unit tests for Defensive AI. T-DA unit tests from §5.
@@ -2273,6 +2273,561 @@ namespace TacticalDirector.DefensiveAI.Tests
             Assert.Ignore("Stage 0+1: requires live GK position tracking — activate when DefensiveAITick is wired into TickOrchestrator");
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ERR-014-008  Canonical-frame twins: team 0 and team 1 given IDENTICAL canonical inputs
+    //              must produce IDENTICAL outputs (own goal at x = 0 for both teams).
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The engine supplies #14 with every position in the defending team's canonical attack-toward-+X
+    /// frame, so both teams defend x = 0 (<see cref="DefensiveSnapshot"/> frame contract). These twins
+    /// run the same canonical geometry with <c>DefensiveTeamId</c> 0 and 1 and own/opponent team ids
+    /// swapped; before ERR-014-008 the team-1 case resolved the defended goal as x = 105.
+    /// </summary>
+    [TestFixture]
+    internal sealed class CanonicalFrameTwinTests
+    {
+        private static DefensiveSnapshot WithTeam(DefensiveSnapshot snapshot, int defendingTeam)
+        {
+            snapshot.DefensiveTeamId = defendingTeam;
+            return snapshot;
+        }
+
+        /// <summary>Frame contract: the defended goal-line is x = 0, independent of any team id.</summary>
+        [Test]
+        public void FrameContract_OwnGoalIsAtX0()
+        {
+            Assert.IsTrue(DefensiveSnapshot.IsOwnGoalAtX0,
+                "The canonical frame places the defended goal-line at x = 0 for both teams.");
+        }
+
+        /// <summary>Twin of T-DA-013: the threat score is the §3.5.4 worked example for either team id.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_013_Twin_ThreatScoreIdenticalForBothTeams(int defendingTeam)
+        {
+            Vector2 oppPos = new Vector2(22.0f, 34.0f);
+            float firstTouch = 16f;
+
+            float expectedProximity = 1.0f - (22.0f / DefensiveAIConstants.PITCH_LENGTH_M);
+            float expectedScore = expectedProximity * ((firstTouch - 1f) / 19f);
+
+            Assert.AreEqual(expectedScore,
+                MarkAssigner.ThreatScore(oppPos, firstTouch, defensiveTeamId: defendingTeam), 0.0001f,
+                "Team-id overload must ignore the id and score against the x = 0 goal.");
+            Assert.AreEqual(expectedScore,
+                MarkAssigner.ThreatScore(oppPos, firstTouch, DefensiveSnapshot.IsOwnGoalAtX0), 0.0001f,
+                "Frame-sourced overload must match the §3.5.4 worked example.");
+        }
+
+        /// <summary>
+        /// Threat ranking picks the opponent nearer the defended goal (x = 0) for either team: of two
+        /// equally skilled in-radius opponents, the one at x = 20 outranks the one at x = 40.
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkAssigner_PicksOpponentNearerOwnGoal_BothTeams(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            Vector2 agentPos = new Vector2(30.0f, 34.0f);
+
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: own, position: agentPos, baselineSlot: agentPos),
+                // Lower EntityId is the FAR attacker, so a threat tie would also favour it: the
+                // assertion can only pass by the goal-proximity ranking choosing 201.
+                SnapshotBuilder.MakeAgent(entityId: 200, teamId: opp,
+                    position: new Vector2(40.0f, 34.0f), firstTouch: 14f),
+                SnapshotBuilder.MakeAgent(entityId: 201, teamId: opp,
+                    position: new Vector2(20.0f, 34.0f), firstTouch: 14f),
+            };
+
+            DefensiveSnapshot snapshot = WithTeam(SnapshotBuilder.Build(agents), defendingTeam);
+            int[] pool = new int[] { 10 };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            for (int tick = 1; tick <= DefensiveAIConstants.MarkDwellTicks; tick++)
+            {
+                MarkAssigner.Assign(snapshot, pool, 1, tick, assignments, hysteresis);
+            }
+
+            Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode);
+            Assert.AreEqual(201, assignments[0].TargetEntityId,
+                "The opponent nearer the defended goal (x = 20) must outrank the one at x = 40.");
+        }
+
+        /// <summary>Twin of T-DA-016: a runner moving toward x = 0 is INTERCEPT_RUNNER, one moving away is not.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_016_Twin_InterceptRunnerDirectionCheck(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            Vector2 agentPos = new Vector2(30.0f, 34.0f);
+            float speed = DefensiveAIConstants.RunnerVelocityThresholdMS + 0.5f;
+
+            for (int pass = 0; pass < 2; pass++)
+            {
+                bool towardOwnGoal = pass == 0;
+                DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+                {
+                    SnapshotBuilder.MakeAgent(entityId: 10, teamId: own, position: agentPos,
+                        baselineSlot: agentPos),
+                    SnapshotBuilder.MakeAgent(entityId: 99, teamId: opp,
+                        position: new Vector2(35.0f, 34.0f),
+                        velocity: new Vector2(towardOwnGoal ? -speed : speed, 0f),
+                        firstTouch: 14f),
+                };
+
+                DefensiveSnapshot snapshot = WithTeam(SnapshotBuilder.Build(agents), defendingTeam);
+                int[] pool = new int[] { 10 };
+                MarkAssignment[] assignments = new MarkAssignment[1];
+                MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+                for (int tick = 1; tick <= DefensiveAIConstants.MarkDwellTicks; tick++)
+                {
+                    MarkAssigner.Assign(snapshot, pool, 1, tick, assignments, hysteresis);
+                }
+
+                if (towardOwnGoal)
+                {
+                    Assert.AreEqual(MarkMode.InterceptRunner, assignments[0].Mode,
+                        "A runner heading to x = 0 must be INTERCEPT_RUNNER for either team.");
+                }
+                else
+                {
+                    Assert.AreNotEqual(MarkMode.InterceptRunner, assignments[0].Mode,
+                        "A runner heading away from x = 0 must not be INTERCEPT_RUNNER for either team.");
+                }
+            }
+        }
+
+        private static DefensiveSnapshot BuildTackleSnapshot(
+            int defendingTeam, Vector2 agentPos, Vector2 oppPos, params Vector2[] teammatePositions)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[2 + teammatePositions.Length];
+            agents[0] = SnapshotBuilder.MakeAgent(entityId: 10, teamId: own, position: agentPos,
+                velocity: new Vector2(1f, 0f), baselineSlot: agentPos, line: LineId.Defense);
+            for (int i = 0; i < teammatePositions.Length; i++)
+            {
+                agents[1 + i] = SnapshotBuilder.MakeAgent(entityId: 11 + i, teamId: own,
+                    position: teammatePositions[i], baselineSlot: teammatePositions[i], line: LineId.Defense);
+            }
+            agents[agents.Length - 1] = SnapshotBuilder.MakeAgent(entityId: 99, teamId: opp,
+                position: oppPos, firstTouch: 14f);
+
+            return WithTeam(SnapshotBuilder.Build(agents), defendingTeam);
+        }
+
+        /// <summary>Twin of T-DA-021: a teammate between the tackler and x = 0 gives cover, so COMMIT.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_021_Twin_CommitWithCoverage(int defendingTeam)
+        {
+            Vector2 agentPos = new Vector2(18.0f, 34.0f);
+            Vector2 oppPos = new Vector2(20.5f, 34.0f);
+            DefensiveSnapshot snapshot = BuildTackleSnapshot(
+                defendingTeam, agentPos, oppPos, new Vector2(12.0f, 32.0f));
+
+            int[] pool = new int[] { 10, 11 };
+            MarkAssignment[] assignments = new MarkAssignment[]
+            {
+                new MarkAssignment { AgentEntityId = 10, Mode = MarkMode.ManMark,
+                    TargetEntityId = 99, TargetPosition = oppPos },
+                new MarkAssignment { AgentEntityId = 11, Mode = MarkMode.Zonal, TargetEntityId = -1 },
+            };
+
+            TackleIntentRequest[] buffer = new TackleIntentRequest[22];
+            TackleIntentEvaluator.Evaluate(snapshot, pool, 2, assignments,
+                lastManPoolIndex: -1, isEmergency: false, buffer, out int count);
+
+            Assert.AreEqual(1, count, "One tackle intent expected.");
+            Assert.AreEqual(1, (int)buffer[0].CoverageDepth, "The teammate at x = 12 is behind the tackler.");
+            Assert.AreEqual(TackleMode.Commit, buffer[0].Mode,
+                "Coverage on the defended-goal side must give COMMIT for either team.");
+        }
+
+        /// <summary>Twin of T-DA-026: coverage depth counts only in-corridor teammates closer to x = 0.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_026_Twin_CoverageDepthCorridor(int defendingTeam)
+        {
+            Vector2 agentPos = new Vector2(18.0f, 34.0f);
+            Vector2 oppPos = new Vector2(20.5f, 34.0f);
+            DefensiveSnapshot snapshot = BuildTackleSnapshot(
+                defendingTeam, agentPos, oppPos,
+                new Vector2(12.0f, 32.0f),   // counted: in corridor, nearer x = 0.
+                new Vector2(12.0f, 44.0f),   // out of y-corridor.
+                new Vector2(25.0f, 34.0f),   // not behind the tackler.
+                new Vector2(28.0f, 36.0f));  // not behind the tackler (a second one: x = 105 would count both).
+
+            int[] pool = new int[] { 10, 11, 12, 13, 14 };
+            MarkAssignment[] assignments = new MarkAssignment[]
+            {
+                new MarkAssignment { AgentEntityId = 10, Mode = MarkMode.ManMark,
+                    TargetEntityId = 99, TargetPosition = oppPos },
+                new MarkAssignment { AgentEntityId = 11, Mode = MarkMode.Zonal, TargetEntityId = -1 },
+                new MarkAssignment { AgentEntityId = 12, Mode = MarkMode.Zonal, TargetEntityId = -1 },
+                new MarkAssignment { AgentEntityId = 13, Mode = MarkMode.Zonal, TargetEntityId = -1 },
+                new MarkAssignment { AgentEntityId = 14, Mode = MarkMode.Zonal, TargetEntityId = -1 },
+            };
+
+            TackleIntentRequest[] buffer = new TackleIntentRequest[22];
+            TackleIntentEvaluator.Evaluate(snapshot, pool, 5, assignments,
+                lastManPoolIndex: -1, isEmergency: false, buffer, out int count);
+
+            Assert.AreEqual(1, count);
+            Assert.AreEqual(1, (int)buffer[0].CoverageDepth,
+                "Only the in-corridor teammate nearer x = 0 counts, for either team.");
+        }
+
+        /// <summary>Twin of T-DA-035: the last man is the pool agent with minimum distance to x = 0.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_035_Twin_LastManMinDistToOwnGoal(int defendingTeam)
+        {
+            int own = defendingTeam;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 102, teamId: own,
+                    position: new Vector2(18.0f, 34.0f), baselineSlot: new Vector2(18.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 105, teamId: own,
+                    position: new Vector2(22.0f, 34.0f), baselineSlot: new Vector2(22.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 107, teamId: own,
+                    position: new Vector2(25.0f, 34.0f), baselineSlot: new Vector2(25.0f, 34.0f)),
+            };
+
+            DefensiveSnapshot snapshot = WithTeam(
+                SnapshotBuilder.Build(agents, ballPosition: new Vector2(12.0f, 34.0f)), defendingTeam);
+            int[] pool = new int[] { 102, 105, 107 };
+
+            LastManDetector.Evaluate(snapshot, pool, pool.Length, out LastManResult result);
+
+            Assert.IsTrue(result.IsEmergency, "Emergency must fire (ball 12 m from x = 0 < 18 + 5).");
+            Assert.AreEqual(102, result.LastManEntityId, "Agent 102 at x = 18 is the last man.");
+        }
+
+        /// <summary>Twin of T-DA-038: emergency fires; the advancing attacker is the one nearest x = 0.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_038_Twin_EmergencyAndAdvancingAttacker(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: own,
+                    position: new Vector2(18.0f, 34.0f), baselineSlot: new Vector2(18.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 50, teamId: opp, position: new Vector2(60.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 51, teamId: opp, position: new Vector2(14.0f, 30.0f)),
+            };
+
+            DefensiveSnapshot snapshot = WithTeam(
+                SnapshotBuilder.Build(agents, ballPosition: new Vector2(12.0f, 34.0f)), defendingTeam);
+            int[] pool = new int[] { 10 };
+
+            LastManDetector.Evaluate(snapshot, pool, pool.Length, out LastManResult result);
+
+            Assert.IsTrue(result.IsEmergency, "EmergencyFlag must be true for either team.");
+            Assert.AreEqual(0, result.LastManPoolIndex);
+            Assert.AreEqual(51, result.AdvancingAttackerEntityId,
+                "The attacker nearest the defended goal (x = 14) is the advancing attacker, not the one at x = 60.");
+        }
+
+        /// <summary>Twin of T-DA-041: GK-zone cover triggers at x = 40 and the zone centre is (7.5, 34).</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_041_Twin_CoverGkZoneAtOwnGoalSide(int defendingTeam)
+        {
+            int own = defendingTeam;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: own,
+                    position: new Vector2(8.0f, 34.0f), baselineSlot: new Vector2(8.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 11, teamId: own,
+                    position: new Vector2(20.0f, 34.0f), baselineSlot: new Vector2(20.0f, 34.0f)),
+            };
+
+            DefensiveSnapshot snapshot = WithTeam(SnapshotBuilder.Build(agents,
+                ballPosition: new Vector2(5.5f, 34.0f),
+                gkEntityId: 1, gkPosition: new Vector2(40.0f, 34.0f)), defendingTeam);
+            int[] pool = new int[] { 10, 11 };
+
+            LastManDetector.Evaluate(snapshot, pool, pool.Length, out LastManResult result);
+
+            Assert.IsTrue(result.IsEmergency, "Emergency must be active for either team.");
+            Assert.IsTrue(result.IsGkOutOfZone, "GK at x = 40 is out of the x = 0 zone for either team.");
+            Assert.AreEqual(11, result.CoverAgentEntityId);
+            Assert.AreEqual(DefensiveAIConstants.GkExpectedZoneMaxX * 0.5f, result.AbandonedZoneCenter.x, 1e-4f,
+                "Abandoned zone centre must sit at x = GK_EXPECTED_ZONE_MAX_X / 2 (the x = 0 end).");
+        }
+
+        private static DefensiveSnapshot BuildTrapSnapshot(int defendingTeam, float ballX, int tick)
+        {
+            // Four DEFENSE-line agents at canonical x = 35 (spread 2 m, inside the coherence threshold).
+            int own = defendingTeam;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 10, teamId: own,
+                    position: new Vector2(35.0f, 34.0f), baselineSlot: new Vector2(35.0f, 34.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 11, teamId: own,
+                    position: new Vector2(35.6f, 28.0f), baselineSlot: new Vector2(35.6f, 28.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 12, teamId: own,
+                    position: new Vector2(36.3f, 40.0f), baselineSlot: new Vector2(36.3f, 40.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 13, teamId: own,
+                    position: new Vector2(37.0f, 46.0f), baselineSlot: new Vector2(37.0f, 46.0f), line: LineId.Defense),
+            };
+
+            return WithTeam(SnapshotBuilder.Build(agents,
+                ballPosition: new Vector2(ballX, 34.0f),
+                ballVelocity: new Vector2(1.5f, 0f),
+                defensiveLineDepth: 35.0f,
+                tick: tick), defendingTeam);
+        }
+
+        /// <summary>
+        /// Twin of T-DA-027: with the ball in the opponent half (canonical x = 60 > 52.5) the trap arms
+        /// after the dwell for either team, and the step-up target x is identical (canonical frame).
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_027_Twin_TrapFiresAndStepsUpIdentically(int defendingTeam)
+        {
+            OffsideLineState state = OffsideLineState.Default();
+            MarkDirective directive = MarkDirective.Inactive(defendingTeam);
+            int[] pool = new int[] { 10, 11, 12, 13 };
+            MarkAssignment[] assignments = null;
+
+            for (int tick = 1; tick <= DefensiveAIConstants.OffsideTrapDwellTicks; tick++)
+            {
+                DefensiveSnapshot snapshot = BuildTrapSnapshot(defendingTeam, ballX: 60.0f, tick: tick);
+                assignments = new MarkAssignment[pool.Length];
+                for (int i = 0; i < pool.Length; i++)
+                    assignments[i] = new MarkAssignment { Mode = MarkMode.Zonal, TargetEntityId = -1 };
+
+                OffsideTrapController.Update(snapshot, pool, pool.Length, tick,
+                    ref state, ref directive, assignments);
+            }
+
+            Assert.IsTrue(directive.OffsideTrapActive,
+                "Ball in the opponent half (canonical x = 60) must arm the trap for either team.");
+            float expectedDepth = 35.0f + DefensiveAIConstants.OffsideStepSizeM;
+            Assert.AreEqual(expectedDepth, directive.StepUpTargetDepth, 1e-4f);
+            for (int i = 0; i < pool.Length; i++)
+            {
+                Assert.AreEqual(expectedDepth, assignments[i].TargetPosition.x, 1e-4f,
+                    "Step-up x must be the depth itself (canonical frame), never 105 - depth.");
+            }
+        }
+
+        /// <summary>The trap must NOT arm while the ball is in the defender's own half (canonical x = 40), for either team.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_027_Twin_TrapBlockedWhenBallInOwnHalf(int defendingTeam)
+        {
+            OffsideLineState state = OffsideLineState.Default();
+            MarkDirective directive = MarkDirective.Inactive(defendingTeam);
+            int[] pool = new int[] { 10, 11, 12, 13 };
+
+            for (int tick = 1; tick <= DefensiveAIConstants.OffsideTrapDwellTicks + 2; tick++)
+            {
+                DefensiveSnapshot snapshot = BuildTrapSnapshot(defendingTeam, ballX: 40.0f, tick: tick);
+                MarkAssignment[] assignments = new MarkAssignment[pool.Length];
+                for (int i = 0; i < pool.Length; i++)
+                    assignments[i] = new MarkAssignment { Mode = MarkMode.Zonal, TargetEntityId = -1 };
+
+                OffsideTrapController.Update(snapshot, pool, pool.Length, tick,
+                    ref state, ref directive, assignments);
+            }
+
+            Assert.IsFalse(directive.OffsideTrapActive,
+                "Ball in the own half (canonical x = 40 <= 52.5) must block the trap for either team.");
+        }
+
+        /// <summary>Twin of T-DA-045: Invariant 2 demotes the LOWEST-threat MAN_MARK (opponent 104) for either team.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void T_DA_045_Twin_MaxManMarkDemotesLowestThreat(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            int poolCount = 5;
+
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[poolCount * 2];
+            for (int i = 0; i < poolCount; i++)
+            {
+                agents[i] = SnapshotBuilder.MakeAgent(entityId: i + 10, teamId: own,
+                    position: new Vector2(30.0f + i * 2.0f, 34.0f),
+                    baselineSlot: new Vector2(30.0f + i * 2.0f, 34.0f), line: LineId.Midfield);
+                // Opponent 104 has both the lowest FirstTouch and the largest x, so against the x = 0 goal
+                // it is the unique lowest threat.
+                agents[poolCount + i] = SnapshotBuilder.MakeAgent(entityId: 100 + i, teamId: opp,
+                    position: new Vector2(32.0f + i * 2.0f, 34.0f), firstTouch: 12f - i);
+            }
+
+            DefensiveSnapshot snapshot = WithTeam(SnapshotBuilder.Build(agents), defendingTeam);
+            int[] pool = new int[] { 10, 11, 12, 13, 14 };
+            MarkAssignment[] assignments = new MarkAssignment[poolCount];
+            for (int i = 0; i < poolCount; i++)
+            {
+                assignments[i] = new MarkAssignment
+                {
+                    AgentEntityId = 10 + i, Mode = MarkMode.ManMark, TargetEntityId = 100 + i,
+                    TargetPosition = new Vector2(32.0f + i * 2.0f, 34.0f), ValidThroughTick = 1,
+                };
+            }
+
+            Assert.IsTrue(InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments));
+
+            int demoted = -1;
+            int manMark = 0;
+            for (int i = 0; i < poolCount; i++)
+            {
+                if (assignments[i].Mode == MarkMode.ManMark) manMark++; else demoted = pool[i];
+            }
+
+            Assert.AreEqual(DefensiveAIConstants.MaxManMarkAssignments, manMark);
+            Assert.AreEqual(14, demoted,
+                "The mark on opponent 104 (lowest FirstTouch and farthest from x = 0) must be the one demoted.");
+        }
+
+        /// <summary>
+        /// Invariant 2 ranks by threat, which is a function of x as well as FirstTouch. Opponents at
+        /// distinct x with EQUAL FirstTouch: the opponent farthest from x = 0 is the lowest threat and
+        /// must be the one demoted, for either team (pre-fix team 1 demoted the nearest instead).
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void Invariant2_DemotesOpponentFarthestFromOwnGoal_BothTeams(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            int poolCount = 5;
+
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[poolCount * 2];
+            for (int i = 0; i < poolCount; i++)
+            {
+                agents[i] = SnapshotBuilder.MakeAgent(entityId: i + 10, teamId: own,
+                    position: new Vector2(30.0f + i * 2.0f, 34.0f),
+                    baselineSlot: new Vector2(30.0f + i * 2.0f, 34.0f), line: LineId.Midfield);
+                // Opponent 100 + i sits at x = 20 + 6 i: opponent 104 (x = 44) is farthest from x = 0.
+                agents[poolCount + i] = SnapshotBuilder.MakeAgent(entityId: 100 + i, teamId: opp,
+                    position: new Vector2(20.0f + 6.0f * i, 34.0f), firstTouch: 12f);
+            }
+
+            DefensiveSnapshot snapshot = WithTeam(SnapshotBuilder.Build(agents), defendingTeam);
+            int[] pool = new int[] { 10, 11, 12, 13, 14 };
+            MarkAssignment[] assignments = new MarkAssignment[poolCount];
+            for (int i = 0; i < poolCount; i++)
+            {
+                assignments[i] = new MarkAssignment
+                {
+                    AgentEntityId = 10 + i, Mode = MarkMode.ManMark, TargetEntityId = 100 + i,
+                    TargetPosition = new Vector2(20.0f + 6.0f * i, 34.0f), ValidThroughTick = 1,
+                };
+            }
+
+            Assert.IsTrue(InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments));
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[4].Mode,
+                "The mark on the opponent farthest from the defended goal (lowest threat) must be demoted.");
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(MarkMode.ManMark, assignments[i].Mode,
+                    $"Mark {i} (opponent nearer the defended goal) must be kept.");
+            }
+        }
+
+        private static DefensiveSnapshot BuildPipelineSnapshot(int defendingTeam, int tick)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+            {
+                SnapshotBuilder.MakeAgent(entityId: 1, teamId: own, isGoalkeeper: true,
+                    position: new Vector2(3.0f, 34.0f), baselineSlot: new Vector2(3.0f, 34.0f)),
+                SnapshotBuilder.MakeAgent(entityId: 2, teamId: own, position: new Vector2(20.0f, 20.0f),
+                    baselineSlot: new Vector2(20.0f, 20.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 3, teamId: own, position: new Vector2(18.0f, 30.0f),
+                    baselineSlot: new Vector2(18.0f, 30.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 4, teamId: own, position: new Vector2(18.0f, 38.0f),
+                    baselineSlot: new Vector2(18.0f, 38.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 5, teamId: own, position: new Vector2(20.0f, 48.0f),
+                    baselineSlot: new Vector2(20.0f, 48.0f), line: LineId.Defense),
+                SnapshotBuilder.MakeAgent(entityId: 6, teamId: own, position: new Vector2(30.0f, 34.0f),
+                    baselineSlot: new Vector2(30.0f, 34.0f), line: LineId.Midfield),
+                // Attackers: one running at the defended goal, two static.
+                SnapshotBuilder.MakeAgent(entityId: 20, teamId: opp, position: new Vector2(26.0f, 34.0f),
+                    velocity: new Vector2(-5.0f, 0f), firstTouch: 16f),
+                SnapshotBuilder.MakeAgent(entityId: 21, teamId: opp, position: new Vector2(24.0f, 22.0f),
+                    firstTouch: 12f),
+                SnapshotBuilder.MakeAgent(entityId: 22, teamId: opp, position: new Vector2(33.0f, 44.0f),
+                    firstTouch: 9f),
+            };
+
+            return WithTeam(SnapshotBuilder.Build(agents,
+                ballPosition: new Vector2(15.0f, 34.0f),
+                ballVelocity: new Vector2(-1.0f, 0f),
+                gkEntityId: 1, gkPosition: new Vector2(3.0f, 34.0f),
+                defensiveLineDepth: 18.0f, tick: tick), defendingTeam);
+        }
+
+        /// <summary>
+        /// Whole-pipeline twin: the same canonical snapshot ticked for team 0 and team 1 yields
+        /// bit-identical assignments, directive and tackle intents (own-goal x = 0 for both).
+        /// </summary>
+        [Test]
+        public void FullPipeline_IdenticalCanonicalInputs_IdenticalOutputs()
+        {
+            DefensiveAITick home = new DefensiveAITick();
+            DefensiveAITick away = new DefensiveAITick();
+            int[] ids = new int[] { 2, 3, 4, 5, 6 };
+            bool sawNonZonal = false;
+            bool sawEmergency = false;
+
+            for (int t = 1; t <= DefensiveAIConstants.MarkDwellTicks + 3; t++)
+            {
+                home.Tick(BuildPipelineSnapshot(0, t));
+                away.Tick(BuildPipelineSnapshot(1, t));
+
+                MarkDirective dh = home.GetMarkDirective();
+                MarkDirective da = away.GetMarkDirective();
+                Assert.AreEqual(dh.EmergencyFlag, da.EmergencyFlag, $"tick {t}: EmergencyFlag");
+                Assert.AreEqual(dh.OffsideTrapActive, da.OffsideTrapActive, $"tick {t}: OffsideTrapActive");
+                Assert.AreEqual(dh.StepUpTargetDepth, da.StepUpTargetDepth, $"tick {t}: StepUpTargetDepth");
+                sawEmergency |= dh.EmergencyFlag;
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    MarkAssignment ah = home.GetAssignment(ids[i]);
+                    MarkAssignment aa = away.GetAssignment(ids[i]);
+                    Assert.AreEqual(ah.Mode, aa.Mode, $"tick {t} agent {ids[i]}: Mode");
+                    Assert.AreEqual(ah.TargetEntityId, aa.TargetEntityId, $"tick {t} agent {ids[i]}: Target");
+                    Assert.AreEqual(ah.TargetPosition.x, aa.TargetPosition.x, 1e-5f, $"tick {t} agent {ids[i]}: X");
+                    Assert.AreEqual(ah.TargetPosition.y, aa.TargetPosition.y, 1e-5f, $"tick {t} agent {ids[i]}: Y");
+                    sawNonZonal |= ah.Mode != MarkMode.Zonal;
+                }
+
+                System.ReadOnlySpan<TackleIntentRequest> th = home.GetTackleIntentRequests();
+                System.ReadOnlySpan<TackleIntentRequest> ta = away.GetTackleIntentRequests();
+                Assert.AreEqual(th.Length, ta.Length, $"tick {t}: tackle intent count");
+                for (int i = 0; i < th.Length; i++)
+                {
+                    Assert.AreEqual(th[i].Mode, ta[i].Mode, $"tick {t} intent {i}: Mode");
+                    Assert.AreEqual(th[i].CoverageDepth, ta[i].CoverageDepth, $"tick {t} intent {i}: depth");
+                }
+            }
+
+            Assert.IsTrue(sawNonZonal, "Scenario must exercise a non-ZONAL assignment (non-vacuous).");
+            Assert.IsTrue(sawEmergency, "Scenario must exercise the last-man emergency (non-vacuous).");
+        }
+    }
 }
 
 #region VersionHistory
@@ -2305,4 +2860,8 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | helper moved to Midfield line to isolate invariant 2 from backline enforcement.          |
 // | 1.5     | 2026-06-30 | —      | #21 §5.6 / G2: RequestedDwell_InvariantPinned locks the pinned OffsideTrapRequestedDwell- |
 // |         |            |        | Ticks magnitude + invariant (1 ≤ requested ≤ baseline) (FR-TI-022 / KD-9).               |
+// | 1.6     | 2026-11-10 | —      | ERR-014-008: CanonicalFrameTwinTests — team-0 / team-1 twins (identical canonical inputs, |
+// |         |            |        | identical outputs) of T-DA-013/016/021/026/027/035/038/041/045, a goal-proximity ranking  |
+// |         |            |        | case for MarkAssigner and Invariant 2, and a whole-pipeline twin. Every pre-existing      |
+// |         |            |        | test is unchanged.                                                                        |
 #endregion
