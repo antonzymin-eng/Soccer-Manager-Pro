@@ -12,6 +12,7 @@ using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PositioningAI;
 using TacticalDirector.PressingAI;
 using TacticalDirector.AttackingAI;
@@ -109,8 +110,9 @@ namespace TacticalDirector.MatchEngine
                 var state = new RotationPairState { TriggerDwellTicks = 1 };
                 rot.RestorePairState(rot.PairCount - 1, in state);
             }
-            // Flush injected state through the real serializer; no AI evaluation at tick 61.
-            engine.RunTick();
+            // Let the real positioning stride apply the restored binding and update its entity
+            // lookup/composed cache before saving, rather than saving a pre-compose fixture state.
+            for (int i = 0; i < 6; i++) engine.RunTick();
             var header = engine.CaptureDurableHeader();
             var payload = engine.CaptureDurablePayload();
             var expected = new byte[240][];
@@ -132,6 +134,50 @@ namespace TacticalDirector.MatchEngine
             }
             Assert.AreEqual(Duty.Defend, restored.TestOnly_PositioningDuty(5));
             Assert.AreEqual(Duty.Attack, restored.TestOnly_PositioningDuty(16));
+        }
+
+        private static Squad SquadFor(int club)
+        {
+            var rng = new DeterministicRngService(Seed ^ (ulong)club);
+            int stream = rng.RegisterStream("formation-duty.roster", SubsystemOrdinals.PlayerDatabase, club, 1);
+            var template = new PlayerPosition[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+            for (int i = 0; i < template.Length; i++)
+                template[i] = i < 3 ? PlayerPosition.Goalkeeper : i < 11 ? PlayerPosition.Defender
+                    : i < 19 ? PlayerPosition.Midfielder : PlayerPosition.Forward;
+            return RosterGenerator.Generate(rng, stream, club, template);
+        }
+
+        private sealed class TwoSquads : ISquadProvider
+        {
+            internal readonly Squad Home = SquadFor(1), Away = SquadFor(2);
+            public Squad ResolveByClubId(int clubId) => clubId == 1 ? Home : clubId == 2 ? Away
+                : throw new ArgumentOutOfRangeException(nameof(clubId));
+        }
+
+        [TestCase(TacticFormation.F433)]
+        [TestCase(TacticFormation.F4231)]
+        public void ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(TacticFormation family)
+        {
+            var squads = new TwoSquads();
+            var control = new MatchEngine(Seed); control.ConfigureSquads(squads.Home, squads.Away);
+            var ids = new int[22]; for (int i = 0; i < ids.Length; i++) ids[i] = control.AgentPlayerId(i);
+            var engine = new MatchEngine(Seed);
+            for (int t = 0; t < 2; t++) engine.SetTeamTactic(t, Tactic(family));
+            engine.ConfigureSquads(squads.Home, squads.Away);
+            for (int i = 0; i < ids.Length; i++) Assert.AreEqual(ids[i], engine.AgentPlayerId(i), "F442-selected ID " + i);
+            engine.SetPlayerTactic(6, new PlayerTactic(PlayerRole.Default, Duty.Attack, PlayerInstructions.Default));
+            engine.SetPlayerTactic(17, new PlayerTactic(PlayerRole.Default, Duty.Defend, PlayerInstructions.Default));
+            for (int i = 0; i < 60; i++) engine.RunTick();
+            var header = engine.CaptureDurableHeader(); var payload = engine.CaptureDurablePayload();
+            var expected = new byte[60][];
+            for (int i = 0; i < expected.Length; i++) { engine.RunTick(); expected[i] = engine.CurrentSnapshotDigest; }
+            var restored = MatchEngine.RestoreFromSnapshot(header, payload, Seed, squads);
+            for (int t = 0; t < 2; t++) Assert.AreEqual(family, restored.GetEffectiveFormation(t));
+            for (int i = 0; i < ids.Length; i++) Assert.AreEqual(ids[i], restored.AgentPlayerId(i));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                restored.RunTick(); CollectionAssert.AreEqual(expected[i], restored.CurrentSnapshotDigest);
+            }
         }
 
         [TestCase(0, 11)]
@@ -310,4 +356,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-09 | —      | Kickoff lock, mixed requests, replay with six rotation rows, corruption and Support identity. |
 // | 1.1 | 2026-11-10 | — | Strengthens active/pending rotation replay, consumer views, synthetic tick-0 and exact Support byte assertions. |
+// | 1.2 | 2026-11-10 | — | Real-squad selected-ID/reprojection coverage and active-binding save after an actual composition stride. |
 #endregion
