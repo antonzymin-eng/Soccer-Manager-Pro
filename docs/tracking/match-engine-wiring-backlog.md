@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED November 10, 2026, v1.46:** #543 review follow-up adds [per-team scoring](evidence/formation-duty-20261109/README.md#characterization), allocation coverage and a [named player-control blocker](open-issues.md#formation-duty-player-control-blocker). Diagnosis is explicitly HOLD for Opus's single design; no new trace analysis or game code. Owner will run final-head Unity validation. Player-facing controls remain blocked until marking movement is fixed and validated; current preset/API reachability is acknowledged.
+
 > **UPDATED November 10, 2026, v1.45:** #434 kickoff formation/Duty is implemented in [draft PR #543](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/543), with [90-match characterization and exact six-seed C0 identity](evidence/formation-duty-20261109/README.md). Full local gate passes; material non-default scoring changes are descriptive and require owner review. The pinned Unity host remains pending, so this is not a landed/certified item. #440 is separate; no Stage B fix is authorized.
 
 > **UPDATED November 9, 2026, v1.43:** The documentation-only [#434 preflight
@@ -824,6 +826,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.46 | 2026-11-10 | — | #543 owner review: per-team headline, player-control blocker, scoped allocation coverage/raw requests; diagnosis held for Opus, owner Unity pending. |
 | 1.45 | 2026-11-10 | — | #434 implemented/measured: 90 primary matches, exact default identity, full Linux gate pass; pinned Unity and normal owner review pending. |
 | 1.44 | 2026-11-09 | — | #434 P1–P4 and slot limitation accepted in-session; runtime/spec/tests authored, full validation/capture pending. No #440 change. |
 | 1.43 | 2026-11-09 | — | #434 preflight v1.2: new formation-translation work correctly identified, conditional base reuse, C0–C9 matrix, explicit budget and stop-versus-characterization distinction. Decisions remain pending; no gameplay change. |

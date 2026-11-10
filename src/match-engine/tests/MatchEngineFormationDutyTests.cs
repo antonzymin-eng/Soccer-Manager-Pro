@@ -9,6 +9,10 @@ using System;
 using System.Reflection;
 
 using NUnit.Framework;
+#if UNITY_5_3_OR_NEWER
+using UnityEngine.TestTools.Constraints;
+using UnityIs = UnityEngine.TestTools.Constraints.Is;
+#endif
 
 using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
@@ -27,6 +31,106 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong Seed = 0x0123456789ABCDEFUL;
 
+        [TestCase(0, TacticFormation.F442)]
+        [TestCase(1, TacticFormation.F442)]
+        [TestCase(0, TacticFormation.F433)]
+        [TestCase(1, TacticFormation.F433)]
+        [TestCase(0, TacticFormation.F4231)]
+        [TestCase(1, TacticFormation.F4231)]
+        public void KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(int team, TacticFormation formation)
+        {
+            foreach (TacticFormation warmFamily in new[] { TacticFormation.F442, TacticFormation.F433, TacticFormation.F4231 })
+            {
+                var warm = new MatchEngine(Seed);
+                warm.SetTeamTactic(team, Tactic(warmFamily));
+                warm.RunTick();
+            }
+
+            var engine = new MatchEngine(Seed);
+            engine.SetTeamTactic(team, Tactic(formation));
+            var snapshots = (PositioningPerceptionSnapshot[])typeof(MatchEngine)
+                .GetField("_posSnapshots", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(engine);
+            var positioning = engine.TestOnly_Positioning(team);
+            FormationFamily family = PositioningAI.TacticTranslation.ToFormationFamily(formation);
+            // Measure the actual cold selection/seeding seam. Construction, reflection and delegate
+            // creation are outside the window; no simulation tick has warmed this instance.
+            TestDelegate select = () => positioning.InitializeFormation(family, snapshots[team]);
+#if UNITY_5_3_OR_NEWER
+            TestDelegate control = () => GC.KeepAlive(new byte[1024]);
+            Assert.That(control, UnityIs.AllocatingGCMemory(), "The native recorder must detect a known allocation.");
+            Assert.That(select, UnityIs.Not.AllocatingGCMemory());
+#else
+            long controlBefore = GC.GetAllocatedBytesForCurrentThread();
+            byte[] control = new byte[1024];
+            long controlBytes = GC.GetAllocatedBytesForCurrentThread() - controlBefore;
+            GC.KeepAlive(control);
+            Assert.Greater(controlBytes, 0L, "The counter must detect a known allocation.");
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            select();
+            long selectionBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.AreEqual(0L, selectionBytes, "The kickoff formation selection/seeding itself must allocate zero bytes.");
+#endif
+            Assert.AreEqual(family, positioning.Formation);
+            Assert.AreEqual(formation == TacticFormation.F4231 ? 6 : 5, positioning.CaptureRotationState().PairCount);
+            engine.RunTick();
+            AssertFirstFrame(engine, team, formation);
+
+#if !UNITY_5_3_OR_NEWER
+            // The whole first tick has an existing 536-byte cost on the frozen Linux lane, also
+            // reproduced on unchanged main. Do not hide it or attribute it to formation routing.
+            // Each sample below is a fresh engine's first actual RunTick, with only lazy crypto
+            // setup primed. Exact equality rejects any added per-match routing allocation.
+            long baseline = FewestFirstTickBytes(team, TacticFormation.F442);
+            long selected = FewestFirstTickBytes(team, formation);
+            Assert.AreEqual(baseline, selected, "The first full tick must not add allocation beyond the default first-tick baseline.");
+            TestContext.WriteLine("First RunTick allocation: default=" + baseline + " selected=" + selected + " bytes; selection=0 bytes.");
+#endif
+        }
+
+#if !UNITY_5_3_OR_NEWER
+        private static long FewestFirstTickBytes(int team, TacticFormation formation)
+        {
+            long fewest = long.MaxValue;
+            // Tiered-JIT bookkeeping can charge one window. A repeatable per-match allocation
+            // cannot disappear: all eight windows begin on a different engine at clock zero.
+            for (int round = 0; round < 8; round++)
+            {
+                var engine = NewAllocationProbe(team, formation);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                engine.RunTick();
+                long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+                fewest = Math.Min(fewest, bytes);
+                AssertFirstFrame(engine, team, formation);
+            }
+            return fewest;
+        }
+#endif
+
+        private static MatchEngine NewAllocationProbe(int team, TacticFormation formation)
+        {
+            var engine = new MatchEngine(Seed);
+            engine.SetTeamTactic(team, Tactic(formation));
+            var orchestrator = (TickOrchestrator)typeof(MatchEngine)
+                .GetField("_orchestrator", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(engine);
+            var codec = (SnapshotCodec)typeof(TickOrchestrator)
+                .GetField("_codec", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(orchestrator);
+            // The existing managed SHA backend is lazy on Linux. Warm that dependency without
+            // advancing its digest chain, running a physics tick, or initializing positioning.
+            codec.ValidateCurrentDigest(orchestrator.CurrentHeader, orchestrator.CurrentPayload);
+            Assert.AreEqual(0UL, orchestrator.CurrentHeader.Tick);
+            Assert.AreEqual(TacticFormation.F442, engine.GetEffectiveFormation(team));
+            return engine;
+        }
+
+        private static void AssertFirstFrame(MatchEngine engine, int team, TacticFormation formation)
+        {
+            var header = engine.CaptureDurableHeader();
+            Assert.AreEqual(1UL, header.Tick, "The allocation oracle must execute exactly the first physics tick.");
+            Assert.AreEqual(formation, engine.GetEffectiveFormation(team));
+            CollectionAssert.AreEqual(new byte[32], header.PrevSnapshotDigest,
+                "Hash warm-up must not advance the match's digest chain.");
+        }
+
         internal static TeamTactic Tactic(TacticFormation formation, Mentality mentality = Mentality.Balanced) =>
             new TeamTactic(mentality, formation, Tempo.Standard, TacticWidth.Standard,
                 TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
@@ -38,6 +142,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(0, TacticFormation.F4231, FormationFamily.F4231, 6)]
         [TestCase(1, TacticFormation.F4231, FormationFamily.F4231, 6)]
         [TestCase(0, (TacticFormation)255, FormationFamily.F442, 5)]
+        [TestCase(1, (TacticFormation)255, FormationFamily.F442, 5)]
         public void FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(
             int team, TacticFormation requested, FormationFamily expected, int rows)
         {
@@ -46,6 +151,9 @@ namespace TacticalDirector.MatchEngine
             engine.SetTeamTactic(team, Tactic(TacticFormation.F433));
             engine.SetTeamTactic(team, Tactic(requested));
             engine.RunTick();
+            Assert.AreEqual(requested, engine.GetRequestedFormation(team), "requested value is an unnormalized audit value");
+            Assert.AreEqual(requested, team == 0 ? engine.Formations.HomeRequested : engine.Formations.AwayRequested);
+            Assert.AreEqual(PositioningAI.TacticTranslation.ToTacticFormation(expected), engine.GetEffectiveFormation(team));
             Assert.AreSame(positioning, engine.TestOnly_Positioning(team), "retained consumer views");
             Assert.AreEqual(expected, positioning.Formation);
             Assert.AreEqual(AnchorCalculator.ComputeAnchor(PositioningAIConstants.GetFormationSlots(expected)[5]),
@@ -357,4 +465,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-11-09 | —      | Kickoff lock, mixed requests, replay with six rotation rows, corruption and Support identity. |
 // | 1.1 | 2026-11-10 | — | Strengthens active/pending rotation replay, consumer views, synthetic tick-0 and exact Support byte assertions. |
 // | 1.2 | 2026-11-10 | — | Real-squad selected-ID/reprojection coverage and active-binding save after an actual composition stride. |
+// | 1.3 | 2026-11-10 | — | Zero-allocation cold selection and full-first-tick baseline comparison for each family/team; existing crypto setup and baseline cost explicitly distinguished. |
 #endregion

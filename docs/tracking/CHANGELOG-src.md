@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 10, 2026 — (v2.222 — **#434 validation closeout.** Production remains byte-identical to runtime implementation `23f2fedb`; real-squad/rotation continuation and mixed-command fixtures strengthen coverage. Full Linux gate passes, all 90 primary matches audit successfully and all six C0 pairs match exactly after only approved layout alignment. Snapshot v29, no tuning or RNG changes. [Retained evidence](evidence/formation-duty-20261109/README.md) includes raw traces, pins, all attempts, source identity and the pending pinned Unity request. Draft/unmerged; runtime switching and formation-aware selection remain follow-ups.)
+> **Last Updated:** November 10, 2026 — (v2.223 — **#434 test/documentation review follow-up.** New cold selection allocation oracle plus first-full-tick baseline comparison, all families/teams; mirrored raw requested values. Production remains at measured `23f2fedb`. Per-team goal reporting and named player-control blocker; trace diagnosis held for Opus. Owner-run pinned Unity remains pending; new fixtures require the final exact head.)
+
+> **Last Updated (prior):** November 10, 2026 — (v2.222 — **#434 validation closeout.** Production remains byte-identical to runtime implementation `23f2fedb`; real-squad/rotation continuation and mixed-command fixtures strengthen coverage. Full Linux gate passes, all 90 primary matches audit successfully and all six C0 pairs match exactly after only approved layout alignment. Snapshot v29, no tuning or RNG changes. [Retained evidence](evidence/formation-duty-20261109/README.md) includes raw traces, pins, all attempts, source identity and the pending pinned Unity request. Draft/unmerged; runtime switching and formation-aware selection remain follow-ups.)
 
 > **Last Updated (prior):** November 9, 2026 — (v2.221 — **#434 kickoff formation and Duty authored.** Keep positioning instance, preallocate supported controllers, lock final pending choice before frame 1; preserve requested tactic updates. Duty follows agents through rotations and shifts the outfield anchor before later composition. World-state v29 stores initialized/effective family before state and count-prefixes contiguous rows; restore validates then selects the catalogue. Viewer frames/HTTP separate requested/effective choices. Focused routing/restore/corruption/Support tests pass; full Linux gate, six-seed capture and Unity host validation are pending. No RNG/tag/tuning or lineup-selection change.)
 
@@ -2834,6 +2836,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.223 | 2026-11-10 | — | #543 cold-selection/first-tick baseline and raw-request test coverage; per-team/control-blocker review follow-up, no runtime change. |
 | 2.222 | 2026-11-10 | — | #434 Linux/source/evidence closeout; strengthened real-roster and rotation fixtures, full 90-match characterization, pending Unity host. |
 | 2.221 | 2026-11-09 | — | #434 family/Duty routing, v29 catalogue-first restore and requested/effective observation; validation in progress. |
 | 2.220 | 2026-11-06 | — | PR #542: conditional fixture hooks with release IL proof, 16 exact-480 CONTACT restore cases, merged main and 38 evidence directories; current full Linux/host status in w8-c-implementation-results.md. |
