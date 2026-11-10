@@ -1,0 +1,10 @@
+{
+  "reviewBase": "4ec8b4d52c393dfcf564565024940994b0886dea",
+  "measuredRuntime": "23f2fedb140d47b22be36b2d495190b0b1685251",
+  "allProductionFilesMatchMeasurement": true,
+  "changedSourcePaths": [
+    "src/match-engine/tests/MatchEngineFormationDutyTests.cs"
+  ],
+  "testFileSha256": "34564a1857a3777c64ac1f0e187b3c9d628fbcba31306ce90448ccf40d7bccaf",
+  "traceDiagnosis": "HOLD awaiting Opus design; only existing CSV summary and allocation tests performed"
+}

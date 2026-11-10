@@ -1,0 +1,4 @@
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 10
+[Log] [FirstTouch] Agent=10 Outcome=LooseBall q=0.529 r=0.771m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1

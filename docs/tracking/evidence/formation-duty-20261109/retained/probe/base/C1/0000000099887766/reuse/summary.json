@@ -1,0 +1,43 @@
+{
+  "seed": "0000000099887766",
+  "case": 1,
+  "mode": "reuse",
+  "frames": 1000,
+  "live": 1000,
+  "shots": [
+    0,
+    0
+  ],
+  "goals": [
+    0,
+    0
+  ],
+  "fouls": [
+    0,
+    0
+  ],
+  "possession": [
+    149,
+    0,
+    851
+  ],
+  "teamPossession": [
+    892,
+    0,
+    108
+  ],
+  "phase": [
+    166,
+    0,
+    0,
+    0,
+    2,
+    164,
+    0,
+    0
+  ],
+  "schema": 28,
+  "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+  "digest": "045fc2c1c14cb569746155a81912b8e93e22cfed0671b2ccd5cc803911479937",
+  "elapsedSeconds": 0.7763291
+}

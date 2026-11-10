@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/RotationController.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec:     Positional Rotations #25 §3.1–§3.4 (FM-RO-01/02), §4.2, FR-RO-001..018, Code Standards #20
 // Purpose:  Per-team rotation controller: evaluates the organic-exchange trigger against the
@@ -272,7 +272,8 @@ namespace TacticalDirector.PositioningAI
         /// an identity binding never rewrites a row (byte-identical for every pre-#25 fill,
         /// including fills that carry non-formation Role values). On a rebind the Role is re-derived
         /// from the newly bound slot's formation record — the pull-factor row is a property of the
-        /// SLOT's positional duty, so the exchanged agents fully exchange positional targets
+        /// SLOT's positional role, while preserving the agent's Duty, so exchanged agents
+        /// compose at the exchanged anchors with their own longitudinal instruction
         /// (FR-RO-001: the persistent role/duty/PlayerTactic surfaces are untouched; this is the
         /// per-fill snapshot derivation, which the orchestrator also derives from the slot).
         /// </summary>
@@ -291,7 +292,8 @@ namespace TacticalDirector.PositioningAI
                     position:     a.Position,
                     isActive:     a.IsActive,
                     role:         formation[boundSlot].Role,
-                    isGoalkeeper: a.IsGoalkeeper);
+                    isGoalkeeper: a.IsGoalkeeper,
+                    duty:         a.Duty);
             }
         }
 
@@ -406,4 +408,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   revert/hold, §3.3 atomic swap + partner lock, §3.4 phase-exit   |
 // |         |            |        |   freeze, F2/F5/F6 validating seams. Identity binding leaves the  |
 // |         |            |        |   snapshot untouched (byte-identical default).                    |
+// | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

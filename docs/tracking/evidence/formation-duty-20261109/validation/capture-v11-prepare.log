@@ -1,0 +1,5 @@
+Generated 74 csproj (37 test projects) + tools/dotnet-ci/TacticalDirector.gen.sln
+structural coverage + 11 synthetic checks + all 35123 real snapshot byte mutations passed (schema 28)
+Generated 74 csproj (37 test projects) + tools/dotnet-ci/TacticalDirector.gen.sln
+structural coverage + 11 synthetic checks + all 35141 real snapshot byte mutations passed (schema 29)
+Prepared frozen inputs: /workspace/work/434-capture-v11

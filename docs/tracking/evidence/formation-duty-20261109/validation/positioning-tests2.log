@@ -1,0 +1,20 @@
+Test run for /workspace/Soccer-Manager-Pro/src/positioning-ai/Tests/bin/Debug/net8.0/TacticalDirector.PositioningAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Determinism_DigestStability_IdenticalInputs [40 ms]
+  Skipped Determinism_EntityIdPermutation_SameOutput [< 1 ms]
+  Skipped Determinism_RngIsolation_CrossSubsystem [< 1 ms]
+  Skipped Determinism_SaveLoad_ResumesIdentically [< 1 ms]
+  Skipped Integration_4231_TransToAtk_AMAdvances [< 1 ms]
+  Skipped Integration_F2Fallback_ValidArchetype [< 1 ms]
+  Skipped Integration_FullMatch_90Min_StateConsistency [< 1 ms]
+  Skipped Integration_LaneOverload_Resolved_BySpacing [< 1 ms]
+  Skipped Integration_OrchestratorNonInvocation_OfStage0Default [< 1 ms]
+  Skipped Integration_PhaseOscillationSuppressed [< 1 ms]
+  Skipped Integration_SubstitutionSentinel_Preserved [< 1 ms]
+  Skipped Performance_SpacingBudget_Under0_05ms [< 1 ms]
+  Skipped Performance_ZeroHeapAlloc_InHotPath [5 ms]
+
+Passed!  - Failed:     0, Passed:   143, Skipped:    13, Total:   156, Duration: 1 s - TacticalDirector.PositioningAI.Tests.dll (net8.0)

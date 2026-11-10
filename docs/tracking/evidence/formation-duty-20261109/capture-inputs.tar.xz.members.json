@@ -1,0 +1,34 @@
+{
+  "archiveSha256": "e6a2857642b77f3199e5ca9766c1960bb92d53417ba553baeb1199b54b1fafde",
+  "archiveBytes": 23484,
+  "files": {
+    "PROTOCOL.md": {
+      "bytes": 6426,
+      "sha256": "3c1ad65273cf90f2e738199858da62525f11d5924c99adecc85d5ae911484f86"
+    },
+    "Program.cs.txt": {
+      "bytes": 14598,
+      "sha256": "e6db2df46a364aa6e08204279c4ab468addc7260c54add337729fedd16105f75"
+    },
+    "REUSE.md": {
+      "bytes": 2320,
+      "sha256": "018d3324fde762e05b6b7802919a0953ae1dd8b0ee1e36183be10696ef2aefa5"
+    },
+    "SHA256SUMS": {
+      "bytes": 472,
+      "sha256": "3032d4875bdf6c39b61b250fc135465c690a6887e44cd7f8dd4cc57dbf845998"
+    },
+    "base-reuse-search.txt": {
+      "bytes": 72750,
+      "sha256": "f64e21d85ee53b2bb9fe9c37f24a3fd39f88088018610994792e38834ad01c87"
+    },
+    "prepare.py": {
+      "bytes": 3757,
+      "sha256": "4b1e1c5c2a47a5a8bb3dc045b11c99118b5f4ee262e98bba56b215bdd83ec4e3"
+    },
+    "run.py": {
+      "bytes": 4387,
+      "sha256": "fb67f7c88fadac28698d2e6eaeb4757a5c7cc5975ed698ec312982f319dea34c"
+    }
+  }
+}

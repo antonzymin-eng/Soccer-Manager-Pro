@@ -1,0 +1,454 @@
+{
+  "archiveSha256": "8125061a4703f9f13942248ef76f4e6b50e236281c389e4498f9262a87b8a57b",
+  "archiveBytes": 712660,
+  "files": {
+    "coverage/0d862cec-edb9-49bd-9ff8-594ce1ce50db/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "04400a2f922fe3e5deeb9adcfa5ef3e06a3a07396013b1de30c162f988aea807"
+    },
+    "coverage/0ddb57f0-fca0-41cf-9792-713773c9558b/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "0067c3bcfc21d94f43fa7d017174451543863b1905f7de307c810536382c38a7"
+    },
+    "coverage/124f000a-2053-4e3c-894f-cca343f6daa5/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "da74d4835bb422d81020c0f401e7ae542be1fcb697f472fdad3681bc4f12d050"
+    },
+    "coverage/13e93215-05c6-436e-82e0-744c600db7e6/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "58f83174dc75e0c284398ec5cdd7973f7d918dccd90fb41bd422c16ca94b8132"
+    },
+    "coverage/1960211b-57c4-4ea2-8342-ff7806d51eb3/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "e60fa0b37b749023ed6f74b6f02baff52a2523477cc6a780754818de72ee8c46"
+    },
+    "coverage/259011cd-ae5f-4038-a627-cbc292fd0e6f/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "51d376d2c98f39afe8a08f53f55703dca0f1e95bd383072f3e30989f6169ca2d"
+    },
+    "coverage/31a07240-436f-4633-ba3f-e0d8b00958ed/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "54d17f458a77da790f546fa65f3e57b862fecb34e0cf943126cdb99b603e5e6e"
+    },
+    "coverage/32d55996-1fba-4824-9988-568c7036d746/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "11b16f2bd8faddc16ae90d8cb6b4871014b4977b36c27a79f8c12335f87623b8"
+    },
+    "coverage/40b502fb-d877-496d-a93a-86c4c0ffe51a/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8f1799ee914763dba391987beef9c98a3fa4878698e3c8ac61b1f097e62c4ca5"
+    },
+    "coverage/41eb6765-99cc-4d53-9963-57939dbc05c3/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "145b6c609801bd3daacf78c7ed0ea0f206c1c682efe8de66e6815f460a8787dc"
+    },
+    "coverage/42366a95-b117-40a7-9aa1-92b32fb05b3b/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "bc8f9d4327af37d61c62457f3804a0faf1d6fe7b379572f41b8d543d8dccabcd"
+    },
+    "coverage/59d0b510-0566-4964-b33c-655837c7ab8c/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "f5c43a565ce37432d4155332c5dbdc88ec47f0e50f37b1196221954aa166a97b"
+    },
+    "coverage/6093ecb2-ef11-4ef5-9fe9-c821f050ecf8/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "5a10b522140ec85ed9b6505b958442ad88b9b925c0d33191234f041197ab6b22"
+    },
+    "coverage/6ead169a-cf82-448b-a15e-a304a6fb44ca/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7f5eee19bf934d5dd295551d2e905324c293d7d6b091896f81fa27cb3164576d"
+    },
+    "coverage/73dc0a0c-50d1-406b-b9a2-853c67b6a2cd/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "b4d3112528eebb51579eada0ec82660bc5c143952b25ddc3c6e25761db40f8d2"
+    },
+    "coverage/747491af-b7e9-4d81-b236-b7757f53730e/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7f03305c6bb24ce2f45c0f4d0f16f025ca4a53dce274572ebfc2d50b07920044"
+    },
+    "coverage/7afbab76-e7f6-4034-9cb4-baf16b3cfa1d/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "64c110fad7122db9eb057633f31f55ab028ff4d0edc5f16637c7f4c34d70ea2c"
+    },
+    "coverage/8792b9aa-b410-41ee-9266-80112100b718/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "4f7cbf070c488bca0c505cb46a3a5359a4ce6a237ad1a49f4433b24de7083528"
+    },
+    "coverage/8e0a6c52-d131-46f9-9a01-4f5c2b4513f2/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "e9380322c7da3c40727a6e2dc1b07c48dc1374b7354d80be674c3b44bc14d82b"
+    },
+    "coverage/8f9861df-2f35-4b36-9558-0d96263bc2e6/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "cd95a7684945580dc7bc09c7f198329251e9a544b18f9369069d7eec7ecbe364"
+    },
+    "coverage/966cc7e7-db98-4153-b435-a73e1ebc032c/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8fc6d13583eac6c04533d92d827fb07b8f20343f2217b73bf5ef891afa32167b"
+    },
+    "coverage/98a1303b-aba7-44e7-a321-a867fd80780b/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "ad84ee2373af154151fcebe38d59505a5e5510003d5f8078d56370a65bee2ab3"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_37/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "a81d47fcbb362faf26a56a540ab91e6c5a692ec3f5507d8227f05b4591379672"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_37.trx": {
+      "bytes": 125734,
+      "sha256": "00ab2235afb10457f4ee381b3e8006c40ffd0192c4ef1cddf784f5bdab17d980"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_38/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "04400a2f922fe3e5deeb9adcfa5ef3e06a3a07396013b1de30c162f988aea807"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_38.trx": {
+      "bytes": 134560,
+      "sha256": "48bcadb4120119d0cafa4a52debd512d2e002fe9d7ffa35e5d651e369381d36e"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_43/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "bc8f9d4327af37d61c62457f3804a0faf1d6fe7b379572f41b8d543d8dccabcd"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_43.trx": {
+      "bytes": 157115,
+      "sha256": "7f61379a2c9a2604d1a5fe40d58ef7003ab1022c333b2a6e6760b5ca8150841e"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_46/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "2eff03355ca744e38b192a2c8b42db8cb4923f6f4a4a35c2def3173c8ce4e796"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_46.trx": {
+      "bytes": 1120693,
+      "sha256": "2d4a276d20c1a4ce8b8397d67c9eadd9e8b781173b3b8726cc31ec632ef41c00"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_50/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8f7752cac355379fa35f83640fa9f87bc4fcdc56159a06368ed8819d518d4c47"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_50.trx": {
+      "bytes": 92884,
+      "sha256": "14827e379fcf2754caf4e91ae826376b4f0cb811c639fef450509c5b55da9525"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_55/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "79aec6ba5911763e045a89f79dbb345efb5ab79645c4e60851feae3aa41ee437"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_16_55.trx": {
+      "bytes": 70763,
+      "sha256": "7d53491bbf5dff02334675f4a5aa19651ac7b244a777049a49f2fea61e453213"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_04/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "58f83174dc75e0c284398ec5cdd7973f7d918dccd90fb41bd422c16ca94b8132"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_04.trx": {
+      "bytes": 178262,
+      "sha256": "8cd9018f6f92467a7968774ad764c93d5e10e02ca2adc11bd8dfb7fcb1d8182c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_09/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "027e091f7be69fe10e7d5ea5ffba5034be088216d83f2c1cf0d2d36b28530ab6"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_09.trx": {
+      "bytes": 158485,
+      "sha256": "845c28b062e535a87c536483ebb793378e14b63a8ba234311cb191ba0c4f738d"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_15/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "11b16f2bd8faddc16ae90d8cb6b4871014b4977b36c27a79f8c12335f87623b8"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_15.trx": {
+      "bytes": 120559,
+      "sha256": "955c5d6e9289f747ffb8785d11c5e39b79ec64ccc705bb34120de1c9b3befc34"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_21/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "4f7cbf070c488bca0c505cb46a3a5359a4ce6a237ad1a49f4433b24de7083528"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_21.trx": {
+      "bytes": 189865,
+      "sha256": "41d3e7de405cef3946053fb8e34c61b43fa6ac39db5d5724cc06ccadbfae07ef"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_25/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "51d376d2c98f39afe8a08f53f55703dca0f1e95bd383072f3e30989f6169ca2d"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_25.trx": {
+      "bytes": 90656,
+      "sha256": "cd7b6bd9c7498cdaa6d77d44e86c0a191fb18807acccca8c0317a532d217f77d"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_30/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "5a10b522140ec85ed9b6505b958442ad88b9b925c0d33191234f041197ab6b22"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_30.trx": {
+      "bytes": 110252,
+      "sha256": "5ffa979a252ed032bd6654bbcc6e77812225ba3048e9ca6132604d3987a8289c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_36/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "c7b7dae683fca4ed1195b9bd4751160754f06c9a926083e92716ffc82d3cacce"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_36.trx": {
+      "bytes": 201543,
+      "sha256": "f5edc9ab56eef6faf00c2903b5991facd2eb20263dd1243b92e2a19eea2cb6b5"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_41/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "707cd85282a59597f7c2a9edf3af704a8c591f4a460a606a3acf90c2585c04ab"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_41.trx": {
+      "bytes": 132539,
+      "sha256": "db064e2a2eb3205e607eeac4cfc916a2abbcb5d632c11dc279d26760b9fa2992"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_47/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "13526962edc33c6187f4e4bd18f7ef2c9c0894ebcd200c992c5c3d8b570890c4"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_47.trx": {
+      "bytes": 100918,
+      "sha256": "eb8b0b75ab0f24de5414447db33e0a5bf34a32b7c279df49ed00cd597a7b666e"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_51/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "fd5ad3019e42dc3f27ab00e2b04fdc26a4de92605f4771e97194bbef2f8340e3"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_51.trx": {
+      "bytes": 167231,
+      "sha256": "60b49053c293b968b4b8e61a61f78c748f45e30423f6d55cb6f52135f52773a6"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_56/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "b4d3112528eebb51579eada0ec82660bc5c143952b25ddc3c6e25761db40f8d2"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_17_56.trx": {
+      "bytes": 92667,
+      "sha256": "95e54acd8f29c2b6df4bda58f7d7a0f21bfad73442502b4d51b297d85508881c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_01/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "f5c43a565ce37432d4155332c5dbdc88ec47f0e50f37b1196221954aa166a97b"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_01.trx": {
+      "bytes": 81028,
+      "sha256": "6bbc4bea6ea6b26dfa3a1c19f20435c0589445d2c89c7675ea7f989dfdb909f0"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_11/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "e60fa0b37b749023ed6f74b6f02baff52a2523477cc6a780754818de72ee8c46"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_11.trx": {
+      "bytes": 253852,
+      "sha256": "25f53725bcd2157a1741f04a23a71302346761284c535498c4848db65aa41b2c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_19/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "0046eb50c70205dfa2a957bcda39c8b7cb5d565bd27ea321114abbea53163fcd"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_19.trx": {
+      "bytes": 82056,
+      "sha256": "cea80c53a80ddbde43760a2673d40a666d3c91e87bfb6fc170cb60f180cd109c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_27/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "e9380322c7da3c40727a6e2dc1b07c48dc1374b7354d80be674c3b44bc14d82b"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_18_27.trx": {
+      "bytes": 4354139,
+      "sha256": "c0a395a6fbe698c7a6caad87d47280065e81bca3b2c75dd8a4f9a291ad18c2ef"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_30_46/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7f5eee19bf934d5dd295551d2e905324c293d7d6b091896f81fa27cb3164576d"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_30_46.trx": {
+      "bytes": 103131,
+      "sha256": "d42c0efa655440fd837839655b35e90c4512e1160f1accffeb15bc30cb024aa7"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_30_56/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "145b6c609801bd3daacf78c7ed0ea0f206c1c682efe8de66e6815f460a8787dc"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_30_56.trx": {
+      "bytes": 148389,
+      "sha256": "2955d24b87b6b5cbe255be6058b711d7ddbf045f79d4ab7c180232b4e5a3afee"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_01/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "54d17f458a77da790f546fa65f3e57b862fecb34e0cf943126cdb99b603e5e6e"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_01.trx": {
+      "bytes": 100028,
+      "sha256": "14eaa5a6baf6afa292d66722923a98675ca19a214ac2bf4484f96d6b9954b40c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_04/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "ad84ee2373af154151fcebe38d59505a5e5510003d5f8078d56370a65bee2ab3"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_04.trx": {
+      "bytes": 15097,
+      "sha256": "849793bdbb794f0b134e36c79127909a72a763e800ccd7e938511a4ed6b9de1f"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_08/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "64c110fad7122db9eb057633f31f55ab028ff4d0edc5f16637c7f4c34d70ea2c"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_08.trx": {
+      "bytes": 65574,
+      "sha256": "e584a0327fff63b236593a514b640821ed5e1b613bb4cd5eae948e95375beed7"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_13/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "192d0e697e92aad1dad9d56d087b3b7daae366d77df7933572224ba7ffef93af"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_13.trx": {
+      "bytes": 257198,
+      "sha256": "f62f526375e0352403617c5c94d5fc5aa1378b88a1a9579588988805194bb696"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_18/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "0067c3bcfc21d94f43fa7d017174451543863b1905f7de307c810536382c38a7"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_18.trx": {
+      "bytes": 211872,
+      "sha256": "b43763b08a813f68efcadea9dd38e3c3b9701a8a10738b2c48254cb49bd719c6"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_24/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "baaa28c6ccce1695ac7ed11cbc03b2d4a35c24f9a51f839b0ffd9bf227eae049"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_24.trx": {
+      "bytes": 139910,
+      "sha256": "5b48afb6cc84d6cb70b0be84ce4bba1d43887b80a687ca77b2136daa989cf8fc"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_29/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7f03305c6bb24ce2f45c0f4d0f16f025ca4a53dce274572ebfc2d50b07920044"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_29.trx": {
+      "bytes": 34813,
+      "sha256": "d93fa86101eca23b538b3fec6f2ca1422bba5231685c3215b2f05bb418022424"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_35/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "cd95a7684945580dc7bc09c7f198329251e9a544b18f9369069d7eec7ecbe364"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_31_35.trx": {
+      "bytes": 1266140,
+      "sha256": "91f40bc42f1974c141d7970f8cf77c869383804a5f77d0256b2f95697f50d95b"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_05/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8fc6d13583eac6c04533d92d827fb07b8f20343f2217b73bf5ef891afa32167b"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_05.trx": {
+      "bytes": 140897,
+      "sha256": "1f78207d3d87048c705014b5f86e96deceb7de55928c89c0b5446eded4123791"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_10/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8f1799ee914763dba391987beef9c98a3fa4878698e3c8ac61b1f097e62c4ca5"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_10.trx": {
+      "bytes": 79261,
+      "sha256": "5df3c304708dc4e88bf7f9e63f42414a65169e6462a9270bf28c9b6b6a6ef7a9"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_16/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7ee80fd8b904b0ff1ba5a976e750c4361cac25a37498d314de9ed1a64c5d3175"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_16.trx": {
+      "bytes": 45289,
+      "sha256": "79f81bc89c4835b05a7c22ddea5d2a5760e72a71a18a4e28372b2faf9f1ab389"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_21/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "2378daa8192168863221af20c4f347db5ad14f72c06e5e1efa7cee4bbcac8c73"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_21.trx": {
+      "bytes": 68927,
+      "sha256": "0aea0bd62c181f90dc845c30ee861aa9d17c995b3e6a2c3e586ffeaef6215799"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_26/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "da74d4835bb422d81020c0f401e7ae542be1fcb697f472fdad3681bc4f12d050"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_26.trx": {
+      "bytes": 92192,
+      "sha256": "32a40c9400634ee00146aa0a0f2f329f8bd9c112e79d76e0c7a750f5dce951e7"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_31/In/6ba8905e2992/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "36cb7416926e71496a0660141040e41c9c7d78a59efc5b5496dcf3e2370b4f7f"
+    },
+    "coverage/_6ba8905e2992_2026-11-10_00_43_31.trx": {
+      "bytes": 68043,
+      "sha256": "3e8e37491d5e72f52230ebb1215ee5e40fa164d4255c91d7241ca658a7995fbf"
+    },
+    "coverage/a0e511d2-0afb-43ff-81b5-f8c50f2ec57f/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "7ee80fd8b904b0ff1ba5a976e750c4361cac25a37498d314de9ed1a64c5d3175"
+    },
+    "coverage/a3e6cfe1-7af5-4852-9ad6-192b2d890479/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "13526962edc33c6187f4e4bd18f7ef2c9c0894ebcd200c992c5c3d8b570890c4"
+    },
+    "coverage/a926424a-511b-4861-82a7-d8d9b8934170/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "2378daa8192168863221af20c4f347db5ad14f72c06e5e1efa7cee4bbcac8c73"
+    },
+    "coverage/b193167e-edf2-45dd-aaba-98281bae417c/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "8f7752cac355379fa35f83640fa9f87bc4fcdc56159a06368ed8819d518d4c47"
+    },
+    "coverage/b77692d8-50ad-4e2e-be3c-cdace014bf52/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "027e091f7be69fe10e7d5ea5ffba5034be088216d83f2c1cf0d2d36b28530ab6"
+    },
+    "coverage/b824b248-ec4d-4db3-929c-6147d429f134/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "79aec6ba5911763e045a89f79dbb345efb5ab79645c4e60851feae3aa41ee437"
+    },
+    "coverage/b88d6dcc-89d3-470d-b63c-ae5f0825bec6/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "fd5ad3019e42dc3f27ab00e2b04fdc26a4de92605f4771e97194bbef2f8340e3"
+    },
+    "coverage/c09e4492-78d5-4e98-9dd0-796f4f92372b/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "c7b7dae683fca4ed1195b9bd4751160754f06c9a926083e92716ffc82d3cacce"
+    },
+    "coverage/c0fd9a78-44a0-4e3f-ae7b-b37ffd769bb4/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "baaa28c6ccce1695ac7ed11cbc03b2d4a35c24f9a51f839b0ffd9bf227eae049"
+    },
+    "coverage/c77b1c70-5b9e-404b-aad4-bd10666125c4/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "192d0e697e92aad1dad9d56d087b3b7daae366d77df7933572224ba7ffef93af"
+    },
+    "coverage/d960189b-9946-4eea-86ec-34cdc0208a60/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "707cd85282a59597f7c2a9edf3af704a8c591f4a460a606a3acf90c2585c04ab"
+    },
+    "coverage/e11007f7-6280-434c-80d3-19066c141cb4/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "2eff03355ca744e38b192a2c8b42db8cb4923f6f4a4a35c2def3173c8ce4e796"
+    },
+    "coverage/e6f09393-1a2a-49c7-b0c9-b99805aba50a/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "36cb7416926e71496a0660141040e41c9c7d78a59efc5b5496dcf3e2370b4f7f"
+    },
+    "coverage/eb935d88-b488-407b-aa71-7b5024f7f247/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "0046eb50c70205dfa2a957bcda39c8b7cb5d565bd27ea321114abbea53163fcd"
+    },
+    "coverage/ebbb8c78-6e2d-4379-b52c-629957debae7/coverage.cobertura.xml": {
+      "bytes": 231,
+      "sha256": "a81d47fcbb362faf26a56a540ab91e6c5a692ec3f5507d8227f05b4591379672"
+    },
+    "pr-coverage.runsettings": {
+      "bytes": 616,
+      "sha256": "cc0012b2f6e5f948945c507c70d9521f45aa3fd3692f4e094523d28f58c0ed01"
+    }
+  }
+}

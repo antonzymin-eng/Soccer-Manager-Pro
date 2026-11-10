@@ -1,0 +1,124 @@
+  UnityShim -> /workspace/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/Soccer-Manager-Pro/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  deterministic-sim.gen -> /workspace/Soccer-Manager-Pro/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  ball-physics.gen -> /workspace/Soccer-Manager-Pro/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  performance-optimization.gen -> /workspace/Soccer-Manager-Pro/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  agent-movement.gen -> /workspace/Soccer-Manager-Pro/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  player-database.gen -> /workspace/Soccer-Manager-Pro/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  collision-system.gen -> /workspace/Soccer-Manager-Pro/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  event-system.gen -> /workspace/Soccer-Manager-Pro/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  testing-strategy.gen -> /workspace/Soccer-Manager-Pro/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  pass-mechanics.gen -> /workspace/Soccer-Manager-Pro/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  first-touch.gen -> /workspace/Soccer-Manager-Pro/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  tactical-instructions.gen -> /workspace/Soccer-Manager-Pro/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  perception-system.gen -> /workspace/Soccer-Manager-Pro/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  shot-mechanics.gen -> /workspace/Soccer-Manager-Pro/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  positioning-ai.gen -> /workspace/Soccer-Manager-Pro/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+  heading-mechanics.gen -> /workspace/Soccer-Manager-Pro/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/Soccer-Manager-Pro/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  pressing-ai.gen -> /workspace/Soccer-Manager-Pro/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+/workspace/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/Soccer-Manager-Pro/src/decision-tree/decision-tree.gen.csproj]
+  defensive-ai.gen -> /workspace/Soccer-Manager-Pro/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  attacking-ai.gen -> /workspace/Soccer-Manager-Pro/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  decision-tree.gen -> /workspace/Soccer-Manager-Pro/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  UnityShim.TestTools -> /workspace/Soccer-Manager-Pro/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  match-engine.gen -> /workspace/Soccer-Manager-Pro/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  match-engine-tests.gen -> /workspace/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in /workspace/Soccer-Manager-Pro/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+   NUnit3TestExecutor discovered 6 of 6 NUnit test cases using Current Discovery mode, Non-Explicit run
+NUnit Adapter 4.6.0.0: Test execution complete
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(0,F442) [126 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+
+
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(1,F442) [24 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(0,F433) [14 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(1,F433) [18 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(0,F4231) [36 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+
+  Failed FirstPhysicsTick_KickoffFormationAllocatesNothing(1,F4231) [16 ms]
+  Error Message:
+     First-tick formation selection allocated in every fresh-engine window.
+  Expected: 0
+  But was:  536
+
+  Stack Trace:
+     at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+1)    at TacticalDirector.MatchEngine.MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Int32 team, TacticFormation formation) in /workspace/Soccer-Manager-Pro/src/match-engine/tests/MatchEngineFormationDutyTests.cs:line 77
+   at InvokeStub_MatchEngineFormationDutyTests.FirstPhysicsTick_KickoffFormationAllocatesNothing(Object, Span`1)
+
+
+
+Test Run Failed.
+Total tests: 6
+     Failed: 6
+ Total time: 1.0835 Seconds
