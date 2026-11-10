@@ -314,11 +314,11 @@ jobs:
         with:
           lfs: false
       # Match captures are replay evidence, not Unity inputs. Keep the LFS
-      # pointer for this path in both matrix modes; fetch other payloads normally.
-      - name: Download LFS payloads without the Pre-C capture
+      # pointers in both matrix modes; fetch game-asset payloads normally.
+      - name: Download game-asset LFS payloads without replay captures
         run: |
           git lfs install --local
-          git lfs pull --include="" --exclude="docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz"
+          git lfs pull --include="" --exclude="docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz,docs/tracking/evidence/ball-loose-stage-a-20261110/**"
       # Unity compiles only what lives under Assets/. src/ reaches it through Assets/Scripts, a link
       # that is deliberately untracked (Assets/README.md), so a fresh checkout has none. Without this
       # step the runner imports no project assembly at all. nightly.yml creates the equivalent Windows junction.

@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED November 10, 2026, v1.41 (branch-local #440 Stage A):** [Draft PR #544](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/544) measures main, independently of unmerged #434. [Census](evidence/ball-loose-stage-a-20261110/README.md): 37/37 tackle-frame carrier regains, all passive pickup; enabled/disabled and independent-main streams match exactly. Full local gate passes. #440 stays open: fix, proposed parameter and scoped no-regain policy require the owner decision in [design v1.2](w-440-ball-loose-design.md). No gameplay/spec/GT/schema change; pinned Unity remains pending.
+
 > **UPDATED October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
@@ -778,6 +780,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.41 | 2026-11-10 | — | Branch-local #440 Stage A census complete; observer neutrality, 37 immediate re-picks, local gate pass. No gameplay fix; owner mechanism/parameter/policy and Unity pending. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |

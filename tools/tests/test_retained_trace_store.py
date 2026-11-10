@@ -19,10 +19,12 @@ class TraceStoreTests(unittest.TestCase):
    p=Path(d);raw=bytes(range(244))*1025
    with gzip.open(p/'trajectory.bin.gz','wb') as f:f.write(raw)
    (p/'aligned.bin.gz').write_bytes(b'')
+   with gzip.open(p/'ledger.bin.gz','wb') as f:f.write(b'ordered-events'*123)
    store.pack(p,delete_originals=True)
    self.assertFalse((p/'trajectory.bin.gz').exists())
    with store.open_trace(p,'trajectory.bin.gz') as f:self.assertEqual(raw,f.read())
    with store.open_trace(p,'aligned.bin.gz') as f:self.assertEqual(b'',f.read())
+   with store.open_trace(p,'ledger.bin.gz') as f:self.assertEqual(b'ordered-events'*123,f.read())
    store.verify_store(p)
  def test_corruption_is_rejected_before_originals_are_deleted(self):
   with tempfile.TemporaryDirectory() as d:

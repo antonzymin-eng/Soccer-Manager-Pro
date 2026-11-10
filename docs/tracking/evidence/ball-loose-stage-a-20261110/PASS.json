@@ -1,0 +1,369 @@
+{
+  "passed": true,
+  "runs": 12,
+  "originalReceiptedRuns": 7,
+  "recoveryRuns": 5,
+  "unreceiptedOriginalOutputsNotUsed": 1,
+  "checks": [
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "disabled/enabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "independent main C0/disabled",
+      "stream": "digests.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "disabled/enabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "independent main C0/disabled",
+      "stream": "trajectory.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "disabled/enabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "independent main C0/disabled",
+      "stream": "ledger.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "disabled/enabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "independent main C0/disabled",
+      "stream": "geometry.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "disabled/enabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "comparison": "independent main C0/disabled",
+      "stream": "team-possession.bin.gz",
+      "equal": true
+    }
+  ]
+}

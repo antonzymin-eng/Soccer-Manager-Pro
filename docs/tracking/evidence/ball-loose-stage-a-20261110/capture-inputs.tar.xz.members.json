@@ -1,0 +1,42 @@
+{
+  "archiveSha256": "88e822b3e4a44fafc70158252353ecf096a4e31ec400f4a96f98076c8df9802b",
+  "archiveBytes": 11504,
+  "files": {
+    "ANALYSIS.md": {
+      "bytes": 1089,
+      "sha256": "8553b9f97bba3a66122234c2ea253d5401dec5f5dd433fc48853b508ea802610"
+    },
+    "Program.cs.txt": {
+      "bytes": 10769,
+      "sha256": "4c05e2ee4e9fdf2bdfcb534aea44b6897d28fab53ce78fe04a5ba5bcbe804318"
+    },
+    "README.md": {
+      "bytes": 1609,
+      "sha256": "095597151aae209670ce6c0ff6a6b4876e0819c73a94f22be02807207cef3320"
+    },
+    "SHA256SUMS": {
+      "bytes": 643,
+      "sha256": "fe190ce7e6eae8effd675123c9635ef4ca7141f13a0395dd59c209dd6fb4703a"
+    },
+    "analysis-freeze.json": {
+      "bytes": 427,
+      "sha256": "a25d829f5fe11a28b168b3a4b4908d6217e58eae5392af540bdf8a54cff49397"
+    },
+    "analyze.py": {
+      "bytes": 7744,
+      "sha256": "7d00fbd9b992a49bee630ccc493853d440fd749d6df7a2ae53340a074c35378d"
+    },
+    "ownership-writer-search.txt": {
+      "bytes": 1993,
+      "sha256": "1f0ef482a7fd154eaefa605f597058b043f8d86bf8a4c9b81599bddd7877d4d5"
+    },
+    "prepare.py": {
+      "bytes": 3615,
+      "sha256": "5d4c7c5911e3a3d1c45db890fbdfe64dfa671deec1b7c2f5da37778116991fe1"
+    },
+    "run.py": {
+      "bytes": 4120,
+      "sha256": "3ebe87a87d8b73d30160d1f2c4b348f201b5d0f37fdc3474a8591c4da2820f4c"
+    }
+  }
+}

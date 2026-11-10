@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 10, 2026 — (v2.221, branch-local #440 Stage A — Development-only copied tackle/ownership/censor diagnostics and an environment-gated test-side episode collector. Twenty always-run tests pass; release metadata excludes all new observer types/fields/methods. No simulation writes, RNG, world-schema, tuning or package changes. Census and Unity validation are pending.)
+> **Last Updated:** November 10, 2026 — (v2.222, branch-local #440 Stage A — **Observer and census complete.** Main-based six-seed enabled/disabled captures and independent-main comparisons are exact; all 37 same-frame carrier regains use passive pickup. Full local gate passes and release metadata excludes new diagnostics. [Evidence](evidence/ball-loose-stage-a-20261110/README.md) retains complete raw traces, chronology, interruption/recovery, source/runtime/binary pins and independent replay. No gameplay fix/spec amendment or new approved constant. Pinned Unity and owner choice of A/B/C/parameter/scoped policy remain pending.)
+
+> **Last Updated (prior):** November 10, 2026 — (v2.221, branch-local #440 Stage A — Development-only copied tackle/ownership/censor diagnostics and an environment-gated test-side episode collector. Twenty always-run tests pass; release metadata excludes all new observer types/fields/methods. No simulation writes, RNG, world-schema, tuning or package changes. Census and Unity validation are pending.)
 
 > **Last Updated (prior):** November 6, 2026 (UTC) — (v2.220 — **PR #542 review follow-up.** Remove the two W8 C fixture fields and their Resolve/whistle calls from release builds with editor/development/test conditional compilation; development and release IL inspected. Add 16 exact-frame-480 CONTACT snapshot round-trips for both teams, all deliveries and the maximum kick windup. The affected restore/prerequisite/C/clock suites pass 143/143; fresh full Linux and pinned-host results are recorded in [the implementation record](w8-c-implementation-results.md). Merge main's Pre-C control, resolve both tracking conflicts and expect 38 registered evidence directories. No rule, snapshot version, policy, RNG or tuning change.)
 
@@ -2832,6 +2834,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.222 | 2026-11-10 | — | Branch-local #440 Stage A: exact neutrality and independent chronology census, full local gate pass; owner/Unity decisions pending. |
 | 2.221 | 2026-11-10 | — | Branch-local #440 Stage A observer and 20 definition/neutrality tests; release-stripping proof. Capture pending. |
 | 2.220 | 2026-11-06 | — | PR #542: conditional fixture hooks with release IL proof, 16 exact-480 CONTACT restore cases, merged main and 38 evidence directories; current full Linux/host status in w8-c-implementation-results.md. |
 | 2.219 | 2026-11-06 | — | W8 C exact-frame hand-control offence and v28 snapshot; Linux regression evidence, paired comparison and pinned-host status in w8-c-implementation-results.md. |

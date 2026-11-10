@@ -87,14 +87,16 @@ def decoded(source,entry):
  raise ValueError('Unknown trace codec')
 def verify_archive(archive,index):
  if sha(archive)!=index['archiveSha256']:raise ValueError('Retained archive SHA-256 mismatch')
- with tarfile.open(archive,'r:xz') as tar:
-  members=tar.getmembers()
-  if len(members)!=len(index['streams']) or {m.name for m in members}!=set(index['streams']):raise ValueError('Unexpected retained members')
-  for m in members:
+ with tarfile.open(archive,'r|xz') as tar:
+  seen=set()
+  for m in tar:
+   if m.name in seen or m.name not in index['streams']:raise ValueError('Unexpected retained members')
+   seen.add(m.name)
    if not m.isfile():raise ValueError('Retained trace must be a regular file')
    expected=index['streams'][m.name]
    with tar.extractfile(m) as f:actual=HashingReader(decoded(f,expected)).finish()
    if any(actual[k]!=expected[k] for k in ['bytes','sha256']):raise ValueError('Retained raw stream differs: '+m.name)
+  if seen!=set(index['streams']):raise ValueError('Missing retained members')
  return index
 def verify_store(folder):
  folder=Path(folder);index=json.loads((folder/INDEX).read_text());return verify_archive(folder/ARCHIVE,index)
@@ -105,10 +107,15 @@ def open_trace(folder,name):
   with gzip.open(direct,'rb') as f:yield f
  else:
   index=json.loads((folder/INDEX).read_text());raw=name.removesuffix('.gz');expected=index['streams'][raw]
-  with tarfile.open(folder/ARCHIVE,'r:xz') as tar:
-   with tar.extractfile(raw) as source:
-    reader=HashingReader(decoded(source,expected));yield reader;actual=reader.finish()
-    if any(actual[k]!=expected[k] for k in ['bytes','sha256']):raise ValueError('Retained raw stream differs: '+raw)
+  with tarfile.open(folder/ARCHIVE,'r|xz') as tar:
+   for member in tar:
+    if member.name!=raw:continue
+    with tar.extractfile(member) as source:
+     reader=HashingReader(decoded(source,expected));yield reader;actual=reader.finish()
+     if any(actual[k]!=expected[k] for k in ['bytes','sha256']):raise ValueError('Retained raw stream differs: '+raw)
+    break
+   else:raise ValueError('Missing retained stream: '+raw)
+
 def pack(folder,delete_originals=False,preset=1):
  folder=Path(folder);archive=folder/ARCHIVE;index_path=folder/INDEX
  previous=verify_store(folder) if archive.exists() and index_path.exists() else None
