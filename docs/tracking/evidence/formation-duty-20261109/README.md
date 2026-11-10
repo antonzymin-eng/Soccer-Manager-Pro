@@ -152,13 +152,28 @@ is therefore not established, and no production fix or relaxed existing budget i
 introduced. The discovery/probe/test receipts are in `validation/review-followup/`.
 The native Unity version of the new test remains part of the pending host request.
 
+### Startup versus later frames — follow-up
+
+The [open allocation issue](../../open-issues.md#engine-frame-allocation) and
+[bounded 1,200-tick probe](validation/allocation-followup/README.md) now record that
+536 B occurs on tick 1 only in eight repeated samples on both unchanged main and
+the measured runtime. Most later ticks are zero, but three reproducible later
+logging-associated allocations remain; zero per-frame allocation is not claimed.
+This follow-up changes documentation/evidence only; runtime/tests and all Unity
+inputs remain identical to reviewed head `75d62186`. Its Unity request can proceed.
+
 ## Validation and host request
 
 **Current review follow-up:** the expanded fixture passes **42/42**, including all
 six allocation cases and both raw-invalid-request cases. All **354 tooling tests**,
 evidence manifests, documentation consistency and Unity meta integrity pass.
-The new full `bash tools/run-tests-local.sh --pr` sweep is running at publication;
-its final result and exact-head CI are recorded in the PR body when complete.
+The full `bash tools/run-tests-local.sh --pr` sweep and exact-head CI at
+`75d62186` have completed: **4,521 passed / 225 existing console skips / 0 failed**,
+37 assemblies; MatchEngine **982 / 16**, PositioningAI **143 / 13**. The local TRX
+skipped/inconclusive inventory matches the retained baseline exactly; three
+pre-existing inconclusives remain separate. Quarantine and owner-held RED ledgers
+are empty. [CI receipt](validation/allocation-followup/ci543-summary.json) and
+[local inventory](validation/allocation-followup/local-gate-summary.json) retain details.
 The full-gate receipts described next belong to the earlier implementation closeout.
 Pinned Unity remains owner-run and pending at the new exact head.
 

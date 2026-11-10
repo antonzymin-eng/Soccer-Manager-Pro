@@ -1,0 +1,98 @@
+{
+  "framesPerMatch": 1200,
+  "repeats": 8,
+  "seed": "0123456789ABCDEF",
+  "base": "d4b026aa951432d342217314b8c4d49b53a19e7d",
+  "runtimeHead": "23f2fedb140d47b22be36b2d495190b0b1685251",
+  "baseHeadAllocationSamplesIdentical": true,
+  "firstTickBytes": [
+    536,
+    536,
+    536,
+    536,
+    536,
+    536,
+    536,
+    536
+  ],
+  "laterNonZeroPerRepeat": [
+    [
+      371,
+      832
+    ],
+    [
+      382,
+      840
+    ],
+    [
+      785,
+      832
+    ]
+  ],
+  "laterZeroCount": 9568,
+  "laterNonzeroCount": 24,
+  "dllSha256": {
+    "base": {
+      "FSharp.Core.dll": "7b70a2b25b01765c8d8a9aa5fb1efef444d30af05a039ea8a48d3749bfdbca96",
+      "FsCheck.NUnit.dll": "25ed6f1623900035cf2dfde8be98ac0590c314c54b9abaa1de18d5a02d23361b",
+      "FsCheck.dll": "863dc092c3f4997c9ae6b7eedd2db599b499332dfae22f818c33ef30752f507f",
+      "TacticalDirector.AgentMovement.dll": "89edcc9f065cd8569d0ad5e0684be20282eab668741b0eee195bc3ba7b1f58e2",
+      "TacticalDirector.AttackingAI.dll": "e91c8b5d4a0a6a914014a7fe0817e17116ee6715e4988190b0b293f6a2d33273",
+      "TacticalDirector.BallPhysics.dll": "278960aef17649ae9f746fa9ac706916115ec88cc19e5d0f0df071949c2da98f",
+      "TacticalDirector.CollisionSystem.dll": "e3534ff8f9753ae6b0bab36b1c78874e96d454c2371877898ab6865f5e2fcf08",
+      "TacticalDirector.DecisionTree.dll": "101654ccacc2d37182f3982271f819d5ec9db79686fe552e1caf8aed9c35cb90",
+      "TacticalDirector.DefensiveAI.dll": "13bff44a07548b25043a00db32ed8b0c9e2618fb3831f4be7842e8f6d3bc2e37",
+      "TacticalDirector.DeterministicSim.dll": "2aed733bfdff3e895acf04c9d50e6f6c5c784ead1a380d0f64e48cdab3e96221",
+      "TacticalDirector.EventSystem.dll": "220e2e033ca1347fa05e217a770850ce142e672c7f7d48a942ff14ef3b6ccac2",
+      "TacticalDirector.FirstTouch.dll": "1a3034b35a3867ed1e70fb41427d07dafc259bfcfa3015515359c5aaae6a99ee",
+      "TacticalDirector.GoalkeeperMechanics.dll": "4fe255172f395c74124f63d236fdc04d6358c4ece539b60062f4320d4182dd84",
+      "TacticalDirector.HeadingMechanics.dll": "fdd6d8c233927cbefd108c4111e7e206de6b0148305e3888ab3eb0f408301cf8",
+      "TacticalDirector.MatchEngine.Tests.dll": "779e979f8d921d94da18a420f60e4ef0006345e8ab94cfb7c6051bd8da402155",
+      "TacticalDirector.MatchEngine.dll": "c2866dfca728f8082e11af2f3974e408f585f46f0c2889299a1df35f60cb46cd",
+      "TacticalDirector.PassMechanics.dll": "f41dbd1f54c49137153bb3f2f18707bf795ec6897117d59180d6795dc903f8b3",
+      "TacticalDirector.PerceptionSystem.dll": "7a4da136acab153b10351aaade6eb3d36c978904f4f83945c3fab84a5a05cf62",
+      "TacticalDirector.PerformanceOptimization.dll": "0dfcc21d097a129a5dab024a51770a59812e6b71f18a58f9660f35c3501760e5",
+      "TacticalDirector.PlayerDatabase.dll": "4cb80db45e6dc53ffcf4e7999caa2ba014ef623377dffd71ffb5c76ede5f598b",
+      "TacticalDirector.PositioningAI.dll": "d44866c91e25c538b986c4fd012cd8c835c57b8f0a3807f5948b8e68cdd9e198",
+      "TacticalDirector.PressingAI.dll": "d7bef9efc2bd165905a02a691731581cd7d5a57fa980f5bb348b2777ea960602",
+      "TacticalDirector.ProjectConstants.dll": "b983b1df64f63b2f0d6b1048a035155385f42119afe37be12823a8fea15ff34f",
+      "TacticalDirector.ShotMechanics.dll": "3054e143eedcbfd17d2eed99ff8153405c2b50698a3e8d646cf4ab9ecd168943",
+      "TacticalDirector.TacticalInstructions.dll": "d71176ec4f0d8c6c30e87cbe7e142205d7322642d1e6d1f5c33f0bae5979622b",
+      "TacticalDirector.TestingStrategy.dll": "9a2d1a332e437d1eba370774e19f2a429c3c974e8570a8f5901469e7cff37b7a",
+      "UnityShim.TestTools.dll": "cabbab10a813b6912962721b0bfb29f3e9a6178a8c659524be2e344a7ef83298",
+      "UnityShim.dll": "b63f00b4d50fc5c54708d936127e625efea9d4bb987451e20884ea1230315bea",
+      "nunit.framework.dll": "d0332e30ba73e560288eadbefdf0f494ece6731e07cd85367585291a6837d834"
+    },
+    "head": {
+      "FSharp.Core.dll": "7b70a2b25b01765c8d8a9aa5fb1efef444d30af05a039ea8a48d3749bfdbca96",
+      "FsCheck.NUnit.dll": "25ed6f1623900035cf2dfde8be98ac0590c314c54b9abaa1de18d5a02d23361b",
+      "FsCheck.dll": "863dc092c3f4997c9ae6b7eedd2db599b499332dfae22f818c33ef30752f507f",
+      "TacticalDirector.AgentMovement.dll": "d2ab5c17e0d58ec98a456344a0bfabb796feb9f9037f4cf12a9f4c510f5ca86e",
+      "TacticalDirector.AttackingAI.dll": "3efc72a2bc7780d64eda7ac5f638cefa8f5342fbac4d632d3687c12b957dd073",
+      "TacticalDirector.BallPhysics.dll": "dd84c3b0929a02b7178f3e09cce5131519ce604915a53897dbc3ab6b60a4a8ca",
+      "TacticalDirector.CollisionSystem.dll": "79fcbd6a4b6f4ab4b9d7ca45987a6048fb8ac0cb620c037fac4eb2f914f15db2",
+      "TacticalDirector.DecisionTree.dll": "e55971f99782e19fd17ba3036b57d7fe272b5949995eaebfa602130942b6616b",
+      "TacticalDirector.DefensiveAI.dll": "a6942e7a68f792d8f5c7cc4e794460085fefb433a02f5c3c8a56b93c53e86a80",
+      "TacticalDirector.DeterministicSim.dll": "6c7575f5ede0aef1d8894b5d568726d25c8a228da586663077b0e5b490dc1f34",
+      "TacticalDirector.EventSystem.dll": "941c59b2ac79eb16d85fbfdbef3a61c4ac60f124cdad6a59ec68e6dc6de03dd1",
+      "TacticalDirector.FirstTouch.dll": "0208cf8d6066cbd84b1c0f5a98dd2db8a8f2be55765545b9c088762ef6175740",
+      "TacticalDirector.GoalkeeperMechanics.dll": "fe2cb4a7f76a60f9e08839eae178b2f1b7b18d55c0c69cb24a6fb82419823dca",
+      "TacticalDirector.HeadingMechanics.dll": "b0153cf0023c71d8b7329b9e6c87f69d8432c1d25c7ddcf6d16b066bf107c3ae",
+      "TacticalDirector.MatchEngine.Tests.dll": "a45ac44df5eb82330ca65599706f8875d6419d691ebebb4edd11332eb1921ee2",
+      "TacticalDirector.MatchEngine.dll": "607e145042aade8fc4398a50afd049cc3ae13ed50ed320293af16e2fb174a98c",
+      "TacticalDirector.PassMechanics.dll": "d86d1a0c55e8d914c39bb0699f0e90681d34a7c14c895533d17e2a6f6390623a",
+      "TacticalDirector.PerceptionSystem.dll": "6d3cf415f7dcb7361c263f1886c01c9bf880e46ef5260b0c8b0f876168303286",
+      "TacticalDirector.PerformanceOptimization.dll": "3db710c2d11d1564542fd841f5547a7943239e69334ccb9041c4b7ce635546e2",
+      "TacticalDirector.PlayerDatabase.dll": "c3b3ab89d26e0048b9121a3219c3a734d2e52d466b60c1ed4ef1e2a17b8e7207",
+      "TacticalDirector.PositioningAI.dll": "722932434355864af6247f864962858fcba8878c9e9e0c0a310c82dddb62c7e5",
+      "TacticalDirector.PressingAI.dll": "dd51ae90cc1ceb7b57659343f966f4e67403b792e7f8ad2d692db4373512fd23",
+      "TacticalDirector.ProjectConstants.dll": "765c83e7b74c837679613adde67859691f07860b361f956f1d6a732b18cd3deb",
+      "TacticalDirector.ShotMechanics.dll": "e88fe0b2caec331cb0b1184a03bd582596cb00eea73b786e172ca220adfbe256",
+      "TacticalDirector.TacticalInstructions.dll": "fc990c7b7e0ae0ca998218d21ec1952dfa19c7482aba797a6fcce228841bd8ba",
+      "TacticalDirector.TestingStrategy.dll": "2467bae9a2ad97dcf7302ebfa57753145c66e54c32707002861b9bf4f8826aa0",
+      "UnityShim.TestTools.dll": "ed4fbcaf37e649a61d7ee4f8e76299471ed03198f07e3c864d0eeee6892d8179",
+      "UnityShim.dll": "4a62c4a34ec2d134d94b83a0a9ce6a6d3db082cf6be32e0400e9ab1cbe6a20d3",
+      "nunit.framework.dll": "d0332e30ba73e560288eadbefdf0f494ece6731e07cd85367585291a6837d834"
+    }
+  }
+}

@@ -354,8 +354,10 @@ step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 
 **Branch cleanup/reachability rule.** A local Git result may support a branch-deletion or evidence-reachability decision only after `python3 tools/dotnet-ci/check_branch_ancestry.py --repo . --ancestor <ref> --descendant <ref>` accepts the repository as non-shallow and evaluates the stored commit graph (replacement refs disabled; legacy grafts rejected). For **remote** branch deletion, the descendant must be a freshly fetched remote-tracking ref such as `refs/remotes/origin/main`, an authoritative remote OID, or an authoritative remote/API comparison; local `main` is sufficient only for local-branch cleanup because a local-only merge does not prove remote publication. If the checkout is shallow, make no local ancestry claim. Fetching refs alone does not satisfy this rule unless the shallow boundary is removed. Current-tree blob absence is not proof that historical evidence is unreachable.
 
-**40 active** / **74 archived**. *(November 10, 2026 — adds the owner-directed formation/Duty player-control blocker; earlier #526 technical host closure remains in the resolved archive. Counts re-derived from owning files.)*
+**41 active** / **74 archived**. *(November 10, 2026 — adds the startup/development-frame allocation issue after the formation/Duty player-control blocker. Counts re-derived from owning files.)*
 
+
+- **MatchEngine startup/development-frame managed allocations — reproduced on unchanged main; pinned-host attribution/fix remains open.** *Owning record: [open-issues.md](../tracking/open-issues.md#engine-frame-allocation).*
 
 - **Non-default formation/Duty sensitivity — player-facing controls blocked until marking is fixed and validated.** *Owning record: [open-issues.md](../tracking/open-issues.md#formation-duty-player-control-blocker).*
 
