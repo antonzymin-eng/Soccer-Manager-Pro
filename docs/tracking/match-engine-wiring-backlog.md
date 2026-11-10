@@ -10,6 +10,8 @@
 
 ---
 
+> **UPDATED November 10, 2026, v1.43 (branch-local #440 protocol review):** [Design v1.4](w-440-ball-loose-design.md) proposes pooled-only 25% gates and f+1..f+24 carrier-return window, with geometric caveats and descriptive time-to-regain distribution through f+60. Team/seed and f+1..f+3 reports are descriptive; no team quota. Proposed 30 pooled coverage floor can end inconclusive. No gameplay/capture or approval; C/D and state audit remain as before. Exact-source CI 210ede77 is green; Unity remains pending.
+
 > **UPDATED November 10, 2026, v1.42 (branch-local #440 design follow-up):** [Design v1.3](w-440-ball-loose-design.md) proposes option C as a measured experiment, not a shipping decision: 25% / 25% ceilings, f+1..f+3, fixed denominators/censor/coverage rules and stop/report/no tuning. Static audit requires an identically zero frame-local fence at save/off-tick boundaries or serialization/schema bump. D is fallback only. No new game code/capture; owner approval remains required before Stage B.
 
 > **UPDATED November 10, 2026, v1.41 (branch-local #440 Stage A):** [Draft PR #544](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/544) measures main, independently of unmerged #434. [Census](evidence/ball-loose-stage-a-20261110/README.md): 37/37 tackle-frame carrier regains, all passive pickup; enabled/disabled and independent-main streams match exactly. Full local gate passes. #440 stays open: fix, proposed parameter and scoped no-regain policy require the owner decision in [design v1.2](w-440-ball-loose-design.md). No gameplay/spec/GT/schema change; pinned Unity remains pending.
@@ -782,6 +784,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.43 | 2026-11-10 | — | Branch-local #440 proposed protocol: extended carrier window, pooled-only gates, censored first-regain reports; no new code/capture or approval. |
 | 1.42 | 2026-11-10 | — | Branch-local #440 design v1.3: bounded C proposal, conditional save/off-tick fence audit; D fallback only, owner stop before Stage B. |
 | 1.41 | 2026-11-10 | — | Branch-local #440 Stage A census complete; observer neutrality, 37 immediate re-picks, local gate pass. No gameplay fix; owner mechanism/parameter/policy and Unity pending. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |

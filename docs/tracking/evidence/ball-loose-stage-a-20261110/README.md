@@ -4,11 +4,14 @@ Created November 10, 2026. This observation-only investigation measures main
 `d4b026aa951432d342217314b8c4d49b53a19e7d`; #434 remains an unmerged independent
 draft. Measured observer/analysis freeze: `15b110d19b6dcb22f1d35d314858cf3b69987030`.
 No gameplay fix, new approved parameter/policy, ERR, RNG draw or save-schema change.
-See [design v1.3](../../w-440-ball-loose-design.md#proposed-stage-b-experiment--owner-approval-required).
+See [design v1.4](../../w-440-ball-loose-design.md#proposed-stage-b-experiment--owner-approval-required).
 
 **Review follow-up: proposal only.** C is a measured experiment with proposed 25%
 ceilings for immediate original-tackler recovery and rapid original-carrier return
-in frames f+1..f+3. The design fixes all-episode denominators, censor-completion
+in frames f+1..f+24. Only pooled results gate; team/seed and the former f+1..f+3
+slice are descriptive. A censored time-to-first-regain distribution extends through
+f+60. The proposed pooled coverage floor is 30 complete windows per gate, with no
+team quota; the fixed sample may end inconclusive. The design fixes all-episode denominators, censor-completion
 bounds, minimum coverage and stop/report/no-tuning rules before any new result.
 The proposed next experiment is 24 runs on an explicitly selected v29 base containing
 #543; none has begun. A static admission/save/off-tick audit makes schema-neutrality
