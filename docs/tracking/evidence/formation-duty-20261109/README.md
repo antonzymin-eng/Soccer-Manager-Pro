@@ -158,15 +158,24 @@ The [open allocation issue](../../open-issues.md#engine-frame-allocation) and
 [bounded 1,200-tick probe](validation/allocation-followup/README.md) now record that
 536 B occurs on tick 1 only in eight repeated samples on both unchanged main and
 the measured runtime. Most later ticks are zero, but three reproducible later
-logging-associated allocations remain; zero per-frame allocation is not claimed.
+allocations consistent in count/size with development logging remain; the logs
+have no tick IDs, so this does not establish a log-to-tick mapping or attribution.
+The later-tick probe uses default tactics only; non-default formation/Duty
+first-tick fixture coverage does not establish later-tick coverage for those cases.
+Zero per-frame allocation is not claimed.
 This follow-up changes documentation/evidence only; runtime/tests and all Unity
 inputs remain identical to reviewed head `75d62186`. Its Unity request can proceed.
 
 ## Validation and host request
 
 **Current review follow-up:** the expanded fixture passes **42/42**, including all
-six allocation cases and both raw-invalid-request cases. All **354 tooling tests**,
-evidence manifests, documentation consistency and Unity meta integrity pass.
+six allocation cases and both raw-invalid-request cases. The retained author
+tooling receipt reports **354 passed / 0 failed / 0 skipped**. The independent
+reviewer reports **352 passed / 0 failed / 2 skipped** in their environment;
+these are separate receipts, and skipped cases are not counted as passes. Evidence
+manifests, documentation consistency and Unity meta integrity pass. Prior docs-only
+CI run 42901659057 at dc2a0e9e has completed successfully; it does not replace the
+pending pinned Unity compile/EditMode run.
 The full `bash tools/run-tests-local.sh --pr` sweep and exact-head CI at
 `75d62186` have completed: **4,521 passed / 225 existing console skips / 0 failed**,
 37 assemblies; MatchEngine **982 / 16**, PositioningAI **143 / 13**. The local TRX

@@ -17,11 +17,22 @@ at ticks 371 and 785, and 840 B at tick 382. Thus 536 B is first-tick-only in th
 bounded sample, not an every-frame charge; zero allocation on every frame is also
 not established. Do not generalize one seed/20-second windows to all match states.
 
-The three later allocating ticks coincide with development FirstTouch log output.
+The three later allocating ticks are consistent in count and allocation size with
+development FirstTouch log output. The log lines carry no tick number: three
+messages per engine match the three allocating ticks, and the one longer message
+is consistent with the one 840 B allocation. This is an association, not a
+timestamped log-to-tick mapping or causal attribution.
 FirstTouchSystem.cs lines 189–196 formats/logs strings under UNITY_EDITOR or
 DEVELOPMENT_BUILD. This identifies a candidate source, not an allocation-stack
 attribution or proof of Release/Unity behavior. No logging or game code is changed.
 The original first-tick source of 536 B is not isolated by this counter probe.
+
+**Configuration limit:** both probe programs leave tactics unset, so these later-
+tick measurements cover the default formation/Duty configuration only. They do
+not cover later ticks under F433, F4231 or non-default Duty. The separate mirrored
+family fixture covers first-tick selection/whole-first-tick comparisons only; its
+family coverage does not extend the 1,200-tick evidence. One seed and 20 simulated
+seconds per engine are a bounded sample, not a complete-match allocation claim.
 
 Reproduce outside the repository: copy an arm's *.txt inputs to Program.cs and
 probe.csproj in a scratch directory, point the HintPath references at that exact
