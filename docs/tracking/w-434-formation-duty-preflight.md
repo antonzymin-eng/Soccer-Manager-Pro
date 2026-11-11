@@ -1,8 +1,8 @@
 # #434 formation and Duty — approved implementation contract
 
-**Created:** November 9, 2026. **Updated:** November 10, 2026. **Version:** 1.5.
+**Created:** November 9, 2026. **Updated:** November 10, 2026. **Version:** 1.6.
 **Purpose:** Preserve the approved kickoff, tactic, save and comparison decisions.
-**Status:** Runtime unchanged; review follow-up adds per-team reporting and allocation coverage. Trace diagnosis HOLD for Opus; owner-run Unity pending.
+**Status:** Runtime unchanged; review follow-up adds per-team reporting and allocation coverage. Trace diagnosis HOLD for Opus; owner-run pinned Unity passed at `75d62186` (0 failed).
 **Analyzed base:** `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 **Implementation/evidence:** [retained package](evidence/formation-duty-20261109/README.md).
 
@@ -194,7 +194,10 @@ to a destination slot. GK composition, PositioningFreedom and PlayerRole remain.
 ## 7. Validation and handoff
 
 See the evidence package for exact gates, all attempts, fixtures, results and the
-pending pinned Unity request. No test is newly skipped/quarantined/disabled. New
+pinned Unity request. The owner-run Unity 6000.4.9f1 receipt at `75d62186` is in
+[`host-formation-duty-75d62186-20261110`](evidence/host-formation-duty-75d62186-20261110/README.md): 0 `error CS`; unfiltered EditMode for the four
+requested assemblies 1,394 passed / 0 failed / 29 skipped / 1 existing inconclusive;
+`MatchEngineFormationDutyTests` 42/42 with the native allocation oracle and its positive control. No test is newly skipped/quarantined/disabled. New
 fixture coverage includes first-frame/pre-first-AI and synthetic tick-0 restore,
 half-time preservation, mixed commands, retained consumer views, every formation
 with active/pending rotations, non-Support replay, real selected IDs, invalid live
@@ -212,3 +215,4 @@ observation investigation; no #440 gameplay fix is authorized by these decisions
 | 1.3 | November 9, 2026 | Records direct owner approval of P1–P4, fallback, no bands and slot limitation. |
 | 1.4 | November 10, 2026 | Closeout condenses superseded process history into the accepted contract and points to retained implementation evidence. |
 | 1.5 | November 10, 2026 | Owner-directed per-team reporting/control blocker, raw-request documentation and scoped allocation coverage; trace diagnosis held for Opus and host handoff assigned to owner. No gameplay changes. |
+| 1.6 | November 10, 2026 | Records the owner-run pinned Unity receipt at `75d62186`: clean full-import compile, four-assembly EditMode with 0 failures, formation fixture 42/42. Diagnosis hold and player-control blocker unchanged. |

@@ -1,0 +1,25 @@
+# Source identity — pinned-host Unity run at 75d62186 (PR #543 Unity source/test target)
+# The run script recorded `git status --short` in the fresh worktree before the compile and after the
+# EditMode run. The ignored-inclusive count below was taken after the run with
+# `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`.
+
+commit: 75d62186264b2fe0615812cc1d1e0f6e06d20993
+parent: 4ec8b4d52c393dfcf564565024940994b0886dea (4ec8b4d5)
+tree src: fd5a1a5d5a70691f917141d5643e97157ba90493
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+worktree: new detached worktree created for this run (git worktree add --detach), GIT_LFS_SKIP_SMUDGE=1, then
+  git lfs pull --include="" --exclude="docs/tracking/evidence/**", as in HOST-REQUEST.md
+Library present before compile: no
+git status --short before compile: 0 lines
+compile start: 2026-11-11T03:31:40Z
+compile exit: 0 end: 2026-11-11T03:33:14Z
+tests start: 2026-11-11T03:33:14Z (NUnit start 03:33:25Z)
+tests exit: 2 end: 2026-11-11T04:04:26Z (NUnit end 04:04:22Z)
+git status --short after tests: 0 lines
+porcelain lines after tests, src/Packages/ProjectSettings including ignored: 0
+HEAD after tests: 75d62186264b2fe0615812cc1d1e0f6e06d20993
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe); Editor file version 6000.4.9.16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+Assets/Scripts: directory junction -> <worktree>/src (fresh detached worktree)

@@ -1,0 +1,116 @@
+# EditMode run — pinned host, commit 75d62186 (PR #543 Unity source/test target), NUnit 3.5 XML summary
+
+command: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests;TacticalDirector.PositioningAI.Tests;TacticalDirector.MatchClientCore.Tests;TacticalDirector.MatchViewer.Tests -testResults <xml> -logFile <log>
+pre-run build: the assemblies from compile.txt (same Library, no source change)
+start: 2026-11-11 03:33:25Z  end: 2026-11-11 04:04:22Z  duration: 1856.3 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=1424 passed=1394 failed=0 inconclusive=1 skipped=29
+process exit code: 2 — Unity's runner reports any non-passed, non-skipped result as failure; the only such result is the inconclusive case below (0 failed)
+
+assemblies:
+  TacticalDirector.MatchClientCore.Tests.dll: Passed total=192 passed=192 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchEngine.Tests.dll: Skipped total=998 passed=981 failed=0 inconclusive=1 skipped=16
+  TacticalDirector.MatchViewer.Tests.dll: Passed total=78 passed=78 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PositioningAI.Tests.dll: Skipped total=156 passed=143 failed=0 inconclusive=0 skipped=13
+
+fixtures named by the host request (schema, rotation, restart, SlotComposerStage, TacticTranslation, TickStampedCommandReplay, LiveMatchFrameCue):
+  TacticalDirector.MatchEngine.MatchEngineFormationDutyTests: Passed passed=42/42 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotSchemaTests: Passed passed=28/28 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotRestoreTests: Passed passed=19/19 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotDigestReferenceTests: Passed passed=1/1 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.PositioningAI.Tests.RotationCatalogueTests: Passed passed=8/8 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.PositioningAI.Tests.RotationControllerTests: Passed passed=13/13 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineRestartTests: Passed passed=19/19 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.PositioningAI.Tests.SlotComposerStageTests: Passed passed=10/10 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.PositioningAI.Tests.TacticTranslationTests: Passed passed=11/11 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchClientCore.Tests.TickStampedCommandReplayTests: Passed passed=12/12 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchViewer.Tests.LiveMatchFrameCueTests: Passed passed=9/9 failed=0 skipped=0 inconclusive=0
+
+MatchEngineFormationDutyTests cases:
+  Passed      0.009s  AllPositioningConsumers_ReadTheSelectedFamily(0,F433)
+  Passed      0.008s  AllPositioningConsumers_ReadTheSelectedFamily(1,F433)
+  Passed      0.017s  AllPositioningConsumers_ReadTheSelectedFamily(0,F4231)
+  Passed      0.008s  AllPositioningConsumers_ReadTheSelectedFamily(1,F4231)
+  Passed      0.086s  ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F433)
+  Passed      0.082s  ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F4231)
+  Passed      0.009s  CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(0,2)
+  Passed      0.012s  CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(1,3)
+  Passed      0.009s  Duty_ReachesPositioning_InBothWorldDirections(0,Attack,3.0f)
+  Passed      0.017s  Duty_ReachesPositioning_InBothWorldDirections(1,Attack,-3.0f)
+  Passed      0.008s  Duty_ReachesPositioning_InBothWorldDirections(0,Defend,-3.0f)
+  Passed      0.008s  Duty_ReachesPositioning_InBothWorldDirections(1,Defend,3.0f)
+  Passed      0.090s  ExplicitSupport_IsExactIdentity_ForEveryAgent
+  Passed      0.010s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F433,F433,5)
+  Passed      0.018s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F433,F433,5)
+  Passed      0.009s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F4231,F4231,6)
+  Passed      0.039s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F4231,F4231,6)
+  Passed      0.010s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,255,F442,5)
+  Passed      0.017s  FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,255,F442,5)
+  Passed      0.020s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F442)
+  Passed      0.011s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F442)
+  Passed      0.018s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F433)
+  Passed      0.019s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F433)
+  Passed      0.010s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F4231)
+  Passed      0.037s  KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F4231)
+  Passed      0.009s  MalformedRotationBlock_RejectsCountOrTruncation(-1)
+  Passed      0.010s  MalformedRotationBlock_RejectsCountOrTruncation(6)
+  Passed      0.005s  MalformedRotationBlock_RejectsCountOrTruncation(int.MaxValue)
+  Passed      0.013s  MalformedRotationBlock_RejectsCountOrTruncation(5)
+  Passed      0.005s  MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(0)
+  Passed      0.004s  MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(1)
+  Passed      0.190s  NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F442)
+  Passed      0.180s  NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F433)
+  Passed      0.192s  NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F4231)
+  Passed      0.052s  Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,11)
+  Passed      0.044s  Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,11)
+  Passed      0.053s  Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,12)
+  Passed      0.068s  Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,12)
+  Passed      0.007s  SyntheticTickZero_InitializedDoesNotResamplePendingFormation
+  Passed      0.015s  SyntheticTickZero_UninitializedCanSelectFinalChoice
+  Passed      0.005s  UninitializedFormation_AtPositiveTick_IsRejected
+  Passed      0.005s  V28_IsRejectedBeforeAnyFormationStateIsDecoded
+
+not passed (failed=0):
+  TacticalDirector.MatchEngine.CloseChanceDiagnosticTests.CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel: Ignored — Set TD_CREATION_DIAGNOSTIC=1 to run the close-chance creation instrument.
+  TacticalDirector.MatchEngine.FoulRateDiagnosticTests.FoulRateDiagnostic_ReportsRateVersusThreshold: Ignored — Set TD_FOUL_DIAGNOSTIC=1 to run the #435 §2.1 source-complete foul/card measurement.
+  TacticalDirector.MatchEngine.GkContactRateDiagnosticTests.GkContactRateDiagnostic_ReportsEpisodeAnatomy: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the keeper contact-rate anatomy instrument.
+  TacticalDirector.MatchEngine.GkRushDiagnosticTests.GkRushDiagnostic_ReportsRushAnatomy: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the keeper rush anatomy instrument.
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsHandlingQualityCeiling: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsSaveFunnel: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  TacticalDirector.MatchEngine.GoalConversionDiagnosticTests.GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel: Ignored — Set TD_CONVERSION_DIAGNOSTIC=1 to run the conversion-at-contact instrument.
+  TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters: Ignored — Set TD_HEADER441_DIAGNOSTIC=1 to run the #441 header-reachability counters.
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsContactStream: Ignored — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsScorelineAsymmetry: Ignored — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  TacticalDirector.MatchEngine.MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice: Inconclusive — too few connecting challenges to judge the share (won=8 loose=13 foul=2 missed=69 dispossessions=8) Expected: greater than 30 But was: 23
+  TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace: Ignored — Set TD_PLATFORM_DIVERGENCE_OUT=<dir> to run the six-seed platform-divergence diagnostic.
+  TacticalDirector.MatchEngine.ShotOutcomeDiagnosticTests.ShotOutcomeDiagnostic_ReportsDistribution: Ignored — Set TD_SHOT_DIAGNOSTIC=1 to run the shot-outcome-distribution characterisation.
+  TacticalDirector.MatchEngine.TackleIntentDiagnosticTests.TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier: Ignored — Set TD_TACKLE_DIAGNOSTIC=1 to run the tackle-intent census instrument.
+  TacticalDirector.MatchEngine.W12GateFiringDiagnosticTests.W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates: Ignored — Set TD_W12_GATE_DIAGNOSTIC=1 to run the W12 gate-firing census.
+  TacticalDirector.MatchEngine.W8BDistributionDiagnosticTests.W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings: Ignored — Set TD_W8_B=1 for frozen B distribution and landing evidence.
+  TacticalDirector.MatchEngine.W8StageADiagnosticTests.W8StageADiagnostic_ReportsFrozenSixSeedBaseline: Ignored — Set TD_W8_STAGE_A=1 to run the preregistered W8 Stage A census.
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_DigestStability_IdenticalInputs: Ignored — T-D-004: requires DeterministicRngService integration — deferred to Stage 0+1
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_EntityIdPermutation_SameOutput: Ignored — T-D-003: requires Stage 0+1 determinism harness bound to #16 §5 DigestEngine
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_RngIsolation_CrossSubsystem: Ignored — T-D-006: requires multi-subsystem RNG stream registration — Stage 0+1
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_SaveLoad_ResumesIdentically: Ignored — T-D-005: requires SnapshotCodec + SaveManager integration — Stage 0+1
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_4231_TransToAtk_AMAdvances: Ignored — T-I-005: requires Stage 0+1 full-match to measure AM advance distance across multiple ticks
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_F2Fallback_ValidArchetype: Ignored — T-I-009: requires invalid archetype enum value injection
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_FullMatch_90Min_StateConsistency: Ignored — T-I-011: requires 90-min simulation (54000 ticks at 10Hz); Stage 0+1 milestone only
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_LaneOverload_Resolved_BySpacing: Ignored — T-I-008: requires 11-agent formation with lane overload scenario
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_OrchestratorNonInvocation_OfStage0Default: Ignored — T-I-010: requires AR-S1-04 orchestrator mock to verify Stage0Default not called on hot path
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_PhaseOscillationSuppressed: Ignored — T-I-006: requires >=20 tick simulation to measure transition frequency per PHASE_HYSTERESIS_TICKS
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_SubstitutionSentinel_Preserved: Ignored — T-I-007: requires sentinel AR-S1-07 injection test (substitution mid-match)
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Performance_SpacingBudget_Under0_05ms: Ignored — T-P-003: requires Stopwatch-based timing — Stage 0+1 perf gate activation
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Performance_ZeroHeapAlloc_InHotPath: Ignored — T-P-002: requires Unity GC Alloc profiler — Stage 0+1
+
+twelve longest cases (s):
+     389.7  TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+     206.5  TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+     198.8  TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+     197.5  TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+     107.7  TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+      99.3  TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+      80.9  TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+      71.9  TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+      62.9  TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+      60.0  TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+      35.9  TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+      35.7  TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)
