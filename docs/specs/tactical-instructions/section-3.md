@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** October 29, 2026 (v0.8 — ERR-021-008: §3.4.1 timing safety re-cited to #11 §3.8.4's 480-frame hand-control budget, back-prop of ERR-011-021)
-**Version:** 0.8
+**Last Updated:** November 11, 2026 (v0.9 — ERR-021-010 / W13.1: §3.4 maps `TightMarking` to the #14 mark stand-off.)
+**Version:** 0.9
 **Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 > Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until B code lands. Owner approval was recorded September 26, 2026; their stated values and shapes are therefore normative B inputs. `[GT]` means uncalibrated, not illustrative or optional.
@@ -94,8 +94,18 @@ utility' = clamp( utility × RoleWeightModifiers[role, opt.Type] × mentalityRis
 | `TacticWidth`/`TacticDefWidth` | **new field** on #12 `ContextModifierInputs`, feeding the existing compactness scaling | map 5/3 steps → scalar [0.85..1.15] |
 | `LineOfEngagement` | #13 trigger distances (existing) | scalar [0.80..1.20] on trigger radius |
 | `OffsideTrap` | #14 `MarkDirective.OffsideTrapActive` | bool passthrough |
+| `TightMarking` (per-agent, `PlayerInstructions`) — **W13.1, `ERR-021-010`** | #14 §3.13.1 mark stand-off `s` (`TacticTranslation.MarkStandoffM`) | `true` → `MARK_STANDOFF_TIGHT_M` (1.0 m `[GT]`, un-calibrated); `false` (the `Default` identity) → `MARK_STANDOFF_M` (2.0 m `[GT]`, un-calibrated). Range `0 < tight < normal < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M) = 3.0 m`. Consumed only while the engine's mark-movement switch is on (default off), so the identity row changes no behaviour (FR-TI-031). |
 | `TransitionWon/Lost` | #15 `StyleProfile.TransitionHoldTicks`; #13 counter-press gate | enum select |
 | `GkDistributionPolicy` | #11 `DistributeIntent` defaults | exact W8 B map in §3.4.1 |
+
+**`TightMarking` (W13.1, `ERR-021-010`).** §2.2.2 described `TightMarking` only as "tighter mark distance" and
+#14 had no mark distance to tighten (its `MarkingOrientation` scalar widens or narrows the *candidate radius*, §3.3.3,
+not how close a marker stands). #14 §3.13.1 now defines the distance: a marker stands `s` metres from his
+man's live position on the line to his own goal, `s = MARK_STANDOFF_M` by default and `MARK_STANDOFF_TIGHT_M` when
+this instruction is set. *Worked example:* a man at canonical (20, 30): `s = 2.0` → mark point (18.039, 30.392);
+`s = 1.0` → (19.019, 30.196). The translation is consumer-side (KD-2): `TacticTranslation.MarkStandoffM(bool)` lives in
+`defensive-ai`; the engine reads the agent's active `PlayerTactic.Instructions.TightMarking`, so no new serialized
+state is added (the flag is already part of the serialized `PlayerTactic`).
 
 ### 3.4.1 Goalkeeper distribution policy — W8 B (FR-TI-022)
 
@@ -231,4 +241,5 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.7 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Accepts `GK_DIST_FALLBACK_ADVANCE_M = 35 m` as the uncalibrated B default while explicitly leaving realistic punt length open against #5's Lofted trajectory; B landing-point evidence is the closing input. B wiring is authorized only after PR #461 merges. |
 | 0.6 | 2026-09-26 | — | W8 B final consistency: corrects the inherited section preamble so spec-first W8 constants are not falsely claimed to already exist in `TacticalInstructionsConstants.cs` and `[GT]` is not mistaken for an optional illustrative value. Source implementation remains blocked on owner approval. |
 | 0.8 | 2026-10-29 | — | ERR-021-008 (back-prop of ERR-011-021): §3.4.1 `GK_DIST_QUICK_DELAY_TICKS` range note and the timing-safety paragraph now cite #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) budget (first attempt 294 frames, retry predicate `candidateContactFrame ≤ handControlStartFrame + 480`) instead of the retired CONTACT-before-inherited-guard proof; corrects the `§11` → `#11` citation typo in that row. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Delay values unchanged. Review fix: first attempt is `35 × 6 + 84 = 294` frames (186-frame margin); `candidateContactFrame = currentFrame + WindupFrames` (no `+ 1`, per #11 §3.8.4), gating the first commit as well as retries. Review round 5: the stale 295-frame first-attempt clause is removed (294 only). |
+| 0.9 | 2026-11-11 | — | W13.1 / ERR-021-010: §3.4 maps the per-agent `TightMarking` instruction to the #14 §3.13.1 mark stand-off (tight 1.0 m / normal 2.0 m, both un-calibrated `[GT]`) via `TacticTranslation.MarkStandoffM`, with a worked example. `false` stays the identity; the mapping is consumed only while the engine's mark-movement switch (default off) is on. No new serialized state. |
 #endregion

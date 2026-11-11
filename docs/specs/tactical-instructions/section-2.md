@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** September 26, 2026 (v0.8 — W8 B amendment approved by owner; baseline status remains APPROVED)
-**Version:** 0.8
+**Last Updated:** November 11, 2026 (v0.9 — ERR-021-010 / W13.1: §2.2.2 `TightMarking` row defined by reference to #14 §3.13.1.)
+**Version:** 0.9
 **Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 ---
@@ -90,7 +90,7 @@ so `Balanced` needs no non-zero seeding for them).
 | Field | Type | Notes |
 |---|---|---|
 | RiskyPasses / ShootTendency / DribbleTendency / CrossTendency / PositioningFreedom / CloseDown | `InstrBias` | per-action modulation |
-| TightMarking | `bool` | tighter mark distance |
+| TightMarking | `bool` | tighter mark distance: the #14 §3.13.1 stand-off `MARK_STANDOFF_TIGHT_M` (1.0 m) instead of `MARK_STANDOFF_M` (2.0 m) — §3.4 (W13.1, `ERR-021-010`) |
 | MarkTargetEntityId | `int` | −1 = none; ≥0 = man-mark request (FR-TI-023) |
 | SetPieceRoles | `SetPieceDutyFlags` | `[Flags]` FreeKickTaker/CornerTaker/PenaltyTaker (Stage 1+) |
 
@@ -141,4 +141,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.6 | 2026-09-25 | — | W8 B: FR-TI-022 becomes a total deterministic producer contract for #11 distribution. Exact six-value mapping, selector/tie-break, fallback zone, power and tactical-tick delays are normative in §3.4.1. Zero RNG; no enum ordinal change. |
 | 0.8 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Approval covers amended FR-TI-022 together with #21 §3.4.1 and the paired #5/#11 W8 sections. The 35 m fallback is accepted as an uncalibrated B default; B wiring begins only after PR #461 merges. |
 | 0.7 | 2026-09-26 | — | W8 B review closure: the historical June APPROVED baseline remains approved, but the W8 amendment is explicitly PENDING OWNER APPROVAL. Merge is not treated as approval; B wiring remains blocked until owner acceptance of the amended FR-TI-022 / §3.4.1 contract. |
+| 0.9 | 2026-11-11 | — | W13.1 / ERR-021-010: §2.2.2 `TightMarking` row states what "tighter mark distance" means (the #14 §3.13.1 stand-off 1.0 m vs 2.0 m); mapping in §3.4. Field set and serialization unchanged. |
 #endregion
