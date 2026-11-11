@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 11, 2026 (v0.9 — W13.1 `ERR-014-010`: new §3.13.1 per-agent mark-target composition; §3.10.2 gated Invariant 4 (one marker per opponent); §3.12 constants index.)
-**Version:** 0.9
+**Last Updated:** November 11, 2026 (v0.10 — W13.1 ⑥: §3.13.1 cites `ERR-008-027` for the #8 PRESS rule now that it is filed; no other change. v0.9: new §3.13.1 per-agent mark-target composition; §3.10.2 gated Invariant 4; §3.12 constants index.)
+**Version:** 0.10
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1653,7 +1653,7 @@ and get no target; #13 press targets stay unconsumed. Emergencies compose like a
 assignment (last man → goal-side of the advancing attacker; cover → zone centre). **INTERCEPT-based
 consumption of the mark is deferred** (a marker may still choose to intercept a ball passing through
 his reach; not scored here). A marker is never moved to his man's *current* position — #8's
-PRESS rule for marking agents (#8 §3.1.8.2; landing with the Decision Tree half of W13.1) removes the nearest-opponent press that
+PRESS rule for marking agents (#8 §3.1.8.2, `ERR-008-027`) removes the nearest-opponent press that
 would otherwise do that. Substitutes inherit the agent index and its mark (§2.2.2). Marking applies
 during restarts as in open play (no set-piece phase exists; set-piece marking is §7.5, Stage 2+).
 
@@ -1676,3 +1676,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.7 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: retained assignments refresh `targetPosition` from the live snapshot (§2.2.2) — §3.3.3 Step 1 and Step 7, §3.10.2 Invariant 3 note, §3.11.3 pre-check and §3.13 Step 5 annotated; a retained target that is absent or `isActive == false` releases the mark to ZONAL at once with hysteresis reset (the dwell lock suppresses candidate thrash, it does not hold a mark on a player who has left the pitch). §3.11.6's thrash-prevention table is unchanged (its retained row keeps mode and target). Code: `MarkAssigner.RefreshRetained`. |
 | 0.8 | November 10, 2026 | AI agent (W13.0 review M1/L2) | Frame note and the four pseudocode annotations reworded: #14 is canonical-only, `team.defendsX0` is the constant true, the `x = 105` alternatives are not implemented (supersedes v0.6's "read from the snapshot frame" wording and the `IsOwnGoalAtX0` accessor, removed). §3.11.3 pre-check comment: the vanished-target release resets the candidate accumulator. |
 | 0.9 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: new §3.13.1 "Per-Agent Mark-Target Composition" (goal-side stand-off point from the target's live position; `COVER_GK_ZONE` passthrough; no-target cases; units, ranges, worked examples A / B / degenerate); §3.10.2 gains the gated Invariant 4 (one marker per opponent) with its worked example, §3.10.3 pseudocode and §3.13 Step 8 annotated; §3.12 index gains `MARK_STANDOFF_M`, `MARK_STANDOFF_TIGHT_M` (`[GT]`, un-calibrated) and `OWN_GOAL_CENTER` (`[DERIVED]`). The composition was planned as "§3.14"; §3.14 is this version history, so it is numbered §3.13.1 (no renumbering). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveAIConstants`, `TacticTranslation.MarkStandoffM`. |
+| 0.10 | November 11, 2026 | AI agent (W13.1) | §3.13.1 cites `ERR-008-027` (Decision Tree #8 §3.1.8.2, marking agents skip PRESS priority 2) instead of the forward reference. Documentation only. |

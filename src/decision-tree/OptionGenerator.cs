@@ -7,6 +7,7 @@
 // Modified: 2026-08-05 (ERR-008-021 — shot lane: wedge-containment cliff → true angular overlap × Vision-read Anticipation/Positioning ability)
 // Modified: 2026-08-06 (ERR-008-022 — the lane's far bound moves to the goal-line plane; the near bound and the goalkeeper read become ramps)
 // Modified: 2026-08-07 (ERR-008-023 — the keeper occludes with a BODY radius; his reach is #11's under P3. Fixes goals-still-scored = 0)
+// Modified: 2026-11-11 (W13.1 / ERR-008-027 — MOVE targets the per-agent mark point when TacticalContext.HasMarkTarget; a marking agent generates PRESS only via priority 1 (the carrier))
 // Modified: 2026-08-09 (ERR-008-024 — §3.1.5.2 sector scan breaks EXACT space ties by DirectionQuality_DRIBBLE; the strict > on saturated space always kept sector 0 = AgentFacingDirection. Wider product-ranking form reverted at the gate: it stalled play and scored 0 goals)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
@@ -733,8 +734,13 @@ namespace TacticalDirector.DecisionTree
             // MOVE_TO_POSITION is always generated in the off-ball branch (no gate conditions)
             // §3.4.5 depth adjustment is team-signed along X (AR-2 M-2); INV-GEN-06
             // clamp keeps an extreme-depth slot on the pitch.
-            Vector2 formationSlot = PitchGeometry.ClampToPitch(
-                ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, ctx.AgentTeamId));
+            // W13.1 (ERR-008-027): a marking agent moves to the host's per-tick mark point instead of the
+            // depth-adjusted slot. The point is anchored to the opponent, so the defensive-line-depth
+            // adjustment is NOT applied to it; the INV-GEN-06 pitch clamp is. Unset ⇒ the slot, bit-for-bit.
+            Vector2 formationSlot = ctx.TacticalContext.HasMarkTarget
+                ? PitchGeometry.ClampToPitch(ctx.TacticalContext.MarkTarget)
+                : PitchGeometry.ClampToPitch(
+                    ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, ctx.AgentTeamId));
             float distToSlot = Vector2.Distance(ctx.AgentPosition, formationSlot);
 
             buf[count++] = new ActionOption
@@ -786,8 +792,10 @@ namespace TacticalDirector.DecisionTree
                 }
             }
 
-            // Priority 2: nearest opponent within range
-            if (pressTargetId == -1)
+            // Priority 2: nearest opponent within range. W13.1 (ERR-008-027): skipped for an agent with a
+            // mark target — marking is MOVE's job (goal-side of his man); pressing the nearest opponent
+            // would send every marker onto his man's current position from ~6 m and let him switch men.
+            if (pressTargetId == -1 && !ctx.TacticalContext.HasMarkTarget)
             {
                 for (int i = 0; i < snap.VisibleOpponentsCount; i++)
                 {
@@ -1046,4 +1054,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | close-chance-creation-design.md §7 item 6 / KD-CC3.                        |
 // |         |            |        | sim_match_engine_close_chance: meanCosine −0.165 → PASS (bound −0.16),     |
 // |         |            |        | goalwardShare 0.407 → PASS (bound 0.42); neither bound moved.              |
+// | 1.12    | 2026-11-11 | —      | W13.1 (ERR-008-027): MOVE targets TacticalContext.MarkTarget (pitch-clamped, no     |
+// |         |            |        | depth adjustment) when HasMarkTarget; a marking agent generates PRESS only via      |
+// |         |            |        | priority 1 (carrier within PRESS_TRIGGER_DISTANCE), skipping priority 2. Unset =    |
+// |         |            |        | bit-identical to before.                                                           |
 #endregion
