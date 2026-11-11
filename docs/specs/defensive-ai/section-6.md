@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.4 — APPROVED patch: KD-6 revised (`ERR-014-006`, wiring backlog W2) — §6.1 gains the new "Region: Tackle Outcome Resolution" (ten `[GT]` + one `[FIXED]`, exactly as tabulated at `section-3.md` §3.6.5.5))
-**Version:** 0.4
+**Last Updated:** November 11, 2026 (v0.5 — W13.1 `ERR-014-010`: §6.1 gains "Region: Mark-Target Composition" — two `[GT]` (un-calibrated) and one `[DERIVED]`.)
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -93,6 +93,16 @@ calibration pass's input, not its output (§3.6.5.5).
 | `MIN_BACKLINE_AGENTS` | `[GT]` | 3 | count | Minimum DEFENSE-line agents that must remain in ZONAL mode after assignment. Invariant 1 in §3.10 (FR-DA-025). |
 | `MAX_MAN_MARK_ASSIGNMENTS` | `[GT]` | 4 | count | Maximum simultaneous MAN_MARK assignments across the HOLD_SHAPE pool. Invariant 2 in §3.10 (FR-DA-026). |
 | `MAX_MARK_DISPLACEMENT_M` | `[GT]` | 20.0 | m | Maximum displacement of a non-ZONAL assignment from the agent's #12 baseline anchor. Invariant 3 in §3.10 (FR-DA-027). |
+
+### Region: Mark-Target Composition (W13.1, `ERR-014-010`, §3.13.1)
+
+Both `[GT]` values are **UN-CALIBRATED** (KD-W1). Range invariant: `0 < MARK_STANDOFF_TIGHT_M < MARK_STANDOFF_M < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M [CROSS: #23])` = 3.0 m.
+
+| Constant | Tag | Value | Unit | Purpose |
+|---|---|---|---|---|
+| `MARK_STANDOFF_M` | `[GT]` | 2.0 | m | Distance a marking defender holds goal-side of his man (§3.13.1). Range `(MARK_STANDOFF_TIGHT_M, 3.0)`. |
+| `MARK_STANDOFF_TIGHT_M` | `[GT]` | 1.0 | m | Stand-off when the agent's #21 `TightMarking` is set. Range `(0, MARK_STANDOFF_M)`. |
+| `OWN_GOAL_CENTER` | `[DERIVED]` | (0, 34) | m | `(0, PITCH_WIDTH_M / 2)` — the canonical own-goal centre (§3.13.1; `PITCH_WIDTH_M` `[CROSS: #1 §1.2]`). |
 
 ### Region: GK Zone
 
@@ -238,3 +248,4 @@ the `EmitAllZonal` function is an O(N_HOLD) memset — the most trivial path.
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §6.1 and v0.1 history row corrected "27-entry" → "26-entry" (22 GT + 4 CROSS/CROSS-PENDING = 26, not 27). M7: §6.1 domain tag block layout now reflects ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |
 | 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` (value `0x1A` confirmed, allocated in #16 §3.4 v1.0.5). Block layout updated to final values: `0x17` = #12, `0x1D` = #11 (final value), `0x19` = #13, `0x1A` = #14, `0x1B` = #15. |
 | 0.4 | August 12, 2026 | AI agent (wiring backlog W2) | APPROVED patch. KD-6 revised (`ERR-014-006`): §6.1 gains "Region: Tackle Outcome Resolution" — ten `[GT]` + one `[FIXED]` constants, values copied verbatim from `section-3.md` §3.6.5.5. Catalogue grows from 26 entries (22 `[GT]` + 4 `[CROSS]`) to 37 (32 `[GT]` + 4 `[CROSS]` + 1 `[FIXED]`); §9.1 item 4's evidence count is now stale as a result and is flagged, not corrected, in this pass (see the W2 sweep report). |
+| 0.5 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §6.1 gains "Region: Mark-Target Composition" (`MARK_STANDOFF_M` 2.0, `MARK_STANDOFF_TIGHT_M` 1.0, both `[GT]` un-calibrated with the range invariant; `OWN_GOAL_CENTER` `[DERIVED]`). Catalogue grows from 37 to 40 entries; the §9.1 item 4 evidence count remains stale, as already flagged at v0.4, and is not corrected here. Hot-path cost of Invariant 4 / the composer: O(pool²) = 100 compares and O(22) lookups per tick, zero allocation (§6.2 enumeration unchanged in kind). |

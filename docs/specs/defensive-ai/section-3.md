@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.8 — W13.0 review M1 / L2: Frame note and pseudocode annotations reworded — #14 is canonical-only, `team.defendsX0` is the constant true and the `x = 105` alternatives are not implemented; §3.11.3 notes that the vanished-target release resets the candidate accumulator.)
-**Version:** 0.8
+**Last Updated:** November 11, 2026 (v0.9 — W13.1 `ERR-014-010`: new §3.13.1 per-agent mark-target composition; §3.10.2 gated Invariant 4 (one marker per opponent); §3.12 constants index.)
+**Version:** 0.9
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1127,23 +1127,47 @@ Assignment: `MarkAssignment { mode = COVER_GK_ZONE, targetPosition = (7.5, 34.0)
 ### 3.10.1 Purpose
 
 After the full assignment pass (§3.3–§3.9), before publication, three
-measurable invariants are enforced. This prevents the assignment algorithm
+measurable invariants (plus the gated fourth, W13.1 `ERR-014-010`, §3.10.2) are enforced. This prevents the assignment algorithm
 from producing collectively incoherent states (e.g., most defenders
 pulled into man-mark assignments, leaving the backline empty).
 
 Applied BEFORE directive publication (FR-DA-024).
 
-### 3.10.2 The Three Invariants
+### 3.10.2 The Invariants (three standing, one gated)
 
 | # | Invariant | Enforcement |
 |---|-----------|-------------|
 | 1 | `count(DEFENSE-line agents in ZONAL) >= MIN_BACKLINE_AGENTS` | Demote the most-recently-assigned non-ZONAL DEFENSE-line agent |
 | 2 | `count(MAN_MARK assignments) <= MAX_MAN_MARK_ASSIGNMENTS` | Demote the MAN_MARK assignment with lowest threat score |
 | 3 | `displacement(agent, targetPos) <= MAX_MARK_DISPLACEMENT_M` for all non-ZONAL | Demote the violating assignment |
+| 4 | **Gated (W13.1, `ERR-014-010`, FR-DA-039):** `count(non-ZONAL assignments with targetEntityId == o) <= 1` for every opponent `o` — **only when `markMovementActive`** | Keep one marker per opponent; demote the rest |
 
 `MIN_BACKLINE_AGENTS = 3` `[GT]`
 `MAX_MAN_MARK_ASSIGNMENTS = 4` `[GT]`
 `MAX_MARK_DISPLACEMENT_M = 20.0 m` `[GT]`
+
+*Invariant 4 — one marker per opponent (W13.1, `ERR-014-010`).* §3.3 has no
+exclusivity: with identical attributes every defender in range scores the same
+deepest attacker highest and picks him (the §3.3.3 loop never sees the other
+defenders' choices). While the assignments only drive tackle intents that is
+harmless; once each marker is *moved* to a point goal-side of his man
+(§3.13.1) the pile-up is wrong, so Invariant 4 is enforced — and only then.
+It applies to every non-ZONAL assignment that names a target (`MAN_MARK` and
+`INTERCEPT_RUNNER`; `COVER_GK_ZONE` names none). For a duplicated target the
+**keeper** is chosen by a strict total order: (1) an agent whose assignment is an
+emergency override (`overriddenThisTick`), else (2) the lowest displacement
+cost `|agent.position − opponent.position|²` (§3.4, live snapshot positions;
+units m²), else (3) the lowest EntityId (FR-DA-014). Every other duplicate is
+demoted to `ZONAL` (own #12 slot). Demotion is monotonic like Invariants 1–3, so
+it cannot re-violate them and the three-pass loop converges. It is gated by the
+per-tick input `markMovementActive` (§2.3): while `false` the invariant does not
+run and the published assignments, and the tackle intents derived from them, are
+byte-for-byte the pre-W13.1 ones. *Worked example.* Away CMs 17 at (45, 28) and
+18 at (45, 40) both mark the home CAM at canonical (36.75, 34). Each is
+`8.25² + 6² = 104.06 m²` away, a tie, so 17 (lower EntityId) keeps the CAM and
+18 is demoted to ZONAL at its slot (45, 40). *Valid range:* agent and opponent
+positions x ∈ [0, 105], y ∈ [0, 68]; cost ∈ [0, 16,000 m²]. Two CBs on one
+striker are already reduced to one by Invariant 1 (`MIN_BACKLINE_AGENTS`).
 
 *Invariant 3 and retained marks (`ERR-014-009`).* `targetPosition` is the
 opponent's **live** position on every published tick (§2.2.2), retained
@@ -1192,6 +1216,11 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
         }
         continue
 
+    // --- Invariant 4 (W13.1, ERR-014-010) — only when snapshot.markMovementActive ---
+    //     for each non-ZONAL a with targetEntityId != null: if another non-ZONAL b has the same
+    //     targetEntityId and (b.overriddenThisTick, -cost(b), -entityId(b)) beats a's, demote a.
+    //     (strict total order: override, then lower |agent - opponent|^2, then lower EntityId)
+
     // --- Invariant 3: Max displacement ---
     violation = null
     for each a in holdShapePool:
@@ -1209,7 +1238,7 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
         }
         continue
 
-    // All three invariants satisfied: break early
+    // All invariants satisfied (Invariant 4 only when markMovementActive): break early
     break
 
 // Post-loop check (FR-DA-032)
@@ -1378,6 +1407,7 @@ are not duplicated here.
 | Tag | Meaning | Rule |
 |-----|---------|------|
 | `[GT]` | Gameplay-Tuned | Designer sets value; lives in `DefensiveAIConstants.cs` |
+| `[DERIVED]` | Derived from other constants | Formula and source constants stated at the definition (§3.13.1 `OWN_GOAL_CENTER`) |
 | `[FIXED]` | Fixed / physical or numerical law | Derived from a hard mapping constraint, not a football judgment; never tune (§3.6.5.5) |
 | `[CROSS]` | Cross-spec constant | Defined in named upstream spec; consumed read-only |
 | `[CROSS-PENDING]` | Cross-spec constant pending upstream allocation | Promoted to `[CROSS]` atomically with upstream APPROVED |
@@ -1417,6 +1447,9 @@ are not duplicated here.
 | `MAX_MAN_MARK_ASSIGNMENTS` | `[GT]` | §3.10.2 |
 | `MAX_MARK_DISPLACEMENT_M` | `[GT]` | §3.10.2 |
 | `MARK_DWELL_TICKS` | `[GT]` | §3.11.4 |
+| `MARK_STANDOFF_M` | `[GT]` (UN-CALIBRATED) | §3.13.1 |
+| `MARK_STANDOFF_TIGHT_M` | `[GT]` (UN-CALIBRATED) | §3.13.1 |
+| `OWN_GOAL_CENTER` | `[DERIVED]` | §3.13.1 |
 | `PITCH_LENGTH_M` | `[CROSS: #1 §1.2]` | §3.5.2 |
 | `PITCH_WIDTH_M` | `[CROSS: #1 §1.2]` | §3.9.2 |
 | `HALF_LINE_X` | `[CROSS: #1 §1.2]` | §3.7.2 |
@@ -1537,7 +1570,7 @@ if offsideState.stepUpDwellCounter >= OFFSIDE_TRAP_DWELL_TICKS
     ExecuteOffsideTrap(holdShapePool, shape, ref directive, assignments,
                        ref offsideState, team)
 
-// Step 8: Anti-chaos enforcement (§3.10)
+// Step 8: Anti-chaos enforcement (§3.10) — Invariants 1-3, plus Invariant 4 when markMovementActive (W13.1)
 enforced = EnforceAntiChaosInvariants(holdShapePool, shape, snapshot,
                                       assignments, team)
 if NOT enforced:
@@ -1556,6 +1589,78 @@ Any RNG tie-breaking uses `DeterministicRngService.NextInt(DOMAIN_TAG_DEFENSIVE_
 where `DOMAIN_TAG_DEFENSIVE_AI = 0x1A [CROSS: #16 §3.4]` — ERR-014-004
 resolved May 18, 2026.
 
+### 3.13.1 Per-Agent Mark-Target Composition (W13.1, `ERR-014-010`; FR-DA-038)
+
+**Purpose.** §3.13 publishes a per-agent `MarkAssignment`, but its `targetPosition` is
+the *opponent's own position* (§2.2.2) — a marker sent there arrives on top of his man,
+not between him and the goal. §4.4.4 / §4.5.1 said the orchestrator "composes the
+per-agent target from `GetAssignments()`" without a rule. This section is that rule. It
+runs **after** `Tick` (§3.13 Step 9), once per 10 Hz tick per HOLD_SHAPE agent, in the
+canonical frame (§2.3; own goal `G = OWN_GOAL_CENTER = (0, PITCH_WIDTH_M / 2) = (0, 34)`,
+`[DERIVED]` from `[CROSS: #1 §1.2]`). The composition root mirrors the result to world space
+for the away team and hands it to #8 (§4.4.4). Pure: no state, no RNG, no allocation.
+
+**Step 1 — no target** (the agent keeps his formation slot; #8 behaves as before) when any of:
+the composition root's switch is off; `mode == ZONAL`; `validThroughTick != tick` (stale,
+§2.2.2); the stand-off `s` is not a positive number; for `MAN_MARK` / `INTERCEPT_RUNNER` the
+target opponent is absent from the snapshot or `!isActive`; **or the agent's team holds team
+possession** (carrier, else the receiver of a pass in flight) — that last test belongs to the
+composition root, which reads the engine's possession once per tick before the team loop, so
+both teams see the same value.
+
+**Step 2 — `COVER_GK_ZONE`:** `M = targetPosition` (the abandoned-zone centre, §3.9.2) unchanged.
+
+**Step 3 — `MAN_MARK` / `INTERCEPT_RUNNER`:** let `O` be the target's **live** snapshot
+position, `v = G − O`, `L = |v|` (m):
+
+```
+M = (L > s) ? O + (s / L) * v      // on the segment O→G, |M − O| = s, closer to G than O
+            : G                    // opponent within s of the goal centre
+```
+
+**Step 4 — no separate distance cap.** The 20 m bound on how far a mark may pull an agent
+from his slot is enforced by Invariant 3 alone, on the live position (§3.10.2, `ERR-014-009`);
+a second, un-hysteresed cap on `M` would offset the boundary by up to `s` and could alternate
+every tick. Because `|M − O| ≤ s`, a consumed target is always within `20 + s` m of the slot.
+
+**Step 5 — output** `M` is canonical; the consumer maps it to world space and #8 clamps it to
+the pitch (§3.1.7.2 of #8). It does **not** apply the defensive-line-depth adjustment: `M` is
+anchored to the opponent, not to the formation slot.
+
+**Stand-off `s` (m).** `s = MARK_STANDOFF_M` (default 2.0), or `MARK_STANDOFF_TIGHT_M` (default
+1.0) when the agent's #21 `PlayerInstructions.TightMarking` is set (#21 §3.4,
+`TacticTranslation.MarkStandoffM`). Range invariant: `0 < MARK_STANDOFF_TIGHT_M <
+MARK_STANDOFF_M < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M [CROSS: #23])` = 3.0 m, so a
+marker standing on the point is inside the tackle-eligibility radius and counts as marking
+his man for #23 (§3.6.2). Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
+that has never moved a defender; it is the calibration pass's input, not its output).
+
+**Units and ranges.** Metres; `s ∈ (0, 3.0)`; `L ∈ [0, 123.6]` (the pitch diagonal bound);
+`|M − O| ≤ s`; `M` within the pitch whenever `O` is.
+
+**Worked examples.**
+- **A** (away CB marks the home 4-2-3-1 striker). Striker world (86.1, 34) → away canonical
+  `O = (105 − 86.1, 68 − 34) = (18.9, 34)`. CB 1's slot (21, 25.84) is 8.43 m away, so the
+  striker is a §3.3 candidate. `v = (−18.9, 0)`, `L = 18.9 > 2` → `M = (16.9, 34)`, i.e. world
+  `(88.1, 34)`, between the striker and the goal at x = 105. A home defender whose snapshot
+  holds the same canonical `O` gets the identical `M = (16.9, 34)`.
+- **B** (off-centre). `O = (20, 30)`, `L = 20.396`: `s = 2` → `M = (18.039, 30.392)`;
+  `s = 1` (tight) → `M = (19.019, 30.196)`.
+- **Degenerate.** `O = (1.0, 34.5)`, `L = 1.118 ≤ 2` → `M = (0, 34)`.
+
+**Exemptions and interactions.** Pressers, the GK and sent-off agents are outside the pool (§3.2)
+and get no target; #13 press targets stay unconsumed. Emergencies compose like any other
+assignment (last man → goal-side of the advancing attacker; cover → zone centre). **INTERCEPT-based
+consumption of the mark is deferred** (a marker may still choose to intercept a ball passing through
+his reach; not scored here). A marker is never moved to his man's *current* position — #8's
+PRESS rule for marking agents (#8 §3.1.8.2; landing with the Decision Tree half of W13.1) removes the nearest-opponent press that
+would otherwise do that. Substitutes inherit the agent index and its mark (§2.2.2). Marking applies
+during restarts as in open play (no set-piece phase exists; set-piece marking is §7.5, Stage 2+).
+
+**Activation.** The composition root's switch (`MatchEngineConstants.MarkMovementEnabled`, `[GT]`,
+default `false`) gates both this composition and Invariant 4 (`markMovementActive`, §2.3). With it
+off no target is ever composed and the pipeline is the pre-W13.1 one.
+
 ---
 
 ## 3.14 Version History
@@ -1570,3 +1675,4 @@ resolved May 18, 2026.
 | 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: Frame note ahead of §3.1 and annotations at §3.3.3 Step 3, §3.5.2, §3.7.4 and §3.9.2. `team.defendsX0` is read from the snapshot frame (canonical attack-toward-+X, own goal at x = 0 for both teams — §2.3 Frame contract), never from the team id, so it is always true in the engine. No formula changes; the away team's inputs were already canonical, only the code's goal choice was wrong. Code: `DefensiveSnapshot.IsOwnGoalAtX0`, `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |
 | 0.7 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: retained assignments refresh `targetPosition` from the live snapshot (§2.2.2) — §3.3.3 Step 1 and Step 7, §3.10.2 Invariant 3 note, §3.11.3 pre-check and §3.13 Step 5 annotated; a retained target that is absent or `isActive == false` releases the mark to ZONAL at once with hysteresis reset (the dwell lock suppresses candidate thrash, it does not hold a mark on a player who has left the pitch). §3.11.6's thrash-prevention table is unchanged (its retained row keeps mode and target). Code: `MarkAssigner.RefreshRetained`. |
 | 0.8 | November 10, 2026 | AI agent (W13.0 review M1/L2) | Frame note and the four pseudocode annotations reworded: #14 is canonical-only, `team.defendsX0` is the constant true, the `x = 105` alternatives are not implemented (supersedes v0.6's "read from the snapshot frame" wording and the `IsOwnGoalAtX0` accessor, removed). §3.11.3 pre-check comment: the vanished-target release resets the candidate accumulator. |
+| 0.9 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: new §3.13.1 "Per-Agent Mark-Target Composition" (goal-side stand-off point from the target's live position; `COVER_GK_ZONE` passthrough; no-target cases; units, ranges, worked examples A / B / degenerate); §3.10.2 gains the gated Invariant 4 (one marker per opponent) with its worked example, §3.10.3 pseudocode and §3.13 Step 8 annotated; §3.12 index gains `MARK_STANDOFF_M`, `MARK_STANDOFF_TIGHT_M` (`[GT]`, un-calibrated) and `OWN_GOAL_CENTER` (`[DERIVED]`). The composition was planned as "§3.14"; §3.14 is this version history, so it is numbered §3.13.1 (no renumbering). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveAIConstants`, `TacticTranslation.MarkStandoffM`. |

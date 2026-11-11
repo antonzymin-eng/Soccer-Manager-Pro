@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.6 — W13.0 review M1 / L2: §2.3 Frame contract states #14 is canonical-only (own goal at x = 0 is a fixed invariant, not a switch; no "one place to change"); §2.2.2 states the vanished-target release also resets the candidate accumulator so re-acquisition pays a full `MARK_DWELL_TICKS`.)
-**Version:** 0.6
+**Last Updated:** | 0.7 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: FR-DA-038 / FR-DA-039 added (the file's own "37 FRs" statements in v0.1 and the §9 checklist are historical). §2.3 gains the `markMovementActive` per-tick input (default false, not serialized). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveSnapshot.MarkMovementActive`. |
+**Version:** 0.7
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -54,6 +54,8 @@ in this spec.
 | FR-DA-035 | Every constant carries exactly one tag: `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, or `[CROSS-PENDING]`. | MUST | KD-13 |
 | FR-DA-036 | No interface or accessor surface is produced against Attacking AI #15 at Stage 0. | MUST | CLAUDE.md / KD-8 |
 | FR-DA-037 | Stage-1 activation is gated on all three preconditions being satisfied: (a) #8 ERR-014-001 amendment ratified; (b) #12 Positioning AI reaches `APPROVED`; (c) ERR-014-002 / ERR-014-003 #17 channel rows landed. | MUST | KD-16 / §7 |
+| FR-DA-038 | Mark-target composition (W13.1, `ERR-014-010`): for a HOLD_SHAPE agent whose committed assignment is `MAN_MARK` / `INTERCEPT_RUNNER`, #14 composes the goal-side mark point of §3.13.1 (a point `MARK_STANDOFF_M [GT]` from the target's LIVE position toward the own-goal centre); `COVER_GK_ZONE` passes its zone centre through; `ZONAL`, a stale `validThroughTick`, or a missing / inactive target yields no target. Pure, canonical frame, no state, no RNG. | MUST | §3.13.1 / `ERR-014-010` |
+| FR-DA-039 | Anti-chaos invariant 4 (W13.1, `ERR-014-010`): when `DefensiveSnapshot.markMovementActive` is true, at most one HOLD_SHAPE agent holds a non-ZONAL assignment on any one opponent; the keeper is an emergency override, else the lowest `|agent − opponent|²`, else the lowest EntityId. When `markMovementActive` is false the invariant does not run. | MUST | §3.10.2 / `ERR-014-010` |
 
 ## 2.2 Data Structures
 
@@ -329,6 +331,14 @@ same two canonical points. Resolving the goal from the team id (`teamId == 0`)
 gives the away team `distToOwnGoal = 105 − 25 = 80.0 m` and proximity `0.238`
 — the inverted value this section corrects. *Valid range:* every x ∈ [0, 105],
 y ∈ [0, 68]; units metres.
+
+**`markMovementActive` (W13.1, `ERR-014-010`).** A `bool` per-tick input on the
+snapshot, default `false`: the producer sets it when it will consume this tick's
+assignments as per-agent mark targets (§3.13.1). It activates §3.10.2
+Invariant 4 and nothing else. It is read within the tick only and is **not**
+part of any serialized or digested state (the committed `MarkAssignment[]` and
+`MarkHysteresisState[]` are unchanged in shape). While `false` the pipeline is
+exactly the pre-W13.1 one.
 
 **Note on GK exclusion:** The GK's EntityId is known via #7 perception
 (`isGoalkeeper` flag or team roster). #14 filters it out before building

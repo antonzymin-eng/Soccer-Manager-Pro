@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.7 — W13.0 review M1: §1.7 states that #14 is canonical-only — own goal at x = 0 is a fixed invariant of its input, not a switch; the x = 105 alternatives are not implemented.)
-**Version:** 0.7
+**Last Updated:** | 0.8 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §1.2.1, §1.4 and the §1.5 KD-17 row note the gated Invariant 4 (one marker per opponent, active only while the engine's mark-movement switch is on; §3.10.2). Documentation only; KD-17's three standing invariants are unchanged. |
+**Version:** 0.8
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -70,7 +70,9 @@ NOT STARTED at the time of this draft).
 - Assignment-transition dwell-time hysteresis bound to Agent Movement
   #2 §3.1 pattern (§3.11, KD-11).
 - Three measurable anti-chaos invariants: `MIN_BACKLINE_AGENTS`,
-  `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (KD-17).
+  `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (KD-17), plus the
+  gated fourth, one marker per opponent (§3.10.2 Invariant 4, W13.1
+  `ERR-014-010`).
 - Phase gating via #12 phase enum: `IN_POSSESSION` produces all-ZONAL
   directive with no further computation (§3.1, KD-19).
 - Canonical exploit-resistance test corpus (§5, KD-18).
@@ -186,7 +188,7 @@ declaration between them at Stage 0.
 | **Last-man predicate** | A deterministic per-tick boolean derived from `IsLastManCandidate` and `IsLastManThreat` (KD-12). When both are true, the identified agent is overridden to `INTERCEPT_RUNNER` mode. GK is excluded from this predicate. |
 | **Tackle intent** | A per-agent per-tick intent signal (`COMMIT` / `JOCKEY` / `HOLD`) produced by #14 for agents within `TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent (§3.6). **Amended (KD-6 revised — `ERR-014-006`):** the original entry read "#8 reads this to construct an `AgentAction`; #3 owns the contact physics" — that dispatch has no working delegate at Stage 0 (see the KD-6 row in §1.5), so a `COMMIT` intent that becomes a challenge is resolved by #14 itself into a `TackleOutcome` (§3.6.5), not handed to #8 or #3. |
 | **Tackle outcome** | The result of a committed tackle challenge: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`, resolved by #14 as an abstract attribute duel between the tackler and the ball carrier (§3.6.5, KD-6 revised — `ERR-014-006`). Digest-visible; ordinals are stable and append-only. |
-| **Anti-chaos invariant** | One of the three measurable constraints in KD-17, enforced before directive publication: minimum backline count (`MIN_BACKLINE_AGENTS`), maximum simultaneous man-mark count (`MAX_MAN_MARK_ASSIGNMENTS`), and maximum mark displacement from #12 anchor (`MAX_MARK_DISPLACEMENT_M`). |
+| **Anti-chaos invariant** | One of the three measurable constraints in KD-17, enforced before directive publication: minimum backline count (`MIN_BACKLINE_AGENTS`), maximum simultaneous man-mark count (`MAX_MAN_MARK_ASSIGNMENTS`), and maximum mark displacement from #12 anchor (`MAX_MARK_DISPLACEMENT_M`). **Amended (W13.1, `ERR-014-010`):** a fourth, gated invariant — one marker per opponent — is enforced only while the engine's mark-movement switch is on (§3.10.2). |
 | **Assignment hysteresis** | Per-agent dwell counter tracking how long an agent has held its current `MarkAssignment` mode. Transitions are gated on the `MARK_DWELL_TICKS [GT]` dwell-time pattern from #2 §3.1. |
 | **OffsideLineState** | Per-team internal state tracking the current line x-depth, step-up dwell counter, and post-trap cooldown ticks remaining. Digested per #16 §6.2. |
 
@@ -212,7 +214,7 @@ Cross-reference to the 19 KDs catalogued in `outline-detailed.md` v1.0:
 | KD-14 | Single constant catalogue `DefensiveAIConstants.cs` per #20 §4.2 | §4.2 |
 | KD-15 | Event System binding (#17) — `MARK_ASSIGNED` / `LINE_STEPPED` channels at Stage 1 via ERR-014-002/003 | §7.5 |
 | KD-16 | Stage-0/Stage-1 scope discipline | §1.8, §7 |
-| KD-17 | Three anti-chaos invariants: `MIN_BACKLINE_AGENTS`, `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` | §3.10 |
+| KD-17 | Three anti-chaos invariants: `MIN_BACKLINE_AGENTS`, `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (+ gated Invariant 4, one marker per opponent — W13.1, `ERR-014-010`) | §3.10 |
 | KD-18 | Exploit-resistance test corpus — four canonical exploits | §5 |
 | KD-19 | Phase enumeration — #12 `IN_POSSESSION` → all-ZONAL directive; `OUT_OF_POSSESSION` / `TRANSITION` → full algorithm | §3.1 |
 

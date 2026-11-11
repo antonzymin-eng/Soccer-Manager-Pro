@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/DefensiveSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-11-10
+// Modified: 2026-11-10 (W13.1 / ERR-014-010 — + MarkMovementActive per-tick input)
 // Author:   —
-// Spec:     Defensive AI #14 §2.3, §4.4, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
+// Spec:     Defensive AI #14 §2.3, §4.4, ERR-014-008, ERR-014-010, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
 // Purpose:  Full tick input container for DefensiveAITick. Populated once per tick by
 //           the match orchestrator from #7, #12, #13 state before Tick() is called.
 
@@ -120,6 +120,17 @@ namespace TacticalDirector.DefensiveAI
         public MarkingOrientation MarkingOrientation;
 
         /// <summary>
+        /// W13.1 (ERR-014-010) per-tick input: true when the composition root will CONSUME this tick's
+        /// assignments as per-agent mark targets (§3.13.1) — i.e. the engine's mark-movement switch is on
+        /// for this tick. It activates anti-chaos Invariant 4 (one marker per opponent, §3.10.2) in
+        /// <see cref="InvariantEnforcer"/>; while <c>false</c> (the class-field default, and the only value
+        /// the shipped engine writes) Invariant 4 does not run, so assignments and tackle intents are exactly
+        /// the pre-W13.1 ones. A per-tick input like every other field here: set by the producer before
+        /// <see cref="DefensiveAITick.Tick"/>, never read across ticks, NOT serialized.
+        /// </summary>
+        public bool MarkMovementActive;
+
+        /// <summary>
         /// Constructs a snapshot with a pre-allocated agents array of the given capacity.
         /// </summary>
         public DefensiveSnapshot(int agentCapacity = DefensiveAIConstants.SQUAD_SIZE)
@@ -148,4 +159,6 @@ namespace TacticalDirector.DefensiveAI
 // | 1.6     | 2026-11-10 | —      | W13.0 review M1: IsOwnGoalAtX0 removed. #14 is canonical-only — own goal at x = 0 is a    |
 // |         |            |        |   fixed frame invariant, not a per-producer switch; the unreachable x = 105 branches are  |
 // |         |            |        |   gone from production code.                                                              |
+// | 1.7     | 2026-11-10 | —      | W13.1 / ERR-014-010: + MarkMovementActive (per-tick input, default false, not serialized) — |
+// |         |            |        |   activates Invariant 4 (one marker per opponent, §3.10.2).                                  |
 #endregion

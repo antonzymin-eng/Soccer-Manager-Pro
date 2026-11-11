@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 5: Test Plan
 
 **Created:** May 17, 2026
-**Last Updated:** November 10, 2026 (v0.3 — `ERR-014-009` (W13.0): T-DA-067 annotated — a retained mark tracks the live target position and is still subject to Invariant 3 during the dwell lock.)
-**Version:** 0.3
+**Last Updated:** November 11, 2026 (v0.4 — W13.1 `ERR-014-010`: §5.8 traceability gains FR-DA-038 / FR-DA-039; T-DA-065 annotated for gated Invariant 4. No T-DA test-count change.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -454,6 +454,12 @@ Expected: On same tick:
 Both overrides issued in the same tick (Steps 4 and 4a of §3.13).
 Validates: FR-DA-022; §3.9.1.
 
+**W13.1 note (`ERR-014-010`).** The cascade below is the three standing invariants. With
+`markMovementActive` a fourth, one marker per opponent (§3.10.2), runs inside the same
+three-pass loop; it is covered by `Invariant4Tests`, which also carries a 1,000-state
+termination harness (the T-DA-DET-006 stub below remains Ignored and is untouched). No
+T-DA-NNN ids are added; the test counts in §5.9 are unchanged.
+
 **T-DA-065 — Anti-chaos cascade: MAX_MAN_MARK_ASSIGNMENTS exceeded; resolves within 3 passes**
 Setup: 6 agents all qualify for MAN_MARK; `MAX_MAN_MARK_ASSIGNMENTS = 4`.
 Expected: demotion cascade reduces MAN_MARK count to 4 within pass 1 or 2;
@@ -747,6 +753,8 @@ systems). This criterion is verifiable without a full xG model.
 | FR-DA-035 | §6.1 catalogue; Appendix A derivations |
 | FR-DA-036 | §4.7 check 6 (grep lint) |
 | FR-DA-037 | §7.1 gate conditions; §9.3(a)(b)(e) |
+| FR-DA-038 | W13.1 `MarkTargetComposerTests` (worked examples A / B / degenerate, no-target cases, COVER_GK_ZONE passthrough, stand-off invariant), `MatchEngineMarkingTests` (engine acquisition / closure / no-target / restore / determinism) |
+| FR-DA-039 | W13.1 `Invariant4Tests` (§3.10.2 worked example, flag-off identity, whole-pipeline, 1,000-state harness) |
 
 ---
 
@@ -757,3 +765,4 @@ systems). This criterion is verifiable without a full xG model.
 | 0.1 | May 17, 2026 | AI agent | Initial draft. 71 named unit and integration tests (T-DA-001..T-DA-071 contiguous). 6 determinism regression tests (T-DA-DET-001..006). 3 performance tests (T-DA-PERF-001..003). 3 anti-chaos invariant tests (T-DA-INV-001..003). 4 exploit-resistance tests (T-DA-EXP-001..004). xG surrogate metrics defined (§5.7). FR-to-test traceability matrix (§5.8; all 37 FRs mapped). Total named tests: ≥ 85 targets met (79 named + 6 determinism + FR-map coverage). KD-18 exploit corpus (Appendix E) referenced. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L1: §5.9 v0.1 row corrected test count from "59 named" to "71 named" (T-DA-001..T-DA-071 = 71 tests, not 59). |
 | 0.3 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: T-DA-067 annotated (retained marks track the live target; Invariant 3 and target-vanished release apply during the dwell lock). No test count changes. |
+| 0.4 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: FR-DA-038 / FR-DA-039 traced to the W13.1 test classes; T-DA-065 annotated (Invariant 4). No T-DA ids added. |
