@@ -1,5 +1,6 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
+// Modified: 2026-11-12 (W13.1c final pass: MarkStandoffTightM doc records the body-contact limitation, W13-F8; no value change)
 // Modified: 2026-11-10 (W13.1 / ERR-014-010 — the §3.13.1 mark stand-off: 2 [GT] (MarkStandoffM, MarkStandoffTightM) + 1 [DERIVED] OwnGoalCenter)
 // Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
 // Author:   —
@@ -331,8 +332,12 @@ namespace TacticalDirector.DefensiveAI
         /// <summary>
         /// [GT] Stand-off (m) used instead of <see cref="MarkStandoffM"/> when the marking agent's #21
         /// <c>PlayerInstructions.TightMarking</c> is set (#21 §3.4, via <see cref="TacticTranslation.MarkStandoffM"/>).
-        /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. Config key
-        /// [defensive-ai] MarkStandoffTightM. Defensive AI #14 §3.13.1 / §6.1.
+        /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. KNOWN LIMITATION (open issue
+        /// W13-F8, blocks the default flip): 1.0 m is at or below the body-contact separation of two players, so against a MOVING
+        /// (and a stationary) man the marker stops in contact beside him — measured 0.82-0.84 m, level with him, not goal-side on
+        /// 54 of 60 strides away / 1 home against a 2.6 m/s runner — rather than 1.0 m goal-side. Whether the constant, a
+        /// contact-aware stand-off floor or the goal-side criterion should change is a calibration / owner decision (KD-W1:
+        /// not tuned here). Config key [defensive-ai] MarkStandoffTightM. Defensive AI #14 §3.13.1 / §6.1.
         /// </summary>
         public static readonly float MarkStandoffTightM = Config.GetFloat("defensive-ai", "MarkStandoffTightM", 1.0f);
 
@@ -381,4 +386,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.4     | 2026-11-10 | —      | W13.1 / ERR-014-010: + the §3.13.1 mark stand-off — [GT] MarkStandoffM 2.0 and |
 // |         |            |        | MarkStandoffTightM 1.0 (UN-CALIBRATED, range invariant documented and locked   |
 // |         |            |        | by test) and the first [DERIVED] region, OwnGoalCenter (0, PITCH_WIDTH_M / 2). |
+// | 1.5     | 2026-11-12 | —      | W13.1c final pass: MarkStandoffTightM documents the known body-contact limitation (W13-F8); doc only, value unchanged. |
 #endregion

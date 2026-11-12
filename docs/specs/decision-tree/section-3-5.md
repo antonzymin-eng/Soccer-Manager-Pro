@@ -465,17 +465,37 @@ whose WALK ceiling (`JogEnter`) brakes him.
 5 m/s → SPRINT. Man at exactly 5.8 m/s, marker 0 m/s → JOG (strict `>`). `HasMarkTarget` false → the distance tier alone,
 bit-identical to the text above.
 
-*Measured behaviour (non-certifying Linux; `MatchEngineMarkingTests.RunnerEnvelope_*`, a man accelerating from rest at 2 m/s²
-to the stated speed and running upfield for 60 strides, 2.0 m stand-off unless stated).* Peak marker-to-man gap, home / away:
-2.6 m/s 3.79 / 2.87 m; 3.5 m/s 3.81 / 2.87 m; 5.0 m/s 4.39 / 2.99 m; 2.6 m/s with the 1.0 m stand-off 1.36 / 3.24 m. The
-marker stays goal-side on every stride from stride 2 and no longer overshoots, but he does **not** close the lag the man opens
-while accelerating — he settles at the man's speed and follows (final gap ≈ peak for the home 3.5 and 5.0 m/s runs), so the
-plan's "within 3.0 m" is not met for the home runs. The asserted bound is the distance tier's own near limit,
-`MOVE_JOG_THRESHOLD` (6.0 m), plus goal-side; the peaks above are the measurements. **Known limitations (recorded, not fixed):**
-the tier has no hysteresis at the `JogEnter` boundary (a man at ≈ 2.2 m/s flips WALK / JOG stride by stride); a man running at his
-goal-side marker (toward the defended goal) collides with him and leaves him GROUNDED for about 2 s in the rig (open issue; blocks
-the default flip); closing the residual lag needs either an Agent Movement #2 target-speed / arrival-braking command or a new
-lag dial, neither of which this section invents.
+*Measured behaviour (non-certifying Linux; `MatchEngineMarkingTests.RunnerEnvelope_*` and the `[Explicit]` descriptive tests; a man
+accelerating from rest at 2 m/s² to the stated speed and running upfield for 60 strides, 2.0 m stand-off; the rig resets the man's
+cached speed and movement state — an earlier rig that did not produced a spurious home/away asymmetry and is not quoted).* Peak
+marker-to-man gap, home / away: 2.6 m/s 2.73 / 2.78 m; 3.5 m/s 2.73 / 2.78 m; 5.0 m/s 3.09 / 3.13 m. The marker is goal-side on
+every stride from stride 2 and no longer overshoots. The remaining lag is **uncorrected and phase-dependent**: the gate has no position
+term, so the marker neither closes the gap the man opens while accelerating nor is it bounded by anything but the distance tier; its size
+depends on where in the stride/threshold phase the man passes `JogEnter`. The asserted bound is the distance tier's own near limit,
+`MOVE_JOG_THRESHOLD` (6.0 m), plus goal-side; the peaks above are measurements, and the 5.0 m/s cases meet neither the plan's 3.0 m
+target (3.09 / 3.13 m) nor discriminate the gate (they pass with it reverted — regression coverage only). With the gate reverted the
+2.6 and 3.5 m/s cases reach 7.9–10.0 m and fail.
+
+**Known limitations (recorded, not fixed; each BLOCKS the default flip, OD-2):**
+- **Gate flapping and OscillationGuard locks (W13-F6).** The gate compares speed *magnitudes* (marker `|velocity|` against the man's
+  `|velocity|`, not the along-run component), so at **any** jog-band speed the command flips WALK / JOG almost every stride as the marker
+  oscillates around the man's speed, and Agent Movement's OscillationGuard (more than 6 state transitions per second ⇒ a 0.5 s state
+  lock) trips. Measured over the 60-stride run, both teams: 2.6 m/s 32 command flips (of 59), 4 lock entries, 23 locked strides; 3.5 m/s
+  37 flips, 3 locks, 15 locked strides; 5.0 m/s 13 flips, 0 locks (`Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks`, `[Explicit]`).
+  The tier has no hysteresis, so the flapping is not confined to a man near `JogEnter`.
+- **Marker orbits a stationary man's mark point (W13-F7).** Reviewer-observed on the OLD rig; on the corrected rig the descriptive
+  `Descriptive_StationaryMan_MarkerSettlingAndSeparation` measures, over the last 15 of 60 closure strides, a constant 2.20 m/s marker
+  speed, 0.01–0.86 m from the mark point (home; 0.02–0.86 m away) and 1.81–2.67 m from the man: the marker never settles. This
+  predates W13.1c (no arrival braking in Agent Movement #2; the DT keeps issuing WalkTo).
+- **1.0 m `TightMarking` stand-off is at body contact (W13-F8).** Against a stationary man the marker stops 0.82–1.11 m away and is goal-side
+  on 12 / 15 (home) and 4 / 15 (away) strides; against a 2.6 m/s runner he sits 0.82–0.84 m away level with him (not goal-side on 54 of 60
+  strides away, 1 of 60 home). Calibration / owner decision (KD-W1); the tight runner cases are descriptive only.
+- **A man running at his goal-side marker (W13-F5).** The marker is GROUNDED, speed 0.00, for 19 of 40 strides, minimum gap 0.68 m (home) /
+  0.50 m (away), and ends 6–10 m behind and not goal-side (corrected rig; not just a rig artefact).
+
+*Candidate real fix — an owner decision, not a plan:* an Agent Movement #2 arrival-braking or target-speed command (so a marker can be told
+"match 2.6 m/s and brake at the point"), or alternatively a position term / latch in this gate with its own (new, un-calibrated) dial. Neither
+is invented here.
 
 **Threshold constants** — listed in §3.4.7 constant table; defined in `UtilityWeights.cs`:
 

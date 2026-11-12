@@ -1,5 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
-// Modified: 2026-11-12 (ERR-008-028 amendment: pure SelectMarkTargetSpeed helper)
+// Modified: 2026-11-12 (ERR-008-028 amendment: pure SelectMarkTargetSpeed helper; read-only TestOnly_Command seam)
 // Modified: 2026-11-12 (W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed beside the mark target; + TestOnly_MarkTargetSpeed. No schema/RNG change; default behaviour identical)
 // Modified: 2026-11-11 (W13.1 / ERR-014-010: mark-target composition in RunMechanicsAI under MarkMovementEnabled (default off); shared TeamPossessionAgent helper; FillDefensiveSnapshot sets MarkMovementActive; + TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole. No schema/RNG change; default behaviour identical; ERR-021-010)
 // Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
@@ -2741,6 +2741,10 @@ namespace TacticalDirector.MatchEngine
         /// engine regardless of <see cref="MatchEngineConstants.MarkMovementEnabled"/>. Per-engine and not
         /// serialized, so a restored engine must be re-armed. Takes effect from the next AI stride.</summary>
         internal void TestOnly_ArmMarkMovement(bool armed) => _markMovementOverride = armed;
+
+        /// <summary>Test-only (W13.1c): the movement command currently held for <paramref name="agentId"/> (commands persist
+        /// between 10 Hz AI strides), so a test can count walk / jog command flips. Read-only.</summary>
+        internal MovementCommand TestOnly_Command(int agentId) => _commands[agentId];
 
         /// <summary>Test-only (W13.1c): the marked man's speed (m/s) the mechanics AI wrote beside the mark target at the
         /// last AI stride (0 when there is no marked man).</summary>
@@ -11305,4 +11309,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.18 | 2026-11-11 | — | W13.1 / ERR-014-010: #14 mark-target composition in RunMechanicsAI under MatchEngineConstants.MarkMovementEnabled (default off; engine-wide); shared TeamPossessionAgent helper (behaviour-neutral); FillDefensiveSnapshot sets MarkMovementActive; TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole seams. No schema, RNG or domain-tag change; switch off = byte-identical. |
 // | 2.19 | 2026-11-12 | — | W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed (the marked man's current speed; 0 for COVER_GK_ZONE) beside the mark target; TestOnly_MarkTargetSpeed seam. No schema, RNG or domain-tag change; switch off = unchanged. |
 // | 2.20 | 2026-11-12 | — | ERR-008-028 amendment: the marked man's speed selection extracted to the pure internal SelectMarkTargetSpeed (unit-tested); no behaviour change. |
+// | 2.21 | 2026-11-12 | — | W13.1c final pass: read-only TestOnly_Command seam (walk / jog command flips in a descriptive test). No behaviour, schema or RNG change. |
 #endregion

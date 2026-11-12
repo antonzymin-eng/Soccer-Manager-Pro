@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 12, 2026 (v0.13 — W13.1c review (`ERR-008-028` amendment): §3.13.1 "Pace" describes the mark speed as the world-frame agent velocity magnitude (was "the snapshot velocity") and notes the speed tier applies only while the marker is slower. v0.12: §3.13.1 pace input and #8 §3.5.6 cross-reference.)
-**Version:** 0.13
+**Last Updated:** November 12, 2026 (v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
+**Version:** 0.14
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1648,7 +1648,12 @@ anchored to the opponent, not to the formation slot.
 `TacticTranslation.MarkStandoffM`). Range invariant: `0 < MARK_STANDOFF_TIGHT_M <
 MARK_STANDOFF_M < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M [CROSS: #23])` = 3.0 m, so a
 marker standing on the point is inside the tackle-eligibility radius and counts as marking
-his man for #23 (§3.6.2). Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
+his man for #23 (§3.6.2). **Known limitation (W13.1c final pass, open issue W13-F8, blocks the default flip):** the tight value is at or below the
+body-contact separation of two players (~0.8 m between agent centres), so a `TightMarking` marker does not stand 1.0 m
+goal-side of his man: measured (non-certifying Linux) he stops in contact 0.82–1.11 m from a *stationary* man and 0.82–0.84 m, level
+with him, from a 2.6 m/s runner (not goal-side on 54 of 60 strides away, 1 of 60 home). Whether the constant, a contact-aware
+stand-off floor or the goal-side criterion should change is a calibration / owner decision (KD-W1); nothing here is tuned.
+Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
 that has never moved a defender; it is the calibration pass's input, not its output).
 
 **Units and ranges.** Metres; `s ∈ (0, 3.0)`; `L ∈ [0, 110.4]` (`|G − O|` is largest at a far corner of the pitch, O = (105, 0) or (105, 68): √(105² + 34²) = 110.4 m);
@@ -1703,3 +1708,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.11 | November 12, 2026 | AI agent (W13.1 review) | `ERR-014-010` review amendment (same commit as the `InvariantEnforcer` change). §3.10.2: Invariant order is 1 → 3 → 4 → 2 when `markMovementActive` so duplicate markers do not count against `MAX_MAN_MARK_ASSIGNMENTS` (worked case: 5 marks, two on one man), 1 → 2 → 3 unchanged otherwise; Known limitation: tackle intents precede the invariants, so a demoted agent may still issue a tackle intent that stride. §3.10.3 pseudocode reordered/annotated (Invariant 4 was shown between 2 and 3, wrong for either order) and the post-loop line names Invariant 4. §3.13.1: `L ∈ [0, 110.4]` (was 123.6; the far-corner distance from G = (0, 34) is √(105² + 34²)). |
 | 0.12 | November 12, 2026 | AI agent (W13.1c) | `ERR-008-028`: §3.13.1 gains "Pace" — the composition root writes the marked man's current speed (m/s; 0 for COVER_GK_ZONE) beside the mark target so #8 §3.5.6 can pace a mark-point MOVE at max(distance tier, man's speed tier). Cross-reference only; #14's composer is unchanged. |
 | 0.13 | November 12, 2026 | AI agent (W13.1c review) | `ERR-008-028` amendment: §3.13.1 "Pace" wording corrected — `v` is the magnitude of the world-frame agent velocity (`_agents[id].Velocity`), frame-invariant, not of the #14 snapshot velocity; the #8 speed tier applies only while the marker is slower than his man. Documentation only. |
+| 0.14 | November 12, 2026 | AI agent (W13.1c final pass) | §3.13.1 stand-off paragraph gains the W13-F8 known limitation (the 1.0 m tight stand-off is at / below body contact; measured separations). No value or formula change. |

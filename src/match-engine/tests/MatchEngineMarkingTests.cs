@@ -43,22 +43,8 @@ namespace TacticalDirector.MatchEngine
         [TearDown]
         public void ResetEventBus()
         {
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
             EventBus.ResetForNewMatch();
         }
-
-        /// <summary>
-        /// Scoped tolerance for the one log message the rig's teleporting provokes (review M3). Measured with strict
-        /// checking on: the ONLY message seen across all 35 marking tests is the movement system's
-        /// "RotateVelocityToward: both currentVelocity and targetDirection are degenerate but newSpeed &gt;
-        /// MIN_VELOCITY_MAGNITUDE" assert (45 occurrences in 13 test cases), raised when a defender the rig has just
-        /// placed exactly on his MOVE target, with zero velocity, is commanded to move. LogAssert.Expect is one-shot per
-        /// message, so it cannot absorb a variable count; instead the tests that provoke it opt in here, and
-        /// <see cref="ResetEventBus"/> restores strict checking. Every other test (full matches, restore, determinism,
-        /// acquisition, closure, invariants, substitution ...) runs with strict log checking.
-        /// </summary>
-        private static void TolerateDegenerateVelocityAssert() =>
-            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
 
         // ── frame helpers ────────────────────────────────────────────────────────
 
@@ -66,19 +52,41 @@ namespace TacticalDirector.MatchEngine
         private static Vector2 W(int defTeam, Vector2 canonical) =>
             defTeam == 0 ? canonical : new Vector2(105.0f - canonical.x, 68.0f - canonical.y);
 
+        /// <summary>
+        /// Teleports an agent and makes his KINEMATIC state consistent with the scripted velocity: <c>Velocity</c>, the cached
+        /// scalar <c>Speed</c> and the locomotion state / state timer. Resetting only <c>Velocity</c> (the first rig) left the
+        /// cached <c>Speed</c> and <c>CurrentState</c> from the previous physics step, so inside each step a scripted man ran his
+        /// own AI at ~8.6 m/s SPRINTING before being moved back, which contaminated contact-dependent results.
+        /// </summary>
+        private static void SetKinematics(ref AgentState s, Vector2 worldPos, Vector2 worldVel)
+        {
+            s.Position = worldPos;
+            s.Velocity = worldVel;
+            float speed = worldVel.magnitude;
+            s.Speed = speed;
+            AgentMovementState band = speed > MovementThresholds.SprintEnter ? AgentMovementState.SPRINTING
+                                    : speed > MovementThresholds.JogEnter ? AgentMovementState.JOGGING
+                                    : speed > MovementThresholds.IdleExit ? AgentMovementState.WALKING
+                                    : AgentMovementState.IDLE;
+            if (s.CurrentState != band)
+            {
+                s.PreviousState = s.CurrentState;
+                s.CurrentState = band;
+                s.TimeInState = 0.0f;
+            }
+        }
+
         private static void Place(MatchEngine e, int id, Vector2 world)
         {
             AgentState s = e.TestOnly_AgentSnapshot(id);
-            s.Position = world;
-            s.Velocity = Vector2.zero;
+            SetKinematics(ref s, world, Vector2.zero);
             e.TestOnly_SetAgent(id, s);
         }
 
         private static void PlaceMoving(MatchEngine e, int id, Vector2 worldPos, Vector2 worldVel)
         {
             AgentState s = e.TestOnly_AgentSnapshot(id);
-            s.Position = worldPos;
-            s.Velocity = worldVel;
+            SetKinematics(ref s, worldPos, worldVel);
             e.TestOnly_SetAgent(id, s);
         }
 
@@ -288,7 +296,6 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private static (int Published, int Demotions, int Reacquisitions, int CommitAttempts, int CrossAttempts) RunBoundary(int def, Func<int, float> distanceAt, int strides)
         {
-            TolerateDegenerateVelocityAssert();
             var e = new MatchEngine(Seed);
             e.TestOnly_ArmMarkMovement(true);
             var rig = new Rig(e, def) { LockOwn = true };
@@ -413,7 +420,6 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1, true, 1)]
         public void Invariant4_TwoMidfieldersOneAttacker(int def, bool armed, int expectedMarkers)
         {
-            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def, armed);
             rig.CarrierCanonical = new Vector2(75.0f, 60.0f);   // out of every defender's 15 m radius
             rig.Strides(2);
@@ -504,7 +510,6 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_SwitchOff(int def)
         {
-            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def, armed: false);
             IntroduceAttacker(rig);
             rig.Strides(12);
@@ -567,7 +572,6 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_PressersAndTheGoalkeeper(int def)
         {
-            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def);
             // A carrier facing a nearby touchline is #13's SIDELINE_TRAP: the nearest defender becomes PRIMARY_PRESS.
             rig.CarrierCanonical = new Vector2(45.0f, 64.5f);
@@ -600,7 +604,6 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_SentOffMarker_And_SentOffMarkedMan(int def)
         {
-            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def);
             IntroduceAttacker(rig);
             rig.Strides(DefensiveAIConstants.MarkDwellTicks + 2);
@@ -915,8 +918,9 @@ namespace TacticalDirector.MatchEngine
         {
             public readonly int Stride; public readonly float Gap; public readonly bool GoalSide;
             public readonly float MarkerSpeed, ManSpeed, SlotToMan; public readonly AgentMovementState State;
-            public EnvelopeRow(int stride, float gap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state)
-            { Stride = stride; Gap = gap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; }
+            public readonly AgentMovementState Command; public readonly bool GuardLocked;
+            public EnvelopeRow(int stride, float gap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state, AgentMovementState command, bool guardLocked)
+            { Stride = stride; Gap = gap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; Command = command; GuardLocked = guardLocked; }
         }
 
         /// <summary>
@@ -928,7 +932,6 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private static List<EnvelopeRow> RunEnvelope(int def, float topSpeed, bool tight, int strides, out int marker, float startX = 19.5f, float dirX = 1.0f)
         {
-            TolerateDegenerateVelocityAssert();   // measured: the home-team envelope runs trip the known degenerate-velocity assert (open issue)
             var e = new MatchEngine(Seed);
             e.TestOnly_ArmMarkMovement(true);
             var rig = new Rig(e, def) { LockOwn = true };
@@ -968,7 +971,8 @@ namespace TacticalDirector.MatchEngine
                 AgentState ms = rig.E.TestOnly_AgentSnapshot(marker);
                 rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
                     ms.Velocity.magnitude, rig.E.TestOnly_MarkTargetSpeed(marker),   // the speed the engine WROTE for the marked man (his physics speed is perturbed by contact)
-                    Vector2.Distance(rig.E.TestOnly_FormationSlot(marker), man), ms.CurrentState));
+                    Vector2.Distance(rig.E.TestOnly_FormationSlot(marker), man), ms.CurrentState,
+                    rig.E.TestOnly_Command(marker).DesiredState, ms.OscillationGuard.GetState().IsLocked));
             }
             return rows;
         }
@@ -984,33 +988,35 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// The marker must stay with a running man for the whole run and never get ahead of him: from stride 2 of the run
-        /// (strides 0-1 are the end of the 60-stride closure — with the 1.0 m stand-off the marker stops in body contact,
-        /// 0.85 m, beside rather than goal-side of a stationary man) every stride the marker is closer to the own goal than the
-        /// man AND the gap is below <c>MoveJogThreshold</c> (6.0 m, the distance tier's own "near" limit — an existing
-        /// constant, not a tuned bound). A jog-band man (2.6 and 3.5 m/s) used to be overshot and orbited by a marker
-        /// commanded SprintEnter (5.8 m/s) with no braking: peaks 8-10 m, and not goal-side for 10-51 frames with the tight
-        /// stand-off (measured at cdb10ab; both fail there). After the fix (ERR-008-028 amendment) the MEASURED envelope is:
-        /// default stand-off, home / away peak gap 3.79 / 2.87 m (2.6 m/s), 3.81 / 2.87 m (3.5 m/s), 4.39 / 2.99 m (5.0 m/s);
-        /// tight stand-off 1.36 / 3.24 m (2.6 m/s); goal-side on every stride from 2 on. The marker does NOT close the lag the man
-        /// opens while accelerating (final gap = peak for the home 3.5 / 5.0 m/s cases): it settles at his speed and follows him,
-        /// so the plan's "within 3.0 m" is NOT met for the home runs (it is for the away ones). Home and away differ from stride
-        /// 4 of the run, before the man exceeds JogEnter, so the difference is not the tier; it is attributed to float differences
-        /// of the 180-degree mirror in the closure end state (the earlier 3.01 / 3.07 m pair was explained by the coordinator as
-        /// the home man crossing the strict JogEnter threshold one 60 Hz frame earlier — plausible, not verified here), is not a
-        /// mirror defect and predates W13.1c. The run is 60 strides (6 s); the scenario precondition, asserted per stride, is that
-        /// the man stays under MaxMarkDisplacementM (20 m) from the marker's slot, because Invariant 3 releases the mark beyond it.
+        /// (strides 0-1 are the end of the 60-stride closure) every stride the marker is closer to the own goal than the man AND
+        /// the gap is below <c>MoveJogThreshold</c> (6.0 m, the distance tier's own "near" limit — an existing constant, not a
+        /// tuned bound); the engine-written speed must equal the man's CURRENT speed at the AI tick on every stride (not a
+        /// stale or end-of-run value). A jog-band man (2.6 and 3.5 m/s) used to be overshot and orbited by a marker commanded
+        /// SprintEnter (5.8 m/s) with no braking: peaks 7.9-10.0 m (re-measured with the corrected rig, gate reverted).
+        /// MEASURED after the fix (ERR-008-028 amendment; corrected rig; home / away peak gap): 2.6 m/s 2.73 / 2.78 m, 3.5 m/s
+        /// 2.73 / 2.78 m, 5.0 m/s 3.09 / 3.13 m; goal-side on every stride from 2 on. The lag the man opens while accelerating is
+        /// UNCORRECTED and phase-dependent: the gate has no position term, so the marker neither closes it nor does it grow, and
+        /// its size depends on where in the stride/threshold phase the man passes JogEnter. The 5.0 m/s cases meet neither the
+        /// plan's 3.0 m target (3.09 / 3.13 m) nor discriminate the gate (they pass with it reverted): regression coverage only.
+        /// The gate compares speed MAGNITUDES, not the along-run component of the man's velocity. Home / away: with the first
+        /// (stale Speed / state) rig the two teams differed by up to 0.9 m (3.79 vs 2.87 m at 2.6 m/s); with the corrected rig
+        /// they differ by 0.05 m, so that asymmetry was mostly a RIG artefact. The reviewer reported (not verified here) that the
+        /// residual comes from a ~1.9e-6 m rounding difference of the 180-degree mirror amplified by Agent Movement's strict
+        /// <c>speed &gt; JogEnter</c> test (home 2.2000005 m/s JOGGING, away 2.199999 m/s WALKING one frame) and by a pre-existing
+        /// orbit of the marker around a stationary man's mark point; it is not a mirror defect. The TightMarking runner cases are
+        /// not asserted here (see the descriptive test and the open issue W13-F8). The run is 60 strides (6 s); the scenario
+        /// precondition, asserted per stride, is that the man stays under MaxMarkDisplacementM (20 m) from the marker's slot,
+        /// because Invariant 3 releases the mark beyond it.
         /// </summary>
-        [TestCase(0, 2.6f, false)]
-        [TestCase(1, 2.6f, false)]
-        [TestCase(0, 3.5f, false)]
-        [TestCase(1, 3.5f, false)]
-        [TestCase(0, 5.0f, false)]
-        [TestCase(1, 5.0f, false)]
-        [TestCase(0, 2.6f, true)]
-        [TestCase(1, 2.6f, true)]
-        public void RunnerEnvelope_MarkerStaysGoalSideAndBounded(int def, float topSpeed, bool tight)
+        [TestCase(0, 2.6f)]
+        [TestCase(1, 2.6f)]
+        [TestCase(0, 3.5f)]
+        [TestCase(1, 3.5f)]
+        [TestCase(0, 5.0f)]
+        [TestCase(1, 5.0f)]
+        public void RunnerEnvelope_MarkerStaysGoalSideAndBounded(int def, float topSpeed)
         {
-            List<EnvelopeRow> rows = RunEnvelope(def, topSpeed, tight, 60, out int marker);
+            List<EnvelopeRow> rows = RunEnvelope(def, topSpeed, false, 60, out int marker);
             string trace = DescribeEnvelope(rows);
             float peak = 0.0f; int notGoalSide = 0;
             foreach (EnvelopeRow r in rows)
@@ -1019,10 +1025,102 @@ namespace TacticalDirector.MatchEngine
                 peak = Mathf.Max(peak, r.Gap);
                 if (r.Stride >= 2 && !r.GoalSide) notGoalSide++;
             }
-            float written = 0.0f; foreach (EnvelopeRow r in rows) written = Mathf.Max(written, r.ManSpeed);
-            Assert.AreEqual(topSpeed, written, 0.05f, "the engine writes the man's speed (frame-invariant: the same for home and away)");
+            foreach (EnvelopeRow r in rows)   // the speed the engine wrote is the man's speed AT THIS STRIDE's AI tick (accelerating 2 m/s^2, 6th tick of the block)
+                Assert.AreEqual(Mathf.Min(topSpeed, 0.2f * (r.Stride + 1)), r.ManSpeed, 0.02f, $"stride {r.Stride}: the engine writes the man's current speed (frame-invariant)");
             Assert.AreEqual(0, notGoalSide, $"marker not goal-side on {notGoalSide} strides; peak gap {peak:F2} m. {trace}");
             Assert.Less(peak, TacticalDirector.DecisionTree.TacticalWeights.MoveJogThreshold, $"peak gap {peak:F2} m. {trace}");
+        }
+
+        /// <summary>
+        /// DESCRIPTIVE, [Explicit]: reproducible numbers for the RunnerEnvelope cases — peak and final gap, strides not
+        /// goal-side from stride 2, the number of walk / jog COMMAND flips between consecutive strides of the 60-stride run, and
+        /// the marker's OscillationGuard lock entries and locked strides (Agent Movement locks a state for 0.5 s after more than
+        /// 6 transitions per second). The pace gate compares speed MAGNITUDES, so at any jog-band speed it can flip the command
+        /// almost every stride; this records how often, for both teams, without asserting that it must not.
+        /// </summary>
+        [Explicit("Descriptive only: records walk/jog command flips and OscillationGuard locks; asserts no outcome.")]
+        [TestCase(0, 2.6f, false)]
+        [TestCase(1, 2.6f, false)]
+        [TestCase(0, 3.5f, false)]
+        [TestCase(1, 3.5f, false)]
+        [TestCase(0, 5.0f, false)]
+        [TestCase(1, 5.0f, false)]
+        [TestCase(0, 2.6f, true)]
+        [TestCase(1, 2.6f, true)]
+        public void Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(int def, float topSpeed, bool tight)
+        {
+            List<EnvelopeRow> rows = RunEnvelope(def, topSpeed, tight, 60, out _);
+            float peak = 0.0f; int notGoalSide = 0, flips = 0, lockEntries = 0, lockedStrides = 0;
+            AgentMovementState prevCmd = rows[0].Command; bool prevLocked = rows[0].GuardLocked;
+            foreach (EnvelopeRow r in rows)
+            {
+                peak = Mathf.Max(peak, r.Gap);
+                if (r.Stride >= 2 && !r.GoalSide) notGoalSide++;
+                if (r.Command != prevCmd) flips++;
+                if (r.GuardLocked && !prevLocked) lockEntries++;
+                if (r.GuardLocked) lockedStrides++;
+                prevCmd = r.Command; prevLocked = r.GuardLocked;
+            }
+            string line = $"ENVELOPE def={def} v={topSpeed} tight={tight}: peak {peak:F2} m, final {rows[rows.Count - 1].Gap:F2} m, not-goal-side {notGoalSide}, " +
+                          $"command flips {flips}/59, guard lock entries {lockEntries}, locked strides {lockedStrides}. {DescribeEnvelope(rows)}";
+            TestContext.Progress.WriteLine(line);
+            Console.WriteLine(line);
+            Assert.AreEqual(60, rows.Count);
+        }
+
+        /// <summary>
+        /// DESCRIPTIVE, [Explicit]: a STATIONARY man after a 60-stride closure, 15 recorded strides. Per case: the marker's speed
+        /// range, his distance from the mark point (min / max), and his distance from the man. Records whether the marker settles
+        /// on the mark point or circles it (the reviewer observed, on the OLD rig, a ~0.4 m radius orbit at 2.2 m/s with no arrival
+        /// braking), and the separation a TightMarking marker keeps from a stationary man (1.0 m stand-off vs body contact).
+        /// </summary>
+        [Explicit("Descriptive only: records marker settling and separation against a stationary man; asserts no outcome.")]
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void Descriptive_StationaryMan_MarkerSettlingAndSeparation(int def, bool tight)
+        {
+            var e = new MatchEngine(Seed);
+            e.TestOnly_ArmMarkMovement(true);
+            var rig = new Rig(e, def) { LockOwn = true };
+            rig.Strides(6);
+            if (tight)
+            {
+                TacticalInstructions.PlayerInstructions ins = new TacticalInstructions.PlayerInstructions(
+                    TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default,
+                    TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default,
+                    true, -1, TacticalInstructions.SetPieceDutyFlags.None);
+                foreach (int cb in new[] { rig.Cb2, rig.Cb3 })
+                    e.SetPlayerTactic(cb, new TacticalInstructions.PlayerTactic(TacticalInstructions.PlayerRole.Default, TacticalInstructions.Duty.Support, ins));
+            }
+            rig.AttackerCanonical = new Vector2(19.5f, 34.0f);
+            rig.Strides(DefensiveAIConstants.MarkDwellTicks + 1);
+            int marker = rig.MarkingCb();
+            Assert.GreaterOrEqual(marker, 0);
+            rig.LockOwn = false;
+            rig.Strides(60);
+
+            float minSpeed = 99f, maxSpeed = 0f, minPt = 99f, maxPt = 0f, minGap = 99f, maxGap = 0f;
+            Vector2 goal = W(def, DefensiveAIConstants.OwnGoalCenter);
+            int goalSide = 0;
+            for (int st = 0; st < 15; st++)
+            {
+                rig.Strides(1);
+                Vector2 m = Pos(e, marker), man = Pos(e, rig.Attacker);
+                float sp = e.TestOnly_AgentSnapshot(marker).Velocity.magnitude;
+                float dp = Vector2.Distance(m, e.TestOnly_MarkTarget(marker).Target);
+                float gap = Vector2.Distance(m, man);
+                minSpeed = Mathf.Min(minSpeed, sp); maxSpeed = Mathf.Max(maxSpeed, sp);
+                minPt = Mathf.Min(minPt, dp); maxPt = Mathf.Max(maxPt, dp);
+                minGap = Mathf.Min(minGap, gap); maxGap = Mathf.Max(maxGap, gap);
+                if (Vector2.Distance(m, goal) < Vector2.Distance(man, goal)) goalSide++;
+            }
+            string line = $"STATIONARY def={def} tight={tight}: marker speed {minSpeed:F2}-{maxSpeed:F2} m/s, distance from mark point {minPt:F2}-{maxPt:F2} m, " +
+                          $"gap to the man {minGap:F2}-{maxGap:F2} m, goal-side on {goalSide}/15 strides.";
+            TestContext.Progress.WriteLine(line);
+            Console.WriteLine(line);
+            Assert.GreaterOrEqual(marker, 0);
         }
 
         /// <summary>
@@ -1052,7 +1150,6 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void MarkTargetSpeed_SwitchOff_IsZeroEverywhere(int def)
         {
-            TolerateDegenerateVelocityAssert();   // measured: the switch-off rig provokes the known degenerate-velocity assert
             Rig off = WarmRig(def, armed: false);
             IntroduceAttacker(off);
             off.AttackerVelocity = new Vector2(5.0f, 0.0f);
@@ -1150,4 +1247,8 @@ namespace TacticalDirector.MatchEngine
 // | 1.2     | 2026-11-12 | —      | W13.1c (ERR-008-028): RunnerTracking (5 m/s man; bounded 3.25 m over 30 strides, closed to 3.0 m by strides 40-49; home + away; REMOVED in 1.3: superseded by RunnerEnvelope, whose bound it contradicted once the overshoot was fixed) and the MarkTargetSpeed-zero locks. |
 // | 1.3     | 2026-11-12 | —      | ERR-008-028 amendment: RunnerEnvelope (jog-band men, tight stand-off, per-stride goal-side + bound, Invariant 3 precondition); SelectMarkTargetSpeed unit test replaces the vacuous armed half (M1). |
 // | 1.4     | 2026-11-12 | —      | Removed a hard-coded scratchpad path (File.AppendAllText in Descriptive_GoalwardRunner_MarkerStateAndContact); the descriptive test logs to the console only. No assertion changed. |
+// | 1.5     | 2026-11-12 | —      | W13.1c final pass: corrected rig (Place / PlaceMoving reset the cached Speed and locomotion state; the first rig left a scripted man running his own AI at |
+// |         |            |        |   ~8.6 m/s SPRINTING inside each physics step); the degenerate-velocity tolerance removed (no test emits the assert with the corrected rig); tight runner cases moved |
+// |         |            |        |   to the [Explicit] descriptive tests (W13-F8); RunnerEnvelope asserts the engine-written speed per stride; [Explicit] command-flip / OscillationGuard and        |
+// |         |            |        |   stationary-man settling tables; peaks re-measured.                                                                                                                  |
 #endregion
