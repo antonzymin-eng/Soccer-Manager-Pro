@@ -1,5 +1,6 @@
 // File:     src/defensive-ai/InvariantEnforcer.cs
 // Created:  2026-05-29
+// Modified: 2026-11-12 (W13.1 review M2: Invariant order 1-3-4-2 when MarkMovementActive; 1-2-3 unchanged otherwise)
 // Modified: 2026-11-10 (W13.1 / ERR-014-010 — Invariant 4: one marker per opponent, gated by DefensiveSnapshot.MarkMovementActive)
 // Author:   —
 // Spec:     Defensive AI #14 §3.10, §4.3, FR-DA-024–028, FR-DA-039, ERR-014-008, ERR-014-010, Code Standards #20
@@ -19,7 +20,8 @@ namespace TacticalDirector.DefensiveAI
     /// Invariant 3: non-ZONAL displacement from baseline &lt;= MAX_MARK_DISPLACEMENT_M (FR-DA-027).
     /// Invariant 4 (W13.1, ERR-014-010, FR-DA-039): at most one marker per opponent — runs ONLY when
     /// <see cref="DefensiveSnapshot.MarkMovementActive"/> is true, so the default pipeline is exactly the
-    /// three-invariant one.
+    /// three-invariant one (order 1, 2, 3). With it active the order is 1, 3, 4, 2: Invariant 4 precedes the
+    /// MAN_MARK cap so duplicate markers do not count against it (review amendment).
     ///
     /// Returns false on F4 (hard fallback: emit all-ZONAL per FR-DA-032).
     /// Pure static; zero allocation. Defensive AI #14 §3.10 / §4.3.
@@ -72,16 +74,26 @@ namespace TacticalDirector.DefensiveAI
                     return false; // Backline minimum unreachable — F4 hard fallback (FR-DA-032).
                 changed |= s1 == InvariantStep.Demoted;
 
-                // --- Invariant 2: maximum MAN_MARK assignments ---
-                changed |= EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                if (!snapshot.MarkMovementActive)
+                {
+                    // --- Invariant 2: maximum MAN_MARK assignments ---
+                    changed |= EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
 
-                // --- Invariant 3: maximum displacement ---
-                changed |= EnforceMaxDisplacement(snapshot, poolBuffer, poolCount, currentTick, assignments);
-
-                // --- Invariant 4 (W13.1): one marker per opponent — only when the assignments will move
-                // defenders. Demotion is monotonic like 1-3, so it cannot re-violate them.
-                if (snapshot.MarkMovementActive)
+                    // --- Invariant 3: maximum displacement ---
+                    changed |= EnforceMaxDisplacement(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                }
+                else
+                {
+                    // W13.1 (ERR-014-010 review amendment): with mark movement active the order is 1 -> 3 -> 4 -> 2.
+                    // Invariant 4 must run BEFORE the MAN_MARK cap: a duplicate marker is removed anyway, so
+                    // counting it against the cap would demote a lone-marker opponent's marker needlessly
+                    // (5 marks, two on one man: the cap would drop the lowest-threat man's marker and
+                    // Invariant 4 then drop the duplicate, leaving 3 marks and a man unmarked).
+                    // Demotions are monotonic, so no step can re-violate an earlier one.
+                    changed |= EnforceMaxDisplacement(snapshot, poolBuffer, poolCount, currentTick, assignments);
                     changed |= EnforceOneMarkerPerOpponent(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                    changed |= EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                }
 
                 if (!changed)
                     break; // Stable: no demotion this pass.
@@ -420,4 +432,6 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   squared marker-to-opponent distance, then lowest EntityId; losers demoted) inside the existing   |
 // |         |            |        |   pass loop and the final check, active ONLY when DefensiveSnapshot.MarkMovementActive — default   |
 // |         |            |        |   behaviour unchanged.                                                                              |
+// | 1.5     | 2026-11-12 | —      | W13.1 review M2 (ERR-014-010 amendment): with MarkMovementActive the invariant order is 1, 3, 4, 2 (was 1, 2, 3, 4), so  |
+// |         |            |        |   duplicate markers no longer count against the MAN_MARK cap; with it false the order is exactly 1, 2, 3 as before.      |
 #endregion

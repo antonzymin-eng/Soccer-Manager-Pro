@@ -47,6 +47,19 @@ namespace TacticalDirector.MatchEngine
             EventBus.ResetForNewMatch();
         }
 
+        /// <summary>
+        /// Scoped tolerance for the one log message the rig's teleporting provokes (review M3). Measured with strict
+        /// checking on: the ONLY message seen across all 35 marking tests is the movement system's
+        /// "RotateVelocityToward: both currentVelocity and targetDirection are degenerate but newSpeed &gt;
+        /// MIN_VELOCITY_MAGNITUDE" assert (45 occurrences in 13 test cases), raised when a defender the rig has just
+        /// placed exactly on his MOVE target, with zero velocity, is commanded to move. LogAssert.Expect is one-shot per
+        /// message, so it cannot absorb a variable count; instead the tests that provoke it opt in here, and
+        /// <see cref="ResetEventBus"/> restores strict checking. Every other test (full matches, restore, determinism,
+        /// acquisition, closure, invariants, substitution ...) runs with strict log checking.
+        /// </summary>
+        private static void TolerateDegenerateVelocityAssert() =>
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+
         // ── frame helpers ────────────────────────────────────────────────────────
 
         /// <summary>Canonical (defending team's attack-+X frame) to world: identity for home, 180-degree rotation for away. Self-inverse.</summary>
@@ -93,10 +106,6 @@ namespace TacticalDirector.MatchEngine
 
             public Rig(MatchEngine e, int def)
             {
-                // The rig teleports agents with zero velocity every tick; a sprint command issued from a standing
-                // start can then trip the movement system's degenerate-velocity assert (MatchBalanceDiagnosticTests
-                // precedent). The fixture TearDown restores strict log checking.
-                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
                 E = e; Def = def; Own = def * Per; Opp = (1 - def) * Per;
                 Carrier = Opp + 5; Attacker = Opp + 9; Cb2 = Own + 2; Cb3 = Own + 3; Gk = Own;
             }
@@ -272,8 +281,9 @@ namespace TacticalDirector.MatchEngine
         /// consumed target is within 20 + s of the slot, and at least MarkDwellTicks strides separate a demotion
         /// from the next acquisition. Returns (published strides, demotions, reacquisitions).
         /// </summary>
-        private static (int Published, int Demotions, int Reacquisitions) RunBoundary(int def, Func<int, float> distanceAt, int strides)
+        private static (int Published, int Demotions, int Reacquisitions, int CommitAttempts, int CrossAttempts) RunBoundary(int def, Func<int, float> distanceAt, int strides)
         {
+            TolerateDegenerateVelocityAssert();
             var e = new MatchEngine(Seed);
             e.TestOnly_ArmMarkMovement(true);
             var rig = new Rig(e, def) { LockOwn = true };
@@ -281,7 +291,7 @@ namespace TacticalDirector.MatchEngine
             int marker = rig.Own + 6;                  // a central midfielder: Invariant 1 (back line) cannot interfere
             rig.LockOwn = false;
 
-            int published = 0, demotions = 0, reacq = 0, lastDemotion = -1000;
+            int published = 0, demotions = 0, reacq = 0, lastDemotion = -1000, attempts = 0, crossAttempts = 0, prevHold = 0;
             bool prevMark = false;
             float s = DefensiveAIConstants.MarkStandoffM;
             for (int st = 0; st < strides; st++)
@@ -319,16 +329,34 @@ namespace TacticalDirector.MatchEngine
                         $"stride {st}: re-acquired only {st - lastDemotion} strides after the demotion at {lastDemotion}");
                 }
                 prevMark = marked;
+
+                // A commit attempt: the candidate accumulator reached MarkDwellTicks and the gate committed (HoldTicks
+                // resets to 0, DwellCounter = MarkDwellTicks) — whether or not Invariant 3 then left the mark published.
+                MarkHysteresisState h = e.TestOnly_DefensiveState(def).Hysteresis[marker];
+                if (h.HoldTicks == 0 && prevHold >= DefensiveAIConstants.MarkDwellTicks - 1 && h.DwellCounter == DefensiveAIConstants.MarkDwellTicks)
+                {
+                    attempts++;
+                    if (d > DefensiveAIConstants.MaxMarkDisplacementM) crossAttempts++;
+                }
+                prevHold = h.HoldTicks;
             }
-            return (published, demotions, reacq);
+            return (published, demotions, reacq, attempts, crossAttempts);
         }
 
-        /// <summary>The plan's strict alternation 19.9 / 20.1 m: the mark is never published on a > 20 m stride.</summary>
+        /// <summary>
+        /// The plan's strict alternation 19.9 / 20.1 m. The candidate keeps being preferred, so the gate commits every
+        /// MarkDwellTicks-th stride — and that stride is always a 20.1 m one, where Invariant 3 demotes at once: commit
+        /// attempts occur (hysteresis HoldTicks reaches MarkDwellTicks and resets, DwellCounter = MarkDwellTicks) while
+        /// the published mode stays ZONAL on every stride and no target is ever consumed.
+        /// </summary>
         [TestCase(0)]
         [TestCase(1)]
-        public void Boundary_StrictAlternation_NeverPublishesBeyond20m(int def)
+        public void Boundary_StrictAlternation_CommitsAreDemotedOnTheCrossingStride(int def)
         {
-            RunBoundary(def, st => st % 2 == 0 ? 19.9f : 20.1f, 40);
+            (int published, _, _, int attempts, int crossAttempts) = RunBoundary(def, st => st % 2 == 0 ? 19.9f : 20.1f, 40);
+            Assert.GreaterOrEqual(attempts, 5, "the gate commits repeatedly (HoldTicks reaches MarkDwellTicks)");
+            Assert.AreEqual(attempts, crossAttempts, "every commit lands on a 20.1 m stride");
+            Assert.AreEqual(0, published, "and the published mode stays ZONAL: Invariant 3 demotes each commit at once");
         }
 
         /// <summary>
@@ -340,7 +368,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void Boundary_HoldThenCross_DemotesAndReacquiresAfterTheDwell(int def)
         {
-            (int published, int demotions, int reacq) = RunBoundary(def, st => st % 9 == 8 ? 20.1f : 19.9f, 60);
+            (int published, int demotions, int reacq, _, _) = RunBoundary(def, st => st % 9 == 8 ? 20.1f : 19.9f, 60);
             Assert.Greater(published, 10, "the mark is held for most strides");
             Assert.GreaterOrEqual(demotions, 3, "each 20.1 m stride demotes");
             Assert.GreaterOrEqual(reacq, 2, "and the mark is re-acquired afterwards");
@@ -380,6 +408,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1, true, 1)]
         public void Invariant4_TwoMidfieldersOneAttacker(int def, bool armed, int expectedMarkers)
         {
+            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def, armed);
             rig.CarrierCanonical = new Vector2(75.0f, 60.0f);   // out of every defender's 15 m radius
             rig.Strides(2);
@@ -470,6 +499,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_SwitchOff(int def)
         {
+            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def, armed: false);
             IntroduceAttacker(rig);
             rig.Strides(12);
@@ -532,6 +562,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_PressersAndTheGoalkeeper(int def)
         {
+            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def);
             // A carrier facing a nearby touchline is #13's SIDELINE_TRAP: the nearest defender becomes PRIMARY_PRESS.
             rig.CarrierCanonical = new Vector2(45.0f, 64.5f);
@@ -564,6 +595,7 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1)]
         public void NoTarget_SentOffMarker_And_SentOffMarkedMan(int def)
         {
+            TolerateDegenerateVelocityAssert();
             Rig rig = WarmRig(def);
             IntroduceAttacker(rig);
             rig.Strides(DefensiveAIConstants.MarkDwellTicks + 2);
@@ -759,12 +791,15 @@ namespace TacticalDirector.MatchEngine
         // ── 9. switch-off identity ───────────────────────────────────────────────
 
         /// <summary>
-        /// Switch off (the shipped default, no arming) writes no mark target over a full five-minute match, and an
-        /// explicit Arm(false) is byte-identical to the default throughout; the armed match, by contrast, differs
-        /// (so the identity is not vacuous).
+        /// Switch off (the shipped default, no arming) writes no mark target over a full five-minute match, whether the
+        /// engine is left as shipped or explicitly disarmed; the same match armed does write targets and differs. This is
+        /// a self-consistency check, NOT evidence of identity with the pre-W13.1 engine: the shipped default and
+        /// <c>Arm(false)</c> resolve through the same code path, so their equality here is true by construction. The
+        /// identity evidence is the env-gated <see cref="IdentityProbe_SixSeedDigestsAtFrame18000"/> compared across the
+        /// W13.0 and W13.1 tips (and the unchanged pre-existing suites).
         /// </summary>
         [Test]
-        public void SwitchOff_NeverWritesATarget_AndExplicitFalseEqualsTheDefault()
+        public void SwitchOff_NeverWritesATarget_AndTheArmedMatchDiffers()
         {
             Assert.IsFalse(MatchEngineConstants.MarkMovementEnabled, "the shipped default is off");
             const int Frames = 18000;
@@ -774,12 +809,12 @@ namespace TacticalDirector.MatchEngine
 
             Assert.AreEqual(0, nPlain, "default: no mark target is ever written");
             Assert.AreEqual(0, nOff, "explicitly disarmed: none either");
-            for (int i = 0; i < plain.Count; i++) CollectionAssert.AreEqual(plain[i], off[i], $"checkpoint {i}: Arm(false) differs from the default");
+            for (int i = 0; i < plain.Count; i++) CollectionAssert.AreEqual(plain[i], off[i], $"checkpoint {i}: Arm(false) differs from the default (same code path; by construction)");
             CollectionAssert.AreEqual(tPlain, tOff);
             Assert.Greater(nOn, 0, "armed: targets are written");
             bool differs = false;
             for (int i = 0; i < plain.Count && !differs; i++) differs = !Equal(plain[i], on[(i + 1) * 5 - 1]);   // 3,000-frame checkpoints vs the armed run's 600-frame ones
-            Assert.IsTrue(differs, "the armed match differs from the switch-off match, so the identity above is not vacuous");
+            Assert.IsTrue(differs, "the armed match differs from the switch-off match, so the no-target assertions above are not vacuous");
         }
 
         /// <summary>mode 0 = engine as shipped (no arming call), 1 = Arm(false), 2 = Arm(true).</summary>
@@ -869,11 +904,12 @@ namespace TacticalDirector.MatchEngine
         // ── descriptive: INTERCEPT versus MOVE near the mark point ───────────────
 
         /// <summary>
-        /// DESCRIPTIVE, not asserted (wiring plan section 11, risks). A marker holding his mark point while a fast
+        /// DESCRIPTIVE, not asserted, and [Explicit] so it never counts as coverage (wiring plan section 11, risks). A marker holding his mark point while a fast
         /// loose ball is struck across his path: records which option the Decision Tree selected each decision
         /// (MOVE_TO_POSITION vs INTERCEPT) so the interaction can be read, not pinned. Writes the tally to the
         /// test log; the only assertions are that the run completes and the marker stays on the pitch.
         /// </summary>
+        [Explicit("Descriptive only: records the option the Decision Tree picks near the mark point; asserts no outcome, so it must not count as coverage.")]
         [TestCase(0)]
         [TestCase(1)]
         public void Descriptive_InterceptVersusMove_NearTheMarkPoint(int def)
@@ -927,4 +963,8 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-11-11 | —      | W13.1 / ERR-014-010: acquisition, closure, 20 m boundary, invariants every stride, no-target |
 // |         |            |        |   cases, substitution / dismissal, restore continuation (armed, mid-dwell), two-run armed   |
 // |         |            |        |   determinism, switch-off identity + env-gated probe, TightMarking, descriptive INTERCEPT.  |
+// | 1.1     | 2026-11-12 | —      | W13.1 review: strict log checking restored for all rig tests (the one degenerate-velocity assert is tolerated only |
+// |         |            |        |   in the six tests that provoke it); Boundary_StrictAlternation now asserts commit attempts on the 20.1 m strides;     |
+// |         |            |        |   the switch-off test renamed / re-commented (self-consistency, not pre-W13.1 identity); Descriptive INTERCEPT case     |
+// |         |            |        |   marked [Explicit].                                                                                                    |
 #endregion

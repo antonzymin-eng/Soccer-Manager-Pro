@@ -439,6 +439,61 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
 
         /// <summary>
+        /// Review M2: Invariant 4 must run before the MAN_MARK cap. Five midfield marks: agents 1 and 2 on X, 3 on Y,
+        /// 4 on Z, 5 on W (the lowest-threat man). Armed (order 1-3-4-2): the duplicate on X is removed first, four
+        /// marks remain, none exceeds the cap, and W stays marked. The old order (cap first) dropped W's marker and
+        /// then the duplicate, leaving 3 marks and W unmarked. Switch off (order 1-2-3): unchanged — the cap drops W's
+        /// marker and the duplicate on X survives.
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void CapRunsAfterInvariant4_DuplicatesDoNotCostALoneMarkersMark(int team)
+        {
+            MarkAssignment[] armed = RunFiveMarks(team, markMovementActive: true, out int[] pool);
+            int marks = 0;
+            var targets = new System.Collections.Generic.HashSet<int>();
+            for (int p = 0; p < 5; p++)
+            {
+                if (armed[p].Mode != MarkMode.ManMark) continue;
+                marks++;
+                Assert.IsTrue(targets.Add(armed[p].TargetEntityId), $"opponent {armed[p].TargetEntityId} has two markers");
+            }
+            Assert.AreEqual(4, marks, "four marks, each opponent marked once");
+            Assert.AreEqual(MarkMode.ManMark, armed[0].Mode, "agent 1 keeps X (tie on cost, lower id)");
+            Assert.AreEqual(MarkMode.Zonal, armed[1].Mode, "agent 2, the duplicate on X, is demoted");
+            Assert.AreEqual(MarkMode.ManMark, armed[4].Mode, "W (lowest threat) keeps his marker");
+            Assert.AreEqual(103, armed[4].TargetEntityId);
+
+            MarkAssignment[] off = RunFiveMarks(team, markMovementActive: false, out _);
+            Assert.AreEqual(MarkMode.ManMark, off[0].Mode);
+            Assert.AreEqual(MarkMode.ManMark, off[1].Mode, "switch off: the duplicate on X survives exactly as before W13.1");
+            Assert.AreEqual(MarkMode.Zonal, off[4].Mode, "switch off: the cap demotes the lowest-threat man's marker (pre-W13.1 order)");
+        }
+
+        private static MarkAssignment[] RunFiveMarks(int team, bool markMovementActive, out int[] pool)
+        {
+            Vector2[] own = { new Vector2(38, 30), new Vector2(38, 38), new Vector2(40, 22), new Vector2(40, 46), new Vector2(55, 34) };
+            Vector2[] opp = { new Vector2(30, 34), new Vector2(35, 20), new Vector2(35, 48), new Vector2(60, 34) };
+            float[] ft = { 14f, 14f, 14f, 8f };
+            DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[9];
+            for (int i = 0; i < 5; i++)
+                agents[i] = SnapshotBuilder.MakeAgent(entityId: i + 1, teamId: team, position: own[i], baselineSlot: own[i], line: LineId.Midfield);
+            for (int i = 0; i < 4; i++)
+                agents[5 + i] = SnapshotBuilder.MakeAgent(entityId: 100 + i, teamId: 1 - team, position: opp[i], firstTouch: ft[i]);
+            DefensiveSnapshot snap = SnapshotBuilder.Build(agents, tick: Tick);
+            snap.DefensiveTeamId = team;
+            snap.MarkMovementActive = markMovementActive;
+
+            pool = new int[] { 1, 2, 3, 4, 5 };
+            int[] tgt = { 100, 100, 101, 102, 103 };
+            MarkAssignment[] a = new MarkAssignment[5];
+            for (int i = 0; i < 5; i++)
+                a[i] = new MarkAssignment { AgentEntityId = i + 1, Mode = MarkMode.ManMark, TargetEntityId = tgt[i], TargetPosition = opp[tgt[i] - 100], ValidThroughTick = Tick };
+            Assert.IsTrue(InvariantEnforcer.Enforce(snap, pool, 5, Tick, a));
+            return a;
+        }
+
+        /// <summary>
         /// Whole pipeline: two midfielders in range of the single attacker both commit MAN_MARK on him after the
         /// dwell with the flag off (today), exactly one with it on. Both teams (canonical inputs identical).
         /// </summary>
@@ -560,4 +615,6 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        |   goal-side property, no-target cases, COVER_GK_ZONE passthrough, stand-off constant        |
 // |         |            |        |   invariant, Invariant 4 (worked example, default-off identity, whole-pipeline duplicates,   |
 // |         |            |        |   1,000-state termination harness) and zero allocation.                                      |
+// | 1.1     | 2026-11-12 | —      | W13.1 review M2: CapRunsAfterInvariant4_DuplicatesDoNotCostALoneMarkersMark (5 marks: armed leaves 4,   |
+// |         |            |        |   each opponent once, W kept; switch off keeps the pre-W13.1 cap-first result).                          |
 #endregion

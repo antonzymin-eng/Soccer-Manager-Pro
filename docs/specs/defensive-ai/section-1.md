@@ -1,7 +1,7 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** | 0.8 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §1.2.1, §1.4 and the §1.5 KD-17 row note the gated Invariant 4 (one marker per opponent, active only while the engine's mark-movement switch is on; §3.10.2). Documentation only; KD-17's three standing invariants are unchanged. |
+**Last Updated:** November 11, 2026 (v0.8 — W13.1 `ERR-014-010`: §1.2.1 scope, §1.4 glossary "Anti-chaos invariant" and the §1.5 KD-17 row note the gated fourth invariant, one marker per opponent.)
 **Version:** 0.8
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
@@ -333,3 +333,4 @@ the rest of #14's runtime, which this revision does not touch.
 | 0.5 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") is dead — #8's `ActionType` ordinal space is exhausted and has no tackle model; #3 defers slide-tackle collision to Stage 2 and never landed the `TackleContactFlag` amendment (`XC-4.4-02`). #14 now resolves the tackle outcome itself (new §3.6.5, an abstract attribute duel with four outcomes). Corrected every site in this file that stated the dead delegation or implied #14 stops at intent: §1.2.1 scope (new bullet), §1.3.1 #3 dependency row, §1.4 glossary (amended "Tackle intent" entry + new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, §1.7 last bullet, §1.8 (scoped Stage-0-runtime-code amendment for §3.6.5 only — the broader three-precondition Stage-1 gate is untouched by this revision). |
 | 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §1.7 own-half normalisation bullet states the snapshot frame contract (canonical attack-toward-+X frame for both teams; `defendsX0` from the frame, not the team id). Implemented in `DefensiveSnapshot.IsOwnGoalAtX0` and the five `defendsX0` consumers. Spec text was never wrong about the formulas; it omitted which frame its inputs are in, and the code filled the gap with `teamId == 0`. |
 | 0.7 | November 10, 2026 | AI agent (W13.0 review M1) | §1.7 Frame contract reworded: #14 is canonical-only (own goal at x = 0 is a fixed invariant, not a per-producer switch). Supersedes the v0.6 wording that `defendsX0` is "read from the snapshot frame" and the `DefensiveSnapshot.IsOwnGoalAtX0` accessor, which is removed. |
+| 0.8 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §1.2.1, §1.4 and the §1.5 KD-17 row note the gated Invariant 4 (one marker per opponent, active only while the engine's mark-movement switch is on; §3.10.2). Documentation only; KD-17's three standing invariants are unchanged. |

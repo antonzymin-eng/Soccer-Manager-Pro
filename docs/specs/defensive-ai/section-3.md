@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 11, 2026 (v0.10 — W13.1 ⑥: §3.13.1 cites `ERR-008-027` for the #8 PRESS rule now that it is filed; no other change. v0.9: new §3.13.1 per-agent mark-target composition; §3.10.2 gated Invariant 4; §3.12 constants index.)
-**Version:** 0.10
+**Last Updated:** November 12, 2026 (v0.11 — W13.1 review (`ERR-014-010` amendment): §3.10.2 / §3.10.3 state the Invariant order 1 → 3 → 4 → 2 when `markMovementActive` (1 → 2 → 3 otherwise), the post-loop check names Invariant 4, a tackle-intent ordering limitation is recorded; §3.13.1 range of `L` corrected to 110.4 m. v0.10: §3.13.1 cites `ERR-008-027`.)
+**Version:** 0.11
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1159,7 +1159,11 @@ emergency override (`overriddenThisTick`), else (2) the lowest displacement
 cost `|agent.position − opponent.position|²` (§3.4, live snapshot positions;
 units m²), else (3) the lowest EntityId (FR-DA-014). Every other duplicate is
 demoted to `ZONAL` (own #12 slot). Demotion is monotonic like Invariants 1–3, so
-it cannot re-violate them and the three-pass loop converges. It is gated by the
+it cannot re-violate them and the three-pass loop converges. **Order (review amendment):** with
+`markMovementActive` the invariants run 1 → 3 → 4 → 2, so a duplicate marker never counts against the
+MAN_MARK cap (cap-first would, with five marks — two on X, one each on Y, Z and the lowest-threat W — drop
+W's marker and then the duplicate on X, leaving three marks and W unmarked; the amended order leaves
+four marks, W marked); while `false` the order is exactly the pre-W13.1 1 → 2 → 3. It is gated by the
 per-tick input `markMovementActive` (§2.3): while `false` the invariant does not
 run and the published assignments, and the tackle intents derived from them, are
 byte-for-byte the pre-W13.1 ones. *Worked example.* Away CMs 17 at (45, 28) and
@@ -1168,6 +1172,10 @@ byte-for-byte the pre-W13.1 ones. *Worked example.* Away CMs 17 at (45, 28) and
 18 is demoted to ZONAL at its slot (45, 40). *Valid range:* agent and opponent
 positions x ∈ [0, 105], y ∈ [0, 68]; cost ∈ [0, 16,000 m²]. Two CBs on one
 striker are already reduced to one by Invariant 1 (`MIN_BACKLINE_AGENTS`).
+*Known limitation (extends the W13.0 review L3 note).* Tackle intents are evaluated at §3.13 Step 6, before the trap
+(Step 7) and the invariants (Step 8), so an agent demoted by Invariant 4 (or 3) in a stride may still issue a
+tackle intent in that same stride when mark movement is active. It is recorded, not fixed: the demoted agent
+still holds his stand-off position that tick, and behaviour is deliberately unchanged here.
 
 *Invariant 3 and retained marks (`ERR-014-009`).* `targetPosition` is the
 opponent's **live** position on every published tick (§2.2.2), retained
@@ -1205,6 +1213,13 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
         }
         continue   // Re-check from pass start
 
+    // ORDER OF 2, 3, 4 (W13.1 review amendment, ERR-014-010):
+    //   snapshot.markMovementActive == false -> Invariant 2, then Invariant 3        (1 -> 2 -> 3, exactly pre-W13.1)
+    //   snapshot.markMovementActive == true  -> Invariant 3, then 4, then 2          (1 -> 3 -> 4 -> 2)
+    // Invariant 4 must precede the MAN_MARK cap: a duplicate marker is removed anyway, so counting it
+    // against the cap would demote a lone-marker opponent's marker needlessly. The blocks are written
+    // below in numeric order; `continue` re-checks from the pass start as before.
+
     // --- Invariant 2: Max man-mark ---
     manMarkCount = count(a in holdShapePool where assignments[a].mode == MAN_MARK)
     if manMarkCount > MAX_MAN_MARK_ASSIGNMENTS:
@@ -1215,11 +1230,6 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
             targetPosition = shape.GetFormationSlot(demoteCandidate)
         }
         continue
-
-    // --- Invariant 4 (W13.1, ERR-014-010) — only when snapshot.markMovementActive ---
-    //     for each non-ZONAL a with targetEntityId != null: if another non-ZONAL b has the same
-    //     targetEntityId and (b.overriddenThisTick, -cost(b), -entityId(b)) beats a's, demote a.
-    //     (strict total order: override, then lower |agent - opponent|^2, then lower EntityId)
 
     // --- Invariant 3: Max displacement ---
     violation = null
@@ -1238,12 +1248,18 @@ for pass in 1..3:   // Maximum 3 passes (FR-DA-028)
         }
         continue
 
+    // --- Invariant 4 (W13.1, ERR-014-010) — only when snapshot.markMovementActive ---
+    //     for each non-ZONAL a with targetEntityId != null: if another non-ZONAL b has the same
+    //     targetEntityId and (b.overriddenThisTick, -cost(b), -entityId(b)) beats a's, demote a.
+    //     (strict total order: override, then lower |agent - opponent|^2, then lower EntityId)
+    if violation4 != null: demote it; continue
+
     // All invariants satisfied (Invariant 4 only when markMovementActive): break early
     break
 
 // Post-loop check (FR-DA-032)
-// Re-evaluate all three invariants one final time
-allSatisfied = (invariant1 AND invariant2 AND invariant3)
+// Re-evaluate every active invariant one final time (1, 2, 3; plus 4 when markMovementActive)
+allSatisfied = (invariant1 AND invariant2 AND invariant3 AND (NOT markMovementActive OR invariant4))
 if NOT allSatisfied:
     // Hard fallback: all-ZONAL for this tick
     EmitAllZonal(team, assignments, directive)
@@ -1635,7 +1651,7 @@ marker standing on the point is inside the tackle-eligibility radius and counts 
 his man for #23 (§3.6.2). Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
 that has never moved a defender; it is the calibration pass's input, not its output).
 
-**Units and ranges.** Metres; `s ∈ (0, 3.0)`; `L ∈ [0, 123.6]` (the pitch diagonal bound);
+**Units and ranges.** Metres; `s ∈ (0, 3.0)`; `L ∈ [0, 110.4]` (`|G − O|` is largest at a far corner of the pitch, O = (105, 0) or (105, 68): √(105² + 34²) = 110.4 m);
 `|M − O| ≤ s`; `M` within the pitch whenever `O` is.
 
 **Worked examples.**
@@ -1677,3 +1693,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.8 | November 10, 2026 | AI agent (W13.0 review M1/L2) | Frame note and the four pseudocode annotations reworded: #14 is canonical-only, `team.defendsX0` is the constant true, the `x = 105` alternatives are not implemented (supersedes v0.6's "read from the snapshot frame" wording and the `IsOwnGoalAtX0` accessor, removed). §3.11.3 pre-check comment: the vanished-target release resets the candidate accumulator. |
 | 0.9 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: new §3.13.1 "Per-Agent Mark-Target Composition" (goal-side stand-off point from the target's live position; `COVER_GK_ZONE` passthrough; no-target cases; units, ranges, worked examples A / B / degenerate); §3.10.2 gains the gated Invariant 4 (one marker per opponent) with its worked example, §3.10.3 pseudocode and §3.13 Step 8 annotated; §3.12 index gains `MARK_STANDOFF_M`, `MARK_STANDOFF_TIGHT_M` (`[GT]`, un-calibrated) and `OWN_GOAL_CENTER` (`[DERIVED]`). The composition was planned as "§3.14"; §3.14 is this version history, so it is numbered §3.13.1 (no renumbering). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveAIConstants`, `TacticTranslation.MarkStandoffM`. |
 | 0.10 | November 11, 2026 | AI agent (W13.1) | §3.13.1 cites `ERR-008-027` (Decision Tree #8 §3.1.8.2, marking agents skip PRESS priority 2) instead of the forward reference. Documentation only. |
+| 0.11 | November 12, 2026 | AI agent (W13.1 review) | `ERR-014-010` review amendment (same commit as the `InvariantEnforcer` change). §3.10.2: Invariant order is 1 → 3 → 4 → 2 when `markMovementActive` so duplicate markers do not count against `MAX_MAN_MARK_ASSIGNMENTS` (worked case: 5 marks, two on one man), 1 → 2 → 3 unchanged otherwise; Known limitation: tackle intents precede the invariants, so a demoted agent may still issue a tackle intent that stride. §3.10.3 pseudocode reordered/annotated (Invariant 4 was shown between 2 and 3, wrong for either order) and the post-loop line names Invariant 4. §3.13.1: `L ∈ [0, 110.4]` (was 123.6; the far-corner distance from G = (0, 34) is √(105² + 34²)). |

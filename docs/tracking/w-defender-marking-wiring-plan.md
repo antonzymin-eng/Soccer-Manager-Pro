@@ -1,6 +1,6 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026 · **Version:** 0.5 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
+> **Created:** November 10, 2026 · **Version:** 0.6 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
 > **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
 > retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
 > formation/Duty scoring sensitivity.
@@ -288,7 +288,7 @@ The Decision Tree gets a position and a flag (physical parameters), never a #14 
 **Step 5 — output:** world = `MirrorPitchIfAway(t, M)`. #8 clamps it to the pitch and does not apply
 the depth adjustment.
 
-**Units and ranges:** m; s ∈ (0, 3.0); L ∈ [0, 123.6]; |M − O| ≤ s.
+**Units and ranges:** m; s ∈ (0, 3.0); L ∈ [0, 110.4] (far-corner |G − O|, corrected in v0.6); |M − O| ≤ s.
 
 **Worked examples.**
 - **A (away CB marks home F4231 ST).**
@@ -314,7 +314,7 @@ the depth adjustment.
   goal-side of his man.
 
 **Invariant 4** (E3) — one marker per opponent.
-- It runs after Invariants 1–3 inside the existing ≤ 3-pass loop (`:62-80`).
+- It runs inside the existing ≤ 3-pass loop (`:62-80`). **Order (review amendment, v0.6):** with `MarkMovementActive` the invariants run 1 → 3 → 4 → 2, so a duplicate marker never counts against the MAN_MARK cap (cap-first, as originally written here, would drop a lone-marker man's marker and then the duplicate); with it off the order is exactly 1 → 2 → 3.
 - For a duplicated target: keep an emergency override if present; otherwise keep the lowest |agent − O|²
   (§3.4); on a tie keep the lower EntityId (FR-DA-014). The others are demoted (`DemoteToZonal`).
   Demotion is monotonic, so convergence holds.
@@ -687,3 +687,4 @@ acquisition/closure/boundary/restore/determinism, and the identity probe.
 | 0.3 | 2026-11-10 | — | Review round 2 (editorial). Status moved to reviewed and awaiting owner decisions. A stop rule for pre-existing test failures is added to §9. The plan's manifest row moves to commit ④. The unscored INTERCEPT interaction is listed as a risk with a descriptive test. No design change. |
 | 0.4 | 2026-11-10 | — | Records the owner's acceptance of all thirteen recommended decisions. Code commits ②–⑨ may proceed in order. No design change. |
 | 0.5 | 2026-11-10 | — | W13.0 landing note: the ERR-014-007 gap (§2). No design change. |
+| 0.6 | 2026-11-12 | — | W13.1 review amendment: §4.3 Invariant 4 order is 1 → 3 → 4 → 2 when armed (1 → 2 → 3 off), §4.2 range of L corrected to 110.4 m. Landed with the code (ERR-014-010 review amendment). No other design change. |
