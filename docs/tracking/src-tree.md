@@ -405,7 +405,8 @@ src/
 │   ├── MarkAssigner.cs                ← pure static: Assign() regular assignment loop (§3.3); ThreatScore() §3.5; RefreshRetained() live target position (W13.0); SelectBestCandidate(); IsBetter() tie-break
 │   ├── TackleIntentEvaluator.cs       ← pure static: Evaluate() tackle intent (§3.6); ComputeCoverageDepth(); SelectMode()
 │   ├── OffsideTrapController.cs       ← pure static: Update() dwell counter + fire trigger (§3.7); ExecuteStepUp(); ComputeDefenseLineSpread()
-│   ├── InvariantEnforcer.cs           ← pure static: Enforce() 3 anti-chaos invariants (§3.10); 3-pass demotion loop; F4 hard-fallback detection
+│   ├── MarkTargetComposer.cs          ← pure static: TryCompose() goal-side mark point from the target's live position (§3.13.1, W13.1)
+│   ├── InvariantEnforcer.cs           ← pure static: Enforce() 3 anti-chaos invariants (§3.10) + gated Invariant 4 (W13.1); 3-pass demotion loop; F4 hard-fallback detection
 │   └── DefensiveAITick.cs             ← sealed class: 10 Hz orchestrator; 9-step §3.13 pipeline; pre-allocated buffers; GetMarkDirective/GetAssignment/GetTackleIntentRequests
 ├── attacking-ai/                      ← Spec #15
 │   ├── attacking-ai.asmdef            ← Mechanics layer; references positioning-ai, pressing-ai
