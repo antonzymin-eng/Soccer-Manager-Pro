@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineMarkingTests.cs
 // Created:  2026-11-11
-// Modified: 2026-11-11
+// Modified: 2026-11-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.13.1 / §3.10.2 (Invariant 4), Decision Tree #8 §3.1.7.2 / §3.1.8.2,
 //           Tactical Instructions #21 §3.4 (TightMarking), ERR-014-010 / ERR-008-027 / ERR-021-010, Code Standards #20

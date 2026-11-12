@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/MarkTargetComposerTests.cs
 // Created:  2026-11-10
-// Modified: 2026-11-10
+// Modified: 2026-11-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.13.1, §3.10.2 (Invariant 4), FR-DA-038 / FR-DA-039, ERR-014-010, Code Standards #20
 // Purpose:  Locks the W13.1 defensive-ai half: the goal-side mark-point composition (worked examples,
