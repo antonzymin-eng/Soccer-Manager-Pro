@@ -1,11 +1,11 @@
 # Movement-system fix — arrival braking and target-speed control
 
-> **Created:** November 12, 2026 · **Version:** 0.2 · **Status:** DRAFT — planned work, not implemented
+> **Created:** November 12, 2026 · **Version:** 0.3 · **Status:** DRAFT — planned work, not implemented
 > **Purpose:** Plan shared arrival settling and speed control, with explicit layer ownership,
 > specification changes, and a dedicated regression pass.
 > **Planning branch baseline:** `a64c8169` (runtime unchanged from `c7ec1131`, PR #545).
 > **W13 implementation located:** `80d60dc1` on `claude/great-sagan-rpcmhp`; inspected and tested in
-> an isolated worktree. Retained results and limits: [baseline review](movement-arrival-braking-baseline/README.md).
+> an isolated worktree. Retained results and limits: [baseline review](evidence/movement-arrival-braking-20261112/README.md).
 
 ## Problem and evidence
 
@@ -23,29 +23,38 @@ explicitly prescribe arrival ownership. Spec #2 §3.2.5 already supports AI-requ
 Its FR-3 revision note also says AI path planning must account for braking zones. That supports
 AI-owned planning, but an accurate physical stopping contract is a prerequisite for either owner.
 
-### Feedback review and evidence limits
+### Authoritative W13 follow-ups and evidence scope
 
-Fable reports orbiting a stationary attacker; 32 command changes in 59 steps against a 2.6 m/s
-runner; 19 grounded steps out of 40 and a 6–10 m deficit against a goal-bound runner; and loss of
-goal-side position in 54 of 60 away-team tight-marking steps. These are reported observations,
-not evidence for `a64c8169`. This review subsequently located W13's corrected test rig at `80d60dc1`
-and reran its descriptive scenarios. Use the retained baseline review for the new run's source,
-toolchain, results, instrument, and limitations; do not silently attach Fable's unknown provenance to it.
+W13 owns the issue status and closure evidence. This plan defines shared movement work; it does not
+create a second blocker register. Follow the owning records on `claude/great-sagan-rpcmhp`:
 
-| Report | Assessment after inspecting the planning baseline and running the W13 implementation |
-|---|---|
-| Standing-target orbit | The corrected W13 rig reproduces failure to settle: ordinary marking stays at 2.20 m/s with changing point error. There is no arrival-stop request. |
-| Walk/jog flicker | W13's speed-comparison gate reproduces 32 command flips and four guard entries in each ordinary 2.6 m/s case. Direct physics observations record 24 resulting state changes per pursuit window; command flips alone would not establish this. The separate 6 m distance boundary also needs coverage. |
-| Goal-bound collision/knockdown | The W13 run reproduces 19 GROUNDED samples out of 40 for both teams. Relative closing velocity, geometry, and collision response remain separate hypotheses. Braking may help but is not proof of clearance; goal-side geometry alone does not make collision inevitable at an attainable matching speed. |
-| Tight marking | Pair radii computed from source span 0.705–0.990 m. A 1.0 m centre separation leaves as little as 0.010 m static clearance. The corrected W13 away-runner case loses goal-side position on 54 of 58 checked samples; a contact-aware floor still needs dynamic validation. |
-| Demoted marker tackles | The real W13 `DefensiveAITick.Tick` reproduces three stale COMMIT requests per team ID after duplicate demotion in the diagnostic's 12-tick window. Physical execution of those requests is not tested; it remains an engine-level regression requirement. |
+| Existing follow-up | Owning W13 record | Relationship to this work |
+|---|---|---|
+| W13-F5 | [Goal-bound runner collision](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-goalward-runner-collision) | Collision/closing-velocity investigation; arrival control alone is not assumed to resolve it. |
+| W13-F6 | [Pace-gate churn and guard locks](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-gate-flapping-guard-locks) | Explicit-speed control. Current ordinary-runner evidence demonstrates state churn and locks while maintaining goal-side position and a bounded gap; gameplay cost is not established. |
+| W13-F7 | [Stationary-target orbit](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-stationary-man-orbit) | Arrival settling and a valid stopping prediction. |
+| W13-F8 | [Tight stand-off](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-tight-standoff-body-contact) | Marking policy; defer the floor/calibration decision until the mirror-asymmetry investigation below is resolved. |
 
-Neither `MarkMovementEnabled`/`HasMarkTarget` nor `MarkTargetSpeed` is present in this source revision.
-Here, "this source revision" means the planning branch baseline `a64c8169`. The composer, one-marker
-invariant, and W13.1c speed carrier exist on `80d60dc1`; that branch also gates the speed-tier override
-on the marker being slower than his man. The resulting switching is a different mechanism from
-crossing the 6 m distance boundary. Compare the exact implementation, not just
-[W13's earlier design](w-defender-marking-wiring-plan.md#4-design).
+The existing records also appear in W13's `match-engine-wiring-backlog.md`, Spec #8 §3.5 known
+limitations, and Spec #14 §3.13.1. Those specifications on the W13 branch are the references for
+its implemented contracts; the planning branch at `a64c8169` predates that wiring.
+
+The retained rerun executes W13's own deterministic `[Explicit]` descriptive tests. Matching output
+establishes repeatability of that implementation and rig, **not independent confirmation** of their
+validity or the causal explanations. The added observer records the same rig at physics cadence.
+See the [evidence review](evidence/movement-arrival-braking-20261112/README.md) for measurements and
+limits rather than copying those measurements into a second live issue record.
+
+Dedicated review follow-ups are owned on W13 as well:
+
+- [W13-F9 — stale tackle requests after demotion](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-stale-tackle-after-demotion): promotes the existing ERR-014-010 known limitation; the actual #14 tick reproduces a request/final-assignment mismatch. Requests are **generated before** enforcement and exposed afterward without reconciliation; this is not proof of publication before enforcement. The defect-log record tracks the contract violation and future fix.
+- [W13-F10 — home/away mirror asymmetry](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/claude/great-sagan-rpcmhp/docs/tracking/open-issues.md#w13-mirror-asymmetry): unresolved differences block using these observations to choose or calibrate the tight-marking floor. Candidate explanations include rig inputs, attributes/identity, float/state thresholds, and collision/RNG processing order; none is confirmed.
+
+Before comparing churn severity with failure to settle or knockdown, measure its gameplay cost:
+response delay to a changed target, catch-up/escape, marking error, fatigue, and contact outcomes
+under a controlled comparison. The current ordinary pursuit cases do not establish worse marking.
+For goal-bound cases, distinguish speed **caps** from speed at contact: both ramps are identical up
+to knockdown, so duplicate grounded counts do not establish a runner-speed response.
 
 ### Stopping-distance dependency — shared by both arrival designs
 
@@ -105,7 +114,7 @@ and evidence recorded under the existing tuning policy.
 
 ## Baseline instrument
 
-Use `MovementArrivalBaselineProbe`, retained with the [baseline review](movement-arrival-braking-baseline/README.md),
+Use `MovementArrivalBaselineProbe`, retained with the [baseline review](evidence/movement-arrival-braking-20261112/README.md),
 for direct 60 Hz state-before/state-after and guard flag/lock-entry observations beside commands and
 positions. The baseline's 10 Hz descriptive summaries are supplementary; command changes alone
 are not state transitions or proof of guard engagement. The retained instrument observes accepted
@@ -176,7 +185,7 @@ the shared implementation meets them through production command paths, the dedic
 retained evidence, and replay/restore remains deterministic at the new revision. A marking-specific
 constant or a passing marking-only test does not close this work item. Recommend keeping marking
 disabled until all five reported failures have been reproduced and resolved or explicitly scoped out
-with evidence. The tight-marking case needs behavioral validation after its parameter decision.
+with evidence. The tight-marking floor decision is held until W13-F10 is explained; behavior must still be validated afterward. W13 owns closure of F5–F10.
 
 ## Version history
 
@@ -184,3 +193,4 @@ with evidence. The tight-marking case needs behavioral validation after its para
 |---|---|---|
 | 0.1 | 2026-11-12 | Initial movement-system work-item draft, grounded in the inspected command, integration, dispatch, and snapshot paths. |
 | 0.2 | 2026-11-12 | Incorporate both Fable/Opus review rounds: leave arrival ownership open pending an accurate #2 stopping contract; unify explicit-speed work with W13.1c; locate the W13 implementation, retain mirrored diagnostic results and physics-transition/guard traces, and separate reproduction from acceptance. |
+| 0.3 | 2026-11-12 | Link authoritative W13-F5–F10 records, distinguish repeatability from independence and gameplay harm, block tight-floor calibration on mirror asymmetry, and register the moved evidence with repository integrity checks. |
