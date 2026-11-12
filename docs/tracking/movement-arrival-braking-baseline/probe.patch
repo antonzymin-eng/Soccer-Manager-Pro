@@ -1,0 +1,77 @@
+diff --git a/src/match-engine/tests/MatchEngineMarkingTests.cs b/src/match-engine/tests/MatchEngineMarkingTests.cs
+index 579adb32..9c426b6b 100644
+--- a/src/match-engine/tests/MatchEngineMarkingTests.cs
++++ b/src/match-engine/tests/MatchEngineMarkingTests.cs
+@@ -174,7 +174,29 @@ public void Tick()
+                         if (Own + k != Own + 5 || !GiveBallToDefenders)
+                             Place(E, Own + k, E.TestOnly_FormationSlot(Own + k));
+ 
++                AgentState before2 = E.TestOnly_AgentSnapshot(Cb2);
++                AgentState before3 = E.TestOnly_AgentSnapshot(Cb3);
+                 E.RunTick();
++                MovementArrivalBaselineProbe(Cb2, before2);
++                MovementArrivalBaselineProbe(Cb3, before3);
++                _probeFrame++;
++            }
++
++            private int _probeFrame;
++            private void MovementArrivalBaselineProbe(int id, AgentState before)
++            {
++                string dir = Environment.GetEnvironmentVariable("TD_MOVEMENT_REVIEW_TRACE_DIR");
++                if (string.IsNullOrEmpty(dir)) return;
++                Directory.CreateDirectory(dir);
++                string path = Path.Combine(dir, TestContext.CurrentContext.Test.Name + ".csv");
++                if (!File.Exists(path))
++                    File.WriteAllText(path, "frame,team,agent,state_before,state_after,transition,locked_before,locked_after,lock_entry,lock_until_s,command,speed_mps,x_m,y_m,target_x_m,target_y_m,has_target,grounded_reason\n");
++                AgentState after = E.TestOnly_AgentSnapshot(id);
++                var gb = before.OscillationGuard.GetState();
++                var ga = after.OscillationGuard.GetState();
++                var target = E.TestOnly_MarkTarget(id);
++                string line = FormattableString.Invariant($"{_probeFrame},{Def},{id},{before.CurrentState},{after.CurrentState},{(before.CurrentState != after.CurrentState ? 1 : 0)},{(gb.IsLocked ? 1 : 0)},{(ga.IsLocked ? 1 : 0)},{(!gb.IsLocked && ga.IsLocked ? 1 : 0)},{ga.LockUntilTime:R},{E.TestOnly_Command(id).DesiredState},{after.Speed:R},{after.Position.x:R},{after.Position.y:R},{target.Target.x:R},{target.Target.y:R},{(target.HasTarget ? 1 : 0)},{after.GroundedReason}\n");
++                File.AppendAllText(path, line);
+             }
+ 
+             public void Strides(int n)
+diff --git a/src/defensive-ai/Tests/MovementArrivalStaleTackleProbe.cs b/src/defensive-ai/Tests/MovementArrivalStaleTackleProbe.cs
+new file mode 100644
+index 00000000..6fca29e5
+--- /dev/null
++++ b/src/defensive-ai/Tests/MovementArrivalStaleTackleProbe.cs
+@@ -0,0 +1,37 @@
++using System;
++using NUnit.Framework;
++using UnityEngine;
++using TacticalDirector.PositioningAI;
++namespace TacticalDirector.DefensiveAI.Tests
++{
++    public sealed class MovementArrivalStaleTackleProbe
++    {
++        [TestCase(0)] [TestCase(1)]
++        public void DemotedDuplicateRetainsCommitIntent(int team)
++        {
++            var agents = new[] {
++                SnapshotBuilder.MakeAgent(17, team, new Vector2(38,34), new Vector2(1,0), line:LineId.Midfield, baselineSlot:new Vector2(38,34)),
++                SnapshotBuilder.MakeAgent(18, team, new Vector2(39,34), new Vector2(1,0), line:LineId.Midfield, baselineSlot:new Vector2(39,34)),
++                SnapshotBuilder.MakeAgent(19, team, new Vector2(10,34), line:LineId.Midfield, baselineSlot:new Vector2(10,34)),
++                SnapshotBuilder.MakeAgent(20, team, new Vector2(15,34), line:LineId.Midfield, baselineSlot:new Vector2(15,34)),
++                SnapshotBuilder.MakeAgent(100, 1-team, new Vector2(40,34), line:LineId.Midfield)
++            };
++            var snap = SnapshotBuilder.Build(agents, ballPosition:new Vector2(40,34));
++            snap.DefensiveTeamId=team; snap.MarkMovementActive=true;
++            var ai=new DefensiveAITick(100);
++            int stale=0;
++            for(int tick=0;tick<12;tick++)
++            {
++                snap.TickIndex=tick; ai.Tick(snap);
++                foreach(var req in ai.GetTackleIntentRequests())
++                {
++                    var final=ai.GetAssignment(req.AgentEntityId);
++                    Console.WriteLine($"STALE team={team} tick={tick} agent={req.AgentEntityId} request={req.Mode} target={req.TargetEntityId} finalMode={final.Mode} finalTarget={final.TargetEntityId}");
++                    if(final.Mode==MarkMode.Zonal && req.Mode==TackleMode.Commit && req.TargetEntityId==100) stale++;
++                }
++            }
++            Assert.Greater(stale,0,"Diagnostic: reproduce stale COMMIT requests after demotion; this is not a fix-acceptance test.");
++            Console.WriteLine($"STALE_RESULT team={team} stale_commit_requests={stale}");
++        }
++    }
++}

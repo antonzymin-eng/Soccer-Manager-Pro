@@ -1,0 +1,10 @@
+Created: 2026-11-12
+Purpose: exact source/toolchain identity for the movement feedback baseline.
+Implementation branch: claude/great-sagan-rpcmhp
+Source commit: 80d60dc1cbf66aac2e91e24e1cc5bf7848474222
+Planning baseline: a64c8169c4c147e06ab3ff07d458fa28e20fd0c8
+SDK: 8.0.426
+Runtime: Microsoft.NETCore.App 8.0.32
+Runner: Linux .NET shim, NUnit adapter 4.6.0
+Unity Editor: not run
+Retained patch: test-only physics observer and stale-tackle diagnostic; no production changes

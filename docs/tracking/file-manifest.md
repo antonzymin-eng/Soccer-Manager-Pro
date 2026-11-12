@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 12, 2026 — **Movement-system work-item draft.** **New:** `docs/tracking/movement-arrival-braking-plan.md` v0.1, covering shared arrival braking/target-speed design, required spec changes, acceptance criteria, and a dedicated regression pass. **Modified:** this manifest and `docs/tracking/CHANGELOG.md`. Planning only; no source, normative spec, tuning, schema, or approval-state change; no gameplay tests run.
+**Last Updated:** November 12, 2026 — **Fable/Opus movement feedback review and retained W13 baseline.** Update `docs/tracking/movement-arrival-braking-plan.md` v0.1 → v0.2: leave arrival ownership open behind a reconciled #2 stopping prediction, fold W13.1c into explicit-speed control, and separate bug reproduction from enablement. **New:** `docs/tracking/movement-arrival-braking-baseline/` (12 files: README.md, SHA256SUMS, source-identity.txt, probe.patch, summary.txt, baseline.log.gz, instrumented.log.gz, stale-tackle.log.gz, baseline.trx.gz, instrumented.trx.gz, stale-tackle.trx.gz, physics-traces.tar.gz). Baseline `80d60dc1`; 16 original plus 16 instrumented descriptive cases and two stale-tackle diagnostic cases completed. No runtime or normative-spec changes.
+
+**Last Updated (prior):** November 12, 2026 — **Movement-system work-item draft.** **New:** `docs/tracking/movement-arrival-braking-plan.md` v0.1, covering shared arrival braking/target-speed design, required spec changes, acceptance criteria, and a dedicated regression pass. **Modified:** this manifest and `docs/tracking/CHANGELOG.md`. Planning only; no source, normative spec, tuning, schema, or approval-state change; no gameplay tests run.
 
 **Last Updated (prior):** November 10, 2026 — **PR #545 spec-hygiene repair.** Advance the three maintained `spec-error-log.md` pointers to v2.98 after W13.0 added ERR-014-008 and ERR-014-009. No inventory paths or runtime behavior change.
 
