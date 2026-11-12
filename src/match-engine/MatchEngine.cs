@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-12 (W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed beside the mark target; + TestOnly_MarkTargetSpeed. No schema/RNG change; default behaviour identical)
 // Modified: 2026-11-11 (W13.1 / ERR-014-010: mark-target composition in RunMechanicsAI under MarkMovementEnabled (default off); shared TeamPossessionAgent helper; FillDefensiveSnapshot sets MarkMovementActive; + TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole. No schema/RNG change; default behaviour identical; ERR-021-010)
 // Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
 // Modified: 2026-11-06 (W8 C / ERR-011-021)
@@ -2740,6 +2741,10 @@ namespace TacticalDirector.MatchEngine
         /// serialized, so a restored engine must be re-armed. Takes effect from the next AI stride.</summary>
         internal void TestOnly_ArmMarkMovement(bool armed) => _markMovementOverride = armed;
 
+        /// <summary>Test-only (W13.1c): the marked man's speed (m/s) the mechanics AI wrote beside the mark target at the
+        /// last AI stride (0 when there is no marked man).</summary>
+        internal float TestOnly_MarkTargetSpeed(int agentId) => _tacticalContexts[agentId].MarkTargetSpeed;
+
         /// <summary>Test-only (W13.1): the per-agent mark point the mechanics AI wrote into
         /// <paramref name="agentId"/>'s TacticalContext at the last AI stride — <c>HasTarget</c> and the WORLD-space
         /// point (zero when there is none).</summary>
@@ -3913,15 +3918,24 @@ namespace TacticalDirector.MatchEngine
                     // world space. NO target for a team in possession (carrier or pass in flight): its agents
                     // attack. Pressers, the GK and sent-off agents are outside #14's pool and get none.
                     if (markMovementOn
-                        && !(teamPossessor >= 0 && _teamIds[teamPossessor] == t)
-                        && MarkTargetComposer.TryCompose(
-                            _defensive[t].GetAssignment(i), _defSnapshots[t], tacticalTick,
-                            TacticalDirector.DefensiveAI.TacticTranslation.MarkStandoffM(
-                                _activePlayerTactics[i].Instructions.TightMarking),
-                            out Vector2 canonicalMark))
+                        && !(teamPossessor >= 0 && _teamIds[teamPossessor] == t))
                     {
-                        ctx.HasMarkTarget = true;
-                        ctx.MarkTarget = MirrorPitchIfAway(t, canonicalMark);
+                        MarkAssignment markAssignment = _defensive[t].GetAssignment(i);
+                        if (MarkTargetComposer.TryCompose(
+                                markAssignment, _defSnapshots[t], tacticalTick,
+                                TacticalDirector.DefensiveAI.TacticTranslation.MarkStandoffM(
+                                    _activePlayerTactics[i].Instructions.TightMarking),
+                                out Vector2 canonicalMark))
+                        {
+                            ctx.HasMarkTarget = true;
+                            ctx.MarkTarget = MirrorPitchIfAway(t, canonicalMark);
+                            // W13.1c (ERR-008-028): the marked man's speed from THIS stride's world state (a speed is
+                            // frame-invariant, so no mirror); 0 for COVER_GK_ZONE (no man). Drives the dispatcher's
+                            // pace tier so a marker is never walking after a runner. No state is kept across strides.
+                            ctx.MarkTargetSpeed = markAssignment.TargetEntityId >= 0
+                                ? _agents[markAssignment.TargetEntityId].Velocity.magnitude
+                                : 0.0f;
+                        }
                     }
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
                     // check, computed once per team per stride, routed to every agent's context.
@@ -11277,4 +11291,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.16 | 2026-11-06 | — | PR #542 review: conditional editor/development/test call for the post-attachment ball fixture; release Resolve omits it. |
 // | 2.17 | 2026-11-10 | — | W13.0 / ERR-014-008: TestOnly_MarkAssignment read seam (per-team #14 committed assignment). No behaviour, schema or RNG change. |
 // | 2.18 | 2026-11-11 | — | W13.1 / ERR-014-010: #14 mark-target composition in RunMechanicsAI under MatchEngineConstants.MarkMovementEnabled (default off; engine-wide); shared TeamPossessionAgent helper (behaviour-neutral); FillDefensiveSnapshot sets MarkMovementActive; TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole seams. No schema, RNG or domain-tag change; switch off = byte-identical. |
+// | 2.19 | 2026-11-12 | — | W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed (the marked man's current speed; 0 for COVER_GK_ZONE) beside the mark target; TestOnly_MarkTargetSpeed seam. No schema, RNG or domain-tag change; switch off = unchanged. |
 #endregion

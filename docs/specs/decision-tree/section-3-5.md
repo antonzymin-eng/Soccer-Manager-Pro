@@ -432,6 +432,27 @@ MovementCommand moveCmd = new MovementCommand
 MovementController.SubmitCommand(context.AgentState.AgentId, moveCmd);
 ```
 
+**Mark-point pace tier (W13.1c, `ERR-008-028`).** When `TacticalContext.HasMarkTarget` the MOVE target is the
+host-composed mark point (§3.1.7.2), which a running man drags away at his own speed, so a distance-only tier
+would walk a marker that is within 6 m of the point while his man runs. The pace is then the **larger** of the
+distance tier above and the man's speed tier:
+
+```
+distanceTier = dist >= MOVE_SPRINT_THRESHOLD ? SPRINT : dist >= MOVE_JOG_THRESHOLD ? JOG : WALK   // dist in m
+speedTier    = v > SprintEnter ? SPRINT : v > JogEnter ? JOG : WALK     // v = TacticalContext.MarkTargetSpeed, m/s
+tier         = HasMarkTarget ? max(distanceTier, speedTier) : distanceTier     // WALK < JOG < SPRINT
+```
+
+`JogEnter` (2.2 m/s) and `SprintEnter` (5.8 m/s) are `[CROSS: Agent Movement #2 §3.1.3]`, read from
+`MovementThresholds` with the state machine's own strict `>` — no new constant. `MarkTargetSpeed` ≥ 0 m/s is the
+marked opponent's speed at the **current** 10 Hz stride, written by the host beside `MarkTarget` (0 when there is no
+marked man, e.g. a COVER_GK_ZONE point); a speed is frame-invariant, so no home/away mirror applies. It is a per-stride
+input, not serialized. *Valid ranges:* `dist` ∈ [0, 125.1] m (pitch diagonal), `v` ∈ [0, 12] m/s (`MAX_SPEED_CLAMP`
+bounds it). *Worked example:* marker 3 m from his mark point; man at 5.0 m/s → distanceTier WALK, speedTier JOG
+(2.2 < 5.0 ≤ 5.8) → **JOG** (`MoveTo`; top jog speed 5.8 m/s ≥ the man's 5.0, so he can keep up; walking caps at
+2.2 m/s and he cannot). Man at 9.0 m/s → SPRINT. Man at 1.0 m/s, 3 m away → WALK. Man at exactly 5.8 m/s → JOG
+(strict `>`). `HasMarkTarget` false → the distance tier alone, bit-identical to the text above.
+
 **Threshold constants** — listed in §3.4.7 constant table; defined in `UtilityWeights.cs`:
 
 | Constant | Value | Tuning range | Constraint |
@@ -463,6 +484,8 @@ The press target is an `AgentId` from the agent's visible opponents list.
 // Agent closes down a visible opponent. Sprint pace; emergency braking.
 // PressTargetId: set in GenerateOptions §3.1 as the opponent with possession
 //   (or nearest opponent to ball) within PRESS_TRIGGER_DISTANCE (§3.2).
+//   (§3.1.8.2 is authoritative: the nearest-opponent priority applies only to an agent WITHOUT
+//   TacticalContext.HasMarkTarget; a marking agent presses the carrier only — ERR-008-027.)
 // The pressing agent runs to the opponent's last perceived position
 //   (from PerceptionSnapshot.VisibleOpponents[n].Position).
 // It does NOT extrapolate opponent movement — it chases the last known position.

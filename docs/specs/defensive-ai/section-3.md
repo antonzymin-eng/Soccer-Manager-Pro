@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 12, 2026 (v0.11 — W13.1 review (`ERR-014-010` amendment): §3.10.2 / §3.10.3 state the Invariant order 1 → 3 → 4 → 2 when `markMovementActive` (1 → 2 → 3 otherwise), the post-loop check names Invariant 4, a tackle-intent ordering limitation is recorded; §3.13.1 range of `L` corrected to 110.4 m. v0.10: §3.13.1 cites `ERR-008-027`.)
-**Version:** 0.11
+**Last Updated:** November 12, 2026 (v0.12 — W13.1c `ERR-008-028`: §3.13.1 states the mark-point pace input (the marked man's current speed, 0 for COVER_GK_ZONE) and cross-references #8 §3.5.6. v0.11: Invariant order 1 → 3 → 4 → 2 when armed, tackle-intent ordering limitation, `L` range corrected.)
+**Version:** 0.12
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1673,6 +1673,12 @@ PRESS rule for marking agents (#8 §3.1.8.2, `ERR-008-027`) removes the nearest-
 would otherwise do that. Substitutes inherit the agent index and its mark (§2.2.2). Marking applies
 during restarts as in open play (no set-piece phase exists; set-piece marking is §7.5, Stage 2+).
 
+**Pace (W13.1c, `ERR-008-028`).** The mark point moves at the man's speed, so the composition root also writes the
+marked man's **current** speed `v = |velocity|` (m/s, from the same stride's world state; 0 for `COVER_GK_ZONE`, which has no
+man) as `TacticalContext.MarkTargetSpeed`; #8 §3.5.6 paces a mark-point MOVE at the larger of its distance tier and the
+tier of `v` (thresholds `JogEnter` / `SprintEnter` `[CROSS #2]`). `v` is a magnitude of the snapshot velocity, so it is
+identical in the canonical and world frames. #14 itself stays pure: the composer's signature and output are unchanged.
+
 **Activation.** The composition root's switch (`MatchEngineConstants.MarkMovementEnabled`, `[GT]`,
 default `false`) gates both this composition and Invariant 4 (`markMovementActive`, §2.3). With it
 off no target is ever composed and the pipeline is the pre-W13.1 one.
@@ -1694,3 +1700,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.9 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: new §3.13.1 "Per-Agent Mark-Target Composition" (goal-side stand-off point from the target's live position; `COVER_GK_ZONE` passthrough; no-target cases; units, ranges, worked examples A / B / degenerate); §3.10.2 gains the gated Invariant 4 (one marker per opponent) with its worked example, §3.10.3 pseudocode and §3.13 Step 8 annotated; §3.12 index gains `MARK_STANDOFF_M`, `MARK_STANDOFF_TIGHT_M` (`[GT]`, un-calibrated) and `OWN_GOAL_CENTER` (`[DERIVED]`). The composition was planned as "§3.14"; §3.14 is this version history, so it is numbered §3.13.1 (no renumbering). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveAIConstants`, `TacticTranslation.MarkStandoffM`. |
 | 0.10 | November 11, 2026 | AI agent (W13.1) | §3.13.1 cites `ERR-008-027` (Decision Tree #8 §3.1.8.2, marking agents skip PRESS priority 2) instead of the forward reference. Documentation only. |
 | 0.11 | November 12, 2026 | AI agent (W13.1 review) | `ERR-014-010` review amendment (same commit as the `InvariantEnforcer` change). §3.10.2: Invariant order is 1 → 3 → 4 → 2 when `markMovementActive` so duplicate markers do not count against `MAX_MAN_MARK_ASSIGNMENTS` (worked case: 5 marks, two on one man), 1 → 2 → 3 unchanged otherwise; Known limitation: tackle intents precede the invariants, so a demoted agent may still issue a tackle intent that stride. §3.10.3 pseudocode reordered/annotated (Invariant 4 was shown between 2 and 3, wrong for either order) and the post-loop line names Invariant 4. §3.13.1: `L ∈ [0, 110.4]` (was 123.6; the far-corner distance from G = (0, 34) is √(105² + 34²)). |
+| 0.12 | November 12, 2026 | AI agent (W13.1c) | `ERR-008-028`: §3.13.1 gains "Pace" — the composition root writes the marked man's current speed (m/s; 0 for COVER_GK_ZONE) beside the mark target so #8 §3.5.6 can pace a mark-point MOVE at max(distance tier, man's speed tier). Cross-reference only; #14's composer is unchanged. |

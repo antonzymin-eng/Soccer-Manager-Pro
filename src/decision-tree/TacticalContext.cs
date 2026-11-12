@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-07-23
 // Modified: 2026-07-26 (ERR-008-014 — + LooseBallCollector routing field, host-designated)
+// Modified: 2026-11-12 (W13.1c / ERR-008-028 — + MarkTargetSpeed, the marked man's speed for the mark-MOVE pace tier)
 // Modified: 2026-11-11 (W13.1 / ERR-008-027 — + HasMarkTarget / MarkTarget per-agent mark-point carrier, host-written, default off)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.6, §3.1.7.2, §3.1.8.2, ERR-008-027, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
@@ -146,6 +147,17 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public Vector2 MarkTarget;
 
+        /// <summary>
+        /// W13.1c (ERR-008-028, #8 §3.5.6): the speed (m/s) of the opponent this agent is marking, read from the
+        /// CURRENT stride's world state by the host and written in the same block as <see cref="MarkTarget"/>;
+        /// 0 when there is no marked man (no target, or a COVER_GK_ZONE point). A speed is frame-invariant, so no
+        /// mirror applies. Consumed only by <c>ActionDispatcher</c> when <see cref="HasMarkTarget"/>: a MOVE to the
+        /// mark point paces at the LARGER of its distance tier and this man's speed tier, so a marker is never
+        /// walking after a runner. Zero value = identity (unused unless <see cref="HasMarkTarget"/>);
+        /// <see cref="Stage0Default"/> seeds 0. Per-stride input; not serialized.
+        /// </summary>
+        public float MarkTargetSpeed;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -189,6 +201,7 @@ namespace TacticalDirector.DecisionTree
                 LooseBallCollector = false,
                 HasMarkTarget      = false,
                 MarkTarget         = Vector2.zero,
+                MarkTargetSpeed    = 0f,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -263,4 +276,6 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | zero = identity; Stage0Default seeds them). Set only by MatchEngine under the           |
 // |         |            |        | mark-movement switch; MOVE targets the point and PRESS priority 2 is skipped for the    |
 // |         |            |        | agent. A position + a flag: no #14 type, no asmdef reference.                          |
+// | 1.11    | 2026-11-12 | —      | W13.1c (ERR-008-028): + MarkTargetSpeed (m/s of the marked man; 0 = none), written beside |
+// |         |            |        |   MarkTarget by MatchEngine; read by ActionDispatcher for the mark-MOVE pace tier.          |
 #endregion
