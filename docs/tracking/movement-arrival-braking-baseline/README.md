@@ -71,7 +71,7 @@ python3 tools/dotnet-ci/generate_projects.py
 dotnet test src/match-engine/tests/match-engine-tests.gen.csproj \
   --filter 'FullyQualifiedName~MatchEngineMarkingTests.Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks|FullyQualifiedName~MatchEngineMarkingTests.Descriptive_StationaryMan_MarkerSettlingAndSeparation|FullyQualifiedName~MatchEngineMarkingTests.Descriptive_GoalwardRunner_MarkerStateAndContact' \
   --logger 'console;verbosity=normal' --logger 'trx;LogFileName=baseline.trx'
-git apply /path/to/retained/probe.patch
+git apply --unidiff-zero /path/to/retained/probe.patch
 TD_MOVEMENT_REVIEW_TRACE_DIR=/path/to/new-traces dotnet test \
   src/match-engine/tests/match-engine-tests.gen.csproj --no-restore \
   --filter 'FullyQualifiedName~MatchEngineMarkingTests.Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks|FullyQualifiedName~MatchEngineMarkingTests.Descriptive_StationaryMan_MarkerSettlingAndSeparation|FullyQualifiedName~MatchEngineMarkingTests.Descriptive_GoalwardRunner_MarkerStateAndContact' \
@@ -81,7 +81,7 @@ dotnet test src/defensive-ai/Tests/defensive-ai-tests.gen.csproj \
   --logger 'console;verbosity=normal' --logger 'trx;LogFileName=stale-tackle.trx'
 ```
 
-The source patch is retained as diagnostic material and is not applied to the planning branch.
+The patch uses zero context; `--unidiff-zero` is required. The source patch is retained as diagnostic material and is not applied to the planning branch.
 Use a fresh trace directory on each run. Ordinary commands may require different SDK activation
 outside this prepared environment.
 

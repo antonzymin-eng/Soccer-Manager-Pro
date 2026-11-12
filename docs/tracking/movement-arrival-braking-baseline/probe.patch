@@ -2,13 +2,10 @@ diff --git a/src/match-engine/tests/MatchEngineMarkingTests.cs b/src/match-engin
 index 579adb32..9c426b6b 100644
 --- a/src/match-engine/tests/MatchEngineMarkingTests.cs
 +++ b/src/match-engine/tests/MatchEngineMarkingTests.cs
-@@ -174,7 +174,29 @@ public void Tick()
-                         if (Own + k != Own + 5 || !GiveBallToDefenders)
-                             Place(E, Own + k, E.TestOnly_FormationSlot(Own + k));
- 
+@@ -176,0 +177,2 @@ public void Tick()
 +                AgentState before2 = E.TestOnly_AgentSnapshot(Cb2);
 +                AgentState before3 = E.TestOnly_AgentSnapshot(Cb3);
-                 E.RunTick();
+@@ -177,0 +180,20 @@ public void Tick()
 +                MovementArrivalBaselineProbe(Cb2, before2);
 +                MovementArrivalBaselineProbe(Cb3, before3);
 +                _probeFrame++;
@@ -29,9 +26,6 @@ index 579adb32..9c426b6b 100644
 +                var target = E.TestOnly_MarkTarget(id);
 +                string line = FormattableString.Invariant($"{_probeFrame},{Def},{id},{before.CurrentState},{after.CurrentState},{(before.CurrentState != after.CurrentState ? 1 : 0)},{(gb.IsLocked ? 1 : 0)},{(ga.IsLocked ? 1 : 0)},{(!gb.IsLocked && ga.IsLocked ? 1 : 0)},{ga.LockUntilTime:R},{E.TestOnly_Command(id).DesiredState},{after.Speed:R},{after.Position.x:R},{after.Position.y:R},{target.Target.x:R},{target.Target.y:R},{(target.HasTarget ? 1 : 0)},{after.GroundedReason}\n");
 +                File.AppendAllText(path, line);
-             }
- 
-             public void Strides(int n)
 diff --git a/src/defensive-ai/Tests/MovementArrivalStaleTackleProbe.cs b/src/defensive-ai/Tests/MovementArrivalStaleTackleProbe.cs
 new file mode 100644
 index 00000000..6fca29e5
