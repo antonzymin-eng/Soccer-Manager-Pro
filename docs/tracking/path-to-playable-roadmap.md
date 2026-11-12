@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 12 — W13.0 records and W8 C closeout (v0.93):** PR #545 merged the canonical-frame and retained-target fixes (`ERR-014-008` / `ERR-014-009`) on November 10. W13 movement, frozen-lane characterization/digest adoption and default-flip acceptance remain open; formation/Duty controls wait for OD-2. W8 C merged in PR #542 on November 6 with its paired Linux comparison complete and pinned-host Unity checks passed at `fdbbff5a`: **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). The November 6 outstanding-host note below is superseded.
+
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
 
 > **November 5 — Pre-C re-review (v0.91):** Merge main #537 without losing either evidence set (37 registered directories). The shared analysis rule 1.1 excludes abstract BallLoose outcomes and censors follow-up at the recorded full-time whistle as well as capture end; all 126 release decisions and 12 selected windows remain unchanged. Unity CI skips downloading this capture while retaining other LFS payloads. The two same-frame opponent receptions remain a C football-realism review question. Capture and frozen analysis policy are unchanged.
@@ -323,7 +325,7 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | 5 / client and career | Finish [P5b host acceptance](p5b-screens-validation.md), B8/B9b/B10/Gate J; start C3/C4 governance and season/new-game UI; finance T3b2's final-head host compile is closed (PR #503 merged October 15; amounts default off, enablement a separate decision), progression, training/medical and transfers | Their own contracts and host slots; revised substitution behavior gates only affected acceptance cases | Client evidence closes; career work advances without waiting for W8–W10/calibration |
 | 6 / engine baseline | ✅ **Frozen October 13, 2026 at `3974b78`** ([w8-stage-a-baseline-results.md](w8-stage-a-baseline-results.md), last section; `evidence/pre-b-anchor-3974b78-20261013/`): Linux .NET lane, frozen `520ba31c` W8 instrument, per-tick stall check clean. Step 2a is closed; settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | ~~D-03/D-04/D-05~~ decided October 10, 2026 with no pre-B behavior change; any relevant invalidator (substitution census done October 10: no affected requests) | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
 | 7 / W8 B | ✅ **Landed October 18, 2026 (UTC), PR #511, merge `c0ffd0d2`.** Six-policy canonical distribution and approved own-release law/avoidance; A→B, LongKick and restricted-spell records retained | Final-head Linux CI `39063246052` passed at `a43bbc1c`; pinned Unity `e58577de` met; #466 obligations closed; **no #7/#8 reaction gate** | Post-law six digests adopted as B→C baseline; exact keeper-release touch/team follow-up remains a C measurement requirement |
-| 8 / W8 C | Separate #11 Law-12 amendment and hand-control implementation; measure B→C | Step 7 evidence, approved C law contract (**met** October 29, 2026: [contract v0.5](w8-c-law12-amendment-draft.md)), D-07 closeout disposition (**met**: landed in #515), re-handling scope/disposition met by #511 ([archive](open-issues-resolved.md#gk-rehandling-law12)); exact touch/team keeper-release measurement in both arms and final-head host slot | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
+| 8 / W8 C | ✅ **Landed November 6, 2026, PR #542, merge `d4b026aa`.** #11 Law-12 hand-control offence and snapshot v28; [implementation and paired comparison](w8-c-implementation-results.md) complete | Step 7, approved C contract, D-07 and re-handling dispositions met; exact touch/team comparison complete. Pinned-host compile and whole MatchEngine EditMode passed at `fdbbff5a`: 939 passed / 0 failed / 16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)) | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
 | 9 / engine fidelity | Develop #441 reachability independently of W8 C now; land after C measurement and before W9; implement W9 and W10; land owner-included #434/#440 fixes separately | W9: resolved #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. D-05 places #434/#440 after B→C; each landing has its own host slot | Included behavior is reachable, tested and separately attributable |
 | 10 / engine and quick-sim | Freeze the **D-08 selected PM-2 engine anchor**, complete its included calibration, then recapture A4a/refit under [KD-7/KD-7a/KD-8](league-bootstrap-design.md) | Selected scope complete; D-09 shape disposition; declared compute slot | Current corpus, mean/shape verdicts, governed model and deterministic locks match that anchor. **Revised November 3, 2026 (D-08/D-09/D-14):** before PM-2, only a recapture and KD-8 mean-bar check (refit only on failure); the freeze, governed refit and D-09 resolution move to the depth phase |
 | 11 / PM-2 | C3/C4 converge: new game, fixtures, play/quick-resolve, report, table/suspensions/board objectives, 38 rounds and save/resume | Client/season criteria in §1; D-08/D-09 and fit valid for selected anchor (revised November 3: mean bar passes on the PM-2 engine, D-09 shape limitation stated); final-head host acceptance | Existing playable-season criteria pass; D-10 save-compatibility decision is recorded |
@@ -491,7 +493,7 @@ decided.
    its whole test assembly, which is cheap, so run that rather than the single fixture (v0.85).
    #526 merged without this record: [resolved process exception](open-issues-resolved.md#pr526-host-evidence-gap). The change
    is a null-by-default observation hook with digest-neutrality locked, so no whole-assembly
-   MatchEngine run is owed (item 3). This first host job is complete; the Pre-C control also completed November 4 ([evidence](evidence/pre-c-control-20261104/README.md)). W8 C is next on the engine lane.
+   MatchEngine run is owed (item 3). This first host job is complete; the Pre-C control also completed November 4 ([evidence](evidence/pre-c-control-20261104/README.md)). W8 C subsequently landed in PR #542, with its host and paired-comparison evidence complete.
 2. **Owner decisions.** D-13 (PM-3 product scope and the integrity choices) before PM-3
    implementation; D-15 (depth-phase order) at PM-2. D-08 is decided (November 3).
 
@@ -505,12 +507,13 @@ decided.
    (step 8's measurement obligation); `policy-freeze.json` pins the eligibility/window interpretation.
    That rule excludes non-contact BallLoose outcomes and censors follow-up at the recorded full-time
    whistle or capture end; neither correction changes the 126 release decisions or 12 selected windows.
-2. **W8 C (L).** Implement [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
+2. **W8 C (L).** ✅ **Done November 6, 2026, PR #542 (`d4b026aa`).**
+   [#11 §3.8.5](../specs/goalkeeper-mechanics/section-3.md#385-hand-control-clock-and-law-12-offence-w8-c-err-011-021)
    and [restart contract §5.3](match-flow-completion-design.md#53-goalkeeper-hand-control-over-eight-seconds--w8-c)
-   as written; cite them rather than paraphrasing the corner rule. The next free snapshot version is
-   v28, now authored in the [C implementation record](w8-c-implementation-results.md) (host validation remains open). Restore locks follow §3.8.5, including its
-   full-time freeze exceptions. Host: compile plus whole-assembly MatchEngine EditMode (behaviour and
-   layout change). Close the Linux B→C comparison before any other keeper gameplay landing.
+   are implemented with snapshot v28, boundary/restore/full-time locks and the isolated Linux B→C
+   comparison complete ([record](w8-c-implementation-results.md)). Pinned Unity 6000.4.9f1 compile
+   passed with 0 `error CS`; whole MatchEngine EditMode at `fdbbff5a` had 939 passed / 0 failed /
+   16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)).
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
    final D-08. Land with separate attribution.
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
@@ -519,6 +522,16 @@ decided.
 5. **#441, then W9/W10 (S/M, then conditional M/L).** #441 uses #526's integrated diagnostics; a
    gameplay repair needs a failing-before/passing-after composed regression. W9 after #441 and D-06;
    W10 after B→C closes. None of these blocks PM-2 (D-08).
+
+**W13 / PM-2 formation/Duty controls (recorded November 12, 2026).** W13.0's two default-changing
+#14 fixes landed in PR #545 on November 10 (`ERR-014-008`, canonical frame; `ERR-014-009`, live
+retained targets). The owner-accepted [W13 plan](w-defender-marking-wiring-plan.md) leaves frozen-lane
+characterization and digest adoption open, then wires movement in W13.1 behind a default-off gate,
+with W13.1c pace tracking and §10 measurement before separate OD-2 default-flip acceptance.
+Formation/Duty player controls wait for that acceptance; the fixes alone do not enable movement.
+The §3 diagnosis for #543 remains a handoff without a recorded verdict; W13.2 per-team schemes
+follow the flip decision. [Live remainder](open-issues.md#w13-defender-marking). This note records
+the accepted W13 dependency without changing D-08 or ratifying a new overall sequence.
 
 **Career lane (starts now).**
 
@@ -916,6 +929,8 @@ which is now the critical path to **PM-1** and to any calibrated table:
 | Version | Date | Change |
 |---------|------|--------|
 
+| v0.93 | November 12, 2026 | Record W13.0 / PR #545 and the open characterization, movement, measurement and OD-2 gates on formation/Duty controls. Reconcile step 8 and engine-lane item 2 to W8 C / PR #542's completed paired comparison and passing pinned-host run at `fdbbff5a` (939 passed, 0 failed, 16 skipped, 1 existing inconclusive). No gameplay or sequencing decision. |
+| v0.92 | November 6, 2026 | Historical header entry above: W8 C implementation authored with snapshot v28; pinned-host validation was still outstanding at that writing, subsequently completed and merged in PR #542. |
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |
 | v0.89 | November 4, 2026 | Close engine lane item 1: freeze Pre-C source/runtime/configuration and exact-touch/team observer at `1d3cebf3`; reproduce all six adopted post-law B digests in plain and observed Linux .NET captures; verify full digest/ball/event neutrality and retain raw attribution/order evidence. W8 C implementation and its paired/host validation remain next. |
