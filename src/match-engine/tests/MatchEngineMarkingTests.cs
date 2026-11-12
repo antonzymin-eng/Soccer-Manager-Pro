@@ -1044,7 +1044,6 @@ namespace TacticalDirector.MatchEngine
             string line = $"GOALWARD def={def} v={topSpeed}: minGap {minGap:F2} m, GROUNDED strides {groundedStrides}/{rows.Count}. {DescribeEnvelope(rows)}";
             TestContext.Progress.WriteLine(line);
             Console.WriteLine(line);
-            File.AppendAllText("/tmp/claude-0/-home-user-Soccer-Manager-Pro/4caf5671-92e0-5208-adc8-74096094e4ec/scratchpad/goalward.txt", line + "\n");
             Assert.IsTrue(rows.Count == 40);
         }
 
@@ -1150,4 +1149,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   marked [Explicit].                                                                                                    |
 // | 1.2     | 2026-11-12 | —      | W13.1c (ERR-008-028): RunnerTracking (5 m/s man; bounded 3.25 m over 30 strides, closed to 3.0 m by strides 40-49; home + away; REMOVED in 1.3: superseded by RunnerEnvelope, whose bound it contradicted once the overshoot was fixed) and the MarkTargetSpeed-zero locks. |
 // | 1.3     | 2026-11-12 | —      | ERR-008-028 amendment: RunnerEnvelope (jog-band men, tight stand-off, per-stride goal-side + bound, Invariant 3 precondition); SelectMarkTargetSpeed unit test replaces the vacuous armed half (M1). |
+// | 1.4     | 2026-11-12 | —      | Removed a hard-coded scratchpad path (File.AppendAllText in Descriptive_GoalwardRunner_MarkerStateAndContact); the descriptive test logs to the console only. No assertion changed. |
 #endregion
