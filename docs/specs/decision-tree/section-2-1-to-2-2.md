@@ -9,10 +9,11 @@ how data flows through it, and what constitutes correct behaviour at the boundar
 each requirement.
 
 **Created:** March 01, 2026, 12:00 PM PST  
-**Updated:** November 12, 2026 (v1.1.5 — `ERR-008-028` (W13.1c): §2.2.6 `TacticalContext` gains `MarkTargetSpeed` (m/s of the marked man; default 0); §2.2.8 row extended.)
+**Updated:** November 12, 2026 (v1.1.6 — `ERR-008-028` amendment: the `MarkTargetSpeed` comment states the speed tier applies only while the marker is slower than his man.)
+**Updated (prior):** November 12, 2026 (v1.1.5 — `ERR-008-028` (W13.1c): §2.2.6 `TacticalContext` gains `MarkTargetSpeed` (m/s of the marked man; default 0); §2.2.8 row extended.)
 **Updated (prior):** November 11, 2026 (v1.1.4 — `ERR-008-027` (W13.1): §2.2.6 `TacticalContext` gains the per-agent `HasMarkTarget` / `MarkTarget` carrier (position + flag; default false / zero); §2.2.8 ownership row added.)
 **Updated (prior):** May 18, 2026 (v1.1.3 patch — ERR-014-001 Option B: `MarkDirective?` field added to `TacticalContext` §2.2.6; ownership table row added)
-**Version:** 1.1.5  
+**Version:** 1.1.6  
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 17, 2026) is a non-behavioral patch per ERR-013-001 Option B: `PressDirective?` nullable field added to §2.2.6 `TacticalContext`; `Stage0Default` factory initializes it `null`; ownership table §2.2.8 row added; "frozen at Stage 0" comment amended. Approval status preserved.  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -775,7 +776,8 @@ public struct TacticalContext
     /// <summary>
     /// W13.1c (ERR-008-028): speed (m/s) of the opponent this agent marks, from the CURRENT stride's world state,
     /// written beside `MarkTarget`; 0 when there is no marked man. Frame-invariant (no mirror). Read by
-    /// ActionDispatcher: a mark-point MOVE paces at max(distance tier, this man's speed tier) (§3.5.6).
+    /// ActionDispatcher: a mark-point MOVE paces at max(distance tier, this man's speed tier) while the marker is
+    /// slower than his man (§3.5.6).
     /// Zero value = identity; per-stride input, not serialized.
     /// </summary>
     public float            MarkTargetSpeed;
@@ -870,3 +872,4 @@ public readonly struct DecisionMadeEvent
 | 1.1.3 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-014-001 Option B: `MarkDirective?` nullable field added to `TacticalContext` §2.2.6 (null at Stage 0; Stage 1+: Defensive AI #14 writer). `Stage0Default` factory initializes field to `null`. Ownership table §2.2.8 row for `MarkDirective` added. Struct comment updated. No formula, scoring, or pipeline contract change. Approval status preserved. |
 | 1.1.4 | November 11, 2026 | — | `ERR-008-027` (W13.1; spec + code, same commit). §2.2.6 `TacticalContext` gains `HasMarkTarget` (bool) and `MarkTarget` (Vector2, world metres): the per-agent mark point composed by #14 §3.13.1 and written by the composition root under its mark-movement switch (default off). The field-set freeze is amended here, as its own rule requires; `Stage0Default` seeds false / zero. §2.2.8 ownership table row added. Consumed by §3.1.7.2 (MOVE target) and §3.1.8.2 (PRESS priority 2 skipped). #8 gains no reference to a #14 type. Code: `TacticalContext.cs`, `OptionGenerator.cs`. |
 | 1.1.5 | November 12, 2026 | — | `ERR-008-028` (W13.1c; spec + code, same commit). §2.2.6 `TacticalContext` gains `MarkTargetSpeed` (float, m/s; the marked man's current speed, 0 = none; default 0, `Stage0Default` seeds it). Written by the composition root beside `MarkTarget`; consumed only by §3.5.6's mark-point pace tier. Field-set freeze amended as its own rule requires; no #14 type reaches #8. Code: `TacticalContext.cs`. |
+| 1.1.6 | November 12, 2026 | — | `ERR-008-028` amendment (W13.1c review): the `MarkTargetSpeed` field comment (§2.2.6) states the §3.5.6 speed tier applies only while the marker is slower than his man. No field added or changed. |

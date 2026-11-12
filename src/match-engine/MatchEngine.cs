@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-12 (ERR-008-028 amendment: pure SelectMarkTargetSpeed helper)
 // Modified: 2026-11-12 (W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed beside the mark target; + TestOnly_MarkTargetSpeed. No schema/RNG change; default behaviour identical)
 // Modified: 2026-11-11 (W13.1 / ERR-014-010: mark-target composition in RunMechanicsAI under MarkMovementEnabled (default off); shared TeamPossessionAgent helper; FillDefensiveSnapshot sets MarkMovementActive; + TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole. No schema/RNG change; default behaviour identical; ERR-021-010)
 // Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
@@ -3932,9 +3933,7 @@ namespace TacticalDirector.MatchEngine
                             // W13.1c (ERR-008-028): the marked man's speed from THIS stride's world state (a speed is
                             // frame-invariant, so no mirror); 0 for COVER_GK_ZONE (no man). Drives the dispatcher's
                             // pace tier so a marker is never walking after a runner. No state is kept across strides.
-                            ctx.MarkTargetSpeed = markAssignment.TargetEntityId >= 0
-                                ? _agents[markAssignment.TargetEntityId].Velocity.magnitude
-                                : 0.0f;
+                            ctx.MarkTargetSpeed = SelectMarkTargetSpeed(markAssignment.TargetEntityId, _agents);
                         }
                     }
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
@@ -3993,6 +3992,19 @@ namespace TacticalDirector.MatchEngine
                     _tacticalContexts[i] = ctx;
                 }
             }
+        }
+
+        /// <summary>
+        /// W13.1c (ERR-008-028, M1): the speed (m/s) of the marked opponent for <see cref="TacticalContext.MarkTargetSpeed"/>:
+        /// <c>|_agents[id].Velocity|</c> from the CURRENT stride's world state, and 0 when there is no marked man
+        /// (<paramref name="targetEntityId"/> &lt; 0, i.e. a COVER_GK_ZONE point or no target) or the id is outside the squad.
+        /// A magnitude of the WORLD-frame velocity, hence identical for the home and the away mirror. Pure; no state.
+        /// </summary>
+        internal static float SelectMarkTargetSpeed(int targetEntityId, AgentState[] agents)
+        {
+            if (targetEntityId < 0 || targetEntityId >= agents.Length)
+                return 0.0f;
+            return agents[targetEntityId].Velocity.magnitude;
         }
 
         /// <summary>
@@ -11292,4 +11304,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.17 | 2026-11-10 | — | W13.0 / ERR-014-008: TestOnly_MarkAssignment read seam (per-team #14 committed assignment). No behaviour, schema or RNG change. |
 // | 2.18 | 2026-11-11 | — | W13.1 / ERR-014-010: #14 mark-target composition in RunMechanicsAI under MatchEngineConstants.MarkMovementEnabled (default off; engine-wide); shared TeamPossessionAgent helper (behaviour-neutral); FillDefensiveSnapshot sets MarkMovementActive; TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole seams. No schema, RNG or domain-tag change; switch off = byte-identical. |
 // | 2.19 | 2026-11-12 | — | W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed (the marked man's current speed; 0 for COVER_GK_ZONE) beside the mark target; TestOnly_MarkTargetSpeed seam. No schema, RNG or domain-tag change; switch off = unchanged. |
+// | 2.20 | 2026-11-12 | — | ERR-008-028 amendment: the marked man's speed selection extracted to the pure internal SelectMarkTargetSpeed (unit-tested); no behaviour change. |
 #endregion

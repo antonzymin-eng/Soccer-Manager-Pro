@@ -432,26 +432,50 @@ MovementCommand moveCmd = new MovementCommand
 MovementController.SubmitCommand(context.AgentState.AgentId, moveCmd);
 ```
 
-**Mark-point pace tier (W13.1c, `ERR-008-028`).** When `TacticalContext.HasMarkTarget` the MOVE target is the
-host-composed mark point (§3.1.7.2), which a running man drags away at his own speed, so a distance-only tier
-would walk a marker that is within 6 m of the point while his man runs. The pace is then the **larger** of the
-distance tier above and the man's speed tier:
+**Mark-point pace tier (W13.1c, `ERR-008-028`; amended).** When `TacticalContext.HasMarkTarget` the MOVE target is the
+host-composed mark point (§3.1.7.2), which a running man drags away at his own speed, so a distance-only tier would walk a
+marker that is within 6 m of the point while his man runs. The pace is the **larger** of the distance tier above and the
+man's speed tier — **but the speed tier applies only while the marker is slower than his man**:
 
 ```
 distanceTier = dist >= MOVE_SPRINT_THRESHOLD ? SPRINT : dist >= MOVE_JOG_THRESHOLD ? JOG : WALK   // dist in m
 speedTier    = v > SprintEnter ? SPRINT : v > JogEnter ? JOG : WALK     // v = TacticalContext.MarkTargetSpeed, m/s
-tier         = HasMarkTarget ? max(distanceTier, speedTier) : distanceTier     // WALK < JOG < SPRINT
+tier         = (HasMarkTarget AND agentSpeed < v) ? max(distanceTier, speedTier) : distanceTier   // WALK < JOG < SPRINT
+                                                       // agentSpeed = |AgentState.Velocity| of the marker, m/s
 ```
 
-`JogEnter` (2.2 m/s) and `SprintEnter` (5.8 m/s) are `[CROSS: Agent Movement #2 §3.1.3]`, read from
-`MovementThresholds` with the state machine's own strict `>` — no new constant. `MarkTargetSpeed` ≥ 0 m/s is the
-marked opponent's speed at the **current** 10 Hz stride, written by the host beside `MarkTarget` (0 when there is no
-marked man, e.g. a COVER_GK_ZONE point); a speed is frame-invariant, so no home/away mirror applies. It is a per-stride
-input, not serialized. *Valid ranges:* `dist` ∈ [0, 125.1] m (pitch diagonal), `v` ∈ [0, 12] m/s (`MAX_SPEED_CLAMP`
-bounds it). *Worked example:* marker 3 m from his mark point; man at 5.0 m/s → distanceTier WALK, speedTier JOG
-(2.2 < 5.0 ≤ 5.8) → **JOG** (`MoveTo`; top jog speed 5.8 m/s ≥ the man's 5.0, so he can keep up; walking caps at
-2.2 m/s and he cannot). Man at 9.0 m/s → SPRINT. Man at 1.0 m/s, 3 m away → WALK. Man at exactly 5.8 m/s → JOG
-(strict `>`). `HasMarkTarget` false → the distance tier alone, bit-identical to the text above.
+`JogEnter` (2.2 m/s) and `SprintEnter` (5.8 m/s) are `[CROSS: Agent Movement #2 §3.1.3]`, read from `MovementThresholds`
+with the state machine's own strict `>` — no new constant. `MarkTargetSpeed` ≥ 0 m/s is the marked opponent's speed at the
+**current** 10 Hz stride, written by the host beside `MarkTarget` (the world-frame `|AgentState.Velocity|` of the marked man; 0
+when there is no marked man, e.g. a COVER_GK_ZONE point); a speed is frame-invariant, so no home/away mirror applies. It is a
+per-stride input, not serialized. *Valid ranges:* `dist` ∈ [0, 125.1] m (pitch diagonal), `v`, `agentSpeed` ∈ [0, 12] m/s
+(`MAX_SPEED_CLAMP`).
+
+*Why "only while slower" (the first W13.1c version applied the speed tier unconditionally and was wrong in the jog band).* The
+movement API has no target-speed command: a JOG command's speed ceiling is `SprintEnter` (5.8 m/s) whatever the man's speed,
+and nothing brakes on arrival. A marker kept on JOG against a 2.6–3.5 m/s man therefore accelerated to ~5.6 m/s, ran past
+him, and orbited (measured at the first W13.1c commit: man accelerating at 2 m/s² to 3.5 m/s, gap 1.15 m at stride ~35 then
+9.7–10.0 m by strides 47–49 for both teams; to 2.6 m/s, 8.0 m by stride 42; with the 1.0 m stand-off at 2.6 m/s the marker was
+not goal-side for 10 strides and 6.3 m away). Once the marker is as fast as his man (strict `<`) the distance tier takes over,
+whose WALK ceiling (`JogEnter`) brakes him.
+
+*Worked example.* Marker 3 m from his mark point. Man at 5.0 m/s, marker at 0 m/s (slower): distanceTier WALK, speedTier JOG
+(2.2 < 5.0 ≤ 5.8) → **JOG** (top jog speed 5.8 m/s ≥ the man's, so he can catch up). The same marker once he reaches 5.0 m/s
+(not slower): **WALK** (distance tier) — he brakes toward the man's pace instead of overshooting. Man at 9.0 m/s, marker at
+5 m/s → SPRINT. Man at exactly 5.8 m/s, marker 0 m/s → JOG (strict `>`). `HasMarkTarget` false → the distance tier alone,
+bit-identical to the text above.
+
+*Measured behaviour (non-certifying Linux; `MatchEngineMarkingTests.RunnerEnvelope_*`, a man accelerating from rest at 2 m/s²
+to the stated speed and running upfield for 60 strides, 2.0 m stand-off unless stated).* Peak marker-to-man gap, home / away:
+2.6 m/s 3.79 / 2.87 m; 3.5 m/s 3.81 / 2.87 m; 5.0 m/s 4.39 / 2.99 m; 2.6 m/s with the 1.0 m stand-off 1.36 / 3.24 m. The
+marker stays goal-side on every stride from stride 2 and no longer overshoots, but he does **not** close the lag the man opens
+while accelerating — he settles at the man's speed and follows (final gap ≈ peak for the home 3.5 and 5.0 m/s runs), so the
+plan's "within 3.0 m" is not met for the home runs. The asserted bound is the distance tier's own near limit,
+`MOVE_JOG_THRESHOLD` (6.0 m), plus goal-side; the peaks above are the measurements. **Known limitations (recorded, not fixed):**
+the tier has no hysteresis at the `JogEnter` boundary (a man at ≈ 2.2 m/s flips WALK / JOG stride by stride); a man running at his
+goal-side marker (toward the defended goal) collides with him and leaves him GROUNDED for about 2 s in the rig (open issue; blocks
+the default flip); closing the residual lag needs either an Agent Movement #2 target-speed / arrival-braking command or a new
+lag dial, neither of which this section invents.
 
 **Threshold constants** — listed in §3.4.7 constant table; defined in `UtilityWeights.cs`:
 

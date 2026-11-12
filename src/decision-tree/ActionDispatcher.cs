@@ -1,5 +1,6 @@
 // File:     src/decision-tree/ActionDispatcher.cs
 // Created:  2026-05-29
+// Modified: 2026-11-12 (ERR-008-028 amendment: speed tier only while the marker is slower than his man; MoveTier enum)
 // Modified: 2026-11-12 (W13.1c / ERR-008-028: MOVE to a mark point paces at the larger of the distance tier and the marked man's speed tier)
 // Modified: 2026-07-23 (ERR-008-013: SAVE → IDtSaveDispatch)
 // Author:   —
@@ -235,36 +236,53 @@ namespace TacticalDirector.DecisionTree
             // at his own speed; the pace is the larger of the distance tier above and the man's speed tier.
             // HasMarkTarget false is the prior behaviour exactly.
             MovementCommand cmd;
-            switch (SelectMoveTier(dist, ctx.TacticalContext.HasMarkTarget, ctx.TacticalContext.MarkTargetSpeed))
+            switch (SelectMoveTier(
+                dist, ctx.TacticalContext.HasMarkTarget, ctx.TacticalContext.MarkTargetSpeed, ctx.AgentState.Velocity.magnitude))
             {
-                case 2:  cmd = MovementCommand.SprintUrgent(action.TargetPosition); break;
-                case 1:  cmd = MovementCommand.MoveTo(action.TargetPosition);       break;
-                default: cmd = MovementCommand.WalkTo(action.TargetPosition);       break;
+                case MoveTier.Sprint: cmd = MovementCommand.SprintUrgent(action.TargetPosition); break;
+                case MoveTier.Jog:    cmd = MovementCommand.MoveTo(action.TargetPosition);       break;
+                default:              cmd = MovementCommand.WalkTo(action.TargetPosition);       break;
             }
             mc.SubmitCommand(action.AgentId, cmd);
         }
 
+        /// <summary>Pace band of a MOVE_TO_POSITION command (§3.5.6): WALKING / JOGGING / SPRINTING, in increasing order.</summary>
+        internal enum MoveTier
+        {
+            /// <summary>WalkTo: top speed JogEnter (2.2 m/s).</summary>
+            Walk = 0,
+            /// <summary>MoveTo: JOGGING, top speed SprintEnter (5.8 m/s).</summary>
+            Jog = 1,
+            /// <summary>SprintUrgent: SPRINTING.</summary>
+            Sprint = 2,
+        }
+
         /// <summary>
-        /// §3.5.6 pace tier for a MOVE_TO_POSITION (2 = sprint, 1 = jog, 0 = walk). The distance tier is
-        /// <c>dist &gt;= MoveSprintThreshold</c> → 2, <c>dist &gt;= MoveJogThreshold</c> → 1, else 0. When
-        /// <paramref name="hasMarkTarget"/> the MOVE targets a mark point and the tier is the LARGER of that and the
-        /// marked man's speed tier: <c>speed &gt; SprintEnter</c> → 2, <c>speed &gt; JogEnter</c> → 1, else 0 — the
-        /// strict comparisons of the Agent Movement #2 §3.1 state machine, thresholds [CROSS #2]
-        /// (<see cref="MovementThresholds.JogEnter"/> 2.2 m/s, <see cref="MovementThresholds.SprintEnter"/> 5.8 m/s),
-        /// so a marker is commanded a band that can match a man in that band. No new constant. Pure; zero allocation.
+        /// §3.5.6 pace tier for a MOVE_TO_POSITION. The distance tier is <c>dist &gt;= MoveSprintThreshold</c> → Sprint,
+        /// <c>dist &gt;= MoveJogThreshold</c> → Jog, else Walk. When <paramref name="hasMarkTarget"/> the MOVE targets a
+        /// mark point that a running man drags away, and the tier is the LARGER of that and the marked man's speed tier
+        /// (<c>speed &gt; SprintEnter</c> → Sprint, <c>speed &gt; JogEnter</c> → Jog, else Walk — the strict comparisons of
+        /// the Agent Movement #2 §3.1 state machine, [CROSS #2] <see cref="MovementThresholds.JogEnter"/> 2.2 m/s,
+        /// <see cref="MovementThresholds.SprintEnter"/> 5.8 m/s) — <b>but the speed tier applies only while the marker is
+        /// slower than his man</b> (<paramref name="agentSpeed"/> &lt; <paramref name="markTargetSpeed"/>). The movement
+        /// API has no target-speed command: a Jog command's speed ceiling is SprintEnter whatever the man's speed and
+        /// nothing brakes on arrival, so a marker kept on Jog against a 2.6-3.5 m/s man accelerates to 5.8 m/s and runs
+        /// past him (measured, ERR-008-028 amendment). Once he is as fast as his man the distance tier takes over and the
+        /// walk ceiling brakes him. No new constant. Pure; zero allocation.
         /// </summary>
         /// <param name="dist">Distance (m) from the agent to the MOVE target, ≥ 0.</param>
         /// <param name="hasMarkTarget">Whether the target is the host-composed mark point.</param>
         /// <param name="markTargetSpeed">The marked man's speed (m/s), ≥ 0; ignored unless <paramref name="hasMarkTarget"/>.</param>
-        internal static int SelectMoveTier(float dist, bool hasMarkTarget, float markTargetSpeed)
+        /// <param name="agentSpeed">The marker's own current speed (m/s), ≥ 0; ignored unless <paramref name="hasMarkTarget"/>.</param>
+        internal static MoveTier SelectMoveTier(float dist, bool hasMarkTarget, float markTargetSpeed, float agentSpeed)
         {
-            int distanceTier = dist >= TacticalWeights.MoveSprintThreshold ? 2
-                             : dist >= TacticalWeights.MoveJogThreshold    ? 1 : 0;
-            if (!hasMarkTarget)
+            MoveTier distanceTier = dist >= TacticalWeights.MoveSprintThreshold ? MoveTier.Sprint
+                                  : dist >= TacticalWeights.MoveJogThreshold    ? MoveTier.Jog : MoveTier.Walk;
+            if (!hasMarkTarget || !(agentSpeed < markTargetSpeed))
                 return distanceTier;
 
-            int speedTier = markTargetSpeed > MovementThresholds.SprintEnter ? 2
-                          : markTargetSpeed > MovementThresholds.JogEnter    ? 1 : 0;
+            MoveTier speedTier = markTargetSpeed > MovementThresholds.SprintEnter ? MoveTier.Sprint
+                               : markTargetSpeed > MovementThresholds.JogEnter    ? MoveTier.Jog : MoveTier.Walk;
             return speedTier > distanceTier ? speedTier : distanceTier;
         }
 
@@ -317,4 +335,6 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   null-tolerant like the executors — dev-logged wiring drop). The GK save     |
 // |         |            |        |   sink; primitives only (no GoalkeeperMechanics type crosses the seam).       |
 // | 1.3     | 2026-11-12 | —      | W13.1c (ERR-008-028): SelectMoveTier — mark-point MOVE paces at max(distance tier, marked man's speed tier). |
+// | 1.4     | 2026-11-12 | —      | ERR-008-028 amendment: the speed tier applies only while the marker is slower than his man (a Jog command's ceiling is |
+// |         |            |        |   SprintEnter and nothing brakes on arrival, so an always-on Jog overshot a 2.6-3.5 m/s man); MoveTier enum.          |
 #endregion
