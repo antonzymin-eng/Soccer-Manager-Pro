@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 10, 2026 — **PR #545 spec-hygiene repair.** Advance the three maintained `spec-error-log.md` pointers to v2.98 after W13.0 added ERR-014-008 and ERR-014-009. No inventory paths or runtime behavior change.
+**Last Updated:** November 12, 2026 — **Movement-system work-item draft.** **New:** `docs/tracking/movement-arrival-braking-plan.md` v0.1, covering shared arrival braking/target-speed design, required spec changes, acceptance criteria, and a dedicated regression pass. **Modified:** this manifest and `docs/tracking/CHANGELOG.md`. Planning only; no source, normative spec, tuning, schema, or approval-state change; no gameplay tests run.
+
+**Last Updated (prior):** November 10, 2026 — **PR #545 spec-hygiene repair.** Advance the three maintained `spec-error-log.md` pointers to v2.98 after W13.0 added ERR-014-008 and ERR-014-009. No inventory paths or runtime behavior change.
 
 **Last Updated (prior):** November 6, 2026 — **PR #542 pinned-host Unity receipt at `fdbbff5a`.** **New evidence directory** `docs/tracking/evidence/host-w8c-fdbbff5a-20261106/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `compile-editor-log.txt.xz`, `matchengine-results.xml.xz`, `editmode-editor-log.txt.xz` and `editmode-summary.txt`. Unity 6000.4.9f1 full import, 0 `error CS`; whole MatchEngine EditMode 939 passed / 0 failed / 16 skipped / 1 existing inconclusive. **Modified:** `docs/tracking/w8-c-implementation-results.md` v1.5 → v1.6, this manifest, and CI tooling `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` (39 registered directories). No `src/` change, no assembly added, no removals.
 
