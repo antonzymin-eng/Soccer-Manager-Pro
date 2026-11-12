@@ -1,6 +1,6 @@
 # Path to Playable — Implementation Roadmap
 
-> **November 12 — W13.0 records and W8 C closeout (v0.93):** PR #545 merged the canonical-frame and retained-target fixes (`ERR-014-008` / `ERR-014-009`) on November 10. W13 movement, frozen-lane characterization/digest adoption and default-flip acceptance remain open; formation/Duty controls wait for OD-2. W8 C merged in PR #542 on November 6 with its paired Linux comparison complete and pinned-host Unity checks passed at `fdbbff5a`: **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). The November 6 outstanding-host note below is superseded.
+> **November 12 — W8 C closeout (v0.93):** W8 C merged in PR #542 on November 6 as `d4b026aa`, with its paired Linux comparison complete and pinned-host Unity checks passed at `fdbbff5a`: **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). Step 8 and engine-lane item 2 now record that closeout; the November 6 outstanding-host note below is superseded.
 
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
 
@@ -523,16 +523,6 @@ decided.
    gameplay repair needs a failing-before/passing-after composed regression. W9 after #441 and D-06;
    W10 after B→C closes. None of these blocks PM-2 (D-08).
 
-**W13 / PM-2 formation/Duty controls (recorded November 12, 2026).** W13.0's two default-changing
-#14 fixes landed in PR #545 on November 10 (`ERR-014-008`, canonical frame; `ERR-014-009`, live
-retained targets). The owner-accepted [W13 plan](w-defender-marking-wiring-plan.md) leaves frozen-lane
-characterization and digest adoption open, then wires movement in W13.1 behind a default-off gate,
-with W13.1c pace tracking and §10 measurement before separate OD-2 default-flip acceptance.
-Formation/Duty player controls wait for that acceptance; the fixes alone do not enable movement.
-The §3 diagnosis for #543 remains a handoff without a recorded verdict; W13.2 per-team schemes
-follow the flip decision. [Live remainder](open-issues.md#w13-defender-marking). This note records
-the accepted W13 dependency without changing D-08 or ratifying a new overall sequence.
-
 **Career lane (starts now).**
 
 1. **P7b independent bindings (M).** Career Home, New Career, Load Career, Main Menu entries, screen
@@ -929,7 +919,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 | Version | Date | Change |
 |---------|------|--------|
 
-| v0.93 | November 12, 2026 | Record W13.0 / PR #545 and the open characterization, movement, measurement and OD-2 gates on formation/Duty controls. Reconcile step 8 and engine-lane item 2 to W8 C / PR #542's completed paired comparison and passing pinned-host run at `fdbbff5a` (939 passed, 0 failed, 16 skipped, 1 existing inconclusive). No gameplay or sequencing decision. |
+| v0.93 | November 12, 2026 | Reconcile step 8 and engine-lane item 2 to W8 C / PR #542's completed paired comparison and passing pinned-host run at `fdbbff5a` (939 passed, 0 failed, 16 skipped, 1 existing inconclusive). No gameplay or sequencing decision. |
 | v0.92 | November 6, 2026 | Historical header entry above: W8 C implementation authored with snapshot v28; pinned-host validation was still outstanding at that writing, subsequently completed and merged in PR #542. |
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |
 | v0.90 | November 4, 2026 | Pre-C review closeout: complete digest retention in LFS, pointer-safe hygiene, portable reproduction, rule 1.1 excluding non-contact BallLoose outcomes with unchanged selections, explicit same-frame and coverage limits; no gameplay change. |

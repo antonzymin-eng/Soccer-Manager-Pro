@@ -10,11 +10,6 @@
 
 ---
 
-> **UPDATED November 12, 2026, v1.41:** W13.0's two #14 defects landed in PR #545
-> (`ERR-014-008` / `ERR-014-009`); defender movement remains unwired under **W13** below.
-> Frozen-lane characterization and digest adoption remain open. W8 C landed in PR #542;
-> its paired comparison and pinned-host checks are complete. KD-W1 remains in force.
->
 > **UPDATED October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
@@ -516,37 +511,6 @@ not.
 
 ---
 
-<a id="w13-defender-marking"></a>
-
-### W13 — Defender mark assignments never move defenders — **W13.0 LANDED; movement OPEN**
-
-**Evidence:** #14 produces per-agent `MarkAssignment`s, but `DefensiveAITick.GetAssignment`
-has no production movement consumer. #8 MOVE targets the depth-adjusted formation slot;
-assignments affect tackle intents, while the trap and invariants constrain assignments only.
-This is separate from **C10** (the unread `HasBall` field / ball-blind target selection).
-Authority: [W13 plan](w-defender-marking-wiring-plan.md), owner acceptance recorded November 10, 2026.
-
-**W13.0 landed November 10, 2026 in PR #545 (`c7ec1131`):**
-
-- `ERR-014-008` (`b91a8ce6`): own-goal orientation comes from the snapshot's canonical frame,
-  fixing the away team's inverted threat, runner, last-man, tackle-cover and trap decisions.
-- `ERR-014-009` (`5d99fa04`): retained MAN_MARK / INTERCEPT_RUNNER positions refresh each tick;
-  an absent or inactive target releases immediately to ZONAL, so Invariant 3 reads live distance.
-
-Spec, code and regression locks landed together. These fixes change default behaviour; no schema,
-RNG stream or domain tag changed, and digest invariance is not claimed. Frozen-lane six-seed
-characterization and owner adoption of the resulting digests remain open (plan §8 / §9 ④).
-
-**Remaining:** W13.1's goal-side movement composer, per-agent #8 target, PRESS priority-2 skip
-and one-marker-per-opponent invariant; its planned config gate defaults off. W13.1c adds runner
-pace tracking; W13.2 adds per-team schemes after the flip decision. W13-F1 (specific opponent),
-W13-F2 (conditional between-lines coverage) and W13-F4 (trap step-up after the units correction)
-remain follow-ups under plan §5. The §3 diagnosis has no recorded verdict; §10 measurement and
-the separate OD-2 default-flip acceptance remain due. Formation/Duty player controls wait for
-that acceptance ([live issue](open-issues.md#w13-defender-marking)).
-
----
-
 ## 3. Class B — wired but starved (gate-level dormancy)
 
 Not found by this audit's method — carried here from measured evidence in `§5.Z.24` and
@@ -724,8 +688,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
 | 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9; develop independently of W8 C now, land after its measurement. |
-| 8 | **W8 B → C** ✅ **LANDED**, then **W9**, **W10** | B landed in PR #511; C and its paired/host evidence landed in PR #542. Preserve the consumer-specific spec/host gates in roadmap §5.1. |
-| — | **W13** defender marking — **W13.0 LANDED; W13.1 OPEN** | PR #545 fixes the frame and stale-target defects. Characterize/adopt the post-W13.0 baseline; wire movement default off, then measure before the separate OD-2 flip. Formation/Duty controls wait for acceptance. [Plan](w-defender-marking-wiring-plan.md); ordering in roadmap §5.1a. |
+| 8 | **W8 B → C**, then **W9**, **W10** | B landed in PR #511; C law/measurement remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
 > **W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated
 > finding — recorded August 17, 2026 with the owner's decision pass, corrected same-day (L11).** This
@@ -819,7 +782,6 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.41 | 2026-11-12 | — | Record W13.0 / PR #545, add Class-A W13 and its open movement/measurement/flip follow-ups; cross-reference C10 and the live issue. Reconcile W8 C / PR #542 with the completed paired comparison and passing pinned-host receipt. No gameplay or tuning change. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |
