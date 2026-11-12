@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/BallLooseEpisodeObserverTests.cs
 // Created:  2026-11-09
-// Modified: 2026-11-10
+// Modified: 2026-11-12
 // Author:   —
 // Spec:     w-440-ball-loose-design.md frozen Stage A definitions
 // Purpose:  Outcome tests for chronology, horizon, censoring and diagnostic neutrality.
@@ -15,7 +15,7 @@ using TacticalDirector.DefensiveAI;
 namespace TacticalDirector.MatchEngine
 {
     /// <summary>Always-run tests; the long census is a separate environment-gated executable.</summary>
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     internal sealed class BallLooseEpisodeObserverTests
     {
         private static BallLooseStageAEvent Event(BallLooseStageAKind kind, int frame = 100,
@@ -206,4 +206,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-10 | — | Always-run definition and real-seam neutrality tests; no opt-in skips. |
+// | 1.1 | 2026-11-12 | — | Removed [NonParallelizable] (NUnit 3.7+); Unity's NUnit 3.5 rejected it with CS0246 on the pinned host. |
 #endregion
