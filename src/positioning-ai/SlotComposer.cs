@@ -1,6 +1,6 @@
 // File: src/positioning-ai/SlotComposer.cs
 // Created: 2026-05-29
-// Modified: 2026-07-22
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author: —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-007/008); Build-Up #24 §3.2 (FM-BU-02);
 //       Dismarking #23 §3.3 (FM-DM-02)
@@ -104,6 +104,10 @@ namespace TacticalDirector.PositioningAI
                 }
 
                 Vector2 anchor   = AnchorCalculator.ComputeAnchor(formation[idx]);
+                // ERR-012-013: Duty is longitudinal in the canonical attacking frame. Support
+                // skips arithmetic entirely, retaining every pre-routing float bit.
+                if (agent.Duty != Duty.Support)
+                    anchor.x += TacticalInstructionsConstants.DutyForeOffsetM[(int)agent.Duty];
                 Vector2 offset   = AnchorCalculator.ComputeBallRelativeOffset(
                                        snapshot.BallPosition, agent.Role, phase);
                 Vector2 baseSlot = anchor + offset;
@@ -234,4 +238,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        | GK slot instead of being skipped. Skipping left outSlots[idx] at the stale carried buffer value,   |
 // |         |            |        | which is not serialized, so forward replay from a restore diverged. GK at slot 0 (every realistic  |
 // |         |            |        | case) is unaffected — byte-identical default pipeline.                                              |
+// | 1.4 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

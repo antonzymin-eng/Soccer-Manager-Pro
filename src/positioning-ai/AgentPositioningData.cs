@@ -1,11 +1,13 @@
 // File: src/positioning-ai/AgentPositioningData.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec: #12 Positioning AI §4.3
 // Purpose: Per-agent input consumed from the perception snapshot each positioning tick.
 
 using UnityEngine;
+
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.PositioningAI
 {
@@ -34,9 +36,12 @@ namespace TacticalDirector.PositioningAI
         /// <summary>True only for the goalkeeper slot (index 0). GK slot computed via dedicated formula §3.3.3.</summary>
         public readonly bool IsGoalkeeper;
 
+        /// <summary>Agent-owned Duty; rotations preserve it while changing the slot binding (#21).</summary>
+        public readonly Duty Duty;
+
         public AgentPositioningData(
             int entityId, int slotIndex, Vector2 position,
-            bool isActive, RoleId role, bool isGoalkeeper)
+            bool isActive, RoleId role, bool isGoalkeeper, Duty duty = Duty.Support)
         {
             EntityId    = entityId;
             SlotIndex   = slotIndex;
@@ -44,6 +49,7 @@ namespace TacticalDirector.PositioningAI
             IsActive    = isActive;
             Role        = role;
             IsGoalkeeper = isGoalkeeper;
+            Duty = duty;
         }
     }
 }
@@ -51,4 +57,5 @@ namespace TacticalDirector.PositioningAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

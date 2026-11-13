@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-07-20
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-009), §3.11, §4.3, FR-PA-001..006,
 //       new §3.5/§7.13; Positional Rotations #25 §4.2
@@ -35,7 +35,7 @@ namespace TacticalDirector.PositioningAI
 
         // ── Persistent state ──────────────────────────────────────────────────
         private readonly HysteresisState _hyst;
-        private readonly FormationFamily _archetype;
+        private FormationFamily _archetype;
 
         // ── Per-tick output buffer (pre-allocated, reused each tick) ──────────
         private readonly Vector2[] _slots;        // length = SQUAD_SIZE; index = SlotIndex
@@ -54,7 +54,13 @@ namespace TacticalDirector.PositioningAI
         private bool _lastRestDefenseSufficient = true;
 
         // ── #25 rotation controller (§4.2: phase → rotations → compose) ────────
-        private readonly RotationController _rotation;
+        private RotationController _rotation;
+        private readonly RotationController _rotation442;
+        private readonly RotationController _rotation433;
+        private readonly RotationController _rotation4231;
+
+        /// <summary>The selected positioning family, fixed after kickoff (FR-PA-039).</summary>
+        public FormationFamily Formation => _archetype;
 
         public PositioningAITick(FormationFamily archetype, int maxEntityId = 64)
         {
@@ -65,7 +71,13 @@ namespace TacticalDirector.PositioningAI
             _entityIdArr      = new int[PositioningAIConstants.SQUAD_SIZE];
             _entityIdCapacity = maxEntityId + 1;
             _entityToSlotIndex = new int[_entityIdCapacity];
-            _rotation         = new RotationController(archetype, PositioningAIConstants.SQUAD_SIZE);
+            // Provision all supported storage before RunTick: selecting the kickoff family
+            // must not allocate. Unselected controllers are never used after the choice is fixed.
+            _rotation442 = new RotationController(FormationFamily.F442, PositioningAIConstants.SQUAD_SIZE);
+            _rotation433 = new RotationController(FormationFamily.F433, PositioningAIConstants.SQUAD_SIZE);
+            _rotation4231 = new RotationController(FormationFamily.F4231, PositioningAIConstants.SQUAD_SIZE);
+            _rotation = archetype == FormationFamily.F433 ? _rotation433
+                : archetype == FormationFamily.F4231 ? _rotation4231 : _rotation442;
 
             for (int i = 0; i < _entityIdCapacity; i++) _entityToSlotIndex[i] = -1;
 
@@ -74,6 +86,22 @@ namespace TacticalDirector.PositioningAI
                 PositioningAIConstants.PITCH_HALF_LENGTH_M,
                 PositioningAIConstants.PITCH_HALF_WIDTH_M);
             for (int i = 0; i < _slots.Length; i++) _slots[i] = centre;
+        }
+
+        /// <summary>
+        /// Selects/seeds a family before the first positioning tick, or on a fresh restore instance.
+        /// Retains this object and its consumers. This is not a mid-match switching API.
+        /// The same-family path is an exact no-op (ERR-012-013).
+        /// </summary>
+        public void InitializeFormation(FormationFamily family, PositioningPerceptionSnapshot snapshot)
+        {
+            if (_archetype == family) return;
+            if (_lastProcessedTick >= 0)
+                throw new System.InvalidOperationException("Positioning formation is fixed after kickoff.");
+            _archetype = family;
+            _rotation = family == FormationFamily.F433 ? _rotation433
+                : family == FormationFamily.F4231 ? _rotation4231 : _rotation442;
+            SeedFromFormation(snapshot);
         }
 
         // ── Match initialisation ───────────────────────────────────────────────
@@ -283,4 +311,5 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   read counterpart to CaptureState; copies phase + per-agent line/lane    |
 // |         |            |        |   membership into the live _hyst. Rotation restores via the existing      |
 // |         |            |        |   RotationController.Restore* seams. No behaviour change.                 |
+// | 1.5 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

@@ -3,7 +3,7 @@
 // Modified: 2026-11-12 (W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed beside the mark target; + TestOnly_MarkTargetSpeed. No schema/RNG change; default behaviour identical)
 // Modified: 2026-11-11 (W13.1 / ERR-014-010: mark-target composition in RunMechanicsAI under MarkMovementEnabled (default off); shared TeamPossessionAgent helper; FillDefensiveSnapshot sets MarkMovementActive; + TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole. No schema/RNG change; default behaviour identical; ERR-021-010)
 // Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
-// Modified: 2026-11-06 (W8 C / ERR-011-021)
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
@@ -323,6 +323,8 @@ namespace TacticalDirector.MatchEngine
         // by SetTeamTactic, committed at the next stride) are cross-tick state, so a tactic changed
         // MID-match now survives save/restore — a mid-match change is restore-deterministic.
         private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
+        private readonly TacticFormation[] _kickoffFormations = new TacticFormation[MatchEngineConstants.TEAM_COUNT];
+        private readonly bool[] _kickoffFormationInitialized = new bool[MatchEngineConstants.TEAM_COUNT];
         private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
 
         // Per-agent manager tactic (#21 §3.3 — the per-agent role/duty/individual-instruction layer).
@@ -1051,7 +1053,8 @@ namespace TacticalDirector.MatchEngine
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 _positioning[t] = new PositioningAITick(
-                    MatchEngineConstants.STAGE0_FORMATION, MatchEngineConstants.MaxEntityId);
+                    TacticalDirector.PositioningAI.TacticTranslation.ToFormationFamily(TeamTactic.Balanced.Formation),
+                    MatchEngineConstants.MaxEntityId);
                 _posSnapshots[t] = new PositioningPerceptionSnapshot(MatchEngineConstants.PLAYERS_PER_TEAM);
                 FillPositioningSnapshot(t, tickIndex: 0);
                 _positioning[t].SeedFromFormation(_posSnapshots[t]);
@@ -1560,8 +1563,40 @@ namespace TacticalDirector.MatchEngine
         public void RunTick()
         {
             using var _ = s_runTickMarker.Auto();
+            // Owner P1: lock the final clock-0 setup before any physics frame/snapshot.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                if (_kickoffFormationInitialized[t]) continue;
+                if (_clock.CurrentTick != 0UL)
+                    throw new InvalidOperationException("Uninitialized kickoff formation after frame zero.");
+                FormationFamily family = TacticalDirector.PositioningAI.TacticTranslation.ToFormationFamily(
+                    _pendingTeamTactics[t].Formation);
+                _kickoffFormations[t] = TacticalDirector.PositioningAI.TacticTranslation.ToTacticFormation(family);
+                FillPositioningSnapshot(t, tickIndex: 0);
+                _positioning[t].InitializeFormation(family, _posSnapshots[t]);
+                _kickoffFormationInitialized[t] = true;
+            }
             _orchestrator.RunTick();
         }
+
+        /// <summary>Effective positioning formation, fixed at kickoff; distinct from later requests.</summary>
+        public TacticFormation GetEffectiveFormation(int teamId)
+        {
+            GuardTeamId(teamId);
+            return _kickoffFormations[teamId];
+        }
+
+        /// <summary>Most recently requested formation, including requests awaiting the next stride.</summary>
+        public TacticFormation GetRequestedFormation(int teamId)
+        {
+            GuardTeamId(teamId);
+            return _pendingTeamTactics[teamId].Formation;
+        }
+
+        /// <summary>Copies both teams' requested/effective formation for the live client.</summary>
+        public MatchFormationState Formations => new MatchFormationState(
+            GetRequestedFormation(0), GetEffectiveFormation(0),
+            GetRequestedFormation(1), GetEffectiveFormation(1));
 
         /// <summary>
         /// Sets a team's manager tactic (#21 §3.1/§3.2 — T2 runtime activation). The change is staged
@@ -2313,6 +2348,13 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>Observation only: live #12 input for a roster slot, after its latest AI fill.</summary>
+        internal PositioningAITick TestOnly_Positioning(int teamId) => _positioning[teamId];
+
+        /// <summary>Observation only: agent-owned Duty in the latest positioning input.</summary>
+        internal Duty TestOnly_PositioningDuty(int agentId) =>
+            _posSnapshots[_teamIds[agentId]].Agents[agentId % MatchEngineConstants.PLAYERS_PER_TEAM].Duty;
+
+        /// <summary>Observation only: positional role in the latest positioning input.</summary>
         internal RoleId TestOnly_PositioningRole(int agentId)
         {
             GuardRosterIndex(agentId);
@@ -4520,7 +4562,7 @@ namespace TacticalDirector.MatchEngine
         {
             PositioningPerceptionSnapshot snap = _posSnapshots[team];
             FormationSlotRecord[] formation =
-                PositioningAIConstants.GetFormationSlots(MatchEngineConstants.STAGE0_FORMATION);
+                PositioningAIConstants.GetFormationSlots(_positioning[team].Formation);
 
             snap.TickIndex = tickIndex;
             snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
@@ -4564,7 +4606,8 @@ namespace TacticalDirector.MatchEngine
                     position: MirrorPitchIfAway(team, _agents[i].Position),
                     isActive: !_isSentOff[i],       // match-flow completion: red-carded agents excluded
                     role: isGk ? RoleId.GK : formation[k].Role,
-                    isGoalkeeper: isGk);
+                    isGoalkeeper: isGk,
+                    duty: _activePlayerTactics[i].Duty);
 
                 if (!isGk) activeOutfield++;
 
@@ -7009,6 +7052,10 @@ namespace TacticalDirector.MatchEngine
             // _perfs (it stays the boot-neutral constant) — when it begins to, _perfs becomes
             // cross-tick state and MUST be serialized here (bump SNAPSHOT_SCHEMA_VERSION at that point).
             //
+            // v29: kickoff initialization/family are serialized explicitly. The selected controller's
+            // binding, cache and every row are serialized below. Unselected preallocated controllers
+            // remain boot identities and are never selected after kickoff. Per-agent Duty inputs are
+            // rebuilt each stride from serialized active PlayerTactic, so the carrier adds no state.
             // CROSS-TICK COVERAGE (D4 v8, completed by v17): every cross-tick gameplay surface is serialized.
             // NOTE (snapshot-deserialize-design.md KD-8): the v8-era "no cross-tick state is excluded" claim
             // below became STALE at v15, when match-flow completion added the match-flow.card-severity
@@ -7047,6 +7094,13 @@ namespace TacticalDirector.MatchEngine
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
             CanonicalSerializer.WriteU64(buf, ref o, _clock.CurrentTick);
+
+            // v29 / owner P3-B exception: catalogue metadata precedes all positioning state.
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                CanonicalSerializer.WriteBool(buf, ref o, _kickoffFormationInitialized[t]);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)_kickoffFormations[t]);
+            }
 
             WriteBallState(buf, ref o, in _ball);
 
@@ -7155,12 +7209,14 @@ namespace TacticalDirector.MatchEngine
             }
             CanonicalSerializer.WriteI32(buf, ref o, _settledPossessionTeam);
 
+            // v29: count-prefixed contiguous rows; selected catalogue is in kickoff metadata.
             // v12 (c) — #25 per-team rotation state (FR-RO-013; #25 Appendix B order: the binding
             // permutation, then the LastComposedTarget cache — restore loads it VERBATIM, a re-seed
             // would break byte-identity (PASS-1 H-1) — then the per-pair state in table-row order).
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 RotationController rot = _positioning[t].CaptureRotationState();
+                CanonicalSerializer.WriteI32(buf, ref o, rot.PairCount);
                 for (int k = 0; k < rot.SquadSize; k++)
                 {
                     CanonicalSerializer.WriteI32(buf, ref o, rot.GetSlotOfAgent(k));
@@ -7445,8 +7501,26 @@ namespace TacticalDirector.MatchEngine
 
             // Tick (the payload's self-describing copy) — restore the clock to the saved tick so the next
             // RunTick advances to tick+1, continuing the run exactly where the save was taken.
+            if (payload.BytesWritten - o < sizeof(ulong)
+                + MatchEngineConstants.TEAM_COUNT * (sizeof(byte) + sizeof(int)))
+                throw new InvalidOperationException("Truncated kickoff formation metadata.");
             ulong tick = CanonicalSerializer.ReadU64(buf, ref o);
             _clock.RestoreFromSnapshot(tick);
+
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                byte initialized = CanonicalSerializer.ReadU8(buf, ref o);
+                int formation = CanonicalSerializer.ReadI32(buf, ref o);
+                if (initialized > 1 || (formation != (int)TacticFormation.F442
+                    && formation != (int)TacticFormation.F433 && formation != (int)TacticFormation.F4231)
+                    || (initialized == 0 && (tick != 0UL || formation != (int)TacticFormation.F442)))
+                    throw new InvalidOperationException("Invalid kickoff formation metadata.");
+                _kickoffFormationInitialized[t] = initialized != 0;
+                _kickoffFormations[t] = (TacticFormation)formation;
+                _positioning[t].InitializeFormation(
+                    TacticalDirector.PositioningAI.TacticTranslation.ToFormationFamily(_kickoffFormations[t]),
+                    _posSnapshots[t]);
+            }
 
             ReadBallState(buf, ref o, ref _ball);
 
@@ -7529,7 +7603,7 @@ namespace TacticalDirector.MatchEngine
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                ReadRotationState(buf, ref o, _positioning[t]);
+                ReadRotationState(buf, ref o, _positioning[t], payload.BytesWritten);
             }
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
@@ -8075,9 +8149,16 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Reads one team's #25 rotation state in the writer's block order and restores it through
         /// the <see cref="RotationController"/>'s validating restore seams (RestoreBinding / RestorePairState /
         /// RestoreLastComposedTarget).</summary>
-        private static void ReadRotationState(byte[] buf, ref int o, PositioningAITick tick)
+        private static void ReadRotationState(byte[] buf, ref int o, PositioningAITick tick, int payloadLength)
         {
             RotationController rot = tick.CaptureRotationState();
+            if (payloadLength - o < sizeof(int))
+                throw new InvalidOperationException("Truncated rotation row count.");
+            int pairCount = CanonicalSerializer.ReadI32(buf, ref o);
+            int remaining = payloadLength - o - rot.SquadSize * MatchEngineConstants.ROTATION_AGENT_STATE_BYTES;
+            if (pairCount != rot.PairCount || remaining < 0
+                || pairCount > remaining / MatchEngineConstants.ROTATION_PAIR_STATE_BYTES)
+                throw new InvalidOperationException("Rotation row count does not match kickoff formation.");
 
             int squadSize = rot.SquadSize;
             int[] binding = new int[squadSize];
@@ -8093,7 +8174,6 @@ namespace TacticalDirector.MatchEngine
                 rot.RestoreLastComposedTarget(k, target);
             }
 
-            int pairCount = rot.PairCount;
             for (int r = 0; r < pairCount; r++)
             {
                 RotationPairState pair = default;
@@ -11310,4 +11390,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.19 | 2026-11-12 | — | W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed (the marked man's current speed; 0 for COVER_GK_ZONE) beside the mark target; TestOnly_MarkTargetSpeed seam. No schema, RNG or domain-tag change; switch off = unchanged. |
 // | 2.20 | 2026-11-12 | — | ERR-008-028 amendment: the marked man's speed selection extracted to the pure internal SelectMarkTargetSpeed (unit-tested); no behaviour change. |
 // | 2.21 | 2026-11-12 | — | W13.1c final pass: read-only TestOnly_Command seam (walk / jog command flips in a descriptive test). No behaviour, schema or RNG change. |
+// | 2.22 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion
