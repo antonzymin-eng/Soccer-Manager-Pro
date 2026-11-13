@@ -1,0 +1,53 @@
+// Created 2026-11-13: W13 switch-off neutrality runner (non-certifying).
+// One seed per process: new MatchEngine(seed); EnableGkHeading(); N ticks.
+// Records a SHA-256 over every per-tick snapshot digest, checkpoints every 6,000 ticks,
+// and the terminal digest, so two builds can be compared tick by tick.
+using System;
+using System.Globalization;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using TacticalDirector.MatchEngine;
+
+internal static class Program
+{
+    private static int Main(string[] args)
+    {
+        ulong seed = ulong.Parse(args[0], NumberStyles.HexNumber);
+        int frames = args.Length > 1 ? int.Parse(args[1]) : 324000;
+        string outPath = args.Length > 2 ? args[2] : null;
+        bool armMarking = args.Length > 3 && args[3] == "armed";
+        string markFlag = "absent";
+        var t = typeof(MatchEngine).Assembly.GetType("TacticalDirector.MatchEngine.MatchEngineConstants");
+        var f = t?.GetField("MarkMovementEnabled");
+        if (f != null) markFlag = f.GetValue(null).ToString();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var engine = new MatchEngine(seed);
+        engine.EnableGkHeading();
+        string armed = "no";
+        if (armMarking)
+        {
+            var m = typeof(MatchEngine).GetMethod("TestOnly_ArmMarkMovement", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (m == null) throw new InvalidOperationException("TestOnly_ArmMarkMovement not found");
+            m.Invoke(engine, new object[] { true });
+            armed = "yes";
+        }
+        using var all = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var sb = new StringBuilder();
+        for (int i = 1; i <= frames; i++)
+        {
+            engine.RunTick();
+            byte[] d = engine.CurrentSnapshotDigest;
+            all.AppendData(d);
+            if (i % 6000 == 0) sb.Append("  cp ").Append(i).Append(' ').AppendLine(Convert.ToHexString(d).ToLowerInvariant());
+        }
+        string line = $"seed={seed:X16} frames={frames} tick={engine.CurrentTick} markMovementEnabled={markFlag} armedOverride={armed} " +
+                      $"terminal={Convert.ToHexString(engine.CurrentSnapshotDigest).ToLowerInvariant()} " +
+                      $"allTicks={Convert.ToHexString(all.GetHashAndReset()).ToLowerInvariant()} " +
+                      $"elapsed={sw.Elapsed.TotalSeconds:F1}s runtime={System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}";
+        string text = line + Environment.NewLine + sb;
+        Console.Write(text);
+        if (outPath != null) File.WriteAllText(outPath, text);
+        return 0;
+    }
+}

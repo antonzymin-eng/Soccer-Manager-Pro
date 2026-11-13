@@ -1,0 +1,100 @@
+W13 pinned-host EditMode summary. Created 2026-11-13.
+Command: Unity.exe -batchmode -projectPath <worktree> -runTests -testPlatform EditMode -assemblyNames "TacticalDirector.MatchEngine.Tests;TacticalDirector.DefensiveAI.Tests;TacticalDirector.DecisionTree.Tests" -testResults <file> -logFile <file>
+Run: 2026-11-13 21:45:45Z -> 2026-11-13 22:17:38Z, 1913 s; total 1366, passed 1316, failed 0, inconclusive 1, skipped 49
+
+TacticalDirector.DecisionTree.Tests.dll: total 174, passed 170, failed 0, skipped 4, inconclusive 0, 0.2 s
+TacticalDirector.DefensiveAI.Tests.dll: total 175, passed 147, failed 0, skipped 28, inconclusive 0, 0.3 s
+TacticalDirector.MatchEngine.Tests.dll: total 1017, passed 999, failed 0, skipped 17, inconclusive 1, 1912.1 s
+
+W13-relevant fixtures (result counts):
+  TacticalDirector.DecisionTree.Tests.DispatcherTests: {'Passed': 38}
+  TacticalDirector.DecisionTree.Tests.OptionGeneratorTests: {'Passed': 55}
+  TacticalDirector.DecisionTree.Tests.TacticTranslationTests: {'Passed': 18}
+  TacticalDirector.DefensiveAI.Tests.CanonicalFrameTwinTests: {'Passed': 25}
+  TacticalDirector.DefensiveAI.Tests.CoverGkZoneTests: {'Passed': 3}
+  TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests: {'Skipped': 28}
+  TacticalDirector.DefensiveAI.Tests.GeometryHelperTests: {'Passed': 8}
+  TacticalDirector.DefensiveAI.Tests.HoldShapePoolFilterTests: {'Passed': 6}
+  TacticalDirector.DefensiveAI.Tests.HysteresisAliasingRegressionTests: {'Passed': 2}
+  TacticalDirector.DefensiveAI.Tests.Invariant4Tests: {'Passed': 13}
+  TacticalDirector.DefensiveAI.Tests.InvariantEnforcerTests: {'Passed': 3}
+  TacticalDirector.DefensiveAI.Tests.InvariantMultiViolationTests: {'Passed': 2}
+  TacticalDirector.DefensiveAI.Tests.LastManDetectorTests: {'Passed': 5}
+  TacticalDirector.DefensiveAI.Tests.MarkAssignerTests: {'Passed': 6}
+  TacticalDirector.DefensiveAI.Tests.MarkHysteresisTests: {'Passed': 4}
+  TacticalDirector.DefensiveAI.Tests.MarkTargetComposerTests: {'Passed': 19}
+  TacticalDirector.DefensiveAI.Tests.OffsideTrapControllerTests: {'Passed': 9}
+  TacticalDirector.DefensiveAI.Tests.OffsideTrapEmptyLineTests: {'Passed': 1}
+  TacticalDirector.DefensiveAI.Tests.RetainedAssignmentRefreshTests: {'Passed': 12}
+  TacticalDirector.DefensiveAI.Tests.TackleIntentEvaluatorTests: {'Passed': 6}
+  TacticalDirector.DefensiveAI.Tests.TackleOutcomeResolverTests: {'Passed': 13}
+  TacticalDirector.DefensiveAI.Tests.TacticTranslationTests: {'Passed': 6}
+  TacticalDirector.DefensiveAI.Tests.ThreatScoreTests: {'Passed': 3}
+  TacticalDirector.DefensiveAI.Tests.ZonalBypassResetTests: {'Passed': 1}
+  TacticalDirector.MatchEngine.MatchEngineAwayTeamTests: {'Passed': 2}
+  TacticalDirector.MatchEngine.MatchEngineMarkingTests: {'Passed': 59, 'Skipped': 1}
+  TacticalDirector.MatchEngine.TackleIntentDiagnosticTests: {'Skipped': 1}
+
+Every non-passed case:
+  Skipped: TacticalDirector.DecisionTree.Tests.BalanceValidationTests.Balance_HighFinishingStriker_SelectsShoot_InAttackingThird — BAL-DT-01: requires Stage 0+1 full-match simulation infrastructure (22-agent heartbeat at 10Hz, ≥50 qualifying ticks where striker is in attacking third with cl
+  Skipped: TacticalDirector.DecisionTree.Tests.BalanceValidationTests.Balance_HighPressing_IncreasesPressBehaviorShare — BAL-DT-03: requires full team PRESS/INTERCEPT share measurement vs MEDIUM baseline over ≥50 ticks. Expected outcome: PRESS + INTERCEPT combined share rises meas
+  Skipped: TacticalDirector.DecisionTree.Tests.BalanceValidationTests.Balance_LowComposure_ShowsHigherSelectionVariance — BAL-DT-02: requires comparative run between Composure=1 and Composure=20 agents over ≥100 ticks with identical match state. Expected outcome: suboptimal choice
+  Skipped: TacticalDirector.DecisionTree.Tests.BalanceValidationTests.Balance_ShortPassing_SelectsShortPassMoreOften — BAL-DT-04: requires passing length distribution comparison SHORT vs DIRECT over ≥50 passes each. Expected outcome: short PASS candidates (distance < 15m) select
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart — Stage 0+1: requires multi-tick dwell sequence with concurrent INTERCEPT_RUNNER — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency — Stage 0+1: requires live ball-switch detection and multi-tick scenario — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit — Stage 0+1: requires full 22-agent pipeline with engineered last-man 1v1 scenario — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick — Stage 0+1: requires live GK position tracking — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline — Stage 0+1: requires full 22-agent pipeline with engineered backline-depletion — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted — Stage 0+1: requires engineered over-assignment scenario — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted — Stage 0+1: requires engineered displacement-exceeding assignment — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests — Stage 0+1: requires reference-host replay harness and #16 §5 digest comparison — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks — Stage 0+1: requires two fresh simulation instances — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity — Stage 0+1: requires Spec #16 SnapshotCodec mid-match serialisation — activate when DeterministicSim snapshot round-trip is verified
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism — Stage 0+1: requires full pipeline with controllable EntityId ordering — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI — Stage 0+1: requires #16 DeterministicRngService wired into DefensiveAITick — activate when DOMAIN_TAG_DEFENSIVE_AI (0x1A) RNG draws are live
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs — Stage 0+1: requires 1,000-iteration randomised anti-chaos harness — activate when DefensiveAITick is wired into TickOrchestrator and InvariantEnforcer iteration
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks — Stage 0+1: requires PressingAI + DefensiveAI wired into TickOrchestrator — activate when both #13 and #14 are live in the full pipeline
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation — Stage 0+1: requires live PositioningAI phase input across 3 ticks — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner — Stage 0+1: requires live phase-change injection — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously — Stage 0+1: requires multi-tick dwell + DEFENSE-line position data — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick — Stage 0+1: requires full 22-agent snapshot with engineered emergency state — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses — Stage 0+1: requires engineered over-assignment scenario — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput — Stage 0+1: requires full pipeline invocation with a fixed snapshot — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell — Stage 0+1: requires multi-tick dwell injection — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_068_GkReentryReleaseCoverGkZone — Stage 0+1: requires GK position tracking across ticks — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_069_PostTrapCooldownBlocksRefire — Stage 0+1: requires multi-tick cooldown tracking — activate when DefensiveAITick is wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition — Stage 0+1: requires full match simulation with #13 press-role data — activate when both #13 and #14 are wired into TickOrchestrator
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Integration_T_DA_071_PhaseChangeTakesEffectImmediately — Stage 0+1: requires live PositioningAI phase input — activate when DefensiveAITick reads phase in same tick as #12 update
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget — Stage 0+1: requires reference host (Ryzen 7 5800X) and Unity Stopwatch micro-benchmark harness — activate when certification-platform.md Stage-0 host pin is con
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick — Stage 0+1: requires Unity Memory Profiler with Allocation Tracking — activate when DefensiveAITick is wired into TickOrchestrator and #18 §3.7 gate is active
+  Skipped: TacticalDirector.DefensiveAI.Tests.DefensiveAIIntegrationTests.Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget — Stage 0+1: requires reference host and isolated InvariantEnforcer micro-benchmark — activate when certification-platform.md Stage-0 host pin is confirmed
+  Skipped: TacticalDirector.MatchEngine.CloseChanceDiagnosticTests.CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel — Set TD_CREATION_DIAGNOSTIC=1 to run the close-chance creation instrument.
+  Skipped: TacticalDirector.MatchEngine.FoulRateDiagnosticTests.FoulRateDiagnostic_ReportsRateVersusThreshold — Set TD_FOUL_DIAGNOSTIC=1 to run the #435 §2.1 source-complete foul/card measurement.
+  Skipped: TacticalDirector.MatchEngine.GkContactRateDiagnosticTests.GkContactRateDiagnostic_ReportsEpisodeAnatomy — Set TD_GK_DIAGNOSTIC=1 to run the keeper contact-rate anatomy instrument.
+  Skipped: TacticalDirector.MatchEngine.GkRushDiagnosticTests.GkRushDiagnostic_ReportsRushAnatomy — Set TD_GK_DIAGNOSTIC=1 to run the keeper rush anatomy instrument.
+  Skipped: TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsHandlingQualityCeiling — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  Skipped: TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsSaveFunnel — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  Skipped: TacticalDirector.MatchEngine.GoalConversionDiagnosticTests.GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel — Set TD_CONVERSION_DIAGNOSTIC=1 to run the conversion-at-contact instrument.
+  Skipped: TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters — Set TD_HEADER441_DIAGNOSTIC=1 to run the #441 header-reachability counters.
+  Skipped: TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsContactStream — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  Skipped: TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsScorelineAsymmetry — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  Skipped: TacticalDirector.MatchEngine.MatchEngineMarkingTests.IdentityProbe_SixSeedDigestsAtFrame18000 — Set TD_MARK_IDENTITY_PROBE=1 to print the six-seed digests (wiring plan section 8).
+  Inconclusive: TacticalDirector.MatchEngine.MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice — too few connecting challenges to judge the share (won=9 loose=14 foul=1 missed=75 dispossessions=9)   Expected: greater than 30   But was:  24
+  Skipped: TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace — Set TD_PLATFORM_DIVERGENCE_OUT=<dir> to run the six-seed platform-divergence diagnostic.
+  Skipped: TacticalDirector.MatchEngine.ShotOutcomeDiagnosticTests.ShotOutcomeDiagnostic_ReportsDistribution — Set TD_SHOT_DIAGNOSTIC=1 to run the shot-outcome-distribution characterisation.
+  Skipped: TacticalDirector.MatchEngine.TackleIntentDiagnosticTests.TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier — Set TD_TACKLE_DIAGNOSTIC=1 to run the tackle-intent census instrument.
+  Skipped: TacticalDirector.MatchEngine.W12GateFiringDiagnosticTests.W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates — Set TD_W12_GATE_DIAGNOSTIC=1 to run the W12 gate-firing census.
+  Skipped: TacticalDirector.MatchEngine.W8BDistributionDiagnosticTests.W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings — Set TD_W8_B=1 for frozen B distribution and landing evidence.
+  Skipped: TacticalDirector.MatchEngine.W8StageADiagnosticTests.W8StageADiagnostic_ReportsFrozenSixSeedBaseline — Set TD_W8_STAGE_A=1 to run the preregistered W8 Stage A census.
+
+Longest 10 cases:
+     404.1 s  TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+     203.4 s  TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+     201.5 s  TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+     199.5 s  TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+      99.5 s  TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+      99.1 s  TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+      82.4 s  TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+      66.4 s  TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+      63.5 s  TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+      60.1 s  TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
