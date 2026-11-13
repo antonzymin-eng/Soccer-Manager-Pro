@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/LastManDetector.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.8, §3.9, §4.3, Code Standards #20
+// Spec:     Defensive AI #14 §3.8, §3.9, §4.3, ERR-014-008, Code Standards #20
 // Purpose:  Pure static module: computes the last-man predicate (§3.8) and the
 //           COVER_GK_ZONE emergency override trigger (§3.9).
 
@@ -78,7 +78,7 @@ namespace TacticalDirector.DefensiveAI
             if (poolCount == 0)
                 return;
 
-            bool defendsX0 = DefendsX0(snapshot.DefensiveTeamId);
+            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             // Find last-man candidate: minimum distToOwnGoal with EntityId ascending tie-break.
             float minDist     = float.MaxValue;
@@ -184,13 +184,9 @@ namespace TacticalDirector.DefensiveAI
         // ── Helpers ──────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Returns true when the defensive team defends the x=0 goal-line.
-        /// TeamId 0 (home) defends x=0; TeamId 1 (away) defends x=105.
-        /// </summary>
-        public static bool DefendsX0(int teamId) => teamId == 0;
-
-        /// <summary>
-        /// Distance from x to own goal-line (team-agnostic).
+        /// Distance from x to own goal-line (team-agnostic). Callers take <paramref name="defendsX0"/>
+        /// from <see cref="DefensiveSnapshot.IsOwnGoalAtX0"/> (the snapshot's frame contract), never from
+        /// a team id: the engine supplies both teams in their own canonical frame (ERR-014-008).
         /// For defending-x0 teams: distToOwnGoal = x.
         /// For defending-x105 teams: distToOwnGoal = 105 - x.
         /// </summary>
@@ -210,7 +206,8 @@ namespace TacticalDirector.DefensiveAI
         }
 
         /// <summary>
-        /// Center of the abandoned GK zone for the given team.
+        /// Center of the abandoned GK zone in the snapshot frame. Callers pass
+        /// <see cref="DefensiveSnapshot.IsOwnGoalAtX0"/>.
         /// For defending-x0: (GK_EXPECTED_ZONE_MAX_X / 2, PITCH_WIDTH / 2).
         /// For defending-x105: (105 - GK_EXPECTED_ZONE_MAX_X / 2, PITCH_WIDTH / 2).
         /// </summary>
@@ -231,4 +228,8 @@ namespace TacticalDirector.DefensiveAI
 // | 1.0     | 2026-05-29 | —      | Initial implementation.                                                                  |
 // | 1.1     | 2026-05-29 | —      | AR-1 M-1: guard GkEntityId < 0 before GK-zone check; Vector2.zero GkPosition gave       |
 // |         |            |        |   DistToOwnGoal = 105 for x=105-defending team, falsely triggering COVER_GK_ZONE. |
+// | 1.2     | 2026-11-10 | —      | ERR-014-008: removed DefendsX0(int teamId) (teamId == 0). The snapshot is in the     |
+// |         |            |        |   defending team's canonical frame for BOTH teams, so the away team's last man, advancing |
+// |         |            |        |   attacker and GK-zone centre were resolved against the wrong goal. Now sourced from   |
+// |         |            |        |   DefensiveSnapshot.IsOwnGoalAtX0.                                                     |
 #endregion

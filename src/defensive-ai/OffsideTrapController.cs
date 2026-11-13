@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/OffsideTrapController.cs
 // Created:  2026-05-29
-// Modified: 2026-06-29
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.7, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / KD-9)
+// Spec:     Defensive AI #14 §3.7, §4.3, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / KD-9)
 // Purpose:  Pure static module: manages the offside-trap dwell counter (§3.7.3) and
 //           executes the DEFENSE-line step-up when all trigger conditions are satisfied.
 
@@ -36,7 +36,7 @@ namespace TacticalDirector.DefensiveAI
             ref MarkDirective    directive,
             MarkAssignment[]     assignments)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(snapshot.DefensiveTeamId);
+            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             // Update CurrentLineDepth mirror from snapshot.
             offsideState.CurrentLineDepth = snapshot.DefensiveLineDepth;
@@ -179,4 +179,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.2     | 2026-06-29 | —      | #21 FR-TI-022 / KD-9: active consumption of OffsideTrapRequested — a requested trap    |
 // |         |            |        |   arms after OffsideTrapRequestedDwellTicks (≤ baseline); the §3.7.2 conditions still   |
 // |         |            |        |   adjudicate. Default false ⇒ baseline dwell ⇒ behaviour-neutral.                       |
+// | 1.3     | 2026-11-10 | —      | ERR-014-008: defendsX0 from DefensiveSnapshot.IsOwnGoalAtX0 (canonical frame), not       |
+// |         |            |        |   teamId == 0. The away team's ball-in-opponent-half test, defence-line spread and          |
+// |         |            |        |   step-up x were computed against x = 105 although its snapshot has its goal at x = 0.      |
 #endregion

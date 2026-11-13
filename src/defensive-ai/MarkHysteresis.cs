@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/MarkHysteresis.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.11, §4.3, Code Standards #20
+// Spec:     Defensive AI #14 §3.11, §4.3, ERR-014-009, Code Standards #20
 // Purpose:  Pure static module: implements the dwell-time hysteresis pattern for
 //           mark-assignment transitions, binding to Agent Movement #2 §3.1 (KD-11).
 
@@ -23,7 +23,9 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         /// <param name="currentAssignment">Current published assignment for this agent.</param>
         /// <param name="hysteresis">Hysteresis state (modified in place).</param>
-        /// <returns>True when the caller should skip candidate evaluation and retain current assignment.</returns>
+        /// <returns>True when the caller should skip candidate evaluation and retain current assignment.
+        /// The retained record is NOT frozen: the caller refreshes its <c>TargetPosition</c> from the live
+        /// snapshot (<see cref="MarkAssigner"/>, ERR-014-009 / #14 §2.2.2).</returns>
         public static bool PreCheck(
             ref MarkAssignment    currentAssignment,
             ref MarkHysteresisState hysteresis)
@@ -108,4 +110,6 @@ namespace TacticalDirector.DefensiveAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-11-10 | —      | ERR-014-009: doc-only. Retention (dwell lock / same-target gate) keeps mode and target, not the |
+// |         |            |        |   commit-time position; MarkAssigner refreshes TargetPosition after PreCheck / ApplyGate.       |
 #endregion
