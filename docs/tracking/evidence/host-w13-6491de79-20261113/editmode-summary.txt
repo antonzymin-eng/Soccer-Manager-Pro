@@ -6,7 +6,7 @@ TacticalDirector.DecisionTree.Tests.dll: total 174, passed 170, failed 0, skippe
 TacticalDirector.DefensiveAI.Tests.dll: total 175, passed 147, failed 0, skipped 28, inconclusive 0, 0.3 s
 TacticalDirector.MatchEngine.Tests.dll: total 1017, passed 999, failed 0, skipped 17, inconclusive 1, 1912.1 s
 
-W13-relevant fixtures (result counts):
+W13-relevant fixtures (result counts). MatchEngineMarkingTests "Passed" includes 18 [Explicit] descriptive cases that assert nothing (Descriptive_*); 41 are behavioural. See README.
   TacticalDirector.DecisionTree.Tests.DispatcherTests: {'Passed': 38}
   TacticalDirector.DecisionTree.Tests.OptionGeneratorTests: {'Passed': 55}
   TacticalDirector.DecisionTree.Tests.TacticTranslationTests: {'Passed': 18}
