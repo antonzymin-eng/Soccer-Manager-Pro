@@ -462,10 +462,14 @@ The 14-window pre-law control-only proxy and 12 post-law restricted-spell window
 team/touch attribution; the owner accepts landing B and requires exact physical touches and shot/goal
 teams in both B→C arms. No new balance conclusion, calibration or match rerun is claimed.
 
-**Still open:** C's separate eight-second/corner law contract (D-07 general outside-area handling
-landed in PR #515, merge `1a3b4271`, October 18, 2026; its keeper-avoidance residual is in
-[open-issues.md](open-issues.md#d07-keeper-avoidance)), and the already recorded LongKick trajectory/recovery follow-ups. C remains approval-gated in the
-[decision packet](w8-goalkeeper-distribution-decision.md); current ordering belongs to roadmap §5.1.
+**C LANDED November 6, 2026, PR #542, merge `d4b026aa`.** The eight-second/corner law,
+snapshot v28 and paired Linux B→C comparison are complete ([results](w8-c-implementation-results.md)).
+Pinned Unity compile and whole MatchEngine EditMode passed at `fdbbff5a`: 939 passed / 0 failed /
+16 skipped / 1 existing inconclusive ([host receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)).
+
+**Still open:** the recorded LongKick trajectory/recovery follow-ups and D-07 keeper-avoidance
+residual ([open issue](open-issues.md#d07-keeper-avoidance)). D-07 general outside-area handling
+itself landed in PR #515 (`1a3b4271`). Current ordering belongs to roadmap §5.1a.
 
 ### W9 — DT-emitted HEADER
 Already recorded in OPEN ISSUES. Headers are triggered by an engine-side proximity heuristic, not
