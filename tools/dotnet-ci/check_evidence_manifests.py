@@ -23,8 +23,7 @@ LFS_POINTER_RE = re.compile(
 # "manifest" contracts are verified by this tool. "external" contracts are owned
 # by the named repository verifier and are deliberately not reimplemented here.
 DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
-    "formation-duty-20261109": ("manifest", FULL_MANIFEST),
-    "host-formation-duty-75d62186-20261110": ("manifest", FULL_MANIFEST),
+    "w13-frozen-lane-20261113": ("manifest", FULL_MANIFEST),
     "v210-rolling": ("manifest", FULL_MANIFEST),
     "pr420-owner-held-isolation": ("manifest", FULL_MANIFEST),
     "foul-card-six-seed": ("manifest", FULL_MANIFEST),

@@ -1,0 +1,189 @@
+// Created 2026-11-09. Read-only #434 paired runner. No production overlays.
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Globalization;
+using System.Text.Json;
+using System.Runtime.CompilerServices;
+using TacticalDirector.ProjectConstants;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.PositioningAI;
+using TacticalDirector.TacticalInstructions;
+using TacticalDirector.EventSystem;
+using TacticalDirector.ShotMechanics;
+using UnityEngine;
+
+static partial class Program
+{
+    static object Field(object x,string name) => x.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(x);
+    static void Need(bool ok,string why) { if(!ok) throw new Exception(why); }
+    static TeamTactic Tactic(TacticFormation f) => new TeamTactic(Mentality.Balanced,f,Tempo.Standard,TacticWidth.Standard,
+        TacticPassing.Mixed,TacticPressing.Medium,LineOfEngagement.Standard,0.5f,TacticDefWidth.Standard,
+        TransitionPlan.HoldShape,TransitionPlan.Regroup,false,TacticTriggerMask.None,FocusPlay.Mixed,GkDistributionPolicy.SlowDown,0);
+    static int Find(byte[] bytes,int length,byte[] pattern,int start=0,int maximumCopies=1) {
+        int copies=0;
+        int found=-1;
+        for(int i=start;i<=length-pattern.Length;i++) {
+            bool same=true; for(int j=0;j<pattern.Length && same;j++) same=bytes[i+j]==pattern[j];
+            if(same) { Need(++copies<=maximumCopies,"ambiguous structural span");if(found<0)found=i; }
+        }
+        Need(found>=0,"missing structural span");return found;
+    }
+    static byte[] Rotation(RotationController rot) {
+        using var ms=new MemoryStream();using var w=new BinaryWriter(ms);
+        for(int i=0;i<11;i++) w.Write(rot.GetSlotOfAgent(i));
+        for(int i=0;i<11;i++) {var p=rot.GetLastComposedTarget(i);w.Write(p.x);w.Write(p.y);}
+        for(int i=0;i<rot.PairCount;i++) {var p=rot.GetPairState(i);w.Write(p.TriggerDwellTicks);w.Write(p.Rotated);w.Write(p.HoldTicksRemaining);}
+        return ms.ToArray();
+    }
+    static byte[] Tactics(MatchEngine engine) {
+        var a=(TeamTactic[])Field(engine,"_activeTeamTactics");var b=(TeamTactic[])Field(engine,"_pendingTeamTactics");
+        var write=typeof(MatchEngine).GetMethod("WriteTeamTactic",BindingFlags.Static|BindingFlags.NonPublic);
+        var buf=new byte[4096];object[] args={buf,0,a[0]};
+        for(int t=0;t<2;t++) foreach(var tactic in new[]{a[t],b[t]}) {args[2]=tactic;write.Invoke(null,args);}
+        return buf.AsSpan(0,(int)args[1]).ToArray();
+    }
+    static BinaryWriter Writer(string path) => new BinaryWriter(new GZipStream(File.Create(path),CompressionLevel.Fastest));
+    static void V(BinaryWriter w,Vector2 p) {w.Write(p.x);w.Write(p.y);}
+    static void V(BinaryWriter w,Vector3 p) {w.Write(p.x);w.Write(p.y);w.Write(p.z);}
+    static byte[] Normalize(byte[] raw,int length,int schema,int[] rotations,int[] families,int tick,int tacticOffset,int tacticWidth,bool reuse) {
+        var copy=raw.AsSpan(0,length).ToArray();
+        Need(BitConverter.ToUInt32(copy,0)==schema,"world schema mismatch");
+        var excluded=new List<(int,int)> {(0,4)};
+        if(schema==29) {
+            for(int t=0;t<2;t++) {Need(copy[12+5*t]==1,"uninitialized kickoff");Need(BitConverter.ToInt32(copy,13+5*t)==families[t],"wrong effective formation");}
+            excluded.Add((12,10));
+            for(int t=0;t<2;t++) {Need(BitConverter.ToInt32(copy,rotations[t]-4)==(families[t]==2?6:5),"wrong rotation count");excluded.Add((rotations[t]-4,4));}
+        } else Need(schema==28,"unexpected base schema");
+        if(reuse) {
+            Need(schema==28,"reuse only on pinned base");
+            for(int t=0;t<2;t++) for(int state=0;state<2;state++) {
+                int at=tacticOffset+(t*2+state)*tacticWidth+4;
+                int expected=state==0 && tick<6?0:families[t];
+                Need(BitConverter.ToInt32(copy,at)==expected,"wrong requested tactic formation");
+                Array.Clear(copy,at,4);
+            }
+        }
+        excluded.Sort((a,b)=>a.Item1.CompareTo(b.Item1));
+        using var result=new MemoryStream();int cursor=0;
+        foreach(var (at,n) in excluded) {Need(at>=cursor && at+n<=length,"overlapping/uncovered spans");result.Write(copy,cursor,at-cursor);cursor=at+n;}
+        result.Write(copy,cursor,length-cursor);return result.ToArray();
+    }
+    static void SelfTest() {
+        var raw=new byte[450];BitConverter.GetBytes(29).CopyTo(raw,0);raw[12]=raw[17]=1;
+        BitConverter.GetBytes(5).CopyTo(raw,96);BitConverter.GetBytes(5).CopyTo(raw,296);
+        var offsets=new[]{100,300};var f=new[]{0,0};var expected=Normalize(raw,raw.Length,29,offsets,f,1,0,0,false);
+        Need(expected.Length==raw.Length-22,"span coverage");
+        foreach(int at in new[]{22,70,200,449}) {var p=(byte[])raw.Clone();p[at]^=1;Need(!Normalize(p,p.Length,29,offsets,f,1,0,0,false).AsSpan().SequenceEqual(expected),"common mutation hidden");}
+        foreach(int at in new[]{0,12,13,17,18,96,296}) {var p=(byte[])raw.Clone();p[at]^=8;bool rejects=false;try {Normalize(p,p.Length,29,offsets,f,1,0,0,false);}catch{rejects=true;}Need(rejects,"invalid metadata accepted");}
+        var e = new MatchEngine(0x0F1E2D3C4B5A6978UL);
+        // A real committed payload containing canonical ledger records, not a fabricated schema.
+        for(int n=0;n<1200;n++) {e.RunTick();if(e.TickLedgerCount>0)break;}
+        Need(e.TickLedgerCount>0,"mutation fixture requires an actual event record");
+        var orchestrator=(TickOrchestrator)Field(e,"_orchestrator");var payload=orchestrator.CurrentPayload;
+        var ticks=(PositioningAITick[])Field(e,"_positioning");int[] realOffsets={-1,-1};
+        for(int t=0;t<2;t++) realOffsets[t]=Find(payload.PayloadBytes,payload.BytesWritten,Rotation(ticks[t].CaptureRotationState()),t==0?0:realOffsets[0]+Rotation(ticks[0].CaptureRotationState()).Length,t==0?2:1);
+        int schema=(int)MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION;
+        var canonical=Normalize(payload.PayloadBytes,payload.BytesWritten,schema,realOffsets,f,1,0,0,false);
+        for(int at=0;at<payload.BytesWritten;at++) {
+            var changed=payload.PayloadBytes.AsSpan(0,payload.BytesWritten).ToArray();changed[at]^=1;
+            bool detected=false;
+            try {detected=!Normalize(changed,changed.Length,schema,realOffsets,f,1,0,0,false).AsSpan().SequenceEqual(canonical);}
+            catch(Exception) {detected=true;}
+            Need(detected,"real snapshot byte mutation hidden at "+at);
+        }
+        Console.WriteLine("structural coverage + 11 synthetic checks + all "+payload.BytesWritten+" real snapshot byte mutations passed (schema "+schema+")");
+    }
+    // Boot is intentionally separate from Run: beforefieldinit catalogues must not execute before config injection.
+    static int Main(string[] args) {
+        bool armed = args.Length > 5 && args[5] == "armed";
+        GameplayConfigHolder.Bind(new GameplayConfig(new Dictionary<string,string> {
+            { "match-engine.MarkMovementEnabled", armed ? "true" : "false" }
+        }));
+        return Run(args, armed);
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static int Run(string[] args, bool armed) {
+        try {
+            if(args[0]=="--state-proof") { ProveState(args[3], armed); return 0; }
+            if(args[0]=="--self-test") {SelfTest();return 0;}
+            CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;
+            ulong seed=ulong.Parse(args[0],NumberStyles.HexNumber);int c=int.Parse(args[1]);string mode=args[2],output=args[3];int frames=int.Parse(args[4]);
+            bool observed=mode!="plain",reuse=mode=="reuse";Directory.CreateDirectory(output);
+            using var log=new StreamWriter(Path.Combine(output,"engine.log"));var original=Console.Out;Console.SetOut(log);
+            var e=new MatchEngine(seed);e.EnableGkHeading();
+            var markingField=typeof(MatchEngineConstants).GetField("MarkMovementEnabled");
+            bool markingEnabled=markingField!=null && (bool)markingField.GetValue(null);
+            Need(markingEnabled==armed,"config activation did not take effect");
+            using var marking=observed ? new MarkObserver(e,output,armed) : null;
+            int[] families={c==1?1:c==3||c==9?2:0,c==2?1:c==4||c==9?2:0};
+            for(int t=0;t<2;t++) {e.SetTeamTactic(t,Tactic((TacticFormation)families[t]));Need(e.GetManagerState(t).Mode==ManagerMode.Human,"manager must be Human");}
+            if(c>=5 && c<=8) {int t=c==5||c==7?0:1;Duty duty=c<=6?Duty.Defend:Duty.Attack;for(int i=1;i<11;i++)e.SetPlayerTactic(t*11+i,new PlayerTactic(PlayerRole.Default,duty,PlayerInstructions.Default));}
+            Need(e.TestOnly_W8DistributionPolicy(0)==GkDistributionPolicy.SlowDown && e.TestOnly_W8DistributionPolicy(1)==GkDistributionPolicy.SlowDown,"shipping SlowDown");
+            var orchestrator=(TickOrchestrator)Field(e,"_orchestrator");var positioning=(PositioningAITick[])Field(e,"_positioning");
+            var ledger=Field(e,"_tickLedger");var ledgerPayload=(byte[])Field(ledger,"_payload");var offsets=(int[])Field(ledger,"_offsets");var sizes=(int[])Field(ledger,"_sizes");
+            using var digest=Writer(Path.Combine(output,"digests.bin.gz"));using var common=Writer(Path.Combine(output,"aligned.bin.gz"));
+            using var trajectory=Writer(Path.Combine(output,"trajectory.bin.gz"));using var events=Writer(Path.Combine(output,"ledger.bin.gz"));using var geometry=Writer(Path.Combine(output,"geometry.bin.gz"));
+            using var teamWitness=Writer(Path.Combine(output,"team-possession.bin.gz"));
+            var receiverField=typeof(MatchEngine).GetField("_passInFlightReceiverId",BindingFlags.Instance|BindingFlags.NonPublic);
+            int[] rotations={-1,-1};int tacticOffset=-1,tacticWidth=0,schema=MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION==29?29:28;
+            long[] shots=new long[2],goals=new long[2],fouls=new long[2],possession=new long[3],teamPossession=new long[3],phase=new long[8];long live=0;
+            byte[] previous=new byte[32];var clock=System.Diagnostics.Stopwatch.StartNew();
+            for(int frame=1;frame<=frames;frame++) {
+                marking?.BeforeTick();
+                e.RunTick(); marking?.RetainedTick(frame); var h=orchestrator.CurrentHeader;var p=orchestrator.CurrentPayload;byte[] raw=p.PayloadBytes;
+                digest.Write(h.CurrentSnapshotDigest);Need(!string.IsNullOrEmpty(h.BuildHash),"missing BuildHash");
+                if(observed) {
+                    Need(h.PrevSnapshotDigest.AsSpan().SequenceEqual(previous),"broken previous link");
+                    using var preimage=new MemoryStream();using(var w=new BinaryWriter(preimage,System.Text.Encoding.UTF8,true)) {
+                        w.Write(DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);w.Write(h.SchemaVersion);w.Write(h.Tick);
+                        w.Write(previous);w.Write(h.Fingerprint.ComputeDigest());w.Write(DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD);w.Write(raw,0,p.BytesWritten);
+                    }
+                    Need(SHA256.HashData(preimage.ToArray()).AsSpan().SequenceEqual(h.CurrentSnapshotDigest),"independent digest mismatch");
+                    for(int t=0;t<2;t++) {
+                        var block=Rotation(positioning[t].CaptureRotationState());
+                        if(frame==1) rotations[t]=Find(raw,p.BytesWritten,block,t==0?0:rotations[0]+Rotation(positioning[0].CaptureRotationState()).Length,t==0?2:1);
+                        Need(raw.AsSpan(rotations[t],block.Length).SequenceEqual(block),"rotation structural span moved");
+                    }
+                    if(reuse && frame==1) {var ts=Tactics(e);tacticOffset=Find(raw,p.BytesWritten,ts);tacticWidth=ts.Length/4;}
+                    var normalized=Normalize(raw,p.BytesWritten,schema,rotations,families,frame,tacticOffset,tacticWidth,reuse);common.Write(SHA256.HashData(normalized));
+                    if(frame==1)File.WriteAllText(Path.Combine(output,"spans.json"),JsonSerializer.Serialize(new{schema,rotations,tacticOffset,tacticWidth,payloadLength=p.BytesWritten,normalizedLength=normalized.Length}));
+                }
+                Array.Copy(h.CurrentSnapshotDigest,previous,32);
+                for(int i=0;i<22;i++) {var a=e.AgentView(i);Need(float.IsFinite(a.Position.x)&&float.IsFinite(a.Position.y),"nonfinite agent");V(trajectory,a.Position);}
+                var b=e.BallView;V(trajectory,b.Position);V(trajectory,b.Velocity);V(trajectory,b.AngularVelocity);V(trajectory,b.LastValidPosition);V(trajectory,b.LastValidVelocity);trajectory.Write((int)b.State);trajectory.Write(e.PossessingAgentId);
+                events.Write(e.TickLedgerCount);
+                for(int n=0;n<e.TickLedgerCount;n++) {
+                    byte ordinal=e.TickLedgerOrdinal(n);var eventBytes=ledgerPayload.AsSpan(offsets[n],sizes[n]);events.Write(ordinal);events.Write(sizes[n]);events.Write(eventBytes);
+                    marking?.Event(ordinal,eventBytes);
+                    int team=-1;
+                    if(ordinal==EventRegistry.GetOrdinal<ShotExecutedEvent>()) {team=MemoryMarshal.Read<ShotExecutedEvent>(eventBytes).TeamId;Need(team>=0&&team<2,"shot team");shots[team]++;}
+                    if(ordinal==EventRegistry.GetOrdinal<GoalAwardedEvent>()) {team=MemoryMarshal.Read<GoalAwardedEvent>(eventBytes).ScoringTeam;Need(team>=0&&team<2,"goal team");goals[team]++;}
+                    if(ordinal==EventRegistry.GetOrdinal<FoulCommittedEvent>()) {team=e.AgentTeamId(MemoryMarshal.Read<FoulCommittedEvent>(eventBytes).Offender);Need(team>=0&&team<2,"foul team");fouls[team]++;}
+                }
+                int receiver=(int)receiverField.GetValue(e);
+                int teamAgent=e.PossessingAgentId>=0?e.PossessingAgentId:receiver;
+                int teamInPossession=teamAgent>=0?e.AgentTeamId(teamAgent):-1;
+                Need(teamInPossession>=-1 && teamInPossession<2,"team possession witness");
+                teamWitness.Write(receiver);teamWitness.Write(teamInPossession);
+                if(!e.MatchEnded) {live++;possession[e.PossessingAgentId<0?2:e.AgentTeamId(e.PossessingAgentId)]++;teamPossession[teamInPossession<0?2:teamInPossession]++;}
+                if(frame%6==0 && !e.MatchEnded) {
+                    marking?.Sample(frame);
+                    geometry.Write(frame);
+                    for(int t=0;t<2;t++) {
+                        int ph=(int)positioning[t].GetPhase();Need(ph>=0&&ph<4,"phase");phase[t*4+ph]++;geometry.Write(ph);
+                        for(int i=0;i<11;i++) {var slot=positioning[t].GetFormationSlot(t*11+i);Need(e.AgentIsSentOff(t*11+i)||float.IsFinite(slot.x)&&float.IsFinite(slot.y),"nonfinite slot");V(geometry,slot);}
+                    }
+                }
+                if(frame%54000==0) {log.Flush();File.WriteAllText(Path.Combine(output,"progress.json"),JsonSerializer.Serialize(new{frame,elapsedSeconds=clock.Elapsed.TotalSeconds}));}
+            }
+            var summary=new{seed=seed.ToString("X16"),@case=c,mode,armed,markingEnabled,marking=marking?.Summary(),frames,live,shots,goals,fouls,possession,teamPossession,phase,schema,buildHash=MatchEngineBuildIdentity.BuildHash,digest=Convert.ToHexString(previous).ToLowerInvariant(),elapsedSeconds=clock.Elapsed.TotalSeconds};
+            File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions{WriteIndented=true}));Console.SetOut(original);Console.WriteLine(JsonSerializer.Serialize(summary));return 0;
+        } catch(Exception ex) {Console.Error.WriteLine(ex);return 1;}
+    }
+}

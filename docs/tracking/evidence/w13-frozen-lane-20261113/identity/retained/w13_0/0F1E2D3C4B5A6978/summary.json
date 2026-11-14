@@ -1,0 +1,14 @@
+{
+  "seed": "0F1E2D3C4B5A6978",
+  "frames": 324000,
+  "tick": 324000,
+  "markMovementEnabled": "absent",
+  "terminal": "064ccf6ba7d3f59d176c17f70f6cd73524f12c51747e80f2d5cd8f5bc3cd4e2a",
+  "allTicks": "7e9d1d6d0c8d590e67ca50351fc638e66a4146920302124882b9e275ac2d4881",
+  "elapsedSeconds": 73.4248249,
+  "runtime": "8.0.32",
+  "sdk": "8.0.426",
+  "configuration": "Debug",
+  "processorCount": 4,
+  "buildHash": "b891a095411f7341c44145d47e57171c631a4ddd2a7edfcc13170d48062a4096"
+}

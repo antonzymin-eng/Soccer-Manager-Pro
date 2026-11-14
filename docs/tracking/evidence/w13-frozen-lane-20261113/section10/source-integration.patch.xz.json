@@ -1,0 +1,7 @@
+{
+  "purpose": "Lossless archival of the unified diff; preserve its significant context-line spaces.",
+  "uncompressedName": "source-integration.patch",
+  "uncompressedBytes": 95528,
+  "uncompressedSha256": "9678cc453a069ae4d3d5ac76fc17690f62457008ef184bf6024d058110367046",
+  "archiveSha256": "72777a5372c0b179a8cfa40a7af7975dfe13187006ed1cede1c6122435d2c86c"
+}

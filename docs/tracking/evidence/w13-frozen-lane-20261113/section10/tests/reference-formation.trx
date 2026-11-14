@@ -1,0 +1,335 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="7b214750-33ad-47af-895d-62649cbc97e8" name="@b69529037488 2026-11-13 15:21:54" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-13T15:21:54.0908739-08:00" queuing="2026-11-13T15:21:54.0908739-08:00" start="2026-11-13T15:21:52.0201614-08:00" finish="2026-11-13T15:21:56.0000559-08:00" />
+  <TestSettings name="default" id="a2487db0-4d96-4a0f-aaf5-32983776fb0d">
+    <Deployment runDeploymentRoot="_b69529037488_2026-11-13_15_21_54" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="6e2e7cd9-1921-404e-bcf5-af2de31411a0" testId="8dcbd57a-88d3-3240-90d5-6758e3f77488" testName="MalformedRotationBlock_RejectsCountOrTruncation(int.MaxValue)" computerName="b69529037488" duration="00:00:00.0019140" startTime="2026-11-13T15:21:54.5447634-08:00" endTime="2026-11-13T15:21:54.5466775-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6e2e7cd9-1921-404e-bcf5-af2de31411a0" />
+    <UnitTestResult executionId="93eae835-97f1-4045-b265-fcd1af09fa0d" testId="c7cd94df-5dd4-767f-36c8-5dd290bb6948" testName="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F4231)" computerName="b69529037488" duration="00:00:00.0792559" startTime="2026-11-13T15:21:53.7360279-08:00" endTime="2026-11-13T15:21:53.8152830-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93eae835-97f1-4045-b265-fcd1af09fa0d" />
+    <UnitTestResult executionId="01f155f9-452c-4c41-bf08-726c64e7eb03" testId="16131a92-c20e-7ec4-7615-833b429949b8" testName="MalformedRotationBlock_RejectsCountOrTruncation(-1)" computerName="b69529037488" duration="00:00:00.0073600" startTime="2026-11-13T15:21:54.5353073-08:00" endTime="2026-11-13T15:21:54.5426665-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="01f155f9-452c-4c41-bf08-726c64e7eb03" />
+    <UnitTestResult executionId="415913ca-c5a2-45c0-af46-13e0814d730c" testId="1356017f-8ade-a4dc-30b0-378d34ae71df" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F442)" computerName="b69529037488" duration="00:00:00.0336150" startTime="2026-11-13T15:21:54.0993605-08:00" endTime="2026-11-13T15:21:54.1329743-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="415913ca-c5a2-45c0-af46-13e0814d730c">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="47d5abc8-07db-4a1e-97bd-075d3d006059" testId="ca8745ef-6d5d-3b21-652f-14aa55141f9a" testName="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,12)" computerName="b69529037488" duration="00:00:00.0665100" startTime="2026-11-13T15:21:55.7301868-08:00" endTime="2026-11-13T15:21:55.7966967-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="47d5abc8-07db-4a1e-97bd-075d3d006059" />
+    <UnitTestResult executionId="8cbe92da-0d6c-4a00-bb8d-60786ce05580" testId="b3d5d261-3a5f-f79a-b525-70ab8d55108f" testName="Duty_ReachesPositioning_InBothWorldDirections(0,Defend,-3.0f)" computerName="b69529037488" duration="00:00:00.0077500" startTime="2026-11-13T15:21:53.8371667-08:00" endTime="2026-11-13T15:21:53.8449153-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8cbe92da-0d6c-4a00-bb8d-60786ce05580" />
+    <UnitTestResult executionId="f01bd7fc-57dc-425f-a09b-6710fa9570ae" testId="0ec89ab6-097b-b9fb-80a2-95f1bff33030" testName="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,11)" computerName="b69529037488" duration="00:00:00.0476730" startTime="2026-11-13T15:21:55.6820404-08:00" endTime="2026-11-13T15:21:55.7297126-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f01bd7fc-57dc-425f-a09b-6710fa9570ae" />
+    <UnitTestResult executionId="45be1cba-e54f-4aee-ba8e-333e233f79d9" testId="04864253-8ee5-b8a2-c99f-94abfed66a7f" testName="ExplicitSupport_IsExactIdentity_ForEveryAgent" computerName="b69529037488" duration="00:00:00.1368680" startTime="2026-11-13T15:21:53.8910481-08:00" endTime="2026-11-13T15:21:54.0279150-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="45be1cba-e54f-4aee-ba8e-333e233f79d9" />
+    <UnitTestResult executionId="bfce82fc-ec9b-4473-b0d0-a7b012e3db31" testId="ea4a2451-3e27-243e-515d-286de1e6c25a" testName="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F433)" computerName="b69529037488" duration="00:00:00.1022580" startTime="2026-11-13T15:21:53.6336992-08:00" endTime="2026-11-13T15:21:53.7359557-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bfce82fc-ec9b-4473-b0d0-a7b012e3db31" />
+    <UnitTestResult executionId="fc255631-8cf3-4991-8a61-86b7ada65f64" testId="d9b8b267-f51f-4a11-3000-108e7fb04cf9" testName="AllPositioningConsumers_ReadTheSelectedFamily(1,F433)" computerName="b69529037488" duration="00:00:00.0046210" startTime="2026-11-13T15:21:53.6146066-08:00" endTime="2026-11-13T15:21:53.6192276-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fc255631-8cf3-4991-8a61-86b7ada65f64" />
+    <UnitTestResult executionId="0872538c-243e-493f-a035-2b82987a6421" testId="175f5fda-fc66-9e81-4d54-7613fd423a85" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,255,F442,5)" computerName="b69529037488" duration="00:00:00.0032540" startTime="2026-11-13T15:21:54.0928542-08:00" endTime="2026-11-13T15:21:54.0961075-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0872538c-243e-493f-a035-2b82987a6421" />
+    <UnitTestResult executionId="516507f1-f083-4ba2-a9e0-d055279c4943" testId="ad6fc0fd-315a-a9d6-58a5-6dfc5feab06c" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F4231,F4231,6)" computerName="b69529037488" duration="00:00:00.0036790" startTime="2026-11-13T15:21:54.0444604-08:00" endTime="2026-11-13T15:21:54.0481386-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="516507f1-f083-4ba2-a9e0-d055279c4943" />
+    <UnitTestResult executionId="d3ede7b6-b154-4c3f-b075-3ca66797d41f" testId="933510ff-272e-ef19-a979-5e1b39474e38" testName="SyntheticTickZero_UninitializedCanSelectFinalChoice" computerName="b69529037488" duration="00:00:00.0053600" startTime="2026-11-13T15:21:55.8328057-08:00" endTime="2026-11-13T15:21:55.8381660-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d3ede7b6-b154-4c3f-b075-3ca66797d41f" />
+    <UnitTestResult executionId="cdf714f1-ceee-4fda-a3ff-a016029531a6" testId="63d7217a-bf4a-d2b2-ccb8-816e4f0f94f0" testName="MalformedRotationBlock_RejectsCountOrTruncation(6)" computerName="b69529037488" duration="00:00:00.0020439" startTime="2026-11-13T15:21:54.5427047-08:00" endTime="2026-11-13T15:21:54.5447488-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cdf714f1-ceee-4fda-a3ff-a016029531a6" />
+    <UnitTestResult executionId="7a1fc46f-7769-4987-8ba5-0d5433882959" testId="d7227538-a67e-5377-d997-f86a4ab6d994" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F433,F433,5)" computerName="b69529037488" duration="00:00:00.0094160" startTime="2026-11-13T15:21:54.0316369-08:00" endTime="2026-11-13T15:21:54.0410527-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a1fc46f-7769-4987-8ba5-0d5433882959" />
+    <UnitTestResult executionId="8bf27430-dfae-4f9a-8d13-14123fe5897f" testId="bf256f08-2cc7-5a2c-5697-8d1af01030a6" testName="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(0)" computerName="b69529037488" duration="00:00:00.0041390" startTime="2026-11-13T15:21:54.5485559-08:00" endTime="2026-11-13T15:21:54.5526949-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8bf27430-dfae-4f9a-8d13-14123fe5897f" />
+    <UnitTestResult executionId="fb082d1e-7cf7-47d3-a8e2-25873fa40136" testId="604a62a4-0959-c432-3026-cfbc362a99de" testName="Duty_ReachesPositioning_InBothWorldDirections(1,Defend,3.0f)" computerName="b69529037488" duration="00:00:00.0050690" startTime="2026-11-13T15:21:53.8858243-08:00" endTime="2026-11-13T15:21:53.8908936-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb082d1e-7cf7-47d3-a8e2-25873fa40136" />
+    <UnitTestResult executionId="62293d22-f7cf-4a3b-8c94-9e5747e0f5e3" testId="7314271e-63a2-c0d3-c135-c02188584851" testName="Duty_ReachesPositioning_InBothWorldDirections(1,Attack,-3.0f)" computerName="b69529037488" duration="00:00:00.0044350" startTime="2026-11-13T15:21:53.8327076-08:00" endTime="2026-11-13T15:21:53.8371411-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62293d22-f7cf-4a3b-8c94-9e5747e0f5e3" />
+    <UnitTestResult executionId="ae077f28-fe09-472d-907e-14c96d54fa9b" testId="cab9989b-431b-d8a7-8d0c-917634aeaf79" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F442)" computerName="b69529037488" duration="00:00:00.0731509" startTime="2026-11-13T15:21:54.1330363-08:00" endTime="2026-11-13T15:21:54.2061864-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ae077f28-fe09-472d-907e-14c96d54fa9b">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e024af47-734e-4b6a-bec0-7de8825874df" testId="9b308a84-6f4d-577b-a54e-fbc10de3caf2" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F433,F433,5)" computerName="b69529037488" duration="00:00:00.0033430" startTime="2026-11-13T15:21:54.0410932-08:00" endTime="2026-11-13T15:21:54.0444358-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e024af47-734e-4b6a-bec0-7de8825874df" />
+    <UnitTestResult executionId="58b5858d-5cea-48fb-8203-e76dada9313e" testId="e8752887-c078-e61f-4aea-997197979974" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F433)" computerName="b69529037488" duration="00:00:00.0774410" startTime="2026-11-13T15:21:54.2062415-08:00" endTime="2026-11-13T15:21:54.2836815-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="58b5858d-5cea-48fb-8203-e76dada9313e">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f678521f-2d2a-47d2-819a-e1583fdb4ebd" testId="e00693af-085a-f83b-18a2-9f79852f92b9" testName="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F442)" computerName="b69529037488" duration="00:00:00.2629320" startTime="2026-11-13T15:21:54.5549829-08:00" endTime="2026-11-13T15:21:54.8179134-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f678521f-2d2a-47d2-819a-e1583fdb4ebd" />
+    <UnitTestResult executionId="68d6ed67-2b18-4b17-b2fa-d1a9bfa853da" testId="a0137a7c-d603-21b6-f336-3b4e981cda5a" testName="V28_IsRejectedBeforeAnyFormationStateIsDecoded" computerName="b69529037488" duration="00:00:00.0024420" startTime="2026-11-13T15:21:55.8404432-08:00" endTime="2026-11-13T15:21:55.8428848-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="68d6ed67-2b18-4b17-b2fa-d1a9bfa853da" />
+    <UnitTestResult executionId="1be2695c-07c7-456b-9073-cb831263087a" testId="50b6f143-b791-a976-c525-fc4f412dabee" testName="AllPositioningConsumers_ReadTheSelectedFamily(0,F4231)" computerName="b69529037488" duration="00:00:00.0105740" startTime="2026-11-13T15:21:53.6192491-08:00" endTime="2026-11-13T15:21:53.6298220-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1be2695c-07c7-456b-9073-cb831263087a" />
+    <UnitTestResult executionId="46ae86ac-dc78-4d94-8b61-955e1be175c5" testId="82e2afaa-9e62-6092-2870-730bb151b043" testName="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(1,3)" computerName="b69529037488" duration="00:00:00.0021650" startTime="2026-11-13T15:21:53.8206311-08:00" endTime="2026-11-13T15:21:53.8227962-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="46ae86ac-dc78-4d94-8b61-955e1be175c5" />
+    <UnitTestResult executionId="3e445404-6bea-46c6-a7d6-ddcd31ef4a98" testId="519b1808-5aec-0725-2dc9-2304a7ff11c6" testName="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,12)" computerName="b69529037488" duration="00:00:00.0325060" startTime="2026-11-13T15:21:55.7971557-08:00" endTime="2026-11-13T15:21:55.8296611-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e445404-6bea-46c6-a7d6-ddcd31ef4a98" />
+    <UnitTestResult executionId="c30bf800-f4e0-4133-bbff-5df64ea01e08" testId="61bf8883-478d-756f-82d7-42d78adc3153" testName="AllPositioningConsumers_ReadTheSelectedFamily(0,F433)" computerName="b69529037488" duration="00:00:00.0068320" startTime="2026-11-13T15:21:53.6077528-08:00" endTime="2026-11-13T15:21:53.6145844-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c30bf800-f4e0-4133-bbff-5df64ea01e08" />
+    <UnitTestResult executionId="07266537-9b38-410f-aa84-62a7e8171da6" testId="7a4feea9-4aee-218e-772c-25045430d302" testName="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F4231)" computerName="b69529037488" duration="00:00:00.3901360" startTime="2026-11-13T15:21:55.2087153-08:00" endTime="2026-11-13T15:21:55.5988500-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="07266537-9b38-410f-aa84-62a7e8171da6">
+      <Output>
+        <StdOut>[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="64087c92-37d6-4807-9445-b29e37bc655f" testId="6c0b0c88-fdff-e412-46e3-9e119da60181" testName="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(0,2)" computerName="b69529037488" duration="00:00:00.0051620" startTime="2026-11-13T15:21:53.8154409-08:00" endTime="2026-11-13T15:21:53.8206022-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="64087c92-37d6-4807-9445-b29e37bc655f" />
+    <UnitTestResult executionId="b5811334-4a71-450e-9caf-f68cec2cc42b" testId="e283898e-29db-1c79-aa97-43f81de186c1" testName="SyntheticTickZero_InitializedDoesNotResamplePendingFormation" computerName="b69529037488" duration="00:00:00.0023680" startTime="2026-11-13T15:21:55.8302283-08:00" endTime="2026-11-13T15:21:55.8325962-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b5811334-4a71-450e-9caf-f68cec2cc42b" />
+    <UnitTestResult executionId="b4542c89-e143-446a-a14c-f3a4bc5631fb" testId="0ab27eb1-dd49-e387-02bf-eb9d8db02d9a" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F4231,F4231,6)" computerName="b69529037488" duration="00:00:00.0446560" startTime="2026-11-13T15:21:54.0481588-08:00" endTime="2026-11-13T15:21:54.0928133-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b4542c89-e143-446a-a14c-f3a4bc5631fb" />
+    <UnitTestResult executionId="9bf0ef00-fe11-40f1-9958-3a78d4ad9ee5" testId="5557537a-4f4e-d5a2-d8dc-b5cf2e484a6e" testName="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,255,F442,5)" computerName="b69529037488" duration="00:00:00.0031449" startTime="2026-11-13T15:21:54.0961316-08:00" endTime="2026-11-13T15:21:54.0992767-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9bf0ef00-fe11-40f1-9958-3a78d4ad9ee5" />
+    <UnitTestResult executionId="16a2a831-4f29-43be-a266-3ab0270c80fe" testId="1924dd50-00e5-2b0f-9f23-4245c8687bb2" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F4231)" computerName="b69529037488" duration="00:00:00.0275260" startTime="2026-11-13T15:21:54.5076551-08:00" endTime="2026-11-13T15:21:54.5351804-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="16a2a831-4f29-43be-a266-3ab0270c80fe">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="56cb3694-0f93-4b0c-a7e4-d19e5aac1396" testId="b1ff71da-06a6-db9b-6546-cb58e5ec5ff3" testName="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,11)" computerName="b69529037488" duration="00:00:00.0793300" startTime="2026-11-13T15:21:55.6020379-08:00" endTime="2026-11-13T15:21:55.6813673-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="56cb3694-0f93-4b0c-a7e4-d19e5aac1396" />
+    <UnitTestResult executionId="54a595bd-9161-4bdb-8916-6ca93c0764ae" testId="97f788b4-0435-1948-d664-cd501819e2c4" testName="sim_crossspec_away_team_tactic_mirror" computerName="b69529037488" duration="00:00:00.2239860" startTime="2026-11-13T15:21:53.3814220-08:00" endTime="2026-11-13T15:21:53.6054086-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="54a595bd-9161-4bdb-8916-6ca93c0764ae" />
+    <UnitTestResult executionId="944ffbf0-1d8b-41ba-a77d-829f3c31f99f" testId="d02046d9-9b0e-7169-c86e-555c235797e8" testName="MirroredKickoff_YieldsMirroredDefensiveAssignments" computerName="b69529037488" duration="00:00:00.3178309" startTime="2026-11-13T15:21:53.0228373-08:00" endTime="2026-11-13T15:21:53.3406135-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="944ffbf0-1d8b-41ba-a77d-829f3c31f99f" />
+    <UnitTestResult executionId="30c4b8a3-eabc-4da3-870d-b058f4c7ff2e" testId="fec48eb6-afdc-d4c5-ba2d-838a47976415" testName="UninitializedFormation_AtPositiveTick_IsRejected" computerName="b69529037488" duration="00:00:00.0018480" startTime="2026-11-13T15:21:55.8384212-08:00" endTime="2026-11-13T15:21:55.8402694-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="30c4b8a3-eabc-4da3-870d-b058f4c7ff2e" />
+    <UnitTestResult executionId="dfaac1f7-0f94-4406-9257-63501f541a6f" testId="e89654b7-5806-e38a-8075-1b4c75a95e4b" testName="AllPositioningConsumers_ReadTheSelectedFamily(1,F4231)" computerName="b69529037488" duration="00:00:00.0037270" startTime="2026-11-13T15:21:53.6298430-08:00" endTime="2026-11-13T15:21:53.6335702-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dfaac1f7-0f94-4406-9257-63501f541a6f" />
+    <UnitTestResult executionId="e6869f96-246d-464f-b0b2-9510dc554369" testId="14423b8b-8c40-bdb8-9eca-12fcd538f394" testName="Duty_ReachesPositioning_InBothWorldDirections(0,Attack,3.0f)" computerName="b69529037488" duration="00:00:00.0098160" startTime="2026-11-13T15:21:53.8228580-08:00" endTime="2026-11-13T15:21:53.8326735-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e6869f96-246d-464f-b0b2-9510dc554369" />
+    <UnitTestResult executionId="c42b86a4-6531-43db-b5a0-d8ee31c11caa" testId="abd27ea5-73ae-0d9a-0548-8b5c8f383bd5" testName="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(1)" computerName="b69529037488" duration="00:00:00.0022200" startTime="2026-11-13T15:21:54.5527115-08:00" endTime="2026-11-13T15:21:54.5549316-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c42b86a4-6531-43db-b5a0-d8ee31c11caa" />
+    <UnitTestResult executionId="38350c90-c418-42ec-a554-b37adc4703f7" testId="43b0eec7-2ce4-2b9a-2732-68ff24078190" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F433)" computerName="b69529037488" duration="00:00:00.1276799" startTime="2026-11-13T15:21:54.2932350-08:00" endTime="2026-11-13T15:21:54.4209151-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="38350c90-c418-42ec-a554-b37adc4703f7">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="414a221f-fab5-4481-a8ec-7ac40985f55f" testId="f06c8eee-2755-2f84-6f48-16acd0a1f4aa" testName="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F433)" computerName="b69529037488" duration="00:00:00.3825640" startTime="2026-11-13T15:21:54.8217690-08:00" endTime="2026-11-13T15:21:55.2043327-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="414a221f-fab5-4481-a8ec-7ac40985f55f" />
+    <UnitTestResult executionId="170022e8-630a-42e9-a031-b4e03134add8" testId="d225ffae-0c69-13a2-5ea2-8ef1eea4e849" testName="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F4231)" computerName="b69529037488" duration="00:00:00.0840290" startTime="2026-11-13T15:21:54.4235708-08:00" endTime="2026-11-13T15:21:54.5075993-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="170022e8-630a-42e9-a031-b4e03134add8">
+      <Output>
+        <StdOut>First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="03776287-deb2-4fe1-bd2b-3438570d8dbd" testId="27b4e473-51d4-6fdc-c142-1c5edfb44305" testName="MalformedRotationBlock_RejectsCountOrTruncation(5)" computerName="b69529037488" duration="00:00:00.0017780" startTime="2026-11-13T15:21:54.5466910-08:00" endTime="2026-11-13T15:21:54.5484691-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03776287-deb2-4fe1-bd2b-3438570d8dbd" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="sim_crossspec_away_team_tactic_mirror" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="97f788b4-0435-1948-d664-cd501819e2c4">
+      <Execution id="54a595bd-9161-4bdb-8916-6ca93c0764ae" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineAwayTeamTests" name="sim_crossspec_away_team_tactic_mirror" />
+    </UnitTest>
+    <UnitTest name="ExplicitSupport_IsExactIdentity_ForEveryAgent" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="04864253-8ee5-b8a2-c99f-94abfed66a7f">
+      <Execution id="45be1cba-e54f-4aee-ba8e-333e233f79d9" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="ExplicitSupport_IsExactIdentity_ForEveryAgent" />
+    </UnitTest>
+    <UnitTest name="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="c7cd94df-5dd4-767f-36c8-5dd290bb6948">
+      <Execution id="93eae835-97f1-4045-b265-fcd1af09fa0d" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F4231)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F442)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="1356017f-8ade-a4dc-30b0-378d34ae71df">
+      <Execution id="415913ca-c5a2-45c0-af46-13e0814d730c" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F442)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F4231,F4231,6)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="0ab27eb1-dd49-e387-02bf-eb9d8db02d9a">
+      <Execution id="b4542c89-e143-446a-a14c-f3a4bc5631fb" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F4231,F4231,6)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="43b0eec7-2ce4-2b9a-2732-68ff24078190">
+      <Execution id="38350c90-c418-42ec-a554-b37adc4703f7" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F433)" />
+    </UnitTest>
+    <UnitTest name="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(1)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="abd27ea5-73ae-0d9a-0548-8b5c8f383bd5">
+      <Execution id="c42b86a4-6531-43db-b5a0-d8ee31c11caa" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(1)" />
+    </UnitTest>
+    <UnitTest name="Duty_ReachesPositioning_InBothWorldDirections(0,Attack,3.0f)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="14423b8b-8c40-bdb8-9eca-12fcd538f394">
+      <Execution id="e6869f96-246d-464f-b0b2-9510dc554369" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Duty_ReachesPositioning_InBothWorldDirections(0,Attack,3.0f)" />
+    </UnitTest>
+    <UnitTest name="MalformedRotationBlock_RejectsCountOrTruncation(6)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="63d7217a-bf4a-d2b2-ccb8-816e4f0f94f0">
+      <Execution id="cdf714f1-ceee-4fda-a3ff-a016029531a6" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MalformedRotationBlock_RejectsCountOrTruncation(6)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="1924dd50-00e5-2b0f-9f23-4245c8687bb2">
+      <Execution id="16a2a831-4f29-43be-a266-3ab0270c80fe" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F4231)" />
+    </UnitTest>
+    <UnitTest name="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="ea4a2451-3e27-243e-515d-286de1e6c25a">
+      <Execution id="bfce82fc-ec9b-4473-b0d0-a7b012e3db31" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="ConfiguredSquads_KeepSelectedIds_AndRestoreFormationDutyContinuation(F433)" />
+    </UnitTest>
+    <UnitTest name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="7a4feea9-4aee-218e-772c-25045430d302">
+      <Execution id="07266537-9b38-410f-aa84-62a7e8171da6" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F4231)" />
+    </UnitTest>
+    <UnitTest name="UninitializedFormation_AtPositiveTick_IsRejected" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="fec48eb6-afdc-d4c5-ba2d-838a47976415">
+      <Execution id="30c4b8a3-eabc-4da3-870d-b058f4c7ff2e" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="UninitializedFormation_AtPositiveTick_IsRejected" />
+    </UnitTest>
+    <UnitTest name="MalformedRotationBlock_RejectsCountOrTruncation(int.MaxValue)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="8dcbd57a-88d3-3240-90d5-6758e3f77488">
+      <Execution id="6e2e7cd9-1921-404e-bcf5-af2de31411a0" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MalformedRotationBlock_RejectsCountOrTruncation(int.MaxValue)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="d225ffae-0c69-13a2-5ea2-8ef1eea4e849">
+      <Execution id="170022e8-630a-42e9-a031-b4e03134add8" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F4231)" />
+    </UnitTest>
+    <UnitTest name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F442)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="e00693af-085a-f83b-18a2-9f79852f92b9">
+      <Execution id="f678521f-2d2a-47d2-819a-e1583fdb4ebd" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F442)" />
+    </UnitTest>
+    <UnitTest name="MirroredKickoff_YieldsMirroredDefensiveAssignments" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="d02046d9-9b0e-7169-c86e-555c235797e8">
+      <Execution id="944ffbf0-1d8b-41ba-a77d-829f3c31f99f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineAwayTeamTests" name="MirroredKickoff_YieldsMirroredDefensiveAssignments" />
+    </UnitTest>
+    <UnitTest name="MalformedRotationBlock_RejectsCountOrTruncation(5)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="27b4e473-51d4-6fdc-c142-1c5edfb44305">
+      <Execution id="03776287-deb2-4fe1-bd2b-3438570d8dbd" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MalformedRotationBlock_RejectsCountOrTruncation(5)" />
+    </UnitTest>
+    <UnitTest name="AllPositioningConsumers_ReadTheSelectedFamily(1,F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="d9b8b267-f51f-4a11-3000-108e7fb04cf9">
+      <Execution id="fc255631-8cf3-4991-8a61-86b7ada65f64" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="AllPositioningConsumers_ReadTheSelectedFamily(1,F433)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,255,F442,5)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="5557537a-4f4e-d5a2-d8dc-b5cf2e484a6e">
+      <Execution id="9bf0ef00-fe11-40f1-9958-3a78d4ad9ee5" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,255,F442,5)" />
+    </UnitTest>
+    <UnitTest name="SyntheticTickZero_UninitializedCanSelectFinalChoice" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="933510ff-272e-ef19-a979-5e1b39474e38">
+      <Execution id="d3ede7b6-b154-4c3f-b075-3ca66797d41f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="SyntheticTickZero_UninitializedCanSelectFinalChoice" />
+    </UnitTest>
+    <UnitTest name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,11)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="b1ff71da-06a6-db9b-6546-cb58e5ec5ff3">
+      <Execution id="56cb3694-0f93-4b0c-a7e4-d19e5aac1396" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,11)" />
+    </UnitTest>
+    <UnitTest name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="f06c8eee-2755-2f84-6f48-16acd0a1f4aa">
+      <Execution id="414a221f-fab5-4481-a8ec-7ac40985f55f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="NonDefaultDuties_AndEveryRotationRow_RoundTripAndContinue(F433)" />
+    </UnitTest>
+    <UnitTest name="MalformedRotationBlock_RejectsCountOrTruncation(-1)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="16131a92-c20e-7ec4-7615-833b429949b8">
+      <Execution id="01f155f9-452c-4c41-bf08-726c64e7eb03" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MalformedRotationBlock_RejectsCountOrTruncation(-1)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F442)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="cab9989b-431b-d8a7-8d0c-917634aeaf79">
+      <Execution id="ae077f28-fe09-472d-907e-14c96d54fa9b" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(1,F442)" />
+    </UnitTest>
+    <UnitTest name="Duty_ReachesPositioning_InBothWorldDirections(0,Defend,-3.0f)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="b3d5d261-3a5f-f79a-b525-70ab8d55108f">
+      <Execution id="8cbe92da-0d6c-4a00-bb8d-60786ce05580" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Duty_ReachesPositioning_InBothWorldDirections(0,Defend,-3.0f)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F433,F433,5)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="9b308a84-6f4d-577b-a54e-fbc10de3caf2">
+      <Execution id="e024af47-734e-4b6a-bec0-7de8825874df" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(1,F433,F433,5)" />
+    </UnitTest>
+    <UnitTest name="Duty_ReachesPositioning_InBothWorldDirections(1,Defend,3.0f)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="604a62a4-0959-c432-3026-cfbc362a99de">
+      <Execution id="fb082d1e-7cf7-47d3-a8e2-25873fa40136" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Duty_ReachesPositioning_InBothWorldDirections(1,Defend,3.0f)" />
+    </UnitTest>
+    <UnitTest name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="e8752887-c078-e61f-4aea-997197979974">
+      <Execution id="58b5858d-5cea-48fb-8203-e76dada9313e" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="KickoffSelection_FirstUseAllocatesNothing_AndFirstTickKeepsBaseline(0,F433)" />
+    </UnitTest>
+    <UnitTest name="AllPositioningConsumers_ReadTheSelectedFamily(0,F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="50b6f143-b791-a976-c525-fc4f412dabee">
+      <Execution id="1be2695c-07c7-456b-9073-cb831263087a" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="AllPositioningConsumers_ReadTheSelectedFamily(0,F4231)" />
+    </UnitTest>
+    <UnitTest name="AllPositioningConsumers_ReadTheSelectedFamily(1,F4231)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="e89654b7-5806-e38a-8075-1b4c75a95e4b">
+      <Execution id="dfaac1f7-0f94-4406-9257-63501f541a6f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="AllPositioningConsumers_ReadTheSelectedFamily(1,F4231)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,255,F442,5)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="175f5fda-fc66-9e81-4d54-7613fd423a85">
+      <Execution id="0872538c-243e-493f-a035-2b82987a6421" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,255,F442,5)" />
+    </UnitTest>
+    <UnitTest name="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(0)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="bf256f08-2cc7-5a2c-5697-8d1af01030a6">
+      <Execution id="8bf27430-dfae-4f9a-8d13-14123fe5897f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="MixedMidMatchRequest_CommitsMentality_ButKeepsKickoffFormation(0)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F433,F433,5)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="d7227538-a67e-5377-d997-f86a4ab6d994">
+      <Execution id="7a1fc46f-7769-4987-8ba5-0d5433882959" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F433,F433,5)" />
+    </UnitTest>
+    <UnitTest name="SyntheticTickZero_InitializedDoesNotResamplePendingFormation" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="e283898e-29db-1c79-aa97-43f81de186c1">
+      <Execution id="b5811334-4a71-450e-9caf-f68cec2cc42b" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="SyntheticTickZero_InitializedDoesNotResamplePendingFormation" />
+    </UnitTest>
+    <UnitTest name="V28_IsRejectedBeforeAnyFormationStateIsDecoded" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="a0137a7c-d603-21b6-f336-3b4e981cda5a">
+      <Execution id="68d6ed67-2b18-4b17-b2fa-d1a9bfa853da" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="V28_IsRejectedBeforeAnyFormationStateIsDecoded" />
+    </UnitTest>
+    <UnitTest name="Duty_ReachesPositioning_InBothWorldDirections(1,Attack,-3.0f)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="7314271e-63a2-c0d3-c135-c02188584851">
+      <Execution id="62293d22-f7cf-4a3b-8c94-9e5747e0f5e3" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Duty_ReachesPositioning_InBothWorldDirections(1,Attack,-3.0f)" />
+    </UnitTest>
+    <UnitTest name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,12)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="519b1808-5aec-0725-2dc9-2304a7ff11c6">
+      <Execution id="3e445404-6bea-46c6-a7d6-ddcd31ef4a98" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,12)" />
+    </UnitTest>
+    <UnitTest name="AllPositioningConsumers_ReadTheSelectedFamily(0,F433)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="61bf8883-478d-756f-82d7-42d78adc3153">
+      <Execution id="c30bf800-f4e0-4133-bbff-5df64ea01e08" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="AllPositioningConsumers_ReadTheSelectedFamily(0,F433)" />
+    </UnitTest>
+    <UnitTest name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F4231,F4231,6)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="ad6fc0fd-315a-a9d6-58a5-6dfc5feab06c">
+      <Execution id="516507f1-f083-4ba2-a9e0-d055279c4943" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="FinalPreKickoffChoice_LocksBeforeFrameOne_InExistingObject(0,F4231,F4231,6)" />
+    </UnitTest>
+    <UnitTest name="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(1,3)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="82e2afaa-9e62-6092-2870-730bb151b043">
+      <Execution id="46ae86ac-dc78-4d94-8b61-955e1be175c5" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(1,3)" />
+    </UnitTest>
+    <UnitTest name="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(0,2)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="6c0b0c88-fdff-e412-46e3-9e119da60181">
+      <Execution id="64087c92-37d6-4807-9445-b29e37bc655f" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="CorruptKickoffMetadata_RejectsInsteadOfLiveFallback(0,2)" />
+    </UnitTest>
+    <UnitTest name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,11)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="0ec89ab6-097b-b9fb-80a2-95f1bff33030">
+      <Execution id="f01bd7fc-57dc-425f-a09b-6710fa9570ae" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(1,11)" />
+    </UnitTest>
+    <UnitTest name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,12)" storage="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/debug/net8.0/tacticaldirector.matchengine.tests.dll" id="ca8745ef-6d5d-3b21-652f-14aa55141f9a">
+      <Execution id="47d5abc8-07db-4a1e-97bd-075d3d006059" />
+      <TestMethod codeBase="/workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="TacticalDirector.MatchEngine.MatchEngineFormationDutyTests" name="Restore_KeepsKickoffFamily_WhenRequestedAndActiveTacticsDiffer(0,12)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8dcbd57a-88d3-3240-90d5-6758e3f77488" executionId="6e2e7cd9-1921-404e-bcf5-af2de31411a0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7cd94df-5dd4-767f-36c8-5dd290bb6948" executionId="93eae835-97f1-4045-b265-fcd1af09fa0d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="16131a92-c20e-7ec4-7615-833b429949b8" executionId="01f155f9-452c-4c41-bf08-726c64e7eb03" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1356017f-8ade-a4dc-30b0-378d34ae71df" executionId="415913ca-c5a2-45c0-af46-13e0814d730c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca8745ef-6d5d-3b21-652f-14aa55141f9a" executionId="47d5abc8-07db-4a1e-97bd-075d3d006059" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3d5d261-3a5f-f79a-b525-70ab8d55108f" executionId="8cbe92da-0d6c-4a00-bb8d-60786ce05580" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0ec89ab6-097b-b9fb-80a2-95f1bff33030" executionId="f01bd7fc-57dc-425f-a09b-6710fa9570ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="04864253-8ee5-b8a2-c99f-94abfed66a7f" executionId="45be1cba-e54f-4aee-ba8e-333e233f79d9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ea4a2451-3e27-243e-515d-286de1e6c25a" executionId="bfce82fc-ec9b-4473-b0d0-a7b012e3db31" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d9b8b267-f51f-4a11-3000-108e7fb04cf9" executionId="fc255631-8cf3-4991-8a61-86b7ada65f64" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="175f5fda-fc66-9e81-4d54-7613fd423a85" executionId="0872538c-243e-493f-a035-2b82987a6421" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ad6fc0fd-315a-a9d6-58a5-6dfc5feab06c" executionId="516507f1-f083-4ba2-a9e0-d055279c4943" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="933510ff-272e-ef19-a979-5e1b39474e38" executionId="d3ede7b6-b154-4c3f-b075-3ca66797d41f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="63d7217a-bf4a-d2b2-ccb8-816e4f0f94f0" executionId="cdf714f1-ceee-4fda-a3ff-a016029531a6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d7227538-a67e-5377-d997-f86a4ab6d994" executionId="7a1fc46f-7769-4987-8ba5-0d5433882959" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bf256f08-2cc7-5a2c-5697-8d1af01030a6" executionId="8bf27430-dfae-4f9a-8d13-14123fe5897f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="604a62a4-0959-c432-3026-cfbc362a99de" executionId="fb082d1e-7cf7-47d3-a8e2-25873fa40136" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7314271e-63a2-c0d3-c135-c02188584851" executionId="62293d22-f7cf-4a3b-8c94-9e5747e0f5e3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cab9989b-431b-d8a7-8d0c-917634aeaf79" executionId="ae077f28-fe09-472d-907e-14c96d54fa9b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9b308a84-6f4d-577b-a54e-fbc10de3caf2" executionId="e024af47-734e-4b6a-bec0-7de8825874df" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e8752887-c078-e61f-4aea-997197979974" executionId="58b5858d-5cea-48fb-8203-e76dada9313e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e00693af-085a-f83b-18a2-9f79852f92b9" executionId="f678521f-2d2a-47d2-819a-e1583fdb4ebd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a0137a7c-d603-21b6-f336-3b4e981cda5a" executionId="68d6ed67-2b18-4b17-b2fa-d1a9bfa853da" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="50b6f143-b791-a976-c525-fc4f412dabee" executionId="1be2695c-07c7-456b-9073-cb831263087a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="82e2afaa-9e62-6092-2870-730bb151b043" executionId="46ae86ac-dc78-4d94-8b61-955e1be175c5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="519b1808-5aec-0725-2dc9-2304a7ff11c6" executionId="3e445404-6bea-46c6-a7d6-ddcd31ef4a98" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="61bf8883-478d-756f-82d7-42d78adc3153" executionId="c30bf800-f4e0-4133-bbff-5df64ea01e08" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7a4feea9-4aee-218e-772c-25045430d302" executionId="07266537-9b38-410f-aa84-62a7e8171da6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c0b0c88-fdff-e412-46e3-9e119da60181" executionId="64087c92-37d6-4807-9445-b29e37bc655f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e283898e-29db-1c79-aa97-43f81de186c1" executionId="b5811334-4a71-450e-9caf-f68cec2cc42b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0ab27eb1-dd49-e387-02bf-eb9d8db02d9a" executionId="b4542c89-e143-446a-a14c-f3a4bc5631fb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5557537a-4f4e-d5a2-d8dc-b5cf2e484a6e" executionId="9bf0ef00-fe11-40f1-9958-3a78d4ad9ee5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1924dd50-00e5-2b0f-9f23-4245c8687bb2" executionId="16a2a831-4f29-43be-a266-3ab0270c80fe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b1ff71da-06a6-db9b-6546-cb58e5ec5ff3" executionId="56cb3694-0f93-4b0c-a7e4-d19e5aac1396" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="97f788b4-0435-1948-d664-cd501819e2c4" executionId="54a595bd-9161-4bdb-8916-6ca93c0764ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d02046d9-9b0e-7169-c86e-555c235797e8" executionId="944ffbf0-1d8b-41ba-a77d-829f3c31f99f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fec48eb6-afdc-d4c5-ba2d-838a47976415" executionId="30c4b8a3-eabc-4da3-870d-b058f4c7ff2e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e89654b7-5806-e38a-8075-1b4c75a95e4b" executionId="dfaac1f7-0f94-4406-9257-63501f541a6f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="14423b8b-8c40-bdb8-9eca-12fcd538f394" executionId="e6869f96-246d-464f-b0b2-9510dc554369" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="abd27ea5-73ae-0d9a-0548-8b5c8f383bd5" executionId="c42b86a4-6531-43db-b5a0-d8ee31c11caa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="43b0eec7-2ce4-2b9a-2732-68ff24078190" executionId="38350c90-c418-42ec-a554-b37adc4703f7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f06c8eee-2755-2f84-6f48-16acd0a1f4aa" executionId="414a221f-fab5-4481-a8ec-7ac40985f55f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d225ffae-0c69-13a2-5ea2-8ef1eea4e849" executionId="170022e8-630a-42e9-a031-b4e03134add8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="27b4e473-51d4-6fdc-c142-1c5edfb44305" executionId="03776287-deb2-4fe1-bd2b-3438570d8dbd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="44" executed="44" passed="44" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in /workspace/work/w13-frozen-20261113/section10/reference/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+   NUnit3TestExecutor discovered 44 of 44 NUnit test cases using Current Discovery mode, Non-Explicit run
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+First RunTick allocation: default=536 selected=536 bytes; selection=0 bytes.
+
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+
+NUnit Adapter 4.6.0.0: Test execution complete
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

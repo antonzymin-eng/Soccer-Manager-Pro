@@ -1,0 +1,70 @@
+{
+  "summary": {
+    "seed": "0000000000000001",
+    "case": 0,
+    "mode": "plain",
+    "armed": false,
+    "markingEnabled": false,
+    "marking": null,
+    "frames": 324000,
+    "live": 323999,
+    "shots": [
+      7,
+      13
+    ],
+    "goals": [
+      3,
+      2
+    ],
+    "fouls": [
+      8,
+      3
+    ],
+    "possession": [
+      15249,
+      14072,
+      294678
+    ],
+    "teamPossession": [
+      153751,
+      153930,
+      16318
+    ],
+    "phase": [
+      26861,
+      26635,
+      262,
+      241,
+      26637,
+      26859,
+      241,
+      262
+    ],
+    "schema": 29,
+    "buildHash": "4a47fd86e17ac049b0c9baac23a3282f90cbc97183b5abbde39861c99992f2d4",
+    "digest": "e7842d544a755a3991dd3f5e1d3468eb29b3d94572936d0dbacd5af168c2650f",
+    "elapsedSeconds": 78.9798105
+  },
+  "streams": {
+    "digests": {
+      "bytes": 10368000,
+      "sha256Uncompressed": "87243fc6ea65a5efc284e9e6060cfeb5d77293542429aebb01f37f471e125ff0"
+    },
+    "trajectory": {
+      "bytes": 79056000,
+      "sha256Uncompressed": "64a9009207d060632718e407eb465f6cff95c64403bc2a2b50e2d65792d51706"
+    },
+    "team-possession": {
+      "bytes": 2592000,
+      "sha256Uncompressed": "e353a6548a1b35d6057383d9078bc7401e7da79e70dcdc197ad470ddb06cd994"
+    },
+    "geometry": {
+      "bytes": 10151812,
+      "sha256Uncompressed": "62a9efbb771119100845866605c4f17e251e7eb104eda17516c1ff83463a1dc4"
+    },
+    "ledger": {
+      "bytes": 1498257,
+      "sha256Uncompressed": "044493199e19b1704f99f7da8d189bd6bd105dc812534e705be5f76d93791934"
+    }
+  }
+}

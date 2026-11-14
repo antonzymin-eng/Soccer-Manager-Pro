@@ -1,0 +1,1877 @@
+{
+  "archiveSha256": "18ffa3e7649b00e8b7138cfb1c3d3be368e5d617912b28145331a852601110bf",
+  "members": {
+    "capture-prepared-prototype.json": {
+      "bytes": 304429,
+      "sha256": "ebbb4b1b41245828e3cb543775f9a059f6af4f534ad5b649c6deb23cf67cf7f9"
+    },
+    "capture-prepared.json": {
+      "bytes": 304429,
+      "sha256": "f1b3072c2a2fc67e3e734a17c44bb836ba1c45549bed04779732a585df10fc37"
+    },
+    "pilot-build/Capture.csproj": {
+      "bytes": 3246,
+      "sha256": "957b9da1521f139ba1d06fef611accc2dcdbb884f859295398f151c6b4db29b3"
+    },
+    "pilot-build/MarkObserver.cs": {
+      "bytes": 10236,
+      "sha256": "517e00cd4319b47c79f4457837146f1473139382e1eda122c270f5c8e9e686a9"
+    },
+    "pilot-build/Program.cs": {
+      "bytes": 15694,
+      "sha256": "f8a14352b70da2a5dd6a912997f00ab091da8f4105140404cc3706a42186754e"
+    },
+    "pilot-no-543-armed.log": {
+      "bytes": 765,
+      "sha256": "7c36455038a88c61a667064dd78bf5a00a656385e75059c8afa337bc42af1acb"
+    },
+    "pilot-no-543-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "a9d27e65f8ae9c3e2398d9a1591bb9efacc9c077c3107b926021e1c7cc5d2f01"
+    },
+    "pilot-no-543-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "8414d0bc9e679806d1815b720cf0236833adc4758c3b2aa49dcddfcdfb66a247"
+    },
+    "pilot-no-543-armed/engine.log": {
+      "bytes": 390,
+      "sha256": "255f67fce0984ff62e1bf5a7038ea03861b31684a604cbc977aeda9c61ad150e"
+    },
+    "pilot-no-543-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "pilot-no-543-armed/geometry.bin.gz": {
+      "bytes": 19670,
+      "sha256": "1da49dab6915e77f4cb37c565ea7ff8aea286dd2a46e31982f600f1ebdb11d95"
+    },
+    "pilot-no-543-armed/ledger.bin.gz": {
+      "bytes": 433,
+      "sha256": "014af80bb50f09202c3b9aa86436e01a6555d22f69f6930aba6a0af7403c2061"
+    },
+    "pilot-no-543-armed/mark-witness.bin.gz": {
+      "bytes": 6134,
+      "sha256": "9b0dc5838c7bc2034dafa30f595e1c42340abe1863047c30aa1a4df644c8d914"
+    },
+    "pilot-no-543-armed/marking.bin.gz": {
+      "bytes": 1934,
+      "sha256": "a86ab6907df886b0f902cb4b9d3cd2cdaa23c6d791eecaa8ecea648139467780"
+    },
+    "pilot-no-543-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "dce7ea28d4b5ca8e1f5f6cccc9680061cc96703d6699f0473b2a413f9bee396c"
+    },
+    "pilot-no-543-armed/summary.json": {
+      "bytes": 1240,
+      "sha256": "006615cad3d6119a0deb521a0c480352513fd1701fbe4f26adddffb7752f77d6"
+    },
+    "pilot-no-543-armed/team-possession.bin.gz": {
+      "bytes": 135,
+      "sha256": "20f69937046eeb796700d6fad44cb8333335e4ec437621a7d002bed4883301f1"
+    },
+    "pilot-no-543-armed/trajectory.bin.gz": {
+      "bytes": 160998,
+      "sha256": "4f42a926d25f8711b423ad9e79739297df16c15771f34728bb8828ada43da221"
+    },
+    "preflight-controller.log": {
+      "bytes": 1315,
+      "sha256": "9915d4044093e08cf277e13a7392c206c809124610bc721a024c22ff2e5c69a0"
+    },
+    "preflight/pilot-reference-C0-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "229846f2262b94c65fda7973d2f327a4ecef831bd94eeed2e14233dccca93c36"
+    },
+    "preflight/pilot-reference-C0-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "ca242233181b52221e3a5c9ba81a99906abcd9007ec376b88030d8061a78fd6e"
+    },
+    "preflight/pilot-reference-C0-observed-off/engine.log": {
+      "bytes": 388,
+      "sha256": "b6ac50a156e2b069cb05b8c7f839845f95ab380f435d5df6c64c127d13f08717"
+    },
+    "preflight/pilot-reference-C0-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C0-observed-off/geometry.bin.gz": {
+      "bytes": 19968,
+      "sha256": "7a6fefe056874c00e4c2b5b039b5e780a50c21d4311ecdcc08d17b1ad90a2f09"
+    },
+    "preflight/pilot-reference-C0-observed-off/ledger.bin.gz": {
+      "bytes": 486,
+      "sha256": "0129ae4efe7fa2de806b26c44d712b04083a27195509c69804430b545d1eec9f"
+    },
+    "preflight/pilot-reference-C0-observed-off/mark-witness.bin.gz": {
+      "bytes": 6725,
+      "sha256": "adbe01b3b3c286b116367fa0b3a1367bba67079e50edd9a938258bbe55e6c070"
+    },
+    "preflight/pilot-reference-C0-observed-off/marking.bin.gz": {
+      "bytes": 776,
+      "sha256": "d416e3c8fcdb732fb108be408316cb0ac2f8d8dfa1b8f96b0ca83d15ba111417"
+    },
+    "preflight/pilot-reference-C0-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "9a51db7bed1cfb0bee93d5f05932bc7a8e9ddc46545a844985a773dbcd43b8d8"
+    },
+    "preflight/pilot-reference-C0-observed-off/runner.log": {
+      "bytes": 764,
+      "sha256": "9c54a839f1ae10d4df06b1aa3262696ee0b710451f09ed78607466d825e23ed0"
+    },
+    "preflight/pilot-reference-C0-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C0-observed-off/summary.json": {
+      "bytes": 1239,
+      "sha256": "a92bddc7001eee81479f846dfead4805905b45d52f6d94093f23ebf58dba3f53"
+    },
+    "preflight/pilot-reference-C0-observed-off/team-possession.bin.gz": {
+      "bytes": 144,
+      "sha256": "d94434ec92e6d318adeb19ccccb3a21ff0b97b16f3f1114a644f1d93fb761dd7"
+    },
+    "preflight/pilot-reference-C0-observed-off/trajectory.bin.gz": {
+      "bytes": 163815,
+      "sha256": "a2d4041b105456f9a0038d5a0ff39969340bf46cce33b07c83a0420affde7ff7"
+    },
+    "preflight/pilot-reference-C1-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "076a91baaa4dc9e232785aa3a1dc53bcd07c10b3c1a7b18d0e6ef0c2d32fdabd"
+    },
+    "preflight/pilot-reference-C1-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "b13020f47908bff6ad3cf5496bf93ea193b2cb82f69982bc4cb99149e2220161"
+    },
+    "preflight/pilot-reference-C1-observed-off/engine.log": {
+      "bytes": 98,
+      "sha256": "4e05cde5acd017722ce0ddf27c7076c23e3be2ceca4d31ae8a8eac3a62600036"
+    },
+    "preflight/pilot-reference-C1-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C1-observed-off/geometry.bin.gz": {
+      "bytes": 19820,
+      "sha256": "c5a7dab8cba3afae6a1190f24a0a312aebcb6cb54d9838c9f1f288e77c30ce0e"
+    },
+    "preflight/pilot-reference-C1-observed-off/ledger.bin.gz": {
+      "bytes": 351,
+      "sha256": "0eb30247d4a756bc7b8fca2b6fbe58cf6c3a929b61173a5c6488f74e98a1be38"
+    },
+    "preflight/pilot-reference-C1-observed-off/mark-witness.bin.gz": {
+      "bytes": 5858,
+      "sha256": "fce988bda070aff3e95865f6099a3f175ce68495f8cc55548986591c512d6b76"
+    },
+    "preflight/pilot-reference-C1-observed-off/marking.bin.gz": {
+      "bytes": 784,
+      "sha256": "dbf935404481c0dd3cfc7ce08c83dbd5b474feff0421b6a99af46cd68cb6f707"
+    },
+    "preflight/pilot-reference-C1-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "c163315b3d454ba20fe0738af64d389b8c4e39815b974500beb6de8b5f60c21b"
+    },
+    "preflight/pilot-reference-C1-observed-off/runner.log": {
+      "bytes": 763,
+      "sha256": "abd7ff9a5b30ff2d52e797c743dc60f153bee1cc85103dbd732b38c93f0fc7b0"
+    },
+    "preflight/pilot-reference-C1-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C1-observed-off/summary.json": {
+      "bytes": 1238,
+      "sha256": "7db0404e4612d2c112d2d7681e34465d0008313c1336525616c9ddd0fd2f6938"
+    },
+    "preflight/pilot-reference-C1-observed-off/team-possession.bin.gz": {
+      "bytes": 125,
+      "sha256": "22cb380e8f8c8e1f2a05205d212e875f3699bc4f1527803e2cb9ccad90d42a57"
+    },
+    "preflight/pilot-reference-C1-observed-off/trajectory.bin.gz": {
+      "bytes": 165743,
+      "sha256": "76c1a99063286b33fff76f62cc9ca8260fa0634a495ff0a36bcf136c7000f5ac"
+    },
+    "preflight/pilot-reference-C2-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "02b84634a65b9af77e6ec86fa3362e3ebea224006273c82cadc639d1665d14a7"
+    },
+    "preflight/pilot-reference-C2-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "d7c504b6b789df8d8476bdacd1611fc582d19927d16af21d0eb0961bd0d953fc"
+    },
+    "preflight/pilot-reference-C2-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "580f35b6b716e01e3677f3b73cd59551cf58a2c9384fa553dd3c053c3eb3af53"
+    },
+    "preflight/pilot-reference-C2-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C2-observed-off/geometry.bin.gz": {
+      "bytes": 21605,
+      "sha256": "9236c1240ca750bf027cbe28b6eebd9f67d331701ebbcff49e1edf999426791c"
+    },
+    "preflight/pilot-reference-C2-observed-off/ledger.bin.gz": {
+      "bytes": 417,
+      "sha256": "0fd6cf09d809d7030a5e341a21d62ecc36028d93400b3b19735f8229f9f598c1"
+    },
+    "preflight/pilot-reference-C2-observed-off/mark-witness.bin.gz": {
+      "bytes": 6290,
+      "sha256": "794fd1e1df6844bf6b57038e8ddb71bcd08eb996d9c32be15914d380fdb8eb57"
+    },
+    "preflight/pilot-reference-C2-observed-off/marking.bin.gz": {
+      "bytes": 838,
+      "sha256": "59fb20b6e4b28caf4e48f8d1ecc23af5a6fe5ba105cc62011d1526f652c722fd"
+    },
+    "preflight/pilot-reference-C2-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "f53d40889fef7c0136d595e972565ca1d129d69862db56e73baf8cc7604d797c"
+    },
+    "preflight/pilot-reference-C2-observed-off/runner.log": {
+      "bytes": 768,
+      "sha256": "39f92882dea413109d435023463f8ca7ba993c97a76ebe342353ac33a0eaea95"
+    },
+    "preflight/pilot-reference-C2-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C2-observed-off/summary.json": {
+      "bytes": 1243,
+      "sha256": "08a71752cefbd169c06e4da7e9f5094b4e523fbd9d7071308011444087307a61"
+    },
+    "preflight/pilot-reference-C2-observed-off/team-possession.bin.gz": {
+      "bytes": 134,
+      "sha256": "fe6382ddeefecf0c40c5b2d8cd5dbe7c3dc76bd42ac6321d3631eae47e4514e1"
+    },
+    "preflight/pilot-reference-C2-observed-off/trajectory.bin.gz": {
+      "bytes": 167125,
+      "sha256": "4243e109351a4d74c6d68dde287f9b548ffe0181648f83464e7366f60db69a45"
+    },
+    "preflight/pilot-reference-C3-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "43b1c228ccb9c413b66bd5f105862a91e5623cbea400f2acc7d2872edde0234b"
+    },
+    "preflight/pilot-reference-C3-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "91eabb64339c0263f535bd6dcd03245f46fe133da2fa0d52f797c6d9393bc69c"
+    },
+    "preflight/pilot-reference-C3-observed-off/engine.log": {
+      "bytes": 194,
+      "sha256": "bdf4752993b8a6ea17f95c02b4f210b716d510405dacd68b3e1dd8e2cc3b48f8"
+    },
+    "preflight/pilot-reference-C3-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C3-observed-off/geometry.bin.gz": {
+      "bytes": 21676,
+      "sha256": "397cfa9ce137d9caf3d98396c4cbaf431bcd4466fbe5014933118162b1370575"
+    },
+    "preflight/pilot-reference-C3-observed-off/ledger.bin.gz": {
+      "bytes": 343,
+      "sha256": "75f811835e232c22580748e216c95a4e5f5a633daf0d18f0482612cb08ab3656"
+    },
+    "preflight/pilot-reference-C3-observed-off/mark-witness.bin.gz": {
+      "bytes": 5887,
+      "sha256": "72a2f1eada9d4f189c82935e9d06887ab12441c953aecba7a9e67d25a2273f1c"
+    },
+    "preflight/pilot-reference-C3-observed-off/marking.bin.gz": {
+      "bytes": 867,
+      "sha256": "2727fb7796feec41717454db5b4d093543e77a98620fcfb6e61939eec95b43d7"
+    },
+    "preflight/pilot-reference-C3-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "f81416b0b1fa16d2ca036700e5c76c01cf493e09f49aa75d4cc67b06c9338014"
+    },
+    "preflight/pilot-reference-C3-observed-off/runner.log": {
+      "bytes": 770,
+      "sha256": "4fdf94cbea6e8ad3625585c9daeb5bbf3f695849f31977b5c71a0079ff7da638"
+    },
+    "preflight/pilot-reference-C3-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "a745d872f7ad414f237fa17a987119655cc3066d780b5564463cf2aa01cfc119"
+    },
+    "preflight/pilot-reference-C3-observed-off/summary.json": {
+      "bytes": 1245,
+      "sha256": "279df69b847e50a63b388e145443325b558b45c6754781d8b099fd61bd9558de"
+    },
+    "preflight/pilot-reference-C3-observed-off/team-possession.bin.gz": {
+      "bytes": 126,
+      "sha256": "1b8f2152ddb0024e998ab8670a9e96b88af31476b1cbad42cfb6eca7094cb583"
+    },
+    "preflight/pilot-reference-C3-observed-off/trajectory.bin.gz": {
+      "bytes": 166650,
+      "sha256": "03dbd5034de039f41d7cc0606befa796a9e3116963189f880c459e8c1dfa5cf3"
+    },
+    "preflight/pilot-reference-C4-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "8c36042fd4dae1e5800154d7313e9e72e7cd62d218fb6c915b9d81814f815cbb"
+    },
+    "preflight/pilot-reference-C4-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "11e1804dae1178332d9fa7e0b8c7287f8a67638dfbe0fe9b45982f0d89946100"
+    },
+    "preflight/pilot-reference-C4-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "dd3e2e295292cdd806cce971b87bd3d0f3d125649399956bdbd4b269a5592c48"
+    },
+    "preflight/pilot-reference-C4-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C4-observed-off/geometry.bin.gz": {
+      "bytes": 20401,
+      "sha256": "85587a4ae7eefff326e8051e25691b2e98f4d1695cc5f6ccdb0dee63595d339e"
+    },
+    "preflight/pilot-reference-C4-observed-off/ledger.bin.gz": {
+      "bytes": 404,
+      "sha256": "1b346e21a0a9010375018915837030f52cbea65cc8adef330acfc8f810c6aab1"
+    },
+    "preflight/pilot-reference-C4-observed-off/mark-witness.bin.gz": {
+      "bytes": 5550,
+      "sha256": "a37508a630981bd25c6ce79c88407054c9170359b5995b5dc3e35b756694e2b3"
+    },
+    "preflight/pilot-reference-C4-observed-off/marking.bin.gz": {
+      "bytes": 844,
+      "sha256": "c4d9c05f81cd78d12486a0fcaa237f26ff4a293142b09d65bd780fe4bc5c5684"
+    },
+    "preflight/pilot-reference-C4-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "032d2b3e3d24753b00bc1beaa287deb03c97ca2bc65031707ea7e63d8c47f346"
+    },
+    "preflight/pilot-reference-C4-observed-off/runner.log": {
+      "bytes": 763,
+      "sha256": "2099fe1c92c38152fb3ca5fa9e8b8b136e033d3851624e7ecfcf7139bceffc71"
+    },
+    "preflight/pilot-reference-C4-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "afad36f538d5e5246261211494d2dcd2a5ffecb9193d997e79688edc0124cc45"
+    },
+    "preflight/pilot-reference-C4-observed-off/summary.json": {
+      "bytes": 1238,
+      "sha256": "813a91c0edb9aaddf6524d53f2e8586693bed4892fb73df492cf279fa67df9e7"
+    },
+    "preflight/pilot-reference-C4-observed-off/team-possession.bin.gz": {
+      "bytes": 139,
+      "sha256": "2daca1b16a85e1f9a5010029dd1fb3e3dae6c2a02d9aa6fd1f7ad0457686e657"
+    },
+    "preflight/pilot-reference-C4-observed-off/trajectory.bin.gz": {
+      "bytes": 164328,
+      "sha256": "3db4f3ac693ee033e4fdfe0cdc36920496728c041ba6ea90a86f74ccd6d4c318"
+    },
+    "preflight/pilot-reference-C5-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "e0eca756b438aae4107b4a807199a344e1e5b8ab55e7f2baf2b0a88951958d45"
+    },
+    "preflight/pilot-reference-C5-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "83aa49092ff2f3ee9be967d222b47304ea57e6b872e310e3b2c5417a4f5ce9ff"
+    },
+    "preflight/pilot-reference-C5-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "ec6a374221e663f8f60c7c19a62b9a444c28202cbbb5bf652b5cfc1da38a068a"
+    },
+    "preflight/pilot-reference-C5-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C5-observed-off/geometry.bin.gz": {
+      "bytes": 19695,
+      "sha256": "2c20b51d80ebe3b22beeb0dd9f83672c838a7786b37a2cfdff531ecdf16388e5"
+    },
+    "preflight/pilot-reference-C5-observed-off/ledger.bin.gz": {
+      "bytes": 349,
+      "sha256": "c8eb8e94b6a3eb6c7218375e1c1133be676e493711b1996f5d5ab39f61ea9a9b"
+    },
+    "preflight/pilot-reference-C5-observed-off/mark-witness.bin.gz": {
+      "bytes": 5952,
+      "sha256": "571610c14a1c3c85bac0caf7869309e343b62f208de372d699a894aa11eb9c89"
+    },
+    "preflight/pilot-reference-C5-observed-off/marking.bin.gz": {
+      "bytes": 808,
+      "sha256": "653f677e4f6212388b2f8b4f47f46ea3d53bfb0b7a2aab084b9e42fbaeaf7dd9"
+    },
+    "preflight/pilot-reference-C5-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "bab1289d4a4186142122936faef01e6c1ffd2acde58f800f15da899afd6f1ff0"
+    },
+    "preflight/pilot-reference-C5-observed-off/runner.log": {
+      "bytes": 765,
+      "sha256": "f12ffe7afaacfc5049971b070962f94b876b462b99e3ecd80c1ba7c4b7cc301e"
+    },
+    "preflight/pilot-reference-C5-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C5-observed-off/summary.json": {
+      "bytes": 1240,
+      "sha256": "3d170d9b753a9d5adb2428fa15acec22bea6dd71b4ceb000252890d7ea9b0ff1"
+    },
+    "preflight/pilot-reference-C5-observed-off/team-possession.bin.gz": {
+      "bytes": 128,
+      "sha256": "d18cdf7d2fa92795d41364c8bbc25162e85e1ccb0942fbbf9a6390c2a0789932"
+    },
+    "preflight/pilot-reference-C5-observed-off/trajectory.bin.gz": {
+      "bytes": 162699,
+      "sha256": "3874276e5905e609f81446843950aec79219566f847756a0f0be9b45f9adc5a7"
+    },
+    "preflight/pilot-reference-C6-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "028b62a12c30d698ee85d2f354c833736fafaa99e4f057feee14138d50c9477a"
+    },
+    "preflight/pilot-reference-C6-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "82c449ce78f4f36ce27ac850307d4cee0faf2eefb81e3e71091282a946acc7ad"
+    },
+    "preflight/pilot-reference-C6-observed-off/engine.log": {
+      "bytes": 96,
+      "sha256": "3f79d9e50b4dd48d48cb01038bb377fa557050e6ca7811cf01bb81634cf6c611"
+    },
+    "preflight/pilot-reference-C6-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C6-observed-off/geometry.bin.gz": {
+      "bytes": 18589,
+      "sha256": "e5fe609585a3d3928ee98733c96ed9e6649711f2e570249ba11b96a8d64b2362"
+    },
+    "preflight/pilot-reference-C6-observed-off/ledger.bin.gz": {
+      "bytes": 244,
+      "sha256": "e7725cc9b6eb15873018e5cddd96c47051c272ebb6cd8749869a75147577fa6c"
+    },
+    "preflight/pilot-reference-C6-observed-off/mark-witness.bin.gz": {
+      "bytes": 6196,
+      "sha256": "c9daec0349df84c254d8252de4f05e3f1e8d84784a9a5c153e49dabde37fd8aa"
+    },
+    "preflight/pilot-reference-C6-observed-off/marking.bin.gz": {
+      "bytes": 841,
+      "sha256": "ea6687e36b3b06832ad925c157d03590d79e240dbb8d95efaeac8f01250d1100"
+    },
+    "preflight/pilot-reference-C6-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "9025919bc70bcebf5ffc1475a75a82e8fed5a04b450cf5111f79bd8d3bd1b98d"
+    },
+    "preflight/pilot-reference-C6-observed-off/runner.log": {
+      "bytes": 760,
+      "sha256": "444beefbf9ba66d545f26e709cd35ceeff2fa83f91eb4e1daa253e27ac6af55d"
+    },
+    "preflight/pilot-reference-C6-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C6-observed-off/summary.json": {
+      "bytes": 1235,
+      "sha256": "34133955f11736d16494a65319823a6ffc4d54294fbe045a2dc1c594d94d3d2a"
+    },
+    "preflight/pilot-reference-C6-observed-off/team-possession.bin.gz": {
+      "bytes": 110,
+      "sha256": "3fb950c2830816825579cea4a41d217d3046caa5c640b523880e2a62be2bf4d6"
+    },
+    "preflight/pilot-reference-C6-observed-off/trajectory.bin.gz": {
+      "bytes": 156881,
+      "sha256": "92893ca89df39248ae8966e34834c46c8d03c8e5adafd4fd9f6efcd295a538ae"
+    },
+    "preflight/pilot-reference-C7-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "f8963dd3267721b8a5a595cc7aedee6b3978cc0e6602c446ec057749d9555b18"
+    },
+    "preflight/pilot-reference-C7-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "39956f4f7c2d5ca908dafa65c95c9d10cedec47aad6c69d1045e8718142ac86a"
+    },
+    "preflight/pilot-reference-C7-observed-off/engine.log": {
+      "bytes": 193,
+      "sha256": "20b71e6f6617ad0dc6a7cfae623d3b306096418074b689c7faa338527406441b"
+    },
+    "preflight/pilot-reference-C7-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C7-observed-off/geometry.bin.gz": {
+      "bytes": 20498,
+      "sha256": "90d6cd478ff23355cf3f39c7c86512c5164e4421ef598a7efa5458a77cd2c4f3"
+    },
+    "preflight/pilot-reference-C7-observed-off/ledger.bin.gz": {
+      "bytes": 337,
+      "sha256": "e7c55fbc5488e0b8bfc62e4d1a0b7461e66be5823489715c8f819277edfffc4c"
+    },
+    "preflight/pilot-reference-C7-observed-off/mark-witness.bin.gz": {
+      "bytes": 6668,
+      "sha256": "c7088e1eb0a815fc02af84cf4801aee47e37ef0d2152bb25f0be136e1d3cbd8c"
+    },
+    "preflight/pilot-reference-C7-observed-off/marking.bin.gz": {
+      "bytes": 870,
+      "sha256": "973907159c440ab2d10e5dfab9ef20c854f53bdc0381974035c31894350dffae"
+    },
+    "preflight/pilot-reference-C7-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "77486f0b6d6481db617b61be6fcdd02f8616fdd7737d580786e92cb20a0994d8"
+    },
+    "preflight/pilot-reference-C7-observed-off/runner.log": {
+      "bytes": 766,
+      "sha256": "7c5b103fb16ab9ca7d81f088795e643260f93855f5c78dc086cb22c0693759c7"
+    },
+    "preflight/pilot-reference-C7-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C7-observed-off/summary.json": {
+      "bytes": 1241,
+      "sha256": "7423e5ef90af050d942fe0d1fcdeca6f2667d64fe50e87b47158df9c6152f562"
+    },
+    "preflight/pilot-reference-C7-observed-off/team-possession.bin.gz": {
+      "bytes": 124,
+      "sha256": "1d05a9a67b52b67499d8f6b925251f5db55c61e2faa22164f27da7fb05f68c24"
+    },
+    "preflight/pilot-reference-C7-observed-off/trajectory.bin.gz": {
+      "bytes": 161941,
+      "sha256": "bc97289e2d6060690c8bc7e63b7268a6aea6a814f32ad2a85f55f4e8db196b31"
+    },
+    "preflight/pilot-reference-C8-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "f21838225187cf78fca6349804aab1a11d20ea1b94613d61ffc061776a96d680"
+    },
+    "preflight/pilot-reference-C8-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "2ddd576c6334ea22e090f06f756fb16ab2ef96703111b9666cbcf11b3dc8e618"
+    },
+    "preflight/pilot-reference-C8-observed-off/engine.log": {
+      "bytes": 291,
+      "sha256": "349b9d318fdb4ad6b26bfd5f2dae6cc6b538e5aa806ae87b5c64cfe3c61f7efc"
+    },
+    "preflight/pilot-reference-C8-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C8-observed-off/geometry.bin.gz": {
+      "bytes": 20422,
+      "sha256": "3fa87b31f7b4b0e3d2a279b26675b8223e145485413b26d7322b59f856b83613"
+    },
+    "preflight/pilot-reference-C8-observed-off/ledger.bin.gz": {
+      "bytes": 436,
+      "sha256": "2cd0d830588684f4fb8d1e8b94419e6ea33af6b60c20fe5ba9e084c53b5234b2"
+    },
+    "preflight/pilot-reference-C8-observed-off/mark-witness.bin.gz": {
+      "bytes": 6709,
+      "sha256": "b102c3ded76d480e65eaae36f2b17ec76fc38ab1e15fdbf453b09cc411643a18"
+    },
+    "preflight/pilot-reference-C8-observed-off/marking.bin.gz": {
+      "bytes": 903,
+      "sha256": "17b1efacd2dfb4a52bd26dbe571c6dbccaa2922aca13aac45951408746496ba9"
+    },
+    "preflight/pilot-reference-C8-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "16ca73281a5d13f8aec0bd2a38983300f06366b01252419a4de19067977b38e3"
+    },
+    "preflight/pilot-reference-C8-observed-off/runner.log": {
+      "bytes": 765,
+      "sha256": "5c489300a6b1ebadd97f6f2475185aafb829bfaf901b86d0d778cf500e52824c"
+    },
+    "preflight/pilot-reference-C8-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-reference-C8-observed-off/summary.json": {
+      "bytes": 1240,
+      "sha256": "ebeed1601d8267acafb0330edc1a8c2b99b177ead2991aa4385b55224a2d1bef"
+    },
+    "preflight/pilot-reference-C8-observed-off/team-possession.bin.gz": {
+      "bytes": 133,
+      "sha256": "ce79ca6d48b516af9b59c7a8bca6e0195cdb5c95b7992fb66a56170de39f130c"
+    },
+    "preflight/pilot-reference-C8-observed-off/trajectory.bin.gz": {
+      "bytes": 161745,
+      "sha256": "1b8f61aa187c4915355bb623c6ce420f05f0c6ad8099e8b608a0e964af420239"
+    },
+    "preflight/pilot-reference-C9-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "be6dc47dfe6440bad7e1dab78cbbb9f1b77a24da49848f688ef3bb95c5b953b1"
+    },
+    "preflight/pilot-reference-C9-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "02b6af4c1eaf567c3929589b9bea33800a14693a566494ada62f3c84336c8da3"
+    },
+    "preflight/pilot-reference-C9-observed-off/engine.log": {
+      "bytes": 485,
+      "sha256": "5502058b7f0858cfb52b69f56faeb22c860b8acdab9a43ab92af77fc41b35e11"
+    },
+    "preflight/pilot-reference-C9-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-reference-C9-observed-off/geometry.bin.gz": {
+      "bytes": 19834,
+      "sha256": "4d64dc37bb28d50ea7256b1b9127fa8ccf42d0531cb098e5b94ff7201c9030eb"
+    },
+    "preflight/pilot-reference-C9-observed-off/ledger.bin.gz": {
+      "bytes": 571,
+      "sha256": "62baf25c18e51d7ab845a4dce451dab2c0e1388f037067e16a0df7c4cf58d484"
+    },
+    "preflight/pilot-reference-C9-observed-off/mark-witness.bin.gz": {
+      "bytes": 5541,
+      "sha256": "6fcc3ef8e88bdb31bf4269562d1482d82f2837e7a2b950907146730f6098b3bc"
+    },
+    "preflight/pilot-reference-C9-observed-off/marking.bin.gz": {
+      "bytes": 822,
+      "sha256": "ebbc73e6349f6e6f7903146d3f7ea3c4e90c18aa0df8dae1950294a87adeecf9"
+    },
+    "preflight/pilot-reference-C9-observed-off/run.json": {
+      "bytes": 649,
+      "sha256": "0a459107a80d5a9032f702c7850ef2e4d849a1fb93ffecc97c5ba1604f81b572"
+    },
+    "preflight/pilot-reference-C9-observed-off/runner.log": {
+      "bytes": 771,
+      "sha256": "86998a9636a0e3568fd63cf691dc3169afec6f15ae78a3723ca104039b2105ac"
+    },
+    "preflight/pilot-reference-C9-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "289d39992a41384033930d26fa5d62d4225c48b1a9ceaaf826173db7f5131195"
+    },
+    "preflight/pilot-reference-C9-observed-off/summary.json": {
+      "bytes": 1246,
+      "sha256": "38487ad93564351dd63d21a3c6e21fdf7a24b26f2761df686f305a25e2355c2f"
+    },
+    "preflight/pilot-reference-C9-observed-off/team-possession.bin.gz": {
+      "bytes": 152,
+      "sha256": "995d0c2d59673ba9a281ed1bb10e676ff4a47f03c4dfecc4aa50e7101c2a4af8"
+    },
+    "preflight/pilot-reference-C9-observed-off/trajectory.bin.gz": {
+      "bytes": 159684,
+      "sha256": "f57f51c51cc14699c2b04c61eb7411072655b1a35a06085ec5ceec743308a386"
+    },
+    "preflight/pilot-w13-C0-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "a9d27e65f8ae9c3e2398d9a1591bb9efacc9c077c3107b926021e1c7cc5d2f01"
+    },
+    "preflight/pilot-w13-C0-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "3ff1d88a706a415119d63218428a109a2dcca60b92e799d0e6b4e36079b4eef0"
+    },
+    "preflight/pilot-w13-C0-observed-armed/engine.log": {
+      "bytes": 390,
+      "sha256": "255f67fce0984ff62e1bf5a7038ea03861b31684a604cbc977aeda9c61ad150e"
+    },
+    "preflight/pilot-w13-C0-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C0-observed-armed/geometry.bin.gz": {
+      "bytes": 19670,
+      "sha256": "1da49dab6915e77f4cb37c565ea7ff8aea286dd2a46e31982f600f1ebdb11d95"
+    },
+    "preflight/pilot-w13-C0-observed-armed/ledger.bin.gz": {
+      "bytes": 433,
+      "sha256": "014af80bb50f09202c3b9aa86436e01a6555d22f69f6930aba6a0af7403c2061"
+    },
+    "preflight/pilot-w13-C0-observed-armed/mark-witness.bin.gz": {
+      "bytes": 6134,
+      "sha256": "9b0dc5838c7bc2034dafa30f595e1c42340abe1863047c30aa1a4df644c8d914"
+    },
+    "preflight/pilot-w13-C0-observed-armed/marking.bin.gz": {
+      "bytes": 1934,
+      "sha256": "a86ab6907df886b0f902cb4b9d3cd2cdaa23c6d791eecaa8ecea648139467780"
+    },
+    "preflight/pilot-w13-C0-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "23d83802e0fc89dac12076c69050a025e3899ab7574cf2aa8c2c44500405971b"
+    },
+    "preflight/pilot-w13-C0-observed-armed/runner.log": {
+      "bytes": 765,
+      "sha256": "602f9ff453e4c870cf0e52aeac610e38c939bb0175524f52c0abccb3fb17c99e"
+    },
+    "preflight/pilot-w13-C0-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C0-observed-armed/summary.json": {
+      "bytes": 1240,
+      "sha256": "51110758f0d6631008efe12de8c8fd316a89a726038559a63bcf720dc539ffd9"
+    },
+    "preflight/pilot-w13-C0-observed-armed/team-possession.bin.gz": {
+      "bytes": 135,
+      "sha256": "20f69937046eeb796700d6fad44cb8333335e4ec437621a7d002bed4883301f1"
+    },
+    "preflight/pilot-w13-C0-observed-armed/trajectory.bin.gz": {
+      "bytes": 160998,
+      "sha256": "4f42a926d25f8711b423ad9e79739297df16c15771f34728bb8828ada43da221"
+    },
+    "preflight/pilot-w13-C0-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "229846f2262b94c65fda7973d2f327a4ecef831bd94eeed2e14233dccca93c36"
+    },
+    "preflight/pilot-w13-C0-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "ca242233181b52221e3a5c9ba81a99906abcd9007ec376b88030d8061a78fd6e"
+    },
+    "preflight/pilot-w13-C0-observed-off/engine.log": {
+      "bytes": 388,
+      "sha256": "b6ac50a156e2b069cb05b8c7f839845f95ab380f435d5df6c64c127d13f08717"
+    },
+    "preflight/pilot-w13-C0-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C0-observed-off/geometry.bin.gz": {
+      "bytes": 19968,
+      "sha256": "7a6fefe056874c00e4c2b5b039b5e780a50c21d4311ecdcc08d17b1ad90a2f09"
+    },
+    "preflight/pilot-w13-C0-observed-off/ledger.bin.gz": {
+      "bytes": 486,
+      "sha256": "0129ae4efe7fa2de806b26c44d712b04083a27195509c69804430b545d1eec9f"
+    },
+    "preflight/pilot-w13-C0-observed-off/mark-witness.bin.gz": {
+      "bytes": 6725,
+      "sha256": "adbe01b3b3c286b116367fa0b3a1367bba67079e50edd9a938258bbe55e6c070"
+    },
+    "preflight/pilot-w13-C0-observed-off/marking.bin.gz": {
+      "bytes": 776,
+      "sha256": "d416e3c8fcdb732fb108be408316cb0ac2f8d8dfa1b8f96b0ca83d15ba111417"
+    },
+    "preflight/pilot-w13-C0-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "7504ee58739a4c4287eabfc10e4e292cbe0afb0f05e669062d3aaf822f3e590d"
+    },
+    "preflight/pilot-w13-C0-observed-off/runner.log": {
+      "bytes": 763,
+      "sha256": "1d06b54bf35bf6551c13def6665c222f2821c9212589c81c02aa5b86ba64a1e7"
+    },
+    "preflight/pilot-w13-C0-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C0-observed-off/summary.json": {
+      "bytes": 1238,
+      "sha256": "c2eb3e682e2432159cdef44df1909f9ffeaf4af8bfe9db6289316ed4f9cb91f3"
+    },
+    "preflight/pilot-w13-C0-observed-off/team-possession.bin.gz": {
+      "bytes": 144,
+      "sha256": "d94434ec92e6d318adeb19ccccb3a21ff0b97b16f3f1114a644f1d93fb761dd7"
+    },
+    "preflight/pilot-w13-C0-observed-off/trajectory.bin.gz": {
+      "bytes": 163815,
+      "sha256": "a2d4041b105456f9a0038d5a0ff39969340bf46cce33b07c83a0420affde7ff7"
+    },
+    "preflight/pilot-w13-C1-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "2aa232875dab25e28ec0532a3bb0aa75ec2490982231fa3df3330f9cc072e5c9"
+    },
+    "preflight/pilot-w13-C1-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "bb6f864951ce77d33596bbb7aa62d8661bdc741f508905318767264fadf1412f"
+    },
+    "preflight/pilot-w13-C1-observed-armed/engine.log": {
+      "bytes": 290,
+      "sha256": "abf405216f9f0cbfcd5d8b78d4ee9f63d6a8494833ae3c29c720a8a1cb070cdb"
+    },
+    "preflight/pilot-w13-C1-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C1-observed-armed/geometry.bin.gz": {
+      "bytes": 21416,
+      "sha256": "031da9ba4288b1da15f8c1d63efe54b62e5c59b1f74aff7a15858045de2ba46a"
+    },
+    "preflight/pilot-w13-C1-observed-armed/ledger.bin.gz": {
+      "bytes": 439,
+      "sha256": "5c524d1c66c9b8151cb498674eb95f02e808b6ad1e3ec7d9b282ef07c424a6c5"
+    },
+    "preflight/pilot-w13-C1-observed-armed/mark-witness.bin.gz": {
+      "bytes": 5727,
+      "sha256": "3ff42229f75ba321379c5c193e7e73e50a435196ba9b11cfd4b7cc25ea6ceb64"
+    },
+    "preflight/pilot-w13-C1-observed-armed/marking.bin.gz": {
+      "bytes": 1737,
+      "sha256": "a76278ad2079a9547a0ab43abc2ceacc1837fc89ade69a2e97d094b367068d38"
+    },
+    "preflight/pilot-w13-C1-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "f7dcdc69fb05e061693f41da7004956654742e2078e7b5b4ab48ba8e62e225b7"
+    },
+    "preflight/pilot-w13-C1-observed-armed/runner.log": {
+      "bytes": 767,
+      "sha256": "662ae5234c03e7ba60f72dc25351663dfe97e1d4cc8a045e55d7ab27bcce0f4c"
+    },
+    "preflight/pilot-w13-C1-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C1-observed-armed/summary.json": {
+      "bytes": 1242,
+      "sha256": "3a871796fe3e265d4115d2fc9c93de176d1e3eacfc7a594bb7212ebc8ff61619"
+    },
+    "preflight/pilot-w13-C1-observed-armed/team-possession.bin.gz": {
+      "bytes": 134,
+      "sha256": "917811bd228bfd8edf27c202958188f1495e7cd28db44d79dfda039d3854d11e"
+    },
+    "preflight/pilot-w13-C1-observed-armed/trajectory.bin.gz": {
+      "bytes": 170457,
+      "sha256": "468c1963e67a058a036d43d8a20498d16791e1bdfea65d556f1fc6c1cc3cd72d"
+    },
+    "preflight/pilot-w13-C1-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "076a91baaa4dc9e232785aa3a1dc53bcd07c10b3c1a7b18d0e6ef0c2d32fdabd"
+    },
+    "preflight/pilot-w13-C1-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "b13020f47908bff6ad3cf5496bf93ea193b2cb82f69982bc4cb99149e2220161"
+    },
+    "preflight/pilot-w13-C1-observed-off/engine.log": {
+      "bytes": 98,
+      "sha256": "4e05cde5acd017722ce0ddf27c7076c23e3be2ceca4d31ae8a8eac3a62600036"
+    },
+    "preflight/pilot-w13-C1-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C1-observed-off/geometry.bin.gz": {
+      "bytes": 19820,
+      "sha256": "c5a7dab8cba3afae6a1190f24a0a312aebcb6cb54d9838c9f1f288e77c30ce0e"
+    },
+    "preflight/pilot-w13-C1-observed-off/ledger.bin.gz": {
+      "bytes": 351,
+      "sha256": "0eb30247d4a756bc7b8fca2b6fbe58cf6c3a929b61173a5c6488f74e98a1be38"
+    },
+    "preflight/pilot-w13-C1-observed-off/mark-witness.bin.gz": {
+      "bytes": 5858,
+      "sha256": "fce988bda070aff3e95865f6099a3f175ce68495f8cc55548986591c512d6b76"
+    },
+    "preflight/pilot-w13-C1-observed-off/marking.bin.gz": {
+      "bytes": 784,
+      "sha256": "dbf935404481c0dd3cfc7ce08c83dbd5b474feff0421b6a99af46cd68cb6f707"
+    },
+    "preflight/pilot-w13-C1-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "f510c49ab9012462bfa41797d8956336ae6fd824dd669de030b2b1c88c198b20"
+    },
+    "preflight/pilot-w13-C1-observed-off/runner.log": {
+      "bytes": 763,
+      "sha256": "5f41114e8fd5a2d82150f8263691ce8d691d1b2a6e869986b5a42c1a0f6997af"
+    },
+    "preflight/pilot-w13-C1-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C1-observed-off/summary.json": {
+      "bytes": 1238,
+      "sha256": "8cbbffb2266128f222d21fd3a576d9cb1978f8ff05407ff45c8da12e4a253587"
+    },
+    "preflight/pilot-w13-C1-observed-off/team-possession.bin.gz": {
+      "bytes": 125,
+      "sha256": "22cb380e8f8c8e1f2a05205d212e875f3699bc4f1527803e2cb9ccad90d42a57"
+    },
+    "preflight/pilot-w13-C1-observed-off/trajectory.bin.gz": {
+      "bytes": 165743,
+      "sha256": "76c1a99063286b33fff76f62cc9ca8260fa0634a495ff0a36bcf136c7000f5ac"
+    },
+    "preflight/pilot-w13-C2-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "d0dda5142f575edafe3c74691fe03f48fa09d432d000928d3a67ebf1d77e7717"
+    },
+    "preflight/pilot-w13-C2-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "45c11a0bc276c267e71643984b15f9a72bc8cbb5c0a014f806b9622c767d80b3"
+    },
+    "preflight/pilot-w13-C2-observed-armed/engine.log": {
+      "bytes": 194,
+      "sha256": "39b5ea318b4717f432747d9d1d2fa82d3b65a8ac9c67302c79327293d9b5556f"
+    },
+    "preflight/pilot-w13-C2-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C2-observed-armed/geometry.bin.gz": {
+      "bytes": 21369,
+      "sha256": "55f39be1d1abff4881b17ad7bcc266c7fdffda4696963559db8fdde76541377c"
+    },
+    "preflight/pilot-w13-C2-observed-armed/ledger.bin.gz": {
+      "bytes": 411,
+      "sha256": "572bcd9575a2bc99cfd9966e9aae45a8a0c9014fe1d855d25cf8555cde547094"
+    },
+    "preflight/pilot-w13-C2-observed-armed/mark-witness.bin.gz": {
+      "bytes": 5903,
+      "sha256": "c026df0365af509afa207d2def2dd3cabbdec6734a63b4f6ee3ce53a6180977d"
+    },
+    "preflight/pilot-w13-C2-observed-armed/marking.bin.gz": {
+      "bytes": 2579,
+      "sha256": "0388ca8873e721d70e36fa86a24f76aa9f4dde997787201113683930be1c444e"
+    },
+    "preflight/pilot-w13-C2-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "b4dcc380388e76c3ff39155bd1bbc6a7e15c992e53658b4cb66592356e249b62"
+    },
+    "preflight/pilot-w13-C2-observed-armed/runner.log": {
+      "bytes": 769,
+      "sha256": "e87745267f577dfe9e38ec752d631917ffe51ebc6d38167dafabded0d9294599"
+    },
+    "preflight/pilot-w13-C2-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C2-observed-armed/summary.json": {
+      "bytes": 1244,
+      "sha256": "9647fc0882c68f947945a438bd69cd81ebf39c1531afed9450d95d77acf0bd5a"
+    },
+    "preflight/pilot-w13-C2-observed-armed/team-possession.bin.gz": {
+      "bytes": 137,
+      "sha256": "9c0d5d5767fe4b4d91209dd4e82248d1af9c7f35120d1878c784de95adbcd194"
+    },
+    "preflight/pilot-w13-C2-observed-armed/trajectory.bin.gz": {
+      "bytes": 164125,
+      "sha256": "23ab22ee285d874ba461596229b256bc39953b6ff27355e8e550457bf32d6b0f"
+    },
+    "preflight/pilot-w13-C2-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "02b84634a65b9af77e6ec86fa3362e3ebea224006273c82cadc639d1665d14a7"
+    },
+    "preflight/pilot-w13-C2-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "d7c504b6b789df8d8476bdacd1611fc582d19927d16af21d0eb0961bd0d953fc"
+    },
+    "preflight/pilot-w13-C2-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "580f35b6b716e01e3677f3b73cd59551cf58a2c9384fa553dd3c053c3eb3af53"
+    },
+    "preflight/pilot-w13-C2-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C2-observed-off/geometry.bin.gz": {
+      "bytes": 21605,
+      "sha256": "9236c1240ca750bf027cbe28b6eebd9f67d331701ebbcff49e1edf999426791c"
+    },
+    "preflight/pilot-w13-C2-observed-off/ledger.bin.gz": {
+      "bytes": 417,
+      "sha256": "0fd6cf09d809d7030a5e341a21d62ecc36028d93400b3b19735f8229f9f598c1"
+    },
+    "preflight/pilot-w13-C2-observed-off/mark-witness.bin.gz": {
+      "bytes": 6290,
+      "sha256": "794fd1e1df6844bf6b57038e8ddb71bcd08eb996d9c32be15914d380fdb8eb57"
+    },
+    "preflight/pilot-w13-C2-observed-off/marking.bin.gz": {
+      "bytes": 838,
+      "sha256": "59fb20b6e4b28caf4e48f8d1ecc23af5a6fe5ba105cc62011d1526f652c722fd"
+    },
+    "preflight/pilot-w13-C2-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "eec7f7c5cf1b10a417c2aaf0e2a9a728cd7c1cf97e877810e5780737962fc339"
+    },
+    "preflight/pilot-w13-C2-observed-off/runner.log": {
+      "bytes": 768,
+      "sha256": "8ce53331b0fc88f1816621d6713754757fbaf72e8583635ef4dc55b13c43f3a9"
+    },
+    "preflight/pilot-w13-C2-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C2-observed-off/summary.json": {
+      "bytes": 1243,
+      "sha256": "90b6a6da38bcfb682a48232c17df7843c1252e121e9c78603cf291e2e6cee872"
+    },
+    "preflight/pilot-w13-C2-observed-off/team-possession.bin.gz": {
+      "bytes": 134,
+      "sha256": "fe6382ddeefecf0c40c5b2d8cd5dbe7c3dc76bd42ac6321d3631eae47e4514e1"
+    },
+    "preflight/pilot-w13-C2-observed-off/trajectory.bin.gz": {
+      "bytes": 167125,
+      "sha256": "4243e109351a4d74c6d68dde287f9b548ffe0181648f83464e7366f60db69a45"
+    },
+    "preflight/pilot-w13-C3-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "d733981a2cab5b21b15e9f98c45d9f3d369e2ff040abccafa5edd0c4c76c30bc"
+    },
+    "preflight/pilot-w13-C3-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "98bc2f3023517d687f832d788359c108225d4720e1568e17f37bda6741c32751"
+    },
+    "preflight/pilot-w13-C3-observed-armed/engine.log": {
+      "bytes": 387,
+      "sha256": "b6346c53dcfb8f41420aa71c62709d5184e2a066e25a09c8eafb85d3e7c74630"
+    },
+    "preflight/pilot-w13-C3-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C3-observed-armed/geometry.bin.gz": {
+      "bytes": 21263,
+      "sha256": "d7a081ea0445cd163525738e8cdfba27728d649af33e4c01ba5c59df207e5e32"
+    },
+    "preflight/pilot-w13-C3-observed-armed/ledger.bin.gz": {
+      "bytes": 504,
+      "sha256": "73955017b4838a76a71c5dac8c5204fcfd88221bc8674ce9c7995df0e6247728"
+    },
+    "preflight/pilot-w13-C3-observed-armed/mark-witness.bin.gz": {
+      "bytes": 6108,
+      "sha256": "d2ce32a1d6c360a4f9330cc264bf017010da6a62663cac2b7a0742518a0df34b"
+    },
+    "preflight/pilot-w13-C3-observed-armed/marking.bin.gz": {
+      "bytes": 2024,
+      "sha256": "46882bedb37e1bbf44c04ee4dc0f6dca4d6b869b39f1a47f113e620421f2522a"
+    },
+    "preflight/pilot-w13-C3-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "96924614856a528c8f0c74027dfe8b474406eec1ec46368f90387533ed0436fb"
+    },
+    "preflight/pilot-w13-C3-observed-armed/runner.log": {
+      "bytes": 769,
+      "sha256": "4304ad9abe3f63bd3d0cf2bfd2f3bfee52c07b1fe1765d69dfe5436846889817"
+    },
+    "preflight/pilot-w13-C3-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "a745d872f7ad414f237fa17a987119655cc3066d780b5564463cf2aa01cfc119"
+    },
+    "preflight/pilot-w13-C3-observed-armed/summary.json": {
+      "bytes": 1244,
+      "sha256": "76f23ff17f558d25e6cf4c983254e247dabe71fbba84badb68606838cd3acd6e"
+    },
+    "preflight/pilot-w13-C3-observed-armed/team-possession.bin.gz": {
+      "bytes": 142,
+      "sha256": "080a844565cf8cedc91b996e821bdcbba77363e5b0f507c452a8369d5e6dc297"
+    },
+    "preflight/pilot-w13-C3-observed-armed/trajectory.bin.gz": {
+      "bytes": 163076,
+      "sha256": "65cf590e7d41d18aea38fe95834f0b21d4cf1b242646e6c97fcef9a953fa56b9"
+    },
+    "preflight/pilot-w13-C3-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "43b1c228ccb9c413b66bd5f105862a91e5623cbea400f2acc7d2872edde0234b"
+    },
+    "preflight/pilot-w13-C3-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "91eabb64339c0263f535bd6dcd03245f46fe133da2fa0d52f797c6d9393bc69c"
+    },
+    "preflight/pilot-w13-C3-observed-off/engine.log": {
+      "bytes": 194,
+      "sha256": "bdf4752993b8a6ea17f95c02b4f210b716d510405dacd68b3e1dd8e2cc3b48f8"
+    },
+    "preflight/pilot-w13-C3-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C3-observed-off/geometry.bin.gz": {
+      "bytes": 21676,
+      "sha256": "397cfa9ce137d9caf3d98396c4cbaf431bcd4466fbe5014933118162b1370575"
+    },
+    "preflight/pilot-w13-C3-observed-off/ledger.bin.gz": {
+      "bytes": 343,
+      "sha256": "75f811835e232c22580748e216c95a4e5f5a633daf0d18f0482612cb08ab3656"
+    },
+    "preflight/pilot-w13-C3-observed-off/mark-witness.bin.gz": {
+      "bytes": 5887,
+      "sha256": "72a2f1eada9d4f189c82935e9d06887ab12441c953aecba7a9e67d25a2273f1c"
+    },
+    "preflight/pilot-w13-C3-observed-off/marking.bin.gz": {
+      "bytes": 867,
+      "sha256": "2727fb7796feec41717454db5b4d093543e77a98620fcfb6e61939eec95b43d7"
+    },
+    "preflight/pilot-w13-C3-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "d7caf8e9feb6a3e8a5dbce5e2d6bc77824604b5d07d5ffb93de61ca2d460137e"
+    },
+    "preflight/pilot-w13-C3-observed-off/runner.log": {
+      "bytes": 770,
+      "sha256": "0662ad27f03f5f0cc3082b54c9007c98259004be62338c2a2111cf87818ceb1a"
+    },
+    "preflight/pilot-w13-C3-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "a745d872f7ad414f237fa17a987119655cc3066d780b5564463cf2aa01cfc119"
+    },
+    "preflight/pilot-w13-C3-observed-off/summary.json": {
+      "bytes": 1245,
+      "sha256": "6842335d872e807851663e47ed2adb27ed2e3fd184e2e10de0cb89cfc039cfcc"
+    },
+    "preflight/pilot-w13-C3-observed-off/team-possession.bin.gz": {
+      "bytes": 126,
+      "sha256": "1b8f2152ddb0024e998ab8670a9e96b88af31476b1cbad42cfb6eca7094cb583"
+    },
+    "preflight/pilot-w13-C3-observed-off/trajectory.bin.gz": {
+      "bytes": 166650,
+      "sha256": "03dbd5034de039f41d7cc0606befa796a9e3116963189f880c459e8c1dfa5cf3"
+    },
+    "preflight/pilot-w13-C4-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "bff8308ce7627aa0430416905a84887d2a80e3cac518eecde4afd5c2f54b8a24"
+    },
+    "preflight/pilot-w13-C4-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "4b19a2bb9ea4000402623beb07f9e700c8a306ce3c8a3a43b72a82aa3fc8eeeb"
+    },
+    "preflight/pilot-w13-C4-observed-armed/engine.log": {
+      "bytes": 292,
+      "sha256": "e7d8ac7d23e3cfc0be87d9aced456e94fc30c2f271e178bd50ae35b23883fc4e"
+    },
+    "preflight/pilot-w13-C4-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C4-observed-armed/geometry.bin.gz": {
+      "bytes": 20011,
+      "sha256": "ffb974032ac4d11d43a10ec8e46bdddee17e0bad3c5a4f8ada6be5c8f4cb209d"
+    },
+    "preflight/pilot-w13-C4-observed-armed/ledger.bin.gz": {
+      "bytes": 402,
+      "sha256": "660d6f9b4fbf9defb25586c4fedb4e9223ed84853f722188f991452b6cdbfd4c"
+    },
+    "preflight/pilot-w13-C4-observed-armed/mark-witness.bin.gz": {
+      "bytes": 5705,
+      "sha256": "a90dc9e276a2e2d2d37a9aa35460fc5815a36aa7f7d2bb3aba70a1607a88adfd"
+    },
+    "preflight/pilot-w13-C4-observed-armed/marking.bin.gz": {
+      "bytes": 2552,
+      "sha256": "f43cfb934934cd60e999fcb4f20a6ef769c086001cb1c58e591c1aaab23ae742"
+    },
+    "preflight/pilot-w13-C4-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "9b44d6887e7b85c4b7094a1517f413d74ddf7854c6ad789adefe4c8206ade812"
+    },
+    "preflight/pilot-w13-C4-observed-armed/runner.log": {
+      "bytes": 770,
+      "sha256": "6832516dd4cc396282c4f2b14f25c98394632012ccc92ec01cb55b9611eb394d"
+    },
+    "preflight/pilot-w13-C4-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "afad36f538d5e5246261211494d2dcd2a5ffecb9193d997e79688edc0124cc45"
+    },
+    "preflight/pilot-w13-C4-observed-armed/summary.json": {
+      "bytes": 1245,
+      "sha256": "47ffb45f7350e3ffabdfb9a1dbb19037c4a0b7e4031edf96f7ed45479a19a88b"
+    },
+    "preflight/pilot-w13-C4-observed-armed/team-possession.bin.gz": {
+      "bytes": 129,
+      "sha256": "071d3f94dbe8507a13219f9ed0a3eb4ae3c7e3e9948057a02609f4e35466c9cf"
+    },
+    "preflight/pilot-w13-C4-observed-armed/trajectory.bin.gz": {
+      "bytes": 158709,
+      "sha256": "64733efcce0fde772104c1ca0731b0eda1701ef94a82a64676c3715ae618f1dc"
+    },
+    "preflight/pilot-w13-C4-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "8c36042fd4dae1e5800154d7313e9e72e7cd62d218fb6c915b9d81814f815cbb"
+    },
+    "preflight/pilot-w13-C4-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "11e1804dae1178332d9fa7e0b8c7287f8a67638dfbe0fe9b45982f0d89946100"
+    },
+    "preflight/pilot-w13-C4-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "dd3e2e295292cdd806cce971b87bd3d0f3d125649399956bdbd4b269a5592c48"
+    },
+    "preflight/pilot-w13-C4-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C4-observed-off/geometry.bin.gz": {
+      "bytes": 20401,
+      "sha256": "85587a4ae7eefff326e8051e25691b2e98f4d1695cc5f6ccdb0dee63595d339e"
+    },
+    "preflight/pilot-w13-C4-observed-off/ledger.bin.gz": {
+      "bytes": 404,
+      "sha256": "1b346e21a0a9010375018915837030f52cbea65cc8adef330acfc8f810c6aab1"
+    },
+    "preflight/pilot-w13-C4-observed-off/mark-witness.bin.gz": {
+      "bytes": 5550,
+      "sha256": "a37508a630981bd25c6ce79c88407054c9170359b5995b5dc3e35b756694e2b3"
+    },
+    "preflight/pilot-w13-C4-observed-off/marking.bin.gz": {
+      "bytes": 844,
+      "sha256": "c4d9c05f81cd78d12486a0fcaa237f26ff4a293142b09d65bd780fe4bc5c5684"
+    },
+    "preflight/pilot-w13-C4-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "126293c3bf9641d9b41415070f24935bbd9d0c54908c83996aa0aa7d75b2f015"
+    },
+    "preflight/pilot-w13-C4-observed-off/runner.log": {
+      "bytes": 763,
+      "sha256": "32a2864f6eacbf111353d6bb3f40dec1e2e66b73674694a2d20e6f0b2ff39dab"
+    },
+    "preflight/pilot-w13-C4-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "afad36f538d5e5246261211494d2dcd2a5ffecb9193d997e79688edc0124cc45"
+    },
+    "preflight/pilot-w13-C4-observed-off/summary.json": {
+      "bytes": 1238,
+      "sha256": "48e5b8c1e89bd9d1279d023710cd117fbc6dee75ecca0001da64aea9f4fef180"
+    },
+    "preflight/pilot-w13-C4-observed-off/team-possession.bin.gz": {
+      "bytes": 139,
+      "sha256": "2daca1b16a85e1f9a5010029dd1fb3e3dae6c2a02d9aa6fd1f7ad0457686e657"
+    },
+    "preflight/pilot-w13-C4-observed-off/trajectory.bin.gz": {
+      "bytes": 164328,
+      "sha256": "3db4f3ac693ee033e4fdfe0cdc36920496728c041ba6ea90a86f74ccd6d4c318"
+    },
+    "preflight/pilot-w13-C5-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "4a874f01466729ee055590268a6c4b30ebedcb067eede3a40745d3c19e6b101c"
+    },
+    "preflight/pilot-w13-C5-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "7c52616e92f13579ef04a9cc891c72d2660f7575da636cdaec402c33245c3f47"
+    },
+    "preflight/pilot-w13-C5-observed-armed/engine.log": {
+      "bytes": 390,
+      "sha256": "27858f3069c39247c10995a975fd055c65ae88799d75599a91a60768794baf33"
+    },
+    "preflight/pilot-w13-C5-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C5-observed-armed/geometry.bin.gz": {
+      "bytes": 20816,
+      "sha256": "0e02366fdc4e58bd6a28da4450e289835367a4c3fa880308acbc67be353a208c"
+    },
+    "preflight/pilot-w13-C5-observed-armed/ledger.bin.gz": {
+      "bytes": 497,
+      "sha256": "6d6d07ecaad69b806b498790c9afe45cd6f4325bc4d8bfcae8d9b730d5a94458"
+    },
+    "preflight/pilot-w13-C5-observed-armed/mark-witness.bin.gz": {
+      "bytes": 5975,
+      "sha256": "d8f51574ffe88546b18414f012511f2255d1c2f26ff4c7b1a69257eca20af146"
+    },
+    "preflight/pilot-w13-C5-observed-armed/marking.bin.gz": {
+      "bytes": 2151,
+      "sha256": "17bf0db857cd678f5d5f55ca5f328102671f7e07c4345b48b643b32d91dc6540"
+    },
+    "preflight/pilot-w13-C5-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "79de7ea4668dc78aab58ba5a106e3a0ad0c9a0cbb11668d23d360a2ffb6c0275"
+    },
+    "preflight/pilot-w13-C5-observed-armed/runner.log": {
+      "bytes": 763,
+      "sha256": "8a9ed3505f113bfe114469d1a0cce009a14138d0a33ed08b977745912c9998a2"
+    },
+    "preflight/pilot-w13-C5-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C5-observed-armed/summary.json": {
+      "bytes": 1238,
+      "sha256": "0f037079d09eb3f24101884a4891feb3523b2a5160b976727e00195b168e1ada"
+    },
+    "preflight/pilot-w13-C5-observed-armed/team-possession.bin.gz": {
+      "bytes": 154,
+      "sha256": "2dfc59d2a223244f7367ef029f518536a61bd5996451b25a1510a96db22267e6"
+    },
+    "preflight/pilot-w13-C5-observed-armed/trajectory.bin.gz": {
+      "bytes": 167036,
+      "sha256": "0b30bafb5c147cc20ab45b0041707b79fb6c3048e36f60fe22e98a20bec4423f"
+    },
+    "preflight/pilot-w13-C5-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "e0eca756b438aae4107b4a807199a344e1e5b8ab55e7f2baf2b0a88951958d45"
+    },
+    "preflight/pilot-w13-C5-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "83aa49092ff2f3ee9be967d222b47304ea57e6b872e310e3b2c5417a4f5ce9ff"
+    },
+    "preflight/pilot-w13-C5-observed-off/engine.log": {
+      "bytes": 290,
+      "sha256": "ec6a374221e663f8f60c7c19a62b9a444c28202cbbb5bf652b5cfc1da38a068a"
+    },
+    "preflight/pilot-w13-C5-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C5-observed-off/geometry.bin.gz": {
+      "bytes": 19695,
+      "sha256": "2c20b51d80ebe3b22beeb0dd9f83672c838a7786b37a2cfdff531ecdf16388e5"
+    },
+    "preflight/pilot-w13-C5-observed-off/ledger.bin.gz": {
+      "bytes": 349,
+      "sha256": "c8eb8e94b6a3eb6c7218375e1c1133be676e493711b1996f5d5ab39f61ea9a9b"
+    },
+    "preflight/pilot-w13-C5-observed-off/mark-witness.bin.gz": {
+      "bytes": 5952,
+      "sha256": "571610c14a1c3c85bac0caf7869309e343b62f208de372d699a894aa11eb9c89"
+    },
+    "preflight/pilot-w13-C5-observed-off/marking.bin.gz": {
+      "bytes": 808,
+      "sha256": "653f677e4f6212388b2f8b4f47f46ea3d53bfb0b7a2aab084b9e42fbaeaf7dd9"
+    },
+    "preflight/pilot-w13-C5-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "4c0f3ae8b38605527a60caf333618ec8074b65dce41cbcc6e39a56ea7dbe6521"
+    },
+    "preflight/pilot-w13-C5-observed-off/runner.log": {
+      "bytes": 767,
+      "sha256": "df44343bbd082680caacdb46ce2777c5b33dcbeed3be80694a68f799f56551fc"
+    },
+    "preflight/pilot-w13-C5-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C5-observed-off/summary.json": {
+      "bytes": 1242,
+      "sha256": "d74056c290d8aa51aec5d5fa5a092c35fa29760a838cf765c2c30fee09d05ad1"
+    },
+    "preflight/pilot-w13-C5-observed-off/team-possession.bin.gz": {
+      "bytes": 128,
+      "sha256": "d18cdf7d2fa92795d41364c8bbc25162e85e1ccb0942fbbf9a6390c2a0789932"
+    },
+    "preflight/pilot-w13-C5-observed-off/trajectory.bin.gz": {
+      "bytes": 162699,
+      "sha256": "3874276e5905e609f81446843950aec79219566f847756a0f0be9b45f9adc5a7"
+    },
+    "preflight/pilot-w13-C6-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "eca02a382777499b4c6ebc79fe8bfd825d007bb97fb96572c1cb641cff773954"
+    },
+    "preflight/pilot-w13-C6-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "416cee6fffbd5f7d366669a7443a53a9deb6f4ad99793c0d6e5a40c0dcf915c2"
+    },
+    "preflight/pilot-w13-C6-observed-armed/engine.log": {
+      "bytes": 392,
+      "sha256": "1db2d4b1fc0b3a79cba69c860b555e834225f5a712301797721dde84e05ec8dc"
+    },
+    "preflight/pilot-w13-C6-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C6-observed-armed/geometry.bin.gz": {
+      "bytes": 19670,
+      "sha256": "6371d86823b7a1054cf6c58eb19ca0d379f8e77a6372639e6b936e59fc040f02"
+    },
+    "preflight/pilot-w13-C6-observed-armed/ledger.bin.gz": {
+      "bytes": 421,
+      "sha256": "d6f6a971d85e9088637b5a4cd7eb4b445f169d8bec106d95c038c1b078c84f72"
+    },
+    "preflight/pilot-w13-C6-observed-armed/mark-witness.bin.gz": {
+      "bytes": 6135,
+      "sha256": "ec02a723cc1f9db0063c1ca4813a99e67563a6bd5780af0d4ec673151a1e55bd"
+    },
+    "preflight/pilot-w13-C6-observed-armed/marking.bin.gz": {
+      "bytes": 1760,
+      "sha256": "3b8167142fff3eb6e2e6f99188218f69dd3c261472d606cb412c2093edbe346f"
+    },
+    "preflight/pilot-w13-C6-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "07f0ef196e4e034de048be6d684f7280f3223e4f92f5de71f6c3cea2e87e64b7"
+    },
+    "preflight/pilot-w13-C6-observed-armed/runner.log": {
+      "bytes": 764,
+      "sha256": "382999a46a31ab16db19b77077bef210a06ff5f87f21ca124730d61cdc9c0d9e"
+    },
+    "preflight/pilot-w13-C6-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C6-observed-armed/summary.json": {
+      "bytes": 1239,
+      "sha256": "6a4cd93b339fde0d7976b1f50000e5a8da2e1564f3a5e51eb4e6e01d3f2a87c8"
+    },
+    "preflight/pilot-w13-C6-observed-armed/team-possession.bin.gz": {
+      "bytes": 137,
+      "sha256": "212f72e189bfbf0ccc5652a937601848c7b929ea6f671ca355e74ad883a813ef"
+    },
+    "preflight/pilot-w13-C6-observed-armed/trajectory.bin.gz": {
+      "bytes": 161866,
+      "sha256": "c9b7f5b1f9a3495cd480ad2266b54ea239cd206c45261fd9f922e4eeac7e2bb5"
+    },
+    "preflight/pilot-w13-C6-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "028b62a12c30d698ee85d2f354c833736fafaa99e4f057feee14138d50c9477a"
+    },
+    "preflight/pilot-w13-C6-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "82c449ce78f4f36ce27ac850307d4cee0faf2eefb81e3e71091282a946acc7ad"
+    },
+    "preflight/pilot-w13-C6-observed-off/engine.log": {
+      "bytes": 96,
+      "sha256": "3f79d9e50b4dd48d48cb01038bb377fa557050e6ca7811cf01bb81634cf6c611"
+    },
+    "preflight/pilot-w13-C6-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C6-observed-off/geometry.bin.gz": {
+      "bytes": 18589,
+      "sha256": "e5fe609585a3d3928ee98733c96ed9e6649711f2e570249ba11b96a8d64b2362"
+    },
+    "preflight/pilot-w13-C6-observed-off/ledger.bin.gz": {
+      "bytes": 244,
+      "sha256": "e7725cc9b6eb15873018e5cddd96c47051c272ebb6cd8749869a75147577fa6c"
+    },
+    "preflight/pilot-w13-C6-observed-off/mark-witness.bin.gz": {
+      "bytes": 6196,
+      "sha256": "c9daec0349df84c254d8252de4f05e3f1e8d84784a9a5c153e49dabde37fd8aa"
+    },
+    "preflight/pilot-w13-C6-observed-off/marking.bin.gz": {
+      "bytes": 841,
+      "sha256": "ea6687e36b3b06832ad925c157d03590d79e240dbb8d95efaeac8f01250d1100"
+    },
+    "preflight/pilot-w13-C6-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "9ff56b49330c4e476d1127e18ae4607d8aef04ce0400c3f844a1805b6c4c93a8"
+    },
+    "preflight/pilot-w13-C6-observed-off/runner.log": {
+      "bytes": 760,
+      "sha256": "25d7985ee3d2ee1e7f1296448a98a231e9c3d5e2aac762af7ccc1b22bb32be40"
+    },
+    "preflight/pilot-w13-C6-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C6-observed-off/summary.json": {
+      "bytes": 1235,
+      "sha256": "8dccac757caa1ef65c92aa59b85036f2916578eecc7aa540eeae8c73594c5aeb"
+    },
+    "preflight/pilot-w13-C6-observed-off/team-possession.bin.gz": {
+      "bytes": 110,
+      "sha256": "3fb950c2830816825579cea4a41d217d3046caa5c640b523880e2a62be2bf4d6"
+    },
+    "preflight/pilot-w13-C6-observed-off/trajectory.bin.gz": {
+      "bytes": 156881,
+      "sha256": "92893ca89df39248ae8966e34834c46c8d03c8e5adafd4fd9f6efcd295a538ae"
+    },
+    "preflight/pilot-w13-C7-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "ebf464143af488508999a0d0a67a02303acc6a64d334a650880134da4929d6d3"
+    },
+    "preflight/pilot-w13-C7-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "03c810a6854ab1ac0a7804877fff31d35aa94aebf93c24950232d8936138bd96"
+    },
+    "preflight/pilot-w13-C7-observed-armed/engine.log": {
+      "bytes": 290,
+      "sha256": "810f3a1e69ec5c9565d562ca0d3884c95955d98fae37350498b6247894710b9e"
+    },
+    "preflight/pilot-w13-C7-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C7-observed-armed/geometry.bin.gz": {
+      "bytes": 18970,
+      "sha256": "0ebb772358df645f459165b6bd77dde5c407c4a878699d7be25ff2203cec9b54"
+    },
+    "preflight/pilot-w13-C7-observed-armed/ledger.bin.gz": {
+      "bytes": 407,
+      "sha256": "ea95b531564a7460651089777737d9b257cdc3bbdfc5fc5e59274a93d27e8083"
+    },
+    "preflight/pilot-w13-C7-observed-armed/mark-witness.bin.gz": {
+      "bytes": 6347,
+      "sha256": "0aeef00d9f5c4c73b6d061ebca1f7f6ebaf60258125acd1857ae90af288db032"
+    },
+    "preflight/pilot-w13-C7-observed-armed/marking.bin.gz": {
+      "bytes": 2003,
+      "sha256": "bcc22ab1c6f1dbd74e21cb34d0695634ada61cb8a87d8459c21ef3b4ddb6d17a"
+    },
+    "preflight/pilot-w13-C7-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "70596177ec2c8f47375e08cd2a4a75ea794054c37ec00a378d05ca7589a3e0df"
+    },
+    "preflight/pilot-w13-C7-observed-armed/runner.log": {
+      "bytes": 768,
+      "sha256": "836ca7b84524dd4d9ec9e4cda3ac233e8759142d20fb7b47226b6713e4cd7ff6"
+    },
+    "preflight/pilot-w13-C7-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C7-observed-armed/summary.json": {
+      "bytes": 1243,
+      "sha256": "0528d38d56f980deed968ec9bbc4904b042abf238550bc02020d61c362f7276c"
+    },
+    "preflight/pilot-w13-C7-observed-armed/team-possession.bin.gz": {
+      "bytes": 133,
+      "sha256": "690c7ca9e182f40dcea0aaa773e2eb0d2f407d25a1ac3ef5a101ea1a01342b96"
+    },
+    "preflight/pilot-w13-C7-observed-armed/trajectory.bin.gz": {
+      "bytes": 157260,
+      "sha256": "3e94dbd04ee1031dad12bc187e4642fe2ee106e4f2e5f3d014bc62247545ba8e"
+    },
+    "preflight/pilot-w13-C7-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "f8963dd3267721b8a5a595cc7aedee6b3978cc0e6602c446ec057749d9555b18"
+    },
+    "preflight/pilot-w13-C7-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "39956f4f7c2d5ca908dafa65c95c9d10cedec47aad6c69d1045e8718142ac86a"
+    },
+    "preflight/pilot-w13-C7-observed-off/engine.log": {
+      "bytes": 193,
+      "sha256": "20b71e6f6617ad0dc6a7cfae623d3b306096418074b689c7faa338527406441b"
+    },
+    "preflight/pilot-w13-C7-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C7-observed-off/geometry.bin.gz": {
+      "bytes": 20498,
+      "sha256": "90d6cd478ff23355cf3f39c7c86512c5164e4421ef598a7efa5458a77cd2c4f3"
+    },
+    "preflight/pilot-w13-C7-observed-off/ledger.bin.gz": {
+      "bytes": 337,
+      "sha256": "e7c55fbc5488e0b8bfc62e4d1a0b7461e66be5823489715c8f819277edfffc4c"
+    },
+    "preflight/pilot-w13-C7-observed-off/mark-witness.bin.gz": {
+      "bytes": 6668,
+      "sha256": "c7088e1eb0a815fc02af84cf4801aee47e37ef0d2152bb25f0be136e1d3cbd8c"
+    },
+    "preflight/pilot-w13-C7-observed-off/marking.bin.gz": {
+      "bytes": 870,
+      "sha256": "973907159c440ab2d10e5dfab9ef20c854f53bdc0381974035c31894350dffae"
+    },
+    "preflight/pilot-w13-C7-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "70cb5c37dda5109fa8728fdd6b1a4c2e08094a0d0cde7b2e53322109df47b263"
+    },
+    "preflight/pilot-w13-C7-observed-off/runner.log": {
+      "bytes": 766,
+      "sha256": "e39b9e2984e9145e3cc415760830082922d261dd11217f71f5fc53770b4897f8"
+    },
+    "preflight/pilot-w13-C7-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C7-observed-off/summary.json": {
+      "bytes": 1241,
+      "sha256": "55e99600dcf53008c70eea69cda023c91f4c65603805381c27bc6384dec46e96"
+    },
+    "preflight/pilot-w13-C7-observed-off/team-possession.bin.gz": {
+      "bytes": 124,
+      "sha256": "1d05a9a67b52b67499d8f6b925251f5db55c61e2faa22164f27da7fb05f68c24"
+    },
+    "preflight/pilot-w13-C7-observed-off/trajectory.bin.gz": {
+      "bytes": 161941,
+      "sha256": "bc97289e2d6060690c8bc7e63b7268a6aea6a814f32ad2a85f55f4e8db196b31"
+    },
+    "preflight/pilot-w13-C8-observed-armed/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "126dad49d11c5099bdc4c1753e158a45ec4f4851310b81898f5da0e271b2e2e1"
+    },
+    "preflight/pilot-w13-C8-observed-armed/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "cacd80cea0cc59f312f65954b9e7c74e01487800728e5d6ba9ccf1df795c8feb"
+    },
+    "preflight/pilot-w13-C8-observed-armed/engine.log": {
+      "bytes": 98,
+      "sha256": "d55206448caecb47b6983b6ebce89acc27c192bca0fd6987d71e157bd84fea29"
+    },
+    "preflight/pilot-w13-C8-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C8-observed-armed/geometry.bin.gz": {
+      "bytes": 18831,
+      "sha256": "ab23175938509b16e4709fd8831e176ab29958c2af9c5ce2c13fb8b0592ba754"
+    },
+    "preflight/pilot-w13-C8-observed-armed/ledger.bin.gz": {
+      "bytes": 256,
+      "sha256": "e9d63b2e404eebb2a4f85bd0b2cdb1d1d4a2782c670351b7c897c28f5a5bc34f"
+    },
+    "preflight/pilot-w13-C8-observed-armed/mark-witness.bin.gz": {
+      "bytes": 6310,
+      "sha256": "6563863dcb0956e94b1c925df65894999bf18ecc6897e96596b0eb0c3a914f3d"
+    },
+    "preflight/pilot-w13-C8-observed-armed/marking.bin.gz": {
+      "bytes": 1969,
+      "sha256": "c52f07780200cc6e27ba84409e602160ac55d71c358f253888497522e45f05b5"
+    },
+    "preflight/pilot-w13-C8-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "ec41ba0616cb59fa6dbffe9d9404aa5b151a9b281b7afdeff2994f96315c5847"
+    },
+    "preflight/pilot-w13-C8-observed-armed/runner.log": {
+      "bytes": 768,
+      "sha256": "afef2e5e66acc6eab5bba73c94e8f1118a5a6f79b36b5f22b29c09cf14b30f51"
+    },
+    "preflight/pilot-w13-C8-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C8-observed-armed/summary.json": {
+      "bytes": 1243,
+      "sha256": "2331795af9c7af316a48317ae45c9daba9877057ea565d1d1e612efee317ee13"
+    },
+    "preflight/pilot-w13-C8-observed-armed/team-possession.bin.gz": {
+      "bytes": 111,
+      "sha256": "b1b27b4ded1d7310d5a32f319d32a7459fd6caf825e6f193a219096a720ba1c4"
+    },
+    "preflight/pilot-w13-C8-observed-armed/trajectory.bin.gz": {
+      "bytes": 160091,
+      "sha256": "313be138f1d4627679f9f2a832310aea9cc89932f05756b176069dd8fdb810ba"
+    },
+    "preflight/pilot-w13-C8-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "f21838225187cf78fca6349804aab1a11d20ea1b94613d61ffc061776a96d680"
+    },
+    "preflight/pilot-w13-C8-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "2ddd576c6334ea22e090f06f756fb16ab2ef96703111b9666cbcf11b3dc8e618"
+    },
+    "preflight/pilot-w13-C8-observed-off/engine.log": {
+      "bytes": 291,
+      "sha256": "349b9d318fdb4ad6b26bfd5f2dae6cc6b538e5aa806ae87b5c64cfe3c61f7efc"
+    },
+    "preflight/pilot-w13-C8-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C8-observed-off/geometry.bin.gz": {
+      "bytes": 20422,
+      "sha256": "3fa87b31f7b4b0e3d2a279b26675b8223e145485413b26d7322b59f856b83613"
+    },
+    "preflight/pilot-w13-C8-observed-off/ledger.bin.gz": {
+      "bytes": 436,
+      "sha256": "2cd0d830588684f4fb8d1e8b94419e6ea33af6b60c20fe5ba9e084c53b5234b2"
+    },
+    "preflight/pilot-w13-C8-observed-off/mark-witness.bin.gz": {
+      "bytes": 6709,
+      "sha256": "b102c3ded76d480e65eaae36f2b17ec76fc38ab1e15fdbf453b09cc411643a18"
+    },
+    "preflight/pilot-w13-C8-observed-off/marking.bin.gz": {
+      "bytes": 903,
+      "sha256": "17b1efacd2dfb4a52bd26dbe571c6dbccaa2922aca13aac45951408746496ba9"
+    },
+    "preflight/pilot-w13-C8-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "93cda1b639a488f6bdc896226f21e98ce9f6fb39d24fd1376a3b684cdf48509a"
+    },
+    "preflight/pilot-w13-C8-observed-off/runner.log": {
+      "bytes": 764,
+      "sha256": "61c34d0f0421a964fecdaae72ed60949171fb20fdf9faa6a5c259d05d6b96015"
+    },
+    "preflight/pilot-w13-C8-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "92810169a32c941805a5d39fd9266880623282607ab23741c2866543cdcff33e"
+    },
+    "preflight/pilot-w13-C8-observed-off/summary.json": {
+      "bytes": 1239,
+      "sha256": "76b8cbc65aa4c57775057c3f1d44a40bd54a5a97710a1d099a1e25f71a51d9b5"
+    },
+    "preflight/pilot-w13-C8-observed-off/team-possession.bin.gz": {
+      "bytes": 133,
+      "sha256": "ce79ca6d48b516af9b59c7a8bca6e0195cdb5c95b7992fb66a56170de39f130c"
+    },
+    "preflight/pilot-w13-C8-observed-off/trajectory.bin.gz": {
+      "bytes": 161745,
+      "sha256": "1b8f61aa187c4915355bb623c6ce420f05f0c6ad8099e8b608a0e964af420239"
+    },
+    "preflight/pilot-w13-C9-observed-armed/aligned.bin.gz": {
+      "bytes": 12311,
+      "sha256": "8c84ea021f8d34babe2d2963e1ef378bc886e96691efef685618c71ca1eab664"
+    },
+    "preflight/pilot-w13-C9-observed-armed/digests.bin.gz": {
+      "bytes": 12311,
+      "sha256": "17c488f87855b9cf464208d51f1019c7221ed3416bcc0c20646c90a58195db32"
+    },
+    "preflight/pilot-w13-C9-observed-armed/engine.log": {
+      "bytes": 194,
+      "sha256": "d8be935779c8e1d82f5f0db97385c8b518aa796f9b333957bf01c0f09ebd90e6"
+    },
+    "preflight/pilot-w13-C9-observed-armed/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C9-observed-armed/geometry.bin.gz": {
+      "bytes": 7592,
+      "sha256": "828cd03793b248f7c256a602dda70cf23abb9cb49e544d688e03db6f53e6e6da"
+    },
+    "preflight/pilot-w13-C9-observed-armed/ledger.bin.gz": {
+      "bytes": 243,
+      "sha256": "d86dfd7da1e45cba168bd2f7246d480fedb28d1e173f29359f37b96112b4518c"
+    },
+    "preflight/pilot-w13-C9-observed-armed/mark-witness.bin.gz": {
+      "bytes": 1316,
+      "sha256": "cf8567ef878fec147ceca11a4fa9170f233ec2d5309e487d202196d951dfa55a"
+    },
+    "preflight/pilot-w13-C9-observed-armed/marking.bin.gz": {
+      "bytes": 706,
+      "sha256": "31751b47fd1cf5846628b5a4d7560c229b7156cc4289ae5f214d5ccff7313d13"
+    },
+    "preflight/pilot-w13-C9-observed-armed/run.json": {
+      "bytes": 630,
+      "sha256": "26a5a0a63dbe068946483868be4a665a1809a5c91402f2e178c290c61d327103"
+    },
+    "preflight/pilot-w13-C9-observed-armed/runner.log": {
+      "bytes": 554,
+      "sha256": "e311e718adf8958fa9c2ddf830dd1e390e69f6ae1597b4208cf06a8673a9dda5"
+    },
+    "preflight/pilot-w13-C9-observed-armed/spans.json": {
+      "bytes": 120,
+      "sha256": "289d39992a41384033930d26fa5d62d4225c48b1a9ceaaf826173db7f5131195"
+    },
+    "preflight/pilot-w13-C9-observed-armed/team-possession.bin.gz": {
+      "bytes": 82,
+      "sha256": "570df917ff1ebdb4267c40795a623b1bec73a24355ed125e4d980530b33602e4"
+    },
+    "preflight/pilot-w13-C9-observed-armed/trajectory.bin.gz": {
+      "bytes": 65872,
+      "sha256": "15208fb93d9e6ff1be3d62910e95da049f2771d54b1e9129721e4f8930ccc95c"
+    },
+    "preflight/pilot-w13-C9-observed-off/aligned.bin.gz": {
+      "bytes": 32028,
+      "sha256": "be6dc47dfe6440bad7e1dab78cbbb9f1b77a24da49848f688ef3bb95c5b953b1"
+    },
+    "preflight/pilot-w13-C9-observed-off/digests.bin.gz": {
+      "bytes": 32028,
+      "sha256": "02b6af4c1eaf567c3929589b9bea33800a14693a566494ada62f3c84336c8da3"
+    },
+    "preflight/pilot-w13-C9-observed-off/engine.log": {
+      "bytes": 485,
+      "sha256": "5502058b7f0858cfb52b69f56faeb22c860b8acdab9a43ab92af77fc41b35e11"
+    },
+    "preflight/pilot-w13-C9-observed-off/event-layouts.json": {
+      "bytes": 2815,
+      "sha256": "febc496cf70c6b69f914d991b15cbfb874e52f3b09fffffaf29b609acc57e794"
+    },
+    "preflight/pilot-w13-C9-observed-off/geometry.bin.gz": {
+      "bytes": 19834,
+      "sha256": "4d64dc37bb28d50ea7256b1b9127fa8ccf42d0531cb098e5b94ff7201c9030eb"
+    },
+    "preflight/pilot-w13-C9-observed-off/ledger.bin.gz": {
+      "bytes": 571,
+      "sha256": "62baf25c18e51d7ab845a4dce451dab2c0e1388f037067e16a0df7c4cf58d484"
+    },
+    "preflight/pilot-w13-C9-observed-off/mark-witness.bin.gz": {
+      "bytes": 5541,
+      "sha256": "6fcc3ef8e88bdb31bf4269562d1482d82f2837e7a2b950907146730f6098b3bc"
+    },
+    "preflight/pilot-w13-C9-observed-off/marking.bin.gz": {
+      "bytes": 822,
+      "sha256": "ebbc73e6349f6e6f7903146d3f7ea3c4e90c18aa0df8dae1950294a87adeecf9"
+    },
+    "preflight/pilot-w13-C9-observed-off/run.json": {
+      "bytes": 625,
+      "sha256": "b6c4375defe7941e1b68fd26d09cf221f81ce6248263b94adee7c9672bb1d6cc"
+    },
+    "preflight/pilot-w13-C9-observed-off/runner.log": {
+      "bytes": 771,
+      "sha256": "9d8d105aebc69a63dcb7ac3901f3792243d0359873ea0536759937e2711a21bd"
+    },
+    "preflight/pilot-w13-C9-observed-off/spans.json": {
+      "bytes": 120,
+      "sha256": "289d39992a41384033930d26fa5d62d4225c48b1a9ceaaf826173db7f5131195"
+    },
+    "preflight/pilot-w13-C9-observed-off/summary.json": {
+      "bytes": 1246,
+      "sha256": "b78a336536c744b5c1599fe7ca13af816b5b0b9b6f8eede712fee847ae65055f"
+    },
+    "preflight/pilot-w13-C9-observed-off/team-possession.bin.gz": {
+      "bytes": 152,
+      "sha256": "995d0c2d59673ba9a281ed1bb10e676ff4a47f03c4dfecc4aa50e7101c2a4af8"
+    },
+    "preflight/pilot-w13-C9-observed-off/trajectory.bin.gz": {
+      "bytes": 159684,
+      "sha256": "f57f51c51cc14699c2b04c61eb7411072655b1a35a06085ec5ceec743308a386"
+    },
+    "preflight/state-reference-C0-observed-off/engine.log": {
+      "bytes": 14535,
+      "sha256": "2f27fd61fea747e43293b5b25e1d1eb6756e5183c0224ddd62bb9de5a5a11a05"
+    },
+    "preflight/state-reference-C0-observed-off/run.json": {
+      "bytes": 643,
+      "sha256": "9915b398d760910f93566bcf4df37664b44fb364f26fea26e8523647c5a41271"
+    },
+    "preflight/state-reference-C0-observed-off/runner.log": {
+      "bytes": 485,
+      "sha256": "24b5f3113bc88ad999b13342652e69b52da82a82e44a2c7ff6e6f8abb76cdaf1"
+    },
+    "preflight/state-reference-C0-observed-off/state-proof.json": {
+      "bytes": 756,
+      "sha256": "4dd2fd886f3574f36174ca4f3aa7b54b8c84a379729d71d64227f9cc47fa2fb9"
+    },
+    "preflight/state-w13-C0-observed-armed/engine.log": {
+      "bytes": 17608,
+      "sha256": "3640f40a32575c8d33cf43c8cd5b5dbb607a928714f3aa785eaf0a9ed6dc5e48"
+    },
+    "preflight/state-w13-C0-observed-armed/run.json": {
+      "bytes": 624,
+      "sha256": "fdaaf216e9e262ea1ebb1edda8514889e7df28122783e8f3e29067da0a22d384"
+    },
+    "preflight/state-w13-C0-observed-armed/runner.log": {
+      "bytes": 484,
+      "sha256": "269c50b675088e3f9eb628ded7029b112f34a689871ba0c5209f5cd51aa8c2f8"
+    },
+    "preflight/state-w13-C0-observed-armed/state-proof.json": {
+      "bytes": 755,
+      "sha256": "5dfb6c0392863d2b2643f7c4cae20a03015644501693f19626afbd36fbf83ce8"
+    },
+    "preflight/status.json": {
+      "bytes": 24681,
+      "sha256": "c8eb6a113cdab8fb255fcf516d870433ead9a8822b755267824120335a39b1dd"
+    },
+    "preflight/structural-reference-C0-observed-off/run.json": {
+      "bytes": 511,
+      "sha256": "9d0441a6dae19045b769214c74a044cdd6bfc4613efd732f75e1bdb8a1e56fd2"
+    },
+    "preflight/structural-reference-C0-observed-off/runner.log": {
+      "bytes": 102,
+      "sha256": "9c23736e4b7ba49b012d370d3fbade2977f202f6676824c81a4e4da254eb80b7"
+    },
+    "preflight/structural-w13-C0-observed-off/run.json": {
+      "bytes": 493,
+      "sha256": "1adfd8a3c78f894f5961477d893e8df700cce15342400e6ae5bfe5c4e215bd01"
+    },
+    "preflight/structural-w13-C0-observed-off/runner.log": {
+      "bytes": 102,
+      "sha256": "9c23736e4b7ba49b012d370d3fbade2977f202f6676824c81a4e4da254eb80b7"
+    },
+    "prepare-capture-prototype.log": {
+      "bytes": 430,
+      "sha256": "1738495da82471d32d30e11b65594884b95ee01395ab7db5fb2c1cdbcfaada35"
+    },
+    "prepare-capture.log": {
+      "bytes": 430,
+      "sha256": "1738495da82471d32d30e11b65594884b95ee01395ab7db5fb2c1cdbcfaada35"
+    },
+    "reference-build.log": {
+      "bytes": 4158,
+      "sha256": "9af6b05f4676169af81e6a3750eb061ef01b5bc68eab34326ac074fe9cd37b01"
+    },
+    "repro-a/digests.bin.gz": {
+      "bytes": 13463,
+      "sha256": "ab9364c2646af4169c4e6214127db23418562c308208abf5ef05838b22ba0ed3"
+    },
+    "repro-a/engine.log": {
+      "bytes": 292,
+      "sha256": "6ae6c6eb681d30f489480710f853ad5dbe736041186174df7dec8e0000c3aa14"
+    },
+    "repro-a/summary.json": {
+      "bytes": 354,
+      "sha256": "c4ed55557d34fad4e9c8a92d9053285e01555395c56cc86abc2e338e4f4a03f0"
+    },
+    "repro-a/trace.csv": {
+      "bytes": 64041,
+      "sha256": "6b77127c80d2118bd39ae9651b20bbe9b26ca34a97495a073e8923ebcadd323a"
+    },
+    "repro-b/digests.bin.gz": {
+      "bytes": 13463,
+      "sha256": "ab9364c2646af4169c4e6214127db23418562c308208abf5ef05838b22ba0ed3"
+    },
+    "repro-b/engine.log": {
+      "bytes": 292,
+      "sha256": "6ae6c6eb681d30f489480710f853ad5dbe736041186174df7dec8e0000c3aa14"
+    },
+    "repro-b/summary.json": {
+      "bytes": 354,
+      "sha256": "c4ed55557d34fad4e9c8a92d9053285e01555395c56cc86abc2e338e4f4a03f0"
+    },
+    "repro-b/trace.csv": {
+      "bytes": 64041,
+      "sha256": "6b77127c80d2118bd39ae9651b20bbe9b26ca34a97495a073e8923ebcadd323a"
+    },
+    "source/MarkObserver.cs": {
+      "bytes": 11593,
+      "sha256": "98bd9750ad3f36d5e46af736051db4653e0a09a6934d05bdd84232f23eff4fde"
+    },
+    "source/OriginalProgram.cs.txt": {
+      "bytes": 14598,
+      "sha256": "e6db2df46a364aa6e08204279c4ab468addc7260c54add337729fedd16105f75"
+    },
+    "source/Program.cs": {
+      "bytes": 15785,
+      "sha256": "3edc093516a09fd18307596631d8246553f24b83d8430fc5e28495dc0dfdc5dd"
+    },
+    "source/StateProof.cs": {
+      "bytes": 2942,
+      "sha256": "81686b7114c7d8f6e673f5a4502055e38ef0faaea05c5bf19fe6238918ebfefa"
+    },
+    "trace-build.log": {
+      "bytes": 4106,
+      "sha256": "cc322eaf8165bcb72680321b4ad29ef983cab6902dbdb04e47261317a2d83c9d"
+    },
+    "w13-build.log": {
+      "bytes": 4008,
+      "sha256": "24fe17a9d4ea615efb92a664c9fea98f8e3bc95a9cad3a0ab7a4d1bd38ab2aa9"
+    }
+  }
+}

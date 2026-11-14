@@ -1,0 +1,2243 @@
+{
+  "capturedUtc": "2026-11-14T00:11:07.540982+00:00",
+  "liveStatusAtCutoff": {
+    "state": "paired_matrix",
+    "startedUtc": "2026-11-13T23:41:27.858016+00:00",
+    "requiredW13Captures": 66,
+    "additionalPlainControls": 12,
+    "freshReferenceCaptures": 60,
+    "plannedFullCaptures": 138,
+    "completed": [
+      {
+        "label": "w13/C0/0F1E2D3C4B5A6978/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:41:45.097044+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:43:04.173303+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0F1E2D3C4B5A6978/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:41:45.097139+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:43:31.093307+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0F1E2D3C4B5A6978/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:43:04.634958+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:44:24.767155+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0F1E2D3C4B5A6978/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:43:32.725085+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:45:19.735688+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/0F1E2D3C4B5A6978/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0F1E2D3C4B5A6978/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:44:25.237144+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:46:11.098681+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000D1A6D05E/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000D1A6D05E",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000D1A6D05E",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:46:14.982357+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:47:35.784374+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000D1A6D05E/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000D1A6D05E",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000D1A6D05E",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:46:14.982143+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:48:03.337848+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000D1A6D05E/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000D1A6D05E",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000D1A6D05E",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:47:36.257978+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:48:56.704743+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000D1A6D05E/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000D1A6D05E",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000D1A6D05E",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:48:05.150176+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:49:54.237136+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/00000000D1A6D05E/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "00000000D1A6D05E",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000D1A6D05E",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/00000000D1A6D05E/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:48:57.193664+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:50:43.919085+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000000000001/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000000000001",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000000000001",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:50:47.636130+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:52:08.334978+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000000000001/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000000000001",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000000000001",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:50:47.635845+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:52:37.904662+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000000000001/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000000000001",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000000000001",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:52:08.793946+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:53:27.929366+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000000000001/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000000000001",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000000000001",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:52:39.532907+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:54:29.695977+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/0000000000000001/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "0000000000000001",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000000000001",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0000000000000001/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:53:28.387486+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:55:22.830465+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000ABCDEF12/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000ABCDEF12",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000ABCDEF12",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:55:26.906687+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:56:49.357145+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000ABCDEF12/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000ABCDEF12",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000ABCDEF12",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-13T23:55:26.907104+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:57:16.966477+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000ABCDEF12/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000ABCDEF12",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000ABCDEF12",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:56:49.814574+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:58:09.567403+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/00000000ABCDEF12/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "00000000ABCDEF12",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000ABCDEF12",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:57:18.595291+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-13T23:59:09.845067+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/00000000ABCDEF12/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "00000000ABCDEF12",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "00000000ABCDEF12",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/00000000ABCDEF12/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-13T23:58:10.038080+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:00:02.363673+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000099887766/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000099887766",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000099887766",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-14T00:00:06.268953+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:01:29.304644+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000099887766/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000099887766",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000099887766",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-14T00:00:06.269422+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:01:58.807135+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000099887766/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000099887766",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000099887766",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:01:29.772301+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:02:54.051095+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/0000000099887766/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "0000000099887766",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000099887766",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:02:00.412771+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:03:52.102572+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/0000000099887766/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "0000000099887766",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0000000099887766",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0000000099887766/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:02:54.548451+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:04:41.219205+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/000000005A5A5A5A/plain-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "000000005A5A5A5A",
+        "mode": "plain",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "000000005A5A5A5A",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/plain-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-14T00:04:44.985594+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:06:04.366736+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/000000005A5A5A5A/observed-armed",
+        "arm": "w13",
+        "case": 0,
+        "seed": "000000005A5A5A5A",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "000000005A5A5A5A",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-14T00:04:44.985053+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:06:31.601001+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/000000005A5A5A5A/plain-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "000000005A5A5A5A",
+        "mode": "plain",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "000000005A5A5A5A",
+          "0",
+          "plain",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/plain-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:06:04.833406+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:07:23.336934+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C0/000000005A5A5A5A/observed-off",
+        "arm": "w13",
+        "case": 0,
+        "seed": "000000005A5A5A5A",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "000000005A5A5A5A",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:06:33.267088+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:08:19.790439+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C0/000000005A5A5A5A/observed-off",
+        "arm": "reference",
+        "case": 0,
+        "seed": "000000005A5A5A5A",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "000000005A5A5A5A",
+          "0",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/000000005A5A5A5A/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:07:23.801550+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:09:09.249122+00:00",
+        "error": null
+      },
+      {
+        "label": "reference/C1/0F1E2D3C4B5A6978/observed-off",
+        "arm": "reference",
+        "case": 1,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "observed",
+        "armed": false,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "1",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C1/0F1E2D3C4B5A6978/observed-off",
+          "324000",
+          "off"
+        ],
+        "startedUtc": "2026-11-14T00:09:13.113436+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:11:01.167388+00:00",
+        "error": null
+      },
+      {
+        "label": "w13/C1/0F1E2D3C4B5A6978/observed-armed",
+        "arm": "w13",
+        "case": 1,
+        "seed": "0F1E2D3C4B5A6978",
+        "mode": "observed",
+        "armed": true,
+        "command": [
+          "/workspace/work/dotnet/dotnet",
+          "--fx-version",
+          "8.0.32",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+          "0F1E2D3C4B5A6978",
+          "1",
+          "observed",
+          "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C1/0F1E2D3C4B5A6978/observed-armed",
+          "324000",
+          "armed"
+        ],
+        "startedUtc": "2026-11-14T00:09:13.114208+00:00",
+        "exitCode": 0,
+        "finishedUtc": "2026-11-14T00:11:01.895049+00:00",
+        "error": null
+      }
+    ],
+    "running": [
+      "reference/C2/0F1E2D3C4B5A6978/observed-off",
+      "w13/C2/0F1E2D3C4B5A6978/observed-armed"
+    ],
+    "checks": [
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0F1E2D3C4B5A6978",
+        "stream": "retained-lag",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000D1A6D05E",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000D1A6D05E",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000D1A6D05E",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000D1A6D05E",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000D1A6D05E",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000D1A6D05E",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000D1A6D05E",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000D1A6D05E",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000D1A6D05E",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000D1A6D05E",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000D1A6D05E",
+        "stream": "retained-lag",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000000000001",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000000000001",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000000000001",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000000000001",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000000000001",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000000000001",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000000000001",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000000000001",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000000000001",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000000000001",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000000000001",
+        "stream": "retained-lag",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000ABCDEF12",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000ABCDEF12",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000ABCDEF12",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000ABCDEF12",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "00000000ABCDEF12",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000ABCDEF12",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000ABCDEF12",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000ABCDEF12",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000ABCDEF12",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "00000000ABCDEF12",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "00000000ABCDEF12",
+        "stream": "retained-lag",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000099887766",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000099887766",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000099887766",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000099887766",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "0000000099887766",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000099887766",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000099887766",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000099887766",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000099887766",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "0000000099887766",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "0000000099887766",
+        "stream": "retained-lag",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "000000005A5A5A5A",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "000000005A5A5A5A",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "000000005A5A5A5A",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "000000005A5A5A5A",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-off",
+        "seed": "000000005A5A5A5A",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "000000005A5A5A5A",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "000000005A5A5A5A",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "000000005A5A5A5A",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "000000005A5A5A5A",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "observation-neutrality-armed",
+        "seed": "000000005A5A5A5A",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "digests",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "trajectory",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "team-possession",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "geometry",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "ledger",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "aligned",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "marking",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "mark-witness",
+        "equal": true
+      },
+      {
+        "kind": "switch-off-identity",
+        "seed": "000000005A5A5A5A",
+        "stream": "retained-lag",
+        "equal": true
+      }
+    ],
+    "failures": []
+  },
+  "scope": "completed captures only; running and future captures excluded",
+  "includedCompleted": [
+    {
+      "label": "w13/C0/0F1E2D3C4B5A6978/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:41:45.097044+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:43:04.173303+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0F1E2D3C4B5A6978/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:41:45.097139+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:43:31.093307+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0F1E2D3C4B5A6978/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:43:04.634958+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:44:24.767155+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0F1E2D3C4B5A6978/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:43:32.725085+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:45:19.735688+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/0F1E2D3C4B5A6978/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0F1E2D3C4B5A6978/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:44:25.237144+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:46:11.098681+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000D1A6D05E/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000D1A6D05E",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:46:14.982357+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:47:35.784374+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000D1A6D05E/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000D1A6D05E",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:46:14.982143+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:48:03.337848+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000D1A6D05E/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000D1A6D05E",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:47:36.257978+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:48:56.704743+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000D1A6D05E/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000D1A6D05E",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000D1A6D05E/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:48:05.150176+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:49:54.237136+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/00000000D1A6D05E/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "00000000D1A6D05E",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/00000000D1A6D05E/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:48:57.193664+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:50:43.919085+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000000000001/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000000000001",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:50:47.636130+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:52:08.334978+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000000000001/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000000000001",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:50:47.635845+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:52:37.904662+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000000000001/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000000000001",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:52:08.793946+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:53:27.929366+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000000000001/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000000000001",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000000000001/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:52:39.532907+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:54:29.695977+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/0000000000000001/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "0000000000000001",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0000000000000001/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:53:28.387486+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:55:22.830465+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000ABCDEF12/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000ABCDEF12",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:55:26.906687+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:56:49.357145+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000ABCDEF12/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000ABCDEF12",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-13T23:55:26.907104+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:57:16.966477+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000ABCDEF12/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000ABCDEF12",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:56:49.814574+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:58:09.567403+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/00000000ABCDEF12/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "00000000ABCDEF12",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/00000000ABCDEF12/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:57:18.595291+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:59:09.845067+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/00000000ABCDEF12/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "00000000ABCDEF12",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/00000000ABCDEF12/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:58:10.038080+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:00:02.363673+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000099887766/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000099887766",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-14T00:00:06.268953+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:01:29.304644+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000099887766/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000099887766",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-14T00:00:06.269422+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:01:58.807135+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000099887766/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000099887766",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:01:29.772301+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:02:54.051095+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/0000000099887766/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "0000000099887766",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0000000099887766/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:02:00.412771+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:03:52.102572+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/0000000099887766/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "0000000099887766",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/0000000099887766/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:02:54.548451+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:04:41.219205+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/000000005A5A5A5A/plain-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "000000005A5A5A5A",
+      "mode": "plain",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/plain-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-14T00:04:44.985594+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:06:04.366736+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/000000005A5A5A5A/observed-armed",
+      "arm": "w13",
+      "case": 0,
+      "seed": "000000005A5A5A5A",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-14T00:04:44.985053+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:06:31.601001+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/000000005A5A5A5A/plain-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "000000005A5A5A5A",
+      "mode": "plain",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "plain",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/plain-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:06:04.833406+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:07:23.336934+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C0/000000005A5A5A5A/observed-off",
+      "arm": "w13",
+      "case": 0,
+      "seed": "000000005A5A5A5A",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/000000005A5A5A5A/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:06:33.267088+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:08:19.790439+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C0/000000005A5A5A5A/observed-off",
+      "arm": "reference",
+      "case": 0,
+      "seed": "000000005A5A5A5A",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C0/000000005A5A5A5A/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:07:23.801550+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:09:09.249122+00:00",
+      "error": null
+    },
+    {
+      "label": "reference/C1/0F1E2D3C4B5A6978/observed-off",
+      "arm": "reference",
+      "case": 1,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "observed",
+      "armed": false,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "1",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/reference/C1/0F1E2D3C4B5A6978/observed-off",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-14T00:09:13.113436+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:11:01.167388+00:00",
+      "error": null
+    },
+    {
+      "label": "w13/C1/0F1E2D3C4B5A6978/observed-armed",
+      "arm": "w13",
+      "case": 1,
+      "seed": "0F1E2D3C4B5A6978",
+      "mode": "observed",
+      "armed": true,
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "1",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C1/0F1E2D3C4B5A6978/observed-armed",
+        "324000",
+        "armed"
+      ],
+      "startedUtc": "2026-11-14T00:09:13.114208+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-14T00:11:01.895049+00:00",
+      "error": null
+    }
+  ]
+}

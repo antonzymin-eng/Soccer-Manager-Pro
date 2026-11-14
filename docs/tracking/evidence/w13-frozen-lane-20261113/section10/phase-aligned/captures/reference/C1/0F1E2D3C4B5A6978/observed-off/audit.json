@@ -1,0 +1,146 @@
+{
+  "summary": {
+    "seed": "0F1E2D3C4B5A6978",
+    "case": 1,
+    "mode": "observed",
+    "armed": false,
+    "markingEnabled": false,
+    "marking": {
+      "samples": 53999,
+      "assignmentModesByTeam": [
+        487118,
+        96689,
+        10182,
+        0,
+        496582,
+        86432,
+        10975,
+        0
+      ],
+      "targetSamplesByTeam": [
+        0,
+        0
+      ],
+      "retainedPossessionLagMarkerFramesByTeam": [
+        0,
+        0
+      ],
+      "retainedInactiveLagMarkerFramesByTeam": [
+        0,
+        0
+      ],
+      "freshMarkerDecisionsByTeam": [
+        0,
+        0
+      ],
+      "markerPressByTeam": [
+        0,
+        0
+      ],
+      "nonCarrierMarkerPressByTeam": [
+        0,
+        0
+      ],
+      "tackleIntentModesByTeam": [
+        9784,
+        1273,
+        12891,
+        4621,
+        651,
+        3136
+      ],
+      "tackleResolvedByTeam": [
+        11,
+        5
+      ],
+      "offsidesByTeam": [
+        23,
+        10
+      ],
+      "armedThroughConfig": false
+    },
+    "frames": 324000,
+    "live": 323999,
+    "shots": [
+      19,
+      12
+    ],
+    "goals": [
+      8,
+      3
+    ],
+    "fouls": [
+      1,
+      3
+    ],
+    "possession": [
+      12938,
+      13588,
+      297473
+    ],
+    "teamPossession": [
+      147944,
+      162146,
+      13909
+    ],
+    "phase": [
+      25382,
+      27871,
+      529,
+      217,
+      27873,
+      25380,
+      217,
+      529
+    ],
+    "schema": 29,
+    "buildHash": "1ed8460d3b17b9e14ca6f7676fbe03f8590d94d686bc118e9afc33280a8ce5e8",
+    "digest": "523134f5ea727e47ada81ec37d5d84a0257c5feaa46239ab39255d00cdac8328",
+    "elapsedSeconds": 107.8087442
+  },
+  "streams": {
+    "digests": {
+      "bytes": 10368000,
+      "sha256Uncompressed": "2bcab27371dd7c0019f6cea791a0b790af11de184547eee1c11312962d9a17e6"
+    },
+    "trajectory": {
+      "bytes": 79056000,
+      "sha256Uncompressed": "9d859005957075e7b3559b349e4e5b111fd503a0757e8754b72fb1b43b02938f"
+    },
+    "team-possession": {
+      "bytes": 2592000,
+      "sha256Uncompressed": "ba8c2fd5f10a5972dc7ca781f41e4d71edf410a68b96625b2fe66120edb52ea2"
+    },
+    "geometry": {
+      "bytes": 10151812,
+      "sha256Uncompressed": "290129be8fb6d901fc3f91f1dfd1ffecd45378afe7e236bc1f5fd345be235346"
+    },
+    "ledger": {
+      "bytes": 1499199,
+      "sha256Uncompressed": "168e5a48bf2843475a63b0fbbf0133418cf07ea6e3c406d1cafbf299e3658308"
+    }
+  },
+  "events": 3931,
+  "ledgerCounts": {
+    "shots": [
+      19,
+      12
+    ],
+    "goals": [
+      8,
+      3
+    ],
+    "fouls": [
+      1,
+      3
+    ],
+    "offsides": [
+      23,
+      10
+    ]
+  },
+  "maxConsecutivePossessionLagFramesByTeam": [
+    0,
+    0
+  ]
+}

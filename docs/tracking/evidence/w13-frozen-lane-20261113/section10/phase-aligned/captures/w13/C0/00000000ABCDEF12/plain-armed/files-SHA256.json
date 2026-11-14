@@ -1,0 +1,14 @@
+{
+  "aligned.bin.gz": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "audit.json": "8b3a807267557a23e95b064bc38ab99d51880b5de3fbb3470bf65ddee83fab3f",
+  "digests.bin.gz": "13b7dfd02892740077ce8f72563cd2575d21e56379b9cd5c4b5deeb1d0f6ae65",
+  "engine.log": "9d3391e0ce43b76b8f5f29af9fcd54b737839add5d095d932ed7655fb95ac2c3",
+  "geometry.bin.gz": "953ecfa38e47ab295a989fdaccc029310b63b13a897bcafb06da576e9756ac98",
+  "ledger.bin.gz": "c220613a6e10bb004e6b36d27a45b00e42b3f0b2506694e1313c965d8730317a",
+  "progress.json": "bbdf10bb62c2e7dfc630a773b339f320036baad435c9121f9d858a2f2243af55",
+  "run.json": "88d15ccc4ff8b05548266efec340c3e5e3b32d416a3b49f2768b4769a4eb3aac",
+  "runner.log": "65267ba9b090796276cc0f643a4d3cf93999ecfee6af568a2739490ecab616a1",
+  "summary.json": "06f9fcf432d0dc34cbdb314d053c759b63bc6d6c3c73f160b84a5b0599e90af4",
+  "team-possession.bin.gz": "d71e1ccf373e4b91e5ae162783d9aba67cb6ba0e61b405edb43b981750bc343b",
+  "trajectory.bin.gz": "cff074c524338f0a8f0653742a264735ed78c44aed28ec7e31a92ee8176e7b4e"
+}

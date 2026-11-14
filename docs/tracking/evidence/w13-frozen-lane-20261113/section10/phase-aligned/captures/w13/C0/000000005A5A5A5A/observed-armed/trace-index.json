@@ -1,0 +1,94 @@
+{
+  "format": "record-tar-xz-v2",
+  "archiveSha256": "58f40a50ebc60e704624a0b16af293c1598bcba6cecd4e6948e7d63c29b7bd34",
+  "streams": {
+    "aligned.bin": {
+      "bytes": 10368000,
+      "asRunGzipSha256": "2cfed150102f8b796ce21fa736ee9799e6afa561118885faafe319125c604701",
+      "asRunGzipBytes": 10371173,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "8566d7fb8d32f5101ef0496c77c80246d12d8f1eba9e2ecf22d93b89bde6f77e"
+    },
+    "digests.bin": {
+      "bytes": 10368000,
+      "asRunGzipSha256": "28cd10eac69bff857a5ccdcc0c5aaaad7b20f24860d1fa294ecc6685b43c7135",
+      "asRunGzipBytes": 10371173,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "ebdf9198bd48c5415b25b90d4dec7895e4d69ba6602f9fe57a88d01155d66b34"
+    },
+    "geometry.bin": {
+      "bytes": 10151812,
+      "asRunGzipSha256": "1e6c91a46c565cdd92492a505e8e8942aa57969b68b1ce907335a486d34db931",
+      "asRunGzipBytes": 6558614,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 188,
+        "blockRecords": 1024
+      },
+      "sha256": "acc78d8ad6f4e1e777a435c216e14f6b3b505fa7c9c15864e41bea80da1d8fb4"
+    },
+    "ledger.bin": {
+      "bytes": 1496429,
+      "asRunGzipSha256": "8b46b91becc2a4c8eccdfc1db468e219e48b316ff6805c36a83265515c24e83e",
+      "asRunGzipBytes": 104662,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "8961718397bc6c7cbefac293ae1248da912b0a495ccc89481c516c95e02e4274"
+    },
+    "mark-witness.bin": {
+      "bytes": 16847688,
+      "asRunGzipSha256": "53920b120c83e6b5d0c39621dc762008191e739a8db31a96b7e5a65f09ec204f",
+      "asRunGzipBytes": 1424926,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "d6cb0c9955cc4939919f6e51a4332ed9db88bd0dfe4685ef95caccea94c713f5"
+    },
+    "marking.bin": {
+      "bytes": 13283754,
+      "asRunGzipSha256": "6d1b1945aec3467706923124a36e4e01e4d078ff2558fef234e13c84c5419841",
+      "asRunGzipBytes": 1876272,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "ca02d7633183c366e475e747d204984ec4f69da712854f0cda5eee73050bc051"
+    },
+    "retained-lag.bin": {
+      "bytes": 5184000,
+      "asRunGzipSha256": "f9bb0cee777c9a8d1371f8ceb78f00201792b7875f0c13dcfb293219e33dfd99",
+      "asRunGzipBytes": 617162,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "bf42d06f262bc9c6db98dbf4349e33c1ed3ad44c887a8f83c806755e50e899cb"
+    },
+    "team-possession.bin": {
+      "bytes": 2592000,
+      "asRunGzipSha256": "6491dc42a8abe3d8c562ef6a6367e232c10916b436ada09c8317a7a5628ffa5d",
+      "asRunGzipBytes": 28211,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 8,
+        "blockRecords": 1024
+      },
+      "sha256": "c2968d21980d1d2896c5fdaaead621e2669dd42a0feb2a67bc74fbe99d71bcfb"
+    },
+    "trajectory.bin": {
+      "bytes": 79056000,
+      "asRunGzipSha256": "d1cc11f6412c0a9e909e871f95f62e46d5452c504967020a4333e8dced0f2b9d",
+      "asRunGzipBytes": 55472198,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 244,
+        "blockRecords": 1024
+      },
+      "sha256": "d15cef8c7bc5a7064b79cb5c374f2353a22192d6d748ab13921e244af98d2924"
+    }
+  },
+  "asRunGzipContainersRetained": false
+}

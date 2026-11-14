@@ -1,0 +1,23 @@
+{
+  "label": "w13/C0/0F1E2D3C4B5A6978/observed-armed",
+  "arm": "w13",
+  "case": 0,
+  "seed": "0F1E2D3C4B5A6978",
+  "mode": "observed",
+  "armed": true,
+  "command": [
+    "/workspace/work/dotnet/dotnet",
+    "--fx-version",
+    "8.0.32",
+    "/workspace/work/w13-frozen-20261113/section10/phase-aligned/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+    "0F1E2D3C4B5A6978",
+    "0",
+    "observed",
+    "/workspace/work/w13-frozen-20261113/section10/phase-aligned/captures/w13/C0/0F1E2D3C4B5A6978/observed-armed",
+    "324000",
+    "armed"
+  ],
+  "startedUtc": "2026-11-13T23:41:45.097139+00:00",
+  "exitCode": 0,
+  "finishedUtc": "2026-11-13T23:43:31.093307+00:00"
+}

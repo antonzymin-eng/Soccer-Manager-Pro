@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 13, 2026 — **W13 host receipt review corrections.** No path added or removed. **Modified:** `docs/tracking/evidence/host-w13-6491de79-20261113/` `README.md` v1.0 → v1.1 (descriptive vs behavioural marking coverage), `editmode-results.xml.xz` (re-encoded with escaped placeholders; same run), `editmode-summary.txt` (descriptive note), `SHA256SUMS`; `docs/tracking/CHANGELOG.md` and this manifest.
+**Last Updated:** November 13, 2026 — **W13 frozen-lane measurement checkpoint, in progress.** **New:** `docs/tracking/evidence/w13-frozen-lane-20261113/` (README, immutable checkpoint index, complete SHA-256 contract, portable rebuild/verifier, exact as-run identity/capture tools and inputs, decoded-stream indexes and LFS archives, initial/corrected instrument attempts, source-integration receipt and patch, test receipts, publication accounting). The checkpoint retains 18 identity/control executions, 12 integrated-off executions and 32 completed §10 captures; active and future captures are excluded. **Modified:** `.gitattributes` (checkpoint archives use LFS), `tools/dotnet-ci/check_evidence_manifests.py` (new directory; remove two stale #543 documentation contracts absent from this source-only measurement tree), its test count (42), `docs/tracking/CHANGELOG.md`, and this manifest. Production source remains the measurement integration `src` `95052885`; this publication does not resolve landing documentation or enable marking.
+
+**Last Updated (prior):** November 13, 2026 — **W13 host receipt review corrections.** No path added or removed. **Modified:** `docs/tracking/evidence/host-w13-6491de79-20261113/` `README.md` v1.0 → v1.1 (descriptive vs behavioural marking coverage), `editmode-results.xml.xz` (re-encoded with escaped placeholders; same run), `editmode-summary.txt` (descriptive note), `SHA256SUMS`; `docs/tracking/CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 13, 2026 — **W13 landing checks on `claude/great-sagan-rpcmhp` (merge `6491de79` with main `39de4662`), documentation, evidence and evidence-registry only; no `src/` change.** **New evidence directory** `docs/tracking/evidence/w13-switch-off-neutrality-20261113/` (its `SHA256SUMS` covers the rest): `Program.cs.txt`, `README.md`, `SHA256SUMS`, `runner.csproj.txt`, `runs.csv` and `runs/` with 18 run files (`main-off-`, `w13-off-`, `w13-armed-` × six seeds). **New evidence directory** `docs/tracking/evidence/host-w13-6491de79-20261113/`: `README.md`, `SHA256SUMS`, `compile-editor-log.txt.xz`, `compile.txt`, `editmode-editor-log.txt.xz`, `editmode-results.xml.xz`, `editmode-summary.txt`, `source-identity.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (registers both directories; 41 registered), `docs/tracking/CHANGELOG.md`, `docs/tracking/open-issues.md` (W13 entry: W13.0 merged via PR #545, F5–F10 blocker list, landing-check results), `docs/tracking/match-engine-wiring-backlog.md` v1.45 → v1.46, `docs/tracking/w-defender-marking-wiring-plan.md` v0.7 → v0.8, `docs/agent-guides/project-reference.md` (W13 index bullet wording; counts unchanged 46 / 75) and this manifest.
 
@@ -4627,6 +4629,20 @@ Created November 4, 2026. Purpose: retain the reproducible B control and shared 
 | `docs/tracking/evidence/pre-c-control-20261104/test_evidence_checks.py` | Capture loss/duplication, missing/truncated digest and partial-mode regression checks |
 | `docs/tracking/evidence/pre-c-control-20261104/test_selection.py` | Same-frame, team-first, cutoff, censoring and non-contact tackle regression checks |
 | `docs/tracking/evidence/pre-c-control-20261104/windows.json` | All 126 releases, first-other decisions, own touches and raw follow-up event memberships |
+
+## W13 frozen-lane checkpoint (November 13, 2026)
+
+| Path | Purpose |
+|---|---|
+| `docs/tracking/evidence/w13-frozen-lane-20261113/README.md` | Scope, source identities, exact completed comparisons and §10 in-progress boundary |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/checkpoint.json` | Immutable cutoff and explicit list of completed captures included |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/SHA256SUMS` | Complete tracked-file integrity contract, including LFS payload digests |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/rebuild.py` | Portable pinned-runtime source preparation, separate from as-run scripts |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/verify_checkpoint.py` | Materialized archive/raw-stream and identity-claim verifier |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/identity/` | Frozen source/runtime/runner identities and 18 packed identity/control runs |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/section10/` | Exact reference/integration provenance, 12 off comparisons, 32 completed corrected captures, tools and test receipts |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/attempts/` | Failed/superseded instrument runs, corrected preflight and original build logs, with archive member hashes |
+| `docs/tracking/evidence/w13-frozen-lane-20261113/publication/` | Snapshot-selection script, bounded controller-log copies and decoded-store packing receipts |
 
 ## Maintenance Rule
 

@@ -1,0 +1,91 @@
+{
+  "seed": "00000000D1A6D05E",
+  "case": 0,
+  "mode": "observed",
+  "armed": false,
+  "markingEnabled": false,
+  "marking": {
+    "samples": 53999,
+    "assignmentModesByTeam": [
+      486956,
+      96791,
+      10242,
+      0,
+      498799,
+      86417,
+      8773,
+      0
+    ],
+    "targetSamplesByTeam": [
+      0,
+      0
+    ],
+    "freshMarkerDecisionsByTeam": [
+      0,
+      0
+    ],
+    "markerPressByTeam": [
+      0,
+      0
+    ],
+    "nonCarrierMarkerPressByTeam": [
+      0,
+      0
+    ],
+    "tackleIntentModesByTeam": [
+      13144,
+      1520,
+      30086,
+      12502,
+      1511,
+      25514
+    ],
+    "tackleResolvedByTeam": [
+      20,
+      12
+    ],
+    "offsidesByTeam": [
+      1,
+      4
+    ],
+    "armedThroughConfig": false
+  },
+  "frames": 324000,
+  "live": 323999,
+  "shots": [
+    11,
+    11
+  ],
+  "goals": [
+    3,
+    6
+  ],
+  "fouls": [
+    3,
+    2
+  ],
+  "possession": [
+    12636,
+    17641,
+    293722
+  ],
+  "teamPossession": [
+    143432,
+    161294,
+    19273
+  ],
+  "phase": [
+    24967,
+    28357,
+    323,
+    352,
+    28359,
+    24965,
+    352,
+    323
+  ],
+  "schema": 29,
+  "buildHash": "eda446239051074f3748187147a915f6727c1fba15a8ba7431c87d8f180ba6d0",
+  "digest": "3591e4f1f5890e0e1bd0e18b214b4a16223f4a60f9e211d712ae95401bc2a8f4",
+  "elapsedSeconds": 106.3392264
+}

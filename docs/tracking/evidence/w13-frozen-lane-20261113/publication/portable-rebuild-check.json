@@ -1,0 +1,33 @@
+{
+  "createdUtc": "2026-11-14T00:27:12.433295+00:00",
+  "scope": "portable identity rebuild plus three 1000-tick prefix checks; not new full-match golden adoption",
+  "checks": [
+    {
+      "arm": "historical",
+      "commit": "1d3cebf3b8d874715158067d9deb5fa48b309a30",
+      "frames": 1000,
+      "equalToRetainedPrefix": true,
+      "digestStreamSha256": "eb18e9733b3f88688e6ef1980da0b528b70aa49badb0283fbe2823166028bf08",
+      "rebuiltBinary": "/workspace/work/w13-portable-identity-check/historical/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "binarySha256": "e5f67be5a95827dd96577064685fba9f0c4037785490c05879d038a164c77328"
+    },
+    {
+      "arm": "w13_0",
+      "commit": "f64729d2f2a20a2c6c96f4ce26df80844c9571d4",
+      "frames": 1000,
+      "equalToRetainedPrefix": true,
+      "digestStreamSha256": "2c1d7a6167c99c016fd135e21dd2fb840b2c7f0575524021f124dcc360ebb997",
+      "rebuiltBinary": "/workspace/work/w13-portable-identity-check/w13_0/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "binarySha256": "1fcd981478a68b2c95182797afd93255f66262c8c3137101c2b46f0bc1bb151b"
+    },
+    {
+      "arm": "w13_off",
+      "commit": "4171d3d1e3f07a661e085ffa6f51770384af92c8",
+      "frames": 1000,
+      "equalToRetainedPrefix": true,
+      "digestStreamSha256": "2c1d7a6167c99c016fd135e21dd2fb840b2c7f0575524021f124dcc360ebb997",
+      "rebuiltBinary": "/workspace/work/w13-portable-identity-check/w13_off/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "binarySha256": "1f34ac5a1510f82803f4addb47d63f67121c8dcdadba3b1b62a69ed188e8fd3c"
+    }
+  ]
+}

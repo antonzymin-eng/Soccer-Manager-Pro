@@ -1,0 +1,663 @@
+Pre-commit hook configuration verified.
+Pre-commit hook configuration verified.
+Preparing persistent pre-commit build cache (one-time cold run; 60s acceptance budget intentionally not applied).
+== Testing Strategy pre-commit pipeline ==
+Documentation audit policy: routine survey; canonical registry approval transitions are blocking
+Pre-commit selection: anchored NUnit method/category rules in /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/precommit.runsettings
+Auditor: approval-checklist evidence (survey)
+checklist-auditor: 53 file(s), 1357 evidence row(s), 0 blocking, 991 survey/note [survey-only routine pipeline]
+Auditor: per-spec section-5 schema (survey)
+spec5-schema-auditor: 52 spec(s), 0 blocking, 331 survey/note [survey-only routine pipeline]
+Runner: tools/dotnet-ci/run-gate.sh (Linux shim, non-certifying)
+── Generate csproj/sln from asmdefs ──────────────────────────────────
+Generated 74 csproj (37 test projects) + tools/dotnet-ci/TacticalDirector.gen.sln
+── Restore ───────────────────────────────────────────────────────────
+  Determining projects to restore...
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/discipline/discipline.gen.csproj (in 1.96 sec).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-web/match-client-web.gen.csproj (in 2.04 sec).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/positioning-ai/positioning-ai.gen.csproj (in 2 sec).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/deterministic-sim/deterministic-sim.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/defensive-ai/defensive-ai.gen.csproj (in 16 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/Tests/decision-tree-tests.gen.csproj (in 317 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/defensive-ai/Tests/defensive-ai-tests.gen.csproj (in 390 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pressing-ai/Tests/pressing-ai-tests.gen.csproj (in 2.46 sec).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/deterministic-sim/tests/deterministic-sim-tests.gen.csproj (in 393 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/collision-system/collision-system.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/club-finances/club-finances.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/club-finances/tests/club-finances-tests.gen.csproj (in 14 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/collision-system/tests/collision-system-tests.gen.csproj (in 18 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/client-app/client-app.gen.csproj (in 151 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/ball-physics.gen.csproj (in 2 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/tests/ball-physics-tests.gen.csproj (in 17 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/attacking-ai/attacking-ai.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim/UnityShim.csproj (in 0.9 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/client-app/tests/client-app-tests.gen.csproj (in 171 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/transfers/transfers.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim.TestTools/UnityShim.TestTools.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ui-framework/ui-framework.gen.csproj (in 52 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/training-system/training-system.gen.csproj (in 2 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/testing-strategy/testing-strategy.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ui-framework/Tests/ui-framework-tests.gen.csproj (in 68 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/tactical-instructions/tactical-instructions.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/transfers/tests/transfers-tests.gen.csproj (in 25 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/testing-strategy/Tests/testing-strategy-tests.gen.csproj (in 14 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/shot-mechanics/shot-mechanics.gen.csproj (in 2 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/training-system/tests/training-system-tests.gen.csproj (in 15 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/tactical-instructions/Tests/tactical-instructions-tests.gen.csproj (in 77 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/season-save/season-save.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/shot-mechanics/Tests/shot-mechanics-tests.gen.csproj (in 10 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/project-constants/project-constants.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/project-constants/tests/project-constants-tests.gen.csproj (in 48 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pressing-ai/pressing-ai.gen.csproj (in 2 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-progression/player-progression.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-progression/tests/player-progression-tests.gen.csproj (in 17 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/positioning-ai/Tests/positioning-ai-tests.gen.csproj (in 4 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-database/player-database.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/season-save/tests/season-save-tests.gen.csproj (in 66 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/performance-optimization/performance-optimization.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/perception-system/perception-system.gen.csproj (in 7 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/performance-optimization/tests/performance-optimization-tests.gen.csproj (in 4 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/pass-mechanics.gen.csproj (in 10 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-database/tests/player-database-tests.gen.csproj (in 50 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/perception-system/Tests/perception-system-tests.gen.csproj (in 29 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/Tests/pass-mechanics-tests.gen.csproj (in 35 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-viewer/match-viewer.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-viewer/tests/match-viewer-tests.gen.csproj (in 58 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-engine/tests/match-engine-tests.gen.csproj (in 58 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-engine/match-engine.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-core/match-client-core.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-analytics/match-analytics.gen.csproj (in 12 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-web/tests/match-client-web-tests.gen.csproj (in 40 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-analytics/Tests/match-analytics-tests.gen.csproj (in 87 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/localization/tests/localization-tests.gen.csproj (in 40 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-core/tests/match-client-core-tests.gen.csproj (in 54 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/localization/localization.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/living-world/living-world.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/heading-mechanics/heading-mechanics.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/injuries-medical/injuries-medical.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/injuries-medical/tests/injuries-medical-tests.gen.csproj (in 5 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/living-world/Tests/living-world-tests.gen.csproj (in 4 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/goalkeeper-mechanics.gen.csproj (in 1 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/first-touch/first-touch.gen.csproj (in 5 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/heading-mechanics/Tests/heading-mechanics-tests.gen.csproj (in 13 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/Tests/goalkeeper-mechanics-tests.gen.csproj (in 15 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/first-touch/Tests/first-touch-tests.gen.csproj (in 16 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/event-system/event-system.gen.csproj (in 4 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/agent-movement/agent-movement.gen.csproj (in 0.9 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/event-system/tests/event-system-tests.gen.csproj (in 54 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/discipline/tests/discipline-tests.gen.csproj (in 20 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/attacking-ai/Tests/attacking-ai-tests.gen.csproj (in 20 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/agent-movement/Tests/agent-movement-tests.gen.csproj (in 25 ms).
+── Test (blocking; explicit policy selection applied) ────────────────
+Runsettings: /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/precommit.runsettings
+  UnityShim -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  UnityShim.TestTools -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  localization.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/localization/bin/Debug/netstandard2.1/TacticalDirector.Localization.dll
+  deterministic-sim.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  localization-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/localization/tests/bin/Debug/net8.0/TacticalDirector.Localization.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/localization/tests/bin/Debug/net8.0/TacticalDirector.Localization.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  tactical-instructions.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  project-constants-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/project-constants/tests/bin/Debug/net8.0/TacticalDirector.ProjectConstants.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/project-constants/tests/bin/Debug/net8.0/TacticalDirector.ProjectConstants.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    67, Skipped:     0, Total:    67, Duration: 816 ms - TacticalDirector.Localization.Tests.dll (net8.0)
+
+Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26, Duration: 217 ms - TacticalDirector.ProjectConstants.Tests.dll (net8.0)
+  agent-movement.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  player-database.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  deterministic-sim-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/deterministic-sim/tests/bin/Debug/net8.0/TacticalDirector.DeterministicSim.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/deterministic-sim/tests/bin/Debug/net8.0/TacticalDirector.DeterministicSim.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped SaveLoad_MidTickSnapshot_SaveAndLoad [15 ms]
+
+Passed!  - Failed:     0, Passed:    90, Skipped:     1, Total:    91, Duration: 400 ms - TacticalDirector.DeterministicSim.Tests.dll (net8.0)
+  living-world.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/living-world/bin/Debug/netstandard2.1/TacticalDirector.LivingWorld.dll
+  ball-physics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  event-system.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  performance-optimization.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  player-database-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-database/tests/bin/Debug/net8.0/TacticalDirector.PlayerDatabase.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-database/tests/bin/Debug/net8.0/TacticalDirector.PlayerDatabase.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  testing-strategy.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+
+Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50, Duration: 235 ms - TacticalDirector.PlayerDatabase.Tests.dll (net8.0)
+  club-finances.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/club-finances/bin/Debug/netstandard2.1/TacticalDirector.ClubFinances.dll
+  discipline.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/discipline/bin/Debug/netstandard2.1/TacticalDirector.Discipline.dll
+  transfers.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/transfers/bin/Debug/netstandard2.1/TacticalDirector.Transfers.dll
+  player-progression.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-progression/bin/Debug/netstandard2.1/TacticalDirector.PlayerProgression.dll
+  living-world-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/living-world/Tests/bin/Debug/net8.0/TacticalDirector.LivingWorld.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/living-world/Tests/bin/Debug/net8.0/TacticalDirector.LivingWorld.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+  performance-optimization-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/performance-optimization/tests/bin/Debug/net8.0/TacticalDirector.PerformanceOptimization.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/performance-optimization/tests/bin/Debug/net8.0/TacticalDirector.PerformanceOptimization.Tests.dll (.NETCoreApp,Version=v8.0)
+Starting test execution, please wait...
+VSTest version 17.11.1 (x64)
+
+A total of 1 test files matched the specified pattern.
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   129, Skipped:     0, Total:   129, Duration: 555 ms - TacticalDirector.LivingWorld.Tests.dll (net8.0)
+
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 53 ms - TacticalDirector.PerformanceOptimization.Tests.dll (net8.0)
+/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/tests/BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used [/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/tests/ball-physics-tests.gen.csproj]
+  ball-physics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  club-finances-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/club-finances/tests/bin/Debug/net8.0/TacticalDirector.ClubFinances.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/club-finances/tests/bin/Debug/net8.0/TacticalDirector.ClubFinances.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   118, Skipped:     0, Total:   118, Duration: 205 ms - TacticalDirector.BallPhysics.Tests.dll (net8.0)
+
+Passed!  - Failed:     0, Passed:    70, Skipped:     0, Total:    70, Duration: 488 ms - TacticalDirector.ClubFinances.Tests.dll (net8.0)
+  training-system.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/training-system/bin/Debug/netstandard2.1/TacticalDirector.TrainingSystem.dll
+  agent-movement-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/agent-movement/Tests/bin/Debug/net8.0/TacticalDirector.AgentMovement.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/agent-movement/Tests/bin/Debug/net8.0/TacticalDirector.AgentMovement.Tests.dll (.NETCoreApp,Version=v8.0)
+  tactical-instructions-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/tactical-instructions/Tests/bin/Debug/net8.0/TacticalDirector.TacticalInstructions.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/tactical-instructions/Tests/bin/Debug/net8.0/TacticalDirector.TacticalInstructions.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    88, Skipped:     0, Total:    88, Duration: 384 ms - TacticalDirector.AgentMovement.Tests.dll (net8.0)
+  transfers-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/transfers/tests/bin/Debug/net8.0/TacticalDirector.Transfers.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/transfers/tests/bin/Debug/net8.0/TacticalDirector.Transfers.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+
+Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 596 ms - TacticalDirector.TacticalInstructions.Tests.dll (net8.0)
+A total of 1 test files matched the specified pattern.
+  injuries-medical.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/injuries-medical/bin/Debug/netstandard2.1/TacticalDirector.InjuriesMedical.dll
+  discipline-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/discipline/tests/bin/Debug/net8.0/TacticalDirector.Discipline.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/discipline/tests/bin/Debug/net8.0/TacticalDirector.Discipline.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    69, Skipped:     0, Total:    69, Duration: 438 ms - TacticalDirector.Transfers.Tests.dll (net8.0)
+  positioning-ai.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+
+Passed!  - Failed:     0, Passed:   146, Skipped:     0, Total:   146, Duration: 426 ms - TacticalDirector.Discipline.Tests.dll (net8.0)
+  collision-system.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  pass-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  heading-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  positioning-ai-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/positioning-ai/Tests/bin/Debug/net8.0/TacticalDirector.PositioningAI.Tests.dll
+  pressing-ai.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  attacking-ai.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  shot-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  defensive-ai.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  training-system-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/training-system/tests/bin/Debug/net8.0/TacticalDirector.TrainingSystem.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/training-system/tests/bin/Debug/net8.0/TacticalDirector.TrainingSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 223 ms - TacticalDirector.TrainingSystem.Tests.dll (net8.0)
+  collision-system-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/collision-system/tests/bin/Debug/net8.0/TacticalDirector.CollisionSystem.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/collision-system/tests/bin/Debug/net8.0/TacticalDirector.CollisionSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  heading-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/heading-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.HeadingMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/heading-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.HeadingMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+  Skipped AgentHitsBall_BallCollisionHandlerCalled [87 ms]
+  Skipped CornerKickClustering_PerformanceUnder500us [< 1 ms]
+  Skipped CrossSystem_CollisionTriggersAgentMovementStateChange [< 1 ms]
+  Skipped FullMatch90Minutes_NoCrashNoNaN [< 1 ms]
+  Skipped GroundedObstacle_RunnerStumbles [< 1 ms]
+  Skipped SameTeamCollision_ReducedMomentumNoFall [< 1 ms]
+  Skipped SprintingHitsStationary_StationaryKnockedBack [< 1 ms]
+  Skipped ThreeAgentsCluster_AllProcessedNoInfiniteLoop [< 1 ms]
+  Skipped TwoAgentsApproach_BothBounceBack [< 1 ms]
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    40, Skipped:     9, Total:    49, Duration: 2 s - TacticalDirector.CollisionSystem.Tests.dll (net8.0)
+  Skipped Conformance_T_HE_C_001_NoHeaderTypeSymbolInSrc [15 ms]
+  Skipped Conformance_T_HE_C_002_ConstantTagVerification [< 1 ms]
+  Skipped Conformance_T_HE_C_003_RngRoutingDisciplineNoSystemRandom [< 1 ms]
+  Skipped Integration_T_HE_I_001_OpenPlayHeaderFromCrossProducesOutgoingVelocity [< 1 ms]
+  Skipped Integration_T_HE_I_002_CornerKickHeaderRoutesIdenticallyToOpenPlay [< 1 ms]
+  Skipped Integration_T_HE_I_003_FreeKickHeaderFarPostDownwardVolley [< 1 ms]
+  Skipped Integration_T_HE_I_004_GoalkeeperHeadedClearanceUsesStandardPipeline [< 1 ms]
+  Skipped Integration_T_HE_I_005_Contested2WayDuelWinnerAndLoserEmitCorrectEvents [< 1 ms]
+  Skipped Integration_T_HE_I_006_Contested3WayDuelTightAndLopsidedSubScenarios [< 1 ms]
+  Skipped Integration_T_HE_I_007_MistimedJumpEmitsFailedEventAndLeavesBalUnchanged [< 1 ms]
+  Skipped Integration_T_HE_I_008_OwnGoalShapeFlagPublishedToEventSystem [< 1 ms]
+  Skipped Integration_T_HE_I_009_DeterministicReplay1000TickByteIdentical [< 1 ms]
+  Skipped Validation_T_HE_V_001_22AgentMatchSegmentHeaderFrequencyAndTimingDistribution [< 1 ms]
+  Skipped Validation_T_HE_V_002_CornerABHeadingAttributeSensitivity [< 1 ms]
+  Skipped Validation_T_HE_V_003_FatigueGradientReducesOutgoingSpeedByTwelvePercent [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    73, Skipped:    15, Total:    88, Duration: 487 ms - TacticalDirector.HeadingMechanics.Tests.dll (net8.0)
+  first-touch.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  player-progression-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-progression/tests/bin/Debug/net8.0/TacticalDirector.PlayerProgression.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/player-progression/tests/bin/Debug/net8.0/TacticalDirector.PlayerProgression.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   193, Skipped:     0, Total:   193, Duration: 1 s - TacticalDirector.PlayerProgression.Tests.dll (net8.0)
+  shot-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/shot-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.ShotMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/shot-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.ShotMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped BM007_PoorMechanicsHighPower_StumbleTriggered [78 ms]
+  Skipped AgentMovementInterface_AgentProperties_FrozenAtInitiating [< 1 ms]
+  Skipped BallPhysicsInterface_ApplyKick_CalledWithValidArguments [< 1 ms]
+  Skipped CollisionInterface_TackleInterruptDuringContact_DoesNotCancel [< 1 ms]
+  Skipped CollisionInterface_TackleInterruptDuringWindup_CancelsShot [< 1 ms]
+  Skipped CriticalDeterminism_IdenticalInputs_ProduceIdenticalOutputs [< 1 ms]
+  Skipped EndToEnd_ChipShotProfile_ProducesElevatedLaunchAngle [< 1 ms]
+  Skipped EndToEnd_DrivenShotProfile_ProducesLowAngleAndHighSpeed [< 1 ms]
+  Skipped EndToEnd_TopCornerPlacement_ProducesCorrectAimDirection [< 1 ms]
+  Skipped EndToEnd_WeakFootShot_HigherErrorAndLowerSpeedThanStrongFoot [< 1 ms]
+  Skipped EventInterface_ShotExecutedEvent_PublishedWithCompletePayload [< 1 ms]
+  Skipped EventInterface_TackleCancelled_PublishesCancelledNotExecuted [< 1 ms]
+  Skipped ShotAnimationData_PopulatedOnCompletion_NotPublished [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    89, Skipped:    12, Total:   101, Duration: 836 ms - TacticalDirector.ShotMechanics.Tests.dll (net8.0)
+/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/Tests/PassMechanicsTests.cs(1679,26): warning CS0649: Field 'PassExecutorGuardTests.StubCollisionQuery.Pressure' is never assigned to, and will always have its default value 0 [/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/Tests/pass-mechanics-tests.gen.csproj]
+  pass-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.PassMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pass-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.PassMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AgentAttributes_ReadCorrectlyFromAgentState [14 ms]
+  Skipped ApplyKick_ClearsPossession_PostPass [< 1 ms]
+  Skipped ChipPass_ApplyKick_VelocityYLarge [< 1 ms]
+  Skipped Fatigue_PropagatesFromAgentStateToErrorCalculation [< 1 ms]
+  Skipped FullPassCycle_IdleToComplete_CorrectEventOrder [< 1 ms]
+  Skipped GroundPass_ApplyKick_CalledWithNonZeroVelocity [< 1 ms]
+  Skipped LoftedPass_ApplyKick_VelocityYPositive [< 1 ms]
+  Skipped PassAttemptEvent_PublishedOnContact [< 1 ms]
+  Skipped PassCompletedEvent_PublishedOnFollowThroughCompletion [< 1 ms]
+  Skipped ReplayDeterminism_IdenticalPassesProduceIdenticalResults [< 1 ms]
+  Skipped TackleInterrupt_FromCollision_CancelsPass [< 1 ms]
+  Skipped TackleInterrupt_PublishesCancelledNotAttempt [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    95, Skipped:    12, Total:   107, Duration: 316 ms - TacticalDirector.PassMechanics.Tests.dll (net8.0)
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/positioning-ai/Tests/bin/Debug/net8.0/TacticalDirector.PositioningAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Determinism_DigestStability_IdenticalInputs [34 ms]
+  Skipped Determinism_EntityIdPermutation_SameOutput [< 1 ms]
+  Skipped Determinism_RngIsolation_CrossSubsystem [< 1 ms]
+  Skipped Determinism_SaveLoad_ResumesIdentically [< 1 ms]
+  Skipped Integration_4231_TransToAtk_AMAdvances [1 ms]
+  Skipped Integration_F2Fallback_ValidArchetype [< 1 ms]
+  Skipped Integration_FullMatch_90Min_StateConsistency [< 1 ms]
+  Skipped Integration_LaneOverload_Resolved_BySpacing [< 1 ms]
+  Skipped Integration_OrchestratorNonInvocation_OfStage0Default [< 1 ms]
+  Skipped Integration_PhaseOscillationSuppressed [< 1 ms]
+  Skipped Integration_SubstitutionSentinel_Preserved [1 ms]
+  Skipped Performance_SpacingBudget_Under0_05ms [< 1 ms]
+  Skipped Performance_ZeroHeapAlloc_InHotPath [< 1 ms]
+
+Passed!  - Failed:     0, Passed:   143, Skipped:    13, Total:   156, Duration: 1 s - TacticalDirector.PositioningAI.Tests.dll (net8.0)
+  injuries-medical-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/injuries-medical/tests/bin/Debug/net8.0/TacticalDirector.InjuriesMedical.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/injuries-medical/tests/bin/Debug/net8.0/TacticalDirector.InjuriesMedical.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    76, Skipped:     0, Total:    76, Duration: 646 ms - TacticalDirector.InjuriesMedical.Tests.dll (net8.0)
+  goalkeeper-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.GoalkeeperMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.GoalkeeperMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped T_GK_C_001_NoSaveTypeSymbol [36 ms]
+  Skipped T_GK_C_002_ConstantTagVerification [< 1 ms]
+  Skipped T_GK_C_003_RngRoutingDiscipline [< 1 ms]
+  Skipped T_GK_C_004_PositioningAiConstantPromotion [< 1 ms]
+  Skipped T_GK_C_005_NoSystemRandom [< 1 ms]
+  Skipped T_GK_C_006_CrossReferenceResolution [< 1 ms]
+  Skipped T_GK_C_007_CrossClaimDuelIterationOrder [< 1 ms]
+  Skipped FailureCause_DisturbedInDuel_DuelDisturbanceAboveThreshold [< 1 ms]
+  Skipped FailureCause_MissedContact_BallOutsideReach [< 1 ms]
+  Skipped FailureCause_MistimedDive_DiveStartedTooEarly [< 1 ms]
+  Skipped FailureCause_OutOfReach_BallBeyondReachEnvelope [< 1 ms]
+  Skipped FailureCause_WrongDirection_DiveInWrongDirection [< 1 ms]
+  Skipped T_GK_I_001_OpenPlaySave [< 1 ms]
+  Skipped T_GK_I_002_FreeKickSave [< 1 ms]
+  Skipped T_GK_I_003_PenaltySave [8 ms]
+  Skipped T_GK_I_004_CornerCrossClaimHandPath [4 ms]
+  Skipped T_GK_I_005_CornerCrossClaimHeadPath [< 1 ms]
+  Skipped T_GK_I_006_OneVsOneConfrontation [< 1 ms]
+  Skipped T_GK_I_007_MistimedDiveNoBallChange [1 ms]
+  Skipped T_GK_I_008_RushAbortOnInterception [< 1 ms]
+  Skipped T_GK_I_009_SaveAndDistributionCycle [< 1 ms]
+  Skipped T_GK_I_010_DeterministicReplay [< 1 ms]
+  Skipped T_GK_I_011_PositioningBaselineSlotRatification [< 1 ms]
+  Skipped T_GK_V_001_MatchPeakHandlingLabelDistribution [< 1 ms]
+  Skipped T_GK_V_002_ReflexABDivergence [< 1 ms]
+  Skipped T_GK_V_003_FatigueGradient [< 1 ms]
+  Skipped T_GK_V_004_OneVsOneConversionRate [< 1 ms]
+
+Passed!  - Failed:     0, Passed:   109, Skipped:    27, Total:   136, Duration: 925 ms - TacticalDirector.GoalkeeperMechanics.Tests.dll (net8.0)
+  perception-system.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  testing-strategy-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/testing-strategy/Tests/bin/Debug/net8.0/TacticalDirector.TestingStrategy.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/testing-strategy/Tests/bin/Debug/net8.0/TacticalDirector.TestingStrategy.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  pressing-ai-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pressing-ai/Tests/bin/Debug/net8.0/TacticalDirector.PressingAI.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/pressing-ai/Tests/bin/Debug/net8.0/TacticalDirector.PressingAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+  defensive-ai-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/defensive-ai/Tests/bin/Debug/net8.0/TacticalDirector.DefensiveAI.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/defensive-ai/Tests/bin/Debug/net8.0/TacticalDirector.DefensiveAI.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+VSTest version 17.11.1 (x64)
+
+
+Passed!  - Failed:     0, Passed:    30, Skipped:     0, Total:    30, Duration: 390 ms - TacticalDirector.TestingStrategy.Tests.dll (net8.0)
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped AntiChaos_T_C_001_FourCandidatesInBallThirdOneDemotes [77 ms]
+  Skipped AntiChaos_T_C_002_BacklineFloorBlocksPrimaryPressPromotion [< 1 ms]
+  Skipped AntiChaos_T_C_003_CoverShadowBeyond25mRejectedAndDemoted [< 1 ms]
+  Skipped AntiChaos_T_C_004_CascadingViolationsResolveInThreeIterations [< 1 ms]
+  Skipped AntiChaos_T_C_005_UnresolvableCascadeTriggersF5Fallback [< 1 ms]
+  Skipped AntiChaos_T_C_006_RepeatedF5FallbackDoesNotCorruptHysteresisState [< 1 ms]
+  Skipped AntiChaos_T_C_007_BacklineBreachTriggersF5InOneIteration [< 1 ms]
+  Skipped Determinism_T_D_001_NinetyMinReplayBitIdenticalDigests [< 1 ms]
+  Skipped Determinism_T_D_002_EntityIdPermutedInputProducesIdenticalState [< 1 ms]
+  Skipped Determinism_T_D_003_HysteresisAndTriggerDigestContributionsNonEmpty [< 1 ms]
+  Skipped Determinism_T_D_004_TenConsecutiveRunsProduceSameFinalDigest [< 1 ms]
+  Skipped Determinism_T_D_005_SaveLoadMidPressDigestContinuity [< 1 ms]
+  Skipped Determinism_T_D_006_DomainTagIsolationPreservesStream [< 1 ms]
+  Skipped Integration_T_I_001_EachTriggerOutOfPossProducesActiveDirective [< 1 ms]
+  Skipped Integration_T_I_002_InPossPhaseBoundaryEmptiesDirective [< 1 ms]
+  Skipped Integration_T_I_003_PossessionTurnoverSequenceProducesCorrectEvolution [< 1 ms]
+  Skipped Integration_T_I_004_DisengageRoundTripOver50Ticks [< 1 ms]
+  Skipped Integration_T_I_005_SubstitutionPreservesLastPressAssignment [< 1 ms]
+  Skipped Integration_T_I_006_SimultaneousTriggersTieBreakByEntityId [< 1 ms]
+  Skipped Integration_T_I_007_ThreeAgentCostTieResolvesDeteterministicallyByEntityId [< 1 ms]
+  Skipped Integration_T_I_008_F5FallbackOnMaxDisplacementViolation [< 1 ms]
+  Skipped Integration_T_I_009_HysteresisStateSurvivesSaveRestoreRoundTrip [< 1 ms]
+  Skipped Integration_T_I_010_IdenticalInputsProduceBitIdenticalOutput [< 1 ms]
+  Skipped Performance_T_P_001_PerTickWallClockWithinBudget [< 1 ms]
+  Skipped Performance_T_P_002_ZeroHeapAllocationsOnHotPath [< 1 ms]
+  Skipped Performance_T_P_003_CoverShadowCandidateScanWithinCostBudget [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    63, Skipped:    26, Total:    89, Duration: 901 ms - TacticalDirector.PressingAI.Tests.dll (net8.0)
+  Skipped AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart [14 ms]
+  Skipped AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted [< 1 ms]
+  Skipped Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests [< 1 ms]
+  Skipped Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks [< 1 ms]
+  Skipped Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity [< 1 ms]
+  Skipped Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism [< 1 ms]
+  Skipped Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI [< 1 ms]
+  Skipped Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs [< 1 ms]
+  Skipped Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks [< 1 ms]
+  Skipped Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation [< 1 ms]
+  Skipped Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner [< 1 ms]
+  Skipped Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously [< 1 ms]
+  Skipped Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick [< 1 ms]
+  Skipped Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses [< 1 ms]
+  Skipped Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput [< 1 ms]
+  Skipped Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell [< 1 ms]
+  Skipped Integration_T_DA_068_GkReentryReleaseCoverGkZone [< 1 ms]
+  Skipped Integration_T_DA_069_PostTrapCooldownBlocksRefire [< 1 ms]
+  Skipped Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition [< 1 ms]
+  Skipped Integration_T_DA_071_PhaseChangeTakesEffectImmediately [< 1 ms]
+  Skipped Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget [< 1 ms]
+  Skipped Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick [< 1 ms]
+  Skipped Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget [< 1 ms]
+/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+
+Passed!  - Failed:     0, Passed:   148, Skipped:    28, Total:   176, Duration: 705 ms - TacticalDirector.DefensiveAI.Tests.dll (net8.0)
+  perception-system-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/perception-system/Tests/bin/Debug/net8.0/TacticalDirector.PerceptionSystem.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/perception-system/Tests/bin/Debug/net8.0/TacticalDirector.PerceptionSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  first-touch-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/first-touch/Tests/bin/Debug/net8.0/TacticalDirector.FirstTouch.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/first-touch/Tests/bin/Debug/net8.0/TacticalDirector.FirstTouch.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+  Skipped AgentBehindOpponentWall_IsPerceptionIsolated [57 ms]
+  Skipped AnticipationAttribute_ReadCorrectlyForShoulderCheckInterval [< 1 ms]
+  Skipped Awareness_BuildsOverFirstTicks_ColdStart [< 1 ms]
+  Skipped BallContactForcedRefresh_ReachesCorrectAgentsOnly [< 1 ms]
+  Skipped BallPosition_3DTo2DProjection_Correct [< 1 ms]
+  Skipped DecisionsAttribute_ReadCorrectlyFromPlayerAttributes [< 1 ms]
+  Skipped Determinism_100Heartbeats_IdenticalInputsProduceBytIdenticalSnapshots [< 1 ms]
+  Skipped EliteMidfielder_VsNoviceDefender_MeasurableFovDifference [< 1 ms]
+  Skipped Fov_RecomputedFreshEachHeartbeat [< 1 ms]
+  Skipped FovOrientation_FollowsAgentStateFacingDirection [< 1 ms]
+  Skipped FullHeartbeat_22Agents_AllSnapshotsProducedNoNulls [< 1 ms]
+  Skipped LrecTracking_NoMemoryLeakOverExtendedSimulation [< 1 ms]
+  Skipped Perception_NeverWritesToSpatialHash [< 1 ms]
+  Skipped PressureQuery_UsesDistinct3mRadiusCall [< 1 ms]
+  Skipped QueryRadius_ReturnsCorrectCandidateCount_SelfExcluded [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    51, Skipped:    15, Total:    66, Duration: 112 ms - TacticalDirector.PerceptionSystem.Tests.dll (net8.0)
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped CollisionToFirstTouchToBallPhysics_CompletePipeline [116 ms]
+  Skipped ConsecutiveTouches_OneTwoPass_BothEvaluateCorrectly [< 1 ms]
+  Skipped ControlledOutcome_AgentMovementReceivesDribblingModifier [< 1 ms]
+  Skipped EventEmission_FirstTouchEventPublishedOnContact [< 1 ms]
+  Skipped GoalkeeperFootControl_ProcessedNormally [< 1 ms]
+  Skipped PossessionChange_UpdatesTeamPossessionState [< 1 ms]
+  Skipped PressureQueryFromSpatialHash_ReturnsCorrectOpponents [< 1 ms]
+  Skipped ReplayDeterminism_IdenticalMatchStateProducesIdenticalResults [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    69, Skipped:     8, Total:    77, Duration: 886 ms - TacticalDirector.FirstTouch.Tests.dll (net8.0)
+  decision-tree.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  decision-tree-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/Tests/bin/Debug/net8.0/TacticalDirector.DecisionTree.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/decision-tree/Tests/bin/Debug/net8.0/TacticalDirector.DecisionTree.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped Balance_HighFinishingStriker_SelectsShoot_InAttackingThird [57 ms]
+  Skipped Balance_HighPressing_IncreasesPressBehaviorShare [< 1 ms]
+  Skipped Balance_LowComposure_ShowsHigherSelectionVariance [< 1 ms]
+  Skipped Balance_ShortPassing_SelectsShortPassMoreOften [< 1 ms]
+
+Passed!  - Failed:     0, Passed:   170, Skipped:     4, Total:   174, Duration: 574 ms - TacticalDirector.DecisionTree.Tests.dll (net8.0)
+  match-engine.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  attacking-ai-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/attacking-ai/Tests/bin/Debug/net8.0/TacticalDirector.AttackingAI.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/attacking-ai/Tests/bin/Debug/net8.0/TacticalDirector.AttackingAI.Tests.dll (.NETCoreApp,Version=v8.0)
+  event-system-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/event-system/tests/bin/Debug/net8.0/TacticalDirector.EventSystem.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/event-system/tests/bin/Debug/net8.0/TacticalDirector.EventSystem.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+  Skipped FR_EVT_006_CanonicalNoPaddingLayout_Stage0Plus1 [62 ms]
+  Skipped FR_EVT_012_SnapshotRoundTrip_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_013_TierB_Activation_Stage5Plus [< 1 ms]
+  Skipped FR_EVT_031_G1_PhaseDigestGolden_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_043_G2_CosmeticDropGolden_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_048_PerPublishZeroAllocation_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_072_Fixed64_Reverification_Stage5Plus [< 1 ms]
+  Skipped FR_EVT_077_ReplayIsolation_Stage1Plus [< 1 ms]
+  Skipped FR_EVT_080_UnknownOrdinalFixtureLoad_Stage0Plus1 [< 1 ms]
+  Skipped FR_EVT_081_VersionIncompatibleFixtureLoad_Stage0Plus1 [< 1 ms]
+  Skipped InvariantEnforcer_RunsAfterAssignmentBeforePublish [86 ms]
+  Skipped Tick_InPossession_LooseBall_EmitsEmptyDirective [< 1 ms]
+  Skipped Determinism_90MinuteReplay_BitIdenticalDigest [< 1 ms]
+  Skipped Determinism_EntityIdIterationOrder_StableAcrossRuns [< 1 ms]
+  Skipped Determinism_HysteresisStateDigest_RoundTrip [< 1 ms]
+  Skipped Determinism_InvariantDemotion_IdenticalOrderAcross1000Runs [< 1 ms]
+  Skipped Determinism_RngDomainTagIsolation_NoCrossDomainBleed [< 1 ms]
+  Skipped Determinism_TransitionHoldState_RoundTrip [< 1 ms]
+  Skipped Integration_9AgentInPossession_CounterAttackProfile_FastestTiming [< 1 ms]
+  Skipped Integration_9AgentInPossession_DirectProfile_MaxThreeRunners [< 1 ms]
+  Skipped Integration_9AgentInPossession_PossessionProfile_InvariantsSatisfied [< 1 ms]
+  Skipped Integration_AllDefenseLineMembership_ZeroRunners [< 1 ms]
+  Skipped Integration_AntiChaosCombination_Resolved [< 1 ms]
+  Skipped Integration_DepthOffset_VerifiedAcrossAllThreeProfiles [< 1 ms]
+  Skipped Integration_Hysteresis_OscillationSuppressedOver10Ticks [< 1 ms]
+  Skipped Integration_OutOfPossession_SkipsAllComputation_5Ticks [< 1 ms]
+  Skipped Integration_OverloadDeclared_CorrectFlank [< 1 ms]
+  Skipped Integration_OverloadNotDeclared_WeakSideExcluded [< 1 ms]
+  Skipped Integration_PossessionToTransitionToOutOfPossession_15Ticks [< 1 ms]
+  Skipped Integration_WidthHolding_BothSides [< 1 ms]
+  Skipped Performance_PerTick_10Agents_CounterAttackProfile_Under0_1ms [< 1 ms]
+  Skipped Performance_PerTick_9Agents_PossessionProfile_Under0_1ms [< 1 ms]
+  Skipped Performance_PerTick_AntiChaosWorstCase_Under0_1ms [40 ms]
+  Skipped Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable [28 ms]
+
+Passed!  - Failed:     0, Passed:    54, Skipped:    10, Total:    64, Duration: 594 ms - TacticalDirector.EventSystem.Tests.dll (net8.0)
+
+Passed!  - Failed:     0, Passed:    65, Skipped:    23, Total:    88, Duration: 902 ms - TacticalDirector.AttackingAI.Tests.dll (net8.0)
+  match-analytics.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-analytics/bin/Debug/netstandard2.1/TacticalDirector.MatchAnalytics.dll
+  match-viewer.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-viewer/bin/Debug/netstandard2.1/TacticalDirector.MatchViewer.dll
+  season-save.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/season-save/bin/Debug/netstandard2.1/TacticalDirector.SeasonSave.dll
+  match-engine-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  match-client-core.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-core/bin/Debug/netstandard2.1/TacticalDirector.MatchClientCore.dll
+  ui-framework.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ui-framework/bin/Debug/netstandard2.1/TacticalDirector.UiFramework.dll
+  match-client-web.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-web/bin/Debug/netstandard2.1/TacticalDirector.MatchClientWeb.dll
+  ui-framework-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ui-framework/Tests/bin/Debug/net8.0/TacticalDirector.UiFramework.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/ui-framework/Tests/bin/Debug/net8.0/TacticalDirector.UiFramework.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 1 s - TacticalDirector.UiFramework.Tests.dll (net8.0)
+  match-client-web-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-web/tests/bin/Debug/net8.0/TacticalDirector.MatchClientWeb.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-web/tests/bin/Debug/net8.0/TacticalDirector.MatchClientWeb.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    60, Skipped:     0, Total:    60, Duration: 4 s - TacticalDirector.MatchClientWeb.Tests.dll (net8.0)
+  Skipped Descriptive_GoalwardRunner_MarkerStateAndContact(0,3.0f) [6 ms]
+  Skipped Descriptive_GoalwardRunner_MarkerStateAndContact(1,3.0f) [31 ms]
+  Skipped Descriptive_GoalwardRunner_MarkerStateAndContact(0,5.0f) [31 ms]
+  Skipped Descriptive_GoalwardRunner_MarkerStateAndContact(1,5.0f) [31 ms]
+  Skipped Descriptive_InterceptVersusMove_NearTheMarkPoint(0) [< 1 ms]
+  Skipped Descriptive_InterceptVersusMove_NearTheMarkPoint(1) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(0,2.6f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(1,2.6f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(0,3.5f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(1,3.5f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(0,5.0f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(1,5.0f,False) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(0,2.6f,True) [< 1 ms]
+  Skipped Descriptive_RunnerEnvelope_PeaksCommandFlipsAndGuardLocks(1,2.6f,True) [< 1 ms]
+  Skipped Descriptive_StationaryMan_MarkerSettlingAndSeparation(0,False) [< 1 ms]
+  Skipped Descriptive_StationaryMan_MarkerSettlingAndSeparation(1,False) [< 1 ms]
+  Skipped Descriptive_StationaryMan_MarkerSettlingAndSeparation(0,True) [< 1 ms]
+  Skipped Descriptive_StationaryMan_MarkerSettlingAndSeparation(1,True) [< 1 ms]
+  Skipped IdentityProbe_SixSeedDigestsAtFrame18000 [50 ms]
+  Skipped ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice [50 ms]
+
+Passed!  - Failed:     0, Passed:  1001, Skipped:     1, Total:  1002, Duration: 8 m 41 s - TacticalDirector.MatchEngine.Tests.dll (net8.0)
+  match-client-core-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-core/tests/bin/Debug/net8.0/TacticalDirector.MatchClientCore.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-client-core/tests/bin/Debug/net8.0/TacticalDirector.MatchClientCore.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   190, Skipped:     0, Total:   190, Duration: 745 ms - TacticalDirector.MatchClientCore.Tests.dll (net8.0)
+  client-app.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/client-app/bin/Debug/netstandard2.1/TacticalDirector.ClientApp.dll
+  season-save-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/season-save/tests/bin/Debug/net8.0/TacticalDirector.SeasonSave.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/season-save/tests/bin/Debug/net8.0/TacticalDirector.SeasonSave.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   550, Skipped:     0, Total:   550, Duration: 4 m 3 s - TacticalDirector.SeasonSave.Tests.dll (net8.0)
+  match-viewer-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-viewer/tests/bin/Debug/net8.0/TacticalDirector.MatchViewer.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-viewer/tests/bin/Debug/net8.0/TacticalDirector.MatchViewer.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    78, Skipped:     0, Total:    78, Duration: 3 s - TacticalDirector.MatchViewer.Tests.dll (net8.0)
+  match-analytics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-analytics/Tests/bin/Debug/net8.0/TacticalDirector.MatchAnalytics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/match-analytics/Tests/bin/Debug/net8.0/TacticalDirector.MatchAnalytics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 2 s - TacticalDirector.MatchAnalytics.Tests.dll (net8.0)
+  client-app-tests.gen -> /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/client-app/tests/bin/Debug/net8.0/TacticalDirector.ClientApp.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/worktrees/w13-publish/testing-strategy/precommit-snapshot/src/client-app/tests/bin/Debug/net8.0/TacticalDirector.ClientApp.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs [74 ms]
+  Skipped S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit [2 ms]
+
+Passed!  - Failed:     0, Passed:   191, Skipped:     2, Total:   193, Duration: 4 s - TacticalDirector.ClientApp.Tests.dll (net8.0)
+── Quarantine empty ─────────────────────────────────────────────────
+── Gate PASSED ──────────────────────────────────────────────────────
+Developer bootstrap complete; pre-commit cache prepared.

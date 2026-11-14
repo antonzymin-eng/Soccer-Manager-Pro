@@ -117,7 +117,7 @@ class EvidenceManifestTests(unittest.TestCase):
         )
         self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
         self.assertIn("Evidence integrity contracts: PASS", completed.stdout)
-        self.assertIn("41 registered directories", completed.stdout)
+        self.assertIn("42 registered directories", completed.stdout)
 
     def test_full_manifest_fails_on_digest_mismatch(self) -> None:
         checker = _load_checker()

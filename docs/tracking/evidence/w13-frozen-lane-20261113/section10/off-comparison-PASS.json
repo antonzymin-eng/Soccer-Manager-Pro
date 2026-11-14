@@ -1,0 +1,677 @@
+{
+  "state": "passed",
+  "startedUtc": "2026-11-13T23:28:58.595754+00:00",
+  "completed": [
+    {
+      "arm": "reference",
+      "seed": "0F1E2D3C4B5A6978",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/0F1E2D3C4B5A6978",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:28:58.601721+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:30:44.246887+00:00",
+      "error": null
+    },
+    {
+      "arm": "reference",
+      "seed": "00000000D1A6D05E",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/00000000D1A6D05E",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:28:58.601637+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:30:45.226788+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "0F1E2D3C4B5A6978",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0F1E2D3C4B5A6978",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/0F1E2D3C4B5A6978",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:30:45.003297+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:32:32.142213+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "00000000D1A6D05E",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000D1A6D05E",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/00000000D1A6D05E",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:30:46.024056+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:32:34.888320+00:00",
+      "error": null
+    },
+    {
+      "arm": "reference",
+      "seed": "0000000000000001",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/0000000000000001",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:32:33.881936+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:34:22.842252+00:00",
+      "error": null
+    },
+    {
+      "arm": "reference",
+      "seed": "00000000ABCDEF12",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/00000000ABCDEF12",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:32:36.498013+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:34:23.797899+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "0000000000000001",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000000000001",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/0000000000000001",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:34:23.538962+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:36:11.394194+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "00000000ABCDEF12",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "00000000ABCDEF12",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/00000000ABCDEF12",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:34:24.520701+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:36:14.541887+00:00",
+      "error": null
+    },
+    {
+      "arm": "reference",
+      "seed": "0000000099887766",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/0000000099887766",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:36:14.112420+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:38:47.953273+00:00",
+      "error": null
+    },
+    {
+      "arm": "reference",
+      "seed": "000000005A5A5A5A",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/reference/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/reference/000000005A5A5A5A",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:36:17.525810+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:38:48.314923+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "000000005A5A5A5A",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "000000005A5A5A5A",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/000000005A5A5A5A",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:38:49.256540+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:40:43.935196+00:00",
+      "error": null
+    },
+    {
+      "arm": "w13",
+      "seed": "0000000099887766",
+      "command": [
+        "/workspace/work/dotnet/dotnet",
+        "--fx-version",
+        "8.0.32",
+        "/workspace/work/w13-frozen-20261113/section10/w13/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+        "0000000099887766",
+        "0",
+        "observed",
+        "/workspace/work/w13-frozen-20261113/section10/off-comparison/w13/0000000099887766",
+        "324000",
+        "off"
+      ],
+      "startedUtc": "2026-11-13T23:38:48.893491+00:00",
+      "exitCode": 0,
+      "finishedUtc": "2026-11-13T23:40:44.971373+00:00",
+      "error": null
+    }
+  ],
+  "running": [],
+  "pairs": [
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "b0cc26679ce55a1ee48c699d5f563c5c7929cc63e061bca1ed30e8d23d251e17",
+          "w13Sha256": "b0cc26679ce55a1ee48c699d5f563c5c7929cc63e061bca1ed30e8d23d251e17",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "fb73bc853f5a7ea64d0052446f5c8b56f304cd46748e65d9c2268e795864a6b5",
+          "w13Sha256": "fb73bc853f5a7ea64d0052446f5c8b56f304cd46748e65d9c2268e795864a6b5",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "7bd94989858653c959c58193e23a1d482127bf7efe715607266bdefcb0f5c92b",
+          "w13Sha256": "7bd94989858653c959c58193e23a1d482127bf7efe715607266bdefcb0f5c92b",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "07df9e369e5c2aeb50a49626c3acfc0fbf8d8768d7c81037f99d3cf52f5e903e",
+          "w13Sha256": "07df9e369e5c2aeb50a49626c3acfc0fbf8d8768d7c81037f99d3cf52f5e903e",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1507458,
+          "referenceSha256": "22bbcc0ed7dbf51cda78c4c6c3e4d7d51a39b638e57462e4c269c3ce19bf267a",
+          "w13Sha256": "22bbcc0ed7dbf51cda78c4c6c3e4d7d51a39b638e57462e4c269c3ce19bf267a",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "de4d5b395d9b9a363abfb4f99a02d1fc0690685e667e20613e8e4d9d156f747c",
+          "w13Sha256": "de4d5b395d9b9a363abfb4f99a02d1fc0690685e667e20613e8e4d9d156f747c",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "e0a96d826da462e1d42f104dfb3613f660c1756d15013fd8310943b0cff97201",
+          "w13Sha256": "e0a96d826da462e1d42f104dfb3613f660c1756d15013fd8310943b0cff97201",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "69b88e652403b75ad177cdec594b99d2aad03dfe275370dd426a0642fdd87258",
+          "w13Sha256": "69b88e652403b75ad177cdec594b99d2aad03dfe275370dd426a0642fdd87258",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "e25eae2f9b309da624076e91390278de873213b7d9f8932e3a6263ae1c1b18f0",
+          "w13Sha256": "e25eae2f9b309da624076e91390278de873213b7d9f8932e3a6263ae1c1b18f0",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "ede4eede40f84fc2ab8c87dcdac0fe3acb232b7a0625edafb4acf6f51bcdc438",
+          "w13Sha256": "ede4eede40f84fc2ab8c87dcdac0fe3acb232b7a0625edafb4acf6f51bcdc438",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "bdddc47d7b20b8c921b88968ce92c7c93988190ffb160b24bacdba5a9612a831",
+          "w13Sha256": "bdddc47d7b20b8c921b88968ce92c7c93988190ffb160b24bacdba5a9612a831",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "80431ecb044c3860b1d69b8d4958faf30c30fe7d137400112bd399d7382471f3",
+          "w13Sha256": "80431ecb044c3860b1d69b8d4958faf30c30fe7d137400112bd399d7382471f3",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1502831,
+          "referenceSha256": "e97785a8373b33c1971e5dd541480a1161cc3eb9e683faaa64adf65c17d3b036",
+          "w13Sha256": "e97785a8373b33c1971e5dd541480a1161cc3eb9e683faaa64adf65c17d3b036",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "e793e2b736d9218ec00e1b1d9eae3ef6d137746892ed988dfb009da91ba1c94f",
+          "w13Sha256": "e793e2b736d9218ec00e1b1d9eae3ef6d137746892ed988dfb009da91ba1c94f",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "cf38b12f19bd3a4ba401744ff358d7b6316e8d5423b59737d6d4b6834817d0e3",
+          "w13Sha256": "cf38b12f19bd3a4ba401744ff358d7b6316e8d5423b59737d6d4b6834817d0e3",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "c1818f19a8d1ef569b5d0014abe81dec046b92be04c059f88e2e629f5741829b",
+          "w13Sha256": "c1818f19a8d1ef569b5d0014abe81dec046b92be04c059f88e2e629f5741829b",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    },
+    {
+      "seed": "0000000000000001",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "87243fc6ea65a5efc284e9e6060cfeb5d77293542429aebb01f37f471e125ff0",
+          "w13Sha256": "87243fc6ea65a5efc284e9e6060cfeb5d77293542429aebb01f37f471e125ff0",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "87a538ee9e0e149a1dc267f00877e5a8edc2092a103b3d558ce43ac9c6aa613e",
+          "w13Sha256": "87a538ee9e0e149a1dc267f00877e5a8edc2092a103b3d558ce43ac9c6aa613e",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "64a9009207d060632718e407eb465f6cff95c64403bc2a2b50e2d65792d51706",
+          "w13Sha256": "64a9009207d060632718e407eb465f6cff95c64403bc2a2b50e2d65792d51706",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "e353a6548a1b35d6057383d9078bc7401e7da79e70dcdc197ad470ddb06cd994",
+          "w13Sha256": "e353a6548a1b35d6057383d9078bc7401e7da79e70dcdc197ad470ddb06cd994",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1498257,
+          "referenceSha256": "044493199e19b1704f99f7da8d189bd6bd105dc812534e705be5f76d93791934",
+          "w13Sha256": "044493199e19b1704f99f7da8d189bd6bd105dc812534e705be5f76d93791934",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "62a9efbb771119100845866605c4f17e251e7eb104eda17516c1ff83463a1dc4",
+          "w13Sha256": "62a9efbb771119100845866605c4f17e251e7eb104eda17516c1ff83463a1dc4",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "5f567fa7825222f21a313ee63c4d2e46e05f69564216d76decd0194837c66c48",
+          "w13Sha256": "5f567fa7825222f21a313ee63c4d2e46e05f69564216d76decd0194837c66c48",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "fb53e009eeca272c6c915b49364535c876a8314ce8e0b3112b9778d3213ee84e",
+          "w13Sha256": "fb53e009eeca272c6c915b49364535c876a8314ce8e0b3112b9778d3213ee84e",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "85fee1a1223b13577841dac14d4cdd4ac27d2b139a7f8ff4b9364c1c2ef6688c",
+          "w13Sha256": "85fee1a1223b13577841dac14d4cdd4ac27d2b139a7f8ff4b9364c1c2ef6688c",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "0de6c2e867b194e5cbbb963976fe9ac9b30a3d40e572af79b69deb832c2ead1c",
+          "w13Sha256": "0de6c2e867b194e5cbbb963976fe9ac9b30a3d40e572af79b69deb832c2ead1c",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "f03d746efdeae858812c8b746ffdb218e2a5e0d46e15bfab5a8237bd8225a879",
+          "w13Sha256": "f03d746efdeae858812c8b746ffdb218e2a5e0d46e15bfab5a8237bd8225a879",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "85112485334909e6780db13d6dea162131ecfd9b07060254b5f1f89864a44e2f",
+          "w13Sha256": "85112485334909e6780db13d6dea162131ecfd9b07060254b5f1f89864a44e2f",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1499679,
+          "referenceSha256": "be26b5a1fd043332e9fdcb200c72185ad1d824a423e073fcae44656f41b86348",
+          "w13Sha256": "be26b5a1fd043332e9fdcb200c72185ad1d824a423e073fcae44656f41b86348",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "55bdf25f09a7ebbb823324c1bdfab530ccf3de072d1616408f8dba5ebfa92fe6",
+          "w13Sha256": "55bdf25f09a7ebbb823324c1bdfab530ccf3de072d1616408f8dba5ebfa92fe6",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "02da76f4ef77606c8aed4efad3f0ee1b63d13572544dfda82b7f9f11a1bb15e9",
+          "w13Sha256": "02da76f4ef77606c8aed4efad3f0ee1b63d13572544dfda82b7f9f11a1bb15e9",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "aa28f95a66335f0b279abc9cc51716af9b4a1b097be868f81b2c9fcefa1807dc",
+          "w13Sha256": "aa28f95a66335f0b279abc9cc51716af9b4a1b097be868f81b2c9fcefa1807dc",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "8258cd259b2791798baf94cfe441a64e24c099a01d8cbf0200b3e0314ad6ecda",
+          "w13Sha256": "8258cd259b2791798baf94cfe441a64e24c099a01d8cbf0200b3e0314ad6ecda",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "a17e4eb31390c482dd4566aabc59285156a8fceeb248ea53089012405f316cb8",
+          "w13Sha256": "a17e4eb31390c482dd4566aabc59285156a8fceeb248ea53089012405f316cb8",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "b0235b402eafebc710af8528e9321e902fbcba0a8ad0cd624909b6866eb4f8e2",
+          "w13Sha256": "b0235b402eafebc710af8528e9321e902fbcba0a8ad0cd624909b6866eb4f8e2",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "5f03bcb4e14736ef79b5aa4b8ab3beb6e0cbb54ca943e7c53574879831dee12e",
+          "w13Sha256": "5f03bcb4e14736ef79b5aa4b8ab3beb6e0cbb54ca943e7c53574879831dee12e",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1501812,
+          "referenceSha256": "4b7f41d37b7dcf3501c12ba30d1dfb517b86bd0609672dec947c949d70d20099",
+          "w13Sha256": "4b7f41d37b7dcf3501c12ba30d1dfb517b86bd0609672dec947c949d70d20099",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "f665f6c0a374b9a58368d2aba64ddbd48443305945a7e9595a236ae77fca962b",
+          "w13Sha256": "f665f6c0a374b9a58368d2aba64ddbd48443305945a7e9595a236ae77fca962b",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "665fdd18410062fa0564f64567a8bde829545b70776f37340c45245b5f2863a6",
+          "w13Sha256": "665fdd18410062fa0564f64567a8bde829545b70776f37340c45245b5f2863a6",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "e63c45bc428f9d560c17854124e7b55729a31e2049a49c24b5b3efdd881f9fa8",
+          "w13Sha256": "e63c45bc428f9d560c17854124e7b55729a31e2049a49c24b5b3efdd881f9fa8",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    },
+    {
+      "seed": "0000000099887766",
+      "ticks": 324000,
+      "streams": {
+        "digests": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "45975f2880cef153efcb8580bf638bfcd613d611ed45f6a50ea7cd0bc47e25cb",
+          "w13Sha256": "45975f2880cef153efcb8580bf638bfcd613d611ed45f6a50ea7cd0bc47e25cb",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "aligned": {
+          "equal": true,
+          "referenceBytes": 10368000,
+          "referenceSha256": "7dbbdb9bd1b91cdd1a93219d2a3abfd66dd64bdfe9520a73825074ab847bed21",
+          "w13Sha256": "7dbbdb9bd1b91cdd1a93219d2a3abfd66dd64bdfe9520a73825074ab847bed21",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "trajectory": {
+          "equal": true,
+          "referenceBytes": 79056000,
+          "referenceSha256": "547b45f15317b1ea4ccd87134e826c6b054ccc31a16cc24a8bab9ca24454be58",
+          "w13Sha256": "547b45f15317b1ea4ccd87134e826c6b054ccc31a16cc24a8bab9ca24454be58",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "team-possession": {
+          "equal": true,
+          "referenceBytes": 2592000,
+          "referenceSha256": "ba4891f20c013c769af30f53c5c7838c631fc8737beb83c29c743f48a4bdea79",
+          "w13Sha256": "ba4891f20c013c769af30f53c5c7838c631fc8737beb83c29c743f48a4bdea79",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "ledger": {
+          "equal": true,
+          "referenceBytes": 1510595,
+          "referenceSha256": "c8152f90f45caa98c50c6762e0c025f6b7c66ac735552acd334bad9acf7c658c",
+          "w13Sha256": "c8152f90f45caa98c50c6762e0c025f6b7c66ac735552acd334bad9acf7c658c",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "geometry": {
+          "equal": true,
+          "referenceBytes": 10151812,
+          "referenceSha256": "74a01f353f514f205b4d072fe56b7e125182cfb3243ba2716d926e5cd67e46d5",
+          "w13Sha256": "74a01f353f514f205b4d072fe56b7e125182cfb3243ba2716d926e5cd67e46d5",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "marking": {
+          "equal": true,
+          "referenceBytes": 13283754,
+          "referenceSha256": "c90546747214c35b43ddcffd010a052c93d36e7c7c9e70efc733cc613f415fea",
+          "w13Sha256": "c90546747214c35b43ddcffd010a052c93d36e7c7c9e70efc733cc613f415fea",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        },
+        "mark-witness": {
+          "equal": true,
+          "referenceBytes": 16847688,
+          "referenceSha256": "a68e928a33fe959ea159b49b895b961dd0b96df5976d57f4e16993a741804ae2",
+          "w13Sha256": "a68e928a33fe959ea159b49b895b961dd0b96df5976d57f4e16993a741804ae2",
+          "firstDifferentByte": null,
+          "firstDifferentTick": null
+        }
+      },
+      "equal": true
+    }
+  ],
+  "failures": [],
+  "finishedUtc": "2026-11-13T23:40:46.478137+00:00"
+}

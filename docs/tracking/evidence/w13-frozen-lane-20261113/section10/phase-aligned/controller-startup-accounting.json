@@ -1,0 +1,11 @@
+{
+  "createdUtc": "2026-11-13T23:48:02.801677+00:00",
+  "issue": "A second controller invocation was accidentally attempted while the original controller was active.",
+  "duplicateOutcome": "The duplicate stopped on FileExistsError when the already-completed preflight directory existed. It launched no captures. The original controller remains the sole capture scheduler.",
+  "retainedEvidence": "All per-run command/exit receipts, raw streams, summaries and audits remain intact. Shared aggregate stdout logs were truncated by the duplicate shell redirection; their initial lines are not complete originals. Per-run run.json receipts are authoritative.",
+  "freezeTimestampCaveat": "The duplicate rewrote measurement-freeze.json with identical input hash mappings and a later frozenUtc stamp. The file birth time precedes the original preflight and captures; the JSON stamp now describes the duplicate write, not initial freezing.",
+  "freezeFileStat": "birth=2026-11-13 15:41:27.858139134 -0800 modified=2026-11-13 15:43:10.611137092 -0800",
+  "capturedInputHashesUnchanged": true,
+  "sourcePreparedBeforeCaptures": "birth=2026-11-13 15:37:42.391951750 -0800 modified=2026-11-13 15:37:42.397215651 -0800",
+  "protocolNote": "AI-composition eligibility follows W13 plan 4.2 and 7. The extra post-Resolve assertion was an instrument phase mismatch, corrected before full armed capture. No owner approval or protocol waiver is claimed; the earlier clarification question was withdrawn after the phase mismatch was established."
+}

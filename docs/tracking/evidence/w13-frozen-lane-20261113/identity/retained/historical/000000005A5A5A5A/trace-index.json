@@ -1,0 +1,16 @@
+{
+  "format": "record-tar-xz-v2",
+  "archiveSha256": "6e814a31736138df36ad1b417f695f0c7747a51d6d2af6b1c2d4344a87f8e49d",
+  "streams": {
+    "digests.bin": {
+      "bytes": 10368000,
+      "asRunGzipSha256": "be89195073c6135872d8a017980a825bb3d8b244bb84378e56a1a6be9f70f879",
+      "asRunGzipBytes": 10371173,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "70a6b9e24554dbe9294dd2c3be10c7f683e8d497833c84ed2ec04372fc47be30"
+    }
+  },
+  "asRunGzipContainersRetained": false
+}

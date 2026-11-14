@@ -1,0 +1,118 @@
+{
+  "startedUtc": "2026-11-13T23:03:43.560674+00:00",
+  "state": "passed",
+  "stage": "w13_identity",
+  "completed": [
+    {
+      "arm": "historical",
+      "seed": "00000000D1A6D05E",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "historical",
+      "seed": "0F1E2D3C4B5A6978",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "historical",
+      "seed": "0000000000000001",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "historical",
+      "seed": "00000000ABCDEF12",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "historical",
+      "seed": "000000005A5A5A5A",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "historical",
+      "seed": "0000000099887766",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "0F1E2D3C4B5A6978",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "0F1E2D3C4B5A6978",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "00000000D1A6D05E",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "00000000D1A6D05E",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "0000000000000001",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "0000000000000001",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "00000000ABCDEF12",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "00000000ABCDEF12",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "0000000099887766",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "0000000099887766",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_0",
+      "seed": "000000005A5A5A5A",
+      "exitCode": 0,
+      "error": null
+    },
+    {
+      "arm": "w13_off",
+      "seed": "000000005A5A5A5A",
+      "exitCode": 0,
+      "error": null
+    }
+  ],
+  "running": [],
+  "failures": [],
+  "finishedUtc": "2026-11-13T23:15:31.777260+00:00"
+}

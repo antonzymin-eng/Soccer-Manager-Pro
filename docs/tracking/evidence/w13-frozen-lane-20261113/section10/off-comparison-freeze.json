@@ -1,0 +1,9 @@
+{
+  "frozenUtc": "2026-11-13T23:28:58.595524+00:00",
+  "files": {
+    "run_off_comparison.py": "27262d6f992bdcdc5caeb088342c4e60e6422da510df5cccaa71d5cab0176f40",
+    "capture-prepared.json": "f1b3072c2a2fc67e3e734a17c44bb836ba1c45549bed04779732a585df10fc37",
+    "integration-source.json": "df4ba971d2be077fc1b59d385593a184416675346e920ae85d4e6c14e73d99dd",
+    "OFF-COMPARISON-PROTOCOL.md": "486c7c96f329285c76dac87525b6f5c53717cdcc77221da4a24584a5d41ebf4a"
+  }
+}

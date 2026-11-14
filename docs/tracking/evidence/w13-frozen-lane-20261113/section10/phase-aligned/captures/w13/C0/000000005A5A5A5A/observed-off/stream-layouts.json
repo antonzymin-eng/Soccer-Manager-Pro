@@ -1,0 +1,14 @@
+{
+  "marking": {
+    "recordBytes": 246,
+    "description": "frame i32, then 22*(mode u8,target i8,hasTarget u8,targetX f32,targetY f32)"
+  },
+  "witness": {
+    "recordBytes": 312,
+    "description": "frame i32, then 22*14 byte source-phase witness, as listed in MarkObserver.cs"
+  },
+  "retainedLag": {
+    "recordBytes": 16,
+    "description": "every frame: frame i32, hasTargetMask u32, possessionLagMask u32, inactiveLagMask u32; bit index = entity id"
+  }
+}

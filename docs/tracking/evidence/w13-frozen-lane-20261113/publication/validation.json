@@ -1,0 +1,38 @@
+{
+  "createdUtc": "2026-11-14T00:46:59.532622+00:00",
+  "validatedIndexTree": "d33fb07e4c2d8a97df6b09c1b62571cf39414331",
+  "productionSrcTree": "95052885a34fe99c4de41f157b6253bc5bee72fc",
+  "precommitComposition": {
+    "command": "bash tools/bootstrap-dev.sh (official cold staged-index preparation)",
+    "exitCode": 0,
+    "assemblies": 37,
+    "passed": 4623,
+    "failed": 0,
+    "skippedFromConsole": 206,
+    "timeBudget": "Documented cold preparation does not enforce the 60-second acceptance bound; no performance claim."
+  },
+  "finalMetadataDeltaBeforeReceipt": [
+    "docs/tracking/evidence/w13-frozen-lane-20261113/README.md",
+    "docs/tracking/evidence/w13-frozen-lane-20261113/SHA256SUMS",
+    "docs/tracking/evidence/w13-frozen-lane-20261113/publication/portable-rebuild-check.json",
+    "docs/tracking/evidence/w13-frozen-lane-20261113/section10/source-integration.patch",
+    "docs/tracking/evidence/w13-frozen-lane-20261113/section10/source-integration.patch.xz",
+    "docs/tracking/evidence/w13-frozen-lane-20261113/section10/source-integration.patch.xz.json"
+  ],
+  "finalMetadataChecks": "Complete-manifest, 22 evidence tests, documentation consistency, binary guard, whitespace checks, decoded payload verification and portable-rebuild prefix checks passed. Manifest/whitespace checks are rerun after this receipt is added.",
+  "commitMethod": "Reuse the completed full hook composition on identical runtime/tooling inputs; do not repeat it during this metadata-only publication commit. Per-command hooksPath disables only that redundant commit invocation; Git LFS payloads were explicitly uploaded.",
+  "rawEvidenceVerification": {
+    "decodedStores": 62,
+    "historicalSeeds": 6,
+    "w13IdentityPairs": 6,
+    "integratedOffPairs": 6,
+    "completedSection10Captures": 32,
+    "status": "PASS"
+  },
+  "portableRebuild": {
+    "arms": 3,
+    "prefixTicksPerArm": 1000,
+    "matchedRetainedDigests": true
+  },
+  "limitations": "Not a governing Unity build, not complete \u00a710 analysis, not a 60-second commit-latency certification, not merge/enablement approval."
+}

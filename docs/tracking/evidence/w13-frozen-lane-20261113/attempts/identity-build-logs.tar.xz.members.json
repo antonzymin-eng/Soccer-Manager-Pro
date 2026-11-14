@@ -1,0 +1,29 @@
+{
+  "archiveSha256": "619e3b60f4fcbdfb0909c3cd2f0208617708617d51f67385a4a08bd5ba6c99e6",
+  "members": {
+    "historical-build-attempt-1.log": {
+      "bytes": 9065,
+      "sha256": "85b15964dfa42a94c293b5e95aeaf99d607af005d33542e1f8e1784b647887e1"
+    },
+    "historical-build.log": {
+      "bytes": 3935,
+      "sha256": "47f934929b239400336317bbdae1bd0525497666916149c5662a48e3c9fb514d"
+    },
+    "prepare-identity-attempt-1.log": {
+      "bytes": 1025,
+      "sha256": "324e3bdf317548c2c10976bc883644ca10699d2ed133ccf8cdb6b74f1197ccc5"
+    },
+    "prepare-identity.log": {
+      "bytes": 442,
+      "sha256": "1096f86042c622d8972c3933f9e015284c2a8b1b3e0e382fb8814ae21df49b07"
+    },
+    "w13_0-build.log": {
+      "bytes": 8423,
+      "sha256": "d8597d59c496121f50312b687ee8e790e105cbe0b1212cd84228cc4639627961"
+    },
+    "w13_off-build.log": {
+      "bytes": 8543,
+      "sha256": "503d0189c4c57299712b6c10747533e13c27f5fa4dccb25612ff39af2c4ac0b4"
+    }
+  }
+}

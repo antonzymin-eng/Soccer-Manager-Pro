@@ -1,0 +1,20 @@
+{
+  "reference": "645924057694fd9aa8bf2ab33e43a5810d3d3feb",
+  "w13": "4171d3d1e3f07a661e085ffa6f51770384af92c8",
+  "measurementCommit": "96684cbc4ced594da581ef2e31ce955f44c38f48",
+  "tree": "903e6e9b910c449bcc8aa2403750a1b448fc184c",
+  "srcTree": "95052885a34fe99c4de41f157b6253bc5bee72fc",
+  "scope": "source-only measurement integration; not a resolved landing merge",
+  "sourceConflicts": [
+    {
+      "path": "src/match-engine/MatchEngine.cs",
+      "conflicts": 1,
+      "resolution": "both comment blocks retained; #543 history appended/renumbered"
+    },
+    {
+      "path": "src/match-engine/MatchEngineConstants.cs",
+      "conflicts": 2,
+      "resolution": "both comment blocks retained; #543 history appended/renumbered"
+    }
+  ]
+}

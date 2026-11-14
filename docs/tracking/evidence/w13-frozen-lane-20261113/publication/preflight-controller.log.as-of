@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/workspace/work/w13-frozen-20261113/section10/phase-aligned/preflight.py", line 57, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "/workspace/work/w13-frozen-20261113/section10/phase-aligned/preflight.py", line 7, in main
+    pin=json.loads((ROOT/'capture-prepared.json').read_text());out=ROOT/'preflight';out.mkdir(exist_ok=False)
+                                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileExistsError: [Errno 17] File exists: '/workspace/work/w13-frozen-20261113/section10/phase-aligned/preflight'

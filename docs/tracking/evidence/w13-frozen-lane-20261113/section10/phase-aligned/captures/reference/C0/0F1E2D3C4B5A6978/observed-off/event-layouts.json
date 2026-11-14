@@ -1,0 +1,127 @@
+[
+  {
+    "name": "TacticalDirector.ShotMechanics.ShotExecutedEvent",
+    "ordinal": 1,
+    "size": 92,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "ShootingAgentId": 12,
+      "TeamId": 16,
+      "KickVelocity": 20,
+      "KickSpin": 32,
+      "IntendedTarget": 44,
+      "FinalDirection": 52,
+      "BodyMechanicsScore": 64,
+      "PowerIntent": 68,
+      "ContactZone": 72,
+      "DistanceToGoal": 76,
+      "MatchTime": 80,
+      "ContactFrame": 84,
+      "StumbleTriggered": 88
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.GoalAwardedEvent",
+    "ordinal": 7,
+    "size": 36,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "Scorer": 12,
+      "Assister": 16,
+      "ScoringTeam": 20,
+      "BallPosition": 24
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.RestartAwardedEvent",
+    "ordinal": 25,
+    "size": 28,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "RestartKind": 12,
+      "AwardedTeam": 13,
+      "Location": 16
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.CardIssuedEvent",
+    "ordinal": 6,
+    "size": 20,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "Recipient": 12,
+      "CardKind": 16,
+      "FoulOrdinal": 18
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.SubstitutionEvent",
+    "ordinal": 8,
+    "size": 24,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "Outgoing": 12,
+      "Incoming": 16,
+      "Team": 20,
+      "SubstitutionReason": 21
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.FoulCommittedEvent",
+    "ordinal": 5,
+    "size": 36,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "Offender": 12,
+      "Victim": 16,
+      "Location": 20,
+      "FoulKind": 32
+    }
+  },
+  {
+    "name": "TacticalDirector.EventSystem.OffsideCalledEvent",
+    "ordinal": 24,
+    "size": 32,
+    "fields": {
+      "eventTypeOrdinal": 0,
+      "payloadVersion": 1,
+      "_reserved": 2,
+      "tick": 4,
+      "subsystemOrdinal": 8,
+      "intraPhaseDrawIndex": 10,
+      "OffendingAgentId": 12,
+      "Team": 16,
+      "Location": 20
+    }
+  }
+]

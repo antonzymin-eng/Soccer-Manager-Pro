@@ -1,0 +1,16 @@
+{
+  "arm": "w13_off",
+  "seed": "00000000ABCDEF12",
+  "command": [
+    "/workspace/work/dotnet/dotnet",
+    "--fx-version",
+    "8.0.32",
+    "/workspace/work/w13-frozen-20261113/w13_off/identity/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+    "00000000ABCDEF12",
+    "324000",
+    "/workspace/work/w13-frozen-20261113/identity-runs/w13_off/00000000ABCDEF12"
+  ],
+  "startedUtc": "2026-11-13T23:11:18.807779+00:00",
+  "exitCode": 0,
+  "finishedUtc": "2026-11-13T23:12:32.281637+00:00"
+}

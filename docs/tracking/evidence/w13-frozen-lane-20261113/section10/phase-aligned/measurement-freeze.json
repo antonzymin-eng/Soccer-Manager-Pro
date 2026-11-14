@@ -1,0 +1,17 @@
+{
+  "frozenUtc": "2026-11-13T23:43:10.610320+00:00",
+  "files": {
+    "run_measurement.py": "b7c2641ecfcca852ad91906d4a7971674466240eb902a7545879f36bbcfabc76",
+    "preflight.py": "e2ef81204a729432229d32c22927c3c53d85e135fedfff4ff422b93b245bc407",
+    "PHASE-ALIGNED-PROTOCOL.md": "11108b64fe9b57f0e150e2a8a9e527d060949ed54c718643ce835b963074eb80",
+    "capture-prepared.json": "67142e7193d0ba7dfd5c06e496140238c2332482e9dac4f1e46101f3a079a741",
+    "integration-source.json": "df4ba971d2be077fc1b59d385593a184416675346e920ae85d4e6c14e73d99dd"
+  },
+  "inputs": {
+    "extend_runner.py": "34803dc20293bde516199fe9184ec33bc5ee7229e0ddc830f701898d4c32a91f",
+    "prepare_capture.py": "2344688c1c9d4744e6965a17dc96643300dd0a7455d6d512b878938c4b1ebf9b",
+    "source/MarkObserver.cs": "73c11cec0212023199bb6f63a60936c203815bbb3f4558e98d954324de657d0d",
+    "source/Program.cs": "30d84b92859ccb5493974977583cce27d447a832f8f32492cf20b7894299afb1",
+    "source/StateProof.cs": "81686b7114c7d8f6e673f5a4502055e38ef0faaea05c5bf19fe6238918ebfefa"
+  }
+}
