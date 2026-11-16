@@ -80,3 +80,7 @@
 *.xz       -text
 # November 4, 2026: full Pre-C digest/ball/event traces exceed the 1 MiB binary gate.
 docs/tracking/evidence/pre-c-control-20261104/capture-traces.tar.xz filter=lfs diff=lfs merge=lfs -text
+
+# November 10, 2026: #434 paired formation/Duty evidence, decoded bytes preserved.
+docs/tracking/evidence/formation-duty-20261109/retained/**/traces.tar.xz filter=lfs diff=lfs merge=lfs -text
+docs/tracking/evidence/formation-duty-20261109/*.tar.xz filter=lfs diff=lfs merge=lfs -text

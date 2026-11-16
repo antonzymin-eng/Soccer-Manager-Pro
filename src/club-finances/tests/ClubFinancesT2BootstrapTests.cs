@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/tests/ClubFinancesT2BootstrapTests.cs
 // Created:  2026-09-11
-// Modified: 2026-09-11 (review follow-up — cite acceptance ids and delimit T2a's partial lifecycle coverage)
+// Modified: 2026-11-04 (ERR-040-004: genesis ceilings)
 // Author:   —
 // Specs:    Spec #20 §3.9.4 (general-test allocation carve-out)
 //           Spec #40 FR-FN-002/025/027, §4.1-§4.3, §5.2-§5.3, §7.1 T2a
@@ -44,8 +44,10 @@ namespace TacticalDirector.ClubFinances.Tests
             for (int i = 0; i < entries.Length; i++)
             {
                 Assert.That(entries[i].Finances.Balance, Is.EqualTo(ClubFinancesConstants.StartingClubBalance));
-                Assert.That(entries[i].Finances.TransferBudget, Is.Zero);
-                Assert.That(entries[i].Finances.WageBudget, Is.Zero);
+                Assert.That(entries[i].Finances.TransferBudget, Is.EqualTo(ClubFinancesConstants.BaseTransferBudget),
+                    "ERR-040-004 genesis ceiling");
+                Assert.That(entries[i].Finances.WageBudget, Is.EqualTo(ClubFinancesConstants.BaseWageBudget),
+                    "ERR-040-004 genesis ceiling");
                 Assert.That(entries[i].Finances.WageBillAggregate, Is.Zero);
                 Assert.That(entries[i].Finances.SeasonRevenueAccrued, Is.Zero);
                 Assert.That(entries[i].Finances.FfpBalanceWindow, Is.Zero);
@@ -94,4 +96,5 @@ namespace TacticalDirector.ClubFinances.Tests
 // |         |            |        | null/empty/null-element/duplicate ClubId failure gates.      |
 // | 1.1     | 2026-09-11 | —      | Review follow-up: acceptance IDs cited; unnecessary unchecked helper arithmetic removed. |
 // | 1.2     | 2026-09-11 | —      | T-FN-LIFE-001 citations explicitly identify T2a as its bootstrap half; across-roll half remains T2b. |
+// | 1.3     | 2026-11-04 | —      | ERR-040-004: bootstrap entries carry the zero-prize base ceilings. |
 #endregion

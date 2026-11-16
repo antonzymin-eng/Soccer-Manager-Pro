@@ -10,8 +10,10 @@
 
 ---
 
-> **UPDATED November 13, 2026 (W13 landing checks), v1.46:** W13.0 D1/D2 are recorded as merged to main (PR #545, `c7ec1131`). On `6491de79` (W13 merged with main `39de4662`): six-seed full-match switch-off digests equal main on every tick, armed control differs ([six-seed full-match switch-off comparison](evidence/w13-switch-off-neutrality-20261113/README.md), non-certifying .NET 8.0.425); pinned Unity compile and MatchEngine / DefensiveAI / DecisionTree EditMode 0 failures ([pinned-host receipt](evidence/host-w13-6491de79-20261113/README.md)). Frozen-lane identity and §10 remain open; the default stays off.
->
+> **UPDATED November 16, 2026 (W13 merges main `3871c9ac`), v1.47:** W13's branch-local v1.41–v1.46 entries and main's #434 v1.41–v1.46 entries are both kept below, newest first. #434 (PR #543) is now on main beneath W13; W13.1 still ships switched OFF, and the W13 section's open items (F5–F10, §10 measurement, OD-2) are unchanged.
+
+> **UPDATED (prior) November 13, 2026 (W13 landing checks), v1.46:** W13.0 D1/D2 are recorded as merged to main (PR #545, `c7ec1131`). On `6491de79` (W13 merged with main `39de4662`): six-seed full-match switch-off digests equal main on every tick, armed control differs ([six-seed full-match switch-off comparison](evidence/w13-switch-off-neutrality-20261113/README.md), non-certifying .NET 8.0.425); pinned Unity compile and MatchEngine / DefensiveAI / DecisionTree EditMode 0 failures ([pinned-host receipt](evidence/host-w13-6491de79-20261113/README.md)). Frozen-lane identity and §10 remain open; the default stays off.
+
 > **UPDATED (prior) November 12, 2026 (movement feedback review), v1.45:** Promote the already-recorded stale tackle limitation to W13-F9 and a dedicated open issue, with the actual-tick reproduction attached to ERR-014-010. Add W13-F10 for unresolved mirror asymmetry, blocking tight-floor calibration; qualify F5 speed caps, F6 gameplay impact and deterministic rerun independence. No production fix, new parameter, schema or approval change.
 
 > **UPDATED (prior) November 12, 2026 (W13.1c final pass), v1.44:** **Corrected-rig re-measurement of the W13.1c mark pace tier; NO production behaviour change, no new constant.** The marking rig left each teleported man's cached `Speed` / movement state stale (the scripted man ran his own AI inside every physics step), so the v1.43 numbers and the home / away asymmetry are superseded: peak marker-to-man gap home / away 2.6 m/s 2.73 / 2.78 m, 3.5 m/s 2.73 / 2.78 m, 5.0 m/s 3.09 / 3.13 m — an **uncorrected, phase-dependent lag**, plan target 3.0 m not met at 5.0 m/s (regression coverage only). Follow-ups **W13-F5** (goalward runner: still GROUNDED 19 / 40 strides, not only a rig artefact), **W13-F6** (gate flapping + OscillationGuard locks at any jog-band speed), **W13-F7** (stationary-man orbit) and **W13-F8** (1.0 m `TightMarking` stand-off at body contact) each **block the default flip (OD-2)**; the candidate real fix (Agent Movement #2 arrival braking / target-speed command, or a gate position term) is an owner decision. The `RotateVelocityToward` assert was a rig artefact (whole suite strict, none emitted). Probe digests unchanged. See W13 below.
@@ -20,9 +22,37 @@
 
 > **UPDATED (prior) November 12, 2026, v1.42:** **W13.1 (mark movement, switched OFF by default) and W13.1c (mark pace tier) are landed on branch `claude/great-sagan-rpcmhp`, **unmerged** (W13.1 commits `7bee32d`, `3e42e76`, `af1aa4d`; review fixes `c57c035`, `68ceb7e` — pushed; W13.1c `1be7609` and this close-out are local, not pushed).** `ERR-014-010` (+ review amendment), `ERR-008-027`, `ERR-021-010`, `ERR-008-028`; `ERR-008-026` is an intentionally-unused tombstone. Validation is the non-certifying Linux gate only; frozen-lane identity and §10, Unity compile and stand-off calibration are pending; the default flip (OD-2) is a separate owner decision. Plan: [w-defender-marking-wiring-plan.md](w-defender-marking-wiring-plan.md).
 
+> **UPDATED (prior) November 10, 2026, v1.46:** #543 review follow-up adds [per-team scoring](evidence/formation-duty-20261109/README.md#characterization), allocation coverage and a [named player-control blocker](open-issues.md#formation-duty-player-control-blocker). Diagnosis is explicitly HOLD for Opus's single design; no new trace analysis or game code. Owner will run final-head Unity validation. Player-facing controls remain blocked until marking movement is fixed and validated; current preset/API reachability is acknowledged.
+
+> **UPDATED (prior) November 10, 2026, v1.45:** #434 kickoff formation/Duty is implemented in [draft PR #543](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/543), with [90-match characterization and exact six-seed C0 identity](evidence/formation-duty-20261109/README.md). Full local gate passes; material non-default scoring changes are descriptive and require owner review. The pinned Unity host remains pending, so this is not a landed/certified item. #440 is separate; no Stage B fix is authorized.
+
 > **UPDATED (prior) November 10, 2026, v1.41:** **W13 opened — Defensive AI #14's mark assignment moves no defender (cross-references C10).** W13.0 (two live #14 defects, `ERR-014-008` / `ERR-014-009`) is **landed on branch `claude/great-sagan-rpcmhp`, **unmerged** (commits `b91a8ce` D1, `5d99fa0` D2, `fd73de7` review fixes; the branch has been pushed; it is not merged)**; W13.1 (the wiring, switched off by default) is **not started**. Validation is the non-certifying Linux gate only; frozen-lane characterization, digest adoption and pinned-Unity validation are pending. Plan: [w-defender-marking-wiring-plan.md](w-defender-marking-wiring-plan.md).
 
+> **UPDATED (prior) November 9, 2026, v1.43:** The documentation-only [#434 preflight
+> v1.2](w-434-formation-duty-preflight.md) corrects a false claim: formation translation is
+> new consumer-side work, not an existing method. Its C0–C9 plan isolates Duty by side,
+> includes both teams on F4231, conditions base-reference reuse on source/probe evidence,
+> and separates hard correctness stops from football metrics with no established numeric
+> acceptance bands. P1–P4, the budget and slot-table acknowledgment remain pending.
+
+> **UPDATED (prior) November 9, 2026, v1.42:** The documentation-only [#434 preflight
+> v1.1](w-434-formation-duty-preflight.md) includes all eight production formation reads,
+> full F442-to-F433/F4231 slot mappings and a proposed non-default six-seed characterization
+> matrix. It compares split-row and contiguous count-prefixed v29 encodings, conditionally
+> preferring the latter with an explicit append-only-procedure exception. P1–P4 and acceptance
+> of the disclosed mapping tradeoff remain owner decisions; no gameplay or #440 change.
+
+> **UPDATED (prior) November 9, 2026, v1.41:** The owner approved narrowing #434 part (i) to
+> kickoff-only formation plus live Duty routing; in-match formation switching is a separate
+> follow-up. The documentation-only [#434 preflight](w-434-formation-duty-preflight.md)
+> records the production-read inventory and proposes the kickoff boundary, mid-match request
+> policy, v29 encoding and default-tactics comparison. Those implementation decisions remain
+> pending. No gameplay, schema, RNG, tuning or #440 change is made by this preflight.
+
 > **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
+
+> **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
+
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
 > contract on the observed trajectories. A one- or two-physics-frame delayed take-off remains
@@ -339,6 +369,29 @@ like `MISSED`). #434 is re-authored on current `main`, not merged from the stale
 window, only with digest-identity evidence at default tactics on the frozen seeds; otherwise it waits
 for B→C. The owner has placed part (i) in PM-2 scope; PM-2 inclusion of
 (ii) and (iii) remains a D-08 question. Packet: `pre-b-decision-packets.md`.
+
+**Owner-approved scope reduction, November 9, 2026:** part (i) now selects positioning's
+formation at kickoff and keeps it fixed for the match, retaining FR-PA-039. Duty still routes
+per player throughout. In-match formation switching and formation-dependent lineup selection
+remain separate follow-ups. The [preflight](w-434-formation-duty-preflight.md) v1.4
+preserves owner acceptance of P1–P4, no numeric bands, the lineup limitation and the
+120-match fallback. [Implementation evidence](evidence/formation-duty-20261109/README.md)
+records full Linux validation, six-seed C0 exact identity and all 90 primary matches.
+World-state v29 restores the selected catalogue before state. Draft PR #543 awaits
+owner football review and pinned Unity compile/whole-assembly validation. #434 parts
+(ii)/(iii) remain excluded from PM-2. #440 Stage A is independent and has no gameplay fix.
+
+**Preflight review revision, November 9, 2026:** v1.1 expands the retained F442 identity/lineup
+limitations, dispositions the `SquadRating` reads, and proposes non-default formation/Duty
+characterization in addition to default identity. Two v29 encodings and their maintenance costs
+are presented for P3. The original documentation commit's Linux functional and Markdown-link CI
+jobs passed; this is not gameplay implementation or owner acceptance of P1–P4.
+
+**Second preflight review revision, November 9, 2026:** v1.2 identifies the missing explicit
+formation conversion, with live-input fallback and invalid-save tests/amendment work. It
+replaces the characterization proposal with one-sided mirrored Duty and both-F4231 contrasts,
+conditional inert-base reuse and explicit budgets. Non-default football metrics are descriptive
+unless numerical bounds are approved before capture; no measurement or gameplay change is claimed.
 
 **Durable evidence pointer:** `docs/tracking/evidence/pr439-w3/` preserves the result-bearing six-seed tables and run/artifact provenance. Its pre-W3 W3-specific zeros are explicitly structural placeholders, not measured activity; the table delta is not a pure W3 effect because the landing state also contains the W6 reattachment correction, #442/#443 merge and review-closure gameplay fixes. `docs/tracking/evidence/pr439-ref-archive/` preserves all 16 evidence-ref histories plus cited-run/ref/disposition ledgers. On 2026-09-25 all 16 `evidence/pr439-*` refs were deleted by the authorized exact-head atomic cleanup; `ref-disposition.tsv` records all 16 rows as `delete_now=true`, while `run-heads.tsv` remains the 15-row cited-run ledger. Deleted ref names remain provenance and their histories are retained in the archive.
 
@@ -815,12 +868,19 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.46 | 2026-11-13 | — | W13 landing checks: W13.0 status corrected to merged (PR #545); switch-off full-match neutrality vs main (non-certifying) and pinned Unity host receipt at `6491de79` recorded. No design change. |
-| 1.45 | 2026-11-12 | — | Promote the stale-request limitation to F9 under ERR-014-010; track unresolved mirror asymmetry as F10 and hold tight-floor calibration; qualify F5/F6 evidence without changing gameplay. |
-| 1.44 | 2026-11-12 | — | **W13.1c final pass (documentation, tests, one read-only test seam; no production behaviour change, no new constant):** corrected-rig re-measurement (peaks 2.73 / 2.78, 2.73 / 2.78, 3.09 / 3.13 m; "uncorrected, phase-dependent lag"); follow-ups W13-F5 (re-stated), **W13-F6 / F7 / F8** added, F5–F8 each block the default flip (OD-2); degenerate-velocity assert withdrawn as a rig artefact; candidate real fix recorded as an owner decision; six-seed probe digests unchanged. |
-| 1.43 | 2026-11-12 | — | **W13.1c review (High) — `ERR-008-028` amended:** the unconditional speed tier overshot / orbited jog-band men; now only while the marker is slower than his man (overshoot removed, lag up to 4.39 m remains, plan 3.0 m not met for home runs, asserted bound `MoveJogThreshold` 6.0 m + goal-side). Goalward-runner collision (marker GROUNDED) recorded as W13-F5 and an open issue, blocking the flip; JogEnter-boundary no-hysteresis, the stride-54 cause (Invariant 3) and the asserted bounds recorded. |
-| 1.42 | 2026-11-12 | — | **W13.1 and W13.1c landed on branch `claude/great-sagan-rpcmhp`, unmerged; the wiring ships switched OFF** (`ERR-014-010`, `ERR-008-027`, `ERR-021-010`, `ERR-008-028`). Six-seed switch-off digests at frame 18,000 equal the W13.0 tip (non-certifying Linux). Follow-ups W13.2 / F1 / F2 / F4 open; frozen-lane identity, §10, Unity compile, calibration and the flip pending. Known limitations and the degenerate-velocity assert recorded. |
-| 1.41 | 2026-11-10 | — | **W13 opened (cross-references C10); W13.0 landed on branch `claude/great-sagan-rpcmhp`, unmerged** (`ERR-014-008` / `ERR-014-009`); W13.1 not started. Review L3 (intents computed before the demotion invariants) and the L7 shifts to measure recorded; every pre-fix measurement is confounded for the away team. Linux gate only; frozen-lane and pinned-Unity validation pending. |
+| 1.47 | 2026-11-16 | — | Merge main `3871c9ac` into W13: both histories kept; W13's v1.41–v1.46 rows are branch-local W13. No status or design change. |
+| 1.46 (branch-local W13) | 2026-11-13 | — | W13 landing checks: W13.0 status corrected to merged (PR #545); switch-off full-match neutrality vs main (non-certifying) and pinned Unity host receipt at `6491de79` recorded. No design change. |
+| 1.45 (branch-local W13) | 2026-11-12 | — | Promote the stale-request limitation to F9 under ERR-014-010; track unresolved mirror asymmetry as F10 and hold tight-floor calibration; qualify F5/F6 evidence without changing gameplay. |
+| 1.44 (branch-local W13) | 2026-11-12 | — | **W13.1c final pass (documentation, tests, one read-only test seam; no production behaviour change, no new constant):** corrected-rig re-measurement (peaks 2.73 / 2.78, 2.73 / 2.78, 3.09 / 3.13 m; "uncorrected, phase-dependent lag"); follow-ups W13-F5 (re-stated), **W13-F6 / F7 / F8** added, F5–F8 each block the default flip (OD-2); degenerate-velocity assert withdrawn as a rig artefact; candidate real fix recorded as an owner decision; six-seed probe digests unchanged. |
+| 1.43 (branch-local W13) | 2026-11-12 | — | **W13.1c review (High) — `ERR-008-028` amended:** the unconditional speed tier overshot / orbited jog-band men; now only while the marker is slower than his man (overshoot removed, lag up to 4.39 m remains, plan 3.0 m not met for home runs, asserted bound `MoveJogThreshold` 6.0 m + goal-side). Goalward-runner collision (marker GROUNDED) recorded as W13-F5 and an open issue, blocking the flip; JogEnter-boundary no-hysteresis, the stride-54 cause (Invariant 3) and the asserted bounds recorded. |
+| 1.42 (branch-local W13) | 2026-11-12 | — | **W13.1 and W13.1c landed on branch `claude/great-sagan-rpcmhp`, unmerged; the wiring ships switched OFF** (`ERR-014-010`, `ERR-008-027`, `ERR-021-010`, `ERR-008-028`). Six-seed switch-off digests at frame 18,000 equal the W13.0 tip (non-certifying Linux). Follow-ups W13.2 / F1 / F2 / F4 open; frozen-lane identity, §10, Unity compile, calibration and the flip pending. Known limitations and the degenerate-velocity assert recorded. |
+| 1.46 | 2026-11-10 | — | #543 owner review: per-team headline, player-control blocker, scoped allocation coverage/raw requests; diagnosis held for Opus, owner Unity pending. |
+| 1.45 | 2026-11-10 | — | #434 implemented/measured: 90 primary matches, exact default identity, full Linux gate pass; pinned Unity and normal owner review pending. |
+| 1.41 (branch-local W13) | 2026-11-10 | — | **W13 opened (cross-references C10); W13.0 landed on branch `claude/great-sagan-rpcmhp`, unmerged** (`ERR-014-008` / `ERR-014-009`); W13.1 not started. Review L3 (intents computed before the demotion invariants) and the L7 shifts to measure recorded; every pre-fix measurement is confounded for the away team. Linux gate only; frozen-lane and pinned-Unity validation pending. |
+| 1.44 | 2026-11-09 | — | #434 P1–P4 and slot limitation accepted in-session; runtime/spec/tests authored, full validation/capture pending. No #440 change. |
+| 1.43 | 2026-11-09 | — | #434 preflight v1.2: new formation-translation work correctly identified, conditional base reuse, C0–C9 matrix, explicit budget and stop-versus-characterization distinction. Decisions remain pending; no gameplay change. |
+| 1.42 | 2026-11-09 | — | #434 preflight v1.1: eight-read inventory, full slot-risk disclosure, non-default characterization, encoding alternatives, initialization/client/provenance corrections and prior-commit CI receipts. Gameplay decisions remain pending. |
+| 1.41 | 2026-11-09 | — | Records owner-approved kickoff-only #434 scope and documentation-only preflight. Kickoff boundary, mixed requests, v29 encoding and comparison contract are proposals awaiting owner decisions. No gameplay implementation or #440 change. |
 | 1.40 | 2026-10-20 | — | Local #441 candidate: corrected six-seed arrival census and bounded witness classification linked to the preserved package. No selectable witness under the existing 10 Hz/first-eligible-start contract on observed trajectories; delayed take-off remains a possible #10 timing-contract change without composed contact proof. Initial zero withdrawn; #441/W9 open. Develop independently of C, land after its measurement. D-05 and D-07 landed status unchanged. |
 | 1.39 | 2026-10-18 | — | D-07 option A landed in PR #515 (merge 1a3b4271); removed from the still-open list; six-seed census 0 D-07 free kicks; keeper-avoidance residual tracked in open-issues. C and calibration remain separate. |
 | 1.38 | 2026-10-18 | — | W8 B / own-release implementation landed in #511; final-head CI/host met, post-law baseline adopted; exact touch/team follow-up required in both B→C arms. C/D-07 and calibration remain separate. |

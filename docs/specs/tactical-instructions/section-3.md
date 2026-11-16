@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 3: Algorithms
 
 **Created:** June 20, 2026
-**Last Updated:** November 11, 2026 (v0.9 — ERR-021-010 / W13.1: §3.4 maps `TightMarking` to the #14 mark stand-off.)
-**Version:** 0.9
+**Last Updated:** November 16, 2026 (v0.10 — merge: main's v0.9 (ERR-021-009, #434) and W13's v0.9 (ERR-021-010, `TightMarking` stand-off) are both in force; no text change.)
+**Version:** 0.10
 **Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 > Existing implemented constants cited by the pre-W8 baseline live in `TacticalInstructionsConstants.cs` (Appendix A). The W8 §3.4.1 constants are **spec-first allocations**: they deliberately do not exist in `src/` until B code lands. Owner approval was recorded September 26, 2026; their stated values and shapes are therefore normative B inputs. `[GT]` means uncalibrated, not illustrative or optional.
@@ -20,10 +20,17 @@ once per tactic-change and writes the *subsystem* enum into the routing field.
 | `#8 TacticPassing → PassingStyle` | Short→SHORT, Mixed→MIXED, Direct→DIRECT | nearest if widened |
 | `#8 TacticPressing → PressingMode` | Low→LOW, Medium→MEDIUM, High→HIGH | nearest if widened |
 | `#13 TacticTriggerMask → TriggerFlags` | bitwise 1:1 by flag name | drop unknown bits |
-| `#12 TacticFormation → FormationFamily` | F442→F442, F433→F433, F4231→F4231 (exactly the 3 #12 families today) | reject/clamp (F5) if a Stage-1 widening adds a family with no #12 table |
+| `#12 TacticFormation → FormationFamily` | F442→F442, F433→F433, F4231→F4231 (exactly the 3 #12 families today) | F442 fallback for unknown live input (#12 FR-PA-043); reject corrupt saved effective metadata |
 
 **Worked example.** `TacticPressing.High` → `PressingMode.HIGH`; if a Stage-1 widening adds
 `TacticPressing.UltraHigh` with no `PressingMode` peer, F5 clamps to `HIGH`.
+
+**ERR-021-009 — implemented kickoff boundary.** The #12 formation map is explicit
+consumer code, not a cast based on matching ordinals. Unknown live formation input
+falls back to F442 (#12 FR-PA-043); invalid saved effective metadata is rejected.
+Formation is sampled once at the first engine `RunTick` entry at clock 0, before
+frame 1. Other tactic fields retain the existing stride boundary. No in-match
+formation switch is implied by the general change-trigger language above.
 
 ## 3.2 Mentality → (profile, risk, line) mapping (FR-TI-011)
 
@@ -241,5 +248,7 @@ KD-9 precedence, not a limitation to be "fixed."
 | 0.7 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Accepts `GK_DIST_FALLBACK_ADVANCE_M = 35 m` as the uncalibrated B default while explicitly leaving realistic punt length open against #5's Lofted trajectory; B landing-point evidence is the closing input. B wiring is authorized only after PR #461 merges. |
 | 0.6 | 2026-09-26 | — | W8 B final consistency: corrects the inherited section preamble so spec-first W8 constants are not falsely claimed to already exist in `TacticalInstructionsConstants.cs` and `[GT]` is not mistaken for an optional illustrative value. Source implementation remains blocked on owner approval. |
 | 0.8 | 2026-10-29 | — | ERR-021-008 (back-prop of ERR-011-021): §3.4.1 `GK_DIST_QUICK_DELAY_TICKS` range note and the timing-safety paragraph now cite #11 §3.8.4's elapsed ≤ `GK_HAND_CONTROL_MAX_FRAMES` (480) budget (first attempt 294 frames, retry predicate `candidateContactFrame ≤ handControlStartFrame + 480`) instead of the retired CONTACT-before-inherited-guard proof; corrects the `§11` → `#11` citation typo in that row. Specified, not implemented: W8 B code keeps the both-guards budget until the W8 C implementation lands. Delay values unchanged. Review fix: first attempt is `35 × 6 + 84 = 294` frames (186-frame margin); `candidateContactFrame = currentFrame + WindupFrames` (no `+ 1`, per #11 §3.8.4), gating the first commit as well as retries. Review round 5: the stale 295-frame first-attempt clause is removed (294 only). |
-| 0.9 | 2026-11-11 | — | W13.1 / ERR-021-010: §3.4 maps the per-agent `TightMarking` instruction to the #14 §3.13.1 mark stand-off (tight 1.0 m / normal 2.0 m, both un-calibrated `[GT]`) via `TacticTranslation.MarkStandoffM`, with a worked example. `false` stays the identity; the mapping is consumed only while the engine's mark-movement switch (default off) is on. No new serialized state. |
+| 0.10 | November 16, 2026 | — | Merge of W13 with main: main's v0.9 (ERR-021-009) and W13's v0.9 (ERR-021-010, marked branch-local W13) both apply; their sections did not overlap. No normative change. |
+| 0.9 (branch-local W13) | 2026-11-11 | — | W13.1 / ERR-021-010: §3.4 maps the per-agent `TightMarking` instruction to the #14 §3.13.1 mark stand-off (tight 1.0 m / normal 2.0 m, both un-calibrated `[GT]`) via `TacticTranslation.MarkStandoffM`, with a worked example. `false` stays the identity; the mapping is consumed only while the engine's mark-movement switch (default off) is on. No new serialized state. |
+| 0.9 | November 9, 2026 | — | ERR-021-009: named map fallback and kickoff-only formation sampling. |
 #endregion

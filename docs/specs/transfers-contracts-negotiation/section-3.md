@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 21, 2026 (v0.17 — AR round 5, ERR-031-015: §3.3 pseudocode body restated against the shipped members, gains the positional-stock fail-louds and the full-contract-set pre-check; §3.4 counts five port facts)
+**Last Updated:** November 5, 2026 (v0.18 — ERR-031-017: shared Diagnose and remaining-budget reads back the bid algorithm.)
+**Last Updated (prior):** October 21, 2026 (v0.17 — AR round 5, ERR-031-015: §3.3 pseudocode body restated against the shipped members, gains the positional-stock fail-louds and the full-contract-set pre-check; §3.4 counts five port facts)
 **Last Updated (prior):** October 20, 2026 (v0.16 — AR round 4, ERR-031-014: §3.3 pseudocode signature matches the shipped SubmitBid; the counterparty-ledger note says option (b) is interim and the owner decision is open)
 **Last Updated (prior):** October 20, 2026 (v0.15 — AR round 3, ERR-031-013: §3.8 is the shipped CreateAtGenesis with the flat [GT] wage; §3.7 duplicate/cap guards; §3.3 counterparty ledger)
 **Last Updated (prior):** October 20, 2026 (v0.14 — ERR-031-012: §3.4 CanRelease throws on impossible input; §3.7 arrival-collision guard)
@@ -12,7 +13,7 @@
 **Last Updated (prior):** September 21, 2026 (v0.9 — ERR-031-002 affordability-before-staging correction)
 **Last Updated (prior):** September 14, 2026 (v0.8 — PR #407 residual review cleanup: budget invariant + T2 hook lock)
 **Last Updated (prior):** September 14, 2026 (v0.7 — PR #407 review correction: precise valuation, symmetric need, typed submission outcomes; prior v0.6 T0 football close-out, v0.5 AR-8, v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.17
+**Version:** 0.18
 **Status:** APPROVED
 
 ---
@@ -90,6 +91,8 @@ SubmitBid(in Offer offer, worldDay, ref ClubFinances finances, TransfersState tx
                                       : (managerClubId, offer.CounterpartyClubId)
 
     # ---- VALIDATE/PREFLIGHT (no local mutation) ----
+    issue = Diagnose(offer, worldDay, txState)  # FR-TX-030 / ERR-031-017; read-only
+    require issue == None else throw the legacy exception for that issue
     require offer well-formed                                                       else throw  # F6
     require CarriesClub(offer.CounterpartyClubId)                                   else throw  # F6, ERR-031-010
     require IsWindowOpen(txState.ActiveWindow, worldDay)                            else throw  # F4
@@ -264,6 +267,10 @@ through `95,000` returns `CounterOffered`; `94,999` rejects. If the accepted `10
 transfer headroom, `SubmitBid` instead returns `InsufficientBudget`; if the destination is full, it returns
 `SquadFull`. All non-accepted command results leave local finance/transfer state untouched.
 
+The preflight requirements above are implemented once by `Diagnose` (FR-TX-030); the
+repeated requirements in this pseudocode explain the same gates, not a second validation owner.
+The affordability subtraction is `RemainingTransferBudget(finances, txState)`, shared with observers.
+
 ## 3.7 Contract aging at the season boundary (FR-TX-028)
 
 `RollToNextSeason` ages the managed club's contracts (durable career state survives the roll):
@@ -336,4 +343,5 @@ A load reconstructs contracts from the transfers sub-blob and MUST NOT re-seed.
 | 0.15 | 2026-10-20 | — | ERR-031-013 (AR round 3): §3.8 specified `SeedInitialContracts(…, DefaultWageFor(…))`, which never existed — the code is `TransfersState.CreateAtGenesis` with the flat `[GT]` `DEFAULT_WAGE_PER_PERIOD`; restated. §3.7 `PrepareSeasonBoundary` also refuses a duplicated arrival and aged contracts plus arrivals above `CLUB_SQUAD_SIZE` with `ArgumentException` (previously an `InvalidOperationException` from the insert, T-L8). §3.3 records that the counterparty AI club's #40 entry is deliberately not posted (KD-2, M16). |
 | 0.16 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L5/R4-L3): the §3.3 pseudocode signature `SubmitBid(managerClubId, in Offer, worldDay, ref ClubFinances, ref TransfersState)` is the shipped `SubmitBid(in Offer, uint worldDay, ref ClubFinances, TransfersState)` — the club comes from `txState.ManagedClubId` and the state is a reference type. The counterparty-ledger note now says option (b) is the recorded interim behaviour and the (a)-vs-(b) owner decision is open. |
 | 0.17 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-B/L-H): the §3.3 pseudocode body named members that never existed (`txState.WindowFor(managerClubId)`, `CommittedSpend(managerClubId)`, `AddCommittedSpend(managerClubId, fee)`, `ContractFrom(…)`) — restated against the shipped `ActiveWindow`, `CommittedSpendThisWindow`, `AddCommittedSpend(long)` and the contract built from the offer's terms; the two positional-stock fail-louds (count outside `[0, CLUB_SQUAD_SIZE]`; a buy whose seller reports zero stock) are now in the pseudocode; a buy with a full contract set fails loud before the roster commit (new shipped guard); §3.4 counted three port facts where the port has five (`CarriesClub` and `CanRelease` added); §3.4's "every subsystem's PlayerId-keyed state follows the player" excludes #31's own managed-club-only `Contract`. |
+| 0.18 | 2026-11-05 | — | ERR-031-017: shared Diagnose and remaining-budget reads back the bid algorithm. |
 #endregion

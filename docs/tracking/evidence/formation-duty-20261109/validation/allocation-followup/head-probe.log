@@ -1,0 +1,42 @@
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=LooseBall q=0.530 r=0.768m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+Runtime=.NET 8.0.32; assembly=9e4c3541-a80d-41eb-9d24-59d625c89c21
+frames 2..1200 phase=0 samples=1600 nonzero=0 min=0 max=0 total=0
+frames 2..1200 phase=1 samples=1592 nonzero=0 min=0 max=0 total=0
+frames 2..1200 phase=2 samples=1600 nonzero=0 min=0 max=0 total=0
+frames 2..1200 phase=3 samples=1600 nonzero=0 min=0 max=0 total=0
+frames 2..1200 phase=4 samples=1600 nonzero=8 min=0 max=840 total=6720
+frames 2..1200 phase=5 samples=1600 nonzero=16 min=0 max=832 total=13312
+first tick repeat=0 bytes=536
+first tick repeat=1 bytes=536
+first tick repeat=2 bytes=536
+first tick repeat=3 bytes=536
+first tick repeat=4 bytes=536
+first tick repeat=5 bytes=536
+first tick repeat=6 bytes=536
+first tick repeat=7 bytes=536

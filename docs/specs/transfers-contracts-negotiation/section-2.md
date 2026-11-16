@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** October 21, 2026 (v0.13 — AR round 5, ERR-031-015: FR-TX-005 states the unposted counterparty as the interim option (b), not a decision; FR-TX-023 no longer says #31's contracts follow a player by id)
+**Last Updated:** November 5, 2026 (v0.14 — ERR-031-017: FR-TX-030 owner diagnosis and shared remaining-budget read.)
+**Last Updated (prior):** October 21, 2026 (v0.13 — AR round 5, ERR-031-015: FR-TX-005 states the unposted counterparty as the interim option (b), not a decision; FR-TX-023 no longer says #31's contracts follow a player by id)
 **Last Updated (prior):** October 20, 2026 (v0.12 — AR round 3, ERR-031-013: FR-TX-009 lists every gate in the shipped order; FR-TX-005 records the unposted counterparty)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: FR-TX-019/028 window derivation; FR-TX-029 completes every list; F6 unknown counterparty)
 **Last Updated (prior):** October 20, 2026 (v0.10 — T2: ERR-031-007/008/009/010 — SquadDepleted (FR-TX-029, F9), unknown counterparty (FR-TX-026), un-contracted sale and regen lockstep terms (FR-TX-028))
@@ -10,12 +11,12 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — ERR-031-003: F3 gains the leading magic gate)
 **Last Updated (prior):** September 14, 2026 (v0.6 — T0 review correction: typed submission outcomes, precise valuation, symmetric need)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 AR-6, v0.3 AR-3/AR-4, v0.2 AR-1, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
 
-## 2.1 Functional requirements (FR-TX-001..029)
+## 2.1 Functional requirements (FR-TX-001..030)
 
 | ID | Requirement | Level | KD |
 |---|---|---|---|
@@ -48,6 +49,21 @@
 | FR-TX-027 | Round-trip save→restore MUST be field-identical for `Contract` + window cursor + `committedSpendThisWindow`, including a mid-window save (and, deep, a mid-negotiation save); a full window's activity MUST be two-run deterministic from a fixed world seed. | MUST | KD-4/KD-8 |
 | FR-TX-028 | At **new-career genesis** (never on load — a load reconstructs from the sub-blob) the managed club's #27 squad MUST be seeded with one `Contract` per player (default `[GT]` terms, F6/F7-valid — §3.8) so the sell/aging flows have a populated set. Contracts MUST survive `RollToNextSeason` (durable career state); at the roll each managed contract's `LengthSeasons` MUST be decremented, and a contract that **would** reach `0` MUST be **removed** (never stored as `0` — F7), the player becoming un-contracted (deep-tier re-signing/free-agency handles the sequel; §3.7) **and remaining sellable** (ERR-031-009: an un-contracted managed player is sold like any other; any contract leaves with him). The window cursor + `committedSpendThisWindow` MUST reset at the season boundary, the new window derived per FR-TX-019 — opening on the day #30 begins the season (ERR-031-008), closing `SUMMER_WINDOW_IN_SEASON_DAYS` − 1 days after the next season's opening fixture day (ERR-031-011); a retired `PlayerId`'s contract MUST be removed, and a regen joining the managed club MUST be seeded the genesis terms (§3.8), in lockstep with #28's roster lifecycle. | MUST | KD-4/KD-7 |
 | FR-TX-029 | A transfer that would leave the RELEASING club (the manager's on a sale, the AI club's on a buy) unable to name a matchday squad MUST return the ordinary no-mutation outcome `TransferSubmissionOutcome.SquadDepleted`, decided before any staging (ERR-031-007). | MUST | F9 |
+
+**FR-TX-030 (MUST, KD-2/KD-3; ERR-031-017).** #31 owns the pure, read-only
+`TransferCommands.Diagnose(in Offer, uint worldDay, TransfersState) → TransferBidIssue` preflight.
+`TransferBidIssue : byte` is append-only: None=0, WindowClosed=1, ManagedCounterparty=2,
+UnknownCounterparty=3, UnknownPlayer=4, WrongDirection=5, FeeNegative=6, WageNegative=7,
+LengthTooShort=8. Diagnose reads only terms, state and the roster port. Its first issue follows
+SubmitBid's legacy order: negative player id, negative club id, negative fee, negative wage,
+length < 1, managed counterparty, unknown club, closed window, unknown player, wrong ownership/direction.
+`SubmitBid` MUST call Diagnose first and preserve the existing exception type/message for every issue.
+None means caller-contract-valid, not accepted: negotiation, affordability, release and capacity gates remain.
+No wage upper bound is introduced; ERR-031-016 remains an open owner decision.
+#31 also owns `RemainingTransferBudget(in ClubFinances, TransfersState) → long`, used by SubmitBid's
+buy gate and observers: money units, #40 ceiling minus committed window spend (zero for unwired state).
+For a valid ceiling 100000 and committed spend 40000 the remaining amount is 60000; the existing
+0 ≤ committed ≤ ceiling invariant remains fail-loud. Neither read mutates, draws or changes persistence.
 
 ## 2.2 Data structures
 
@@ -108,7 +124,8 @@ explicit direction, so the default is never routed unchecked.
 | 0.8 | 2026-10-19 | — | ERR-031-005: FR-TX-021 re-home under the unchanged id, club never derived from the id; FR-TX-022 capacity is a roster count with commit confirmation; FR-TX-023 nothing migrates, `OnPlayerRekeyed` deleted. ERR-031-004: F5 reachable but not universal (23-player bootstrap). |
 | 0.9 | 2026-10-20 | — | ERR-031-006 (ERR-031-005 back-prop completion): FR-TX-009's commit clause no longer requires the commit to return the previewed id — the commit returns nothing and #31 confirms via `TryGetPlayer` that the player is on the destination roster before any local write; F2 recovery restated to match. |
 | 0.10 | 2026-10-20 | — | #31 T2: FR-TX-026 adds an unknown `CounterpartyClubId` (ERR-031-010); new FR-TX-029 + F9 `SquadDepleted` (ERR-031-007); FR-TX-028 — an un-contracted player stays sellable (ERR-031-009), the window opens on the season-begin day (ERR-031-008), regens joining the managed club get the genesis terms; `TransferSubmissionOutcome.SquadDepleted = 5`. |
-| 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2, completing the ERR-031-007/008/009 back-prop): FR-TX-019 and FR-TX-028 state the window derivation (open on the season-begin day, close = opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1, independent of roll timing); heading counts FR-TX-001..029; FR-TX-029 moved after FR-TX-028 and F9 after F8; FR-TX-009 lists `SquadDepleted` among the ordinary no-mutation outcomes; F6 names the unknown/managed counterparty that FR-TX-026 already covered. |
+| 0.11 | 2026-10-20 | — | ERR-031-011 (AR round 2, completing the ERR-031-007/008/009 back-prop): FR-TX-019 and FR-TX-028 state the window derivation (open on the season-begin day, close = opening fixture day + `SUMMER_WINDOW_IN_SEASON_DAYS` − 1, independent of roll timing); heading counts FR-TX-001..030; FR-TX-029 moved after FR-TX-028 and F9 after F8; FR-TX-009 lists `SquadDepleted` among the ordinary no-mutation outcomes; F6 names the unknown/managed counterparty that FR-TX-026 already covered. |
 | 0.12 | 2026-10-20 | — | ERR-031-013 (AR round 3): FR-TX-009's gate list omitted the F6 counterparty gate and the F9 release gate (both shipped at T2) and is now in the shipped order (`SubmitBid`: F6 counterparty → F4 window → negotiation → F1 affordability → F9 release → F5 destination); FR-TX-005 states that the counterparty AI club's #40 entry is deliberately not posted (KD-2, M16). |
 | 0.13 | 2026-10-21 | — | ERR-031-015 (AR round 5, L-A/L13): FR-TX-005 said the counterparty's #40 entry is "deliberately NOT posted", reading as a decision — it is the recorded interim option (b) and the (a)-vs-(b) choice is an open owner decision (§7.2). FR-TX-023 said #31's `Contract` follows the player by construction; #31 tracks only the managed club's contracts (inserted on a buy, removed on a sale), so a contract does not travel to or from an AI club; FR-TX-009 gains the two buy-side contract-set invariants (no existing contract for the incoming player, contract set below `CLUB_SQUAD_SIZE`), refused before the roster commit. |
+| 0.14 | 2026-11-05 | — | ERR-031-017: FR-TX-030 owner diagnosis and shared remaining-budget read. |
 #endregion

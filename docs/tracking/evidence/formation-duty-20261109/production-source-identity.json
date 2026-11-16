@@ -1,0 +1,3447 @@
+{
+  "measuredRuntimeCommit": "23f2fedb140d47b22be36b2d495190b0b1685251",
+  "latestSourceAndTestCommit": "722509f5e4b4f549c4863d44ec05bca8b27f8b86",
+  "allProductionCsAndAsmdefIdentical": true,
+  "files": [
+    {
+      "path": "src/agent-movement/AgentDirectionalMovement.cs",
+      "sha256": "60745a6e34a6e81951bd456d251ac152b4e924e08f4d5ef2fb128adde5f906a3"
+    },
+    {
+      "path": "src/agent-movement/AgentLocomotion.cs",
+      "sha256": "e36d69a121a6ed648a75e20f3f6918ac1ece8fc9c4df36f31adbffad14ff9be0"
+    },
+    {
+      "path": "src/agent-movement/AgentMovementConstants.cs",
+      "sha256": "5220e4f8608a5116a33bb1c4c2f4522bd17bf01ebbc6a774ee065cba369785d7"
+    },
+    {
+      "path": "src/agent-movement/AgentMovementState.cs",
+      "sha256": "2c4992aad52431f623a4eec0899de601b1241729bac245c5e697ebd62a39babb"
+    },
+    {
+      "path": "src/agent-movement/AgentMovementSystem.cs",
+      "sha256": "db31c7d88623554a36274fda3b5c26ac3edf275081450a872226a5732e3569b1"
+    },
+    {
+      "path": "src/agent-movement/AgentSafetySystem.cs",
+      "sha256": "8c385725d9badb53bd316636d3b50f5b4e81e3643929b0811b85358d808db191"
+    },
+    {
+      "path": "src/agent-movement/AgentState.cs",
+      "sha256": "570198c764d71c8f9655263bba414af3f5ab439b47fe8f9659ccb2480e87f31c"
+    },
+    {
+      "path": "src/agent-movement/AgentStateMachine.cs",
+      "sha256": "d969760b4cf9dca7fc2e5a8bf9bf74ada2b9a78abab31d8eaf08add802af37d2"
+    },
+    {
+      "path": "src/agent-movement/AgentTurning.cs",
+      "sha256": "a8e4e39e675b8a573cc208a699e389511e4e42aa36f0faa802c301effc41639c"
+    },
+    {
+      "path": "src/agent-movement/AssemblyInfo.cs",
+      "sha256": "f685afd6cd8bd7710a9d7aae5a2f94f0a9217578a799b75fea3ff9b9879930be"
+    },
+    {
+      "path": "src/agent-movement/DecelerationMode.cs",
+      "sha256": "17293129cb157c93ce5dcf84b6799095f8a6c7f2e6a4ec05ea76389d37cef566"
+    },
+    {
+      "path": "src/agent-movement/FacingMode.cs",
+      "sha256": "4e4d94e9097866b36ce4dfdb910d0ebcaf8d8d157043da77a6779ab127cde7ab"
+    },
+    {
+      "path": "src/agent-movement/GroundedReason.cs",
+      "sha256": "60cc553f23a36f734fd54b049d3e4744e099269413c8d43f49cc8d0e39ce1214"
+    },
+    {
+      "path": "src/agent-movement/MovementCommand.cs",
+      "sha256": "4a85bb8d946aff06f3f9ddebb93c91394845b07561a889a35ad027411c780c85"
+    },
+    {
+      "path": "src/agent-movement/OscillationGuard.cs",
+      "sha256": "480cc40b7db93a3b77aa6d3dddcb048753daece99020d05e0a29b950962f6ef1"
+    },
+    {
+      "path": "src/agent-movement/OscillationGuardState.cs",
+      "sha256": "eb5439cfe083d07ed0759282139635b4f4452a658b07b5562b8ce8894e435e7b"
+    },
+    {
+      "path": "src/agent-movement/PerformanceContext.cs",
+      "sha256": "64477c8f8126c4738d950607608ad130281c3819a5b0c30715f6defaaf54d6e0"
+    },
+    {
+      "path": "src/agent-movement/PlayerAttributes.cs",
+      "sha256": "e080b4915ac829efb9769be1d52c1dd25fac2f107b7dc9f8e1412e48945b4e16"
+    },
+    {
+      "path": "src/agent-movement/agent-movement.asmdef",
+      "sha256": "f76c56cd33e08eae5cd2ea6643e69c2842d81934c91806b5b3dd44768af561bf"
+    },
+    {
+      "path": "src/attacking-ai/AssemblyInfo.cs",
+      "sha256": "c4c6954cac6448ab3322e7106c0e0c053b5b18f9544109caadf068c28a52f278"
+    },
+    {
+      "path": "src/attacking-ai/AttackDirective.cs",
+      "sha256": "d72be6d20f84df6ba83e52ce3acbf84eddad41311c4407247dcd4fd7614ff599"
+    },
+    {
+      "path": "src/attacking-ai/AttackHysteresis.cs",
+      "sha256": "c5aa8a317381ebb731f41a4b84a9def03c0ca5886aafa2d669cc2106e004111a"
+    },
+    {
+      "path": "src/attacking-ai/AttackHysteresisState.cs",
+      "sha256": "5d664fda99defe6f1f69732a5430d0f9e8206bf290433537c32968b6f2781a61"
+    },
+    {
+      "path": "src/attacking-ai/AttackIntent.cs",
+      "sha256": "4266b865c4a7958fe3d6d952111ea8274463fc67365530752570f6efb6a2ff8f"
+    },
+    {
+      "path": "src/attacking-ai/AttackIntentSnapshot.cs",
+      "sha256": "d94c5e53c28a6edfbc1780c60b70714ba0b08d3cb05d2fd030bc7eb0e080cee7"
+    },
+    {
+      "path": "src/attacking-ai/AttackPoolEntry.cs",
+      "sha256": "cd191787f7b9e31aadffb1e2090cdf78fc356e68c9d82536038997f40c30bb3a"
+    },
+    {
+      "path": "src/attacking-ai/AttackRole.cs",
+      "sha256": "9ded35827cd5c72aeaf3cc12bf2f03be650f950a0e35d032ff71d52d20956f33"
+    },
+    {
+      "path": "src/attacking-ai/AttackingAIConstants.cs",
+      "sha256": "3a887448978bde72596e9605b1ad9253917c50ccbc06ab2e2680cef175313c37"
+    },
+    {
+      "path": "src/attacking-ai/AttackingAITick.cs",
+      "sha256": "f2fc9fc6ff39dd414ca1daf6f52ceb09dbfc87e6552affed7673d64d49f95c44"
+    },
+    {
+      "path": "src/attacking-ai/AttackingAgentSnapshot.cs",
+      "sha256": "f6840599a1b15dcba47fd9c55072ebb7869a15e2b9602e67cc845da833204587"
+    },
+    {
+      "path": "src/attacking-ai/AttackingPoolBuilder.cs",
+      "sha256": "d7feceb61cd1f0d330fd62859b9009edb37458fd9f9f2b43ba8c7afc0183de07"
+    },
+    {
+      "path": "src/attacking-ai/AttackingSnapshot.cs",
+      "sha256": "afaf473ca639cf071e58b3df5f6f509fc016fc33a27d575c7c9430aa0ec8ab75"
+    },
+    {
+      "path": "src/attacking-ai/AttackingTickState.cs",
+      "sha256": "a2012752c1906e0b9577e4c2ba9921c8aa531ba946e2eb80b374fd9f98e0bd94"
+    },
+    {
+      "path": "src/attacking-ai/Flank.cs",
+      "sha256": "b0c2aa68e6a57461f1291138ae196ed1b03cfb191baf786e0ab71aefc3b93848"
+    },
+    {
+      "path": "src/attacking-ai/InvariantEnforcer.cs",
+      "sha256": "c881510a7dc7f040a508e37c6192836c8489a1d35e8c21c4f88702a0794fd2d2"
+    },
+    {
+      "path": "src/attacking-ai/OverloadDetector.cs",
+      "sha256": "ed34bb575c0ea9a7890b4479bdbe9da280104d7603ce258c92acdbaa8f738135"
+    },
+    {
+      "path": "src/attacking-ai/RoleAssigner.cs",
+      "sha256": "83c8434789b80d3f7108608d2681c341b11b2085a706183c62ebc674e97cd48a"
+    },
+    {
+      "path": "src/attacking-ai/RunParameters.cs",
+      "sha256": "b5576060bf7155c87f044c3b0126ae7d9f5898637fb1de58a658e62032bb1269"
+    },
+    {
+      "path": "src/attacking-ai/StyleProfile.cs",
+      "sha256": "94dc721d336950029dc9bd8423b16d205aa9d352fc8f1e7c0ca136f3c876314f"
+    },
+    {
+      "path": "src/attacking-ai/SupportHeuristic.cs",
+      "sha256": "8a9454ee7e7751594c25a5b4991d2dc2a171e313bbcc51a1ee0ab175936b169a"
+    },
+    {
+      "path": "src/attacking-ai/TacticTranslation.cs",
+      "sha256": "1529bb7a5b645049fd5a6ab669426514724651dda0dc62d404e74bb20d2e4253"
+    },
+    {
+      "path": "src/attacking-ai/TransitionController.cs",
+      "sha256": "b4ffad78202cf73344c1f7b8c8b4d712e5c275ddb3f30c369f32a6ebf5626485"
+    },
+    {
+      "path": "src/attacking-ai/TransitionHoldState.cs",
+      "sha256": "fa360b742ded67ff7a781c8db296e41420cdcccfc804f7cfbe6a0492f48e3a27"
+    },
+    {
+      "path": "src/attacking-ai/WeakSideController.cs",
+      "sha256": "e720ea7a76665b0c626df54932392dd126e010e0833c6fe6e31dfa075b12c260"
+    },
+    {
+      "path": "src/attacking-ai/WidthHolder.cs",
+      "sha256": "b684f6d6720072b41619563d337f7dee56bd448dcb1478d231ec3abdaf27f36e"
+    },
+    {
+      "path": "src/attacking-ai/attacking-ai.asmdef",
+      "sha256": "0108790fa33fe61fd5475e75f45f89292342eec91049fb39acca2352afce9597"
+    },
+    {
+      "path": "src/ball-physics/BallCollision.cs",
+      "sha256": "0ef5b98cb56249f4d093a49d387a9eae79ebcf54af010e8b5b996dc9336e1248"
+    },
+    {
+      "path": "src/ball-physics/BallEventLogger.cs",
+      "sha256": "fea5d2cdf174ea3f6f26a080fb0dca8b5a5618d3b523634e784e743207008167"
+    },
+    {
+      "path": "src/ball-physics/BallGroundInteraction.cs",
+      "sha256": "3d7075b3de4772741197c578d3c8c7876fe892fe9b4d3d038bfc97f2c0836052"
+    },
+    {
+      "path": "src/ball-physics/BallPhysicsConstants.cs",
+      "sha256": "9cfbf6a8a6950d088d7dae2df305bd76c12ec2c78476378d86e72715f34859d5"
+    },
+    {
+      "path": "src/ball-physics/BallPhysicsCore.cs",
+      "sha256": "805b648b2ff8b60c5e65938a01ba3e25d1bf2558f0ce0f3368ab40e79a39a021"
+    },
+    {
+      "path": "src/ball-physics/BallState.cs",
+      "sha256": "7df921a899769a0ff3025fa1f735dc5a194ca1a3a618d86ce3ee6f7b8c9106d8"
+    },
+    {
+      "path": "src/ball-physics/BallStateMachine.cs",
+      "sha256": "0d3a8ef82cde07b488d9de4f49a26da77a1e6826ac41df566354931f3218325d"
+    },
+    {
+      "path": "src/ball-physics/BodyPart.cs",
+      "sha256": "d29fae7d4d1f3e5daf7e5f3c161cfb87e75f1dba6179d120cea01509ddeeceb8"
+    },
+    {
+      "path": "src/ball-physics/BodyPartCoefficients.cs",
+      "sha256": "23d837f5c20442d15f80390afbbf2de6658b55c37f631c23a4c3a09c2033307b"
+    },
+    {
+      "path": "src/ball-physics/KickResult.cs",
+      "sha256": "1fd7f15c6e35f0ad814c5d845eef364c798fbc3fd3620235909644a040b0fd3b"
+    },
+    {
+      "path": "src/ball-physics/RestartType.cs",
+      "sha256": "1481592b25ec0a62c4847c1f115c803fe77ecfe8929aea8493517b3786eeafe8"
+    },
+    {
+      "path": "src/ball-physics/SurfaceProperties.cs",
+      "sha256": "7b739831d325e24e369a4986c3c89b90f227d680b0599aa5cfac9d07b3abb864"
+    },
+    {
+      "path": "src/ball-physics/ball-physics.asmdef",
+      "sha256": "cc956b9e1f8d87734424828ebb9ab927ab6407c876e8cd19fefc40989ccf38a2"
+    },
+    {
+      "path": "src/client-app/AssemblyInfo.cs",
+      "sha256": "035595fb81bdfaf32a3398378c4f7d833dcbc14496dcd3a267a48ccf3687b145"
+    },
+    {
+      "path": "src/client-app/CareerChange.cs",
+      "sha256": "236b90675add477e5d9874ac4d75f750c9b09c9c4ca3cc0c3111091d8dfc7127"
+    },
+    {
+      "path": "src/client-app/CareerChangeKind.cs",
+      "sha256": "92dbc88b6862102226cab1af59baeaf528bcfe4057182ef0ceb92b782b7867f8"
+    },
+    {
+      "path": "src/client-app/CareerHomeSource.cs",
+      "sha256": "af5b902ad20a63386638a540824d694fbf7cdaa5e3b63e77d198f217a33c8632"
+    },
+    {
+      "path": "src/client-app/CareerHomeViewModel.cs",
+      "sha256": "73e6250601042ba3a7049b41dde724906c79b3ea6a53a43d420b318b72a5e179"
+    },
+    {
+      "path": "src/client-app/CareerProgress.cs",
+      "sha256": "cf312b8521c985c73fef84543dfe4590e0a752244d419ca0e42635d4d9d95134"
+    },
+    {
+      "path": "src/client-app/CareerProgressAction.cs",
+      "sha256": "4c2e1cd12fdb99d9f5456cb2351b96c98b23c07c5e69f3aaff2d99b85bd0b173"
+    },
+    {
+      "path": "src/client-app/CareerSaveSlot.cs",
+      "sha256": "0fe94f3d314a6d730d3121b01f28ebb11383c9ab440d30525c7ef286c44fb21f"
+    },
+    {
+      "path": "src/client-app/CareerSaveSlots.cs",
+      "sha256": "9f5a3329a4621675bea1aeaa04a24e0c959bf1be7b55f4678248a85794fb6a9c"
+    },
+    {
+      "path": "src/client-app/CareerSession.cs",
+      "sha256": "ea6ff6d32183fcbd5237ba2c6eef679cb60973f67c753976cb763ac540f7b9ab"
+    },
+    {
+      "path": "src/client-app/CareerSessionHolder.cs",
+      "sha256": "bd4078d02a3821cf174cbe69d9e7fd4f428ee8bfada7f243415f794de80fc518"
+    },
+    {
+      "path": "src/client-app/CareerSlotState.cs",
+      "sha256": "f71008b0ee729952b2d4f68d3a96b7d3d4db2ece09c74faa6200163bbd587d82"
+    },
+    {
+      "path": "src/client-app/CareerSlotSummary.cs",
+      "sha256": "aee3d74bfc4a003cfb977ffc14601415e9ee41b8abd3b5e4c0f35e8e99ac1808"
+    },
+    {
+      "path": "src/client-app/ClientAppConstants.cs",
+      "sha256": "0aee6c62cfe7a6c30e247d89b32e48340d1720a2510f11a543803bc4e3d90019"
+    },
+    {
+      "path": "src/client-app/ClientChangeRecord.cs",
+      "sha256": "2a0421cbae96470c733eb0dedfe93073386ef2a1fa81bd349be94a88873a1308"
+    },
+    {
+      "path": "src/client-app/ClientChangeRequests.cs",
+      "sha256": "ce9919b33effea57827ea87bb97372125deb067e64685f160313e82c1b9f6294"
+    },
+    {
+      "path": "src/client-app/ClientMatchContext.cs",
+      "sha256": "b85eec407ebd2a57ef2d468a0d7d27d79e594c7369576f2666123ec6f5956007"
+    },
+    {
+      "path": "src/client-app/ClientMatchCoordinator.cs",
+      "sha256": "5f1fc64be7b6fd0be8593624601320c762d5a4d00cdc5d465979462204b42a15"
+    },
+    {
+      "path": "src/client-app/ClientMatchReport.cs",
+      "sha256": "f16dd38d8929de4afbbca1a9f649b04ffb3c9555e5a108238bd267d0a3a7e936"
+    },
+    {
+      "path": "src/client-app/ClientMatchScreenHandle.cs",
+      "sha256": "22162a0ff4d490c479d01991a7d6e87efa7397cfdbda11da72e81233006877d0"
+    },
+    {
+      "path": "src/client-app/ClientReportScreenHandle.cs",
+      "sha256": "9297fb95fef688f96ed885ca8bb65436b40db4db42e7cceab466fee7c9b696ee"
+    },
+    {
+      "path": "src/client-app/ClientScreenFlow.cs",
+      "sha256": "c4af2006651970828ed7b46a64355819c5da09dd07a9cd2dac2710cc08571238"
+    },
+    {
+      "path": "src/client-app/ClientScreenVisibility.cs",
+      "sha256": "6b89733f0abf71f5b5e75cd772cd02a9036702da442d963434a5a13ba595bbd9"
+    },
+    {
+      "path": "src/client-app/ClientScreens.cs",
+      "sha256": "5299acfbee6ed5cbc2089452e15fecdac9b9d7d2ff742608a9283a31068be7e7"
+    },
+    {
+      "path": "src/client-app/ClientShellRootSnapshot.cs",
+      "sha256": "5cb472c9be4b8b07b71c5fcfab645faeb622108e67f21c124a22aa900c5dac24"
+    },
+    {
+      "path": "src/client-app/ClientShellWiringFault.cs",
+      "sha256": "34f106983356c0d78ad51e1bff8cee5afa262538e79415368771dac49cee2da7"
+    },
+    {
+      "path": "src/client-app/ClientShellWiringValidator.cs",
+      "sha256": "0c4dd0ebdc4693b48b1532eb0638c69c8bb072e156abe54fe3c4345b4be886e5"
+    },
+    {
+      "path": "src/client-app/IMatchRendererBinding.cs",
+      "sha256": "370251956404aaa0d1cbf8658b25bf8a43d94172fcfc94376632698468b64ba3"
+    },
+    {
+      "path": "src/client-app/LoadCareerSource.cs",
+      "sha256": "f575bfbbe18c0fc5d6b856d3509be84609495caad85f3db065736d927051da97"
+    },
+    {
+      "path": "src/client-app/LoadCareerViewModel.cs",
+      "sha256": "6345c921b2325e05a7cf7673b25888fe0f2ff6e9b7b48ca6c15e63016bfb81ec"
+    },
+    {
+      "path": "src/client-app/NewCareerSetup.cs",
+      "sha256": "a19010230efe218d12e08ea6a60972e6522b3ae3a50f40d4faeddef34069e1ec"
+    },
+    {
+      "path": "src/client-app/NewCareerViewModel.cs",
+      "sha256": "e460d7631cf53a8fc2cb636050ad81e9ac7d6b4042f829a69e080a0a73065335"
+    },
+    {
+      "path": "src/client-app/S0DemoConstants.cs",
+      "sha256": "a12440b277af8388a15685872e940a5a3ed295a3b6961c0928aec713740db7de"
+    },
+    {
+      "path": "src/client-app/S0DemoFixture.cs",
+      "sha256": "9a225f0d4525cfdad431431ac22104bfb3f33d1a3e99384d6bc18973a1f94680"
+    },
+    {
+      "path": "src/client-app/S0FocusNavigation.cs",
+      "sha256": "7e35d8f63b0afb395073e85d2235489ee6f8f4345ed2f2810b9b85e1e1baea0d"
+    },
+    {
+      "path": "src/client-app/S0PresentationConfiguration.cs",
+      "sha256": "8b364d477921e92a977203814e6bad737d29896b0d0ec08bc1cddba2210e2cf6"
+    },
+    {
+      "path": "src/client-app/S0ScreenContent.cs",
+      "sha256": "079c3390a675a1963490302522350e6e587fed7cfc578715cc610659884d97ed"
+    },
+    {
+      "path": "src/client-app/S0ScreenLayout.cs",
+      "sha256": "d1374d95416a6ea441952be0318cc0026c0cc17cdaff95cdcbe3e4b0d5c17481"
+    },
+    {
+      "path": "src/client-app/S0ScreenPresenter.cs",
+      "sha256": "5c31f22d31a9d98409cd78c57b59fe0df661f1818c035effddc95f9d71d8b7f1"
+    },
+    {
+      "path": "src/client-app/S0TextFormatter.cs",
+      "sha256": "126db2daea27df4e676b27a4ae685f478aafca9c14a0ef51bd6705c3fe33b8c5"
+    },
+    {
+      "path": "src/client-app/S0TextRole.cs",
+      "sha256": "62da9b5d0254c526e6fc1d7fbad8e500aa91e501d09434d4159c1a6155e7817a"
+    },
+    {
+      "path": "src/client-app/SeasonCommandDispatcher.cs",
+      "sha256": "ce9e5f04b1b7a6b4b262035f9b56c544eb24c93836bc2a36f06adcddd88458cd"
+    },
+    {
+      "path": "src/client-app/client-app.asmdef",
+      "sha256": "fe8827a7541b08d5ce5ee116d6b930d7fe113205e35b33df710de84028e27c3c"
+    },
+    {
+      "path": "src/club-finances/BoardModifier.cs",
+      "sha256": "2244b4462f0f1724e237ee416e5324c8354d730610b768129f7a1e7f88a70833"
+    },
+    {
+      "path": "src/club-finances/ClubFinanceEntry.cs",
+      "sha256": "db72504b20383e522e0829f583cc36589a70d3bfa440da51a618ca1d40ad7fb9"
+    },
+    {
+      "path": "src/club-finances/ClubFinances.cs",
+      "sha256": "8bca57365834b0dffeca73d8213efba58075904248ce4a120e82f0395d576e48"
+    },
+    {
+      "path": "src/club-finances/ClubFinancesConstants.cs",
+      "sha256": "930671b93dd842847e6e37d3f1bd012fba0e2afdd00cde94594b40535d469c35"
+    },
+    {
+      "path": "src/club-finances/ClubFinancesSaveCodec.cs",
+      "sha256": "358a5bbc080fd4bfaa534438506cdd59b5e50c5575c0ccdd1ecfd24ee3d559b5"
+    },
+    {
+      "path": "src/club-finances/FinanceLedger.cs",
+      "sha256": "724e0d53d185d6bbab856f3860394dbb6b97b23f5cf8522905eb8561f0281f93"
+    },
+    {
+      "path": "src/club-finances/FinanceLineItem.cs",
+      "sha256": "c8566e6e2f4e38d026961144f437fbb0dc0251cb9e2da46c39b374988bbf9007"
+    },
+    {
+      "path": "src/club-finances/FinanceStep.cs",
+      "sha256": "d3d4687f436ebebce507dd23a67e260155c49d6eb3dce62e825655044495aba2"
+    },
+    {
+      "path": "src/club-finances/FinanceTransaction.cs",
+      "sha256": "efb4474e59cd98a9a456ac8c0cf3c5ae5172bc5dbe716b987f52dfd93053930c"
+    },
+    {
+      "path": "src/club-finances/FinanceTransactionKind.cs",
+      "sha256": "939f991ccba2069be153d123ade0ce989ba59588b712e617359384b095ee537f"
+    },
+    {
+      "path": "src/club-finances/FinancesViewModel.cs",
+      "sha256": "d9e3b26d301b1a9a800ceac53e6be3b645e318c619735424444c0f1e7a9d3522"
+    },
+    {
+      "path": "src/club-finances/club-finances.asmdef",
+      "sha256": "64d6cd9bc533c8970a0c9ef1f0c6007b61d8c67c8d6185aa1af99e2194184125"
+    },
+    {
+      "path": "src/collision-system/AgentAgentCollisionResult.cs",
+      "sha256": "01c61a11c5f31cf3a46b61b81ae866b82e6a803b2a07bcbb82a8402d8e09795d"
+    },
+    {
+      "path": "src/collision-system/AgentBallCollisionData.cs",
+      "sha256": "0a3050959601a7c128e6b9c40693b0cd4d9508bfbc1a3fca9b4be57c7dab6856"
+    },
+    {
+      "path": "src/collision-system/AgentPhysicalProperties.cs",
+      "sha256": "27366067cf75153e845a43c1e0f2503b21fb27b501c1c508e1876a6aa7d4be3e"
+    },
+    {
+      "path": "src/collision-system/BallCollisionHandler.cs",
+      "sha256": "f234c2b24e0ae5cf7bd98ab58933c51853c3ff3f9f2a0679dfba561a9d06d0bf"
+    },
+    {
+      "path": "src/collision-system/CollisionContactState.cs",
+      "sha256": "d959166c1706ec76ace5cac6505c862211b0e1c66c2a320c673534b6af365ccc"
+    },
+    {
+      "path": "src/collision-system/CollisionDetection.cs",
+      "sha256": "89b16275a41c08aaaeaa19887a6d7c07a60f139ddf568e2c1d15b8e5ceea4405"
+    },
+    {
+      "path": "src/collision-system/CollisionEvent.cs",
+      "sha256": "71f6631f9fe4fd420421f5ea66a693ba6b50a44c902b744a06a357b4604d4d20"
+    },
+    {
+      "path": "src/collision-system/CollisionManifold.cs",
+      "sha256": "9f3e4b5ce63bf784183f9d463295764a1b32aa2f7ca29dce0d7685051fa4187e"
+    },
+    {
+      "path": "src/collision-system/CollisionPairBitfield.cs",
+      "sha256": "6d27e1cd2e62221a75651e824bc4359643bbe7ba542f83684deffcec6db176b9"
+    },
+    {
+      "path": "src/collision-system/CollisionResponse.cs",
+      "sha256": "6753cc113e7255b07fd65f4649abec80a16aaf7a5c34b70c948de7306f9102af"
+    },
+    {
+      "path": "src/collision-system/CollisionSystem.cs",
+      "sha256": "f5fce0f0cf079b27a3a7d13457286f89caceb43788cc138ee14fc8b8318fff1e"
+    },
+    {
+      "path": "src/collision-system/CollisionSystemConstants.cs",
+      "sha256": "6e6c81fd8443a16b43d3202382bd576a3437ca91c7cdc6e7fa87e4913a5d88d3"
+    },
+    {
+      "path": "src/collision-system/CollisionType.cs",
+      "sha256": "b31f4a7875404c107171380270800c8ef49c455a009f730736a1797d60cb2e2f"
+    },
+    {
+      "path": "src/collision-system/ContactForceData.cs",
+      "sha256": "e7040a3c24f4b980ad829e32167f5fab7a19b1c66be34c523def2dc17adab3e2"
+    },
+    {
+      "path": "src/collision-system/ContactType.cs",
+      "sha256": "c8abad119a5b18e408f5ffc2f84390f49db4c09d844e4692fc31bc64b366e2d8"
+    },
+    {
+      "path": "src/collision-system/ContactTypeClassifier.cs",
+      "sha256": "94642bdb11d6178a4b53f60b67a657620850ef55bc21b78e4616e67243f09250"
+    },
+    {
+      "path": "src/collision-system/DeterministicRNG.cs",
+      "sha256": "5683dedd8c05566f919198a84f598160382f2bc697dcb526297b299ff57488e6"
+    },
+    {
+      "path": "src/collision-system/ICollisionEventConsumer.cs",
+      "sha256": "fc06eec0fba7e2dd14124690f1c8caa7e358b604350a1f806107312eb245b842"
+    },
+    {
+      "path": "src/collision-system/SpatialHashGrid.cs",
+      "sha256": "782c4f56c2b88b7f27dbcc09290520225b04fe157bc31a199eff38422d631421"
+    },
+    {
+      "path": "src/collision-system/collision-system.asmdef",
+      "sha256": "ba5d2e50e20b943f5bc74e0d91674008022609ac559656902fbe143a76660c02"
+    },
+    {
+      "path": "src/decision-tree/ActionDispatcher.cs",
+      "sha256": "6e61de18ba637b7f8d24f24654fda83b9bc8aa0bdea8832768fda30104404b88"
+    },
+    {
+      "path": "src/decision-tree/ActionOption.cs",
+      "sha256": "d3af732dd13a1cf6b67404c358f959828e51b434f11bbf62b0d496547fc6deaf"
+    },
+    {
+      "path": "src/decision-tree/ActionSelector.cs",
+      "sha256": "b470fa47543c86653598e2560ff4e247d71fb7e643476e3517c542d5dbb83592"
+    },
+    {
+      "path": "src/decision-tree/ActionType.cs",
+      "sha256": "9d9c7fd54c16aeac13451d24bae02767bcbf0566c765e8c17fbf08c1fba0e482"
+    },
+    {
+      "path": "src/decision-tree/AgentAction.cs",
+      "sha256": "139513775ac49be438485cb8973e3567263182541d28c3086373c0480dd80fcc"
+    },
+    {
+      "path": "src/decision-tree/AssemblyInfo.cs",
+      "sha256": "28ca41c80b848f112fbf28fb81b4666834c566498ceff19db2aac701d12c04b8"
+    },
+    {
+      "path": "src/decision-tree/ComposureWeights.cs",
+      "sha256": "adfa88a38b68d80a37b495c54f79c741630e3f36153c379c4142b4cd97339e88"
+    },
+    {
+      "path": "src/decision-tree/DecisionContext.cs",
+      "sha256": "aa53fc2dfe6b4e923520a776047b8d682ae56b7b2c68d67f4cb0077a59b86009"
+    },
+    {
+      "path": "src/decision-tree/DecisionContextAssembler.cs",
+      "sha256": "e18d4660896427fbf74f712b43a511a9f5221403d96a7c8c86075f71e762a16a"
+    },
+    {
+      "path": "src/decision-tree/DecisionMadeEvent.cs",
+      "sha256": "051f92bbcaf77a69c36b54bdf4f2e8bece8ea568ec02b945c22a7040dd6764da"
+    },
+    {
+      "path": "src/decision-tree/DecisionTree.cs",
+      "sha256": "d70cbab59caacdef8f9b69ae448133a049cdd76f4afb0f36042b2a1743740a27"
+    },
+    {
+      "path": "src/decision-tree/DecisionTreeConstants.cs",
+      "sha256": "8c06e976e3e8fb230c313675fb1a172e32aeb37b9514ad05b338e96ae3ccec00"
+    },
+    {
+      "path": "src/decision-tree/DecisionTreeState.cs",
+      "sha256": "5e910ea6116f5df50c03ce79b241903592271bdc6f72d46b3eff277be215def6"
+    },
+    {
+      "path": "src/decision-tree/DecisionTreeStateMachine.cs",
+      "sha256": "700d3a1409214389f733701b4723a5b3be81267a191b97a72e7729cc577b5978"
+    },
+    {
+      "path": "src/decision-tree/DtAgentAttributes.cs",
+      "sha256": "e6a4c73061ff835140b316605c74cab749f97a3f9715017af8efe5106c3acdad"
+    },
+    {
+      "path": "src/decision-tree/DtState.cs",
+      "sha256": "6958dab12bd96be8804b9655ca9280f8ab88fbf19f8e36c63016c6e842a22505"
+    },
+    {
+      "path": "src/decision-tree/EventBusRegistrar.cs",
+      "sha256": "863f658cfefb7f6d3d6f02b7991758849058195aacbf3a97a6e3aa0c1554fede"
+    },
+    {
+      "path": "src/decision-tree/EventBusStub.cs",
+      "sha256": "f230549bf729593e05b2efb4f77ce99fa39bca753b80981b53cbd4ccc9ce4fa9"
+    },
+    {
+      "path": "src/decision-tree/FieldZone.cs",
+      "sha256": "c3c981a247cc47822e6911620e8b3e82f79c0cdc5265be1e03e9bb4d9c2900f8"
+    },
+    {
+      "path": "src/decision-tree/IDtMovementController.cs",
+      "sha256": "4a6bdf99dddddb1a7a1ce43d765e2b03417ca87ddfc43c2558ab6f7b92842420"
+    },
+    {
+      "path": "src/decision-tree/IDtSaveDispatch.cs",
+      "sha256": "a58e045412a2bf148f34636dc97851a1af078bbdf947e7e6c5a026fd3b04ca28"
+    },
+    {
+      "path": "src/decision-tree/MatchContext.cs",
+      "sha256": "8a08b303c4a4761b759f4cacbfdecc65691889a78b922adae7c8bb4f25527da1"
+    },
+    {
+      "path": "src/decision-tree/MatchPhase.cs",
+      "sha256": "a37450cdc78143f0dc7b7fa1299656a2c5b7f6381541a54d9f18c99d1154734d"
+    },
+    {
+      "path": "src/decision-tree/OptionGenerator.cs",
+      "sha256": "67c81947311f3d2c736a6fb4cbf6e05bd8d6a54863aa85909e04caed0d27790c"
+    },
+    {
+      "path": "src/decision-tree/PassingStyle.cs",
+      "sha256": "8d22c594e6e3275a49631f35ca9f6fb1020c799151e336bd3ce53f8947c472a0"
+    },
+    {
+      "path": "src/decision-tree/PitchGeometry.cs",
+      "sha256": "7b40deb826fd774dea4d5080f64f0126e16686a90098a7d3cad98a30928d7820"
+    },
+    {
+      "path": "src/decision-tree/PossessionState.cs",
+      "sha256": "eba2bcd9c59fc3dedefcf7025d06838f82e53f34ffa1a5f2eeda655d833e9d61"
+    },
+    {
+      "path": "src/decision-tree/PressingMode.cs",
+      "sha256": "7db3c7a5d383e4ce90450e2fcc7095e694f73ebbd99de5d1cc3ad5475fd747c3"
+    },
+    {
+      "path": "src/decision-tree/SnapshotValidator.cs",
+      "sha256": "6887d14f1ff0a071a753e181aba05e26c8bd03dbdc949e33264f8d013ee5e6cf"
+    },
+    {
+      "path": "src/decision-tree/TacticTranslation.cs",
+      "sha256": "e4973cda56b68f02923cf8d23eb171858bce954a8e50c29e0a314512f29b64b0"
+    },
+    {
+      "path": "src/decision-tree/TacticalContext.cs",
+      "sha256": "f3209c33541cf92413e5ae353d6406b5890c2ef1c942ec77522a6fed2d2877db"
+    },
+    {
+      "path": "src/decision-tree/TacticalModifierResolver.cs",
+      "sha256": "e6c5d32d32fae9a70c3d473585e1dc47095070747b4c66582c5748db7ade7c75"
+    },
+    {
+      "path": "src/decision-tree/TacticalWeights.cs",
+      "sha256": "7fa5b6232cc0346011531427fb91d1c39dc4a244b11f3d939ad1b085d82bd33e"
+    },
+    {
+      "path": "src/decision-tree/UtilityScorer.cs",
+      "sha256": "0cd0161214706c193ed5dd9d470ef944a428a4c15683e22ea66699726ca848af"
+    },
+    {
+      "path": "src/decision-tree/UtilityWeights.cs",
+      "sha256": "78d2893b531bb140dfbb61d058b931e1569ddcf89ddf82c55ce82e51924092a1"
+    },
+    {
+      "path": "src/decision-tree/decision-tree.asmdef",
+      "sha256": "a0e63febc3c9eb456c712212668ae7e0ba49bb0dbc0e9dcafcdbeae88e63226c"
+    },
+    {
+      "path": "src/defensive-ai/DefensiveAIConstants.cs",
+      "sha256": "5561ffa0925ed9dc6debb4d1829de426e2e294f4cc8b778c04a6e30d09f19b4c"
+    },
+    {
+      "path": "src/defensive-ai/DefensiveAITick.cs",
+      "sha256": "2c99870d216e51eac06bb19bd4633f9ebe933652a0a035fbe6196f1eacb653af"
+    },
+    {
+      "path": "src/defensive-ai/DefensiveAgentSnapshot.cs",
+      "sha256": "0e556f600eed007fb9eb7c60f732f27965ef9165dd9a2760a5417a8716140b0d"
+    },
+    {
+      "path": "src/defensive-ai/DefensiveSnapshot.cs",
+      "sha256": "df5740cd8a46a15baa31d5670d3566d8bdf65a297cb9e890a7670cf26d76d56f"
+    },
+    {
+      "path": "src/defensive-ai/DefensiveTickState.cs",
+      "sha256": "750bfe3dc5b1d71abbfbe61a0548e003ea85111aab12aeccd4131e2fd5ff2c2e"
+    },
+    {
+      "path": "src/defensive-ai/HoldShapePoolFilter.cs",
+      "sha256": "6ef57e5b3bf2bcbf35bbc11d71d7e117dd6ee2ce921830e91dc6900bd3b9ecc4"
+    },
+    {
+      "path": "src/defensive-ai/InvariantEnforcer.cs",
+      "sha256": "afefae1dc21edce25b8d251b09a4782d913d5184b0a5409726d9811268606aef"
+    },
+    {
+      "path": "src/defensive-ai/LastManDetector.cs",
+      "sha256": "f9300cfff4101a8d1ad6ec817d6479c2d03400f7cd09bf9e2d4b651f4cbf1b4f"
+    },
+    {
+      "path": "src/defensive-ai/MarkAssigner.cs",
+      "sha256": "722b3eebacbdc01d63c97a327c9e74fb5cc123243eac6f49f0419b7fcffeeae7"
+    },
+    {
+      "path": "src/defensive-ai/MarkAssignment.cs",
+      "sha256": "bca31c10440943b08b826e4bf0a128e1e06a8d6bdb93c0dd2ba70fd17320757a"
+    },
+    {
+      "path": "src/defensive-ai/MarkDirective.cs",
+      "sha256": "ee631c1f6a3d770f9497c8c485b41e3a7f399256179fcf636786f45b13edbe56"
+    },
+    {
+      "path": "src/defensive-ai/MarkHysteresis.cs",
+      "sha256": "aeb1790acd477c1dd1b5add060fd291e1704dfee4b90b8ce344f5455a2ae154d"
+    },
+    {
+      "path": "src/defensive-ai/MarkHysteresisState.cs",
+      "sha256": "2ddcc90f47ea59a05eb522f8c48d4aa069e2195b053d2a080b35cbda7b1a89ec"
+    },
+    {
+      "path": "src/defensive-ai/MarkMode.cs",
+      "sha256": "94b346d366a2d86094806cc1d903bc2d563061af4cf09cdfbbd32c4d47166ea6"
+    },
+    {
+      "path": "src/defensive-ai/OffsideLineState.cs",
+      "sha256": "6ebe1e519e10e20fba46b9ea1c9df6469c64599c10fc1080d8887e0a22fc80b7"
+    },
+    {
+      "path": "src/defensive-ai/OffsideTrapController.cs",
+      "sha256": "5ea3b76ca48f7a1681a87ff528ceb981af097b268754f3b11d108338596d0565"
+    },
+    {
+      "path": "src/defensive-ai/TackleDuelInputs.cs",
+      "sha256": "114a8f8ebae1c7c68a4c5e06b333ce8f543b92df6a7c703ed7d469301ebecd01"
+    },
+    {
+      "path": "src/defensive-ai/TackleIntentEvaluator.cs",
+      "sha256": "5b1d6642e83a66af25f94cd24adb1a878b7bd5f6f5e5809f230e7ef30375e614"
+    },
+    {
+      "path": "src/defensive-ai/TackleIntentRequest.cs",
+      "sha256": "1aff2c9c08379314601a25844c1734eb502403fda485560908e6ab432583deef"
+    },
+    {
+      "path": "src/defensive-ai/TackleMode.cs",
+      "sha256": "f6149b55b66d76ab219ba4cce7d120b64bc4dfd198c99b7969d5d93dac792df0"
+    },
+    {
+      "path": "src/defensive-ai/TackleOutcome.cs",
+      "sha256": "51f9246a61cea408aa1058a8fe24465deba8db25fd2707f622891e8bbfdd79dc"
+    },
+    {
+      "path": "src/defensive-ai/TackleOutcomeResolver.cs",
+      "sha256": "9d11b90237bb67bb7189d28151dbc84c62ed70bd935ce49b9a998088c05f4af9"
+    },
+    {
+      "path": "src/defensive-ai/TacticTranslation.cs",
+      "sha256": "9395e05de9b2628d3db37ffecbf4062ca3538dc22622179ab61c0c5244aadecf"
+    },
+    {
+      "path": "src/defensive-ai/defensive-ai.asmdef",
+      "sha256": "6e10fde98908230ee59af97a20f8c57422184f9d5ad0a848b1ee07a0b26dd9fa"
+    },
+    {
+      "path": "src/deterministic-sim/AssemblyInfo.cs",
+      "sha256": "42a47d2b37720c395b07bd693d10f92199f3acb58c4e806dce9259bb03c78c00"
+    },
+    {
+      "path": "src/deterministic-sim/BuildIdentity.cs",
+      "sha256": "ae19409d35cb61a1aa82227668ae47c7df20f2e4d429cb25c86925f44925dddd"
+    },
+    {
+      "path": "src/deterministic-sim/CanonicalSerializer.cs",
+      "sha256": "58367bf146df668f1e65982033bf2f12d6660fec9070e34026d455001e8cafca"
+    },
+    {
+      "path": "src/deterministic-sim/CngSha256.cs",
+      "sha256": "e86ca359b4fb067fc60a623af059095f9a3a2a92f6096cd28f94a2d3a4931f84"
+    },
+    {
+      "path": "src/deterministic-sim/DespawnEntry.cs",
+      "sha256": "2d1d265cb2e6880b932e55c8ded83a26a3ec384341d0c3ed9cc958dce617369f"
+    },
+    {
+      "path": "src/deterministic-sim/DespawnLog.cs",
+      "sha256": "4273049ac8379d787b128ac45582d3cd207123e01781fb2ebc261f1415eddae5"
+    },
+    {
+      "path": "src/deterministic-sim/DeterminismTier.cs",
+      "sha256": "d0f0632824ca306dfdb1ad325bb0d202146504cd3c9271689c901ce74f48eadd"
+    },
+    {
+      "path": "src/deterministic-sim/DeterministicRngService.cs",
+      "sha256": "332581b1c26abfa5ba6fbd965134d5bc9c6ddec88b6a1fd2d5b4add633a08eec"
+    },
+    {
+      "path": "src/deterministic-sim/DeterministicSimConstants.cs",
+      "sha256": "7274d078da82eb1f6e06ba3929933894c9e58a52286ec9015f912d91a2c22548"
+    },
+    {
+      "path": "src/deterministic-sim/DivergenceClass.cs",
+      "sha256": "cc71c4c48bd3988246418c87876a7612b9c3667ad2cade7f9b9a9b55f1c341b9"
+    },
+    {
+      "path": "src/deterministic-sim/DivergenceDetector.cs",
+      "sha256": "dfde76f4ba90d43e5a251d673542e325fbeeb6ba482f5d27550d331f5a35bb97"
+    },
+    {
+      "path": "src/deterministic-sim/EnvironmentFingerprint.cs",
+      "sha256": "716f331d98311510635321fb2624a47a28f35424e768f88c1b46252bbdd03b9f"
+    },
+    {
+      "path": "src/deterministic-sim/FloatFlagTuple.cs",
+      "sha256": "bcc75bc2bcd6a6f801b1d69341d3ea6d464f25a52ae50ca91d9cc5c545db32da"
+    },
+    {
+      "path": "src/deterministic-sim/MatchClock.cs",
+      "sha256": "d370ee1c0489163fa467f51f8521f274a611c5225e6cd078b01f6fbe54cc3b51"
+    },
+    {
+      "path": "src/deterministic-sim/MxcsrNative.cs",
+      "sha256": "3da86727cedab4662c7ec221a447a8d771174221a39abe0af4561b47b2227c92"
+    },
+    {
+      "path": "src/deterministic-sim/MxcsrValidator.cs",
+      "sha256": "5672f2c9fc5a334a36df747ff546fb7898d4bc82dc10cebb02642cfc8cc88d0d"
+    },
+    {
+      "path": "src/deterministic-sim/PhaseId.cs",
+      "sha256": "b505d3d369a3b876962393b3906db7fac61c7096dda753c401b63ece4342443a"
+    },
+    {
+      "path": "src/deterministic-sim/ReplayCursor.cs",
+      "sha256": "3d397ebce5d704c4b6dfa538225aba7bbd005d28320bfb23a0cf48350658be38"
+    },
+    {
+      "path": "src/deterministic-sim/ReplayEngine.cs",
+      "sha256": "130c82dbf101ee4694df217e40cb4f4dd782ee29a3ad9f8414adce3c94e466d3"
+    },
+    {
+      "path": "src/deterministic-sim/RngStreamState.cs",
+      "sha256": "585db9f0dcec9ac65ae7a8331d6389accb3d826077caf14a39c072a26b539dca"
+    },
+    {
+      "path": "src/deterministic-sim/SaveBlobFramingHelpers.cs",
+      "sha256": "c594f3f9a24529c545c41a29ee448dd1a6d10e43200472cefcb80c35fd41d2ab"
+    },
+    {
+      "path": "src/deterministic-sim/SaveManager.cs",
+      "sha256": "9c17bbc6f1a2a0f0689d962e8082591a46dfbb66d9b1831d804bb14436c21166"
+    },
+    {
+      "path": "src/deterministic-sim/SnapshotCodec.cs",
+      "sha256": "d59207e4a04e613ee52dc9a191791dce5a7ca21a9582483a6ad73caab07fe3aa"
+    },
+    {
+      "path": "src/deterministic-sim/SnapshotHeader.cs",
+      "sha256": "43e5bd0737feb36690a1d40d991901a8c8e1f31e0109f3e0e64b75671a6d6eec"
+    },
+    {
+      "path": "src/deterministic-sim/SnapshotPayload.cs",
+      "sha256": "780021663869eb5bf90f3dc99721ef98d7bd720ac6e4702549c298b6a45eb529"
+    },
+    {
+      "path": "src/deterministic-sim/SubsystemOrdinals.cs",
+      "sha256": "bde9cd71f31b88c3a27a28435464145998e5312d850d4e2120623e8a84ab046d"
+    },
+    {
+      "path": "src/deterministic-sim/TickOrchestrator.cs",
+      "sha256": "6338aa66da416c3683bd1622c32a95332e95ff32dea03f2389f6ffe5437ea482"
+    },
+    {
+      "path": "src/deterministic-sim/deterministic-sim.asmdef",
+      "sha256": "7cade316470299def0663ba101f4bb3658d7987989d33bb4333f68f441c694b7"
+    },
+    {
+      "path": "src/discipline/AssemblyInfo.cs",
+      "sha256": "a177e2ff6aae62d83a83ab3e4056452c3734a18a705d9f11e9c325aff9e998a8"
+    },
+    {
+      "path": "src/discipline/Availability.cs",
+      "sha256": "95438ba60fd33589a3473fc966cee07a9a0b405acf42485de946fc1001d305fb"
+    },
+    {
+      "path": "src/discipline/CardLedgerFold.cs",
+      "sha256": "faf62e284ed82da5a591ba1266269a60a1476fa318928ed8ef8806a2cb509c6a"
+    },
+    {
+      "path": "src/discipline/DisciplineConstants.cs",
+      "sha256": "3590087fcef4a19357af5069ba3f15ca4c7bc5402179eaafe3ca74e9a6ec7c1b"
+    },
+    {
+      "path": "src/discipline/DisciplineEntry.cs",
+      "sha256": "da3217668cd55b8cda7198f50984218f9f9bd3466b77e2bd4fab13c9940167d3"
+    },
+    {
+      "path": "src/discipline/DisciplineRules.cs",
+      "sha256": "e031f69fb1edecbba46c0b9977439aa3275a24188cb3d4e1f3369094a7bae2d6"
+    },
+    {
+      "path": "src/discipline/DisciplineSaveCodec.cs",
+      "sha256": "5f8ce8f1608e9a03e81586eb41ad3dd90ba15479d3086f24fde298d6be42d41e"
+    },
+    {
+      "path": "src/discipline/DisciplineState.cs",
+      "sha256": "1a7c63783cf55112654f4e1b00d892b9a6a4a66b826b5632fa926fb983263b37"
+    },
+    {
+      "path": "src/discipline/IDisciplineTickLedgerTap.cs",
+      "sha256": "0147a4af075ba308b87b5980919ae05425ea6096ee44f860c86417439c1d1a0b"
+    },
+    {
+      "path": "src/discipline/discipline.asmdef",
+      "sha256": "e9fce4089c63ff1ae71e5ea0070a12432f37bccd22b7d3a6824fba21fa7c30a9"
+    },
+    {
+      "path": "src/event-system/AssemblyInfo.cs",
+      "sha256": "83160f5e163032d05cee542b9d79730afe1405f475887145219ef22905148755"
+    },
+    {
+      "path": "src/event-system/CardIssuedEvent.cs",
+      "sha256": "b3c9c70d1bbbabfa09d3a34b7c16f270faee4a18a008b414e64b02f84398c262"
+    },
+    {
+      "path": "src/event-system/CosmeticChannel.cs",
+      "sha256": "5e325136fa976daa3bad33de223274c71d4d9a4097aac91434b8933d554ce71f"
+    },
+    {
+      "path": "src/event-system/EventBus.cs",
+      "sha256": "d3c0601b358d4f70b6dc92ad2d93eaae113161efdce31c3ad93f7e075807a076"
+    },
+    {
+      "path": "src/event-system/EventHandler.cs",
+      "sha256": "e5940133626a94a18c06531cc3b5c68a43f2782ed0a890d883898861b1608e92"
+    },
+    {
+      "path": "src/event-system/EventLedger.cs",
+      "sha256": "86b739340512efe45d5b6b378a20b258131399ea51b34866e99aa1d1109726a8"
+    },
+    {
+      "path": "src/event-system/EventRegistry.cs",
+      "sha256": "9dc9d56f3e52d6f9eeacacbac58f714868125cf3c3520754cdd034e1d2ecf1e7"
+    },
+    {
+      "path": "src/event-system/EventSystemConstants.cs",
+      "sha256": "4f2b14a34a366d3c68ccbd6c89e4a72b55f20b083002456abde241d3bba70d01"
+    },
+    {
+      "path": "src/event-system/EventTierCache.cs",
+      "sha256": "2f531418bfeee9379eb7fa140ea60a6b717ca112b5968376e096f44991aa46ff"
+    },
+    {
+      "path": "src/event-system/FoulCommittedEvent.cs",
+      "sha256": "fbc2f192a7c3cc0a07883cafd002c295ad46e169588d234932475c63313d43bd"
+    },
+    {
+      "path": "src/event-system/GoalAwardedEvent.cs",
+      "sha256": "0b1e2ae1e5c36a2c4d0530201ab0e403e21cc3af836398f62640d845790faf92"
+    },
+    {
+      "path": "src/event-system/IEventA.cs",
+      "sha256": "dbbf111d677d61cc669ec9a967374d4a416350eab61c48d732aae6ed28bffccd"
+    },
+    {
+      "path": "src/event-system/IEventB.cs",
+      "sha256": "2d6ba3c5270ca497a208af8036b338463781e436fc0e84fdd8ccc6e339ed4eac"
+    },
+    {
+      "path": "src/event-system/IEventC.cs",
+      "sha256": "3a9149cf621ac0e554501bca1583f61094f600535d78a7b48a664102be67e354"
+    },
+    {
+      "path": "src/event-system/MatchPhaseChangedEvent.cs",
+      "sha256": "6d94e170286072902481d4617b6b05fc9065528a883b538007494c88ffbc1f7c"
+    },
+    {
+      "path": "src/event-system/OffsideCalledEvent.cs",
+      "sha256": "aec05a32e492b4970edd170e0009e8b6de9c463501ff8ebec54b87906eebf23d"
+    },
+    {
+      "path": "src/event-system/PossessionChangedEvent.cs",
+      "sha256": "c04ea8bdfe7a503a98a31d4c3782f0d56ebe7fa84189d99357744edafd8148c5"
+    },
+    {
+      "path": "src/event-system/RestartAwardedEvent.cs",
+      "sha256": "133afebcacb52299b983b623cb02921fc59ed75447a3971ffb4d887adca94351"
+    },
+    {
+      "path": "src/event-system/SubscriptionToken.cs",
+      "sha256": "a1026356947cca5519bb629c5df0fb4bd4fdd62529dfc182d46c7a72af84fdb6"
+    },
+    {
+      "path": "src/event-system/SubstitutionEvent.cs",
+      "sha256": "9cd283cacbcbcab84189e051e0742432b1f2c0744b505215a8308617649863b3"
+    },
+    {
+      "path": "src/event-system/TickHeartbeatEvent.cs",
+      "sha256": "ae855ce9f7afe36645b4dd8820a1ca4335a6fd2fd916bb1c879137e71f6288f2"
+    },
+    {
+      "path": "src/event-system/TickLedgerSnapshot.cs",
+      "sha256": "f0509174ec36090869a27e8545f6766580d5f1033499f9ec0f2ff2529b3f70b0"
+    },
+    {
+      "path": "src/event-system/UiNotificationCue.cs",
+      "sha256": "22cffdb2d323ad495baf18571b40df2a3170e3d96ec7ed24f0628930ea7d4e10"
+    },
+    {
+      "path": "src/event-system/VfxImpactCue.cs",
+      "sha256": "d770f3689fed486798503ca059475c3b6d408b2e72815df29e52b26354ecf6fa"
+    },
+    {
+      "path": "src/event-system/event-system.asmdef",
+      "sha256": "9e03d5e7e73a0990f9f84c76041967a541c2d3cdadde2ec3d6c02838e3a637a5"
+    },
+    {
+      "path": "src/first-touch/AssemblyInfo.cs",
+      "sha256": "317dcf317c4488b791d0d962295373a4a0471bbdfd779a9724cc783d264fadea"
+    },
+    {
+      "path": "src/first-touch/BallDisplacementProcessor.cs",
+      "sha256": "09eb4892d57d2b9911f1b92cd138755926e45205777b27716f9ba11cac8a3935"
+    },
+    {
+      "path": "src/first-touch/ControlQualityCalculator.cs",
+      "sha256": "917001389af724271d8939fc739f664e38a717cbd0602dff9b37382f61c53ba8"
+    },
+    {
+      "path": "src/first-touch/FirstTouchConstants.cs",
+      "sha256": "bb63c051c9ff7f38bb919d80da18836c890279709104668ba0beeac0548156c2"
+    },
+    {
+      "path": "src/first-touch/FirstTouchContext.cs",
+      "sha256": "f330f3824603b069b98222050286a462dea538282d466dcc460768f4cbeef261"
+    },
+    {
+      "path": "src/first-touch/FirstTouchResult.cs",
+      "sha256": "7f5e36d9665443a0c7bbcebbf0f2ce361c4b718c6ea1254805b11963acdab99e"
+    },
+    {
+      "path": "src/first-touch/FirstTouchSystem.cs",
+      "sha256": "d053eb79161d71ceeaef202ebb941d49c99eaeb55fc530576932f7177715afc1"
+    },
+    {
+      "path": "src/first-touch/IAgentMovementSystem.cs",
+      "sha256": "7d591541deaa94e2b56852e066d5aafb288334cbf0639a93d2ad6b8cdaa1630d"
+    },
+    {
+      "path": "src/first-touch/IBallPhysicsSystem.cs",
+      "sha256": "04dcffe6aab8ef6169d2389b11954e78248a3abc2ffde31e75cc6d6cdf2f4e9c"
+    },
+    {
+      "path": "src/first-touch/IFirstTouchSystem.cs",
+      "sha256": "868b1a34f3bf7518341ccf71f35ee803b51ff823f9ca13fbd5c09c7e021081cb"
+    },
+    {
+      "path": "src/first-touch/OrientationDetector.cs",
+      "sha256": "e767519e4d088e4b186bf111094aff5a01436241396308427b585f89c10bb4c9"
+    },
+    {
+      "path": "src/first-touch/PossessionStateMachine.cs",
+      "sha256": "73592b0d2fb23ee9c2920db51b86af825e7cfc8892ae7d136bed0c76ef518b7e"
+    },
+    {
+      "path": "src/first-touch/PressureEvaluator.cs",
+      "sha256": "92a50e6a58cf10d6e4c0515c0b131049ac0863bfb5f21029d005f0fd1a5316f0"
+    },
+    {
+      "path": "src/first-touch/PressureResult.cs",
+      "sha256": "d5dc44168ba418cfca293f88bcf807e8195137876641b904d14992dd6233b52f"
+    },
+    {
+      "path": "src/first-touch/TouchRadiusCalculator.cs",
+      "sha256": "47f1bfe487c72f16d260af7aa5320c75ddc2d97a25c179accb6e30808665fee6"
+    },
+    {
+      "path": "src/first-touch/TouchResult.cs",
+      "sha256": "1ea50ee71b73c3ef2492d313aad3f2ca01f1783473ff73695b990782f4ee41df"
+    },
+    {
+      "path": "src/first-touch/first-touch.asmdef",
+      "sha256": "1bc2a070d8f9983f6250e8dbc04d7894f4d0896513282c353a9a46b8c739c241"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/AbortReason.cs",
+      "sha256": "19c2491c30ae7fb4b0c658e011b20969552d6d4a77e585af12985f32d12749f5"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/BallClaimedEvent.cs",
+      "sha256": "719ca4f19d44f0ae663593fc9ca43590ae24d80138d03dba1792b9fe0f65bc3d"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/BodyPartEnum.cs",
+      "sha256": "3b522732343a7e81d1e2ac80f8cc6004438bd995fba4274e639c3f5306abcf66"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/ClaimIntent.cs",
+      "sha256": "b5bce46b46136b3e11e54aeddcdb305a5c54c37de865e31212e2a08c2a46224a"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/ClaimType.cs",
+      "sha256": "c98029e8a1ac1db942525b6758ffa472a6bc2b05d4dbcf7cb3ba181b7a83f368"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/CrossClaimDuelContext.cs",
+      "sha256": "5ec29b336a6250a277d01014f9629cde7e3004c76433025ff70b6428331fe68c"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/DeliveryKind.cs",
+      "sha256": "846b7446569866463fd19b7d10a25c564c490498d6b8ecb4d323be0477ad2ccf"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/DistributeIntent.cs",
+      "sha256": "6883fa90b32b8f691f01db82609854e8812a2784385d0e6ac5bcefce59ed2619"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/DistributionExecutedEvent.cs",
+      "sha256": "b197633136c4b7acf7671f6f125c4f88429731523a2774b658dc111f5b03cc32"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/EventBusRegistrar.cs",
+      "sha256": "32f4a857f69e1d1e6c4ab91b57a518c3d26402386b3b793cf4877c198e17fcc4"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/EventBusStub.cs",
+      "sha256": "7b9b12056b8b6505e9ae436730376b8cf99e521c163351dd6cf02986aa57b55b"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/FailureCause.cs",
+      "sha256": "98fb083d8960f27c737e477c8d38a2079c43f9da73b87a077ddc655b9cf60478"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GkContactState.cs",
+      "sha256": "b741f23f3ade3848e32269e3f25441b89405d05234b1b991089486f6889bcd30"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperAgentAttributes.cs",
+      "sha256": "7e85627abd04e1ebc266b1aea70b462a957d56e049dd06b03001f10831ad8d38"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperConstants.cs",
+      "sha256": "642a6396df6110535d557ca50a1047217c9bb4c4b565b1672e14d310553f388a"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperCrossClaimDuel.cs",
+      "sha256": "7ba36d4fdb92f75d21b13d76ced049bb5d4a589e13464a42d8865bfb16f88dc4"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperDistribution.cs",
+      "sha256": "0e186f41081a0427907071f0d45c25f5589b6be372a184d380e61106a97c9fe9"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperDiveKinematics.cs",
+      "sha256": "0fb3185290e8f10be4e99823d161272eec840d36862316018727e6ea6c8c6809"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperHandlingQuality.cs",
+      "sha256": "8424620970466b650c709afd52eeb8f27ac6f60f18c3f6ddd1561766703df237"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperMechanics.cs",
+      "sha256": "09c40d627ee8d7be46cfde3e49dc2f5377fdd8524d4ca2f859344a9db13f6d40"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperPositioningContract.cs",
+      "sha256": "c83df87ae0ffe346cec73c2790f176d79b761de9609aabe5a75a73c5eb85ba5c"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperReactionPipeline.cs",
+      "sha256": "4e3c8306ce2d4632a2c865e548a53b7b8d74d3fe33391e8b570b5d98c0ba8c53"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperRushDispatch.cs",
+      "sha256": "02f1b6bb934365d503bcedb7dd5be226a40b270fcb0a02f513227f0570abc278"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperRushEvent.cs",
+      "sha256": "4dd5d1f586f91482206f930334d329362a382ed81f26ded9273fa24a5a622e3d"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperState.cs",
+      "sha256": "0e0e7e2cbc63ebf73ee6dfe4174207a2e43001d773ed7020ba1d50306be1a231"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperStateMachine.cs",
+      "sha256": "556829a21161af87e18d49c53bf645addd96fb536d6d7701626eedb46f9879d9"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperTelemetry.cs",
+      "sha256": "fe30120a886752c89aaf2d5884a864731cdc13e7b521c90cf0fb1cdd83b40b0d"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/GoalkeeperTickState.cs",
+      "sha256": "1478f1ce75970d615754d291a682f2197bb994da2f3ba664b2a7f8176678f7c5"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/HandEnum.cs",
+      "sha256": "0cb5e92960891b4f58577fd28fb48f66c909e41e6c317b08184cac0e19079174"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/HandlingQualityLabel.cs",
+      "sha256": "6b25f85a63c2cce915602f423ad5b1a3ad9105cdd8a227ea3046b6637b304dad"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/IGoalkeeperBallSystem.cs",
+      "sha256": "d3900dec67134c63a62468597f58504d65edcf311e68f5b855482eac01239945"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/IGoalkeeperRngService.cs",
+      "sha256": "031aa8812d5979330c994dc3b013eaaa3356c524364da13644ce4a9a619fef70"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/ReactionLabel.cs",
+      "sha256": "072ac3b7d94c29f2939ce6546f441992dfc4e7eba86952bd7ab9724295bd38f6"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/RushIntent.cs",
+      "sha256": "bbb6d0ced32c660c531e78c398a1f278f17bdd3868cdca690f06755903609283"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/RushPhase.cs",
+      "sha256": "242a7d0cf05a3e6e182d1e514dfa5481838863b5f40ae4a80d3efebc39c15dfc"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/SaveAttemptedEvent.cs",
+      "sha256": "4966824031be8de67ece0e992f60d5baabe8483a38f42c67c7a3d076eed40a3a"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/SaveIntent.cs",
+      "sha256": "e55e93c28b94e3e9c87ac6958bffbe50d9d42d44b6b81a372efa3889aaa6fb67"
+    },
+    {
+      "path": "src/goalkeeper-mechanics/goalkeeper-mechanics.asmdef",
+      "sha256": "2b2d61f903255ae31e0e1faf28deda92c23843c057858c8df85aae86f68cd743"
+    },
+    {
+      "path": "src/heading-mechanics/AssemblyInfo.cs",
+      "sha256": "fa50a3e4e758363b2e384a81e82e9068725df6aaa33b49ace26167cce6088720"
+    },
+    {
+      "path": "src/heading-mechanics/ContactQualityLabel.cs",
+      "sha256": "d6277c0a7c705bbba2b9ec02179ca727e21050fb4283c163b6204046a56b786f"
+    },
+    {
+      "path": "src/heading-mechanics/ContestedDuelContext.cs",
+      "sha256": "83cd57dd06cab1f1e26f5d82df2be61056a8db46307b6d6e3bf0aea16b02f94e"
+    },
+    {
+      "path": "src/heading-mechanics/EligibilityResult.cs",
+      "sha256": "c404d019f321cc27f4a6798d4f892f54839a0fcf10cf83e2dfec5b69b0710b02"
+    },
+    {
+      "path": "src/heading-mechanics/EventBusRegistrar.cs",
+      "sha256": "115735086fe7ca17312d3031a1f96e0c4122f26618d2c23e71e27c34b909b520"
+    },
+    {
+      "path": "src/heading-mechanics/EventBusStub.cs",
+      "sha256": "db922e1a702a9b81e1ff7ab3e34fe3de267ee7ed6e9165879ef03d6cb3c23f83"
+    },
+    {
+      "path": "src/heading-mechanics/FailureCause.cs",
+      "sha256": "0b2988f885146f0950f1be9e2c7c9a31ce75d9f3121f880d0880e2c87b1345c8"
+    },
+    {
+      "path": "src/heading-mechanics/HeaderAttemptFailedEvent.cs",
+      "sha256": "b169a7092020928d5806ae8013b5afd9aa640f89e2e34f554b07877a30cd0dbc"
+    },
+    {
+      "path": "src/heading-mechanics/HeaderContactState.cs",
+      "sha256": "dded1a1be85c1fa208a7c4d08082fc36508255258542eb6ddecdb331edc2ae4b"
+    },
+    {
+      "path": "src/heading-mechanics/HeaderExecutedEvent.cs",
+      "sha256": "aa10ca11fcc4c7726a4611c72a4bb0ac5dd03d4808bbe16a1810d9a89c7e3913"
+    },
+    {
+      "path": "src/heading-mechanics/HeaderIntent.cs",
+      "sha256": "d6cde36f1d61710ea3698e1b527e54d4b7ba074eeaf39bbbddcd953d0efaf451"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingAgentAttributes.cs",
+      "sha256": "b01f742e68e62c913c0453720483d41a44e2b3f4a890b858de78754c9f4298cd"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingAim.cs",
+      "sha256": "bfdb11961a698b58c0781ed10669dfbf1cbc6f036e5cfb49f0f5d71dcab47cee"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingContactQuality.cs",
+      "sha256": "057f1438b98ba5d01667d25aa894b673bc169f5db8a295e8239946439f140ca5"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingDuelResolution.cs",
+      "sha256": "e0c644e028b27000418c0bd5e58b67022d0f48330583e954892ebd503e71ab1c"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingEligibility.cs",
+      "sha256": "4798dbb4e9ac1874d901062b018a844f72c554cc34e63402049c4c9972166b43"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingJumpKinematics.cs",
+      "sha256": "315f238418f48d5e160ce0bbbeda004141ebeb8247ad3a344e013b8e379dc205"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingMechanics.cs",
+      "sha256": "701736c367fbbfa4ff6ad80246f5dda38b90268861217dc11327cf448f26427e"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingMechanicsConstants.cs",
+      "sha256": "2d5fdc5e8b5e0cbc5b7a35f14ba20d91d5ca939d03da21f007c867a0b9bbad0d"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingPowerAngle.cs",
+      "sha256": "865200c055c5f85693aeb8d325e7f9965053cc668640158467dd1d008d985057"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingReachabilitySample.cs",
+      "sha256": "1192ba059edad5d279d24dfb1602cfd8322e7ed2b63b83c8729e5ace52e55efd"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingRngServiceStub.cs",
+      "sha256": "31a8df6d02faf18805e8f2671529afb5bef352c8b4d802b995d9c0fc0c2ae107"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingSpinTransfer.cs",
+      "sha256": "667b46f1ec3f7e24b4ac29837f50755eabf6ef2cac79fdbc2ae550dbd622a950"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingTelemetry.cs",
+      "sha256": "e24d743c3073b136ab7a515f942db853a8efc686e84880f709bdb624c2b522f5"
+    },
+    {
+      "path": "src/heading-mechanics/HeadingTickState.cs",
+      "sha256": "1f31aa0647874a87009914fa6fc545ddc86543b01f239c6b1cfc3de37ea2074f"
+    },
+    {
+      "path": "src/heading-mechanics/IHeadingBallSystem.cs",
+      "sha256": "e90d7ed8f94c33b9c6072fb7decb6ef0bf5534e0f28e01a4962838572d07b2d8"
+    },
+    {
+      "path": "src/heading-mechanics/IHeadingRngService.cs",
+      "sha256": "c63f6d1bf0e7b7a3abe06a92f29929607a002529be31507ec3c21acc97d14a07"
+    },
+    {
+      "path": "src/heading-mechanics/MistimedDirection.cs",
+      "sha256": "3e210cde5abc637e59164d7aeb4614bb1e780764f3b793f4b7c8c6dc1785b2f6"
+    },
+    {
+      "path": "src/heading-mechanics/SetPieceContext.cs",
+      "sha256": "8096f34bc322beb8b49eba667f9a38adeaa8542977eea7305b694cd9f01a7543"
+    },
+    {
+      "path": "src/heading-mechanics/heading-mechanics.asmdef",
+      "sha256": "e1745e1b6f2aa258052f13d7d4d0401c326a2007221e50356b8316ba6a45698b"
+    },
+    {
+      "path": "src/injuries-medical/AssemblyInfo.cs",
+      "sha256": "2069597f2e775da2be3e3b6c5a8562b21c84699636e9f9e456f277ede0e914e3"
+    },
+    {
+      "path": "src/injuries-medical/ClubInjuryStates.cs",
+      "sha256": "6ef57a87b631acf19c03be78e3139e58036550591d6098e95d01118bdf5ca0d7"
+    },
+    {
+      "path": "src/injuries-medical/InjuriesMedicalConstants.cs",
+      "sha256": "22b0e3c14f11ad808f83750b72326b6104c88a965e9dfa3414acee0890114078"
+    },
+    {
+      "path": "src/injuries-medical/InjurySeverity.cs",
+      "sha256": "97f3fbc85e05d158b19b844f4c66d9ed76e86b2dda543b7054df7f3252b717c6"
+    },
+    {
+      "path": "src/injuries-medical/InjuryState.cs",
+      "sha256": "6e0acce0df10def4df4459ae0a02d25ba5f8661f221f3ad4fbdb25cf5c84594d"
+    },
+    {
+      "path": "src/injuries-medical/MatchLoad.cs",
+      "sha256": "c60ca59b0558cf7f7c9a613246599daa1c05e7b94b9e8288ace8990670f44cd4"
+    },
+    {
+      "path": "src/injuries-medical/MedicalModifier.cs",
+      "sha256": "cbfa7c267347db75c42ebc8acabd0da16bce155055484a36bc4045cd339289f2"
+    },
+    {
+      "path": "src/injuries-medical/MedicalSaveCodec.cs",
+      "sha256": "1d22959c2b9864bc38d684c5f36f0f5266fefc22368ec99d856c74922e2c5a17"
+    },
+    {
+      "path": "src/injuries-medical/MedicalStep.cs",
+      "sha256": "bd20d443bb192acb0e66550fc3c3b30bf4e3de2040331cb85c0d66061a14068d"
+    },
+    {
+      "path": "src/injuries-medical/MedicalViewModel.cs",
+      "sha256": "b338a6be628757f1ce24e221d18fa599f20bb9a97dae24d5f213c03de996aa64"
+    },
+    {
+      "path": "src/injuries-medical/injuries-medical.asmdef",
+      "sha256": "f349417744bcd014e812e51565966d031cee9f89fb2051339f51bb5519aab23b"
+    },
+    {
+      "path": "src/living-world/ActiveSetMembership.cs",
+      "sha256": "77d04f7edb733cde1c66b61c32838d260558976d75245a4c77cd251012a36d4f"
+    },
+    {
+      "path": "src/living-world/Arc.cs",
+      "sha256": "b5a7b7df4df613d446688fed92d9de158f314f2cf6cbb9f16ac637237bd707d2"
+    },
+    {
+      "path": "src/living-world/ArcCanonSource.cs",
+      "sha256": "e9073f0840f4873a4249980ba5bc8c3ed0932a19fe708fdad117e85c832827c0"
+    },
+    {
+      "path": "src/living-world/ArcEngine.cs",
+      "sha256": "65555cff25984875648026c48c99ea380badd786e41acd10ed394d71e4c735b0"
+    },
+    {
+      "path": "src/living-world/ArcKind.cs",
+      "sha256": "74318d167d6ce4e4bb03d71c6544dc1a3b2cce0e91a1b680dba88e3a1caf8257"
+    },
+    {
+      "path": "src/living-world/ArcTrigger.cs",
+      "sha256": "3cee7f54d42e99f0b7c14cd7488cc9e928b2d396afdf071a1d7b6400c5cf049c"
+    },
+    {
+      "path": "src/living-world/ArcTriggerCatalogue.cs",
+      "sha256": "863d98f9ed2c5823d3c0c6cbcf4479fbf4fe7faeb0433d2dc3d91636f3314f0e"
+    },
+    {
+      "path": "src/living-world/ArcTriggerEvaluator.cs",
+      "sha256": "37398fe545525590e8089e5eac038e025a7c379ae86ec2a31d69712670e4673c"
+    },
+    {
+      "path": "src/living-world/AssemblyInfo.cs",
+      "sha256": "6b1292ed94569f2e4315d084f7f56c4caa0a9c768a925d00da0e309e81f3345f"
+    },
+    {
+      "path": "src/living-world/ColdStore.cs",
+      "sha256": "f8697c8b8275068341e02cffdb8977e03e57504b19fb286ea3430b8c2ba374a3"
+    },
+    {
+      "path": "src/living-world/ColdSummary.cs",
+      "sha256": "32455f4c4ce251a38b63ef4c07e2e77dc18fd3ad332be17dc1bb69f580d43cc8"
+    },
+    {
+      "path": "src/living-world/EventKind.cs",
+      "sha256": "6c21d72646740a3a760e42a378026038892f6e067c7e4729a14d5bacaeb5a10d"
+    },
+    {
+      "path": "src/living-world/InteractionIntent.cs",
+      "sha256": "f73f2f89cd40a8cf4bc0cc6ad008b9df694f4c50463939cda801e51a24fbe5f8"
+    },
+    {
+      "path": "src/living-world/InteractionSlots.cs",
+      "sha256": "1f77d6a53eff18cae9e3c4eaee6fa5970824c7dcfdb27848bd418bf1ec899f85"
+    },
+    {
+      "path": "src/living-world/InteractionTextCorpus.cs",
+      "sha256": "2dc959bb98e5aea5a64f68724450f9f7b33b909213c5c778a3add91e0a55f53b"
+    },
+    {
+      "path": "src/living-world/InteractionTextGenerator.cs",
+      "sha256": "d3f3d9e8e082555f6c68ccb018082100c79d40e3de0ae2719c5c65a9ed1ddd1c"
+    },
+    {
+      "path": "src/living-world/LivingWorldConstants.cs",
+      "sha256": "f7af561ad0b13d49ca037552b7e6e8e9f9cd83afced800484209c2e643afbec1"
+    },
+    {
+      "path": "src/living-world/LivingWorldMath.cs",
+      "sha256": "3818395cb281727dfeec4e5785163e434b1108d726850620539b4212392e1972"
+    },
+    {
+      "path": "src/living-world/MemoryEpisode.cs",
+      "sha256": "511caffea52f94710b28166bb1bc8614e808f6ea192de7d0ad0f37c7d1b9947d"
+    },
+    {
+      "path": "src/living-world/MemoryStore.cs",
+      "sha256": "b7d97d9d9f36f2d5f39c4b7c6762b62b60c99b73acf217a1132c1859d8606b9f"
+    },
+    {
+      "path": "src/living-world/RelationshipEdge.cs",
+      "sha256": "e6c0afd2827cc9007a331742dc3448a818a39dd6ef22352cc042c74e49e4631e"
+    },
+    {
+      "path": "src/living-world/RelationshipLayer.cs",
+      "sha256": "5f0c077cb4407611c04a803bae162bea51f92affb69a4cbbf3baddd39a6414f7"
+    },
+    {
+      "path": "src/living-world/SpawnCause.cs",
+      "sha256": "b4bc6b63f04938b8d3a948407ee34462bee0dbf7292475de897ba8cc0fd8cd30"
+    },
+    {
+      "path": "src/living-world/WorldClock.cs",
+      "sha256": "4202cb6a424bb6e2a7dff911a809b1ec4dbc68590a22eea2089fbe0f704a0f8b"
+    },
+    {
+      "path": "src/living-world/WorldLoop.cs",
+      "sha256": "9f9fb26b1016a11e6ea97cdec838f063c8820c97aab456a6f48fc8cd9d29bdd4"
+    },
+    {
+      "path": "src/living-world/WorldStateSerializer.cs",
+      "sha256": "be251387f8ea1ae49a7c06aa93c4f50f4266b7732139954ed6ece6af8d9f9797"
+    },
+    {
+      "path": "src/living-world/WorldStore.cs",
+      "sha256": "3cac4aa2d3ca89e454fe2fa736183d3994db061f5c5dadd1cac7b5c7db49fcc2"
+    },
+    {
+      "path": "src/living-world/living-world.asmdef",
+      "sha256": "49caf6f657040fd7f370f6efe52d81ba27623260e651c82df4062f239d308912"
+    },
+    {
+      "path": "src/localization/CatalogueCoverage.cs",
+      "sha256": "1480a37bd67b08c62bba8576858497ad48f4672519a8b3363d26e685deaf4af9"
+    },
+    {
+      "path": "src/localization/GrammaticalGender.cs",
+      "sha256": "a63996a6f3f80c80b9ffb8a8ff78fc157283ac14ce776185be61b0b6d5c854bf"
+    },
+    {
+      "path": "src/localization/ILocalizer.cs",
+      "sha256": "cba2b772b30e51c59061c754bdacba7766d13dcaddd66e3e64534d493475477b"
+    },
+    {
+      "path": "src/localization/LocaleId.cs",
+      "sha256": "4f800700a4a6232448707ef53ba06924ab6ac036dad257875b3bdd0be1c538b4"
+    },
+    {
+      "path": "src/localization/LocalizationConstants.cs",
+      "sha256": "a8f799033f39be698f3942a9612505d0829e9532ba19566044c4a8c0f91ed2cf"
+    },
+    {
+      "path": "src/localization/LocalizationHash.cs",
+      "sha256": "0e2573e654607ed2ea11c8cb8f574bb3a96b6eeb8669e01fe47ab39bd57a89c2"
+    },
+    {
+      "path": "src/localization/LocalizationKey.cs",
+      "sha256": "f534f3b991b9189d73329f94e5bebb1455b64620690eb58e7eb14b3a4f0a9794"
+    },
+    {
+      "path": "src/localization/LocalizedTextRequest.cs",
+      "sha256": "6d7188a9e73a0641512bda74f9dcf35fe920f2f28db9b5faf5cd91f2cca2222a"
+    },
+    {
+      "path": "src/localization/Localizer.cs",
+      "sha256": "8708625dd8fb1ffc630211db9482aa7c2343d5c42b7bf84a1097adb81144166d"
+    },
+    {
+      "path": "src/localization/NamedSelector.cs",
+      "sha256": "cc1f050cc81e8f544b1abb91a821395bfa1cb7c8b38d2d5a0ae22fc6edb01b6e"
+    },
+    {
+      "path": "src/localization/NamedSelectorSet.cs",
+      "sha256": "c5d8390ce442cc18b94b71dbd7d72d6534e4a3f65eb70507d098e798c049a93e"
+    },
+    {
+      "path": "src/localization/NamedSlot.cs",
+      "sha256": "6b440ec02eb84df6a5cc26e37ba88a23482c213ac075efd66a83d3bbf9f454e7"
+    },
+    {
+      "path": "src/localization/NamedSlotSet.cs",
+      "sha256": "225dc34d9beb0b5d623f0c3ee88f0a8e02116f79923b33c9befb776233adff8f"
+    },
+    {
+      "path": "src/localization/PluralCategory.cs",
+      "sha256": "3ce8deb347140810f90b36285b03615de4e2ff8ddb10f5f50ef7219e818256e2"
+    },
+    {
+      "path": "src/localization/SelectorOperand.cs",
+      "sha256": "0d9da720288ef8d0bfa2bdfc745d51d9d5ee75e1dbac914cb5a56e1c5f699089"
+    },
+    {
+      "path": "src/localization/TemplateCatalogue.cs",
+      "sha256": "1d08e1475c8a6e0ea25f4265a72df5be0054d570a3e5aeed5561328aaba9757a"
+    },
+    {
+      "path": "src/localization/TemplateExpander.cs",
+      "sha256": "8f27a49c4a8017a26259c818ad16d6f3db9017c0acc9e62d3ced551d219a76aa"
+    },
+    {
+      "path": "src/localization/TemplateForm.cs",
+      "sha256": "53a562c5c17cdcf9f94d87b46e95c4f93ae743b0fe9cb6fcda27778b63d925f4"
+    },
+    {
+      "path": "src/localization/TemplateVariant.cs",
+      "sha256": "32f8b2403c723b17224667410e75a0708533312c5456013d38aad259a0f02adf"
+    },
+    {
+      "path": "src/localization/TextTemplateId.cs",
+      "sha256": "4eda7cc666ec92c47bd1602d858a835e0add61b84226903c20a530e5f8569ffa"
+    },
+    {
+      "path": "src/localization/localization.asmdef",
+      "sha256": "1209f3bd30c12ea5ab002d14cb95e4ad4eb95e0509401bac3e22195e65dc54eb"
+    },
+    {
+      "path": "src/match-analytics/AdvancedStatline.cs",
+      "sha256": "fa8315b2483206c87a2842ee6616083c474b363ea4988b41f84d498d2bd87785"
+    },
+    {
+      "path": "src/match-analytics/ITickLedgerTap.cs",
+      "sha256": "36b611d7f6617f11d06d1e753df2f6f68b322e76312417634188e268b6e86bd8"
+    },
+    {
+      "path": "src/match-analytics/IWorldStateSample.cs",
+      "sha256": "67822c52f479e58cf89a1bd0e2e408c5192bf70359a59adcef97385361a1012b"
+    },
+    {
+      "path": "src/match-analytics/MatchAnalyticsAggregator.cs",
+      "sha256": "f556ebeba085d26a670a853e1cf0c7ba93d002cea91a86189030f1eb23737f94"
+    },
+    {
+      "path": "src/match-analytics/MatchAnalyticsConstants.cs",
+      "sha256": "6a3f585af13143014652b8151c1234878a5e7732a452ebe4a05a1091863e88a7"
+    },
+    {
+      "path": "src/match-analytics/MatchAnalyticsResult.cs",
+      "sha256": "63d7ab9511d07c9b14adc9932e49b9c45a345d3bb5b5a54146708cd8fa38e384"
+    },
+    {
+      "path": "src/match-analytics/MatchEngineObservation.cs",
+      "sha256": "f16bc13227fd0c8d6b3662b8292804805d1d82a24ed2e185e7e671cfb5770444"
+    },
+    {
+      "path": "src/match-analytics/MatchStatline.cs",
+      "sha256": "23ce909863f7d225f93b9a9d0611803830a64a69761fe0cd4bcc09053e68b4bd"
+    },
+    {
+      "path": "src/match-analytics/StatPoint.cs",
+      "sha256": "36da1e90ffe0be9bcdde39ba834426ee2c3123c82a20a76486e5713b7cac22d0"
+    },
+    {
+      "path": "src/match-analytics/XgLocationModel.cs",
+      "sha256": "846eab4d2edeb638b895d72f7c17e80a1c5a20ad1a7daa2dd531e420b0715387"
+    },
+    {
+      "path": "src/match-analytics/match-analytics.asmdef",
+      "sha256": "646609cf82869faaab09f583265a2f7e588ab779f8ed87586f10967fb6fcc747"
+    },
+    {
+      "path": "src/match-client-core/AgentRenderModel.cs",
+      "sha256": "95d81f2c061e1a34ec25a0a160e9d1ab5b6c13e5d8e90b02773ce34eefdc2c6a"
+    },
+    {
+      "path": "src/match-client-core/AssemblyInfo.cs",
+      "sha256": "1e1a5fda8019dc0bc57e3231f13636dd4b6481941401a4cc9bf46f2edc2a37a0"
+    },
+    {
+      "path": "src/match-client-core/BallRenderModel.cs",
+      "sha256": "4dd94ea726778bc644af7cf592483ab8f08f6b0148b8a2ed9b32750ecfa93574"
+    },
+    {
+      "path": "src/match-client-core/FollowBallCamera.cs",
+      "sha256": "1ecca36bde7b6c9402d59902516bbe2a7252ab213fdc0c2656b23cd045359bc3"
+    },
+    {
+      "path": "src/match-client-core/FrameInterpolator.cs",
+      "sha256": "e6b335d0bca0e7f378d322296a0e9aeca00da5c58be8ed232b2ea849865d222b"
+    },
+    {
+      "path": "src/match-client-core/ILiveMatchMutations.cs",
+      "sha256": "d85977653ad899a459e240b8746af22f5a00d5070cd1608e70102efc37070750"
+    },
+    {
+      "path": "src/match-client-core/LiveFrameLatch.cs",
+      "sha256": "6f13cc82ed13156a633dfcb35c97627c8a6337e1f72e69c587581879035e2872"
+    },
+    {
+      "path": "src/match-client-core/ManagerCommand.cs",
+      "sha256": "7a74e16af11aa183af091d7d59616bea4260bd3ff1d3d00ff401440552f2b43f"
+    },
+    {
+      "path": "src/match-client-core/ManagerCommandKind.cs",
+      "sha256": "46daa8d22c385cea4e2bebdecf582ec4d48d0a1226bc13f78348bb657fbeb3d0"
+    },
+    {
+      "path": "src/match-client-core/ManagerCommandQueue.cs",
+      "sha256": "921b5133ba88ce1b480d292bcef7ada4b510fb9fdda2addbbf95919245c57cf4"
+    },
+    {
+      "path": "src/match-client-core/MatchAnalyticsPublication.cs",
+      "sha256": "fba06ea60a5b772493c68535e6ad978df28f40ca347c6d591289d167dbc91da7"
+    },
+    {
+      "path": "src/match-client-core/MatchBootRoster.cs",
+      "sha256": "73cecedc4b9a4db61d835e1da64cd1d759add902e1da0868fb034e9bc5522360"
+    },
+    {
+      "path": "src/match-client-core/MatchClientConstants.cs",
+      "sha256": "ee7149e5eb7bfcd5d6543bf693aa37b75a427036ccd76ae788d69707bc79abac"
+    },
+    {
+      "path": "src/match-client-core/MatchClientDriver.cs",
+      "sha256": "9a3d9f1449cf28dc1b74771e2f4f5d223c8c2643f20697ef8eaf5f47a17419a2"
+    },
+    {
+      "path": "src/match-client-core/MatchControlAvailability.cs",
+      "sha256": "3394b7ae0c652f87ea8e15cfb19c43708835151ff3154a7dad01fe86b3c42183"
+    },
+    {
+      "path": "src/match-client-core/MatchControlLockReason.cs",
+      "sha256": "d2109c032fb91f26622ef2430630699dc9ca01304bf34efb54e8082a164d8202"
+    },
+    {
+      "path": "src/match-client-core/MatchEngineMutations.cs",
+      "sha256": "a6174116841077bb44d6327245ae64b3cc6a0856ed7a0abac54b8d55f9ab2535"
+    },
+    {
+      "path": "src/match-client-core/MatchIdentityContext.cs",
+      "sha256": "770b48bc7472914d3a354bb8761fe6f95a2d96cf1705c808bbc0bb3daf34833c"
+    },
+    {
+      "path": "src/match-client-core/MatchPlayerIdentity.cs",
+      "sha256": "7d8623b52849fea2c0803154a1574f63826989869cadd565e482c8666231b02b"
+    },
+    {
+      "path": "src/match-client-core/MatchRenderProjection.cs",
+      "sha256": "352cb4dc9faf388b8ded61b4fe1f80d04c13c87cf4485853c32df3a71c6bf360"
+    },
+    {
+      "path": "src/match-client-core/MatchRoster.cs",
+      "sha256": "6608f756670c69fbfd9b8b89dacc5a0a9683b26ab9a8db2b2c49391ee21181ba"
+    },
+    {
+      "path": "src/match-client-core/MatchSession.cs",
+      "sha256": "db237d1e24083789825c6a6379f14bd3497e66944a4983848f1907b3d2dacf81"
+    },
+    {
+      "path": "src/match-client-core/MatchSessionLifecycle.cs",
+      "sha256": "b087b40b6c593c0751ff930e122b17bb9c1895b6b1c48c7363071eb5b7d3d480"
+    },
+    {
+      "path": "src/match-client-core/MatchSetup.cs",
+      "sha256": "2da4cb5912131186e86c60b762cab9006fe38b2e4288f8507f516366d8e02d2d"
+    },
+    {
+      "path": "src/match-client-core/PitchCameraPose.cs",
+      "sha256": "b097b7e963b66bc9cbe58fbcd6e68b6ada56d30600be7e4f4a9904b97b55d5e6"
+    },
+    {
+      "path": "src/match-client-core/PitchCameraRig.cs",
+      "sha256": "ed20f8a9a69167864ec5989d2156d23a3482d52675bebb80a91574f9268561a0"
+    },
+    {
+      "path": "src/match-client-core/PitchMarking.cs",
+      "sha256": "d70e451b11f35c6b3d249780781f7b0a1989ebd227d96c8226df0202d42688d1"
+    },
+    {
+      "path": "src/match-client-core/PitchMarkingKind.cs",
+      "sha256": "efb4b39888eb6d62166e6320b9595375fdf1f5c8d4d2dc837ce663a51745f6b0"
+    },
+    {
+      "path": "src/match-client-core/PitchMarkings.cs",
+      "sha256": "8e40f94d3d30ee536e98f2feb84d47cfdee2a248116fd2fd423b12068eeceac9"
+    },
+    {
+      "path": "src/match-client-core/PitchViewProjection.cs",
+      "sha256": "b3b916f9225512635bf087f7524aa6726ac3bc3b29ad4d1cd2fcea92fc4a80cf"
+    },
+    {
+      "path": "src/match-client-core/PlaybackSpeedLadder.cs",
+      "sha256": "478aedd8abd0cbef7d579e01e617f7eb6e0345fd500be0887406675024690cfa"
+    },
+    {
+      "path": "src/match-client-core/SessionMatchAnalytics.cs",
+      "sha256": "31e8a1619353bba431f56cbf3142820bcb715f413bbd97b788dee895314c990b"
+    },
+    {
+      "path": "src/match-client-core/TickStampedCommand.cs",
+      "sha256": "ca36b06357422bac4a2c9ca05475c63b88efcd68123c62ac61ccde0127a6c234"
+    },
+    {
+      "path": "src/match-client-core/TickStampedCommandReplay.cs",
+      "sha256": "32acfb2edc0c04e404148b4db56df37806d1814ce6bea355905a76ed74c6623a"
+    },
+    {
+      "path": "src/match-client-core/match-client-core.asmdef",
+      "sha256": "b4d52ba14e12f6635d5270f572f997ee285f947c9b95ac84d44db2c7f8a58259"
+    },
+    {
+      "path": "src/match-client-unity/ClientShellBehaviour.cs",
+      "sha256": "e229bcb87781740a779bb6252ca9e0df1cac9ec37ce2758fb9785e8ce02ada9d"
+    },
+    {
+      "path": "src/match-client-unity/DevelopmentMatchHost.cs",
+      "sha256": "03735469c4cd26da9fd303472999cb729745d3111f1826f69766d21b52ead6c9"
+    },
+    {
+      "path": "src/match-client-unity/MatchClientBehaviour.cs",
+      "sha256": "a4a615782e5b85ef50937bee88045ff1ed62134933c7502ef973240a0cac8a75"
+    },
+    {
+      "path": "src/match-client-unity/S0BodyLayout.cs",
+      "sha256": "8594c738327ff4d7394d148a6d8084173db7a0f2bb80648ee0f6a3ef03dd61ce"
+    },
+    {
+      "path": "src/match-client-unity/S0ControlSkin.cs",
+      "sha256": "fbee6043a9340e23b970a170a6e7d5e1fa50dfcc4c5c44248e76aa0d39490730"
+    },
+    {
+      "path": "src/match-client-unity/S0MaxWidth.cs",
+      "sha256": "6ec6f975f0b0f3c7bd7be2e6d57bf423be75146ad565a972182bcf3f5f2216c2"
+    },
+    {
+      "path": "src/match-client-unity/S0PitchLayout.cs",
+      "sha256": "0398e8c6e483f8ffe7d6b5854d2ef7a7888e567e196595060cfd29e3d5c81daa"
+    },
+    {
+      "path": "src/match-client-unity/S0ReservedReason.cs",
+      "sha256": "1129e9dac5bed46f103a1ba1797e37c809eaf78d3461f19e401cb8fa99d05756"
+    },
+    {
+      "path": "src/match-client-unity/S0ScreensBehaviour.cs",
+      "sha256": "dcd3526d79ad5abc961cd5fc551026ea5ad240d9b3b76565acaec2f99ea7eb1b"
+    },
+    {
+      "path": "src/match-client-unity/S0UiConstants.cs",
+      "sha256": "150515937b6dc73d34b1ba96502aca57cd21370c9e82f87af6de94235017e367"
+    },
+    {
+      "path": "src/match-client-unity/S0UiFactory.cs",
+      "sha256": "82b4ff34a7eefb63c338fcbb326135652cabbe0fff28e355319ec2a9dfd4de1d"
+    },
+    {
+      "path": "src/match-client-unity/match-client-unity.asmdef",
+      "sha256": "1cd1bfdfe355262581cb334637adeaa36023413710b5f2ad2e2420b667fa0874"
+    },
+    {
+      "path": "src/match-client-web/MatchAnalyticsReport.cs",
+      "sha256": "5959494bcbedbc79462244fbb50cb3aa92cec0d62ba705059358a8ac4eae83b9"
+    },
+    {
+      "path": "src/match-client-web/MatchClientHost.cs",
+      "sha256": "830b83ea446e339e0e873b797a4ea7aef6b3443a6f3eb0629dda504beb5159b6"
+    },
+    {
+      "path": "src/match-client-web/MatchClientPage.cs",
+      "sha256": "3d86ec47ae5c1ff5329e09f660e4b3e369df101238468f151793163e82990bbb"
+    },
+    {
+      "path": "src/match-client-web/MatchClientResponse.cs",
+      "sha256": "f56ca686ae66dfb32fdf4a9605f19df8bfccf67144f094637bcb536146b1bd46"
+    },
+    {
+      "path": "src/match-client-web/MatchClientRouter.cs",
+      "sha256": "45f8afeb274a1fe35fe19e7ce12baa3c780da5ce7ffa9fed255c92deea9e27a6"
+    },
+    {
+      "path": "src/match-client-web/MatchClientServer.cs",
+      "sha256": "6397dfe9e1006156b57329d281f1ad90fe9733d71cc9bceae1f0d7b930d97a01"
+    },
+    {
+      "path": "src/match-client-web/MatchClientWebConstants.cs",
+      "sha256": "8ccb44750bf178481e2a565398eba87d0bc00b5b9f97882d47ab0ee4e84d8b44"
+    },
+    {
+      "path": "src/match-client-web/match-client-web.asmdef",
+      "sha256": "acfcec622d6536cd9a1163c8575c3a8de5913ae33657b7f5a9a5058b334c1d5a"
+    },
+    {
+      "path": "src/match-engine/AssemblyInfo.cs",
+      "sha256": "54d0a4c15bced6ca24bc4cb2aec94b2fab418fc35a47dc23520cac1fdf95e72b"
+    },
+    {
+      "path": "src/match-engine/GkHeadingIntentSource.cs",
+      "sha256": "25641616430a2816cdc0836e6654971c12face086d7f3414158be99cbea3a60b"
+    },
+    {
+      "path": "src/match-engine/ISquadProvider.cs",
+      "sha256": "461d253e46620bd686fbb245d73b030cd4c67e3ec377acd011660bd1c3388638"
+    },
+    {
+      "path": "src/match-engine/KeeperPerceptionGate.cs",
+      "sha256": "479ad000d5148414e50ebe0e152d6272ad706a474d33be773753e46d6db7b25a"
+    },
+    {
+      "path": "src/match-engine/LineupSelector.cs",
+      "sha256": "81aa38ea10f3568a23a2c48cccc300c359bf16b641379c172fdcd2bcde1d2845"
+    },
+    {
+      "path": "src/match-engine/ManagerAdaptation.cs",
+      "sha256": "e7f4c987d70601a8daa218fd5cec87ff42bad14fe9bafc7fc55f42c98aed62d9"
+    },
+    {
+      "path": "src/match-engine/ManagerDecisionGate.cs",
+      "sha256": "b8d9deeb25e2086aac9343b888855795247e0c7674076d0e1af811394112fbbb"
+    },
+    {
+      "path": "src/match-engine/ManagerMode.cs",
+      "sha256": "6b1983f4dda7c2b844490cf07cea44fc2c046204f2e2c08a192ca3c683ff04fb"
+    },
+    {
+      "path": "src/match-engine/ManagerProfile.cs",
+      "sha256": "6aa32a22accb16420c836df2a146adf1d007ebc46241d8a3e71175d77fee75eb"
+    },
+    {
+      "path": "src/match-engine/ManagerState.cs",
+      "sha256": "0e6f91524c232f2411714546c3d2e125163f4508628129bbe35106a943da44a3"
+    },
+    {
+      "path": "src/match-engine/MatchEngine.GoalkeeperDistribution.cs",
+      "sha256": "ad30502f4e440404c6536f110b701f811de6b9cc1bbb2fc43daf96ae90bc58c8"
+    },
+    {
+      "path": "src/match-engine/MatchEngine.KeeperHandControlLaw.cs",
+      "sha256": "27f219a95342a595f5e8f82214d16df6601a1bb879dba94b68efc911fe060adc"
+    },
+    {
+      "path": "src/match-engine/MatchEngine.KeeperHandlingLaw.cs",
+      "sha256": "f227e17da1c95c2d52c6606fd3d670c3c07b863f27ea22fdb6ae774a9cdedcab"
+    },
+    {
+      "path": "src/match-engine/MatchEngine.cs",
+      "sha256": "4bf8d1edefd693ab3862dffd5efd903b77636175faf1564db2bc926f9ff1482e"
+    },
+    {
+      "path": "src/match-engine/MatchEngineBuildIdentity.cs",
+      "sha256": "1efa217b478f1ff814d7648d3dc5a85d888f12b84abea11aa964b18fee82b648"
+    },
+    {
+      "path": "src/match-engine/MatchEngineConstants.cs",
+      "sha256": "4192dd250213bd4eb0852a0785a346633b6206532c5c05125c2cd39390ca32af"
+    },
+    {
+      "path": "src/match-engine/MatchFormationState.cs",
+      "sha256": "d2f60faf790d1010bba1da2cc88ae3b3a9fcaa3138edc90113f4d7f45f18256e"
+    },
+    {
+      "path": "src/match-engine/MatchPeriod.cs",
+      "sha256": "b436e0389dce779dc7fc1d332e288d2c1c81aabac0c7404f48811cc63374b533"
+    },
+    {
+      "path": "src/match-engine/MatchSaveCodec.cs",
+      "sha256": "9e77fd31b3822998bd8707618fc089813f830c7fc85878cdd4382b1829047da4"
+    },
+    {
+      "path": "src/match-engine/MatchSaveContents.cs",
+      "sha256": "0daa5a26c3f7db7d82c4564858b9b21aed7c917f606d9aee7f4615d342eef508"
+    },
+    {
+      "path": "src/match-engine/MatchSaveManager.cs",
+      "sha256": "9cfe5e51d4be2f0393965dc740cd5ecfb1e2d9cffcb9f581aacd64ed4f2ef0d9"
+    },
+    {
+      "path": "src/match-engine/OffsideEvaluator.cs",
+      "sha256": "41a57e3975c6a4664e51db6306c80fcb9b20fbe7ce65bdf4a3cb77eb15bf5749"
+    },
+    {
+      "path": "src/match-engine/PlayerAttributeProjection.cs",
+      "sha256": "50c4c07bb70f0d52bf7c5962880cbecf68739f739a4f75d4dcc9d652abfe30f3"
+    },
+    {
+      "path": "src/match-engine/PlayerTacticConfig.cs",
+      "sha256": "e035ecc7a7492a7bea2f7e2870848da5d511ab825ab85c79bc84e6bdc12f704f"
+    },
+    {
+      "path": "src/match-engine/PlayerTacticConfigApplier.cs",
+      "sha256": "77a62edfc0312af46d3acd7d9e388972ac74acb9ce334b56ea4da9602d42323c"
+    },
+    {
+      "path": "src/match-engine/PlayerTacticFileLoader.cs",
+      "sha256": "452ce9e252635cfa98627e9ac43e1c93fcc0e62ed30c8f933a878250559ba5c7"
+    },
+    {
+      "path": "src/match-engine/RestartCue.cs",
+      "sha256": "763b29e2adf7793fb6bcb23f26b1948150ead1bfd356591dce2f909f4f89a4d4"
+    },
+    {
+      "path": "src/match-engine/RestartResolver.cs",
+      "sha256": "3ff47e62671a263bcedbd5abb589328819fc477b8fa01112a8e1791f479a55da"
+    },
+    {
+      "path": "src/match-engine/SquadRating.cs",
+      "sha256": "7ab78bfed592b8a909ecfa42399c64c800c847acf756e40304024b61569f869e"
+    },
+    {
+      "path": "src/match-engine/SubstitutionReason.cs",
+      "sha256": "0448ba36e9c68169b683eaa3e50ecaab31970cccb869c02292fcd42962d6a245"
+    },
+    {
+      "path": "src/match-engine/SubstitutionRequestResult.cs",
+      "sha256": "f66250e37445427f5e535d470e54e9a94610364a0023cf719e6b43500be5ffe0"
+    },
+    {
+      "path": "src/match-engine/TackleIntentCensus.cs",
+      "sha256": "430718c531edc1786c359fbebe6227dce95750a517b19f05bbd1e30a831fb6cb"
+    },
+    {
+      "path": "src/match-engine/TacticFileGrammar.cs",
+      "sha256": "76bfab7d5589e771c393640885165754a8251c3c41e5030e74bdb2a164b9b21e"
+    },
+    {
+      "path": "src/match-engine/TacticPresetFileLoader.cs",
+      "sha256": "b6abfcf4298963c54627b74ada154b489395c224336b957f7b3a3291faf94e74"
+    },
+    {
+      "path": "src/match-engine/TacticPresetProjection.cs",
+      "sha256": "b3ec89367e5d24f6bf7bc5273acbd3406206df07b3f0e5e4ae94e52fab4d335b"
+    },
+    {
+      "path": "src/match-engine/TeamTacticConfig.cs",
+      "sha256": "50669316ef025848d296f6621683e7536c4083e54845ec1fc23a46792160586b"
+    },
+    {
+      "path": "src/match-engine/TeamTacticConfigApplier.cs",
+      "sha256": "cedc1c8ce302e669ae1e373b2dbac473017217fea8df5a1ddcc5f86eafc59f50"
+    },
+    {
+      "path": "src/match-engine/TeamTacticFileLoader.cs",
+      "sha256": "462d00bb0fe567ccafba825882bae4a7ce0acdfa2759869396ce2ac68245b064"
+    },
+    {
+      "path": "src/match-engine/W8StageAEvent.cs",
+      "sha256": "e6cae6b0a1c1370bb5595df74101a12af4acd2a53d38a26771219ce640ed7bdf"
+    },
+    {
+      "path": "src/match-engine/match-engine.asmdef",
+      "sha256": "96d2709b537f7809bcc8e59c9967d85335c8da53622c4ca20f7bed25f6d6760a"
+    },
+    {
+      "path": "src/match-viewer/AssemblyInfo.cs",
+      "sha256": "1958dde501e2f6022b7d33d07b0efada6a1c275c259540ebe1bbbc9c97dd993b"
+    },
+    {
+      "path": "src/match-viewer/HtmlReplayExporter.cs",
+      "sha256": "494fba2cafb68444ad7370fdef34882df081a365fbd2cec98ac498a709fa04e4"
+    },
+    {
+      "path": "src/match-viewer/HttpGracefulClose.cs",
+      "sha256": "0648774c5827c8dab976a5519208043591c79d768b96515165fddac1238be0c7"
+    },
+    {
+      "path": "src/match-viewer/LiveAgentCue.cs",
+      "sha256": "b2667e6487d27bcccca30b9cd10b0dce169ba1845c446179c63ae431d31448c2"
+    },
+    {
+      "path": "src/match-viewer/LiveMatchFrame.cs",
+      "sha256": "82e35562bf3d3eb9ee94bffaeb76e053f24ebd87c41c016c4b455e70937ecb97"
+    },
+    {
+      "path": "src/match-viewer/LiveMatchServer.cs",
+      "sha256": "230ab2195745b535af0878f6cd06227b13ff1001330b591465a635e84d97c61c"
+    },
+    {
+      "path": "src/match-viewer/LiveMatchStreamer.cs",
+      "sha256": "3c332ca9445567171b1a26d05172ce5ac6a84b04666c04dac23749fe645e32ea"
+    },
+    {
+      "path": "src/match-viewer/MatchReplay.cs",
+      "sha256": "1a13ffb7445131bb26f36b36c81c004e2e78e09e17e4a820f1002f7b9f4fb1ae"
+    },
+    {
+      "path": "src/match-viewer/MatchReplayRecorder.cs",
+      "sha256": "ae26a4060718b7a765d4c37ed35d5130a6071d8b338af3f300e7b20d558df6dd"
+    },
+    {
+      "path": "src/match-viewer/MatchViewerConstants.cs",
+      "sha256": "491869cbdfe1c8b774278845ec284189f0fe5a49e8300dd42ac9c61a59dfe224"
+    },
+    {
+      "path": "src/match-viewer/ReplayFrame.cs",
+      "sha256": "83ef6aacb9d50e5522d0ff96239be7177cfa157c2eac578797d74e924c88a394"
+    },
+    {
+      "path": "src/match-viewer/RestartBanner.cs",
+      "sha256": "f3a06265d7be9e7ed12fd9bfeb47be0708251010ca6128587ac8ea6ade0f6921"
+    },
+    {
+      "path": "src/match-viewer/RosterShirtNumbers.cs",
+      "sha256": "6ecda7f8023d89b956f82a45e13208cd54cfb3b6a57fc536d8dc0ad8aa0a5209"
+    },
+    {
+      "path": "src/match-viewer/Scoreline.cs",
+      "sha256": "743c69776d8b097a2cf841a587f79699b3cde3ec8523dd0b457be06b41e24f83"
+    },
+    {
+      "path": "src/match-viewer/match-viewer.asmdef",
+      "sha256": "7cafa8b2bd027e2d9f60f56ce9c8affcac7817a0308977ee42f708255fb2b37d"
+    },
+    {
+      "path": "src/pass-mechanics/AssemblyInfo.cs",
+      "sha256": "c41ba2393a3a8a982847eacc67fc5e0f8522fc2da234e047acc38f32153701b6"
+    },
+    {
+      "path": "src/pass-mechanics/CancelReason.cs",
+      "sha256": "7b1aef72dbecc06e15dc4cfcbf4c7a2500d140b50ed0431b2ca59b414f937142"
+    },
+    {
+      "path": "src/pass-mechanics/CrossSubType.cs",
+      "sha256": "28094893051fd908e5cd3733c387a7cad61bd585de935ef52f6c5053b2946898"
+    },
+    {
+      "path": "src/pass-mechanics/EventBusRegistrar.cs",
+      "sha256": "6f291492547ff1cca9d1e601310c460a27a3e4660182b0666d0bd784e1e0196f"
+    },
+    {
+      "path": "src/pass-mechanics/EventBusStub.cs",
+      "sha256": "fea238f073007207cebfbced058b6e0275d7db5bbff11a16969ce4d1914a3047"
+    },
+    {
+      "path": "src/pass-mechanics/GoalkeeperDeliveryVariant.cs",
+      "sha256": "98b37b23ad55878e944fa269568bb883d7d96362036de978d1f263573c67d282"
+    },
+    {
+      "path": "src/pass-mechanics/GoalkeeperDistributionFeedback.cs",
+      "sha256": "0484f3be96b40a9b552447b439217a20f7db26e8952ac0a5ce85fc688caa31ab"
+    },
+    {
+      "path": "src/pass-mechanics/GoalkeeperDistributionFeedbackKind.cs",
+      "sha256": "ec4ec64009dcbc5eb13cc20d3a81dc705b3b66743f7401efe933721629f395cf"
+    },
+    {
+      "path": "src/pass-mechanics/GoalkeeperDistributionRequest.cs",
+      "sha256": "9c2b4b1a8f9587272b0a57c0a91531c54dc6b028f393653e22deb512e0f3d66b"
+    },
+    {
+      "path": "src/pass-mechanics/IPassAgentQuery.cs",
+      "sha256": "7d56cadc5e1cb97515373282aeec6ed847070cb358ea9915fe87971cca84450e"
+    },
+    {
+      "path": "src/pass-mechanics/IPassBallSystem.cs",
+      "sha256": "6febbce064af57baa14d60874a06a6b8044eff39bf565ae005b265283521efb0"
+    },
+    {
+      "path": "src/pass-mechanics/IPassCollisionQuery.cs",
+      "sha256": "aa05da37fcee81faf4e8345660e90ce84faf2611777caa51466fd4bb57fc546b"
+    },
+    {
+      "path": "src/pass-mechanics/PassAgentAttributes.cs",
+      "sha256": "20f6c937c16d4ae0dca19c14ee864c683a2e30935c660e61b459512b9b436a2b"
+    },
+    {
+      "path": "src/pass-mechanics/PassAgentState.cs",
+      "sha256": "114ca4a376285db5ac381b7b667ca4003ee2acec54460717da71ab61391f48a3"
+    },
+    {
+      "path": "src/pass-mechanics/PassAttemptEvent.cs",
+      "sha256": "8e8243037e20a5a7769475d0a2dec1655a3181134a8f0e77bee54c1d4107e981"
+    },
+    {
+      "path": "src/pass-mechanics/PassCancelledEvent.cs",
+      "sha256": "242f7a6941abffbb0435e943449b7066dda891f80bc8de3c22927f212ae4d62a"
+    },
+    {
+      "path": "src/pass-mechanics/PassErrorCalculator.cs",
+      "sha256": "964d905528db901d03d90f0c639cc05517dd37d6f7fc1fb5f47a18a1eb513636"
+    },
+    {
+      "path": "src/pass-mechanics/PassExecutor.GoalkeeperDistribution.cs",
+      "sha256": "601c77b59033384677980ddf1c86bce66b89047391c9c1577b1c66eaff982e03"
+    },
+    {
+      "path": "src/pass-mechanics/PassExecutor.cs",
+      "sha256": "e07263214f03eef5f17e69fe81b2038c91ba75792ee55b8591df40462f2b4ff6"
+    },
+    {
+      "path": "src/pass-mechanics/PassExecutorState.cs",
+      "sha256": "cd6faddb0ce96ac67dabc9c9b3c7bd399987222ff571fd50fa10f0736b642ca7"
+    },
+    {
+      "path": "src/pass-mechanics/PassMechanicsConstants.cs",
+      "sha256": "e2a31eb389ced1f65162ca7b642d467ecf2c117e34ac4143c51c3d54d251156b"
+    },
+    {
+      "path": "src/pass-mechanics/PassOutcome.cs",
+      "sha256": "919c5e9e6535dfcc56cafdb697d3a24cbf14c7afda13f9306565039b8911b2be"
+    },
+    {
+      "path": "src/pass-mechanics/PassRequest.cs",
+      "sha256": "51e0d4a0776571a3bb8a39a5ef79d600de7d161edc858b8963b86c85c0fb0b86"
+    },
+    {
+      "path": "src/pass-mechanics/PassResult.cs",
+      "sha256": "1853f42544eee8091634d5417ba65faa0296016f7f91594be1326dfb19ce37a0"
+    },
+    {
+      "path": "src/pass-mechanics/PassTargetResolver.cs",
+      "sha256": "b9db7fce0e8759f5f41896830309eb79ddab7d5b5e074458216cd284247b5eaf"
+    },
+    {
+      "path": "src/pass-mechanics/PassType.cs",
+      "sha256": "74d88ec98ae91113cb42ce7e549fb5b3434a71ba2a7df5a7340e6213eee9c7af"
+    },
+    {
+      "path": "src/pass-mechanics/PassTypeProfiles.cs",
+      "sha256": "6943ebaef94ff31b7c4710e24dc1053b07e3f604e0254a96fd181c5aac6411e3"
+    },
+    {
+      "path": "src/pass-mechanics/PassVelocityCalculator.cs",
+      "sha256": "1f703ce3ebff7052e010795db1bdc80eb5bb11e051e679e133f1bff5c5141be5"
+    },
+    {
+      "path": "src/pass-mechanics/PhysicalProfile.cs",
+      "sha256": "2694719aa3309002fd7625e0572da54cf006cfbabfe5ad9102ff93308011110a"
+    },
+    {
+      "path": "src/pass-mechanics/SpinType.cs",
+      "sha256": "e8e4e6816ecf521b62fcecd98d5d28630fd57533ef98d82b74d6b7dfcb333009"
+    },
+    {
+      "path": "src/pass-mechanics/pass-mechanics.asmdef",
+      "sha256": "58785ea66664049439c4d3eee98deda8b40d8b65b26306f903f151f440771fd2"
+    },
+    {
+      "path": "src/perception-system/BallPerceptionEvaluator.cs",
+      "sha256": "a2a99e69ef2451627593aef9adba589b14bf8e4ae1737a5e896d402bad47a3df"
+    },
+    {
+      "path": "src/perception-system/EventBusRegistrar.cs",
+      "sha256": "2be0328f724d5de5c464d35ccdd609443492605c23a9846d6f176d232e732656"
+    },
+    {
+      "path": "src/perception-system/EventBusStub.cs",
+      "sha256": "c16343cb7829df6d02350d9b5cb2e516d923792dec8ba8ac38d11d773adbc22f"
+    },
+    {
+      "path": "src/perception-system/FilteredView.cs",
+      "sha256": "962355de944dab1ae34b340f0c68420ab7e2a886147cb7a05e30b88f97485d49"
+    },
+    {
+      "path": "src/perception-system/FovCalculator.cs",
+      "sha256": "14f25b47cf9522475c8016d3156ff299cc6f93d98e932e343673334c2f6e6837"
+    },
+    {
+      "path": "src/perception-system/OcclusionFilter.cs",
+      "sha256": "f63a9e8bddd45c5415af71d7d2f90b82dda89427c941badd69dbd29eec834e16"
+    },
+    {
+      "path": "src/perception-system/PerceptionAgentAttributes.cs",
+      "sha256": "957419a3c0f2417e85b6be4dabf8c521c76d32ea12b43846fd25e4e1251c9d77"
+    },
+    {
+      "path": "src/perception-system/PerceptionConstants.cs",
+      "sha256": "20418a994b11896b63d87ad0cc4bb9a00f7dbf80a9ab5776c3a6b89106d1e149"
+    },
+    {
+      "path": "src/perception-system/PerceptionEvents.cs",
+      "sha256": "42f5fecd8935c189bdae306b4ace681aeaaeb5c8ccd21e151c46a5ecd36b600d"
+    },
+    {
+      "path": "src/perception-system/PerceptionSystem.cs",
+      "sha256": "573de125be06258d33ef15af4b8d697636b4f188640ab957e9113e6efe8bfa95"
+    },
+    {
+      "path": "src/perception-system/PerceptionTickState.cs",
+      "sha256": "7bf1624f993b55777368a45a7971980275ef381d729e0974df93b92adda4908e"
+    },
+    {
+      "path": "src/perception-system/PressureEvaluator.cs",
+      "sha256": "88126d222e219743a21ad569f9947de208d435f74cef842084d10b92b445b3e7"
+    },
+    {
+      "path": "src/perception-system/RecognitionLatencyState.cs",
+      "sha256": "4176b88231973a643da1a0e6b9b33ee56ed1a05e2f754415988dc3b5ad0e3810"
+    },
+    {
+      "path": "src/perception-system/RecognitionLatencyTracker.cs",
+      "sha256": "5406fd65c9234bd2087c03345e2d4609b23557e4421f5369be23f4f5c93ce77a"
+    },
+    {
+      "path": "src/perception-system/ShoulderCheckScheduler.cs",
+      "sha256": "6a6d35dddb6b629f507b06a9c9941f4fd513fa405e0ea60226a4647be13d5b30"
+    },
+    {
+      "path": "src/perception-system/ShoulderCheckState.cs",
+      "sha256": "520416b13c5d0bbeae083e2cbcde0ca0782378e55c6b7e8b20374311114c8cfe"
+    },
+    {
+      "path": "src/perception-system/ViewBuilder.cs",
+      "sha256": "76492b9857bd394f38d3f81561d8c00b8b18376679cb694ba286dcd2e3f1e264"
+    },
+    {
+      "path": "src/perception-system/perception-system.asmdef",
+      "sha256": "98fd389a7dbd22f54a934969b1993826e30f59e2e515bfc02f3aba12fecbc5dc"
+    },
+    {
+      "path": "src/performance-optimization/BaselinePassFail.cs",
+      "sha256": "0fa2f48d4f9a72972e6aa3a5cf1b97efb710d89f58395ee0d0bbdb85ae11ae88"
+    },
+    {
+      "path": "src/performance-optimization/BaselineRecord.cs",
+      "sha256": "c518b39ece17b17470395923a7a69858574debb9ee23a6b7f036db27426e4e56"
+    },
+    {
+      "path": "src/performance-optimization/BaselineReproducibilityAuditor.cs",
+      "sha256": "2897a2aa9a8798df7d2e814886ab7c1c1c46dceb07c4dbfb32c709e91a782e36"
+    },
+    {
+      "path": "src/performance-optimization/BudgetRollupEntry.cs",
+      "sha256": "cbbe84940657a076e1f418c8eb06c0f3d751b367b626f992594ac0e572112f80"
+    },
+    {
+      "path": "src/performance-optimization/CertificationStatus.cs",
+      "sha256": "d6dd929cf1361e3a2f6744447e8c2b6179b805be182a2b381cabb0300f0c51a7"
+    },
+    {
+      "path": "src/performance-optimization/CertifiedPerfBaseline.cs",
+      "sha256": "9895924870ad16a5b569d399b05d40db09f3f472946078740a2171cbbe19b5ba"
+    },
+    {
+      "path": "src/performance-optimization/ChannelDeterminismClass.cs",
+      "sha256": "5cd0fe8457f33dcae47b6e149bab210e9aa17c34071e50429ba75782546fa162"
+    },
+    {
+      "path": "src/performance-optimization/ChannelSamplingRule.cs",
+      "sha256": "b7e94ceaff6720f8d4ec78d20dd713335c71ff41a9471f6f00dcd4420d138bb6"
+    },
+    {
+      "path": "src/performance-optimization/ChannelVerbosity.cs",
+      "sha256": "f104add681b9bc68cf66fac026513aab762867af96768a318560f6852a658e02"
+    },
+    {
+      "path": "src/performance-optimization/HardwareCounterSnapshot.cs",
+      "sha256": "b3179a78bd80e6c2fe263316632ad679df7e0fda380aa467f8c07960d91dac16"
+    },
+    {
+      "path": "src/performance-optimization/HotPathAllocExemptAttribute.cs",
+      "sha256": "0fc74f87388f74d4293c3e7a9bc8e83cc158f75e37048d116a8f1217ba527f3f"
+    },
+    {
+      "path": "src/performance-optimization/HotPathEntry.cs",
+      "sha256": "6608891d158f0a77ea354053ce9d78e7d0ae4cfd74567e8b1dee7fccc3c9d2a5"
+    },
+    {
+      "path": "src/performance-optimization/IBudgetSource.cs",
+      "sha256": "916ba944592edde5ce65b165395ce4aa951f5dc68bc39c575429a07402285f78"
+    },
+    {
+      "path": "src/performance-optimization/IPerfHarness.cs",
+      "sha256": "5d20ac83bd420e4fc6a295cdf80ffb045911cb569e6d8f348790cad667754382"
+    },
+    {
+      "path": "src/performance-optimization/LoopTag.cs",
+      "sha256": "eab016b9243f36d1830885e753f9fabd60cbafca98fe6eee08f680d6d3bb3f7f"
+    },
+    {
+      "path": "src/performance-optimization/PerformanceOptimizationConstants.cs",
+      "sha256": "a5c40217575c90f08731b8d1c7e84504599fa25181cef994ccc94f168355264b"
+    },
+    {
+      "path": "src/performance-optimization/RegressionGate.cs",
+      "sha256": "02f8826b2c42a37cb793b90c4a7d1101de4187512d5c330bcc8a0ccf5a0831d1"
+    },
+    {
+      "path": "src/performance-optimization/RegressionResult.cs",
+      "sha256": "f68d594d9a41b35d6b9511f37bea605e3a3b3214cb01203f2e5549532f4206ee"
+    },
+    {
+      "path": "src/performance-optimization/ReproducibilityResult.cs",
+      "sha256": "541df5739e4292956a6ebb09cbe50e9aeaf7f147c5a93748289f1bd36839b166"
+    },
+    {
+      "path": "src/performance-optimization/SessionManifest.cs",
+      "sha256": "b85379e276344c1e353882a1c363d9bba3793cb4af676c4a5e3c775518b94683"
+    },
+    {
+      "path": "src/performance-optimization/StopwatchPerfHarness.cs",
+      "sha256": "a69e1bb25efb471ad2fb1436e44eb1f4bdf5a965b286246132d5ac2e3f2cc1ce"
+    },
+    {
+      "path": "src/performance-optimization/TraceChannelDescriptor.cs",
+      "sha256": "b3f224098cf660198c4d4411e8b96979e9be60d5b3e423305d3c4b901241ddf7"
+    },
+    {
+      "path": "src/performance-optimization/TraceChannelRegistry.cs",
+      "sha256": "d4cbd92f53edd6609571a47059e3d2a751d2c4c628ce49af5b27d54c8a2af520"
+    },
+    {
+      "path": "src/performance-optimization/performance-optimization.asmdef",
+      "sha256": "296703e920e89b4370f375d08ffddec642487ae77b2717628c58608cdb9b55ad"
+    },
+    {
+      "path": "src/player-database/AttrIdx.cs",
+      "sha256": "2a5b463e38b39c9d75b422d4dacaf9063902bf99122bed7bb68be0651900a4ec"
+    },
+    {
+      "path": "src/player-database/NameCatalogue.cs",
+      "sha256": "c8706c71ca87f43521998403359fee012e9627ed2eed8768b60fc0cce40cba71"
+    },
+    {
+      "path": "src/player-database/PlayerAttributes.cs",
+      "sha256": "0c079d87489f494b14ea7dd007b348d0b1dbb3f6eb31c9400ff5f6585a8a3557"
+    },
+    {
+      "path": "src/player-database/PlayerDatabaseConstants.cs",
+      "sha256": "ffc53043d1fc9bf227eef5fbb71c75def5487bc4987da61d4ddc9b191e670c72"
+    },
+    {
+      "path": "src/player-database/PlayerGenerationRng.cs",
+      "sha256": "2a1e1f3f5683000e3333d33fcfd20f8512f8622cc4e483c5c4724ee49ffb1c1a"
+    },
+    {
+      "path": "src/player-database/PlayerPosition.cs",
+      "sha256": "9232a22cb8ab59dfa677dc2a3a55e9a236bb81d1a740d1439e69dc18bc94ab38"
+    },
+    {
+      "path": "src/player-database/PlayerRecord.cs",
+      "sha256": "5037be0175ea323d6af4eed62afab1ebe1fb140da9dd58430118f9de99337127"
+    },
+    {
+      "path": "src/player-database/RosterGenerator.cs",
+      "sha256": "632ae564a7fdee15b4395df3d3edc9bb90fb28d0e1e9b5a2bcc5e66119b0cecd"
+    },
+    {
+      "path": "src/player-database/Squad.cs",
+      "sha256": "6ebd8cd9e72696c721bee2731d0114d14daeb156f4293c315dd6a035762a294a"
+    },
+    {
+      "path": "src/player-database/SquadFileLoader.cs",
+      "sha256": "de2fd2f229993696091246e92c66b8759ce28e50285f0407b63b5377a8987f2f"
+    },
+    {
+      "path": "src/player-database/player-database.asmdef",
+      "sha256": "341bca5a665816cb7dd467cd4ef11b4e7e1178a436249cb9138af488ac9a1ed5"
+    },
+    {
+      "path": "src/player-progression/AbilityModel.cs",
+      "sha256": "2d2ddd44fb4854d46879a67be8c91d931cab8d1b0ef71158713b459de63e618b"
+    },
+    {
+      "path": "src/player-progression/AssemblyInfo.cs",
+      "sha256": "448df7874df73e08512831b9f469344256741caf7c6cf51196653f3ab4a7d882"
+    },
+    {
+      "path": "src/player-progression/ClubCareerStates.cs",
+      "sha256": "adc14bea062c53f1e8762bca364f91affd984083281240aed1f5f65a2add9ad6"
+    },
+    {
+      "path": "src/player-progression/GrowthProjection.cs",
+      "sha256": "735176a0e7c25ed6542e8fc6fa08ea86340a332fe41b574a956756cb23dc5b03"
+    },
+    {
+      "path": "src/player-progression/LifecycleViewModel.cs",
+      "sha256": "8de2891f5ff6bf756ed67a1c95df5525608272f43d96400fcb4da43a97525e32"
+    },
+    {
+      "path": "src/player-progression/PlayerLifecycle.cs",
+      "sha256": "0771008ec13666e00ddbbbbacdd7f0c5f4e719a20a22fe645412edd7fc5fe6af"
+    },
+    {
+      "path": "src/player-progression/PlayerProgressionConstants.cs",
+      "sha256": "11a23ad948b1b73bd7b279f7dd9ce5eb30265678f5015fb020ce60461030c226"
+    },
+    {
+      "path": "src/player-progression/ProgressionEngine.cs",
+      "sha256": "a42580615fb837bf296ca5e188549198028213524363581d720c88fae0dd4318"
+    },
+    {
+      "path": "src/player-progression/ProgressionSaveCodec.cs",
+      "sha256": "5a3d8c0e9b24c8b14e32b0637db1202bb28a13a8ed4f90d71a60dca22d597d20"
+    },
+    {
+      "path": "src/player-progression/RegenGenerator.cs",
+      "sha256": "e4fb3b66b8607ded5e5ec67958df049d0cd2c5badf6d05442d143b9a3dcbe19f"
+    },
+    {
+      "path": "src/player-progression/SeasonBoundaryPlan.cs",
+      "sha256": "933f0ee9998c075a54c8c6932fcaef5ffd7ce42d387ae16b0e5c0449c318af1d"
+    },
+    {
+      "path": "src/player-progression/TrainingInput.cs",
+      "sha256": "16681b9e1c77c8a80a5d952cf3c3fe6a02d80e6859bffc6c49e565198b7faf8c"
+    },
+    {
+      "path": "src/player-progression/TrainingInputBatch.cs",
+      "sha256": "928fc64759cb13154fa586036b5b1c21027172a3cadbc1f5aca0590689701fa2"
+    },
+    {
+      "path": "src/player-progression/player-progression.asmdef",
+      "sha256": "782cc19c315b19d137fa1f2ccfbdc39e8abd29da4943f4b075f5233dbbda7c8a"
+    },
+    {
+      "path": "src/positioning-ai/AgentHysteresisState.cs",
+      "sha256": "2d555a7ce867295df9ef88d842095059742ad43ba57bc707e2c4ca95223cd1ef"
+    },
+    {
+      "path": "src/positioning-ai/AgentPositioningData.cs",
+      "sha256": "b8058d048683f0da49fcb4943a79b80e67b0789d0e97d67530913f3809ab2309"
+    },
+    {
+      "path": "src/positioning-ai/AnchorCalculator.cs",
+      "sha256": "fdf1736e546e31f863233a51126fcc3492a3c058579600aec6fe920ffa8b1876"
+    },
+    {
+      "path": "src/positioning-ai/BuildUpOverlayCatalogue.cs",
+      "sha256": "a7ee8d4b6074fd5aef76877b0c6ba79ffc90ba38baef7d8c4fb543d58caacadc"
+    },
+    {
+      "path": "src/positioning-ai/BuildUpZone.cs",
+      "sha256": "ba74088f9de091f00c00c668252640ebc192ae8e160627433a06fc7fba7dd862"
+    },
+    {
+      "path": "src/positioning-ai/BuildUpZoneClassifier.cs",
+      "sha256": "d48db9b45011deebe1dcf9a6d6f7fa50b8b0ba2c79963ac49327dde3b38353db"
+    },
+    {
+      "path": "src/positioning-ai/BuildUpZoneState.cs",
+      "sha256": "7239c97b1391325b13c423371437ae08d0d3330a568dae76391941a8debcbc75"
+    },
+    {
+      "path": "src/positioning-ai/ContextModifier.cs",
+      "sha256": "3eb34af80a00f2dfd7f978955c24426d64fffa62d8a59e53e39dfb72a68075e5"
+    },
+    {
+      "path": "src/positioning-ai/ContextModifierInputs.cs",
+      "sha256": "d7aea3e1ead0427f534ee50165f172737629f1cf54ee868282d7313fd42a3c32"
+    },
+    {
+      "path": "src/positioning-ai/FormationFamily.cs",
+      "sha256": "85556d4ddfb51c5d85994f8f1b5a1e1d010eb33fd8a0fea518247dba81bb97f4"
+    },
+    {
+      "path": "src/positioning-ai/FormationSlotRecord.cs",
+      "sha256": "9306fc92788cd70ba73fd310a5fc8ee750d748c9f1034d5168fed038ad577f6a"
+    },
+    {
+      "path": "src/positioning-ai/HysteresisState.cs",
+      "sha256": "8f446e74bc629d3c51c95477330f171e66225e79a574245dd7e4d7e0b78cf78c"
+    },
+    {
+      "path": "src/positioning-ai/LaneId.cs",
+      "sha256": "90adafc717f6786b99507de349d16649ec112635028cc837f57561313b7713c9"
+    },
+    {
+      "path": "src/positioning-ai/LineId.cs",
+      "sha256": "37f92b6f7d609f697921a8c6635afc52ce82a7948619af3a94d9b19c5dd181e0"
+    },
+    {
+      "path": "src/positioning-ai/MarkingDwellState.cs",
+      "sha256": "52e876824c1340b59a6e8414dc3798c6903b264c0e5b5f65dd58456819ed5ea0"
+    },
+    {
+      "path": "src/positioning-ai/MarkingPressureEvaluator.cs",
+      "sha256": "a3b3c81c340a89f83cc1f9342790426c6c488b06dddea40af540cd46d492af54"
+    },
+    {
+      "path": "src/positioning-ai/Phase.cs",
+      "sha256": "57020d0c4666aba55a14560f11ffd01707912bc80f84f3d819177f15c7bffcb1"
+    },
+    {
+      "path": "src/positioning-ai/PhaseClassifier.cs",
+      "sha256": "41d195eabf15a398895992b54982b24320ffe2f4deec60fdb4a31458c24036ff"
+    },
+    {
+      "path": "src/positioning-ai/PositioningAIConstants.cs",
+      "sha256": "a21d7948eb58cbd1e6e58fc89e5ea8c91e402fb03fec81c1dda568992ddd615a"
+    },
+    {
+      "path": "src/positioning-ai/PositioningAITick.cs",
+      "sha256": "78d5283128c45618087e0abf23c0d47b9b81132312bd5a0bc00f1b242589049b"
+    },
+    {
+      "path": "src/positioning-ai/PositioningPerceptionSnapshot.cs",
+      "sha256": "baa89e9ae88e843778f4ba001ac772aeb4d6f9b750d1e823ad0c009eba7dc457"
+    },
+    {
+      "path": "src/positioning-ai/RestDefenseEvaluator.cs",
+      "sha256": "d8b32b7aedfe50fe46f6055000bf1a5ac25e2ab99f4779ff3c10996ec1df8458"
+    },
+    {
+      "path": "src/positioning-ai/RoleId.cs",
+      "sha256": "d77947b8cf62fe130abea3775358662fa083f6b5e46fd9c413b7eee502de074f"
+    },
+    {
+      "path": "src/positioning-ai/RotationAdjacencyCatalogue.cs",
+      "sha256": "655b199ad0eee69336a0ebbb23b68d90f077d0e65e24fc6f649e0e6be9ab546d"
+    },
+    {
+      "path": "src/positioning-ai/RotationController.cs",
+      "sha256": "61e79ca59e727f789972b118a49a8ea82af33ce8e91fc154637b3b5273955c75"
+    },
+    {
+      "path": "src/positioning-ai/RotationPair.cs",
+      "sha256": "295c5758ae93bd3acd86099c1923580a02eec65c1bbd26c2d064520370abea6b"
+    },
+    {
+      "path": "src/positioning-ai/RotationPairState.cs",
+      "sha256": "bd24a7157a6f66a267b531d023082ea27613cf2f91111d976b3fafbbcad363fe"
+    },
+    {
+      "path": "src/positioning-ai/ShapeAnalyzer.cs",
+      "sha256": "0d13a532e337e8b725402262f243be1efb0880f40d17a68e56bd86323bbe6e63"
+    },
+    {
+      "path": "src/positioning-ai/SlotComposer.cs",
+      "sha256": "df540faa1ca503ccb11104b7a86d08c3bacbda7cabd1eea7e9174ca20d1bf18e"
+    },
+    {
+      "path": "src/positioning-ai/SpacingResolver.cs",
+      "sha256": "306bcd98bbf27490bf4740fea1091fd5d7d32b9012007dd915ae5b97bf0c3e39"
+    },
+    {
+      "path": "src/positioning-ai/TacticTranslation.cs",
+      "sha256": "db3fe529efd5504f879c80fbeed0cd86561737dbfaeb80453c5976d35525ad4f"
+    },
+    {
+      "path": "src/positioning-ai/positioning-ai.asmdef",
+      "sha256": "d3423dcf3c92a6f345200f39efa7ef1b2a9fb69ad2fde31cda73e53571922b46"
+    },
+    {
+      "path": "src/pressing-ai/AssemblyInfo.cs",
+      "sha256": "c93f9a2d7818a411c540e92dbaf8ae768001d194abd2da1198578021d10d756b"
+    },
+    {
+      "path": "src/pressing-ai/CoverShadow.cs",
+      "sha256": "1e988daf98d82bc29609e2c2896708f394b1924d6933468291bfa7105d8a4804"
+    },
+    {
+      "path": "src/pressing-ai/CoverShadowCurve.cs",
+      "sha256": "09c2583d44251012eb8262256dfe4aa48cc506d6b084ab1ae5f2ff18888708d3"
+    },
+    {
+      "path": "src/pressing-ai/CoverShadowSelector.cs",
+      "sha256": "81d95ec301a8919aa1c65d2b5695d5647eb256659cee86ac4ab9d955adfe9f26"
+    },
+    {
+      "path": "src/pressing-ai/DisengageResolver.cs",
+      "sha256": "5c0a7f53c63053c8ead6233b1c903f76ff6b0b19880522f2a5498b4f47212686"
+    },
+    {
+      "path": "src/pressing-ai/InvariantEnforcer.cs",
+      "sha256": "483938049160504fcfeca667985501bd7986359abd4bf5a4b6c0c0c079eada06"
+    },
+    {
+      "path": "src/pressing-ai/PassEventRing.cs",
+      "sha256": "f99e6aa7a2ad2e6042415acc365324e429445d3a4fc018f169efc5e2df305209"
+    },
+    {
+      "path": "src/pressing-ai/PitchOrientation.cs",
+      "sha256": "a36fb3731d93cacdf7be0c205ffaa93f1e2f6e9c71ec054ae02e961d7817cd07"
+    },
+    {
+      "path": "src/pressing-ai/PositioningAIView.cs",
+      "sha256": "f8a6f2f2ff6e03b94f190227cf1e6c27ce9a2f11e0d6aabb23586d93f0815a28"
+    },
+    {
+      "path": "src/pressing-ai/PressAssignment.cs",
+      "sha256": "a29373572e22b5efa1e484a11d43b4f905e61bd84f9ffea78c2fc6577c16b721"
+    },
+    {
+      "path": "src/pressing-ai/PressDirective.cs",
+      "sha256": "d62f3889d1c806a9e99c336a93b3dc2937a462c27169e58ce3dbbf71fd99385b"
+    },
+    {
+      "path": "src/pressing-ai/PressRole.cs",
+      "sha256": "016569173d23e7c9f534bd47db9a4147f558828e0a06f7eeef3079c09d5ee3a2"
+    },
+    {
+      "path": "src/pressing-ai/PressTrigger.cs",
+      "sha256": "d73ba843ce7745aac114bd91aec8a223160e1cd9a5b62a4cbd3195505c27b109"
+    },
+    {
+      "path": "src/pressing-ai/PressingAIConstants.cs",
+      "sha256": "2af65738cfc43501e589dea5a1f51b2247f7db2568186e62090a27f86736f527"
+    },
+    {
+      "path": "src/pressing-ai/PressingAITick.cs",
+      "sha256": "8bcb8e7ed3ee6104d06b64c25dbcc31547b6923f2e4c1517b1e8bfbf5060febb"
+    },
+    {
+      "path": "src/pressing-ai/PressingAgentSnapshot.cs",
+      "sha256": "1ee7de84e42d606f55ead1ba0fef9547078f42868da8d60836376254ff2e169b"
+    },
+    {
+      "path": "src/pressing-ai/PressingSnapshot.cs",
+      "sha256": "b4e074cabf224ea8ab49a15ffdc3e3d5eb051fd65123b681e787e1feeda99f2b"
+    },
+    {
+      "path": "src/pressing-ai/PressingTickDiagnostics.cs",
+      "sha256": "cccabc890cf4cb778193322fb062fc3e40d4c7d47ec0464e9d707bbc3a06c6b3"
+    },
+    {
+      "path": "src/pressing-ai/PressingTickState.cs",
+      "sha256": "3ba4ebe55fd1144f32a06ec2310c926cbfe4bda0c04322e5c041fe1b985b33b2"
+    },
+    {
+      "path": "src/pressing-ai/PrimaryPressSelector.cs",
+      "sha256": "eea4d6b29bb2a281ac43a141520b272464e2035d9ee3be17beb3f1617ffe87d3"
+    },
+    {
+      "path": "src/pressing-ai/RoleHysteresis.cs",
+      "sha256": "4b410a3bf7465219932bd4a6ff6efdf514abc78f3c37368aae207ceeaabe72d8"
+    },
+    {
+      "path": "src/pressing-ai/RoleHysteresisState.cs",
+      "sha256": "2171fdc26eeb2f5e13f942fa9575fbbc16302be0ab8a2774487381118b9662c3"
+    },
+    {
+      "path": "src/pressing-ai/StaminaAccumulator.cs",
+      "sha256": "f75066892c8432c5464a52466aeb3d6d3c76ef9d141e52984a7755772f6b0da8"
+    },
+    {
+      "path": "src/pressing-ai/TacticTranslation.cs",
+      "sha256": "d844cc0b5995e59e4f47dcee875d74fc76acd2376d11472b9698401c52d453c5"
+    },
+    {
+      "path": "src/pressing-ai/TriggerEvaluator.cs",
+      "sha256": "79afd44d2f0098711d417e49831dbe740605458666beb52a9aa398bdca569cc8"
+    },
+    {
+      "path": "src/pressing-ai/TriggerFlags.cs",
+      "sha256": "0e6fb34548a33d1af2655968100d4cb7561f89f590419d9a76a8ba729ccbe6c2"
+    },
+    {
+      "path": "src/pressing-ai/pressing-ai.asmdef",
+      "sha256": "c638f1252701f3fca97c6527df5f23275c258a13e7aff367bf05b570cfde1d86"
+    },
+    {
+      "path": "src/project-constants/AssemblyInfo.cs",
+      "sha256": "1872fa26ced0bb5c0d9c55be8d7b6d4f7025aa11dab8a6bbf4cabcce026da4c7"
+    },
+    {
+      "path": "src/project-constants/GameplayConfig.cs",
+      "sha256": "b0a26f69448343b86312e7fb6b8fc91dd5a4184aeb93ad40a7bcdf90398e8ba9"
+    },
+    {
+      "path": "src/project-constants/GameplayConfigFileLoader.cs",
+      "sha256": "fca1c9da0f939c5cc0b86f0b886c7b9de23c39921b8f988be78a182326b9b33c"
+    },
+    {
+      "path": "src/project-constants/GameplayConfigHolder.cs",
+      "sha256": "f9b65e4d40ddc805a1631c6347205fee391ff3a8d9ce09eecf299d3558a97280"
+    },
+    {
+      "path": "src/project-constants/project-constants.asmdef",
+      "sha256": "44507280e81fa0f8e2497e0c0adbba8063b17a4cb3826354aecd62d81fc42f54"
+    },
+    {
+      "path": "src/season-save/AppearanceBlock.cs",
+      "sha256": "1b13040dec13cb20aead1daba3f80c2960757413b83665e86fcaf3d5eb1640f0"
+    },
+    {
+      "path": "src/season-save/AppearanceSaveCodec.cs",
+      "sha256": "6dc8fc615236bb9a4a5f824e3a1027db18a554686924b3e48ed843f7ddf07a50"
+    },
+    {
+      "path": "src/season-save/AppearanceState.cs",
+      "sha256": "d4cea6d9013fbc99afa8ac1d3355c88c28e98aa32083f99d058d2092e9923399"
+    },
+    {
+      "path": "src/season-save/AppearanceWindow.cs",
+      "sha256": "64af640601debea13de7f2264b8d8acccd509375948c1691e2729125bb80c3a5"
+    },
+    {
+      "path": "src/season-save/AssemblyInfo.cs",
+      "sha256": "9114eaebffd560d254e0de4c77a7094edd22fcd2b431837c8436fdac8fb5edeb"
+    },
+    {
+      "path": "src/season-save/AvailabilityComposition.cs",
+      "sha256": "8efe1f00cb79184b27ccd86ad628ae3b9b0a320efd25052a626b811c2909f89f"
+    },
+    {
+      "path": "src/season-save/BoardObjective.cs",
+      "sha256": "c722f5041e3ac04124e1570f8a5bf089a5d4b64ca734b462e1f6929652ff081e"
+    },
+    {
+      "path": "src/season-save/BoardState.cs",
+      "sha256": "5e217e3ee4d3bccd04f75a3843d58db7ad4078ceb67eaf422b37cc943553c108"
+    },
+    {
+      "path": "src/season-save/Club.cs",
+      "sha256": "d2fffca2748609c24586c86c87cb84af82a91d25f6ccc87ad485d26d370e45c6"
+    },
+    {
+      "path": "src/season-save/ClubAppearanceStates.cs",
+      "sha256": "98e3f885df4c157f33b24cc7d683dfac0ec6210bd096d3f26a6d92c856e04ab0"
+    },
+    {
+      "path": "src/season-save/ClubNameCatalogue.cs",
+      "sha256": "52b71c70ae1cf16987faf17f2e3faed9711cea823e8c1505d9c8d7942445e0af"
+    },
+    {
+      "path": "src/season-save/DisciplineBlock.cs",
+      "sha256": "4f35ce0015f6a49a2e9afa7f168d73b8ca45bd5ee3ff9b6d3b05d86dd1ce538a"
+    },
+    {
+      "path": "src/season-save/FinanceBlock.cs",
+      "sha256": "4b8633f4b75dbbfd7a3ecb9c432fc0a7724c52b1222948bc520f0886c7e1fa07"
+    },
+    {
+      "path": "src/season-save/Fixture.cs",
+      "sha256": "d45e712a47e1180d48f05df1b30795e867e80355cdddae1eac3407221b24f94f"
+    },
+    {
+      "path": "src/season-save/FixtureScheduler.cs",
+      "sha256": "7f1094d79c93bb31fd61e7361a306e9d77805a0d7bcbbb9d34cfb6f8b0bcd955"
+    },
+    {
+      "path": "src/season-save/League.cs",
+      "sha256": "9240ed80c37d7a5b180d3d09da8455aacdcc1aae7da11c59236130a4d7a47399"
+    },
+    {
+      "path": "src/season-save/LeagueBootstrap.cs",
+      "sha256": "83d82d9e8ee103f931426035d13febd6f749b43e075542e521b16f72936140a1"
+    },
+    {
+      "path": "src/season-save/LeagueBootstrapConstants.cs",
+      "sha256": "6c471e7391c03f1e83ec6f08ebb61cc4321babd64ebc66a3fefa0e7c9cd6c2fc"
+    },
+    {
+      "path": "src/season-save/LeagueTable.cs",
+      "sha256": "5553b0d66e664ed6761cb3e5a2fa9c59e33ccfdf8131fa0d81a55dfd349f1671"
+    },
+    {
+      "path": "src/season-save/LeagueTableRow.cs",
+      "sha256": "c0d203a9619ce9e590c63d6194922626aff80cc904b6b1911fec6878f007c06b"
+    },
+    {
+      "path": "src/season-save/MatchEngineDisciplineTap.cs",
+      "sha256": "442b5af1a905be5a53368f669b1c422a661d8678a84c2cfc078ac17b8381458f"
+    },
+    {
+      "path": "src/season-save/MatchResult.cs",
+      "sha256": "264e369a31409f95d293d89db6b937c88b5373c3b8a1cd3d3a6eef6136c94344"
+    },
+    {
+      "path": "src/season-save/MedicalBlock.cs",
+      "sha256": "7482839f7f0e3b5e5eb19478b05e89754d38bb3edf444d0d8a602db37dd0b87f"
+    },
+    {
+      "path": "src/season-save/PlayerCareerStates.cs",
+      "sha256": "5312e57f2cea050c9eb947d4d350fcf0ae656ad9805e87c88ff2429ae0ee86e1"
+    },
+    {
+      "path": "src/season-save/ProgressionBlock.cs",
+      "sha256": "e4cf7b27ff432a49530b793566fa694e14e6d3bd2faeed3cd834a1cf0374850d"
+    },
+    {
+      "path": "src/season-save/ProgressionSquads.cs",
+      "sha256": "e0af727d01670f56dc5768c59249d38b65bfb2ed29c7456e04fc2d0b131ae63f"
+    },
+    {
+      "path": "src/season-save/RoundResolutionMode.cs",
+      "sha256": "767a1e12bb70b5ba45635baf53f9c714539cff62a1bc95c5b007405bcea1e569"
+    },
+    {
+      "path": "src/season-save/RoundResolutionModel.cs",
+      "sha256": "7dd0ab7473f7be7cf3e3864d1ef692c61ca640bcf75985eae6bbd9c182ee0a0e"
+    },
+    {
+      "path": "src/season-save/SeasonCalendar.cs",
+      "sha256": "4d77919ed5728b74cf85756dc8ff66e4108da5f1b520eb9898bb2cd992bf8134"
+    },
+    {
+      "path": "src/season-save/SeasonFinanceCoherence.cs",
+      "sha256": "e47edf485cd4f017de304300e8f83f4b017c2acd56dc0a2c2faea6b9287a3a9c"
+    },
+    {
+      "path": "src/season-save/SeasonFinanceRuntime.cs",
+      "sha256": "ce9f6e2ac37d4a8baa0aa38ac1baea0ce1a02e9c31ef7e6219423b992b497638"
+    },
+    {
+      "path": "src/season-save/SeasonLoop.cs",
+      "sha256": "32b1408ac7ca1d8154326a115f9e2ed18469ead2bff80b1435557e53baac4993"
+    },
+    {
+      "path": "src/season-save/SeasonLoopConstants.cs",
+      "sha256": "dece4ad4fea862876a76a474b8a8e45e6dc77a8a5a9f501b6a5f25c97126861c"
+    },
+    {
+      "path": "src/season-save/SeasonRollOutcome.cs",
+      "sha256": "92391c007e37c927a196df05a0d03dc8b32f3d7150519b1d4440c71ce5f29040"
+    },
+    {
+      "path": "src/season-save/SeasonSaveBlobs.cs",
+      "sha256": "48252e04d6a624a8c3cf6b86665d1210dbfe56da34ee3b278f54f2d0e71e8028"
+    },
+    {
+      "path": "src/season-save/SeasonSaveCodec.cs",
+      "sha256": "fee5e0ca8c9bd34865a7a1f86e0f1662588823e18f853a4bee570f21894f218c"
+    },
+    {
+      "path": "src/season-save/SeasonSaveConstants.cs",
+      "sha256": "da0ed70300a21d87c23e47104aee0e4daf01659e9308e709640eff7928a46697"
+    },
+    {
+      "path": "src/season-save/SeasonSaveContents.cs",
+      "sha256": "6348e99b41c20c96aa84dd0b8e84d911ddc760f42a788c2e7725f25aef61c3bf"
+    },
+    {
+      "path": "src/season-save/SeasonSaveManager.cs",
+      "sha256": "63b316313ae9872fc91a56656e8e62204cf1efac225b75e29ac52703de04d4b4"
+    },
+    {
+      "path": "src/season-save/SeasonState.cs",
+      "sha256": "5193a37e939db46939ec042403b3dff8349854665de0097541f41af151a87bff"
+    },
+    {
+      "path": "src/season-save/SeasonStateCodec.cs",
+      "sha256": "38f07bc69185096db8dd59ec8fa2986193212e30f57308f19ccbdd0fd73b6db8"
+    },
+    {
+      "path": "src/season-save/SeasonTransferRoster.cs",
+      "sha256": "27e48313722ab6b8afe59c4d0a9ebf2cff7648715af57a8e8fd97e80cdddf28d"
+    },
+    {
+      "path": "src/season-save/SeasonTransfersCoherence.cs",
+      "sha256": "dfdd5ddf570c05e914f3ee2e1f74cdb1913bfc65e9285d216418fb6da8b25e3d"
+    },
+    {
+      "path": "src/season-save/SeasonViewModel.cs",
+      "sha256": "35324106002428f3002b63b0d0b7f513b7077b950267543a31ff5b28f4a33e0b"
+    },
+    {
+      "path": "src/season-save/TrainingBlock.cs",
+      "sha256": "b7a9bf0a4401fa8d876c0de4e99601a90a85b8ceaac4018475487ce03a8269a0"
+    },
+    {
+      "path": "src/season-save/TransfersBlock.cs",
+      "sha256": "09769211d0b4281781b09d224349205f0fb2b7eb1921234ea015c5bc0ad79c97"
+    },
+    {
+      "path": "src/season-save/season-save.asmdef",
+      "sha256": "a0fc8769e8025474c5c18eb3b841fd8581b347cd1732dea50015fc530e53a658"
+    },
+    {
+      "path": "src/shot-mechanics/BodyMechanicsEvaluator.cs",
+      "sha256": "63392520ad5bc40cf4426ea104ba57fecb8c7a9fdf0e0d682cb15bb574965892"
+    },
+    {
+      "path": "src/shot-mechanics/BodyMechanicsResult.cs",
+      "sha256": "49f1089c0e28617c8dbef4e799e4321d996cb1583b4bbc0912fb529a229028dc"
+    },
+    {
+      "path": "src/shot-mechanics/ContactZone.cs",
+      "sha256": "ac02bf48e5e5b559b9b0ac7d8540de56095ad651bf8861a9ddbf7c31b71df2d4"
+    },
+    {
+      "path": "src/shot-mechanics/EventBusRegistrar.cs",
+      "sha256": "01c6347fb4ffa8c0aba0d8e3b83a0effc13263e92949adb6c5178957b1929a5b"
+    },
+    {
+      "path": "src/shot-mechanics/EventBusStub.cs",
+      "sha256": "49fb0fdaad320cd49a1d1f5e5a56e21deea29a8dcc46adf62061ec2bf4ef718e"
+    },
+    {
+      "path": "src/shot-mechanics/GoalGeometry.cs",
+      "sha256": "7714f2a77bf973d4fb189ee14c7b273b63183597b4f0bbd438717c99885e0b11"
+    },
+    {
+      "path": "src/shot-mechanics/GoalGeometryProvider.cs",
+      "sha256": "11e37488e9403989f6b451bfd07837bd65bd66ffeb2996402341cf805b4e7b60"
+    },
+    {
+      "path": "src/shot-mechanics/IShotAgentQuery.cs",
+      "sha256": "e75679befab32f2990dfd55c94547bd7a2d4d353254dc74dde4e85da5821bcc8"
+    },
+    {
+      "path": "src/shot-mechanics/IShotBallSystem.cs",
+      "sha256": "7b7ff046a932a9d70c698282537860637d4cba76e6572f556c6e522cc69a1884"
+    },
+    {
+      "path": "src/shot-mechanics/IShotCollisionQuery.cs",
+      "sha256": "034dff948d59979ad23ad9163a26c3d2d75c927d45db779b1c905f33716a3073"
+    },
+    {
+      "path": "src/shot-mechanics/IShotVelocityCalculator.cs",
+      "sha256": "420b287b5b2b8508d3c5b3371f7e918090e309eb0267422e4a8dae50eda9e8df"
+    },
+    {
+      "path": "src/shot-mechanics/ShotAgentAttributes.cs",
+      "sha256": "f1592131e0a77f8f0afdceeb23290c7337fca2f47f98597e1543c7789b169e6b"
+    },
+    {
+      "path": "src/shot-mechanics/ShotAgentState.cs",
+      "sha256": "0f48384f82ee1293bbbf4de28e999e13c59ae7c8aeaf66f2be9b61e1b9df270b"
+    },
+    {
+      "path": "src/shot-mechanics/ShotAnimationData.cs",
+      "sha256": "03cccef20ee920b7de1a15db0cc1e5ecedba27cc68cb8614e98f6b22d195a513"
+    },
+    {
+      "path": "src/shot-mechanics/ShotCancelReason.cs",
+      "sha256": "0e16b4a1aee3746890db4d01637afc93b201ee6d2af017d60fa87b72142ce94f"
+    },
+    {
+      "path": "src/shot-mechanics/ShotCancelledEvent.cs",
+      "sha256": "9c66e966c85b842fa668ed0812da5b76cdf40a9992d5d5cae5704b80e5c514b4"
+    },
+    {
+      "path": "src/shot-mechanics/ShotErrorCalculator.cs",
+      "sha256": "3b085b7764d73a66d06f7b8d8697616d253e91bd07043c6af8b6ffa88897b27a"
+    },
+    {
+      "path": "src/shot-mechanics/ShotEventEmitter.cs",
+      "sha256": "1f3220a9e01a088338342b8943c5664616819a614acbf686501510c3a2ae01d1"
+    },
+    {
+      "path": "src/shot-mechanics/ShotExecutedEvent.cs",
+      "sha256": "d400701faf50d6bc8adde8d60a2a1f4e5df9fe0416253718582590d1b13bfa0d"
+    },
+    {
+      "path": "src/shot-mechanics/ShotExecutor.cs",
+      "sha256": "f9ec9ca2330b9130532c768159fbf3704b3912983525ade305e3a3c9024c8b04"
+    },
+    {
+      "path": "src/shot-mechanics/ShotExecutorState.cs",
+      "sha256": "f51cf6f9b447a2926c5e27e19054b7222e8639876f03a8fb511c34e5b58cea8f"
+    },
+    {
+      "path": "src/shot-mechanics/ShotLaunchAngleCalculator.cs",
+      "sha256": "3d260e579afeac70fa4797eeeee2079ee2854b4487d1f366d608c2158ee96581"
+    },
+    {
+      "path": "src/shot-mechanics/ShotMechanicsConstants.cs",
+      "sha256": "deafb38f13d7feb36fe7b2edf2efb19455f74e3ae3f85008dec2a4400c1af59e"
+    },
+    {
+      "path": "src/shot-mechanics/ShotOutcome.cs",
+      "sha256": "9bbfb181eee6f4f7fef80ba0c13d5a775c511cbb4a17994763d3bbbfa9f515ca"
+    },
+    {
+      "path": "src/shot-mechanics/ShotPlacementResolver.cs",
+      "sha256": "07093ef3810af3b766fb8d3e29a6f7c64b6bb43a7c0f3ae73d5f7a5694679a61"
+    },
+    {
+      "path": "src/shot-mechanics/ShotRequest.cs",
+      "sha256": "e85835026fa118c7db0861f09c9ddfd91e157498ea1fbd91125e229348375fbe"
+    },
+    {
+      "path": "src/shot-mechanics/ShotResult.cs",
+      "sha256": "939f6c534250b6bbab8d17633ea6e638602760045f0cade3139b657809d82ed9"
+    },
+    {
+      "path": "src/shot-mechanics/ShotSpinCalculator.cs",
+      "sha256": "65198b02c34c3232057c6824b00bb88677cd95e3647ae01613cce8c82c466eb0"
+    },
+    {
+      "path": "src/shot-mechanics/ShotVelocityCalculator.cs",
+      "sha256": "0b1b27e08585c791b484c63c0b553593bc991c0fa8e60012785f2cbc78ba1f00"
+    },
+    {
+      "path": "src/shot-mechanics/WeakFootPenaltyApplier.cs",
+      "sha256": "8415ab0af9f5bf8412800c44e2ae8b2a1c7866c1e2a39b110ef2e9f913594d3f"
+    },
+    {
+      "path": "src/shot-mechanics/shot-mechanics.asmdef",
+      "sha256": "17b24486091d6a47be80ad1d66e77ae6b08d59ae167be278c47deea4639cdb02"
+    },
+    {
+      "path": "src/tactical-instructions/ArrayTacticPresetCatalogue.cs",
+      "sha256": "6823993a6cb15931fe2ce7884908763fb23e6edb70aba7eaf5e0eb26420d0c26"
+    },
+    {
+      "path": "src/tactical-instructions/BuildUpStructure.cs",
+      "sha256": "5ce6a15de691d8bf7b0ab3022aa81e7d94c90d9303bc83931a1f694eac463171"
+    },
+    {
+      "path": "src/tactical-instructions/DismarkIntensity.cs",
+      "sha256": "1240139c4570cc1eae79d205f2508c21542681f539aef4828b41ca059a924c01"
+    },
+    {
+      "path": "src/tactical-instructions/Duty.cs",
+      "sha256": "d34c3bb5a61c44e38ac7a3ef5e61b9faab8b43a00c8180a876b56d431dd94f08"
+    },
+    {
+      "path": "src/tactical-instructions/FocusPlay.cs",
+      "sha256": "39e259e88d3e396c293719dd0b9bf878c8f631ab55b0b8b126c8141b93f7668f"
+    },
+    {
+      "path": "src/tactical-instructions/GkDistributionPolicy.cs",
+      "sha256": "a96dc824e5957f971545d9e3e239db75f998f500558c1be49efd715b40a0e068"
+    },
+    {
+      "path": "src/tactical-instructions/ITacticPresetCatalogue.cs",
+      "sha256": "b8f2109b1d4b5868473eb6269434a8a28806a60781dfb9663d16156164be2ae6"
+    },
+    {
+      "path": "src/tactical-instructions/InCodeTacticPresetCatalogue.cs",
+      "sha256": "ba3b5686f6fb2121ab312c4e26846c51e6d411929edfe514dc90f93954214a50"
+    },
+    {
+      "path": "src/tactical-instructions/InstrBias.cs",
+      "sha256": "cc94a2c3da6f86a1357cb0e2d4853fcc139c5c7aac6b9d894c75e98054bd747a"
+    },
+    {
+      "path": "src/tactical-instructions/LineOfEngagement.cs",
+      "sha256": "97ddd524430106e23b0c61050d1039950c936f7c870c8dbc533243f3fb28effc"
+    },
+    {
+      "path": "src/tactical-instructions/MarkingOrientation.cs",
+      "sha256": "8955d4998ce1c854b9a34329fbba6c1c0c44e9a325997aec450ecc45bf51c136"
+    },
+    {
+      "path": "src/tactical-instructions/Mentality.cs",
+      "sha256": "83cfaf207b14c4b1cf13559a30e06fef74cc7cb3300b0eacb23acc09e2f8e324"
+    },
+    {
+      "path": "src/tactical-instructions/PlayerInstructions.cs",
+      "sha256": "59a2f6bcde49e5a840ae21f6e01c3dea5451acec5e61d5e56bef5f2d08dafed8"
+    },
+    {
+      "path": "src/tactical-instructions/PlayerRole.cs",
+      "sha256": "1bbb987ed8008760f9f838df37cf8432c18b51f216a21e2decaf8eda3b86fc90"
+    },
+    {
+      "path": "src/tactical-instructions/PlayerTactic.cs",
+      "sha256": "8ca56d527d33efdff406710e4bdf13a57b6718e00454ae9c7c9b8a249a6d91de"
+    },
+    {
+      "path": "src/tactical-instructions/RotationFreedom.cs",
+      "sha256": "63444f17357b0a3149dd40ec4b62c625d33b11deac9628d067303b68150054c2"
+    },
+    {
+      "path": "src/tactical-instructions/SetPieceDutyFlags.cs",
+      "sha256": "b5df3a66fd3a4fcde16a85e5ceacb863e444c6cdd3522975a80471cd14a307fa"
+    },
+    {
+      "path": "src/tactical-instructions/TacticDefWidth.cs",
+      "sha256": "7fa289e25f55ea7217b3876b2c908d8033d33e7a45698039b3da8e404672426e"
+    },
+    {
+      "path": "src/tactical-instructions/TacticFormation.cs",
+      "sha256": "0939e7ae18c3c029fdca5e1bb8f77caffbf206f15105e26f282068b3a4d2a3c1"
+    },
+    {
+      "path": "src/tactical-instructions/TacticPassing.cs",
+      "sha256": "e711b6204fdd71704c21f384acbdf6661f0bef0cd79f8fe15261e98934457fed"
+    },
+    {
+      "path": "src/tactical-instructions/TacticPreset.cs",
+      "sha256": "71941f45ba187a1386b789482b2d7bccd3d83edc8823154d05a172cc65e6d96a"
+    },
+    {
+      "path": "src/tactical-instructions/TacticPresetLibrary.cs",
+      "sha256": "f56ccec28d89af05cb3d5b86019f6e6f150f273ef261451c5e1517dc4828fa4f"
+    },
+    {
+      "path": "src/tactical-instructions/TacticPressing.cs",
+      "sha256": "37fb8c2feec2860f8de570e9c335fbbcfa4347bdbe8149340313725190949684"
+    },
+    {
+      "path": "src/tactical-instructions/TacticTriggerMask.cs",
+      "sha256": "1de98a4e056cc3804b72e42795fd515a0c86e56701257970c1d3934afff0ac85"
+    },
+    {
+      "path": "src/tactical-instructions/TacticWidth.cs",
+      "sha256": "e5cbb948d5631c0bc398bf278f5e8bf10e498860c1675dddb6f06e6117e5a758"
+    },
+    {
+      "path": "src/tactical-instructions/TacticalInstructionsConstants.cs",
+      "sha256": "ef2d6db26df0a1f7cc1e5812469fb0f3dc1c4b9282895c19e112748c2584c9af"
+    },
+    {
+      "path": "src/tactical-instructions/TacticalPresetsConstants.cs",
+      "sha256": "a67d553855dc05abeeb9e13c0597f6b71a3fa630d9353208b6d6e4edfa526d18"
+    },
+    {
+      "path": "src/tactical-instructions/TeamTactic.cs",
+      "sha256": "c329a05b70443c5eb34e14f8ba376a042c139da3f6a3debeb109bfaa751d3395"
+    },
+    {
+      "path": "src/tactical-instructions/Tempo.cs",
+      "sha256": "25de425e07078c84ada349d70cabfece41e3ae2ddb49f5900cdf9e0897277b9c"
+    },
+    {
+      "path": "src/tactical-instructions/TransitionPlan.cs",
+      "sha256": "f34e19de796a8d10fe4bd495ac2f64090bf2146b3f39353d89ae8c69fc86302d"
+    },
+    {
+      "path": "src/tactical-instructions/tactical-instructions.asmdef",
+      "sha256": "28b83d38aef6243b4e47dd4b64aafa56ce5fade3659fec446ad2ec47b152587d"
+    },
+    {
+      "path": "src/testing-strategy/ClosedLoopScenario.cs",
+      "sha256": "0f27e10b3e5827babf0f5362f5bcbab5bf957f38f59d7c77bdba82a4bfef972a"
+    },
+    {
+      "path": "src/testing-strategy/DeterminismGate.cs",
+      "sha256": "bd208552fb39560a039ff76b7fe229b41e2c2481ddffb5c666c06ed762a1c102"
+    },
+    {
+      "path": "src/testing-strategy/DeterminismSuiteResult.cs",
+      "sha256": "449f3aeb6a66ceccba57e191dc1bd06c420085198469a5d4c626985ce0d32633"
+    },
+    {
+      "path": "src/testing-strategy/DeterminismTierKind.cs",
+      "sha256": "0f8cce709397c8a4554f08ab3bba413a00a4a31daa69283e885a33ac2c94b030"
+    },
+    {
+      "path": "src/testing-strategy/DeterminismTierResult.cs",
+      "sha256": "f64b33976f11e764b60393d5fbd05a4c3cbba21b4f6b5cc63c11176ec85569a3"
+    },
+    {
+      "path": "src/testing-strategy/GoldenVectorEntry.cs",
+      "sha256": "751abc6965bab09d582ff797171446beef9b15d1924af75dbe5aad0f367c320c"
+    },
+    {
+      "path": "src/testing-strategy/GoldenVectorKind.cs",
+      "sha256": "067f9808b9a59e63a48ced291ac6584d851aade96b0208f8e78894a7e37e327e"
+    },
+    {
+      "path": "src/testing-strategy/GoldenVectorResult.cs",
+      "sha256": "29c97bb7771f5fae0889877cdfce7305e640fa063bbfce01bb224df1a1992117"
+    },
+    {
+      "path": "src/testing-strategy/GoldenVectorRunner.cs",
+      "sha256": "6162d0b4fd46fbd93c3b17be9d728f63f27f21464b3fd11278d707c0308ed849"
+    },
+    {
+      "path": "src/testing-strategy/IScenario.cs",
+      "sha256": "6d4580461813c2200051431ac6cbedbd0bbcc8cc0160cb15aab8ca3331e21403"
+    },
+    {
+      "path": "src/testing-strategy/PerfGateReport.cs",
+      "sha256": "cda3173ba475ebf2da884cabde9c12f22ff5ce27a6ada3a42552b4fb21a6793f"
+    },
+    {
+      "path": "src/testing-strategy/PerfGateRunner.cs",
+      "sha256": "4f4eebf780560a1c5956b21decb64e8e01e26b5c0ef970bbfc246a7c1f21e87f"
+    },
+    {
+      "path": "src/testing-strategy/RepositoryRoot.cs",
+      "sha256": "974608dde939705b50bd25616d6f3ff0635f0935af31c832d8df1198903a3d6e"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioContext.cs",
+      "sha256": "61608be6b0e2d54f1c1ec6f43f3063f7b0d343aeacce831cffe284d089c7973f"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioEnvelope.cs",
+      "sha256": "495f73f806d3982a510b530142adf2cd704d42a8ca34c9d89b16db55e01318c8"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioIndex.cs",
+      "sha256": "9dd9b158984cf12b6bb04423673ca1820e0bd0fffdfd61afc85f238b2ec5c43e"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioIndexEntry.cs",
+      "sha256": "d03357904cc645efe2bee78e226c59d29be6fa47407c34c1e49f4bc144acd48f"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioManifest.cs",
+      "sha256": "55427a9f628d92d1e1e947cc35166cbbced00367903787c18331836eb0b35195"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioResult.cs",
+      "sha256": "4bc9c852fa77921f1091d9da86b747279f128f8cb7da84e6ba1e056608c4c118"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioRunner.cs",
+      "sha256": "8fd69f1335471173b147281b4449a4259f14cdafa7bc6f52a0dbbea0786e8efb"
+    },
+    {
+      "path": "src/testing-strategy/ScenarioStatus.cs",
+      "sha256": "384e16013043e79d78eb51ac9521a73a07dfba80b96bd33226350b890e1513dd"
+    },
+    {
+      "path": "src/testing-strategy/TestLayer.cs",
+      "sha256": "dc788c723995bc43d911600ce064f47e275177b899ec2c0337ab28d9948dc882"
+    },
+    {
+      "path": "src/testing-strategy/TestTier.cs",
+      "sha256": "1bfff3e8121490fc13b7af445a529b6f26fe9810b6fecb2a098a925bd970906f"
+    },
+    {
+      "path": "src/testing-strategy/TestingStrategyConstants.cs",
+      "sha256": "ece1ebee08b47620d7eb4b040c8b4dff5c72e39259e992a97992b9c207155aeb"
+    },
+    {
+      "path": "src/testing-strategy/testing-strategy.asmdef",
+      "sha256": "e914d9fbc1e94cfb31198864814f6f11243203923d93da05e39b048dfec6e241"
+    },
+    {
+      "path": "src/training-system/AssemblyInfo.cs",
+      "sha256": "d881ffc3530232490dd904d6849376da79dc5fad73db7feb827fba84383cce68"
+    },
+    {
+      "path": "src/training-system/ClubTrainingStates.cs",
+      "sha256": "43aee9c35eb6a6a522bf6488a65a208fa9d8196004dc75e7daca0b426167b327"
+    },
+    {
+      "path": "src/training-system/CoachingModifier.cs",
+      "sha256": "91079a8b49b6832ab61c4e1f6095b4141cee28a7d42715b8796affa96e624918"
+    },
+    {
+      "path": "src/training-system/InjuryRiskContribution.cs",
+      "sha256": "8fe8dcb21596270bed7bb3ac9ca94cc2bce2c3a09d3cdaa7222b6554fe3ab916"
+    },
+    {
+      "path": "src/training-system/TrainingFocus.cs",
+      "sha256": "b5fd85c9987ff65293f2d3b19b5e17ffb330a38d2c3e8101c4a6307d6aa0e875"
+    },
+    {
+      "path": "src/training-system/TrainingSaveCodec.cs",
+      "sha256": "8ee27b37148e96abfd5d01357f4e427ae70a80eb53f42b195cffbbc57d7b7106"
+    },
+    {
+      "path": "src/training-system/TrainingSchedule.cs",
+      "sha256": "6c66d0c8118d1ac7c7c08afad3f7bb57b7a9552582f2f368f5952e126352eafb"
+    },
+    {
+      "path": "src/training-system/TrainingState.cs",
+      "sha256": "72648a8b7ce617d833c53f3872159633a98712ade12fa3f020cae573087e63ec"
+    },
+    {
+      "path": "src/training-system/TrainingStep.cs",
+      "sha256": "dbf230ed5396d0e17305764ffadbdeee4fe4f9bc53c211f75d7523c65efa57d5"
+    },
+    {
+      "path": "src/training-system/TrainingSystemConstants.cs",
+      "sha256": "0b5e9759a9374a962804c82611162a31b740aca7ae9b8c47cf7a1d160aa5621b"
+    },
+    {
+      "path": "src/training-system/TrainingViewModel.cs",
+      "sha256": "17e461a76e1a0859ff947a8834b45b2cce331775cbc9bcdb8544870d0aa24a6d"
+    },
+    {
+      "path": "src/training-system/training-system.asmdef",
+      "sha256": "5453437ed78dc7b6d9ab4b0bb31183a1cb71899c4e4043f27b0c26a2a1df0fc6"
+    },
+    {
+      "path": "src/transfers/AssemblyInfo.cs",
+      "sha256": "222e04bf4a511ce9aa0960b231d8c1fa1077f016becb646070e8033a69b96aff"
+    },
+    {
+      "path": "src/transfers/ClubTransferState.cs",
+      "sha256": "2b2a9118c091bc4d73430c441726d685c7b05bc6568c9be8ab04dafed1b31271"
+    },
+    {
+      "path": "src/transfers/Contract.cs",
+      "sha256": "433bfc24483e41f908912721e30f92ac499a73bebcb0cceaaf248f652f03a9e5"
+    },
+    {
+      "path": "src/transfers/ITransferRosterPort.cs",
+      "sha256": "68d9912aeb63c90b312da945ad73a49abe961f5abc0be17a9f5cc34860f6bb1b"
+    },
+    {
+      "path": "src/transfers/NegotiationEngine.cs",
+      "sha256": "7cf9c73ddbec8dc79b2b8a695e33919231b0b9c7f1e4beeac36b4d3e4ce17d95"
+    },
+    {
+      "path": "src/transfers/NegotiationOutcome.cs",
+      "sha256": "bd0d2158ff1276930879fb29a48303973ed83c615dcf6fe76272a67ee21d6552"
+    },
+    {
+      "path": "src/transfers/Offer.cs",
+      "sha256": "5d6453a0221e006ad4793e7afc2fcf719d9d4dbc1bbef59d09a08000a584c7c2"
+    },
+    {
+      "path": "src/transfers/PlayerValuation.cs",
+      "sha256": "dc3c60b809373fe368aedf579743b778d616d5526371ca9a4cbefacfdd566d47"
+    },
+    {
+      "path": "src/transfers/TransferCommands.cs",
+      "sha256": "b0bfcb8fdf40edeb4648a74f1ad219fc2cbef2e603e25a32f09dcc0ff6b01725"
+    },
+    {
+      "path": "src/transfers/TransferWindow.cs",
+      "sha256": "621d2b017c6d263bb7e9eb0408e26c20747066e8b4dfad4344090c28776f3594"
+    },
+    {
+      "path": "src/transfers/TransfersConstants.cs",
+      "sha256": "8ce08d47fdf9cc3f1ced6218fa603d7a83ce3ce29c773a873c2696791f3b20ba"
+    },
+    {
+      "path": "src/transfers/TransfersSaveCodec.cs",
+      "sha256": "12ca14a3822bd799070dea3a839baa3e5c903d39150c87ca78adf79850efb9c2"
+    },
+    {
+      "path": "src/transfers/TransfersState.cs",
+      "sha256": "c46979c72dcf56f86a24ac7c747f403106d38287e301a3d8c486ad72181dd298"
+    },
+    {
+      "path": "src/transfers/transfers.asmdef",
+      "sha256": "1ee2e7608e1e71c368a22dae80a2dc3db76961629f95bc41188c819264960602"
+    },
+    {
+      "path": "src/ui-framework/AssemblyInfo.cs",
+      "sha256": "2adc8558a86c5864ac566718d9e4e6a293ff1b7598bc92a676d065528c51ee04"
+    },
+    {
+      "path": "src/ui-framework/ICommandDispatcher.cs",
+      "sha256": "1edb45f5830d6f3b2b8baaa89590b9459288725f8217ba797cf236d79a713030"
+    },
+    {
+      "path": "src/ui-framework/ILiveFrameSource.cs",
+      "sha256": "6bf2d53e45f785229089c1450fb9e4dd43ed42dadbbcd9cedd836dd4d51bd521"
+    },
+    {
+      "path": "src/ui-framework/IViewModelSource.cs",
+      "sha256": "554d07e63c724c6fba2e6ef3107eac85950cbb8997668dfff2300389b7648421"
+    },
+    {
+      "path": "src/ui-framework/IntentKind.cs",
+      "sha256": "090f09d07081995718982bda923f7bd767516ce08c0e9b96454d4b82cb125bbe"
+    },
+    {
+      "path": "src/ui-framework/IntentRouting.cs",
+      "sha256": "54418e0cd74da00f6ad530a3174ca319326b5b503a5b33ce9d2d94178ad15052"
+    },
+    {
+      "path": "src/ui-framework/LiveMatchStreamerFrameSource.cs",
+      "sha256": "cdb95a88f0a6518e8bb2d1728ac6f4a9a59fce6784f11350ea168c8b6f0af64c"
+    },
+    {
+      "path": "src/ui-framework/ManagerIntent.cs",
+      "sha256": "4625bbdf506e7328fdcdb8939711ee0084999f7356b1fb2bdba21caa384b7632"
+    },
+    {
+      "path": "src/ui-framework/MatchFrameView.cs",
+      "sha256": "477a2cbc11e9317853ed4ca89a108528a4b7414f78559bbdf01e251f7f7f7174"
+    },
+    {
+      "path": "src/ui-framework/MatchTacticsDispatcher.cs",
+      "sha256": "96fe8138b6d64e8ec5abc78ced45a99c1abc92a37b4dc574c182a016b02ece28"
+    },
+    {
+      "path": "src/ui-framework/MatchViewModelSource.cs",
+      "sha256": "1ea7e3e5d3fb8522715100862c05b2bafcf03e8669d521e6e75462589f05b5b4"
+    },
+    {
+      "path": "src/ui-framework/NavigationShell.cs",
+      "sha256": "0a0cbc665ce52d8558742061258a6ea13fbbabdc24ce56c88c4d9c47992f1c0e"
+    },
+    {
+      "path": "src/ui-framework/ScreenId.cs",
+      "sha256": "4e2410243969a2ada457e3458a5468d888875f976599944f424aa6949de2f26f"
+    },
+    {
+      "path": "src/ui-framework/UiFrameworkConstants.cs",
+      "sha256": "4db1b8937efdb4382fea639f0848d6fb96bb5bf66fb0a7e8946d5a57e45e894b"
+    },
+    {
+      "path": "src/ui-framework/ui-framework.asmdef",
+      "sha256": "e06d5ab67c7a87a4fea6a2490931d6eeca4b7f9878211e13e3c52415a69abcd9"
+    }
+  ]
+}

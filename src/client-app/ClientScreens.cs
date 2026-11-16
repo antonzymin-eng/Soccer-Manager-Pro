@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientScreens.cs
 // Created:  2026-08-07
-// Modified: 2026-10-18
+// Modified: 2026-11-05 (§5-P8 Transfers and ClubFinances)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b (the four match screens),
 //           §5-P7 (the three career screens),
@@ -43,6 +43,12 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>Load Career — pick a save slot to resume (§5-P7).</summary>
         public static readonly ScreenId LoadCareer = new ScreenId(ClientAppConstants.SCREEN_ID_LOAD_CAREER);
+
+        /// <summary>Transfers: buy and sell offers through #31's command seam (§5-P8).</summary>
+        public static readonly ScreenId Transfers = new ScreenId(ClientAppConstants.SCREEN_ID_TRANSFERS);
+
+        /// <summary>Club Finances: the managed club's read-only #40 view (§5-P8).</summary>
+        public static readonly ScreenId ClubFinances = new ScreenId(ClientAppConstants.SCREEN_ID_CLUB_FINANCES);
     }
 }
 
@@ -50,4 +56,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-07 | —      | Initial creation: the four screens as typed ScreenIds.         |
 // | 1.1     | 2026-10-18 | —      | §5-P7: CareerHome, NewCareer, LoadCareer.                      |
+// | 1.2     | 2026-11-05 | —      | §5-P8: Transfers, ClubFinances.                                |
 #endregion
