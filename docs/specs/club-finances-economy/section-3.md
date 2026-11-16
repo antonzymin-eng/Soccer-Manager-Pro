@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** October 13, 2026 (v0.16 — deterministic amount model implemented behind the default-off config gate)
+**Last Updated:** November 4, 2026 (v0.17 — ERR-040-004: genesis budget ceilings are the zero-prize base (owner decision D-13))
+**Last Updated (prior):** October 13, 2026 (v0.16 — deterministic amount model implemented behind the default-off config gate)
 **Last Updated (prior):** October 11, 2026 (v0.15 — PR #497 review: break-advance citation states its starting day)
 **Last Updated (prior):** October 11, 2026 (v0.14 — PR #497 review: break days accrue no sponsorship, so attribution is independent of roll timing)
 **Last Updated (prior):** October 10, 2026 (v0.13 — T3b2 formula half: §3.7 deterministic daily sponsorship/matchday model, gate producer, composition and worked example; code pending)
@@ -149,7 +150,8 @@ ApplyTransaction(ref ClubFinances f, in FinanceTransaction txn):
 (KD-3/KD-5, FR-FN-013). At T3+, #40-owned autonomous accrual functions such as `AccrueDailyRevenue` are
 separate accounting transforms, not a second caller-command ledger. This is the ERR-040-003 correction to
 the earlier over-broad wording. `ApplyTransaction` never reads or writes `TransferBudget`/`WageBudget` — those
-are set exclusively by `SettleFinances` once per season (§1.6/FR-FN-004); Stage 2 has no concept of "budget
+are seeded by `CreateInitial` at genesis (FR-FN-003, ERR-040-004) and otherwise set exclusively by
+`SettleFinances` once per season (§1.6/FR-FN-004); Stage 2 has no concept of "budget
 remaining after this season's spend" as a tracked field — if a caller (#31) wants that, it computes it
 externally by summing the transactions it has itself submitted, or a future deep-tier extension adds it as a
 new field (recorded in §7, not built here).
@@ -463,4 +465,5 @@ rejects negative sponsorship/price tuning or fill endpoints outside `0 ≤ botto
 | 0.14 | 2026-10-11 | — | **PR #497 review (delayed roll).** #30 permits advancing the whole break before `RollToNextSeason`, so v0.13's "break days accrue into the new season" was false and made completed-season revenue depend on roll timing. `DailyRevenue` gains `inSeasonDay` (`DayOfRound(0) ≤ d ≤ DayOfRound(RoundCount − 1)` of the live season): sponsorship accrues only in-season, break and pre-season days accrue nothing, and a home fixture outside that span fails loud. Worked example and failure rows updated. Still spec only. |
 | 0.15 | 2026-10-11 | — | **PR #497 review.** §3.7.3 states that the cited `SeasonRollTests` break advance starts from the final round day, so its first advance is the final-day completion. Wording only. |
 | 0.16 | 2026-10-13 | — | **T3b2 implementation.** deterministic amount model implemented behind the default-off config gate. Default remains off; pinned Unity compilation pending. |
+| 0.17 | 2026-11-04 | — | **ERR-040-004.** §3 ledger note: ceilings are seeded at genesis by `CreateInitial` and otherwise set only by `SettleFinances`. No formula change. |
 #endregion

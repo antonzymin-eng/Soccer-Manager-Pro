@@ -9,7 +9,8 @@
         "TacticalDirector.UiFramework",
         "UnityEngine.UI",
         "TacticalDirector.TacticalInstructions",
-        "TacticalDirector.Localization"
+        "TacticalDirector.Localization",
+        "TacticalDirector.SeasonSave"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

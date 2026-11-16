@@ -1,12 +1,13 @@
 # Club Finances & Economy #40 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** October 8, 2026 (v0.8 — cadence requirements distinguish identity invocation from non-zero accrual)
+**Last Updated:** November 4, 2026 (v0.9 — ERR-040-004: genesis budget ceilings are the zero-prize base (owner decision D-13))
+**Last Updated (prior):** October 8, 2026 (v0.8 — cadence requirements distinguish identity invocation from non-zero accrual)
 **Last Updated (prior):** September 11, 2026 (v0.7 — ERR-040-003: T3 autonomous accrual exception, revenue coherence, and gate-order review correction)
 **Last Updated (prior):** September 11, 2026 (v0.6 — T3a lifecycle: SeasonRevenueAccrued closes at settlement; FFP window remains carried)
 **Last Updated (prior):** September 11, 2026 (v0.5 — T3a back-prop: reconcile FR-FN-003 with the planned deep revenue mutation path)
 **Last Updated (prior):** September 7, 2026 (v0.4 — PR #363 follow-up: non-positive BoardModifier values fail loud)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -20,8 +21,11 @@
   and the deep-tier `SeasonRevenueAccrued`/`FfpBalanceWindow` accumulators) is #40-owned state, keyed by
   `ClubId`, serialized under #40's sub-blob (KD-7). It is the single source of truth for a club's financial
   position.
-- **FR-FN-003** — `SettleFinances` MUST be the sole entry point that sets `TransferBudget`/`WageBudget` and
-  adds to `Balance` at the season boundary. At Stage 2, `ApplyTransaction` MUST be the sole between-boundary
+- **FR-FN-003** — `SettleFinances` MUST be the sole entry point that sets `TransferBudget`/`WageBudget` after
+  creation and adds to `Balance` at the season boundary. At creation, `CreateInitial` MUST seed the genesis
+  ceilings with the values a zero-prize settlement under `BoardModifier.Identity` would set — `TransferBudget =
+  BASE_TRANSFER_BUDGET` and `WageBudget = BASE_WAGE_BUDGET`, clamped exactly as §3.1 clamps them — so a
+  career's first transfer window has a spending ceiling (**ERR-040-004**, owner decision D-13). At Stage 2, `ApplyTransaction` MUST be the sole between-boundary
   mutation path. At T3+, #40-owned deep-tier accrual entry points MAY mutate `Balance` and their own deep
   accumulators without going through `ApplyTransaction`; they MUST NOT set `TransferBudget`/`WageBudget`,
   mutate `WageBillAggregate`, or create a second externally-commanded transaction ledger. T3a's
@@ -30,8 +34,9 @@
   **ERR-040-003** records this approved-spec correction: the prior unqualified "sole between-boundary
   mutation path" wording was too broad for the already-approved T3 autonomous-accrual design; ledger
   exclusivity remains unchanged.
-- **FR-FN-004** — `ApplyTransaction` MUST NOT mutate `TransferBudget` or `WageBudget`; those ceilings are set
-  exclusively by `SettleFinances` once per season (KD-1/KD-3) — Stage 2 has no "remaining budget net of
+- **FR-FN-004** — `ApplyTransaction` MUST NOT mutate `TransferBudget` or `WageBudget`; those ceilings are seeded
+  by `CreateInitial` at genesis (FR-FN-003, ERR-040-004) and otherwise set exclusively by `SettleFinances` once
+  per season (KD-1/KD-3) — Stage 2 has no "remaining budget net of
   spend" running total (§1.6).
 
 **Budget projection semantics (KD-1/KD-6)**
@@ -150,15 +155,18 @@ public enum FinanceLineItem : byte { General = 0, TransferFee = 1, PlayerWage = 
 public struct ClubFinances
 {
     public long Balance;             // signed — may be negative (debt); no F1 gate on Balance itself
-    public long TransferBudget;      // spending ceiling #31 reads (>= 0, clamped, F1); SET only by SettleFinances
-    public long WageBudget;          // wage-ceiling #31/#34 read (>= 0, clamped, F1); SET only by SettleFinances
+    public long TransferBudget;      // spending ceiling #31 reads (>= 0, clamped, F1); seeded by CreateInitial, then SET only by SettleFinances
+    public long WageBudget;          // wage-ceiling #31/#34 read (>= 0, clamped, F1); seeded by CreateInitial, then SET only by SettleFinances
     public long WageBillAggregate;   // sum of committed wage line items (0 at Stage 2 — no producer yet, KD-5); >= 0 (F1)
     // deep-tier accumulators (0 at Stage 2 -> minimal identity, KD-8/FR-FN-028):
     public long SeasonRevenueAccrued; // current-season accumulator; >= 0; SettleFinances resets to 0 for the next season
     public long FfpBalanceWindow;     // carried unchanged at T3a; later FFP slice owns its window update
 
+    // ERR-040-004: genesis ceilings = what SettleFinances would set for prizeMoney = 0 under BoardModifier.Identity
+    // (BASE_TRANSFER_BUDGET / BASE_WAGE_BUDGET through §3.1's clamp). Catalogue defaults: 100,000 / 50,000.
     public static ClubFinances CreateInitial(long startingBalance) =>
-        new() { Balance = startingBalance, TransferBudget = 0, WageBudget = 0,
+        new() { Balance = startingBalance,
+                TransferBudget = ZeroPrizeCeiling(BASE_TRANSFER_BUDGET), WageBudget = ZeroPrizeCeiling(BASE_WAGE_BUDGET),
                 WageBillAggregate = 0, SeasonRevenueAccrued = 0, FfpBalanceWindow = 0 };
 }
 
@@ -249,4 +257,5 @@ remains the single externally-commanded ledger mutation path; T3a adds the separ
 | 0.6 | 2026-09-11 | OpenAI | **T3a lifecycle back-prop.** FR-FN-005 defines `SeasonRevenueAccrued` as current-season state reset by settlement, requires future FFP consumption to occur before reset, and leaves `FfpBalanceWindow` carried until that slice defines its update. |
 | 0.7 | 2026-09-11 | OpenAI | **ERR-040-003 / review correction.** Formally scopes FR-FN-003's Stage-2 sole-mutation rule to the externally-commanded ledger while permitting #40-owned T3 accrual, makes `SeasonRevenueAccrued >= 0` an F1 coherence invariant enforced on restore/consumption, and pins coherence validation before the disabled T3a gate. |
 | 0.8 | 2026-10-08 | — | **T3b1 / ERR-030-052.** cadence requirements distinguish identity invocation from non-zero accrual. |
+| 0.9 | 2026-11-04 | — | **ERR-040-004 (owner decision D-13, November 4, 2026).** FR-FN-003 lets `CreateInitial` seed the genesis `TransferBudget`/`WageBudget` with the zero-prize identity-board ceilings (`BASE_TRANSFER_BUDGET` 100,000 / `BASE_WAGE_BUDGET` 50,000, §3.1 clamp); `SettleFinances` stays the sole setter after creation. FR-FN-004 and the §2 sketch updated. Before this, a career's first window was sale-only (every buy `InsufficientBudget`). |
 #endregion

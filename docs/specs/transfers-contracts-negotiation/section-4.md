@@ -1,7 +1,8 @@
 # Transfers, Contracts & Negotiation #31 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: the composition-root bullet no longer says #31 is invoked at a T2 season slot)
+**Last Updated:** November 5, 2026 (v0.15 — ERR-031-017: public owner preflight and headroom seams; no new dependency.)
+**Last Updated (prior):** October 20, 2026 (v0.14 — AR round 4, ERR-031-014: the composition-root bullet no longer says #31 is invoked at a T2 season slot)
 **Last Updated (prior):** October 20, 2026 (v0.13 — AR round 3, ERR-031-013: §4.2 file rows list the shipped members)
 **Last Updated (prior):** October 20, 2026 (v0.12 — ERR-031-012: §4.5 CanRelease contract)
 **Last Updated (prior):** October 20, 2026 (v0.11 — ERR-031-011: §4.1 references/diagram as shipped; §4.2 window derivation live; §4.3 SquadDepleted)
@@ -11,7 +12,7 @@
 **Last Updated (prior):** October 18, 2026 (v0.7 — #31 T1 landed: §4.2 codec row live, §4.4 rewritten for the shipped composition; ERR-031-003)
 **Last Updated (prior):** September 14, 2026 (v0.6 — PR #407 review correction: submission-result seam + prospective-stock semantics)
 **Last Updated (prior):** September 14, 2026 (v0.5 — T0 football-judgment close-out; prior v0.4 T0 landing, v0.3 AR-6, v0.2 AR-3, v0.1 initial)
-**Version:** 0.14
+**Version:** 0.15
 **Status:** APPROVED
 
 ---
@@ -69,6 +70,14 @@ adds `InsufficientBudget` / `SquadFull` / `SquadDepleted` (FR-TX-029 / F9) for o
 results. Keeping the enums
 separate prevents UI/T2 concerns from contaminating the reusable negotiation API.
 
+The public read seams (FR-TX-030, ERR-031-017) are
+`TransferCommands.Diagnose(in Offer, uint worldDay, TransfersState) → TransferBidIssue` and
+`TransferCommands.RemainingTransferBudget(in ClubFinances, TransfersState) → long`.
+The first reads terms/window/roster without mutation; SubmitBid invokes the same diagnosis and
+preserves legacy throws. The second is the single headroom calculation used by SubmitBid and the
+#30 wrappers consumed by client projections. `TransferBidIssue.cs` owns the append-only byte enum;
+it is independent of `TransferSubmissionOutcome` (negotiation/budget/capacity results).
+
 ## 4.4 Save composition (KD-4)
 
 **T1 (live).** `TransfersSaveCodec.Encode(TransfersState stateOrNull) → byte[]` and `Decode(byte[]) → TransfersState`
@@ -119,4 +128,5 @@ references for `CanonicalSerializer` / `SaveBlobFramingHelpers` only — still n
 | 0.12 | 2026-10-20 | — | ERR-031-012 (AR round 2): §4.5 states that `CanRelease`'s `false` is depletion only; impossible input throws. |
 | 0.13 | 2026-10-20 | — | ERR-031-013 (AR round 3): §4.2's `ITransferRosterPort.cs` row omitted `CarriesClub` / `CanRelease` and the `TransfersState.cs` row omitted `CreateAtGenesis` / `PrepareSeasonBoundary` (all shipped at T2); both rows restated. |
 | 0.14 | 2026-10-20 | — | ERR-031-014 (AR round 4, R4-L5): §4.5 said the composition root MUST invoke #31 at the recorded T2 season slot; §7.1 keeps slot 5 a null seam and #31 runs only via `SubmitTransferBid` and the staged roll step (d″). Restated. |
+| 0.15 | 2026-11-05 | — | ERR-031-017: public owner preflight and headroom seams; no new dependency. |
 #endregion

@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/ClubFinances.cs
 // Created:  2026-09-04
-// Modified: 2026-09-11 (#40 T3a review — current-season revenue coherence)
+// Modified: 2026-11-04 (ERR-040-004: genesis budgets are the zero-prize base ceilings)
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §2.2 (per-club finance state)
@@ -33,16 +33,21 @@ namespace TacticalDirector.ClubFinances
         /// <summary>Deep-tier FFP accumulator; zero and untouched at T0.</summary>
         public long FfpBalanceWindow;
 
-        /// <summary>Creates the pre-first-season identity state with only the supplied cash balance populated.</summary>
+        /// <summary>
+        /// Creates the pre-first-season state: the supplied cash balance, and the genesis budget ceilings a
+        /// zero-prize settlement under <see cref="BoardModifier.Identity"/> would set (ERR-040-004, owner
+        /// decision D-13), so a career's first transfer window has a spending ceiling. Every later ceiling is
+        /// set only by <see cref="FinanceStep.SettleFinances"/> (FR-FN-003).
+        /// </summary>
         /// <param name="startingBalance">Initial signed cash balance.</param>
-        /// <returns>A coherent finance state with zero budgets, wage liability, and deep-tier accumulators.</returns>
+        /// <returns>A coherent finance state with zero-prize base budgets and zero wage liability and deep-tier accumulators.</returns>
         public static ClubFinances CreateInitial(long startingBalance)
         {
             return new ClubFinances
             {
                 Balance = startingBalance,
-                TransferBudget = 0,
-                WageBudget = 0,
+                TransferBudget = FinanceStep.ZeroPrizeTransferCeiling(),
+                WageBudget = FinanceStep.ZeroPrizeWageCeiling(),
                 WageBillAggregate = 0,
                 SeasonRevenueAccrued = 0,
                 FfpBalanceWindow = 0
@@ -81,4 +86,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.1     | 2026-09-06 | —      | Header author attribution corrected to automated-agent placeholder. |
 // | 1.3     | 2026-09-08 | —      | Corrected the version-history table to the required parseable pipe-row format. |
 // | 1.4     | 2026-09-11 | OpenAI | T3a review: SeasonRevenueAccrued is non-negative coherent state, including restore validation. |
+// | 1.5     | 2026-11-04 | —      | ERR-040-004 (owner decision, D-13): CreateInitial seeds TransferBudget/WageBudget with the zero-prize base ceilings so a first-season window can buy. |
 #endregion

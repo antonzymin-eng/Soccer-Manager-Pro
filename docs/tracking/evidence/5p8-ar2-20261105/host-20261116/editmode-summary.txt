@@ -1,0 +1,64 @@
+# EditMode summary — pinned-host Unity run for PR #539 (merged src tree 967655cc)
+# Derived from editmode-results.xml.xz (NUnit 3.5 XML written by Unity).
+command: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.ClientApp.Tests;TacticalDirector.SeasonSave.Tests;TacticalDirector.Transfers.Tests;TacticalDirector.ClubFinances.Tests;TacticalDirector.MatchClientCore.Tests;TacticalDirector.UiFramework.Tests -testResults <out>/editmode.xml -logFile <out>/editmode.log
+no filter, category or exclusion; environment-gated diagnostics left unset
+run: start 2026-11-16 15:25:43Z end 2026-11-16 15:38:55Z duration 792.1 s; process exit code 0
+totals: 1227 cases; passed 1220; failed 0; skipped 7; inconclusive 0
+
+per assembly (passed / failed / skipped / inconclusive):
+  TacticalDirector.ClientApp.Tests.dll: 276 / 0 / 3 / 0
+  TacticalDirector.ClubFinances.Tests.dll: 70 / 0 / 0 / 0
+  TacticalDirector.MatchClientCore.Tests.dll: 190 / 0 / 0 / 0
+  TacticalDirector.SeasonSave.Tests.dll: 553 / 0 / 4 / 0
+  TacticalDirector.Transfers.Tests.dll: 79 / 0 / 0 / 0
+  TacticalDirector.UiFramework.Tests.dll: 52 / 0 / 0 / 0
+
+fixtures named in HOST-REQUEST.md (passed / failed / skipped):
+  CareerScreenTextTests: 10 / 0 / 0
+  CareerTransfersTests: 22 / 0 / 0
+  ClientCareerCoordinatorTests: 41 / 0 / 0
+  ClientShellWiringValidatorTests: 13 / 0 / 0
+  ClientScreenVisibilityTests: 7 / 0 / 0
+  S0TextFormatterTests: 24 / 0 / 0
+  CareerDriftDiagnosticTests: 0 / 0 / 1
+  SeasonDailyRevenueTests: 9 / 0 / 0
+  SeasonLoopFinanceTests: 23 / 0 / 0
+  SeasonTransfersT2Tests: 34 / 0 / 0
+  SeasonFinancePersistenceTests: 8 / 0 / 0
+  TransfersT0Tests: 47 / 0 / 0
+  ClubFinancesT0Tests: 20 / 0 / 0
+  ClubFinancesT2BootstrapTests: 5 / 0 / 0
+
+AR-2 M1 finance-restore cases (ClientApp):
+  Passed: ResumedFinances_UseOwnerMigrationOrKeepSavedValues(False,False)
+  Passed: ResumedFinances_UseOwnerMigrationOrKeepSavedValues(False,True)
+  Passed: ResumedFinances_UseOwnerMigrationOrKeepSavedValues(True,False)
+  Passed: ResumedFinances_UseOwnerMigrationOrKeepSavedValues(True,True)
+
+every non-passed case:
+  Skipped: TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests.S0MovementDiagnostic_ReportsPlayerTravelAndSpread
+    reason: Set TD_MOVEMENT_DIAGNOSTIC=1 to run the S0 player-movement measurement.
+  Skipped: TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs
+    reason: Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+  Skipped: TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit
+    reason: Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+  Skipped: TacticalDirector.SeasonSave.Tests.CareerDriftDiagnosticTests.CareerDriftDiagnostic_ReportsClubStrengthAndRegenQualityOverSeasons
+    reason: Set TD_CAREER_DRIFT=1 to run the ERR-028-026 multi-season career drift measurement.
+  Skipped: TacticalDirector.SeasonSave.Tests.EngineScoringDiagnosticTests.EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes
+    reason: Set TD_ENGINE_DIAGNOSTIC=1 to run the ERR-030-014 characterisation (one full match).
+  Skipped: TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Corpus_GeneratesTheRequestedSlice
+    reason: Set TD_CALIBRATION_SAMPLES (plus optional TD_CALIBRATION_DELTA_FROM / _TO / _OUT) to generate an A4a corpus slice. Each sample is a full ~2-minute engine match.
+  Skipped: TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Pilot_ExtremeDifferentialsAreDistinguishable
+    reason: Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).
+
+ten longest cases (s):
+     455.7  TacticalDirector.ClientApp.Tests.S0DemoFixtureComparisonTests.sim_ApprovedFixtureFullMatchIsRepeatableAndObserverNeutral
+     207.6  TacticalDirector.SeasonSave.Tests.SeasonLoopDisciplineTests.ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse
+     103.9  TacticalDirector.SeasonSave.Tests.SeasonLoopScenarioTests.sim_season_multi_fixture
+       7.3  TacticalDirector.SeasonSave.Tests.SeasonLoopDisciplineTests.QuickSimPath_MakesASuspensionCostSomething
+       1.8  TacticalDirector.SeasonSave.Tests.SeasonInjuryRealismTests.DialOn_ASeasonProducesFootballPlausibleInjuryRates
+       1.1  TacticalDirector.ClientApp.Tests.CareerProgressTests.AfterTheLastRound_OneDayAdvanceComesBeforeTheRoll_AsErr030053Requires
+       1.0  TacticalDirector.ClientApp.Tests.CareerProgressTests.AWholeSeason_TheRoll_AndTheNextSeasonsFirstMatchday_AreReachableByProgressAlone
+       0.7  TacticalDirector.ClientApp.Tests.ClientMatchCoordinatorTests.ActiveRendererFailureStopsPacedSession
+       0.4  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ClosedWindow_IsRefusedByTheWorkerWithTypedReason_M4c
+       0.3  TacticalDirector.ClientApp.Tests.ClientMatchCoordinatorTests.ApprovedFixtureBootIsCompleteRepeatableAndObserverNeutral
