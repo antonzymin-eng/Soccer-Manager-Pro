@@ -1,0 +1,427 @@
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/attacking-ai/AttackingAgentSnapshot.cs:34:        /// PositioningAI.GetFormationSlot(). <c>Vector2.NegativeInfinity</c> = sentinel
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/attacking-ai/AttackingSnapshot.cs:55:        /// = the <c>TeamTactic.Balanced</c> identity (FR-TI-031), so a default snapshot is
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:28:        private TeamTactic _currentTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:42:        internal ClientChangeRequests(in TeamTactic initialTactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:48:        internal TeamTactic WithMentality(Mentality mentality)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:50:            TeamTactic b = _currentTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:51:            return new TeamTactic(mentality, b.Formation, b.Tempo, b.Width, b.Passing, b.Pressing, b.LineOfEngagement, b.DefensiveLine, b.DefensiveWidth, b.TransitionWon, b.TransitionLost, b.OffsideTrap, b.TriggerPressMask, b.FocusPlay, b.GkDistribution, b.TimeWasting, b.MarkingOrientation, b.DismarkIntensity, b.BuildUpStructure, b.RotationFreedom);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:56:            if (_completed || command.TeamId != 0 || (command.Kind != ManagerCommandKind.SetTeamTactic && command.Kind != ManagerCommandKind.Substitute))
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:58:            bool mentality = command.Kind == ManagerCommandKind.SetTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:109:            ClientChangeRecord pending = command.Kind == ManagerCommandKind.SetTeamTactic ? _mentalityPending : _substitutionPending;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:112:            if (status == ClientChangeStatus.Applied && command.Kind == ManagerCommandKind.SetTeamTactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:113:                _currentTactic = command.NewTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientChangeRequests.cs:186:            return a.Kind == ManagerCommandKind.SetTeamTactic ? a.NewTeamTactic.Equals(b.NewTeamTactic) : a.Kind == ManagerCommandKind.Substitute && a.OutSlotIndex == b.OutSlotIndex && a.BenchIndex == b.BenchIndex && a.Reason == b.Reason;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/ClientMatchContext.cs:31:        internal ClientMatchContext(MatchSession session, MatchIdentityContext identity, SessionMatchAnalytics analytics, TeamTactic homeTactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0DemoFixture.cs:107:            TeamTactic b = TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0DemoFixture.cs:108:            var home = new TeamTactic(mentality, b.Formation, b.Tempo, b.Width, b.Passing, b.Pressing,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0ScreenPresenter.cs:364:            TeamTactic tactic = _context.Changes.WithMentality(RequestedMentality);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0ScreenPresenter.cs:365:            ManagerCommand command = ManagerCommand.SetTeamTactic(0, tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0ScreenPresenter.cs:366:            ManagerIntent intent = ManagerIntent.SetTeamTactic(0, tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0ScreenPresenter.cs:786:                if (row.Command.Kind == ManagerCommandKind.SetTeamTactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/client-app/S0ScreenPresenter.cs:787:                    _feedback.Add(row.Status == ClientChangeStatus.Applied ? Text.Format(cell, "feedback.mentality_" + suffix, MentalityLabel(row.Command.NewTeamTactic.Mentality), Minute(row.OutcomeTick)) : Text.Format(cell, "feedback.mentality_" + suffix, MentalityLabel(row.Command.NewTeamTactic.Mentality)));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/OptionGenerator.cs:737:                ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, ctx.AgentTeamId));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/OptionGenerator.cs:963:// |         |            |        |   floor; M-2 MOVE slot uses team-signed GetAdjustedFormationSlot(agentId,       |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticTranslation.cs:55:        /// §3.2: per-Mentality additive defensive-line bias (+TeamTactic.DefensiveLine, then
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:9://           Stage 1+: Formation System (Positioning AI #12) populates live values.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:127:        // ── Formation Slot ────────────────────────────────────────────────────
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:179:        /// Stage 1+: Formation System dynamically adjusts slots.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:182:        public Vector2 GetFormationSlot(int agentId) => _formationSlot;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:185:        /// Formation slot adjusted for DefensiveLineDepth (§3.4.5: shifts the slot
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:196:        public Vector2 GetAdjustedFormationSlot(int agentId, int teamId)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/decision-tree/TacticalContext.cs:208:// | 1.1     | 2026-06-11 | —      | Audit AR-2 M-2: GetAdjustedFormationSlot shifts X (pitch depth, team-signed) |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/defensive-ai/DefensiveSnapshot.cs:85:        /// <c>false</c> = the <c>TeamTactic.Balanced</c> identity (FR-TI-031). Per KD-9 this is a
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/defensive-ai/TacticTranslation.cs:15:    /// never references #14. The §3.4 table maps <c>TeamTactic.OffsideTrap</c> onto the #14 trap as a
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/defensive-ai/TacticTranslation.cs:16:    /// <b>bool passthrough</b>; <c>false</c> is the <see cref="TeamTactic.Balanced"/> identity
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/defensive-ai/TacticTranslation.cs:25:        /// §3.4: <c>TeamTactic.OffsideTrap</c> → the #14 offside-trap request flag carried on
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/living-world/ArcCanonSource.cs:26:    /// pattern (the ScenarioIndex / TeamTacticConfig precedent). When the real vol-2/vol-3 producer
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/living-world/InteractionTextCorpus.cs:16:    /// corpus IN CODE per the #19 ScenarioIndex / #21 TeamTacticConfig precedent: the shipped §7.2
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ILiveMatchMutations.cs:36:        void SetTeamTactic(int teamId, in TeamTactic tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:30:        /// <summary>Team id (<see cref="ManagerCommandKind.SetTeamTactic"/> / <see cref="ManagerCommandKind.Substitute"/>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:36:        /// <summary>The team tactic to stage (<see cref="ManagerCommandKind.SetTeamTactic"/>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:37:        public readonly TeamTactic NewTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:55:            in TeamTactic newTeamTactic,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:64:            NewTeamTactic   = newTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:72:        public static ManagerCommand SetTeamTactic(int teamId, in TeamTactic tactic) =>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:73:            new ManagerCommand(ManagerCommandKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:106:                case ManagerCommandKind.SetTeamTactic:
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:108:                    TeamTactic tactic = NewTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommand.cs:109:                    mutations.SetTeamTactic(TeamId, in tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommandKind.cs:35:        /// <summary>Stage a team-level tactic change (→ <c>SetTeamTactic</c>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommandKind.cs:36:        SetTeamTactic = 1,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/ManagerCommandQueue.cs:35:            if (kind < (uint)ManagerCommandKind.SetTeamTactic
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchEngineMutations.cs:43:        public void SetTeamTactic(int teamId, in TeamTactic tactic) => _engine.SetTeamTactic(teamId, in tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSession.cs:145:            // team's authored setup tactic intact. Running this before the old SetTeamTactic calls would
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSession.cs:150:                new TeamTacticConfig(setup.HomeTactic, setup.AwayTactic));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSession.cs:418:// |         |            |        | baseline. Replaces the two unconditional SetTeamTactic calls.   |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:40:        public TeamTactic HomeTactic { get; }
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:43:        public TeamTactic AwayTactic { get; }
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:72:            TeamTactic? homeTactic = null,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:73:            TeamTactic? awayTactic = null,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:89:            HomeTactic         = homeTactic ?? TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-core/MatchSetup.cs:90:            AwayTactic         = awayTactic ?? TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientPage.cs:223: const url='/intent?kind=SetTeamTactic&team='+g('team')+'&mentality='+g('mentality')
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:265:                    case IntentKind.SetTeamTactic:
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:266:                        intent = BuildTeamTactic(args);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:292:        private static ManagerIntent BuildTeamTactic(Dictionary<string, string> args)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:299:            TeamTactic b = TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:300:            var tactic = new TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:302:                formation:          b.Formation,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-client-web/MatchClientRouter.cs:322:            return ManagerIntent.SetTeamTactic(teamId, in tactic);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:60:    /// Deterministic lineup selection over a <see cref="Squad"/> and a <see cref="FormationFamily"/>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:81:        public static LineupPlan Select(Squad squad, FormationFamily family)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:106:            Squad squad, FormationFamily family, out LineupPlan plan, out string failure)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:110:            FormationSlotRecord[] slots = PositioningAIConstants.GetFormationSlots(family);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:119:                FormationSlotRecord slot = slots[s];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:221:        /// internal keeps <see cref="FormationFamily"/> out of the public match-engine surface, so
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:226:        internal static float StartingElevenMean(Squad squad, FormationFamily family)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:253:        internal static bool CanSelect(Squad squad, FormationFamily family) =>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/LineupSelector.cs:260:        private static PlayerPosition RequiredPosition(in FormationSlotRecord slot)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:9://           SetTeamTactic/SetPlayerTactic mid-match — never the appliers, F3).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:27:    /// existing <see cref="TeamTacticConfigApplier"/>/<see cref="PlayerTacticConfigApplier"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:29:    /// <see cref="MatchEngine.SetTeamTactic"/>/<see cref="MatchEngine.SetPlayerTactic"/> and never
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:178:        /// <see cref="MatchEngine.SetTeamTactic"/>/<see cref="MatchEngine.SetPlayerTactic"/> —
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:220:            engine.SetTeamTactic(teamId, preset.Team);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:248:        /// <param name="teamBaseline">Per-team human/config tactics (null ⇒ <see cref="TeamTacticConfig.Default"/>).</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:252:            TeamTacticConfig teamBaseline = null, PlayerTacticConfig playerBaseline = null)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:262:            teamBaseline = teamBaseline ?? TeamTacticConfig.Default;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:265:            TeamTactic homeTactic = teamBaseline.ForTeam(0);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:266:            TeamTactic awayTactic = teamBaseline.ForTeam(1);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/ManagerAdaptation.cs:304:            TeamTacticConfigApplier.Apply(engine, new TeamTacticConfig(homeTactic, awayTactic));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.GoalkeeperDistribution.cs:62:                GkDistributionPolicy policy = _activeTeamTactics[team].GkDistribution;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:57:// Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:59:// Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:60:// Modified: 2026-06-29 (#21 §3.3 team-Tempo routing + ERR-021-002: SNAPSHOT_SCHEMA_VERSION 8 → 9, per-team active+pending TeamTactic serialized)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:182:            _activeTeamTactics[teamId].GkDistribution;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:311:        // Per-team manager tactic (the §3.1/§3.2 input layer). _pending is what SetTeamTactic writes;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:314:        // only on stride ticks) — never mid-tick. Both default to TeamTactic.Balanced, which reproduces
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:319:        // by SetTeamTactic, committed at the next stride) are cross-tick state, so a tactic changed
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:321:        private readonly TeamTactic[] _activeTeamTactics;   // [TEAM_COUNT]
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:322:        private readonly TeamTactic[] _pendingTeamTactics;  // [TEAM_COUNT]
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:865:            // until a caller invokes SetTeamTactic before kickoff. _active is seeded directly (not via the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:867:            _activeTeamTactics = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:868:            _pendingTeamTactics = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:871:                _activeTeamTactics[t] = TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:872:                _pendingTeamTactics[t] = TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:933:            // Bench roster (design note §6): a Stage-0 in-code source, mirroring the TeamTacticConfig
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:1049:                _positioning[t].SeedFromFormation(_posSnapshots[t]);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:1564:        /// <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:1566:        public void SetTeamTactic(int teamId, in TeamTactic tactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:1569:            _pendingTeamTactics[teamId] = tactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:1574:        /// Like <see cref="SetTeamTactic"/> the change is staged as <em>pending</em> and committed at the next
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:2649:        /// <see cref="SetTeamTactic"/>, <see cref="SubstitutePlayer"/>, <see cref="ConfigureManager"/> and
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3027:        internal Vector2 TestOnly_FormationSlot(int agentId) => _tacticalContexts[agentId].GetFormationSlot(agentId);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3041:        /// SetTeamTactic reaches the DecisionTree input and the Balanced default is behaviour-neutral.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3053:        /// SetTeamTactic reaches the press input and the Balanced default (Standard) is behaviour-neutral.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3058:        /// SetTeamTactic reaches the defensive input and the Balanced default (false) is the identity.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3063:        /// SetTeamTactic reaches the defensive input and the Balanced default is the identity.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3072:        /// AI (#15) snapshot at the last AI tick — lets the Phase-D writer test prove SetTeamTactic
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3078:        /// prove SetTeamTactic reaches the positioning input and the Balanced default (Standard) is the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3583:            // pending→active commit below, so a decision fired at tick N stages via SetTeamTactic
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3593:            // "swap on IsAiStrideTick" contract — a SetTeamTactic call during the intervening 60 Hz
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3598:                _activeTeamTactics[t] = _pendingTeamTactics[t];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3747:        /// the Defensive snapshot), then writes back: <c>GetFormationSlot(entityId)</c> → the MOVE_TO_POSITION
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3785:                    width: _activeTeamTactics[t].Width,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3786:                    defensiveWidth: _activeTeamTactics[t].DefensiveWidth);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3821:                    Vector2 canonicalSlot = _positioning[t].GetFormationSlot(i);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3846:                    TeamTactic tactic = _activeTeamTactics[t];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:3865:                    // authority. The §3.4 recompute Clamp01(TeamTactic.DefensiveLine + MentalityLineBias) is
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4427:            FormationSlotRecord[] formation =
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4428:                PositioningAIConstants.GetFormationSlots(MatchEngineConstants.STAGE0_FORMATION);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4453:            TeamTactic activeTactic = _activeTeamTactics[team];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4576:            snap.LineOfEngagement = _activeTeamTactics[team].LineOfEngagement;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4597:                    BaselineSlot = isOwn ? _positioning[team].GetFormationSlot(i)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4617:        /// <c>Clamp01(TeamTactic.DefensiveLine + MentalityLineBias[mentality])</c> (echoed into
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4635:            // dial + the per-mentality additive bias, re-Clamp01'd — TeamTactic.DefensiveLine is INPUT ONLY,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4641:            TeamTactic depthTactic = _activeTeamTactics[team];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4659:                    _activeTeamTactics[team].OffsideTrap);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4665:            snap.MarkingOrientation = _activeTeamTactics[team].MarkingOrientation;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4694:                    BaselineSlot = isOwn ? _positioning[team].GetFormationSlot(i)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4736:            snap.FocusPlay = _activeTeamTactics[team].FocusPlay;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:4745:                    baselineSlot: isOwn ? _positioning[team].GetFormationSlot(i)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:5045:            Vector2 canonicalSlot = _positioning[team].GetFormationSlot(agentId);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:6421:                            in _buildUpStates[newTeam], _activeTeamTactics[newTeam].TransitionWon);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:7020:            // phase reads) and the pending tactic (a SetTeamTactic staged but not yet committed at a stride
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:7026:                WriteTeamTactic(buf, ref o, in _activeTeamTactics[t]);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:7027:                WriteTeamTactic(buf, ref o, in _pendingTeamTactics[t]);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:7409:                _activeTeamTactics[t] = ReadTeamTactic(buf, ref o);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:7410:                _pendingTeamTactics[t] = ReadTeamTactic(buf, ref o);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8163:        /// <summary>Reads a <see cref="TeamTactic"/> in the <see cref="WriteTeamTactic"/> (Appendix B) field order.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8164:        private static TeamTactic ReadTeamTactic(byte[] buf, ref int o)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8167:            TacticFormation formation = (TacticFormation)CanonicalSerializer.ReadI32(buf, ref o);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8187:            return new TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8237:        /// <summary>Serializes a <see cref="TeamTactic"/> in canonical (Appendix B) field order. Enum
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8240:        private static void WriteTeamTactic(byte[] buf, ref int o, in TeamTactic t)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:8243:            CanonicalSerializer.WriteI32(buf, ref o, (int)t.Formation);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10319:// |         |            |        | world state, ticks #12, and folds GetFormationSlot back into    |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10327:// |         |            |        | MirrorPitchIfAway + TestOnly_FormationSlot accessor. asmdef     |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10458:// |         |            |        | a live per-team TeamTactic into the DecisionTree input. New     |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10459:// |         |            |        | _active/_pendingTeamTactics[TEAM_COUNT] (default TeamTactic.    |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10460:// |         |            |        | Balanced); public SetTeamTactic(teamId, tactic) stages pending; |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10491:// |         |            |        | pressing team's active TeamTactic.LineOfEngagement into         |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10500:// |         |            |        | routes the active TeamTactic.OffsideTrap → DefensiveSnapshot.   |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10503:// |         |            |        | FillAttackingSnapshot routes the active TeamTactic.FocusPlay →  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10514:// |         |            |        | Inputs via the 5-arg ctor, routing the active TeamTactic.Width /|
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10527:// |         |            |        | team active + pending TeamTactic now serialized via WriteTeam-  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10529:// |         |            |        | restore-deterministic; SetTeamTactic / _activeTeamTactics docs  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10530:// |         |            |        | + the cross-tick-coverage proof updated. New TeamTactic_Feeds-  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10542:// |         |            |        | FillDefensiveSnapshot.DefensiveLineDepth = Clamp01(TeamTactic.  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10557:// |         |            |        | (a) #14 MarkingOrientation appended to WriteTeamTactic + routed |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10581:// |         |            |        | CaptureRotationState. WriteTeamTactic appends the three dials   |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngine.cs:10939:// |         |            |        | inline teamId guards in SetTeamTactic / SubstitutePlayer /      |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:193:        /// active <c>TeamTactic</c> (read by the AI phase) and the pending one (a <c>SetTeamTactic</c> staged
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:205:        /// v11 (2026-07-07, cheap-item addition) appends <c>TeamTactic.MarkingOrientation</c> to the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:206:        /// per-team WriteTeamTactic field list (§3.4, #14 MAN_MARK candidate radius). Appended after
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:217:        /// HoldTicksRemaining i32 in table-row order). WriteTeamTactic additionally appends the three
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:590:        public static readonly FormationFamily STAGE0_FORMATION =
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:591:            (FormationFamily)Enum.Parse(typeof(FormationFamily), Config.GetString("match-engine", "STAGE0_FORMATION", "F442"));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:962:// |         |            |        | active + pending TeamTactic is now serialized into the world-    |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/MatchEngineConstants.cs:973:// |         |            |        | WriteTeamTactic. v12 doc paragraph added. (The v10 → 11 bump of  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticConfig.cs:8://           parser swap that produces this same type (the #19 ScenarioIndex / TeamTacticConfig precedent).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticConfig.cs:21:    /// per-team analogue is <see cref="TeamTacticConfig"/>).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticConfig.cs:27:    /// #19 <c>ScenarioIndex</c> / <see cref="TeamTacticFileLoader"/> precedent); the Stage-1 <c>[GT]</c>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticConfigApplier.cs:16:    /// The per-agent analogue of <see cref="TeamTacticConfigApplier"/>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticFileLoader.cs:7://           sibling of TeamTacticFileLoader). Parses the Stage-0 human-authoring text format into the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/PlayerTacticFileLoader.cs:23:    /// precedent, mirroring <see cref="TeamTacticFileLoader"/>). The result is fed to
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/SquadRating.cs:45:    /// <c>FormationFamily</c> off the public surface, so <c>season-save</c> needs no
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:6:// Purpose:  The shared line-oriented tactic-file grammar helpers (WS-1). Both TeamTacticFileLoader and
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:20:    /// <c>TeamTacticFileLoader</c> / <c>TacticPresetFileLoader</c> grammar). Each <c>Xxx(kv, key, …)</c>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:116:        /// Builds one <see cref="TeamTactic"/> from a section's key/value map — every field defaults to
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:117:        /// the <see cref="TeamTactic.Balanced"/> identity when its key is absent (FR-TI-031), so a
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:120:        /// any of its own non-TeamTactic keys, e.g. the preset name/affinity).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:122:        internal static TeamTactic BuildTeamTactic(Dictionary<string, string> kv)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:124:            TeamTactic d = TeamTactic.Balanced;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:126:            return new TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:128:                formation:        ParseEnum(kv, "formation",        d.Formation),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticFileGrammar.cs:164:// |         |            |        |   BuildTeamTactic) from TeamTacticFileLoader so TacticPreset-  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:21:    /// was authored to receive (the #19 <c>ScenarioIndex</c> / #21 <c>TeamTacticFileLoader</c> precedent).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:35:    /// <item>the <see cref="TeamTactic"/> dials, reusing <see cref="TacticFileGrammar"/> exactly — an
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:36:    /// omitted dial inherits the <see cref="TeamTactic.Balanced"/> identity (KD-7).</item>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:46:    /// the pinned Balanced midpoint, or one whose section is not <see cref="TeamTactic.Balanced"/>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:150:        // TeamTactic dials; any key left over is unknown and fails loud.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:163:            TeamTactic team = TacticFileGrammar.BuildTeamTactic(kv);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:176:        // its section must be TeamTactic.Balanced (never assume — validate, KD-6).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:201:            // TeamTactic is an all-value-typed readonly struct, so default value equality compares
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:204:            if (!presets[ordinal].Team.Equals(TeamTactic.Balanced))
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:208:                    "is not TeamTactic.Balanced-equivalent.");
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetFileLoader.cs:221:// |         |            |        |   TeamTactic value equality instead of a hand-rolled 20-field  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:6:// Purpose:  Pure preset → (TeamTacticConfig, PlayerTacticConfig) projection for one managed team.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:38:        /// <param name="otherTeamTactic">The OTHER team's own tactic (kept as-is per FM-TP-01).</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:44:            in TeamTactic otherTeamTactic,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:45:            out TeamTacticConfig teamConfig,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:56:                ? new TeamTacticConfig(preset.Team, otherTeamTactic)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TacticPresetProjection.cs:57:                : new TeamTacticConfig(otherTeamTactic, preset.Team);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:1:// File:     src/match-engine/TeamTacticConfig.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:6:// Purpose:  In-memory manager-tactic config — one TeamTactic per team — that the boot applier feeds into
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:7://           MatchEngine.SetTeamTactic before kickoff. The Stage 0+1 on-disk loader is a parser swap that
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:17:    /// Immutable per-match manager-tactic configuration: the <see cref="TeamTactic"/> chosen for each
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:19:    /// <see cref="TeamTacticConfigApplier"/> reads to populate <see cref="MatchEngine.SetTeamTactic"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:24:    /// full <see cref="TeamTactic"/> constructor) or from the on-disk Stage-0 text format via
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:25:    /// <see cref="TeamTacticFileLoader.Parse"/> (the parser swap this type was authored to receive, per
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:26:    /// the #19 <c>ScenarioIndex</c> precedent — it produces a <see cref="TeamTacticConfig"/> and leaves
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:27:    /// <see cref="TeamTacticConfigApplier"/> unchanged). The Stage-1 <c>[GT]</c> config-loader
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:31:    /// <see cref="Default"/> sets every team to <see cref="TeamTactic.Balanced"/>, which reproduces the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:33:    /// Construct with real factories (<see cref="TeamTactic.Balanced"/> or the full constructor):
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:34:    /// <c>default(TeamTactic)</c> is NOT the identity (see <see cref="TeamTactic"/>).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:36:    public sealed class TeamTacticConfig
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:38:        private readonly TeamTactic[] _byTeam;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:45:        public TeamTacticConfig(in TeamTactic home, in TeamTactic away)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:47:            _byTeam = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:53:        /// The behaviour-neutral default: <see cref="TeamTactic.Balanced"/> for every team (FR-TI-031).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:54:        /// Applying this config is byte-identical to never calling <see cref="MatchEngine.SetTeamTactic"/>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:56:        public static TeamTacticConfig Default =>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:57:            new TeamTacticConfig(TeamTactic.Balanced, TeamTactic.Balanced);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:61:        public TeamTactic ForTeam(int teamId)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:75:// | 1.0     | 2026-06-29 | —      | Initial implementation — in-code TeamTactic config source (#21 T2). |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfig.cs:76:// | 1.1     | 2026-06-29 | —      | Remark updated: on-disk source now exists (TeamTacticFileLoader.Parse). |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:1:// File:     src/match-engine/TeamTacticConfigApplier.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:6:// Purpose:  Boot-time applier that stages a TeamTacticConfig into a MatchEngine via SetTeamTactic, once
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:14:    /// Applies a <see cref="TeamTacticConfig"/> to a <see cref="MatchEngine"/> by calling
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:15:    /// <see cref="MatchEngine.SetTeamTactic"/> once per team (#21 §3.1/§3.2 T2 runtime activation).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:20:    /// restore-deterministic. Applying <see cref="TeamTacticConfig.Default"/> is behaviour-neutral
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:23:    /// This is the boot-time entry point the on-disk tactic loader feeds: <see cref="TeamTacticFileLoader"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:24:    /// parses a file into a <see cref="TeamTacticConfig"/> and the caller passes it to <see cref="Apply"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:27:    public static class TeamTacticConfigApplier
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:34:        public static void Apply(MatchEngine engine, TeamTacticConfig config)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:47:                engine.SetTeamTactic(teamId, config.ForTeam(teamId));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticConfigApplier.cs:55:// | 1.0     | 2026-06-29 | —      | Initial implementation — boot applier for TeamTacticConfig (#21 T2). |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:1:// File:     src/match-engine/TeamTacticFileLoader.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:6:// Purpose:  The on-disk → TeamTacticConfig parser swap (the deferred half of the #21 config loader).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:7://           Parses the Stage-0 human-authoring text format into the immutable TeamTacticConfig that
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:8://           TeamTacticConfigApplier feeds into MatchEngine.SetTeamTactic before kickoff.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:18:    /// Parses the Stage-0 manager-tactic text file into a <see cref="TeamTacticConfig"/> — the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:19:    /// "pure parser swap" the in-code <see cref="TeamTacticConfig"/> / <see cref="TeamTacticConfigApplier"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:21:    /// <see cref="TeamTacticConfigApplier.Apply"/> unchanged.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:26:    /// are ignored. Every <see cref="TeamTactic"/> field has a key; an OMITTED key inherits the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:27:    /// <see cref="TeamTactic.Balanced"/> identity value, so an empty file (or one with no sections) parses
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:28:    /// to <see cref="TeamTacticConfig.Default"/> — applying it is behaviour-neutral (FR-TI-031). Enum
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:34:    /// file is read once before kickoff; only the resulting <see cref="TeamTactic"/> VALUES enter the
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:36:    /// loader (FR-CS-019) may replace the grammar; it still produces a <see cref="TeamTacticConfig"/> and
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:37:    /// leaves <see cref="TeamTacticConfigApplier"/> untouched.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:39:    public static class TeamTacticFileLoader
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:45:        /// Parses <paramref name="text"/> (the full file contents) into a <see cref="TeamTacticConfig"/>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:49:        public static TeamTacticConfig Parse(string text)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:93:            return new TeamTacticConfig(BuildTactic(home), BuildTactic(away));
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:116:        // Builds one TeamTactic from a section's key/value map via the shared grammar (WS-1). Each
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:119:        // after the TeamTactic fields are consumed is an unknown field and fails loudly.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:120:        private static TeamTactic BuildTactic(Dictionary<string, string> kv)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:122:            TeamTactic tactic = TacticFileGrammar.BuildTeamTactic(kv);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:135:// | 1.0     | 2026-06-29 | —      | Initial implementation — Stage-0 text → TeamTacticConfig parser swap (#21).  |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:139:// |         |            |        |   "every TeamTactic field has a key" contract after the field appends).      |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-engine/TeamTacticFileLoader.cs:141:// |         |            |        |   the 20-field TeamTactic build) moved to the shared TacticFileGrammar so    |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/match-viewer/MatchReplayRecorder.cs:53:        /// caller applied a <c>TeamTacticConfig</c> to before kickoff). The engine should be at its
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/player-database/Squad.cs:8://           carve-out as TeamTacticFileLoader/PlayerTacticFileLoader).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/player-database/SquadFileLoader.cs:6:// Purpose:  The Stage-0 human-authoring text -> Squad parser (mirrors TeamTacticFileLoader /
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/player-database/SquadFileLoader.cs:33:    /// <c>TeamTacticFileLoader</c>.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/AnchorCalculator.cs:14:    ///   (a) Formation anchor: pitchSize × formationOffset[role] — §3.1.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/AnchorCalculator.cs:21:        // ── (a) Formation anchor ──────────────────────────────────────────────
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/AnchorCalculator.cs:29:        public static Vector2 ComputeAnchor(in FormationSlotRecord slot)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpOverlayCatalogue.cs:19:    /// Rows are addressed by the slot's EXISTING <see cref="FormationSlotRecord.DefaultLine"/> /
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpOverlayCatalogue.cs:20:    /// <see cref="FormationSlotRecord.DefaultLane"/> (FR-BU-007) — no new slot identity. Lanes are
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpOverlayCatalogue.cs:41:        /// <param name="line">The slot's <see cref="FormationSlotRecord.DefaultLine"/>.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpOverlayCatalogue.cs:42:        /// <param name="lane">The slot's <see cref="FormationSlotRecord.DefaultLane"/>.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpOverlayCatalogue.cs:133:// |         |            |        |   actual FormationSlotRecord DefaultLane data, not the Appendix A |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/BuildUpZoneClassifier.cs:95:        /// <param name="transitionWon">The team's <c>TeamTactic.TransitionWon</c> dial.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/FormationFamily.cs:1:// File: src/positioning-ai/FormationFamily.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/FormationFamily.cs:11:    public enum FormationFamily : byte
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/FormationSlotRecord.cs:1:// File: src/positioning-ai/FormationSlotRecord.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/FormationSlotRecord.cs:14:    public readonly struct FormationSlotRecord
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/FormationSlotRecord.cs:34:        public FormationSlotRecord(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/HysteresisState.cs:49:        public void SeedFromFormation(FormationSlotRecord[] slots)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:15:    /// Region order: Fixed → Derived → Cross → GT → Formation Tables → Lookup Arrays.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:293:        #region Formation Tables — GT; per KD-17 / FR-PA-011 these live in this single file
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:300:        public static readonly FormationSlotRecord[] Family442 = new FormationSlotRecord[SQUAD_SIZE]
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:303:            new FormationSlotRecord(0.05f, 0.500f, RoleId.GK, LineId.Defense, LaneId.C,  isGoalkeeper: true),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:305:            new FormationSlotRecord(0.20f, 0.150f, RoleId.LB, LineId.Defense, LaneId.LH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:307:            new FormationSlotRecord(0.20f, 0.380f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:309:            new FormationSlotRecord(0.20f, 0.620f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:311:            new FormationSlotRecord(0.20f, 0.850f, RoleId.RB, LineId.Defense, LaneId.RH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:313:            new FormationSlotRecord(0.50f, 0.100f, RoleId.LM, LineId.Midfield, LaneId.LW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:315:            new FormationSlotRecord(0.50f, 0.380f, RoleId.CM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:317:            new FormationSlotRecord(0.50f, 0.620f, RoleId.CM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:319:            new FormationSlotRecord(0.50f, 0.900f, RoleId.RM, LineId.Midfield, LaneId.RW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:321:            new FormationSlotRecord(0.78f, 0.420f, RoleId.ST, LineId.Attack, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:323:            new FormationSlotRecord(0.78f, 0.580f, RoleId.ST, LineId.Attack, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:334:        public static readonly FormationSlotRecord[] Family433 = new FormationSlotRecord[SQUAD_SIZE]
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:337:            new FormationSlotRecord(0.05f, 0.500f, RoleId.GK, LineId.Defense, LaneId.C,  isGoalkeeper: true),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:339:            new FormationSlotRecord(0.22f, 0.150f, RoleId.LB, LineId.Defense, LaneId.LH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:341:            new FormationSlotRecord(0.22f, 0.380f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:343:            new FormationSlotRecord(0.22f, 0.620f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:345:            new FormationSlotRecord(0.22f, 0.850f, RoleId.RB, LineId.Defense, LaneId.RH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:347:            new FormationSlotRecord(0.42f, 0.500f, RoleId.DM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:349:            new FormationSlotRecord(0.55f, 0.350f, RoleId.CM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:351:            new FormationSlotRecord(0.55f, 0.650f, RoleId.CM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:353:            new FormationSlotRecord(0.74f, 0.100f, RoleId.LW, LineId.Attack, LaneId.LW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:355:            new FormationSlotRecord(0.80f, 0.500f, RoleId.ST, LineId.Attack, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:357:            new FormationSlotRecord(0.74f, 0.900f, RoleId.RW, LineId.Attack, LaneId.RW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:369:        public static readonly FormationSlotRecord[] Family4231 = new FormationSlotRecord[SQUAD_SIZE]
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:372:            new FormationSlotRecord(0.05f, 0.500f, RoleId.GK, LineId.Defense, LaneId.C,  isGoalkeeper: true),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:374:            new FormationSlotRecord(0.22f, 0.150f, RoleId.LB, LineId.Defense, LaneId.LH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:376:            new FormationSlotRecord(0.22f, 0.380f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:378:            new FormationSlotRecord(0.22f, 0.620f, RoleId.CB, LineId.Defense, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:380:            new FormationSlotRecord(0.22f, 0.850f, RoleId.RB, LineId.Defense, LaneId.RH),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:382:            new FormationSlotRecord(0.40f, 0.380f, RoleId.DM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:384:            new FormationSlotRecord(0.40f, 0.620f, RoleId.DM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:386:            new FormationSlotRecord(0.62f, 0.150f, RoleId.AM, LineId.Midfield, LaneId.LW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:388:            new FormationSlotRecord(0.65f, 0.500f, RoleId.AM, LineId.Midfield, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:390:            new FormationSlotRecord(0.62f, 0.850f, RoleId.AM, LineId.Midfield, LaneId.RW),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:392:            new FormationSlotRecord(0.82f, 0.500f, RoleId.ST, LineId.Attack, LaneId.C),
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:516:        public static FormationSlotRecord[] GetFormationSlots(FormationFamily family)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:520:                FormationFamily.F433  => Family433,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:521:                FormationFamily.F4231 => Family4231,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:527:        public static (int FirstMid, int FirstAtk) GetLineCuts(FormationFamily family)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:531:                FormationFamily.F433  => LineCuts433,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAIConstants.cs:532:                FormationFamily.F4231 => LineCuts4231,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:17:    /// Lifecycle: construct once per team per match → call SeedFromFormation() at match start →
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:18:    /// call Tick() every 10 Hz → read results via GetFormationSlot() / IsSentinelSlot().
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:22:    ///   (b) Writing GetFormationSlot(entityId) into TacticalContext.FormationSlot per agent (§4.4.3).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:34:            new ProfilerMarker("PositioningAI.GetFormationSlot");
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:38:        private readonly FormationFamily _archetype;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:45:        // ── EntityId → SlotIndex lookup (populated at SeedFromFormation) ─────
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:59:        public PositioningAITick(FormationFamily archetype, int maxEntityId = 64)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:86:        public void SeedFromFormation(PositioningPerceptionSnapshot snapshot)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:92:            FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(_archetype);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:93:            _hyst.SeedFromFormation(formation);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:96:            // SeedFromFormation is the one sanctioned pre-controller SlotIndex assignment (§4.4).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:122:        /// Updates internal slot buffer; results are immediately available via GetFormationSlot().
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:149:            FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(_archetype);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:153:            // GetFormationSlot(entityId) resolves through the live binding. Identity binding writes
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:154:            // the same values SeedFromFormation seeded.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:179:        public Vector2 GetFormationSlot(int entityId)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningAITick.cs:280:// |         |            |        |   LastComposedTarget cache write-back; SeedFromFormation resets the      |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/PositioningPerceptionSnapshot.cs:79:        /// match-engine Phase-D writer from the active TeamTactic. Zero value = Off = the exact
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationAdjacencyCatalogue.cs:6:// Purpose:  The static per-FormationFamily rotation adjacency tables. Row order is commit
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationAdjacencyCatalogue.cs:71:        public static IReadOnlyList<RotationPair> GetPairs(FormationFamily family)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationAdjacencyCatalogue.cs:75:                FormationFamily.F433 => s_family433Ro,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationAdjacencyCatalogue.cs:76:                FormationFamily.F4231 => s_family4231Ro,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationController.cs:52:        public RotationController(FormationFamily family, int squadSize)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationController.cs:75:        /// construction and by <see cref="PositioningAITick.SeedFromFormation"/> (the cache is then
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationController.cs:103:        public void Run(PositioningPerceptionSnapshot snapshot, Phase phase, FormationSlotRecord[] formation)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/RotationController.cs:279:        private void ApplyBinding(PositioningPerceptionSnapshot snapshot, FormationSlotRecord[] formation)
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/ShapeAnalyzer.cs:34:        /// <param name="archetype">Formation family for lineCutIndices.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/ShapeAnalyzer.cs:38:            FormationFamily archetype,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/SlotComposer.cs:49:            FormationFamily               archetype,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/SlotComposer.cs:59:            FormationSlotRecord[] formation = PositioningAIConstants.GetFormationSlots(archetype);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/positioning-ai/SpacingResolver.cs:27:        /// <param name="anchors">Formation anchor per slot; used to compute displacement cost. Length = SQUAD_SIZE.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/pressing-ai/PositioningAIView.cs:33:        public Vector2 GetFormationSlot(int entityId) => _tick.GetFormationSlot(entityId);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/pressing-ai/PositioningAIView.cs:43:        /// <param name="slot">Slot value returned by <see cref="GetFormationSlot"/>.</param>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/pressing-ai/PressingSnapshot.cs:82:        /// active <c>TeamTactic.LineOfEngagement</c>. NOTE: the zero-value default is VeryLow
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/project-constants/GameplayConfigFileLoader.cs:38:    /// <c>TeamTacticFileLoader</c> parser-swap precedent).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/ArrayTacticPresetCatalogue.cs:20:    /// TeamTactic. Any content validation beyond that (ordinal↔content stability, the Balanced-midpoint
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/FocusPlay.cs:13:    /// is the <see cref="TeamTactic.Balanced"/> identity (no lateral preference). NEW logic — no
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/GkDistributionPolicy.cs:13:    /// <see cref="TeamTactic.Balanced"/> identity. The consumer (#11) maps each value to a default
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:1:// File:     src/tactical-instructions/TacticFormation.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:6:// Purpose:  Local formation-family analogue of #12 FormationFamily (KD-2). Exactly
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:13:    /// Team formation family (FR-TI-004). Local analogue of #12 <c>FormationFamily</c>; the consumer
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:16:    /// (index 0) is the <see cref="TeamTactic.Balanced"/> identity.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:17:    /// ORDINAL STABILITY: byte-backed, APPEND-only (FR-TI-007); the ordinals match #12 FormationFamily.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:20:    public enum TacticFormation : byte
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:22:        /// <summary>4-4-2 flat → #12 FormationFamily.F442 (identity). §3.1.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:25:        /// <summary>4-3-3 → #12 FormationFamily.F433. §3.1.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticFormation.cs:28:        /// <summary>4-2-3-1 → #12 FormationFamily.F4231. §3.1.</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPassing.cs:15:    /// <see cref="TeamTactic.Balanced"/> identity.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPreset.cs:6:// Purpose:  An immutable named tactic bundle: Name + one TeamTactic + optional roster-indexed
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPreset.cs:37:        public TeamTactic Team { get; }
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPreset.cs:79:            string name, in TeamTactic team,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:21:    /// every non-listed dial stays at its <see cref="TeamTactic.Balanced"/> identity value (KD-7 —
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:74:            // 2 — Balanced (A.1): TeamTactic.Balanced verbatim (the FR-TI-031 identity).
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:75:            new TacticPreset("Balanced", TeamTactic.Balanced,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:117:        /// Builds a TeamTactic from the Balanced identity with only the named dials overridden —
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:119:        /// optional-parameter default below IS the corresponding <see cref="TeamTactic.Balanced"/>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:125:        private static TeamTactic Compose(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:127:            TacticFormation formation = TacticFormation.F442,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPresetLibrary.cs:147:            return new TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticPressing.cs:15:    /// <see cref="TeamTactic.Balanced"/> identity.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TacticTriggerMask.cs:18:    /// <see cref="None"/> is the <see cref="TeamTactic.Balanced"/> identity.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:1:// File:     src/tactical-instructions/TeamTactic.cs
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:19:    /// HAZARD — <c>default(TeamTactic)</c> is NOT the identity (e.g. Mentality VeryDefensive, Passing
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:22:    public readonly struct TeamTactic
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:27:        /// <summary>Formation family; translated → #12 FormationFamily (§3.1).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:28:        public TacticFormation Formation { get; }
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:88:        /// (zero value) is identity (FR-DM-012). Serialization enters <c>WriteTeamTactic</c> with a
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:97:        /// (FR-BU-005). Serialization enters <c>WriteTeamTactic</c> only at #24's wiring stage.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:105:        /// (FR-RO-011). Serialization enters <c>WriteTeamTactic</c> only at #25's wiring stage.
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:109:        /// <summary>Constructs a <see cref="TeamTactic"/> in canonical field order (Appendix B).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:110:        public TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:112:            TacticFormation formation,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:133:            Formation = formation;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:163:        public static TeamTactic Balanced => new TeamTactic(
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:165:            TacticFormation.F442,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:187:// | 1.1     | 2026-06-21 | —      | AR-1 L-1: <remarks> default(TeamTactic) is not the identity.   |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TeamTactic.cs:196:// |         |            |        |   NOT serialized yet — WriteTeamTactic + schema bump land at   |
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TransitionPlan.cs:14:    /// fields of <see cref="TeamTactic"/>. Composes with <see cref="Mentality"/>: it overrides only
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/tactical-instructions/TransitionPlan.cs:16:    /// other multipliers (§3.2). The <see cref="TeamTactic.Balanced"/> identity uses
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/IntentKind.cs:16:    /// the three <b>match</b> kinds onto <c>MatchEngine</c> (<c>SetTeamTactic</c>,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/IntentKind.cs:40:        /// <summary>Change a team's tactic (→ <c>MatchEngine.SetTeamTactic</c>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/IntentKind.cs:41:        SetTeamTactic = 1,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/IntentRouting.cs:23:            kind == IntentKind.SetTeamTactic
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:41:        /// <summary>Team id (<see cref="IntentKind.SetTeamTactic"/> / <see cref="IntentKind.Substitute"/>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:47:        /// <summary>The team tactic to stage (<see cref="IntentKind.SetTeamTactic"/>).</summary>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:48:        public readonly TeamTactic NewTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:66:            in TeamTactic newTeamTactic,
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:75:            NewTeamTactic   = newTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:83:        public static ManagerIntent SetTeamTactic(int teamId, in TeamTactic tactic) =>
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/ManagerIntent.cs:84:            new ManagerIntent(IntentKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default);
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/MatchTacticsDispatcher.cs:8://           seams (SetTeamTactic / SetPlayerTactic / SubstitutePlayer). During a live streamed match it
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/MatchTacticsDispatcher.cs:105:                case IntentKind.SetTeamTactic:
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/MatchTacticsDispatcher.cs:107:                    TacticalInstructions.TeamTactic tactic = intent.NewTeamTactic;
+d4b026aa951432d342217314b8c4d49b53a19e7d:src/ui-framework/MatchTacticsDispatcher.cs:108:                    return ManagerCommand.SetTeamTactic(intent.TeamId, in tactic);

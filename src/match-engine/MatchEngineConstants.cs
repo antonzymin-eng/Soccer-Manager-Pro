@@ -1,5 +1,5 @@
 // File:     src/match-engine/MatchEngineConstants.cs
-// Modified: 2026-11-06 (W8 C / ERR-011-021)
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
@@ -324,7 +324,13 @@ namespace TacticalDirector.MatchEngine
         /// indirect-restart taker. No save-file format change.</para>
         /// <para>v28 adds #11 per-slot signed 64-bit hand-control start frames beside ClaimTick.
         /// Live ownership and CONTACT budget are checked after decoding the full body; full time freezes timing.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 28;
+        public const uint SNAPSHOT_SCHEMA_VERSION = 29;
+
+        /// <summary>[DERIVED] Bytes per rotation binding/cache row: int32 slot + two float32 coordinates.</summary>
+        public const int ROTATION_AGENT_STATE_BYTES = sizeof(int) + sizeof(float) + sizeof(float);
+
+        /// <summary>[DERIVED] Bytes per rotation-pair state: int32 dwell + byte flag + int32 hold.</summary>
+        public const int ROTATION_PAIR_STATE_BYTES = sizeof(int) + sizeof(byte) + sizeof(int);
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -1127,4 +1133,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.44 | 2026-10-15 | — | Comment-only: distinguish retained B stall bookkeeping from current Law 12; values and tags unchanged. |
 // | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 1.46 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
+// | 1.47 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

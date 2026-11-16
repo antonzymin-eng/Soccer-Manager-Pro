@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 15, 2026
-**Last Updated:** May 18, 2026 (v0.4 — FAIL-4 fix (A-03): §4.6 RNG domain tag row — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved.)
-**Version:** 0.4
+**Last Updated:** November 9, 2026 (v0.5 — ERR-012-013: family initialization and agent-owned Duty producer/consumer contract.)
+**Version:** 0.5
 **Status:** DRAFT
 
 ---
@@ -77,6 +77,14 @@ The match orchestrator supplies `ContextModifierInputs` at tick
 start. Score difference, team-mean fatigue, and tactical-intensity
 are computed by the orchestrator (#12 does not own those
 computations).
+
+**ERR-012-013 routing amendment.** The orchestrator supplies each agent's active
+`PlayerTactic.Duty` in `AgentPositioningData` (default Support), and uses the fixed
+effective kickoff family for role/anchor lookup. It initializes the existing
+`PositioningAITick` with the named consumer translation (§3.1.0). Pressing and
+Attacking retain views of that same object; Defensive receives positioning through
+its snapshot inputs. Save restore selects the family/rotation catalogue before
+loading any positioning hysteresis or rotation state; #25 Appendix B owns the layout.
 
 ### 4.4.3 #8 Decision Tree Coupling (KD-3)
 
@@ -196,3 +204,5 @@ The following checks run during integration testing (§5.4):
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 §4.4.3 rewritten: `Stage0Default()` is match-init-only per #8 §2.2.6; per-tick path is direct field write `ctx.FormationSlot = slot`; `IsSentinel(slot)` accessor added for AR-S1-07 substitute/red-card semantics. |
 | 0.3 | May 17, 2026 | AI agent (claude/fix-ai-specs-review-qgWFR) | ERR-013-007 / ERR-013-008 back-prop: §4.5.1 updated to declare `GetPhase(TeamId)` and `GetLine(EntityId)` as Stage 1 accessor commitments for Pressing AI #13 KD-11 / KD-16 requirements. `GetLine` elevated from Stage 1+ to Stage 1 in §4.5.2. |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §4.6 RNG domain tag row — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved. |
+
+| 0.5 | November 9, 2026 | — | ERR-012-013: family initialization and agent-owned Duty producer/consumer contract. |

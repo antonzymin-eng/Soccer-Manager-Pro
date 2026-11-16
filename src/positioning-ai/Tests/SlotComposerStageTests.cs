@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/SlotComposerStageTests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec:     Build-Up #24 §3.2/§4.2 (FM-BU-02, T-BU-U-005/006/007, T-BU-I-001/003); Dismarking #23
 //           §3.3/§4.2 (FM-DM-02, T-DM-U-008/010, T-DM-I-001/002); #12 §3.7.1 (ERR-012-007/008)
@@ -8,6 +8,8 @@
 //           ContextModifier, before spacing) and the #23 dismark offset (after spacing, before
 //           the pitch clamp) — including the shared stage-order contract and the zero-dial
 //           identities.
+
+using System;
 
 using NUnit.Framework;
 using UnityEngine;
@@ -69,6 +71,34 @@ namespace TacticalDirector.PositioningAI.Tests
             {
                 Assert.AreEqual(expected[i].x, actual[i].x, 0f, $"{message} (slot {i} x)");
                 Assert.AreEqual(expected[i].y, actual[i].y, 0f, $"{message} (slot {i} y)");
+            }
+        }
+
+        [TestCase(Duty.Defend, -3f)]
+        [TestCase(Duty.Support, 0f)]
+        [TestCase(Duty.Attack, 3f)]
+        public void Duty_ShiftsAnchorLongitudinally_AndExcludesGoalkeeper(Duty duty, float expected)
+        {
+            var snap = MakeSnapshot();
+            var control = Compose(snap, Phase.InPoss);
+            for (int i = 0; i < SquadSize; i++)
+            {
+                var a = snap.Agents[i];
+                snap.Agents[i] = new AgentPositioningData(a.EntityId, a.SlotIndex,
+                    a.Position, a.IsActive, a.Role, a.IsGoalkeeper, duty);
+            }
+            var result = Compose(snap, Phase.InPoss);
+            Assert.AreEqual(control[0], result[0]);
+            if (duty == Duty.Support)
+                for (int i = 0; i < SquadSize; i++)
+                {
+                    CollectionAssert.AreEqual(BitConverter.GetBytes(control[i].x), BitConverter.GetBytes(result[i].x));
+                    CollectionAssert.AreEqual(BitConverter.GetBytes(control[i].y), BitConverter.GetBytes(result[i].y));
+                }
+            for (int i = 1; i < SquadSize; i++)
+            {
+                Assert.AreEqual(expected, result[i].x - control[i].x, 0.00001f, "slot " + i);
+                Assert.AreEqual(control[i].y, result[i].y, 0f);
             }
         }
 
@@ -260,4 +290,6 @@ namespace TacticalDirector.PositioningAI.Tests
 // |         |            |        |   identity, phase/suppression/final-third gates, post-overlay    |
 // |         |            |        |   spacing invariant) + #23 dismark (exact FM-DM-02 offset, Off   |
 // |         |            |        |   identity, carrier/phase exclusion, clamp bounds).              |
+// | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
+// | 1.2 | 2026-11-09 | — | Strengthens active/pending rotation replay, consumer views, synthetic tick-0 and exact Support byte assertions. |
 #endregion

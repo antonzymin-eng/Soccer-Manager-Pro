@@ -1,0 +1,216 @@
+== Testing Strategy pre-commit pipeline ==
+Documentation audit policy: routine survey; canonical registry approval transitions are blocking
+Pre-commit selection: anchored NUnit method/category rules in /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/tools/dotnet-ci/precommit.runsettings
+== Testing Strategy pre-commit pipeline ==
+Documentation audit policy: routine survey; canonical registry approval transitions are blocking
+Pre-commit selection: anchored NUnit method/category rules in /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/tools/dotnet-ci/precommit.runsettings
+Auditor: approval-checklist evidence (survey)
+checklist-auditor: 53 file(s), 1357 evidence row(s), 0 blocking, 991 survey/note [survey-only routine pipeline]
+Auditor: per-spec section-5 schema (survey)
+spec5-schema-auditor: 52 spec(s), 0 blocking, 331 survey/note [survey-only routine pipeline]
+Runner: tools/dotnet-ci/run-gate.sh (Linux shim, non-certifying)
+── Generate csproj/sln from asmdefs ──────────────────────────────────
+Generated 74 csproj (37 test projects) + tools/dotnet-ci/TacticalDirector.gen.sln
+── Restore ───────────────────────────────────────────────────────────
+  Determining projects to restore...
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ui-framework/ui-framework.gen.csproj (in 770 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ui-framework/Tests/ui-framework-tests.gen.csproj (in 911 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-web/match-client-web.gen.csproj (in 10 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-viewer/match-viewer.gen.csproj (in 3 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-viewer/tests/match-viewer-tests.gen.csproj (in 23 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-core/tests/match-client-core-tests.gen.csproj (in 26 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-web/tests/match-client-web-tests.gen.csproj (in 35 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-core/match-client-core.gen.csproj (in 122 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/client-app/client-app.gen.csproj (in 14 ms).
+  Restored /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/client-app/tests/client-app-tests.gen.csproj (in 81 ms).
+  66 of 76 projects are up-to-date for restore.
+── Test (blocking; explicit policy selection applied) ────────────────
+Runsettings: /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/tools/dotnet-ci/precommit.runsettings
+  UnityShim -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  UnityShim.TestTools -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  agent-movement.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  deterministic-sim.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  ball-physics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  tactical-instructions.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  collision-system.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  event-system.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  performance-optimization.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  positioning-ai.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+  testing-strategy.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  ball-physics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ball-physics/tests/bin/Debug/net8.0/TacticalDirector.BallPhysics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  player-database.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  club-finances.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/club-finances/bin/Debug/netstandard2.1/TacticalDirector.ClubFinances.dll
+
+Passed!  - Failed:     0, Passed:   118, Skipped:     0, Total:   118, Duration: 1 s - TacticalDirector.BallPhysics.Tests.dll (net8.0)
+  first-touch.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  shot-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  pass-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  heading-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  perception-system.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  pressing-ai.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  attacking-ai.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  defensive-ai.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  deterministic-sim-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/deterministic-sim/tests/bin/Debug/net8.0/TacticalDirector.DeterministicSim.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/deterministic-sim/tests/bin/Debug/net8.0/TacticalDirector.DeterministicSim.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/decision-tree.gen.csproj]
+Starting test execution, please wait...
+  decision-tree.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+A total of 1 test files matched the specified pattern.
+  match-engine.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  match-analytics.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-analytics/bin/Debug/netstandard2.1/TacticalDirector.MatchAnalytics.dll
+  match-viewer.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-viewer/bin/Debug/netstandard2.1/TacticalDirector.MatchViewer.dll
+  localization.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/localization/bin/Debug/netstandard2.1/TacticalDirector.Localization.dll
+  Skipped SaveLoad_MidTickSnapshot_SaveAndLoad [55 ms]
+  living-world.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/living-world/bin/Debug/netstandard2.1/TacticalDirector.LivingWorld.dll
+
+Passed!  - Failed:     0, Passed:    90, Skipped:     1, Total:    91, Duration: 646 ms - TacticalDirector.DeterministicSim.Tests.dll (net8.0)
+  player-progression.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/player-progression/bin/Debug/netstandard2.1/TacticalDirector.PlayerProgression.dll
+  training-system.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/training-system/bin/Debug/netstandard2.1/TacticalDirector.TrainingSystem.dll
+  defensive-ai-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/defensive-ai/Tests/bin/Debug/net8.0/TacticalDirector.DefensiveAI.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/defensive-ai/Tests/bin/Debug/net8.0/TacticalDirector.DefensiveAI.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+  injuries-medical.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/injuries-medical/bin/Debug/netstandard2.1/TacticalDirector.InjuriesMedical.dll
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  discipline.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/discipline/bin/Debug/netstandard2.1/TacticalDirector.Discipline.dll
+  transfers.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/transfers/bin/Debug/netstandard2.1/TacticalDirector.Transfers.dll
+  season-save.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/season-save/bin/Debug/netstandard2.1/TacticalDirector.SeasonSave.dll
+  Skipped AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart [55 ms]
+  Skipped AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit [< 1 ms]
+  Skipped AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted [< 1 ms]
+  Skipped AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted [< 1 ms]
+  Skipped Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests [< 1 ms]
+  Skipped Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks [< 1 ms]
+  Skipped Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity [< 1 ms]
+  Skipped Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism [< 1 ms]
+  Skipped Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI [< 1 ms]
+  Skipped Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs [< 1 ms]
+  Skipped Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks [< 1 ms]
+  Skipped Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation [< 1 ms]
+  Skipped Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner [< 1 ms]
+  Skipped Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously [< 1 ms]
+  Skipped Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick [< 1 ms]
+  Skipped Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses [< 1 ms]
+  Skipped Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput [< 1 ms]
+  Skipped Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell [< 1 ms]
+  Skipped Integration_T_DA_068_GkReentryReleaseCoverGkZone [< 1 ms]
+  Skipped Integration_T_DA_069_PostTrapCooldownBlocksRefire [< 1 ms]
+  Skipped Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition [< 1 ms]
+  Skipped Integration_T_DA_071_PhaseChangeTakesEffectImmediately [< 1 ms]
+  Skipped Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget [< 1 ms]
+  Skipped Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick [< 1 ms]
+  Skipped Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    78, Skipped:    28, Total:   106, Duration: 307 ms - TacticalDirector.DefensiveAI.Tests.dll (net8.0)
+  match-client-core.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-core/bin/Debug/netstandard2.1/TacticalDirector.MatchClientCore.dll
+  ui-framework.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/ui-framework/bin/Debug/netstandard2.1/TacticalDirector.UiFramework.dll
+  localization-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/localization/tests/bin/Debug/net8.0/TacticalDirector.Localization.Tests.dll
+  discipline-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/discipline/tests/bin/Debug/net8.0/TacticalDirector.Discipline.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/discipline/tests/bin/Debug/net8.0/TacticalDirector.Discipline.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  match-analytics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-analytics/Tests/bin/Debug/net8.0/TacticalDirector.MatchAnalytics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-analytics/Tests/bin/Debug/net8.0/TacticalDirector.MatchAnalytics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   146, Skipped:     0, Total:   146, Duration: 559 ms - TacticalDirector.Discipline.Tests.dll (net8.0)
+  goalkeeper-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.GoalkeeperMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/goalkeeper-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.GoalkeeperMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Skipped T_GK_C_001_NoSaveTypeSymbol [103 ms]
+  Skipped T_GK_C_002_ConstantTagVerification [< 1 ms]
+  Skipped T_GK_C_003_RngRoutingDiscipline [< 1 ms]
+  Skipped T_GK_C_004_PositioningAiConstantPromotion [< 1 ms]
+  Skipped T_GK_C_005_NoSystemRandom [< 1 ms]
+  Skipped T_GK_C_006_CrossReferenceResolution [< 1 ms]
+  Skipped T_GK_C_007_CrossClaimDuelIterationOrder [< 1 ms]
+  Skipped FailureCause_DisturbedInDuel_DuelDisturbanceAboveThreshold [< 1 ms]
+  Skipped FailureCause_MissedContact_BallOutsideReach [< 1 ms]
+  Skipped FailureCause_MistimedDive_DiveStartedTooEarly [3 ms]
+  Skipped FailureCause_OutOfReach_BallBeyondReachEnvelope [< 1 ms]
+  Skipped FailureCause_WrongDirection_DiveInWrongDirection [< 1 ms]
+  Skipped T_GK_I_001_OpenPlaySave [< 1 ms]
+  Skipped T_GK_I_002_FreeKickSave [< 1 ms]
+  Skipped T_GK_I_003_PenaltySave [< 1 ms]
+  Skipped T_GK_I_004_CornerCrossClaimHandPath [< 1 ms]
+  Skipped T_GK_I_005_CornerCrossClaimHeadPath [< 1 ms]
+  Skipped T_GK_I_006_OneVsOneConfrontation [< 1 ms]
+  Skipped T_GK_I_007_MistimedDiveNoBallChange [< 1 ms]
+  Skipped T_GK_I_008_RushAbortOnInterception [< 1 ms]
+  Skipped T_GK_I_009_SaveAndDistributionCycle [< 1 ms]
+  Skipped T_GK_I_010_DeterministicReplay [< 1 ms]
+  Skipped T_GK_I_011_PositioningBaselineSlotRatification [< 1 ms]
+  Skipped T_GK_V_001_MatchPeakHandlingLabelDistribution [< 1 ms]
+  Skipped T_GK_V_002_ReflexABDivergence [< 1 ms]
+  Skipped T_GK_V_003_FatigueGradient [< 1 ms]
+  Skipped T_GK_V_004_OneVsOneConversionRate [< 1 ms]
+
+Passed!  - Failed:     0, Passed:   109, Skipped:    27, Total:   136, Duration: 1 s - TacticalDirector.GoalkeeperMechanics.Tests.dll (net8.0)
+  heading-mechanics-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/heading-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.HeadingMechanics.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/heading-mechanics/Tests/bin/Debug/net8.0/TacticalDirector.HeadingMechanics.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    59, Skipped:     0, Total:    59, Duration: 5 s - TacticalDirector.MatchAnalytics.Tests.dll (net8.0)
+  Skipped Conformance_T_HE_C_001_NoHeaderTypeSymbolInSrc [14 ms]
+  Skipped Conformance_T_HE_C_002_ConstantTagVerification [< 1 ms]
+  Skipped Conformance_T_HE_C_003_RngRoutingDisciplineNoSystemRandom [< 1 ms]
+  Skipped Integration_T_HE_I_001_OpenPlayHeaderFromCrossProducesOutgoingVelocity [< 1 ms]
+  Skipped Integration_T_HE_I_002_CornerKickHeaderRoutesIdenticallyToOpenPlay [< 1 ms]
+  Skipped Integration_T_HE_I_003_FreeKickHeaderFarPostDownwardVolley [< 1 ms]
+  Skipped Integration_T_HE_I_004_GoalkeeperHeadedClearanceUsesStandardPipeline [< 1 ms]
+  Skipped Integration_T_HE_I_005_Contested2WayDuelWinnerAndLoserEmitCorrectEvents [< 1 ms]
+  Skipped Integration_T_HE_I_006_Contested3WayDuelTightAndLopsidedSubScenarios [< 1 ms]
+  Skipped Integration_T_HE_I_007_MistimedJumpEmitsFailedEventAndLeavesBalUnchanged [< 1 ms]
+  Skipped Integration_T_HE_I_008_OwnGoalShapeFlagPublishedToEventSystem [< 1 ms]
+  Skipped Integration_T_HE_I_009_DeterministicReplay1000TickByteIdentical [< 1 ms]
+  Skipped Validation_T_HE_V_001_22AgentMatchSegmentHeaderFrequencyAndTimingDistribution [< 1 ms]
+  Skipped Validation_T_HE_V_002_CornerABHeadingAttributeSensitivity [< 1 ms]
+  Skipped Validation_T_HE_V_003_FatigueGradientReducesOutgoingSpeedByTwelvePercent [< 1 ms]
+
+Passed!  - Failed:     0, Passed:    73, Skipped:    15, Total:    88, Duration: 113 ms - TacticalDirector.HeadingMechanics.Tests.dll (net8.0)
+  injuries-medical-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/injuries-medical/tests/bin/Debug/net8.0/TacticalDirector.InjuriesMedical.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/injuries-medical/tests/bin/Debug/net8.0/TacticalDirector.InjuriesMedical.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  match-client-core-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-core/tests/bin/Debug/net8.0/TacticalDirector.MatchClientCore.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/match-client-core/tests/bin/Debug/net8.0/TacticalDirector.MatchClientCore.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    76, Skipped:     0, Total:    76, Duration: 503 ms - TacticalDirector.InjuriesMedical.Tests.dll (net8.0)
+  living-world-tests.gen -> /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/living-world/Tests/bin/Debug/net8.0/TacticalDirector.LivingWorld.Tests.dll
+Test run for /workspace/Soccer-Manager-Pro/.git/testing-strategy/precommit-snapshot/src/living-world/Tests/bin/Debug/net8.0/TacticalDirector.LivingWorld.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+ERROR: command exceeded 60s wall-clock budget

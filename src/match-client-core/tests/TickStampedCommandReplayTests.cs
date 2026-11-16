@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/TickStampedCommandReplayTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-11-09 (#434 mixed tactic command and effective frame contract)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P6/§6.1/§9),
 //           Code Standards #20
@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 using NUnit.Framework;
 
@@ -31,6 +32,32 @@ namespace TacticalDirector.MatchClientCore.Tests
 
         private static ManagerCommand AwayTactic() =>
             ManagerCommand.SetTeamTactic(1, TeamTactic.Balanced);
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MixedTacticCommand_CommitsOtherFields_AndReportsFixedFormation(int team)
+        {
+            TeamTactic Tactic(TacticFormation family, Mentality mentality) =>
+                new TeamTactic(mentality, family, Tempo.Standard, TacticWidth.Standard,
+                    TacticPassing.Mixed, TacticPressing.Medium, LineOfEngagement.Standard, 0.5f,
+                    TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
+                    TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+            var session = new MatchSession(MatchSetup.NeutralDemo(Seed));
+            session.Commands.Enqueue(ManagerCommand.SetTeamTactic(team, Tactic(TacticFormation.F4231, Mentality.Balanced)));
+            session.TickOnce();
+            session.Commands.Enqueue(ManagerCommand.SetTeamTactic(team, Tactic(TacticFormation.F433, Mentality.VeryAttacking)));
+            for (int i = 1; i < 6; i++) session.TickOnce();
+            Assert.IsTrue(session.TryGetLatestFrame(out var frame));
+            Assert.AreEqual(TacticFormation.F4231, team == 0 ? frame.Formations.HomeEffective : frame.Formations.AwayEffective);
+            Assert.AreEqual(TacticFormation.F433, team == 0 ? frame.Formations.HomeRequested : frame.Formations.AwayRequested);
+            var active = (TeamTactic[])typeof(MatchEngine.MatchEngine)
+                .GetField("_activeTeamTactics", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(session.TestOnly_Engine);
+            Assert.AreEqual(Mentality.VeryAttacking, active[team].Mentality);
+            Assert.AreEqual(TacticFormation.F433, active[team].Formation);
+            Assert.AreEqual(2, session.Driver.Log.Count);
+            Assert.AreEqual(0, session.Driver.FailedCommands.Count);
+        }
 
         [Test]
         public void AdvanceTo_ReStampsEachCommandAtItsRecordedTick()
@@ -190,4 +217,5 @@ namespace TacticalDirector.MatchClientCore.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-08-03 | —      | Initial implementation. |
+// | 1.1 | 2026-11-09 | — | Mixed formation/mentality commands keep kickoff-effective frame fields and commit mentality, mirrored teams. |
 #endregion

@@ -1,5 +1,7 @@
 # Path to Playable — Implementation Roadmap
 
+> **November 10 — #434 implemented and measured (v0.94):** [Draft PR #543](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/543) implements kickoff-only formation/Duty. [Evidence](evidence/formation-duty-20261109/README.md): all six default pairs are exact after approved structural layout alignment; 90 primary matches and the full Linux gate pass. Non-default football metrics are descriptive with material scoring changes; owner review and pinned Unity validation remain open. Formation-aware lineup selection/runtime switching remain follow-ups. #440 stays independent and requires its Stage A owner decision before any gameplay fix.
+
 > **November 12 — W8 C closeout (v0.93):** W8 C merged in PR #542 on November 6 as `d4b026aa`, with its paired Linux comparison complete and pinned-host Unity checks passed at `fdbbff5a`: **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). Step 8 and engine-lane item 2 now record that closeout; the November 6 outstanding-host note below is superseded.
 
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
@@ -515,7 +517,7 @@ decided.
    passed with 0 `error CS`; whole MatchEngine EditMode at `fdbbff5a` had 939 passed / 0 failed /
    16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)).
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
-   final D-08. Land with separate attribution.
+   final D-08. Land with separate attribution. **#434: implemented/measured in draft PR #543; pinned Unity and owner football review pending.** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: separate main-based Stage A; no fix until its owner decision.**
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
@@ -918,7 +920,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
-
+| v0.94 | November 10, 2026 | #434 implemented/measured in draft PR #543; six-seed default identity, 90 primary captures and full Linux gate pass. Host and owner football review pending; #440 remains separate Stage A. Renumbered from v0.93 when merging main #546 (November 16). |
 | v0.93 | November 12, 2026 | Reconcile step 8 and engine-lane item 2 to W8 C / PR #542's completed paired comparison and passing pinned-host run at `fdbbff5a` (939 passed, 0 failed, 16 skipped, 1 existing inconclusive). No gameplay or sequencing decision. |
 | v0.92 | November 6, 2026 | Historical header entry above: W8 C implementation authored with snapshot v28; pinned-host validation was still outstanding at that writing, subsequently completed and merged in PR #542. |
 | v0.91 | November 5, 2026 | Merge main #537 and retain both evidence contracts (37 directories); summarize recorded-full-time censoring alongside the BallLoose exclusion; exclude the capture from Unity CI LFS pulls. No capture, frozen-policy or gameplay change. |

@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineRestartTests.cs
 // Created:  2026-07-14
-// Modified: 2026-10-12 (ERR-001-007: goal-frame/state ordering)
+// Modified: 2026-11-10 (#434: initialize kickoff before a fixture clock jump)
+// Modified (prior): 2026-10-12 (ERR-001-007: goal-frame/state ordering)
 // Modified: 2026-07-14
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §5, Code Standards #20
@@ -31,6 +32,9 @@ namespace TacticalDirector.MatchEngine
             var engine = new MatchEngine(MatchSeed);
             if (secondHalf)
             {
+                // Initialize the actual kickoff before this fixture skips ahead to half-time.
+                // A fresh engine at a positive clock is invalid under the #434 kickoff lock.
+                engine.RunTick();
                 engine.TestOnly_SetPhysicsFrame((int)MatchEngineConstants.HALF_TIME_BOUNDARY_TICK);
                 engine.RunTick();
             }
@@ -296,4 +300,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.1     | 2026-10-12 | —      | ERR-001-007: ten cases reproduce PR #499 at both goals/in both |
 // |         |            |        | halves, lock crossing-before-contact corner/goal-kick awards   |
 // |         |            |        | and digest-identical restore continuation.                     |
+// | 1.2 | 2026-11-10 | — | Initialize real kickoff before half-time clock jump; all rebound/restart assertions retained. |
 #endregion

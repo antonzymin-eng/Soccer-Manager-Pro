@@ -1,0 +1,5 @@
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.762 r=0.406m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.

@@ -1,0 +1,998 @@
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.762 r=0.406m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state STUMBLING.
+[Warning] [DT] FM-DT-09 agent 0
+[Warning] [DT] FM-DT-09 agent 0
+[Warning] [DT] FM-DT-09 agent 0
+[Warning] [DT] FM-DT-09 agent 0
+[Warning] [DT] FM-DT-09 agent 0
+[Warning] [DT] FM-DT-09 agent 0
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.960 r=0.153m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=1 Outcome=Controlled q=1.000 r=0.100m PossessingID=1 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.884 r=0.254m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.776 r=0.388m PossessingID=18 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [PassExecutor] FM-08: Agent 5 lost possession before CONTACT — pass cancelled.
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=0.677 r=0.508m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(97.20, 73.00, 0.00), clamped=(97.20, 68.00, 0.00)
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(109.20, 73.00, 0.00), clamped=(105.00, 68.00, 0.00)
+[Log] [FirstTouch] Agent=2 Outcome=LooseBall q=0.368 r=1.157m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=0.970 r=0.140m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=6 Outcome=Controlled q=0.987 r=0.117m PossessingID=6 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=LooseBall q=0.433 r=1.030m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.732 r=0.441m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.734 r=0.440m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=0.895 r=0.240m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=0.677 r=0.507m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=LooseBall q=0.398 r=1.086m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=LooseBall q=0.435 r=0.996m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.969 r=0.141m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=0.731 r=0.442m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=1 Outcome=Controlled q=0.732 r=0.442m PossessingID=1 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.855 r=0.293m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=0.655 r=0.534m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.871 r=0.272m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.797 r=0.364m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=0.650 r=0.540m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.750 r=0.420m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=0.654 r=0.536m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=LooseBall q=0.588 r=0.628m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.901 r=0.233m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=LooseBall q=0.444 r=0.974m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.915 r=0.213m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.705 r=0.475m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.891 r=0.246m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=1.000 r=0.100m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.709 r=0.469m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.968 r=0.143m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.675 r=0.510m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=LooseBall q=0.551 r=0.718m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.993 r=0.109m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.850 r=0.300m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.783 r=0.380m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.510 r=0.815m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=1.000 r=0.100m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=0.792 r=0.369m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=0.809 r=0.349m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=LooseBall q=0.497 r=0.847m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.956 r=0.159m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=LooseBall q=0.577 r=0.656m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.669 r=0.517m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.728 r=0.447m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=LooseBall q=0.532 r=0.764m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=LooseBall q=0.528 r=0.772m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.613 r=0.584m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=LooseBall q=0.481 r=0.887m PossessingID=-1 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.775 r=0.390m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.651 r=0.538m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [DT] FM-DT-09 agent 15
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.953 r=0.162m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=0.958 r=0.157m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.639 r=0.553m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=LooseBall q=0.579 r=0.649m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.798 r=0.362m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=0.686 r=0.497m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=0.670 r=0.516m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.365 r=1.219m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.32, 69.20, 0.00), clamped=(50.32, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=LooseBall q=0.460 r=0.936m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(51.77, 68.05, 0.00), clamped=(51.77, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.982 r=0.124m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=LooseBall q=0.465 r=0.924m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.988 r=0.116m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(-1.48, 38.60, 0.00), clamped=(0.00, 38.60, 0.00)
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.470 r=0.913m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 17
+[Warning] [DT] FM-DT-09 agent 17
+[Warning] [DT] FM-DT-09 agent 17
+[Warning] [DT] FM-DT-09 agent 17
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(51.50, 68.91, 0.00), clamped=(51.50, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.668 r=0.518m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.772 r=0.394m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.686 r=0.496m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.637 r=0.555m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.643 r=0.549m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.632 r=0.561m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.71, -0.93, 0.00), clamped=(50.71, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.816 r=0.341m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Warning] [PassExecutor] FM-01: Agent 7 does not have possession. Frame=13999
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(52.73, -0.25, 0.00), clamped=(52.73, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.821 r=0.334m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(49.69, 70.21, 0.00), clamped=(49.69, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.986 r=0.119m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.695 r=0.487m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(54.17, -0.17, 0.00), clamped=(54.17, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.932 r=0.190m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=LooseBall q=0.595 r=0.613m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.683 r=0.501m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=LooseBall q=0.599 r=0.603m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=LooseBall q=0.511 r=0.813m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.774 r=0.392m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=1 Outcome=Controlled q=1.000 r=0.100m PossessingID=1 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=1 Outcome=Controlled q=1.000 r=0.100m PossessingID=1 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.890 r=0.246m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.609 r=0.589m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.579 r=0.651m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=1.000 r=0.100m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=LooseBall q=0.442 r=0.978m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.894 r=0.241m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.606 r=0.592m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.794 r=0.368m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.734 r=0.439m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=LooseBall q=0.552 r=0.715m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.703 r=0.477m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=LooseBall q=0.450 r=0.960m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.679 r=0.505m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=0.621 r=0.575m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=1.000 r=0.100m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.488 r=0.868m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.614 r=0.583m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(49.29, -0.05, 0.00), clamped=(49.29, 0.00, 0.00)
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.87, -1.39, 0.00), clamped=(50.87, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.904 r=0.227m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.690 r=0.492m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.97, -1.80, 0.00), clamped=(50.97, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.679 r=0.506m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.658 r=0.531m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.613 r=0.584m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.661 r=0.526m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 9
+[Warning] [PassExecutor] FM-01: Agent 9 does not have possession. Frame=30414
+[Log] [FirstTouch] Agent=9 Outcome=LooseBall q=0.587 r=0.632m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.526 r=0.778m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=1.000 r=0.100m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=LooseBall q=0.535 r=0.756m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=0.871 r=0.271m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.993 r=0.109m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.683 r=0.501m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [DT] FM-DT-09 agent 15
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.724 r=0.452m PossessingID=19 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.618 r=0.578m PossessingID=19 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [DT] FM-DT-09 agent 19
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.633 r=0.561m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=LooseBall q=0.576 r=0.658m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.976 r=0.132m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.986 r=0.119m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.464 r=0.926m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.709 r=0.470m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.681 r=0.503m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=LooseBall q=0.598 r=0.605m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=0.713 r=0.465m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=0.970 r=0.140m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=1.000 r=0.100m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.605 r=0.594m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.613 r=0.584m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=0.972 r=0.138m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.21, -1.09, 0.00), clamped=(50.21, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.776 r=0.388m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=1.000 r=0.100m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=0.983 r=0.123m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.618 r=0.578m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.600 r=0.599m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.992 r=0.111m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.982 r=0.123m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.889 r=0.247m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=0.962 r=0.150m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.914 r=0.215m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=4 Outcome=Controlled q=1.000 r=0.100m PossessingID=4 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(50.71, 68.89, 0.00), clamped=(50.71, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(52.06, 68.42, 0.00), clamped=(52.06, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 13
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.619 r=0.577m PossessingID=10 InterceptingID=-1
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 10 in non-shootable state GROUNDED.
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.688 r=0.495m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 14
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.633 r=0.560m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.393 r=1.125m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 17
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(49.91, 68.75, 0.00), clamped=(49.91, 68.00, 0.00)
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=15 Outcome=Controlled q=1.000 r=0.100m PossessingID=15 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.956 r=0.158m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [DT] FM-DT-09 agent 5
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [DT] FM-DT-09 agent 15
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.736 r=0.437m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=0.651 r=0.538m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=LooseBall q=0.539 r=0.747m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.588 r=0.628m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=1.000 r=0.100m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=0.907 r=0.224m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=0.896 r=0.239m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=0.633 r=0.560m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.863 r=0.283m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.995 r=0.107m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.907 r=0.223m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.953 r=0.162m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=0.950 r=0.166m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.970 r=0.140m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=LooseBall q=0.451 r=0.958m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 18
+[Log] [FirstTouch] Agent=17 Outcome=LooseBall q=0.504 r=0.830m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.634 r=0.560m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.956 r=0.158m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.989 r=0.114m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.527 r=0.775m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.833 r=0.320m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=0.635 r=0.558m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=0.727 r=0.447m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.809 r=0.349m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.852 r=0.297m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.396 r=1.115m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 0
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.713 r=0.464m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(78.16, -1.86, 0.00), clamped=(78.16, 0.00, 0.00)
+[Log] [FirstTouch] Agent=19 Outcome=Controlled q=1.000 r=0.100m PossessingID=19 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.506 r=0.827m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=0.880 r=0.260m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Warning] [PassExecutor] FM-01: Agent 13 does not have possession. Frame=47557
+[Log] [FirstTouch] Agent=12 Outcome=Controlled q=1.000 r=0.100m PossessingID=12 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=0.620 r=0.576m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=11 Outcome=Controlled q=0.961 r=0.152m PossessingID=11 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.505 r=0.827m PossessingID=-1 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 7
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=0.782 r=0.382m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.838 r=0.314m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=10 Outcome=Controlled q=1.000 r=0.100m PossessingID=10 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.547 r=0.728m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=14 Outcome=Controlled q=1.000 r=0.100m PossessingID=14 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=16 Outcome=Controlled q=1.000 r=0.100m PossessingID=16 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=LooseBall q=0.565 r=0.683m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=1.000 r=0.100m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=1.000 r=0.100m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=0.673 r=0.512m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=20 Outcome=LooseBall q=0.437 r=0.992m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(105.64, 35.94, 0.00), clamped=(105.00, 35.94, 0.00)
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(53.01, -0.36, 0.00), clamped=(53.01, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.899 r=0.234m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=0.816 r=0.341m PossessingID=5 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=5 Outcome=Controlled q=1.000 r=0.100m PossessingID=5 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(83.37, 68.06, 0.00), clamped=(83.37, 68.00, 0.00)
+[Log] [FirstTouch] Agent=7 Outcome=Controlled q=1.000 r=0.100m PossessingID=7 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=9 Outcome=Controlled q=1.000 r=0.100m PossessingID=9 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=13 Outcome=Controlled q=1.000 r=0.100m PossessingID=13 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [DT] FM-DT-09 agent 2
+[Warning] [DT] FM-DT-09 agent 2
+[Warning] [DT] FM-DT-09 agent 2
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.698 r=0.482m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=1.000 r=0.100m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.708 r=0.470m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Warning] [TargetResolver] Aim point clamped to pitch bounds: original=(72.45, -2.79, 0.00), clamped=(72.45, 0.00, 0.00)
+[Log] [FirstTouch] Agent=20 Outcome=LooseBall q=0.441 r=0.982m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=0 Outcome=Controlled q=0.687 r=0.496m PossessingID=0 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=0.992 r=0.111m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=0.716 r=0.460m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Interception q=0.318 r=1.381m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=0.901 r=0.232m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=Controlled q=1.000 r=0.100m PossessingID=21 InterceptingID=-1
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Warning] [ShotExecutor] Agent 21 in non-shootable state GROUNDED.
+[Log] [FirstTouch] Agent=2 Outcome=Controlled q=0.790 r=0.372m PossessingID=2 InterceptingID=-1
+[Log] [FirstTouch] Agent=21 Outcome=LooseBall q=0.498 r=0.845m PossessingID=-1 InterceptingID=-1
+[Log] [FirstTouch] Agent=8 Outcome=Controlled q=1.000 r=0.100m PossessingID=8 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
+[Log] [FirstTouch] Agent=3 Outcome=Controlled q=1.000 r=0.100m PossessingID=3 InterceptingID=-1
+[Log] [FirstTouch] Agent=17 Outcome=Controlled q=1.000 r=0.100m PossessingID=17 InterceptingID=-1
+[Log] [FirstTouch] Agent=20 Outcome=Controlled q=1.000 r=0.100m PossessingID=20 InterceptingID=-1
+[Log] [FirstTouch] Agent=18 Outcome=Controlled q=1.000 r=0.100m PossessingID=18 InterceptingID=-1
