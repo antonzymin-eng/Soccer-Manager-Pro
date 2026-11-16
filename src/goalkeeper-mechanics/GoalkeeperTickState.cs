@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperTickState.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-07-23
 // Modified: 2026-07-23
@@ -96,6 +97,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>Per-GK claim tick (-1 = not holding).</summary>
         public readonly int[] ClaimTick;
 
+        /// <summary>Exact 60 Hz lawful hand-claim frame, or −1 when inactive (schema v28).</summary>
+        public readonly long[] HandControlStartFrame;
+
         /// <summary>Per-GK earliest release tick (int.MaxValue sentinel).</summary>
         public readonly int[] ReleaseTickEarliest;
 
@@ -129,8 +133,10 @@ namespace TacticalDirector.GoalkeeperMechanics
             int[] claimTick,
             int[] releaseTickEarliest,
             int[] recoveryCooldownEndTick,
-            bool[] distributionPending)
+            bool[] distributionPending,
+            long[] handControlStartFrame)
         {
+            HandControlStartFrame = handControlStartFrame;
             DistributionPending = distributionPending;
             States                  = states;
             Attrs                   = attrs;
@@ -168,4 +174,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.1     | 2026-09-22 | —      | W3: ClaimIntent + active latch added to authoritative snapshot view. |
 // |         |            |        | Match-engine world-state schema 22 → 23.                            |
 // | 1.2 | 2026-10-15 | — | W8 B: canonical accepted-distribution wait latch, schema v26. |
+// | 1.3 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

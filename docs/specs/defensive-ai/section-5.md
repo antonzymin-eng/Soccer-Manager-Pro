@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 5: Test Plan
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L1 resolved)
-**Version:** 0.2
+**Last Updated:** November 10, 2026 (v0.3 — `ERR-014-009` (W13.0): T-DA-067 annotated — a retained mark tracks the live target position and is still subject to Invariant 3 during the dwell lock.)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -474,6 +474,12 @@ Ticks 2–4: opponent exits radius (distance > 15.0 m); agent retains MAN_MARK
 for remaining dwell.
 Tick 5: dwellCounter = 0; re-evaluation; no candidates within radius → ZONAL.
 Expected: ZONAL assignment starts on tick 5, not tick 2 (dwell lock respected).
+`ERR-014-009` clarification: during the retained ticks 2–4 `targetPosition` is the
+opponent's live position (§2.2.2), so if the opponent leaves more than
+`MAX_MARK_DISPLACEMENT_M` of the agent's slot the mark is demoted by §3.10
+Invariant 3 on that tick (the lock does not exempt it); and a target that leaves
+the snapshot or becomes inactive releases the mark immediately. Implemented
+tests: `RetainedAssignmentRefreshTests`.
 Validates: FR-DA-015; §3.11.3 pre-check.
 
 **T-DA-068 — GK re-entry to zone: COVER_GK_ZONE released**
@@ -750,3 +756,4 @@ systems). This criterion is verifiable without a full xG model.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. 71 named unit and integration tests (T-DA-001..T-DA-071 contiguous). 6 determinism regression tests (T-DA-DET-001..006). 3 performance tests (T-DA-PERF-001..003). 3 anti-chaos invariant tests (T-DA-INV-001..003). 4 exploit-resistance tests (T-DA-EXP-001..004). xG surrogate metrics defined (§5.7). FR-to-test traceability matrix (§5.8; all 37 FRs mapped). Total named tests: ≥ 85 targets met (79 named + 6 determinism + FR-map coverage). KD-18 exploit corpus (Appendix E) referenced. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L1: §5.9 v0.1 row corrected test count from "59 named" to "71 named" (T-DA-001..T-DA-071 = 71 tests, not 59). |
+| 0.3 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: T-DA-067 annotated (retained marks track the live target; Invariant 3 and target-vanished release apply during the dwell lock). No test count changes. |

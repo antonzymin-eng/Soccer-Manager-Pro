@@ -1,0 +1,13 @@
+{
+  "base_commit": "b6505350",
+  "pre_review_local_commit": "0f77c76d57748001b965c788b4c9c568287a2921",
+  "merged_main_commit": "af11683913e88cc4621686fbe3f659625398decb",
+  "fresh_full_test_filter": null,
+  "compiled_source_note": "Full rerun and targeted tests use development compilation after the hook guards and exact-480 cases. Only version-history comments changed afterwards. Release build overrides DefineConstants with TRACE.",
+  "binaries_sha256": {
+    "src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll": "1c5bbafe55af15fdbe6acaf756d89912ddb6fdbfdf384635d021cb1b39cc8de5",
+    "src/match-engine/bin/Release/netstandard2.1/TacticalDirector.MatchEngine.dll": "b24733398e518f24a7bc77ed98a4f97a148a1165c6ed3e6229b9488bf5a9221e",
+    "src/match-engine/tests/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll": "26d1550d01b917c0a892c0c6abf288197aa98a250a5b89e5eb6e6d3cdd9e3496"
+  },
+  "host_unity_status": "pending; no Unity Editor available in this cloud environment"
+}

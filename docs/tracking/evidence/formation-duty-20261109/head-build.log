@@ -1,0 +1,64 @@
+  Determining projects to restore...
+  Restored /workspace/work/434-capture-v11/head/src/player-database/player-database.gen.csproj (in 307 ms).
+  Restored /workspace/work/434-capture-v11/head/src/positioning-ai/positioning-ai.gen.csproj (in 304 ms).
+  Restored /workspace/work/434-capture-v11/head/src/match-engine/match-engine.gen.csproj (in 349 ms).
+  Restored /workspace/work/434-capture-v11/head/src/defensive-ai/defensive-ai.gen.csproj (in 348 ms).
+  Restored /workspace/work/434-capture-v11/head/src/performance-optimization/performance-optimization.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/perception-system/perception-system.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/pass-mechanics/pass-mechanics.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/heading-mechanics/heading-mechanics.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/goalkeeper-mechanics/goalkeeper-mechanics.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/event-system/event-system.gen.csproj (in 1 ms).
+  Restored /workspace/work/434-capture-v11/head/src/first-touch/first-touch.gen.csproj (in 9 ms).
+  Restored /workspace/work/434-capture-v11/head/src/deterministic-sim/deterministic-sim.gen.csproj (in 1 ms).
+  Restored /workspace/work/434-capture-v11/head/src/ball-physics/ball-physics.gen.csproj (in 1 ms).
+  Restored /workspace/work/434-capture-v11/head/src/collision-system/collision-system.gen.csproj (in 1 ms).
+  Restored /workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj (in 4 ms).
+  Restored /workspace/work/434-capture-v11/head/tools/dotnet-ci/UnityShim/UnityShim.csproj (in 0.9 ms).
+  Restored /workspace/work/434-capture-v11/head/src/agent-movement/agent-movement.gen.csproj (in 5 ms).
+  Restored /workspace/work/434-capture-v11/head/src/attacking-ai/attacking-ai.gen.csproj (in 9 ms).
+  Restored /workspace/work/434-capture-v11/head/src/testing-strategy/testing-strategy.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/tactical-instructions/tactical-instructions.gen.csproj (in 0.8 ms).
+  Restored /workspace/work/434-capture-v11/head/src/shot-mechanics/shot-mechanics.gen.csproj (in 2 ms).
+  Restored /workspace/work/434-capture-v11/head/src/project-constants/project-constants.gen.csproj (in 1 ms).
+  Restored /workspace/work/434-capture-v11/head/tools/dotnet-ci/UnityShim.TestTools/UnityShim.TestTools.csproj (in 69 ms).
+  Restored /workspace/work/434-capture-v11/head/src/pressing-ai/pressing-ai.gen.csproj (in 3 ms).
+  Restored /workspace/work/434-capture-v11/head/capture/Capture.csproj (in 308 ms).
+  UnityShim -> /workspace/work/434-capture-v11/head/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/work/434-capture-v11/head/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  deterministic-sim.gen -> /workspace/work/434-capture-v11/head/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  event-system.gen -> /workspace/work/434-capture-v11/head/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  ball-physics.gen -> /workspace/work/434-capture-v11/head/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  agent-movement.gen -> /workspace/work/434-capture-v11/head/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  collision-system.gen -> /workspace/work/434-capture-v11/head/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  first-touch.gen -> /workspace/work/434-capture-v11/head/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  pass-mechanics.gen -> /workspace/work/434-capture-v11/head/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  shot-mechanics.gen -> /workspace/work/434-capture-v11/head/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  perception-system.gen -> /workspace/work/434-capture-v11/head/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  heading-mechanics.gen -> /workspace/work/434-capture-v11/head/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/work/434-capture-v11/head/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  tactical-instructions.gen -> /workspace/work/434-capture-v11/head/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  positioning-ai.gen -> /workspace/work/434-capture-v11/head/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+  decision-tree.gen -> /workspace/work/434-capture-v11/head/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  pressing-ai.gen -> /workspace/work/434-capture-v11/head/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  defensive-ai.gen -> /workspace/work/434-capture-v11/head/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  attacking-ai.gen -> /workspace/work/434-capture-v11/head/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  player-database.gen -> /workspace/work/434-capture-v11/head/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  match-engine.gen -> /workspace/work/434-capture-v11/head/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  performance-optimization.gen -> /workspace/work/434-capture-v11/head/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  testing-strategy.gen -> /workspace/work/434-capture-v11/head/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  UnityShim.TestTools -> /workspace/work/434-capture-v11/head/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  Capture -> /workspace/work/434-capture-v11/head/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+
+Build succeeded.
+
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/434-capture-v11/head/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/work/434-capture-v11/head/src/decision-tree/decision-tree.gen.csproj]
+    3 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:41.67

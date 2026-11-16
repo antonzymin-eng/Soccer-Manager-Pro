@@ -1,0 +1,4 @@
+20252b77ef01ed6a813dfce5f19e0e6fb6de4a12aad509eea603ecc66f43ad5a  work/w8c/probe/prepare.py
+63d8361f52213934483480f2afe686fc7b0f941d70603130352906c1fa2342ef  work/w8c/probe/MatchEngine.W8Probe.cs
+d5d53d54110087fe2405947cc0474352a584b93a4233abdaeb7ae1995c6dc75a  work/w8c/probe/W8CComparisonDiagnosticTests.cs
+efdc894fa34c1fea4012afb3851192694648fcf9e92543a3655534ee1ff9548e  work/w8c/probe/PREREGISTRATION.md

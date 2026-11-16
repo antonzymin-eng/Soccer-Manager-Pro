@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAgentSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-11-10
 // Author:   —
 // Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20
 // Purpose:  Per-agent immutable snapshot provided to DefensiveAITick each tick.
@@ -33,10 +33,10 @@ namespace TacticalDirector.DefensiveAI
         /// <summary>TeamId of this agent (0 = home, 1 = away).</summary>
         public int TeamId;
 
-        /// <summary>World-space position (X, Y). Z ignored at Stage 0.</summary>
+        /// <summary>Position (X, Y) in the defending team's canonical frame (own goal at x = 0, both teams; see <see cref="DefensiveSnapshot"/>). Z ignored at Stage 0.</summary>
         public Vector2 Position;
 
-        /// <summary>World-space velocity vector (m/s). X, Y components used for speed and direction checks.</summary>
+        /// <summary>Velocity vector (m/s) in the same canonical frame as <see cref="Position"/>. X, Y components used for speed and direction checks.</summary>
         public Vector2 Velocity;
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace TacticalDirector.DefensiveAI
         public bool HasBall;
 
         /// <summary>
-        /// Positioning AI #12 formation slot (world-space X, Y). Own-team agents only;
+        /// Positioning AI #12 formation slot (X, Y) in the canonical frame. Own-team agents only;
         /// zero for opponents. Used for displacement cost baseline and ZONAL target (§3.4 / §3.3).
         /// </summary>
         public Vector2 BaselineSlot;
@@ -81,4 +81,6 @@ namespace TacticalDirector.DefensiveAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-11-10 | —      | ERR-014-008: Position / Velocity / BaselineSlot docs corrected from "world-space" |
+// |         |            |        |   to the defending team's canonical frame (doc-only; no behaviour change).        |
 #endregion

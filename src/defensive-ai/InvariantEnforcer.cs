@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/InvariantEnforcer.cs
 // Created:  2026-05-29
-// Modified: 2026-06-15
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.10, §4.3, FR-DA-024–028, Code Standards #20
+// Spec:     Defensive AI #14 §3.10, §4.3, FR-DA-024–028, ERR-014-008, Code Standards #20
 // Purpose:  Pure static module: enforces the three anti-chaos invariants (§3.10 / KD-17)
 //           after the full assignment pass, before directive publication.
 
@@ -284,7 +284,7 @@ namespace TacticalDirector.DefensiveAI
                 return 0f;
 
             ref readonly DefensiveAgentSnapshot opp = ref snapshot.Agents[oIdx];
-            return MarkAssigner.ThreatScore(opp.Position, opp.PerceivedFirstTouch, snapshot.DefensiveTeamId);
+            return MarkAssigner.ThreatScore(opp.Position, opp.PerceivedFirstTouch, DefensiveSnapshot.IsOwnGoalAtX0);
         }
 
         private static void DemoteToZonal(
@@ -309,4 +309,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   Each helper now fully enforces its invariant (demotes ALL violations); the outer     |
 // |         |            |        |   loop re-runs until a no-change pass; final AreAllSatisfied verifies. MinBackline      |
 // |         |            |        |   returns an InvariantStep so Stuck (backline unreachable) maps to F4 distinctly.       |
+// | 1.2     | 2026-11-10 | —      | ERR-014-008: TargetThreat (the demotion ranking of Invariants 1 and 2) takes defendsX0     |
+// |         |            |        |   from DefensiveSnapshot.IsOwnGoalAtX0, not the team id, so the away team demotes the     |
+// |         |            |        |   lowest-threat mark rather than the highest.                                              |
 #endregion

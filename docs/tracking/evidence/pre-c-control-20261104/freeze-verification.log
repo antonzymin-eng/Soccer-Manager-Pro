@@ -1,0 +1,1 @@
+Plain source equals the pinned Git archive; observed source differs only by the retained overlay. Frozen source, instrument, generated compile inputs, loaded binary sets and CLR hashes unchanged; all 12 captures exited 0.

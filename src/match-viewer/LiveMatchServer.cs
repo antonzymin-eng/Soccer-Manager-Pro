@@ -1,6 +1,6 @@
 // File:     src/match-viewer/LiveMatchServer.cs
 // Created:  2026-07-15
-// Modified: 2026-07-16 (AR-7 fix pass: viewer clock rounds seconds before the minute split (L-3); post-Stop connection threads refused via a volatile shutdown flag + 503 (L-4))
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified: 2026-07-27 (P1 AR-1 M-6: score reads follow LiveMatchFrame onto the Scoreline carrier; /frame JSON keys unchanged)
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
@@ -416,6 +416,14 @@ namespace TacticalDirector.MatchViewer
             sb.Append(',');
             AppendJsonInt(sb, "awayScore", frame.Score.Away);
             sb.Append(',');
+            AppendJsonInt(sb, "homeEffectiveFormation", (int)frame.Formations.HomeEffective);
+            sb.Append(',');
+            AppendJsonInt(sb, "homeRequestedFormation", (int)frame.Formations.HomeRequested);
+            sb.Append(',');
+            AppendJsonInt(sb, "awayEffectiveFormation", (int)frame.Formations.AwayEffective);
+            sb.Append(',');
+            AppendJsonInt(sb, "awayRequestedFormation", (int)frame.Formations.AwayRequested);
+            sb.Append(',');
             AppendJsonBool(sb, "matchEnded", frame.MatchEnded);
             sb.Append(',');
 
@@ -715,4 +723,5 @@ poll();
 // |         |            |        | the response (two Unity EditMode failures; also every real      |
 // |         |            |        | browser request, whose headers were never read). Linux returned |
 // |         |            |        | the queued data first, so the Linux gate passed.                |
+// | 1.7 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
@@ -79,6 +80,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // Hold-rule state
         private readonly int[] _claimTick;
+        private readonly long[] _handControlStartFrame;
         private readonly int[] _releaseTickEarliest;
         private readonly int[] _recoveryCooldownEndTick;
 
@@ -134,6 +136,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             _shotEventPending = new bool[maxGks];
 
             _claimTick = new int[maxGks];
+            _handControlStartFrame = new long[maxGks];
             _releaseTickEarliest = new int[maxGks];
             _recoveryCooldownEndTick = new int[maxGks];
 
@@ -286,6 +289,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             _shotEventPending[gkIndex] = false;
 
             _claimTick[gkIndex] = -1;
+            _handControlStartFrame[gkIndex] = -1;
             _releaseTickEarliest[gkIndex] = int.MaxValue;
             _recoveryCooldownEndTick[gkIndex] = 0;
         }
@@ -511,6 +515,9 @@ namespace TacticalDirector.GoalkeeperMechanics
             _distributeIntentActive[gkIndex] = false;
             _distributionPending[gkIndex] = false;
             _states[gkIndex] = GoalkeeperState.Recovering;
+            _handControlStartFrame[gkIndex] = -1;
+            _claimTick[gkIndex] = -1;
+            _releaseTickEarliest[gkIndex] = int.MaxValue;
             int tacticalTick = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
             _recoveryCooldownEndTick[gkIndex] = tacticalTick + GoalkeeperConstants.RecoveryCooldownTicks;
             return true;
@@ -721,6 +728,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 _ballSystem.SetPossessor(agentId);
                 _ballSystem.ParkBall();
                 _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                _handControlStartFrame[gkIndex] = currentFrame;
                 _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
                 _states[gkIndex] = GoalkeeperState.HandsOnBall;
 
@@ -877,6 +885,9 @@ namespace TacticalDirector.GoalkeeperMechanics
         public bool HasHandControl(int gkIndex) =>
             _states[gkIndex] == GoalkeeperState.HandsOnBall || _states[gkIndex] == GoalkeeperState.Distributing;
 
+        /// <summary>Exact 60 Hz start of the lawful hand episode, or −1 when inactive (#11 §3.8.5).</summary>
+        public long GetHandControlStartFrame(int gkIndex) => _handControlStartFrame[gkIndex];
+
         /// <summary>Reads the original tactical hand clocks without allocating a snapshot.</summary>
         public bool TryGetDistributionGate(int gkIndex, out int claimTick, out int releaseTick)
         {
@@ -940,7 +951,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 _diveLaunchFrames, _diveDurationFrames, _divePeakHandZ, _diveDirectionLateral,
                 _rushLaunchMps, _rushInitialAttackerId,
                 _shotDetectedTickMs, _requiredReactionMs, _shotEventPending,
-                _claimTick, _releaseTickEarliest, _recoveryCooldownEndTick, _distributionPending);
+                _claimTick, _releaseTickEarliest, _recoveryCooldownEndTick, _distributionPending,
+                _handControlStartFrame);
 
         /// <summary>
         /// Restores this orchestrator's cross-tick state from a snapshot produced by
@@ -976,6 +988,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             Array.Copy(state.RequiredReactionMs, _requiredReactionMs, _requiredReactionMs.Length);
             Array.Copy(state.ShotEventPending, _shotEventPending, _shotEventPending.Length);
             Array.Copy(state.ClaimTick, _claimTick, _claimTick.Length);
+            Array.Copy(state.HandControlStartFrame, _handControlStartFrame, _handControlStartFrame.Length);
             Array.Copy(state.ReleaseTickEarliest, _releaseTickEarliest, _releaseTickEarliest.Length);
             Array.Copy(state.RecoveryCooldownEndTick, _recoveryCooldownEndTick, _recoveryCooldownEndTick.Length);
         }
@@ -1073,15 +1086,6 @@ namespace TacticalDirector.GoalkeeperMechanics
                     gkBaselineSlot: positioning.GkBaselineSlot,
                     ballThreateningOwnGoal: ballThreateningOwnGoal,
                     ballSafelyUpfield: ballSafelyUpfield);
-
-                // Legacy timeout signal only; this does not release the ball.
-                if (_states[gkIndex] == GoalkeeperState.HandsOnBall &&
-                    !_distributionPending[gkIndex] &&
-                    _claimTick[gkIndex] >= 0 &&
-                    (currentTick - _claimTick[gkIndex]) >= GoalkeeperConstants.GK_HOLD_MAX_TICKS)
-                {
-                    _telemetry.RecordHoldTimeoutSignal(agentId);
-                }
 
                 _states[gkIndex] = newState;
             }
@@ -1335,6 +1339,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                                 _ballSystem.SetPossessor(agentId);
                                 _ballSystem.ParkBall();
                                 _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                                _handControlStartFrame[gkIndex] = currentFrame;
                                 _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
                                 BallClaimedEvent claimEvt = new BallClaimedEvent
@@ -1494,6 +1499,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         _ballSystem.SetPossessor(agentId);
                         _ballSystem.ParkBall();
                         _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                        _handControlStartFrame[gkIndex] = currentFrame;
                         _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
                         BallClaimedEvent smotherClaim = new BallClaimedEvent
@@ -1822,4 +1828,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.22 | 2026-10-16 | — | Call renamed RecordHoldTimeoutSignal; condition and hold timing unchanged. |
 // | 1.23 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 1.24 | 2026-10-16 | — | ERR-011-020: feet-only avoidance, contact/miss and foul-order regression coverage; observational law census. |
+// | 1.25 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

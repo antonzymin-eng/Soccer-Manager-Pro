@@ -1,0 +1,67 @@
+{
+  "format": "record-tar-xz-v2",
+  "archiveSha256": "e5d345c6a8bd32003278f2a014d864b318e1c68ec37dc210b6c57b63b321dda3",
+  "streams": {
+    "aligned.bin": {
+      "bytes": 10368000,
+      "asRunGzipSha256": "888ac6bab6188ca5a94457485881e64faae4f8f68812432820b61697d92fb23d",
+      "asRunGzipBytes": 10371173,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "49fc48d2e1a3070afd454fc0b3bed27a2eec327779effd66892d480c72a37836"
+    },
+    "digests.bin": {
+      "bytes": 10368000,
+      "asRunGzipSha256": "72da38a1150b565ff0e7ffdf607f4fa5822115d66d042ca1e19198c69792f25d",
+      "asRunGzipBytes": 10371173,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "410b170aaf5f2f138c22d18e68f530690805955c442a8afa5b608ee7ca101b29"
+    },
+    "geometry.bin": {
+      "bytes": 10151812,
+      "asRunGzipSha256": "d53b77e11b5b29f13441a2aeb75c159d2244689309af86b082b2a2264c60aa87",
+      "asRunGzipBytes": 6878811,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 188,
+        "blockRecords": 1024
+      },
+      "sha256": "4e03ae4a810cfcdc745fdce9299cbfa7b3e16e0286b3e4ef3ac7bf8610aff2ec"
+    },
+    "ledger.bin": {
+      "bytes": 1523715,
+      "asRunGzipSha256": "f270a3f226b4b79c95fb90d6bd0d2ecef243a39861b39b6ae3a7501108d4d2b2",
+      "asRunGzipBytes": 116912,
+      "codec": {
+        "kind": "raw"
+      },
+      "sha256": "6a7b487998e1cf2d810c1cb93eff76586d56b857ed23e833e629e2e518adbfe5"
+    },
+    "team-possession.bin": {
+      "bytes": 2592000,
+      "asRunGzipSha256": "ad6459493e889992fed79c6c38ffbff2ffc663847874966e7dba9ba8312f717b",
+      "asRunGzipBytes": 29946,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 8,
+        "blockRecords": 1024
+      },
+      "sha256": "3a0f1f26065d55a725da1988731f49644bbe085d1aa8f1eb725419a041b71502"
+    },
+    "trajectory.bin": {
+      "bytes": 79056000,
+      "asRunGzipSha256": "0a08797464a9d91219d7001f2980e1d1b44ea5dddd757d699455a45613140ac4",
+      "asRunGzipBytes": 56467747,
+      "codec": {
+        "kind": "word-delta-shuffle-le-v1",
+        "recordBytes": 244,
+        "blockRecords": 1024
+      },
+      "sha256": "24a7bdf04c4decbe5bb198084e1c1dd5ae5dee5d42b0c9e8e4fe518774dba6da"
+    }
+  },
+  "asRunGzipContainersRetained": false
+}

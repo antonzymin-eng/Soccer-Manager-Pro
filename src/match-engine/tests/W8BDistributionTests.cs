@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/W8BDistributionTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (Unity host: resolve external ordinal after engine boot)
 // Created:  2026-10-15
 // Modified: 2026-10-15
@@ -350,7 +351,7 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
-        public void RetainedCancellation_RetriesOnlyWhileBothDeadlinesPermit(int team)
+        public void RetainedCancellation_RetriesOnlyWhileHandBudgetPermits(int team)
         {
             MatchEngine engine = Committed(GkDistributionPolicy.ShortKick, team, false);
             int keeper = team * 11;
@@ -363,7 +364,7 @@ namespace TacticalDirector.MatchEngine
             engine.TestOnly_SetPhysicsFrame(next - 1); engine.RunTick();
             Assert.AreEqual(1, engine.TestOnly_PassExecutorState(keeper).ExecutionMode, "early retry fits");
             engine.TestOnly_CancelGoalkeeperDistribution(keeper); engine.RunTick();
-            int tooLate = (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * 6 - 6;
+            int tooLate = (ClaimFrame + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES) / 6 * 6;
             engine.TestOnly_SetPhysicsFrame(tooLate - 1); engine.RunTick();
             Assert.AreEqual(0, engine.TestOnly_PassExecutorState(keeper).ExecutionMode, "late retry refused");
             Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(team));
@@ -372,12 +373,12 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
-        public void DefensiveLateAcceptedContact_IsCancelledAtEarlierHandBoundary(int team)
+        public void DefensiveLateAcceptedContact_IsCancelledByCornerBeforeContact(int team)
         {
             MatchEngine engine = Fixture(GkDistributionPolicy.ShortKick, team, false);
             int keeper = team * 11;
             GoalkeeperTickState state = Clone(engine.TestOnly_GoalkeeperState);
-            int boundary = (state.ClaimTick[team] + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * 6;
+            int boundary = ClaimFrame + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES + 1;
             engine.TestOnly_SetPhysicsFrame(boundary - 2);
             var request = new GoalkeeperDistributionRequest
             {
@@ -403,10 +404,12 @@ namespace TacticalDirector.MatchEngine
             };
             engine.RunTick(); // WINDUP expires; CONTACT waits for boundary tick.
             Assert.AreEqual(2, engine.TestOnly_PassExecutorState(keeper).State);
-            engine.RunTick(); // Earlier inherited hand boundary cancels before CONTACT.
+            engine.RunTick(); // Corner wins; Cancelled terminal remains until next Resolve.
+            Assert.AreEqual(RestartCue.Corner, engine.RestartAppliedThisTick);
+            Assert.AreEqual(0, cancelled); Assert.AreEqual(0, CountEvents(engine));
+            Assert.AreEqual(GoalkeeperState.Recovering, engine.TestOnly_GkState(team));
+            engine.RunTick();
             Assert.AreEqual(1, cancelled); Assert.AreEqual(0, CountEvents(engine));
-            Assert.AreEqual(keeper, engine.PossessingAgentId);
-            Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(team));
         }
 
         [TestCase(0)]
@@ -437,7 +440,7 @@ namespace TacticalDirector.MatchEngine
                 Assert.AreEqual(GoalkeeperDistributionFeedbackKind.Rejected, feedback.Kind); rejected++;
             };
             int stoppedAt = -1;
-            for (int frame = due; frame < (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * 6; frame += 6)
+            for (int frame = due; frame <= ClaimFrame + GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES; frame += 6)
             {
                 engine.TestOnly_SetPhysicsFrame(frame);
                 int before = rejected;
@@ -489,19 +492,18 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void ConfiguredFirstAttemptBudget_IsStrictlyBeforeBothGuards()
+        public void ConfiguredFirstAttemptBudget_FitsHandControlLimit()
         {
             foreach (GkDistributionPolicy policy in Enum.GetValues(typeof(GkDistributionPolicy)))
             {
                 DeliveryKind kind = Delivery(policy) == GoalkeeperDeliveryVariant.Roll ? DeliveryKind.Roll
                     : Delivery(policy) == GoalkeeperDeliveryVariant.Throw ? DeliveryKind.Throw : DeliveryKind.Kick;
                 int windup = Mathf.CeilToInt(GoalkeeperDistribution.ComputeWindupMs(kind) * 60f / 1000f);
-                int contact = Delay(policy) * 6 + windup + 1;
-                Assert.Less(contact, GoalkeeperConstants.GK_HOLD_MAX_TICKS * 6 - 5);
-                Assert.Less(contact, MatchEngineConstants.GkMaxHoldTicks);
+                int contact = Delay(policy) * 6 + windup;
+                Assert.LessOrEqual(contact, GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES);
             }
-            Assert.Less(TacticalInstructionsConstants.GK_DIST_MAX_POLICY_DELAY_TICKS * 6 + 84 + 1,
-                GoalkeeperConstants.GK_HOLD_MAX_TICKS * 6 - 5, "maximum permitted 1400 ms windup");
+            Assert.LessOrEqual(TacticalInstructionsConstants.GK_DIST_MAX_POLICY_DELAY_TICKS * 6 + 84,
+                GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES, "maximum permitted 1400 ms windup");
         }
 
         internal static MatchEngine Fixture(GkDistributionPolicy policy, int team, bool hasReceiver)
@@ -527,6 +529,7 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperTickState state = Clone(engine.TestOnly_GoalkeeperState);
             state.States[team] = GoalkeeperState.HandsOnBall;
             state.ClaimTick[team] = ClaimFrame / 6;
+            state.HandControlStartFrame[team] = ClaimFrame;
             state.ReleaseTickEarliest[team] = ClaimFrame / 6 + 1;
             engine.TestOnly_RestoreGoalkeeperState(in state);
             return engine;
@@ -601,7 +604,8 @@ namespace TacticalDirector.MatchEngine
                 (int[])s.ClaimTick.Clone(),
                 (int[])s.ReleaseTickEarliest.Clone(),
                 (int[])s.RecoveryCooldownEndTick.Clone(),
-                (bool[])s.DistributionPending.Clone());
+                (bool[])s.DistributionPending.Clone(),
+                (long[])s.HandControlStartFrame.Clone());
     }
 }
 
@@ -611,4 +615,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.1 | 2026-10-15 | — | Genuine smother handover interrupts ordinary PASS/SHOOT in WINDUP or CONTACT at both ends; canonical continuation. |
 // | 1.2 | 2026-10-15 | — | Same-keeper real restart ends the claim observation; live-claim detachment remains a failure and a new post-restart claim is observed. |
 // | 1.3 | 2026-10-16 | — | Resolve the external distribution ordinal lazily; fail loudly on unregistered ledger lookup. |
+// | 1.4 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

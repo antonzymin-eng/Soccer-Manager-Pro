@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): new §3.6.5 "Tackle Outcome Resolution" — #14 now resolves the tackle challenge outcome itself as a four-outcome abstract attribute duel, superseding the dead #8-mediates/#3-owns-contact delegation. §3.6.1 Purpose corrected. §3.12 constants index and tags table extended with the eleven new §3.6.5.5 constants and the `[FIXED]` tag. Top-of-file "no runtime code is produced at Stage 0" statement gains a scoped exception note for §3.6.5.)
-**Version:** 0.5
+**Last Updated:** November 10, 2026 (v0.7 — `ERR-014-009` (W13.0): §3.3.3 Step 1 / Step 7, §3.10.2 Invariant 3, §3.11.3 and §3.13 Step 5 — "retain current assignment" retains mode and target but refreshes `targetPosition` from the live snapshot; a retained target that is absent or inactive releases the mark to ZONAL at once (§2.2.2).)
+**Version:** 0.7
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -23,6 +23,17 @@ is produced at Stage 0.
 `TackleOutcomeResolver.cs` ships as runtime code alongside this revision
 (see §1.8, §4.1 for the same note). The rest of §3 is unaffected: its
 algorithms remain normative specification text pending Stage 1 activation.
+
+**Frame note (`ERR-014-008`, W13.0, November 10, 2026):** every `team.defendsX0`
+below is **read from the snapshot's frame** (§2.3 "Frame contract": the
+defending team's canonical attack-toward-+X frame, own goal at x = 0 for BOTH
+teams), which makes it **always true** in the engine. It is never inferred
+from the team id: for the away team the snapshot is already rotated, so
+`defendsX0 = (teamId == 0)` would apply the x = 105 branch to a snapshot whose
+defended goal is at x = 0 and invert threat ranking, runner direction,
+last-man selection, coverage depth and the trap's half test. The `x = 105`
+alternatives printed in this section are the formulas' generic definition for a
+non-canonical producer; no producer in the system selects them.
 
 ---
 
@@ -171,7 +182,11 @@ for each agent in holdShapePool (EntityId-ascending):
     // Step 1: Hysteresis check (§3.11) — only for non-ZONAL modes (T-DA-054)
     if assignments[agent].mode != MarkMode.ZONAL AND hysteresis[agent].dwellCounter > 0:
         hysteresis[agent].dwellCounter -= 1
-        // Retain current assignment; do not re-evaluate
+        // Retain current assignment (mode + target); do not re-evaluate.
+        // ERR-014-009: refresh targetPosition from the live snapshot (§2.2.2); if the
+        // retained target is absent or not isActive, release to ZONAL at once and reset
+        // hysteresis[agent] (the §3.11.3 ZONAL bypass) instead of retaining.
+        RefreshRetained(agent, assignments[agent], hysteresis[agent])
         continue
 
     // Step 2: Collect MAN_MARK candidates
@@ -195,6 +210,8 @@ for each agent in holdShapePool (EntityId-ascending):
         if speed > RUNNER_VELOCITY_THRESHOLD_M_S:
             // Normalise: for team defending x=0, own-goal direction = -X
             //            for team defending x=105, own-goal direction = +X
+            // (team.defendsX0 is read from the snapshot frame — ERR-014-008; always
+            //  true for the canonical-frame snapshot the engine supplies)
             // Use dot product of velocity with own-goal unit vector
             ownGoalDir = (team.defendsX0) ? Vector2(-1, 0) : Vector2(+1, 0)
             dot = dot(normalize(opponent.velocity.xy), ownGoalDir)
@@ -244,6 +261,10 @@ for each agent in holdShapePool (EntityId-ascending):
                             targetEntityId = bestTarget,
                             targetPosition = perception.GetAgent(bestTarget).position  // §2.2.2
                         }, hysteresis)
+
+    // ERR-014-009: the gate may RETAIN the current assignment (same target, or a competing
+    // candidate still inside its dwell). Refresh it exactly as in Step 1.
+    RefreshRetained(agent, assignments[agent], hysteresis[agent])
 ```
 
 ### 3.3.4 Anti-Chaos Post-Pass
@@ -316,6 +337,8 @@ threat(opponent) = perceivedGoalProximity(opponent)
 ```
 // For team defending x=0: ownGoalCenter = (0.0, 34.0)
 // For team defending x=105: ownGoalCenter = (105.0, 34.0)
+// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008; always
+//  true for the canonical-frame snapshot the engine supplies)
 
 ownGoalCenter = (team.defendsX0) ? Vector2(0.0f, 34.0f) : Vector2(105.0f, 34.0f)
 
@@ -798,6 +821,7 @@ offsideStepDepth = min(offsideStepDepth, OFFSIDE_MAX_DEPTH_M)        // safety c
 
 // For team defending x=0: x increases = forward into opponent half
 // For team defending x=105: step is mirrored (decrease x)
+// (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
 // currentLineDepth is always expressed as distToOwnGoal; convert back:
 // targetX = (team.defendsX0) ? offsideStepDepth : (105.0 − offsideStepDepth)
 
@@ -1017,6 +1041,7 @@ if directive.emergencyFlag AND distToOwnGoal(gkPos) > GK_EXPECTED_ZONE_MAX_X:
     // Abandoned zone center: midpoint of expected GK zone
     // For team defending x=0: zone = [0, GK_EXPECTED_ZONE_MAX_X]; center.x = 7.5
     // For team defending x=105: zone = [105-15, 105]; center.x = 97.5
+    // (defendsX0 is read from the snapshot frame, not the team id — ERR-014-008)
     abandonedZoneCenter = Vector2(
         (team.defendsX0) ? (GK_EXPECTED_ZONE_MAX_X / 2.0f)
                          : (105.0f − GK_EXPECTED_ZONE_MAX_X / 2.0f),
@@ -1119,6 +1144,14 @@ Applied BEFORE directive publication (FR-DA-024).
 `MIN_BACKLINE_AGENTS = 3` `[GT]`
 `MAX_MAN_MARK_ASSIGNMENTS = 4` `[GT]`
 `MAX_MARK_DISPLACEMENT_M = 20.0 m` `[GT]`
+
+*Invariant 3 and retained marks (`ERR-014-009`).* `targetPosition` is the
+opponent's **live** position on every published tick (§2.2.2), retained
+assignments included, so the displacement test measures where the opponent is
+now. A dwell-locked mark whose target runs more than 20.0 m from the slot is
+demoted to ZONAL on that tick; the lock does not exempt it (demotion does not
+set `overriddenThisTick`, and re-acquisition needs `MARK_DWELL_TICKS` fresh
+consecutive preferences).
 
 ### 3.10.3 Algorithm
 
@@ -1259,7 +1292,9 @@ MarkHysteresisState {
 // --- Pre-check (executed in §3.3 Step 1 before candidate evaluation) ---
 if assignments[a].mode != ZONAL AND hysteresis[a].dwellCounter > 0:
     hysteresis[a].dwellCounter -= 1
-    // Retain current assignment; skip candidate evaluation
+    // Retain current assignment (mode + target); skip candidate evaluation.
+    // ERR-014-009: the caller then refreshes targetPosition from the live snapshot
+    // (§2.2.2), or releases to ZONAL + resets hysteresis if the target is absent / inactive.
     return
 
 // --- Post-evaluation hysteresis gate (called after §3.3 selects bestCandidate) ---
@@ -1468,6 +1503,7 @@ for i in 0..holdShapePool.count:
     // Hysteresis pre-check
     if assignments[i].mode != MarkMode.ZONAL AND hysteresis[i].dwellCounter > 0:
         hysteresis[i].dwellCounter -= 1
+        RefreshRetained(i)  // ERR-014-009: live targetPosition, or release to ZONAL if target gone (§2.2.2)
         continue  // Retain current assignment
 
     // Evaluate candidates (§3.3 Steps 2–4)
@@ -1475,6 +1511,7 @@ for i in 0..holdShapePool.count:
     bestCandidate = SelectBestCandidate(candidates, agent)      // §3.5 threat + §3.4 cost
     ApplyHysteresisGate(i, bestCandidate, ref hysteresis[i],    // §3.11
                         ref assignments[i], shape)
+    RefreshRetained(i)  // ERR-014-009: the gate may have retained the current assignment
 
 // Step 6: Tackle intent evaluation (§3.6)
 tackleCount = 0
@@ -1528,3 +1565,5 @@ resolved May 18, 2026.
 | 0.3 | May 17, 2026 | AI agent | PASS-2 adversarial review fix pass. PASS-2-H1: §3.13 now includes Step 3b that explicitly resets `overriddenThisTick = false` for all pool slots before Steps 4/4a set emergency overrides — without this, stale `true` values from the previous tick would cause Step 5 to incorrectly skip non-emergency agents. PASS-2-M1: §3.10.3 Invariant 1 demotion now checks `eligiblePool is empty` before calling `argmin` — if all non-ZONAL DEFENSE-line agents have `overriddenThisTick = true`, a `break` exits the pass loop and allows the F4 post-loop check to handle the residual invariant violation, rather than crashing on an empty argmin. |
 | 0.4 | 2026-07-07 | AI agent | Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`. |
 | 0.5 | 2026-08-12 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): added §3.6.5 "Tackle Outcome Resolution" — #14 owns the tackle outcome (four-outcome abstract duel: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`) in addition to the intent, because neither original KD-6 delegate can accept dispatch (#8's `ActionType` ordinal space is exhausted; #3 defers slide-tackle collision to Stage 2). §3.6.1 Purpose corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch. §3.12 constants index extended with the eleven new §3.6.5.5 constants (ten `[GT]` + one `[FIXED]`) and the `[FIXED]` tag row. Top-of-file stage-binding statement gains a scoped exception note (§3.6.5 ships as Stage-0 runtime code; the rest of §3 is unaffected). Implemented in `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs`. |
+| 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: Frame note ahead of §3.1 and annotations at §3.3.3 Step 3, §3.5.2, §3.7.4 and §3.9.2. `team.defendsX0` is read from the snapshot frame (canonical attack-toward-+X, own goal at x = 0 for both teams — §2.3 Frame contract), never from the team id, so it is always true in the engine. No formula changes; the away team's inputs were already canonical, only the code's goal choice was wrong. Code: `DefensiveSnapshot.IsOwnGoalAtX0`, `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |
+| 0.7 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: retained assignments refresh `targetPosition` from the live snapshot (§2.2.2) — §3.3.3 Step 1 and Step 7, §3.10.2 Invariant 3 note, §3.11.3 pre-check and §3.13 Step 5 annotated; a retained target that is absent or `isActive == false` releases the mark to ZONAL at once with hysteresis reset (the dwell lock suppresses candidate thrash, it does not hold a mark on a player who has left the pitch). §3.11.6's thrash-prevention table is unchanged (its retained row keeps mode and target). Code: `MarkAssigner.RefreshRetained`. |

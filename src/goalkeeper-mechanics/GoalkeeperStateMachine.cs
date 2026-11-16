@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperStateMachine.cs
+// Modified: 2026-11-06 (W8 C deadline ownership comment)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
 // Created:  2026-05-28
@@ -140,8 +141,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         return GoalkeeperState.Distributing;
                     }
-                    // The legacy timeout is signalled by #11; the engine owns the physical
-                    // backstop. Only an accepted #5 request can enter Distributing.
+                    // Resolve owns the exact-frame Law-12 deadline (#11 §3.8.5).
+                    // Only an accepted #5 request can enter Distributing.
                     return GoalkeeperState.HandsOnBall;
                 }
 
@@ -374,4 +375,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | untouched, since nothing about the ball's trajectory ends the rush.          |
 // | 1.8 | 2026-10-15 | — | W8 B: no-intent expiry preserves HandsOnBall; only accepted execution distributes. |
 // | 1.9 | 2026-10-16 | — | Review cleanup: collapse redundant HandsOnBall timeout branch; accepted-request semantics unchanged. |
+// | 1.10 | 2026-11-06 | — | W8 C: tactical holding has no legal-deadline authority; Resolve owns §3.8.5. Comment only. |
 #endregion

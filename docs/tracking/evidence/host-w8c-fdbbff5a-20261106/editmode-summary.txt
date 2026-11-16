@@ -1,0 +1,53 @@
+# EditMode run — pinned host, commit fdbbff5a (PR #542 head), NUnit 3.5 XML summary
+
+command: Unity.exe -batchmode -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests -testResults <xml> -logFile <log>
+pre-run build: the assemblies from compile.txt (same Library, no source change; porcelain 0)
+start: 2026-11-06 21:38:11Z  end: 2026-11-06 22:08:03Z  duration: 1792.1 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=956 passed=939 failed=0 inconclusive=1 skipped=16
+process exit code: 2 — Unity's runner reports any non-passed, non-skipped result as failure; the only such result is the inconclusive case below (0 failed)
+
+fixtures touched by W8 C and its neighbours:
+  TacticalDirector.MatchEngine.W8CHandControlTests: Passed passed=99/99 failed=0 skipped=0
+  TacticalDirector.MatchEngine.W8BDistributionTests: Passed passed=99/99 failed=0 skipped=0
+  TacticalDirector.MatchEngine.W8BPrerequisiteTests: Passed passed=8/8 failed=0 skipped=0
+  TacticalDirector.MatchEngine.W8BDistributionDiagnosticTests: Skipped passed=4/5 failed=0 skipped=1
+  TacticalDirector.MatchEngine.KeeperRehandlingLawTests: Passed passed=42/42 failed=0 skipped=0
+  TacticalDirector.MatchEngine.KeeperOutsideAreaHandlingTests: Passed passed=52/52 failed=0 skipped=0
+  TacticalDirector.MatchEngine.GoalkeeperClockCorrectionTests: Passed passed=17/17 failed=0 skipped=0
+  TacticalDirector.MatchEngine.GoalkeeperBaselineSlotTests: Passed passed=6/6 failed=0 skipped=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotRestoreTests: Passed passed=19/19 failed=0 skipped=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotSchemaTests: Passed passed=28/28 failed=0 skipped=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotDigestReferenceTests: Passed passed=1/1 failed=0 skipped=0
+
+not passed (failed=0):
+  TacticalDirector.MatchEngine.CloseChanceDiagnosticTests.CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel: Ignored — Set TD_CREATION_DIAGNOSTIC=1 to run the close-chance creation instrument.
+  TacticalDirector.MatchEngine.FoulRateDiagnosticTests.FoulRateDiagnostic_ReportsRateVersusThreshold: Ignored — Set TD_FOUL_DIAGNOSTIC=1 to run the #435 §2.1 source-complete foul/card measurement.
+  TacticalDirector.MatchEngine.GkContactRateDiagnosticTests.GkContactRateDiagnostic_ReportsEpisodeAnatomy: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the keeper contact-rate anatomy instrument.
+  TacticalDirector.MatchEngine.GkRushDiagnosticTests.GkRushDiagnostic_ReportsRushAnatomy: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the keeper rush anatomy instrument.
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsHandlingQualityCeiling: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsSaveFunnel: Ignored — Set TD_GK_DIAGNOSTIC=1 to run the §5.Z.15 goalkeeper save-pipeline characterisation.
+  TacticalDirector.MatchEngine.GoalConversionDiagnosticTests.GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel: Ignored — Set TD_CONVERSION_DIAGNOSTIC=1 to run the conversion-at-contact instrument.
+  TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters: Ignored — Set TD_HEADER441_DIAGNOSTIC=1 to run the #441 header-reachability counters.
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsContactStream: Ignored — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsScorelineAsymmetry: Ignored — Set TD_BALANCE_DIAGNOSTIC=1 to run the §5.Z.11 balance characterisation.
+  TacticalDirector.MatchEngine.MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice: Inconclusive — Assume connected > 30 unmet (existing; also inconclusive on Linux)
+  TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace: Ignored — Set TD_PLATFORM_DIVERGENCE_OUT=<dir> to run the six-seed platform-divergence diagnostic.
+  TacticalDirector.MatchEngine.ShotOutcomeDiagnosticTests.ShotOutcomeDiagnostic_ReportsDistribution: Ignored — Set TD_SHOT_DIAGNOSTIC=1 to run the shot-outcome-distribution characterisation.
+  TacticalDirector.MatchEngine.TackleIntentDiagnosticTests.TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier: Ignored — Set TD_TACKLE_DIAGNOSTIC=1 to run the tackle-intent census instrument.
+  TacticalDirector.MatchEngine.W12GateFiringDiagnosticTests.W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates: Ignored — Set TD_W12_GATE_DIAGNOSTIC=1 to run the W12 gate-firing census.
+  TacticalDirector.MatchEngine.W8BDistributionDiagnosticTests.W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings: Ignored — Set TD_W8_B=1 for frozen B distribution and landing evidence.
+  TacticalDirector.MatchEngine.W8StageADiagnosticTests.W8StageADiagnostic_ReportsFrozenSixSeedBaseline: Ignored — Set TD_W8_STAGE_A=1 to run the preregistered W8 Stage A census.
+
+twelve longest cases (s):
+     386.2  TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+     193.4  TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+     192.2  TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+     191.2  TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+      97.3  TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+      97.1  TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+      79.8  TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+      64.3  TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+      63.8  TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+      57.2  TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+      35.6  TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(1089357896855742840UL)
+      35.5  TacticalDirector.MatchEngine.MatchEngineTackleTests.SaveAndRestoreCarryTheTackleLatches(3517370462UL)

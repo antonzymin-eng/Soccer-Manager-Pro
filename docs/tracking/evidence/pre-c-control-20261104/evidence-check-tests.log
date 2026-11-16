@@ -1,0 +1,10 @@
+test_duplicate_publish_is_rejected (test_evidence_checks.EvidenceChecks.test_duplicate_publish_is_rejected) ... ok
+test_missing_publish_is_rejected (test_evidence_checks.EvidenceChecks.test_missing_publish_is_rejected) ... ok
+test_nonterminal_digest_difference_is_detected (test_evidence_checks.EvidenceChecks.test_nonterminal_digest_difference_is_detected) ... ok
+test_publish_order_may_differ_from_canonical_order (test_evidence_checks.EvidenceChecks.test_publish_order_may_differ_from_canonical_order) ... ok
+test_unaccounted_ledger_bytes_are_rejected (test_evidence_checks.EvidenceChecks.test_unaccounted_ledger_bytes_are_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+
+OK

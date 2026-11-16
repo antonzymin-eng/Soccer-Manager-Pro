@@ -1,4 +1,5 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-15 (W8 B accepted-only distribution)
 // Created:  2026-05-31
 // Modified: 2026-05-31
@@ -236,14 +237,14 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.AreEqual(GoalkeeperState.Distributing, result, "HandsOnBall should transition to Distributing when release tick is reached and DistributeIntent is set.");
         }
 
-        // ── T-5.1.1-H  HandsOnBall forced release after GK_HOLD_MAX_TICKS ────
+        // ── Tactical holding has no legal-deadline authority (W8 C) ────
 
-        /// <summary>B no-intent guard cannot enter Distributing without an accepted #5 request.</summary>
+        /// <summary>A tactical heartbeat cannot manufacture a distribution at the legal deadline.</summary>
         [Test]
-        public void HandsOnBall_SixSecondRuleExpired_WithoutAcceptedRequest_RemainsHandsOnBall()
+        public void HandsOnBall_TacticalClockHasNoLegalDeadline_WithoutAcceptedRequest()
         {
             int claimTick  = 0;
-            int currentTick = GoalkeeperConstants.GK_HOLD_MAX_TICKS; // = 60 ticks
+            int currentTick = GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES; // deliberately beyond the law deadline; Resolve owns it
 
             GoalkeeperState result = GoalkeeperStateMachine.EvaluateTacticalTransition(
                 currentState:           GoalkeeperState.HandsOnBall,
@@ -263,7 +264,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 ballSafelyUpfield:      true);
 
             Assert.AreEqual(GoalkeeperState.HandsOnBall, result,
-                "B no-intent expiry must not manufacture an accepted #5 distribution.");
+                "Resolve owns the legal deadline; a tactical heartbeat cannot manufacture a distribution.");
         }
 
         // ── T-5.1.1-I  Recovering → Set on cooldown elapsed ──────────────────
@@ -1737,4 +1738,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.5 | 2026-09-26 | — | W8 / ERR-011-017 review: T-5.1.1-I2 locks the not-elapsed side of the recovery cooldown (tick 9 < end 10 stays Recovering off-baseline; tick 10 returns to Set). T-5.1.1-I only covered the elapsed side. |
 // | 1.6 | 2026-09-27 | — | ERR-011-018: T-GK-I-011 stub text names #12 GetFormationSlot (via §3.3.0.1) instead of the phantom GetGKBaselineSlot and records that the baseline read is locked at composition level; still ignored — the reactive-radius clamp has no consumer. No test behaviour change. |
 // | W8 B | 2026-10-15 | — | No-intent expiry remains HandsOnBall; accepted #5 request owns distribution. |
+// | 1.7 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

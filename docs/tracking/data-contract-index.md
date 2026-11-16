@@ -173,6 +173,7 @@ read the value from the file.
 | Entity | Owning spec § | Assembly | Type(s) |
 |---|---|---|---|
 | Team tactic | #21 §2.2.1 | `tactical-instructions` | `TeamTactic` |
+| Requested/effective kickoff formation observation | #12 FR-PA-039, #21 §4.6.1 | `match-engine` → `match-viewer` | `MatchFormationState` → `LiveMatchFrame.Formations` |
 | Player instructions | #21 §2.2.2 | `tactical-instructions` | `PlayerInstructions` |
 | Per-agent resolved tactic | #21 §2.2.3 | `tactical-instructions` | `PlayerTactic` |
 | Tactic enums (APPEND-only) | #21 §2.2.4, Appendix A | `tactical-instructions` | see §2.2.4 |
@@ -263,6 +264,7 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.7 | November 10, 2026 | #434: maps the concrete requested/effective formation observation to its owning engine producer and frame consumer; definitions remain in #12/#21. |
 | v1.6 | October 30, 2026 | Cross-document consistency review at `38395f8`: §8 still listed #44 and #49 as having no assembly although `src/discipline/` and `src/localization/` exist — both rows removed and pointed at instead (§3 discipline row, §7 localization row). §5: `SEASON_STATE_FORMAT_VERSION` re-pointed to `SeasonLoopConstants.cs` (it was never in `SeasonSaveConstants.cs`); `DISCIPLINE_SAVE_FORMAT_VERSION` and `CAREER_SLOT_META_FORMAT_VERSION` rows added. No version values added. |
 | v1.5 | October 21, 2026 | #31 T2 AR round 5 (ERR-031-015): the Manager-transfer-command row no longer says the counterparty ledger is untouched "by design" — it is the interim option (b) with the (a)-vs-(b) owner decision open (§7.2, open-issues `transfer-counterparty-ledger`). Pointer wording only; no contract changed. |
 | v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |

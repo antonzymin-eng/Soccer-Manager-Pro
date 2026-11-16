@@ -1,0 +1,25 @@
+{
+  "baseCommit": "b6505350c76968b15decaf5e56c37cc1b1ba2707",
+  "arm": "C",
+  "sourceFiles": {
+    "src/goalkeeper-mechanics/GoalkeeperConstants.cs": "4fd74e4739833d7ff54d8a82a31f2482b201a59237c24621ec9ea9d5ea3a93cf",
+    "src/goalkeeper-mechanics/GoalkeeperMechanics.cs": "33fdf1e30cab27f5f7852ede7f43b537f42c61a0b11c4be4b9a0306b651ae7c9",
+    "src/goalkeeper-mechanics/GoalkeeperStateMachine.cs": "1fbf9dd44aa357a2d2a41994bddb033ab5bf29b3f67a69cb686f7c46793bfc11",
+    "src/goalkeeper-mechanics/GoalkeeperTickState.cs": "e37b4d1d7ad35c88c61de0b607c4cfbc95056af4e583cdb66775f4acbe47a048",
+    "src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs": "64eb25fcd5ec581b7e50d2016c7da78d13134f1230b76d539200faaa5a804c68",
+    "src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs": "0b66aaf0fdc6d7143bf668fc7be8296a2e48d4cf89b91fc627b80900712bcf81",
+    "src/match-engine/MatchEngine.GoalkeeperDistribution.cs": "b5fd0f47b06bed5d5bd73b90107038f01ef94addfbd38456f6160521145e2744",
+    "src/match-engine/MatchEngine.KeeperHandControlLaw.cs": "5d2b11064208b026980f5a2953227f61c9632d10498474453f88406eb1a404e6",
+    "src/match-engine/MatchEngine.KeeperHandlingLaw.cs": "caa54c8e3b5bdd4bbc448c0454e961918aa66a2791b66e80941fa2f309b46989",
+    "src/match-engine/MatchEngine.cs": "5ee21ed48eb9154108aab1edfa3c90735110fb7a31112fc3ba3aca1b88441460",
+    "src/match-engine/MatchEngineConstants.cs": "066634ec141b7f0fd4a03071899a8cf1dc2e0b4f0834edfffd6186fc760ac5ed",
+    "src/match-engine/tests/GoalkeeperBaselineSlotTests.cs": "4a2b9a54bff35b225781854748812e73c181b29d1e80181557edcfabba3d90ef",
+    "src/match-engine/tests/GoalkeeperClockCorrectionTests.cs": "a5776976b3e67ceb08edce6b48001dcd766bfcf728f692bff37f0f81767348a3",
+    "src/match-engine/tests/KeeperOutsideAreaHandlingTests.cs": "cf08c13acfb6f74b8d383de6319946041b47292c8825ab136e1cda6f3fa91d2b",
+    "src/match-engine/tests/KeeperRehandlingLawTests.cs": "ea7f181e2c97ae9a5612b0f49b0c7cd65a87ea9584ffda8ba29d0dddb2982b41",
+    "src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs": "c4320e1400ab17aa614430752b791884e4420e5f6e3e5809dff1ea8f73308674",
+    "src/match-engine/tests/W8BDistributionDiagnosticTests.cs": "72d4261519a0193af54905552f02c1cbbd957c52463ed1f81a7db9fcd3cc14ab",
+    "src/match-engine/tests/W8BDistributionTests.cs": "f74bb8a18e9c705d67ec039816dc0dd5a0c0747276f0b23f9ca6834986715fed",
+    "src/match-engine/tests/W8CHandControlTests.cs": "1dc4729e69146333cb4ad31e34d101e7c961ab70c5f2102daa456f94c77ee6e4"
+  }
+}

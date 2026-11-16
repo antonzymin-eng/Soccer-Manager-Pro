@@ -1,0 +1,19 @@
+{
+  "ruleVersion": "1.1",
+  "date": "2026-11-04",
+  "sourceCommit": "1d3cebf3b8d874715158067d9deb5fa48b309a30",
+  "asRunFreezeSha256": "e47471bcf87ceb342ea881e8490ba98d90b7525432e980454ca3a44326a5432c",
+  "captureArchiveSha256": "dc9dba77904c630a2a60a4af68aadc680f9f04470f67748e3ea456f61aa69508",
+  "inputs": {
+    "PROTOCOL.md": "7aca0d2c668e16643970e5f75ae94624d943ebd3d132cc8d874af1da6e5bc035",
+    "analyze.py": "f142c21ec47d7b7b55390289d6a9cb6dc4e0ca1b1b0f57a46630346868e1a187",
+    "review.py": "a98cd22b1d27b4bed233757b43963b99ac13a58574a2249bf73020e487a72119",
+    "test_selection.py": "06746c05fd4170dc19304442199cca23156ff6a240edbcfd763f27e9f070cc15",
+    "test_evidence_checks.py": "9f2d102056c80239ab4861a14e2d5a42f7640d61f453627d419ce5142c9094d6",
+    "Program.cs.txt": "cc982444c194c15059cca9f240bc6d472a688592ec6a5be7e0a9add3531cd4f6",
+    "FrozenW8.cs.txt": "3c5198e1b5a343f9331b0512da61fe27ead197aec64fde75d68bfcd91afced6a",
+    "observer-only.patch": "c29deac55fb67a5b679a4ffd488b4b48670313567629358d4e9e256b0d9b6a40",
+    "expected.json": "1ecb7d1970ea0594de62c4e049d90f916bfadeaff580ae84d43ea66a586b0182"
+  },
+  "scope": "Pre-C analysis amendment before any C capture; raw instrument and captured games unchanged."
+}

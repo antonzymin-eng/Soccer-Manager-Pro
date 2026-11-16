@@ -1,0 +1,69 @@
+{
+  "ruleVersion": "1.1",
+  "releaseDecisionsUnchanged": 126,
+  "selectedWindowsUnchanged": 12,
+  "allRecordedStreamHashesUnchanged": true,
+  "abstractLooseTackleOutcomesExcluded": 37,
+  "appliedTouches": 16264,
+  "sameFrameCases": [
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 24126,
+      "releaseOrder": 2,
+      "passEventOrder": 3,
+      "distributionEventOrder": 4,
+      "touchOrder": 5,
+      "restrictionClearOrder": 6,
+      "releasingKeeper": 11,
+      "toucher": 10,
+      "distanceM": 0.8402877307024047,
+      "acceptanceRadiusM": 1.0,
+      "passVelocity": [
+        -9.658854484558105,
+        4.960748195648193,
+        0.7076542377471924
+      ],
+      "approachDot": 9.06636780799196,
+      "minimumSpeedMps": 0.5,
+      "finalPossessor": 10,
+      "shotsInWindow": 0,
+      "goalsInWindow": 0,
+      "decision": "retain: executor CONTACT precedes approaching first touch in Resolve"
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 24378,
+      "releaseOrder": 2,
+      "passEventOrder": 3,
+      "distributionEventOrder": 4,
+      "touchOrder": 5,
+      "restrictionClearOrder": 6,
+      "releasingKeeper": 11,
+      "toucher": 10,
+      "distanceM": 0.8350846822544381,
+      "acceptanceRadiusM": 1.0,
+      "passVelocity": [
+        -10.829697608947754,
+        4.758249282836914,
+        0.8930643200874329
+      ],
+      "approachDot": 5.2669050567111455,
+      "minimumSpeedMps": 0.5,
+      "finalPossessor": 10,
+      "shotsInWindow": 0,
+      "goalsInWindow": 0,
+      "decision": "retain: executor CONTACT precedes approaching first touch in Resolve"
+    }
+  ],
+  "selectedFirstOtherKinds": {
+    "touch:first-touch": 11,
+    "touch:loose-pickup": 1
+  },
+  "coverageLimits": {
+    "headerContacts": 0,
+    "handAttempts": 165,
+    "appliedHandContacts": 165,
+    "rejectedHandAttempts": 0,
+    "interpretation": "Header and rejected-hand physical producer paths are not exercised by this corpus; unit checks are separate."
+  }
+}

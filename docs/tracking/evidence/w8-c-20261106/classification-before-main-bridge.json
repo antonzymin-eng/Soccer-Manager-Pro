@@ -1,0 +1,205 @@
+{
+  "B_adopted_fingerprints_reproduced": 6,
+  "traceRecordBytes": 77,
+  "comparison": [
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "4ad060266acda3385a417c96ec38af5fd8479c3870e34ad99cd5b9ef41b62e1b",
+      "C_traceSHA256": "4ad060266acda3385a417c96ec38af5fd8479c3870e34ad99cd5b9ef41b62e1b"
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "6733b65cb9b49520fc6713fdb349f6b5c03820d72fa46ac9afc52522c93939a4",
+      "C_traceSHA256": "6733b65cb9b49520fc6713fdb349f6b5c03820d72fa46ac9afc52522c93939a4"
+    },
+    {
+      "seed": "0000000000000001",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "746f3b6e8891f359e9626f10694fa9dda745ad35547cd9123300bb5a07247bea",
+      "C_traceSHA256": "746f3b6e8891f359e9626f10694fa9dda745ad35547cd9123300bb5a07247bea"
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "f9cb93d4c7933face5a59d99b1c600f879390031a29ee906ce95af10ef4c140d",
+      "C_traceSHA256": "f9cb93d4c7933face5a59d99b1c600f879390031a29ee906ce95af10ef4c140d"
+    },
+    {
+      "seed": "0000000099887766",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "0a97bb9b9ae4195f706360b72cceb84f632c241e4c93c6bf1a87ee1d2539a2fe",
+      "C_traceSHA256": "0a97bb9b9ae4195f706360b72cceb84f632c241e4c93c6bf1a87ee1d2539a2fe"
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frames": 324000,
+      "firstDivergence": null,
+      "B_traceSHA256": "d44f8c8c0985f9142434370e1d223d98b166ae4189b49f288725fd4500b87ad1",
+      "C_traceSHA256": "d44f8c8c0985f9142434370e1d223d98b166ae4189b49f288725fd4500b87ad1"
+    }
+  ],
+  "arms": {
+    "B": {
+      "handReleases": 126,
+      "physicalTouchRowsAfterDuplicateEffects": 16263,
+      "selectedWindows": 12,
+      "completeWindows": 12,
+      "censoredWindows": 0,
+      "overlappingWindows": 3,
+      "playedFrames": 1944000,
+      "corpusGoals": 47,
+      "corpusShots": 146,
+      "corpusGoalsPer600Frames": 0.014506172839506172,
+      "uniqueSelectedEvents": {
+        "ownShots": 0,
+        "opponentShots": 8,
+        "ownGoals": 0,
+        "opponentGoals": 6
+      },
+      "uniqueShots": 8,
+      "uniqueGoals": 6,
+      "windowMembershipTotals": {
+        "ownShots": 0,
+        "opponentShots": 8,
+        "ownGoals": 0,
+        "opponentGoals": 6
+      },
+      "perWindow": {
+        "ownShots": 0.0,
+        "opponentShots": 0.6666666666666666,
+        "ownGoals": 0.0,
+        "opponentGoals": 0.5
+      }
+    },
+    "C": {
+      "handReleases": 126,
+      "physicalTouchRowsAfterDuplicateEffects": 16263,
+      "selectedWindows": 12,
+      "completeWindows": 12,
+      "censoredWindows": 0,
+      "overlappingWindows": 3,
+      "playedFrames": 1944000,
+      "corpusGoals": 47,
+      "corpusShots": 146,
+      "corpusGoalsPer600Frames": 0.014506172839506172,
+      "uniqueSelectedEvents": {
+        "ownShots": 0,
+        "opponentShots": 8,
+        "ownGoals": 0,
+        "opponentGoals": 6
+      },
+      "uniqueShots": 8,
+      "uniqueGoals": 6,
+      "windowMembershipTotals": {
+        "ownShots": 0,
+        "opponentShots": 8,
+        "ownGoals": 0,
+        "opponentGoals": 6
+      },
+      "perWindow": {
+        "ownShots": 0.0,
+        "opponentShots": 0.6666666666666666,
+        "ownGoals": 0.0,
+        "opponentGoals": 0.5
+      }
+    }
+  },
+  "ordinaryGameplayAndBallStreamsEqual": true,
+  "snapshotDigests": {
+    "B": [
+      {
+        "seed": "0F1E2D3C4B5A6978",
+        "frames": "324000",
+        "homeGoals": "3",
+        "awayGoals": "4",
+        "snapshotDigest": "6ef1e77f9dcf86c4bce5e1f66a989a64b42f26c268ead53340b9c57d282b4072"
+      },
+      {
+        "seed": "00000000D1A6D05E",
+        "frames": "324000",
+        "homeGoals": "2",
+        "awayGoals": "3",
+        "snapshotDigest": "06e3daf03f1c45a112f958c4bfac980c30956971e175b35b7d815d685b4caf93"
+      },
+      {
+        "seed": "0000000000000001",
+        "frames": "324000",
+        "homeGoals": "2",
+        "awayGoals": "4",
+        "snapshotDigest": "25ceac27f7d4e87fb1166227f683eaff87336efd301fa5500b6d212a28deba59"
+      },
+      {
+        "seed": "00000000ABCDEF12",
+        "frames": "324000",
+        "homeGoals": "5",
+        "awayGoals": "6",
+        "snapshotDigest": "77b4e0cc08a4ac903fbb364f2bb28612eaa39b380955111c58fe040ebf474a80"
+      },
+      {
+        "seed": "0000000099887766",
+        "frames": "324000",
+        "homeGoals": "4",
+        "awayGoals": "4",
+        "snapshotDigest": "ccc99ba78dce889ed07d18609c568486920ffd97c45cb283f15d7f5c203f6e4f"
+      },
+      {
+        "seed": "000000005A5A5A5A",
+        "frames": "324000",
+        "homeGoals": "4",
+        "awayGoals": "6",
+        "snapshotDigest": "6961b03ff4cb1512967c01c46158274b3516bb4c632d921f75e5f6baad936eb3"
+      }
+    ],
+    "C": [
+      {
+        "seed": "0F1E2D3C4B5A6978",
+        "frames": "324000",
+        "homeGoals": "3",
+        "awayGoals": "4",
+        "snapshotDigest": "e4ea26b70934be89498ae50ec4033440d4f72e5a6bb7d55747b96cd2c816ae01"
+      },
+      {
+        "seed": "00000000D1A6D05E",
+        "frames": "324000",
+        "homeGoals": "2",
+        "awayGoals": "3",
+        "snapshotDigest": "c25534251f87a973a95a28fbe1f06828bc01bb0c65425c2857d5dce14002bdfb"
+      },
+      {
+        "seed": "0000000000000001",
+        "frames": "324000",
+        "homeGoals": "2",
+        "awayGoals": "4",
+        "snapshotDigest": "82ce2eeee91271f58bd68b22ef92652edb49746f9a48ee1e3d3a58204b632032"
+      },
+      {
+        "seed": "00000000ABCDEF12",
+        "frames": "324000",
+        "homeGoals": "5",
+        "awayGoals": "6",
+        "snapshotDigest": "adbb4c93ff7025a56ffcab54f0bd8448b70453e025544ffd6c712bd16041a3e7"
+      },
+      {
+        "seed": "0000000099887766",
+        "frames": "324000",
+        "homeGoals": "4",
+        "awayGoals": "4",
+        "snapshotDigest": "104cc13e7bbe3e2294504b4640ce687567c05cc3bf94cb81a8dff061208e6e2f"
+      },
+      {
+        "seed": "000000005A5A5A5A",
+        "frames": "324000",
+        "homeGoals": "4",
+        "awayGoals": "6",
+        "snapshotDigest": "32d2413f933e26f7078e8d9640b82cbaa0b958fb37cccc136640f99a355b50f2"
+      }
+    ]
+  }
+}

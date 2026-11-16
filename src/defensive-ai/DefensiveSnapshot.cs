@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/DefensiveSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §2.3, §4.4, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
+// Spec:     Defensive AI #14 §2.3, §4.4, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
 // Purpose:  Full tick input container for DefensiveAITick. Populated once per tick by
 //           the match orchestrator from #7, #12, #13 state before Tick() is called.
 
@@ -20,19 +20,44 @@ namespace TacticalDirector.DefensiveAI
     ///
     /// <see cref="Agents"/> contains all up-to-22 agents (both teams). Callers filter by
     /// <see cref="DefensiveTeamId"/> to obtain own-team or opponent agents.
+    ///
+    /// <para>
+    /// <b>Frame contract (ERR-014-008, #14 §2.3).</b> Every position and velocity in this snapshot
+    /// (<see cref="BallPosition"/>, <see cref="BallVelocity"/>, <see cref="GkPosition"/>, and each
+    /// <see cref="DefensiveAgentSnapshot"/> <c>Position</c> / <c>Velocity</c> / <c>BaselineSlot</c>,
+    /// opponents included) is expressed in the <b>defending team's canonical attack-toward-+X frame</b>:
+    /// the defended goal-line is x = 0 and the goal being attacked is x = 105, for BOTH teams. The
+    /// composition root performs the away-team 180-degree pitch mirror before filling the snapshot, so
+    /// this is NOT world space. <see cref="DefensiveTeamId"/> identifies who is defending and which
+    /// agents are own-team; it says nothing about which goal is defended. Defensive AI must read the
+    /// defended goal from <see cref="IsOwnGoalAtX0"/>, never from the team id.
+    /// </para>
     /// </summary>
     public sealed class DefensiveSnapshot
     {
+        /// <summary>
+        /// True when the defended goal-line is x = 0 in this snapshot's frame. Always true: the frame
+        /// contract above places the defended goal at x = 0 for both teams (ERR-014-008). Every
+        /// <c>defendsX0</c> decision in #14 (threat ranking, runner direction, last-man selection,
+        /// tackle coverage depth, offside-trap half test and step-up depth) is sourced here, so the
+        /// frame is stated once and a future non-canonical producer has exactly one place to change.
+        /// </summary>
+        public static bool IsOwnGoalAtX0 => true;
+
         /// <summary>
         /// Tick index when this snapshot was captured. Used for F1 stale-perception detection
         /// (FR-DA-029): if snapshot.TickIndex &lt; lastProcessedTick, reuse previous tick output.
         /// </summary>
         public int TickIndex;
 
-        /// <summary>TeamId of the team running the defensive algorithm (0 = home, 1 = away).</summary>
+        /// <summary>
+        /// TeamId of the team running the defensive algorithm (0 = home, 1 = away). Identifies the own
+        /// team only; it does NOT select the defended goal (see the frame contract on the class and
+        /// <see cref="IsOwnGoalAtX0"/>).
+        /// </summary>
         public int DefensiveTeamId;
 
-        /// <summary>Ball world-space position (X, Y). Z available but unused at Stage 0.</summary>
+        /// <summary>Ball position (X, Y) in the defending team's canonical frame. Z available but unused at Stage 0.</summary>
         public Vector2 BallPosition;
 
         /// <summary>Ball velocity vector (m/s). Magnitude used for offside-trap trigger (§3.7.2 condition 1).</summary>
@@ -60,7 +85,7 @@ namespace TacticalDirector.DefensiveAI
         public int GkEntityId;
 
         /// <summary>
-        /// Perceived world-space position of the defensive team's goalkeeper (X, Y).
+        /// Perceived position of the defensive team's goalkeeper (X, Y), in the canonical frame.
         /// Used by LastManDetector COVER_GK_ZONE trigger (§3.9). Set to Vector2.zero if GK absent.
         /// </summary>
         public Vector2 GkPosition;
@@ -126,4 +151,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   (reduced dwell when true; false = baseline = neutral).          |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition: + MarkingOrientation routing field (FR-TI-033),|
 // |         |            |        |   ctor-seeded Balanced (zero-value default is BallOriented).      |
+// | 1.5     | 2026-11-10 | —      | ERR-014-008: documents the canonical-frame contract (own goal at x = 0 for |
+// |         |            |        |   both teams; positions were mis-documented as world space) and adds the   |
+// |         |            |        |   IsOwnGoalAtX0 frame accessor that replaces every team-id goal decision.  |
 #endregion

@@ -1,0 +1,40 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  UnityShim -> /workspace/work/pre-c-control/observed/tools/dotnet-ci/UnityShim/bin/Debug/netstandard2.1/UnityShim.dll
+  project-constants.gen -> /workspace/work/pre-c-control/observed/src/project-constants/bin/Debug/netstandard2.1/TacticalDirector.ProjectConstants.dll
+  deterministic-sim.gen -> /workspace/work/pre-c-control/observed/src/deterministic-sim/bin/Debug/netstandard2.1/TacticalDirector.DeterministicSim.dll
+  event-system.gen -> /workspace/work/pre-c-control/observed/src/event-system/bin/Debug/netstandard2.1/TacticalDirector.EventSystem.dll
+  ball-physics.gen -> /workspace/work/pre-c-control/observed/src/ball-physics/bin/Debug/netstandard2.1/TacticalDirector.BallPhysics.dll
+  agent-movement.gen -> /workspace/work/pre-c-control/observed/src/agent-movement/bin/Debug/netstandard2.1/TacticalDirector.AgentMovement.dll
+  collision-system.gen -> /workspace/work/pre-c-control/observed/src/collision-system/bin/Debug/netstandard2.1/TacticalDirector.CollisionSystem.dll
+  first-touch.gen -> /workspace/work/pre-c-control/observed/src/first-touch/bin/Debug/netstandard2.1/TacticalDirector.FirstTouch.dll
+  pass-mechanics.gen -> /workspace/work/pre-c-control/observed/src/pass-mechanics/bin/Debug/netstandard2.1/TacticalDirector.PassMechanics.dll
+  shot-mechanics.gen -> /workspace/work/pre-c-control/observed/src/shot-mechanics/bin/Debug/netstandard2.1/TacticalDirector.ShotMechanics.dll
+  perception-system.gen -> /workspace/work/pre-c-control/observed/src/perception-system/bin/Debug/netstandard2.1/TacticalDirector.PerceptionSystem.dll
+  heading-mechanics.gen -> /workspace/work/pre-c-control/observed/src/heading-mechanics/bin/Debug/netstandard2.1/TacticalDirector.HeadingMechanics.dll
+  goalkeeper-mechanics.gen -> /workspace/work/pre-c-control/observed/src/goalkeeper-mechanics/bin/Debug/netstandard2.1/TacticalDirector.GoalkeeperMechanics.dll
+  tactical-instructions.gen -> /workspace/work/pre-c-control/observed/src/tactical-instructions/bin/Debug/netstandard2.1/TacticalDirector.TacticalInstructions.dll
+  positioning-ai.gen -> /workspace/work/pre-c-control/observed/src/positioning-ai/bin/Debug/netstandard2.1/TacticalDirector.PositioningAI.dll
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+  decision-tree.gen -> /workspace/work/pre-c-control/observed/src/decision-tree/bin/Debug/netstandard2.1/TacticalDirector.DecisionTree.dll
+  pressing-ai.gen -> /workspace/work/pre-c-control/observed/src/pressing-ai/bin/Debug/netstandard2.1/TacticalDirector.PressingAI.dll
+  defensive-ai.gen -> /workspace/work/pre-c-control/observed/src/defensive-ai/bin/Debug/netstandard2.1/TacticalDirector.DefensiveAI.dll
+  attacking-ai.gen -> /workspace/work/pre-c-control/observed/src/attacking-ai/bin/Debug/netstandard2.1/TacticalDirector.AttackingAI.dll
+  player-database.gen -> /workspace/work/pre-c-control/observed/src/player-database/bin/Debug/netstandard2.1/TacticalDirector.PlayerDatabase.dll
+  match-engine.gen -> /workspace/work/pre-c-control/observed/src/match-engine/bin/Debug/netstandard2.1/TacticalDirector.MatchEngine.dll
+  performance-optimization.gen -> /workspace/work/pre-c-control/observed/src/performance-optimization/bin/Debug/netstandard2.1/TacticalDirector.PerformanceOptimization.dll
+  testing-strategy.gen -> /workspace/work/pre-c-control/observed/src/testing-strategy/bin/Debug/netstandard2.1/TacticalDirector.TestingStrategy.dll
+  UnityShim.TestTools -> /workspace/work/pre-c-control/observed/tools/dotnet-ci/UnityShim.TestTools/bin/Debug/netstandard2.1/UnityShim.TestTools.dll
+  Capture -> /workspace/work/pre-c-control/observed/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll
+
+Build succeeded.
+
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(25,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.CandidateCount' is never assigned to, and will always have its default value 0 [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(26,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.TiebreakerApplied' is never assigned to, and will always have its default value false [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+/workspace/work/pre-c-control/observed/src/decision-tree/ActionSelector.cs(27,25): warning CS0649: Field 'ActionSelector.SelectionMetadata.FallbackToHold' is never assigned to, and will always have its default value false [/workspace/work/pre-c-control/observed/src/decision-tree/decision-tree.gen.csproj]
+    3 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:38.51

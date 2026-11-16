@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/GoalkeeperClockCorrectionTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-09-26
 // Modified: 2026-09-26 (v1.1 review closure: live distribution-intent teardown cases)
@@ -24,9 +25,8 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong MatchSeed = 0x0BADF00DDEADBEEFUL;
 
-        // Deep into a match and mid-way through a six-frame tactical cell: the raw 60 Hz frame (6003) and
-        // the tactical tick (1000) differ by far more than the 60-tick hold limit, so a frame index passed
-        // where a tick is expected cannot go unnoticed.
+        // A non-aligned claim frame keeps the physical clock distinct from the tactical cell.
+        // Tactical time still owns policy/recovery; C gives legal-deadline authority only to Resolve.
         private const int ClaimFrame = 6003;
 
         [Test]
@@ -41,27 +41,27 @@ namespace TacticalDirector.MatchEngine
 
         [TestCase(0)]
         [TestCase(1)]
-        public void HandEpisode_HoldsAcrossTacticalPasses_UntilTheTacticalHoldLimit(int teamId)
+        public void HandEpisode_TacticalPassesPreserveExactClockWithoutAdjudicatingDeadline(int teamId)
         {
             MatchEngine engine = NewEngine();
             int claimTick = ClaimFrame / GoalkeeperConstants.FramesPerTacticalTick;
             StageHandEpisode(engine, teamId, ClaimFrame);
 
-            // First tactical pass after the claim. Before ERR-011-017 the raw frame (6006) was compared
-            // with the 10 Hz claim tick (1000), matured the 60-tick limit at once and forced Distributing.
+            // Tactical-only seam: no Resolve adjudication runs, even when the clock is advanced past 480.
             DriveTacticalAt(engine, (claimTick + 1) * GoalkeeperConstants.FramesPerTacticalTick);
             Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId),
                 "one tactical pass after the claim is 0.1 s of hold, not six seconds");
 
             DriveTacticalAt(engine,
-                (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS - 1) * GoalkeeperConstants.FramesPerTacticalTick);
+                (claimTick + (GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES / GoalkeeperConstants.FramesPerTacticalTick) - 1) * GoalkeeperConstants.FramesPerTacticalTick);
             Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId),
                 "one tick short of the hold limit the keeper still holds");
 
             DriveTacticalAt(engine,
-                (claimTick + GoalkeeperConstants.GK_HOLD_MAX_TICKS) * GoalkeeperConstants.FramesPerTacticalTick);
+                (claimTick + 2 * (GoalkeeperConstants.GK_HAND_CONTROL_MAX_FRAMES / GoalkeeperConstants.FramesPerTacticalTick)) * GoalkeeperConstants.FramesPerTacticalTick);
             Assert.AreEqual(GoalkeeperState.HandsOnBall, engine.TestOnly_GkState(teamId),
-                "B no-intent expiry signals defensively without manufacturing accepted distribution");
+                "C tactical holding has no legal-deadline authority");
+            Assert.AreEqual((long)ClaimFrame, engine.TestOnly_GoalkeeperState.HandControlStartFrame[teamId]);
         }
 
         [TestCase(0, false)]
@@ -202,6 +202,7 @@ namespace TacticalDirector.MatchEngine
             int claimTick = claimFrame / GoalkeeperConstants.FramesPerTacticalTick;
             staged.States[teamId] = handState;
             staged.ClaimTick[teamId] = claimTick;
+            staged.HandControlStartFrame[teamId] = claimFrame;
             staged.ReleaseTickEarliest[teamId] = claimTick + 1;
             staged.DistributeIntents[teamId] = intent ?? default;
             staged.DistributeIntentActive[teamId] = intent.HasValue;
@@ -284,7 +285,8 @@ namespace TacticalDirector.MatchEngine
                 (int[])s.ClaimTick.Clone(),
                 (int[])s.ReleaseTickEarliest.Clone(),
                 (int[])s.RecoveryCooldownEndTick.Clone(),
-                (bool[])s.DistributionPending.Clone());
+                (bool[])s.DistributionPending.Clone(),
+                (long[])s.HandControlStartFrame.Clone());
     }
 }
 
@@ -297,4 +299,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | new PossessionLoss_ClearsALiveDistributeIntent stages a live non-default     |
 // |         |            |        | intent in HandsOnBall and in Distributing and proves the teardown clears it. |
 // | W8 B | 2026-10-15 | — | Copy the canonical accepted-distribution wait latch in fixture state. |
+// | 1.2 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

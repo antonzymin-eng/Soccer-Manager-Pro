@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/TackleIntentEvaluator.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.6, §4.3, Code Standards #20
+// Spec:     Defensive AI #14 §3.6, §4.3, ERR-014-008, Code Standards #20
 // Purpose:  Pure static module: evaluates tackle intent (COMMIT/JOCKEY/HOLD) for each
 //           HOLD_SHAPE agent within TACKLE_ELIGIBLE_RADIUS_M of its assigned opponent.
 
@@ -41,7 +41,7 @@ namespace TacticalDirector.DefensiveAI
             out int                tackleCount)
         {
             tackleCount = 0;
-            bool defendsX0 = LastManDetector.DefendsX0(snapshot.DefensiveTeamId);
+            bool defendsX0 = DefensiveSnapshot.IsOwnGoalAtX0;
 
             for (int p = 0; p < poolCount; p++)
             {
@@ -164,4 +164,6 @@ namespace TacticalDirector.DefensiveAI
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-29 | —      | Initial implementation. |
+// | 1.1     | 2026-11-10 | —      | ERR-014-008: coverage-depth defendsX0 from DefensiveSnapshot.IsOwnGoalAtX0 (canonical |
+// |         |            |        |   frame), not teamId == 0; the away team counted cover on the wrong side of the agent.  |
 #endregion

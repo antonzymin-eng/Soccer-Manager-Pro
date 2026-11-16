@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §1.2.1 scope gains tackle outcome resolution; §1.3.1 #3 dependency row, §1.4 glossary "Tackle intent" entry (+ new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, and §1.7's last bullet corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch; §1.8 gains a scoped Stage-0-runtime-code amendment for §3.6.5 only.)
-**Version:** 0.5
+**Last Updated:** November 10, 2026 (v0.6 — `ERR-014-008` (W13.0): §1.7 own-half normalisation bullet gains the snapshot frame contract — the engine supplies both teams in the defending team's canonical frame (own goal at x = 0), so `defendsX0` is sourced from the frame, never from the team id.)
+**Version:** 0.6
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -248,7 +248,13 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
   closer to their own goal. All last-man predicate and offside-trap
   formulas use a normalised `distanceToOwnGoal` scalar computed once
   per tick per agent so that the same formula body applies to both
-  teams without per-team branching.
+  teams without per-team branching. **Frame contract (`ERR-014-008`):**
+  the snapshot #14 receives is expressed in the *defending team's
+  canonical attack-toward-+X frame* for BOTH teams (§2.3), so in the
+  engine the defended goal is always x = 0 and `defendsX0` is always
+  true. `defendsX0` is read from the snapshot frame and is never
+  inferred from the team id; the x = 105 branches in §3 are the generic
+  definition for a non-canonical producer and are not selected by team.
 - **Fatigue convention:** `0.0 = fully rested`, `1.0 = fully fatigued`.
   Cited from CLAUDE.md. Any inversion is a critical error (KD-1, KD-8 FR-DA-008).
 - **Tick rates:** 10 Hz tactical (this spec); 60 Hz physics (#1, #2,
@@ -321,3 +327,4 @@ the rest of #14's runtime, which this revision does not touch.
 | 0.3 | May 17, 2026 | AI agent | PASS-3 clean-up. §1.6 boundary matrix row for #7 Perception: removed `Anticipation` from attribute lookups (consistent with M6 fix in §2.3 and XC-014-005 — `Anticipation` is not consumed by #14 at Stage 0); retained `FirstTouch` (threat score §3.5) and `Tackling` (declared for future tackle-quality use). |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`. |
 | 0.5 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") is dead — #8's `ActionType` ordinal space is exhausted and has no tackle model; #3 defers slide-tackle collision to Stage 2 and never landed the `TackleContactFlag` amendment (`XC-4.4-02`). #14 now resolves the tackle outcome itself (new §3.6.5, an abstract attribute duel with four outcomes). Corrected every site in this file that stated the dead delegation or implied #14 stops at intent: §1.2.1 scope (new bullet), §1.3.1 #3 dependency row, §1.4 glossary (amended "Tackle intent" entry + new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, §1.7 last bullet, §1.8 (scoped Stage-0-runtime-code amendment for §3.6.5 only — the broader three-precondition Stage-1 gate is untouched by this revision). |
+| 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §1.7 own-half normalisation bullet states the snapshot frame contract (canonical attack-toward-+X frame for both teams; `defendsX0` from the frame, not the team id). Implemented in `DefensiveSnapshot.IsOwnGoalAtX0` and the five `defendsX0` consumers. Spec text was never wrong about the formulas; it omitted which frame its inputs are in, and the code filled the gap with `teamId == 0`. |

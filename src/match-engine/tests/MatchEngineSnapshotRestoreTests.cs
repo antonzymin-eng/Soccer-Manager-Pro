@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-11-06 (W8 C: forced distributions include their lawful #11 hand episode)
 // Modified: 2026-10-13 (W8 B: real engine Resolve consumption and restored feedback exactly once)
 // Modified: 2026-09-28 (remove blanket LogAssert.ignoreFailingMessages; unexpected Error logs fail the run again — v1.15)
 // Modified: 2026-09-27 (W8 B/v24: harden mid-windup restore + add through-CONTACT deterministic continuation)
@@ -23,6 +24,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.GoalkeeperMechanics;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.TacticalInstructions;
@@ -144,11 +146,25 @@ namespace TacticalDirector.MatchEngine
                 midRunTick: 60);
         }
 
+        // v28 requires an in-flight #5 request to belong to a live, controlled #11 hand episode.
+        private static void StageDistributionHandEpisode(MatchEngine engine)
+        {
+            engine.EnableGkHeading();
+            engine.TestOnly_SetPossession(0);
+            GoalkeeperTickState hand = engine.TestOnly_GoalkeeperState;
+            hand.States[0] = GoalkeeperState.Distributing;
+            hand.HandControlStartFrame[0] = 0;
+            hand.ClaimTick[0] = 0;
+            hand.ReleaseTickEarliest[0] = 1;
+            hand.DistributionPending[0] = true;
+            engine.TestOnly_RestoreGoalkeeperState(in hand);
+        }
+
         [Test]
         public void RoundTrip_GoalkeeperDistributionMidWindup_RestoresFieldsAndContinuation()
         {
             var a = new MatchEngine(MatchSeed);
-            a.TestOnly_SetPossession(0);
+            StageDistributionHandEpisode(a);
             PassExecutorState source = a.TestOnly_PassExecutorState(0);
             PassRequest ordinaryRequest = source.Request;
             PassResult lastResult = source.LastResult;
@@ -236,7 +252,7 @@ namespace TacticalDirector.MatchEngine
         public void RoundTrip_GoalkeeperDistributionThroughContact_RestoresDeterministically()
         {
             var a = new MatchEngine(MatchSeed);
-            a.TestOnly_SetPossession(0);
+            StageDistributionHandEpisode(a);
             PassExecutorState source = a.TestOnly_PassExecutorState(0);
             PassRequest ordinaryRequest = source.Request;
             PassResult lastResult = source.LastResult;
@@ -750,4 +766,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.14    | 2026-09-27 | —      | W8 B review hardening: mid-windup lock now asserts WINDUP + no pending feedback; second real save/restore case crosses CONTACT and proves completed terminal feedback plus post-kick digest continuation are identical. |
 // | 1.16    | 2026-10-13 | —      | Through-CONTACT restore now asserts Resolve consumes exactly one completion and clears executor mode on both branches. |
 // | 1.15    | 2026-09-28 | —      | Removed blanket ignoreFailingMessages (stale FM-08 rationale; FM-08 is Warning since W2); measured run emitted no Error log at all. |
+// | 1.17 | 2026-11-06 | — | W8 C/v28: forced distribution restore fixtures stage the owning #11 hand state, exact clock and accepted-request wait latch. |
 #endregion

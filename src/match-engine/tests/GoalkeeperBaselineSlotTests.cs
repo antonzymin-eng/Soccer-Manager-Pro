@@ -1,4 +1,5 @@
 // File:     src/match-engine/tests/GoalkeeperBaselineSlotTests.cs
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-09-27
 // Modified: 2026-09-27
@@ -203,7 +204,8 @@ namespace TacticalDirector.MatchEngine
                 (int[])s.ClaimTick.Clone(),
                 (int[])s.ReleaseTickEarliest.Clone(),
                 (int[])s.RecoveryCooldownEndTick.Clone(),
-                (bool[])s.DistributionPending.Clone());
+                (bool[])s.DistributionPending.Clone(),
+                (long[])s.HandControlStartFrame.Clone());
     }
 }
 
@@ -213,4 +215,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | keeper stays Recovering until RecoveryCooldownTicks; an on-slot keeper exits |
 // |         |            |        | on the next pass. Mirrored for both teams.                                   |
 // | W8 B | 2026-10-15 | — | Copy the canonical accepted-distribution wait latch in fixture state. |
+// | 1.1 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 #endregion

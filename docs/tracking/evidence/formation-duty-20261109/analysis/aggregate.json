@@ -1,0 +1,152 @@
+[
+  {
+    "case": "C0",
+    "matchesPerArm": 6,
+    "baseReference": "own case",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    }
+  },
+  {
+    "case": "C1",
+    "matchesPerArm": 6,
+    "baseReference": "measured C0 behavior reused",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 214,
+      "goals": 83,
+      "fouls": 45
+    }
+  },
+  {
+    "case": "C2",
+    "matchesPerArm": 6,
+    "baseReference": "measured C0 behavior reused",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 210,
+      "goals": 98,
+      "fouls": 46
+    }
+  },
+  {
+    "case": "C3",
+    "matchesPerArm": 6,
+    "baseReference": "measured C0 behavior reused",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 181,
+      "goals": 86,
+      "fouls": 36
+    }
+  },
+  {
+    "case": "C4",
+    "matchesPerArm": 6,
+    "baseReference": "measured C0 behavior reused",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 134,
+      "goals": 56,
+      "fouls": 32
+    }
+  },
+  {
+    "case": "C5",
+    "matchesPerArm": 6,
+    "baseReference": "own case",
+    "base": {
+      "shots": 105,
+      "goals": 37,
+      "fouls": 44
+    },
+    "head": {
+      "shots": 96,
+      "goals": 26,
+      "fouls": 45
+    }
+  },
+  {
+    "case": "C6",
+    "matchesPerArm": 6,
+    "baseReference": "own case",
+    "base": {
+      "shots": 167,
+      "goals": 73,
+      "fouls": 53
+    },
+    "head": {
+      "shots": 94,
+      "goals": 31,
+      "fouls": 45
+    }
+  },
+  {
+    "case": "C7",
+    "matchesPerArm": 6,
+    "baseReference": "own case",
+    "base": {
+      "shots": 152,
+      "goals": 55,
+      "fouls": 44
+    },
+    "head": {
+      "shots": 210,
+      "goals": 99,
+      "fouls": 48
+    }
+  },
+  {
+    "case": "C8",
+    "matchesPerArm": 6,
+    "baseReference": "own case",
+    "base": {
+      "shots": 129,
+      "goals": 56,
+      "fouls": 50
+    },
+    "head": {
+      "shots": 250,
+      "goals": 104,
+      "fouls": 45
+    }
+  },
+  {
+    "case": "C9",
+    "matchesPerArm": 6,
+    "baseReference": "measured C0 behavior reused",
+    "base": {
+      "shots": 146,
+      "goals": 47,
+      "fouls": 48
+    },
+    "head": {
+      "shots": 177,
+      "goals": 78,
+      "fouls": 36
+    }
+  }
+]
