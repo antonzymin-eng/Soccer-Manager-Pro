@@ -1,7 +1,8 @@
 # §5-P8 AR-2 verification evidence
 
 **Created:** November 5, 2026\
-**Last Updated:** November 5, 2026 (v1.8 — AR-2 M1 restore mutation killed in two empty-block cases and restored 4/4; Unity and independent full-scope review pending.)
+**Last Updated:** November 16, 2026 (v1.9 — pinned-host Unity 6000.4.9f1 compile and affected EditMode PASS on PR #539 merged with main, `src` tree `967655cc`; independent full-scope review pending.)
+**Last Updated (prior):** November 5, 2026 (v1.8 — AR-2 M1 restore mutation killed in two empty-block cases and restored 4/4; Unity and independent full-scope review pending.)
 **Last Updated (prior):** November 5, 2026 (v1.7 — M1 optional-empty #40 restore fix executed on Linux CI; Unity, mutation kill-check and full-scope review pending.)
 **Last Updated (prior):** November 5, 2026 (v1.6 — AR-1 M1 save-resume capability refusal, DOC-L1–L4 repairs and executed verification; fresh full adversarial verification pending.)
 **Last Updated (prior):** November 5, 2026 (v1.5 — T6: executed display-boundary mutation guards; rejected-wiring edit and Unity verification limits.)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** November 5, 2026 (v1.2 — T3: executed five projection, Home, cache, order, saturation and S0 identity guards; test hygiene.)
 **Last Updated (prior):** November 5, 2026 (v1.1 — T2: executed failed-entry, Quit and localized-copy guards; full ClientApp result.)
 **Last Updated (prior):** November 5, 2026\
-**Version:** 1.8\
+**Version:** 1.9\
 **Author:** —\
 **Purpose:** Preserve executed behavior guards and non-certifying Linux verification for the six ordered AR-2 tasks and subsequent AR-1 review fixes.
 
@@ -20,7 +21,8 @@ subsequently executed on an isolated non-merge branch (see the v1.8 evidence bel
 Each historical mutant below was applied temporarily, compiled, and
 executed against the named test; a compilation error was not accepted as a killed mutant. The original
 source was restored in a `finally` block and the positive regression was rerun. No match-engine file,
-RNG behavior, schema or save format changed. Unity 6000.4.9f1 compilation/runtime remains unverified here.
+RNG behavior, schema or save format changed. Unity 6000.4.9f1 compilation and the affected EditMode suites
+passed on the pinned host on November 16, 2026 ([`host-20261116/`](host-20261116/README.md)); Unity runtime remains unverified.
 
 ## T1 — owner preflight and headroom
 
@@ -215,8 +217,8 @@ the mutant never existed on PR #539 or `main`.
 
 **Not executed / not certified here:**
 
-- **No pinned-host Unity 6000.4.9f1 Editor compile or affected EditMode run** certifies this P7/P8
-  source tree. The Linux-generated `.NET` solution and skipped Unity CI job are not substitutes.
+- ~~No pinned-host Unity 6000.4.9f1 Editor compile or affected EditMode run certifies this P7/P8
+  source tree.~~ **Superseded November 16, 2026 (v1.9):** see the pinned-host section below.
 - The **71 earlier focused Codex tests were not committed or reconstructed**. Four new saved
   restore cases are the only additions for this M1 follow-up; the 275 count refers to the
   whole ClientApp assembly, not 275 new cases.
@@ -231,6 +233,21 @@ This evidence supplements, rather than replaces, the older T1–T6 and AR-1 expe
 Subsequent documentation-only commits may carry this *source-tree* result when the SHA stays
 identical. The restore mutation is now recorded above; Unity and independent full-scope approval remain outstanding.
 
+## Pinned-host Unity validation (v1.9)
+
+Run on November 16, 2026 per [`HOST-REQUEST.md`](HOST-REQUEST.md); receipt in
+[`host-20261116/`](host-20261116/README.md). PR head `34f29b84` conflicted with main in docs and tooling only, so
+the run validated the conflict-free merged `src` tree `967655cc` (main `39de4662`); `Assets`, `Packages` and
+`ProjectSettings` are identical on all three. Unity 6000.4.9f1 (f7258d6eebbe, Mono), empty `Library`:
+`Tundra build success`, **0 `error CS`**, the three known warnings, 75 assemblies for 75 asmdefs. Unfiltered
+EditMode over ClientApp, SeasonSave, Transfers, ClubFinances, MatchClientCore and UiFramework: **1,220 passed /
+0 failed / 7 skipped** (all environment-gated diagnostics) / 0 inconclusive; ClientApp 276/0/3, SeasonSave 553/0/4,
+Transfers 79/0/0, ClubFinances 70/0/0. All four AR-2 M1 restore cases passed under Unity.
+
+A later commit is covered only while its `src`, `Assets`, `Packages` and `ProjectSettings` trees match the receipt.
+Play mode, the player build, timing and the Unity transfer/finance pages are not covered. Independent full-scope
+review and owner merge approval remain outstanding.
+
 ## Version History
 
 | Version | Date | Author | Notes |
@@ -244,3 +261,4 @@ identical. The restore mutation is now recorded above; Unity and independent ful
 | 1.6 | 2026-11-05 | — | AR-1 M1 save-resume capability refusal and one killed/restored mutant; DOC-L1–L4 repairs; full ClientApp 271/0/3; fresh full adversarial verification pending. |
 | 1.7 | 2026-11-05 | — | AR-2 M1 restore fix; Linux gate at d35bf396 PASS including ClientApp 275/0/3; source tree pinned; 71 uncommitted cases not recovered, negative mutation/Unity/final review pending. |
 | 1.8 | 2026-11-05 | — | Isolated restore mutation run 42141685472: exactly 2 empty cases fail for missing finances, 2 populated cases pass. Byte-identical restore and positive run 42141855943: 4/4 pass. Unity/final independent review pending. |
+| 1.9 | 2026-11-16 | — | Pinned-host Unity 6000.4.9f1 compile (0 error CS) and six-assembly EditMode 1,220/0/7 on PR #539 merged with main (`src` 967655cc); host request and receipt `host-20261116/` added. Full-scope review pending. |

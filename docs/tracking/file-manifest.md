@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 5, 2026 — (review-fix v2.234) PR #539 AR-3 localization-context fix shares one CareerScreenText across the coordinator and Unity binding, with a host-free formatter-identity test; two XML documentation fixes. Existing-file changes only. Linux and pinned Unity verification still due at the new source head.
+**Last Updated:** November 16, 2026 — (evidence-sync v2.235) PR #539 pinned-host Unity 6000.4.9f1 validation on the conflict-free merge with main (`src` tree `967655cc`): compile 0 `error CS`, six-assembly EditMode 1,220 passed / 0 failed / 7 skipped. New `docs/tracking/evidence/5p8-ar2-20261105/HOST-REQUEST.md` and receipt directory `host-20261116/` (`README.md`, `source-identity.txt`, `compile.txt`, `compile-editor-log.txt.xz`, `editmode-results.xml.xz`, `editmode-editor-log.txt.xz`, `editmode-summary.txt`); AR-2 evidence README v1.9; parent `SHA256SUMS` covers all of them. No source change.
+
+**Last Updated (prior):** November 5, 2026 — (review-fix v2.234) PR #539 AR-3 localization-context fix shares one CareerScreenText across the coordinator and Unity binding, with a host-free formatter-identity test; two XML documentation fixes. Existing-file changes only. Linux and pinned Unity verification still due at the new source head.
 
 **Last Updated (prior):** November 5, 2026 — (evidence-sync v2.233) AR-2 restore kill-check negative/positive verified: two optional-empty failures under isolated constructor mutant, four passing cases after byte-identical restore; evidence README v1.8 and SHA256SUMS updated. Unity host certification and independent full-scope review remain pending; no `src/` change.
 
@@ -4694,8 +4696,10 @@ Current after T1–T6 and AR-1 review fixes, November 5, 2026. Fresh full advers
 | `src/transfers/tests/TransfersT0Tests.cs` | v1.12 | Modified in T1–T3; behavior and tests described in the task changelog. |
 | `src/transfers/TransferBidIssue.cs.meta` | New | Fresh 32-hex GUID, no trailing newline. |
 | `src/client-app/TransferBudgetRule.cs` and `.meta` | Deleted | Owner headroom read replaces the client formula. |
-| `docs/tracking/evidence/5p8-ar2-20261105/README.md` | v1.8 | Historical T1–T6/AR-1 mutation evidence, AR-2 Linux CI, and executed negative/positive restore kill-check; Unity and final review limitations. |
-| `docs/tracking/evidence/5p8-ar2-20261105/SHA256SUMS` | Updated | SHA-256 integrity contract for AR-2 evidence README v1.7. |
+| `docs/tracking/evidence/5p8-ar2-20261105/README.md` | v1.9 | Historical T1–T6/AR-1 mutation evidence, AR-2 Linux CI, executed negative/positive restore kill-check, and the v1.9 pinned-host Unity PASS; final review limitations. |
+| `docs/tracking/evidence/5p8-ar2-20261105/SHA256SUMS` | Updated | SHA-256 integrity contract for the AR-2 evidence README v1.9, `HOST-REQUEST.md` and every file under `host-20261116/`. |
+| `docs/tracking/evidence/5p8-ar2-20261105/HOST-REQUEST.md` | New | Pinned Unity host request for PR #539 (created November 16, 2026); status RUN — PASS. |
+| `docs/tracking/evidence/5p8-ar2-20261105/host-20261116/` (7 files) | New | Pinned-host receipt: README v1.0, source identity, compile excerpt, redacted Editor logs (.xz), NUnit results XML (.xz), EditMode summary. |
 
 Current approved-spec / tracking amendments in the same review-fix landing:
 
@@ -4710,6 +4714,7 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
+| 2.235 | 2026-11-16 | — | Evidence-only: PR #539 host request and pinned-host Unity receipt (merged `src` 967655cc; compile 0 error CS; EditMode 1,220/0/7); AR-2 README v1.9 and SHA256SUMS. No source change; full-scope review still pending. |
 | 2.234 | 2026-11-05 | — | PR #539 AR-3: share career formatter across coordinator and Unity UI, add translated instance identity test; repair two code comments. All existing paths; Unity and Linux verification pending. |
 | 2.233 | 2026-11-05 | — | AR-2 restore mutation evidence v1.8: 2 expected empty-block failures with the reverted constructor; 4/4 pass after byte-identical restore. Evidence README digest refreshed and manifest synced; Unity/full review still pending. |
 | 2.232 | 2026-11-05 | — | Evidence-only update: README v1.7 records source-tree Linux CI at d35bf396 and remaining non-certifying limits; SHA256SUMS refreshed, this manifest synced. No source change; Unity compile, restore kill-check, full review still pending. |
