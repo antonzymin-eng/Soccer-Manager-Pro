@@ -1,6 +1,6 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026 · **Version:** 0.4 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
+> **Created:** November 10, 2026 · **Version:** 0.8 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
 > **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
 > retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
 > formation/Duty scoring sensitivity.
@@ -134,6 +134,10 @@ Source: #543 `analysis/per-match-team.csv`.
   commit that files it, and re-run after every rebase.
 - At `d4b026aa` the script reports ERR-014-007 / ERR-008-026 / ERR-021-009 as next free. **#543 already
   uses ERR-021-009, ERR-012-013 and ERR-025-001.** Nothing here is a reservation.
+- **ERR-014-007 is intentionally unused (W13.0 landing, November 10, 2026).** This note named it as the
+  next free #14 id; `next_err_id.sh` greps `docs/` and so counted this very sentence as a use, and W13.0
+  filed #14 as **ERR-014-008** (D1) and **ERR-014-009** (D2). The gap is left, not renumbered, and
+  `spec-error-log.md` carries a tombstone row. Do not reuse it.
 - ERR-014-001 is cited in #8 §2.2.6 but has no index row found by grep.
 
 | Entry | Spec | Content | Commit |
@@ -284,7 +288,7 @@ The Decision Tree gets a position and a flag (physical parameters), never a #14 
 **Step 5 — output:** world = `MirrorPitchIfAway(t, M)`. #8 clamps it to the pitch and does not apply
 the depth adjustment.
 
-**Units and ranges:** m; s ∈ (0, 3.0); L ∈ [0, 123.6]; |M − O| ≤ s.
+**Units and ranges:** m; s ∈ (0, 3.0); L ∈ [0, 110.4] (far-corner |G − O|, corrected in v0.6); |M − O| ≤ s.
 
 **Worked examples.**
 - **A (away CB marks home F4231 ST).**
@@ -310,7 +314,7 @@ the depth adjustment.
   goal-side of his man.
 
 **Invariant 4** (E3) — one marker per opponent.
-- It runs after Invariants 1–3 inside the existing ≤ 3-pass loop (`:62-80`).
+- It runs inside the existing ≤ 3-pass loop (`:62-80`). **Order (review amendment, v0.6):** with `MarkMovementActive` the invariants run 1 → 3 → 4 → 2, so a duplicate marker never counts against the MAN_MARK cap (cap-first, as originally written here, would drop a lone-marker man's marker and then the duplicate); with it off the order is exactly 1 → 2 → 3.
 - For a duplicated target: keep an emergency override if present; otherwise keep the lowest |agent − O|²
   (§3.4); on a tie keep the lower EntityId (FR-DA-014). The others are demoted (`DemoteToZonal`).
   Demotion is monotonic, so convergence holds.
@@ -682,3 +686,7 @@ acquisition/closure/boundary/restore/determinism, and the identity probe.
 | 0.2 | 2026-11-10 | — | Review round 1. PRESS/MOVE utility analysis and a priority-2 skip for marking agents moved into W13.1. The `GetBool` loader and its precedent are cited. The composer's displacement drop is replaced by Invariant 3 alone, with a boundary test. A per-team `MarkingScheme` roadmap (W13.2) is added. Delivery is ordered commits on one branch, with identity relative to post-W13.0 and evidence split between here and the frozen lane. The diagnosis becomes a non-blocking handoff, stratified by defending team, with R5. N = 60 is derived. Thresholds are justified; KD-W1, D-05 and the possession read are cited. Trimmed. |
 | 0.3 | 2026-11-10 | — | Review round 2 (editorial). Status moved to reviewed and awaiting owner decisions. A stop rule for pre-existing test failures is added to §9. The plan's manifest row moves to commit ④. The unscored INTERCEPT interaction is listed as a risk with a descriptive test. No design change. |
 | 0.4 | 2026-11-10 | — | Records the owner's acceptance of all thirteen recommended decisions. Code commits ②–⑨ may proceed in order. No design change. |
+| 0.5 | 2026-11-10 | — | W13.0 landing note: the ERR-014-007 gap (§2). No design change. |
+| 0.6 | 2026-11-12 | — | W13.1 review amendment: §4.3 Invariant 4 order is 1 → 3 → 4 → 2 when armed (1 → 2 → 3 off), §4.2 range of L corrected to 110.4 m. Landed with the code (ERR-014-010 review amendment). No other design change. |
+| 0.7 | 2026-11-12 | — | Implementation status: §9 commits ⑤–⑧ (W13.1 and W13.1c) landed on branch `claude/great-sagan-rpcmhp`, switched off by default; ⑨ close-out recorded in the wiring backlog W13 (v1.42), open-issues and the changelogs. §10 measurement, the frozen-lane identity, Unity compile, stand-off calibration and the flip (OD-2) remain pending. No design change. |
+| 0.8 | 2026-11-13 | — | Landing-check status (§8 evidence for option b): W13.0 D1/D2 merged to main in PR #545; on `6491de79` the switch-off build equals main `39de4662` on every per-tick digest of six full frozen-corpus matches with an armed control that differs (non-certifying .NET 8.0.425, `evidence/w13-switch-off-neutrality-20261113/`), and pinned Unity compile plus MatchEngine / DefensiveAI / DecisionTree EditMode passed (`evidence/host-w13-6491de79-20261113/`). The frozen-lane identity is still owed. No design change. |

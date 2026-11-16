@@ -8,6 +8,12 @@
 
 ---
 
+<a id="rotate-velocity-degenerate-assert"></a>
+
+> **[RESOLVED and ARCHIVED November 12, 2026 — a test-rig artefact, not a production edge (W13.1c final pass).]** The corrected marking rig resets a teleported man's cached `AgentState.Speed` / `CurrentState`; with that fixed the whole marking suite runs strict (no `LogAssert` tolerance, the `TolerateDegenerateVelocityAssert` helper deleted) and the assert is emitted nowhere (41 passed / 1 skipped, non-certifying Linux). The stale cached speed / state after the teleport had the scripted agent run its own AI inside each physics step. **Not established:** that the goalkeeper was the agent that tripped it was never independently confirmed, and whether a game agent standing exactly on a target with zero velocity can reach the same branch was not tested.
+
+- **Movement system `RotateVelocityToward` degenerate-velocity assert fires in the W13.1 marking rig — DIAGNOSE; it may be a real movement-system edge.** *Opened November 12, 2026.* With strict log checking on, the only message across the 35 marking tests is `[Assert] RotateVelocityToward: both currentVelocity and targetDirection are degenerate but newSpeed > MIN_VELOCITY_MAGNITUDE.` (`src/agent-movement/AgentDirectionalMovement.cs:190`): 45 occurrences in 13 test cases. Working hypothesis, not verified: the rig places a defender exactly on its MOVE target with zero velocity and the movement system is then commanded to move. Tolerated only in `MatchEngineMarkingTests.TolerateDegenerateVelocityAssert`. Next step was a minimal `AgentMovementSystem` reproduction.
+
 <a id="genesis-transfer-budget"></a>
 
 - **RESOLVED November 4, 2026 (ERR-040-004) — A new career cannot buy a player in its first season: #40's genesis transfer budget is 0. RECORDED, owner decision.** *Opened October 20, 2026 (#31 T2).* `ClubFinances.CreateInitial` sets `TransferBudget = 0`; only the season-end `SettleFinances` sets a ceiling. So every first-season buy returns `InsufficientBudget`, while sales work. Whether a new game should start with a budget is a #40 balance question, out of #31's scope. T2's end-to-end tests set a budget explicitly.

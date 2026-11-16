@@ -1,0 +1,13 @@
+Created: 2026-11-13. Source identity and process record for the W13 pinned-host Unity run.
+
+parent commits: ed0b60c16b6d0a599d527f650b6cfafd936f412d 39de4662841dec3c1c537a4e4c93bef553441725
+commit 6491de79714052080011e3fbb3d00853b7638df5 src 447828bc7f7a50264bf9076d700bba32a82bbfb1 Packages d71ce2b8dcdf897a4088717b7847023315f9423b ProjectSettings 5dec802e2a7397b9e02b933200a8db0860bc5eea Assets dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+td_mxcsr.dll sha256 1adf9ebfe91cfbfd3e3fb74d63129e718b4305492f534c2c664561d3cfffe703 (LFS materialized)
+pre-compile porcelain: 0 start 2026-11-13T21:43:56Z
+compile exit=0 end 2026-11-13T21:45:32Z post-compile porcelain: 0
+pre-test porcelain: 0 start 2026-11-13T21:45:33Z
+test exit=2 end 2026-11-13T22:17:41Z post-test porcelain: 0
+Unity: 6000.4.9f1 (f7258d6eebbe), Mono, batch mode; fresh detached worktree, empty Library; Assets/Scripts = directory junction to the worktree's own src; LFS materialized for Assets/** and src/**
+test exit=2 is Unity's batch runner treating the one Inconclusive case as a failure for the process exit code; the XML records 0 failed.
+
+Earlier attempt (not adopted): same commit, LFS materialized for Assets/** only, so src/deterministic-sim/native/td_mxcsr.dll was an LFS pointer. Compile clean (0 error CS); EditMode 1 failed: GkRushTriggerTests.ComposedEngine_CommittedRush_MovesTheKeeperOffHisLineAndTerminates(0), unhandled log 'Failed to load ... td_mxcsr.dll, expected x64 architecture, but was Unknown architecture' from MatchEngine..ctor -> MxcsrValidator. Library deleted and both steps re-run after materializing src/** LFS; that re-run is the result in this directory.

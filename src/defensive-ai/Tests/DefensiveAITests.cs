@@ -2294,14 +2294,6 @@ namespace TacticalDirector.DefensiveAI.Tests
             return snapshot;
         }
 
-        /// <summary>Frame contract: the defended goal-line is x = 0, independent of any team id.</summary>
-        [Test]
-        public void FrameContract_OwnGoalIsAtX0()
-        {
-            Assert.IsTrue(DefensiveSnapshot.IsOwnGoalAtX0,
-                "The canonical frame places the defended goal-line at x = 0 for both teams.");
-        }
-
         /// <summary>Twin of T-DA-013: the threat score is the §3.5.4 worked example for either team id.</summary>
         [TestCase(0)]
         [TestCase(1)]
@@ -2315,10 +2307,9 @@ namespace TacticalDirector.DefensiveAI.Tests
 
             Assert.AreEqual(expectedScore,
                 MarkAssigner.ThreatScore(oppPos, firstTouch, defensiveTeamId: defendingTeam), 0.0001f,
-                "Team-id overload must ignore the id and score against the x = 0 goal.");
-            Assert.AreEqual(expectedScore,
-                MarkAssigner.ThreatScore(oppPos, firstTouch, DefensiveSnapshot.IsOwnGoalAtX0), 0.0001f,
-                "Frame-sourced overload must match the §3.5.4 worked example.");
+                "The (internal) team-id shim must ignore the id and score against the x = 0 goal.");
+            Assert.AreEqual(expectedScore, MarkAssigner.ThreatScore(oppPos, firstTouch), 0.0001f,
+                "Canonical overload must match the §3.5.4 worked example.");
         }
 
         /// <summary>
@@ -2982,6 +2973,83 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
 
         /// <summary>
+        /// Vanished-target release on the ApplyGate path (W13.0 review L2). The dwell lock has expired and a
+        /// DIFFERENT opponent B is the standing candidate, so the gate would hold the stale mark on A while B
+        /// accumulates. A is sent off: the mark is released to ZONAL at once, and the release resets the
+        /// candidate accumulator as well as the dwell counter, so B must be re-preferred for a FULL
+        /// MarkDwellTicks before MAN_MARK on B is committed.
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void VanishedTarget_ApplyGatePath_ReleasesAndResetsCandidateAccumulator(int defendingTeam)
+        {
+            int own = defendingTeam;
+            int opp = 1 - defendingTeam;
+            const int OppA = 40;
+            const int OppB = 41;
+            Vector2 slot = new Vector2(30.0f, 34.0f);
+
+            DefensiveSnapshot Snap(int tick, bool aActive)
+            {
+                DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[]
+                {
+                    SnapshotBuilder.MakeAgent(entityId: AgentId, teamId: own, position: slot,
+                        baselineSlot: slot, line: LineId.Midfield),
+                    // A is nearer the defended goal (x = 0), so it outranks B at commit.
+                    SnapshotBuilder.MakeAgent(entityId: OppA, teamId: opp, position: new Vector2(38.0f, 34.0f),
+                        isActive: aActive, firstTouch: 14f),
+                    SnapshotBuilder.MakeAgent(entityId: OppB, teamId: opp, position: new Vector2(42.0f, 34.0f),
+                        firstTouch: 14f),
+                };
+                DefensiveSnapshot snapshot = SnapshotBuilder.Build(agents,
+                    ballPosition: new Vector2(90.0f, 34.0f), ballVelocity: new Vector2(0.5f, 0f), tick: tick);
+                snapshot.DefensiveTeamId = defendingTeam;
+                return snapshot;
+            }
+
+            int[] pool = new int[] { AgentId };
+            MarkAssignment[] assignments = new MarkAssignment[1];
+            MarkHysteresisState[] hysteresis = new MarkHysteresisState[] { MarkHysteresisState.Default() };
+
+            int tick = 0;
+            for (; tick < DefensiveAIConstants.MarkDwellTicks * 2; )
+            {
+                tick++;
+                MarkAssigner.Assign(Snap(tick, true), pool, 1, tick, assignments, hysteresis);
+            }
+
+            Assert.AreEqual(OppA, assignments[0].TargetEntityId, "Precondition: marking A.");
+            Assert.AreEqual(0, hysteresis[0].DwellCounter, "Precondition: dwell lock expired (gate path).");
+
+            // A is sent off. B is the (differing) candidate: the gate holds, then the refresh releases.
+            tick++;
+            MarkAssigner.Assign(Snap(tick, false), pool, 1, tick, assignments, hysteresis);
+
+            Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode, "Released at once.");
+            Assert.AreEqual(-1, assignments[0].TargetEntityId);
+            Assert.AreEqual(slot.x, assignments[0].TargetPosition.x, 1e-4f);
+            Assert.AreEqual(0, hysteresis[0].DwellCounter);
+            Assert.AreEqual(0, hysteresis[0].HoldTicks, "Candidate accumulator reset by the release.");
+            Assert.AreEqual(MarkMode.Zonal, hysteresis[0].CandidateMode);
+
+            // Re-acquisition (now on B) pays a FULL dwell: ZONAL for MarkDwellTicks - 1 ticks, MAN_MARK on the last.
+            for (int i = 1; i <= DefensiveAIConstants.MarkDwellTicks; i++)
+            {
+                tick++;
+                MarkAssigner.Assign(Snap(tick, false), pool, 1, tick, assignments, hysteresis);
+                if (i < DefensiveAIConstants.MarkDwellTicks)
+                {
+                    Assert.AreEqual(MarkMode.Zonal, assignments[0].Mode, $"re-acquisition tick {i}: still ZONAL");
+                }
+                else
+                {
+                    Assert.AreEqual(MarkMode.ManMark, assignments[0].Mode, "Full dwell served: MAN_MARK commits.");
+                    Assert.AreEqual(OppB, assignments[0].TargetEntityId);
+                }
+            }
+        }
+
+        /// <summary>
         /// A retained target that is no longer ACTIVE in the snapshot (sent off, substituted) has no
         /// position to track: the mark is released to ZONAL at once, ignoring the dwell lock, and the
         /// hysteresis state is reset (ERR-014-009).
@@ -3054,4 +3122,7 @@ namespace TacticalDirector.DefensiveAI.Tests
 // | 1.7     | 2026-11-10 | —      | ERR-014-009: RetainedAssignmentRefreshTests (team 0 / team 1) — dwell-lock and same-target   |
 // |         |            |        | retained marks track the live target; Invariant 3 demotes on the live distance during a      |
 // |         |            |        | dwell lock; a vanished (inactive / absent) target releases the mark to ZONAL at once.        |
+// | 1.8     | 2026-11-10 | —      | W13.0 review: removed the FrameContract_OwnGoalIsAtX0 test (IsOwnGoalAtX0 withdrawn; #14 is      |
+// |         |            |        | canonical-only) and moved the ThreatScore twin to the canonical overload; + VanishedTarget_      |
+// |         |            |        | ApplyGatePath_ReleasesAndResetsCandidateAccumulator (L2). Pre-existing tests unchanged.        |
 #endregion
