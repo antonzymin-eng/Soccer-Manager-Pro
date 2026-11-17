@@ -1,6 +1,6 @@
 # Tackle duel — design note (scaling back #440, proposing a richer duel)
 
-> **Created:** November 16, 2026 · **Version:** 0.1 · **Status:** DRAFT — design supplement, not an
+> **Created:** November 16, 2026 · **Version:** 0.2 · **Status:** DRAFT — design supplement, not an
 > approved spec. Nothing here is implemented, measured or authorized. Every constant below is a
 > proposal, and every decision in §7 is the owner's.
 > **Purpose:** The owner reviewed #440 Stage B and judged the tackle model a poor fit for real
@@ -65,7 +65,7 @@ and it cannot express the five things that decide real challenges:
 2. **The tackler's side and the carrier's orientation.** A carrier shielding with his back turned is
    hard to tackle cleanly. From behind, the man is between the tackler and the ball, and fouls follow.
 3. **Timing.** A tackler who is set and choosing his moment beats one lunging in at closing speed.
-   The lunge overruns the ball (Missed) or catches the man (Foul).
+   The lunge catches the man (Foul) or only half-wins the ball (BallLoose).
 4. **Intent.** Going through the man versus playing the ball changes the foul and outcome mix.
 5. **The carrier's speed and change of direction.** These are hard to time against, and at speed the
    ball runs further from the feet.
@@ -129,14 +129,21 @@ fence"). Restart awards remain law-governed.
 There is no preregistered 25 % cap and no 48-run batch. Football acceptance moves to B′, where the
 duel itself is under review.
 
+**Delayed-regain reporting is kept** (review recommendation, v0.2). Every A′ characterization reports
+Stage A's frozen time-to-regain bins descriptively: f+1..3, f+4..12, f+13..24 and f+25..60, plus
+complete-without-regain and censored. It also reports the f+3, f+24 and f+60 cumulative bounds and
+endpoint ownership. These are reported, not gated, so a fence that merely defers the old carrier's
+regain by a few frames stays visible.
+
 ## 5. Stage B′ — Duel v2 (abstract duel with real geometry)
 
 All inputs are read at resolution from `_agents[]` by the composition root, which already owns the
-trigger geometry (§3.6.5.1). No snapshot field or cross-tick state is added.
+trigger geometry (§3.6.5.1). No snapshot field or cross-tick state is added. Notation follows §4,
+plus `f_c`, the carrier's facing (unit vector).
 
 ### 5.1 Side of approach and exposure
 
-Let `f_c` be the carrier's facing (unit) and `r = (p_t − p_c) / |p_t − p_c|`. Then:
+Let `r = (p_t − p_c) / |p_t − p_c|`. Then:
 
 ```
 cosφ = f_c · r        # +1 = tackler in front of the carrier, 0 = side, −1 = behind
@@ -154,8 +161,7 @@ weaker his close control:
 ```
 d_b  = clamp(BALL_LEAD_BASE_M + BALL_LEAD_SPEED_K · |v_c| · (1 − BALL_LEAD_DRIBBLE_K · dribbling),
              BALL_LEAD_BASE_M, BALL_LEAD_MAX_M)                     # metres
-p_b  = p_c + f_c · d_b
-reachFraction = clamp01(|p_b − p_t| / TackleContactRadiusM)          # replaces tackler-to-carrier
+p_b  = clampToPitch(p_c + f_c · d_b)                                  # stays inside the pitch rectangle
 X'   = clamp01(X + BALL_LEAD_EXPOSE_K · (d_b − BALL_LEAD_BASE_M))      # a ball well ahead is exposed from the side too
 ```
 
@@ -173,34 +179,67 @@ X'   = clamp01(X + BALL_LEAD_EXPOSE_K · (d_b − BALL_LEAD_BASE_M))      # a ba
 more ball on show at speed. This is the owner's "let the ball go too far" case, without a dribbling
 system.
 
-### 5.3 Timing
+### 5.3 Challenge geometry — one rule for eligibility, selection and resolution
+
+Today the contact gate, the choice of tackler and `reachFraction` all measure to the real ball, which
+is pinned to the carrier. B′ replaces all three with one rule, so no step disagrees with another
+(review finding, v0.2):
 
 ```
-L = max(0, c − TIMING_SET_SPEED_M_S)                       # lunge excess (m/s); c from §4
-q = clamp01(tackling − TIMING_LUNGE_K · L − TIMING_TURN_K · |turnRate_c| / TURN_RATE_REF)
+d_ball = |p_b − p_t|               # to the virtual ball
+d_man  = |p_c − p_t|               # to the carrier's body
+d_ch   = min(d_ball, d_man)        # challenge distance
+eligible   ⇔  Commit intent  ∧  d_ch ≤ TackleContactRadiusM
+selection  :  the eligible Commit with the smallest d_ch (ties: lowest agent id, as today)
+reach      :  ball-first → clamp01(d_ball / TackleContactRadiusM)
+              man-first  → clamp01(d_man  / TackleContactRadiusM)
+BallLoose  :  the ball is released at p_b (§5.7), not at p_c
 ```
 
-`q` is timing quality in [0, 1]. A set tackler (`c ≤ 1.5 m/s`) times it as well as his Tackling
-allows. Lunging in at closing speed, or against a carrier who is changing direction, degrades it.
+**Why the minimum.** A defender 1.5 m ahead of a carrier with a 0.66 m lead is 0.84 m from the ball,
+so he can challenge it. A defender 0.6 m directly behind (same 0.66 m lead) can reach the man but not a ball 1.26 m away.
+He is eligible, but only a man-first challenge reaches its target (§5.6). Using the ball distance alone
+would make him ineligible. Using the carrier distance alone would let him win a ball outside his reach.
+
+**Known limitation until C′.** The virtual ball exists only inside the tackle path. Pressing,
+perception, first touch and passing still see the real ball at `p_c`. The two agree again on
+BallLoose (released at `p_b`) and on BallWon (the tackler takes control).
+
+### 5.4 Commitment and timing — both from closing speed
+
+v0.1 kept `cos(approachAngle)`, the tackler's **own** velocity direction, as commitment. That
+penalizes a set or retreating defender, whose velocity points away from the carrier even while the
+carrier runs into him (review finding, v0.2). B′ derives both commitment and timing from the
+**relative** closing speed `c` (§4):
+
+```
+commit = clamp01(c / TIMING_SET_SPEED_M_S)                 # 0 when not closing, 1 at the set speed or above
+L      = max(0, c − TIMING_SET_SPEED_M_S)                  # lunge excess (m/s)
+q      = clamp01(tackling − TIMING_LUNGE_K · L − TIMING_TURN_K · |turnRate_c| / TURN_RATE_REF)
+```
+
+`q` is timing quality in [0, 1]. Closing at about the set speed is fully committed and well timed.
+Closing faster is a lunge, and timing degrades. So does a carrier who is changing direction.
 
 | Constant | Tag | Proposed | Range |
 |---|---|---|---|
-| `TIMING_SET_SPEED_M_S` | `[GT]` (proposed) | 1.5 m/s | [0, 4] |
+| `TIMING_SET_SPEED_M_S` | `[GT]` (proposed) | 1.5 m/s | (0, 4] |
 | `TIMING_LUNGE_K` | `[GT]` (proposed) | 0.08 s/m | [0, 0.2] |
 | `TIMING_TURN_K` | `[GT]` (proposed) | 0.2 | [0, 0.5] |
 | `TURN_RATE_REF` | `[CROSS]` | Agent Movement #2's maximum turn rate | — |
 
 **Worked example.** Tackling 0.7, closing at 5.5 m/s (`L = 4`), carrier running straight:
-`q = 0.7 − 0.32 = 0.38`. The same player arriving set gets `q = 0.70`.
+`commit = 1`, `q = 0.7 − 0.32 = 0.38`. A defender closing at 1.5 m/s gets `commit = 1`, `q = 0.70`.
 
-### 5.4 Intent — ball-first or man-first
+### 5.5 Intent — ball-first or man-first
 
 ```
 m = clamp01(INTENT_MAN_BASE + INTENT_MAN_AGGRESSION_K · aggression + INTENT_MAN_SHIELD_K · (1 − X'))
 ```
 
 `m` is the probability of a man-first challenge. When the ball is shielded, more challenges go through
-the man.
+the man. Intent is drawn **after** selection and **before** resolution, because it picks the reach
+target (§5.3). `m` does not depend on the tackler's speed.
 
 **Draw-site decision (owner, §7 D3).** Two options:
 
@@ -219,13 +258,15 @@ documented.
 | `INTENT_MAN_AGGRESSION_K` | `[GT]` (proposed) | 0.25 | [0, 0.6] |
 | `INTENT_MAN_SHIELD_K` | `[GT]` (proposed) | 0.30 | [0, 0.6] |
 
-### 5.5 Revised outcome bands (same nested shape as §3.6.5.3)
+### 5.6 Revised outcome bands (same nested shape as §3.6.5.3)
+
+`engage` answers only "did he reach his target". Lunge, side of approach and intent change **what
+happens when he does**, never whether he connects. That separation makes the directional claims in
+§6 provable (review finding, v0.2).
 
 ```
-engage     = clamp01(TackleEngageBase + TackleEngageCommitmentK · max(0, cos approachAngle)
-                     + TackleEngageProximityK · (1 − reachFraction)          # now to the virtual ball
-                     + ENGAGE_EXPOSURE_K · (X' − 0.5)                         # NEW
-                     − ENGAGE_LUNGE_K · L · (1 − tackling))                   # NEW: overrun
+engage     = clamp01(TackleEngageBase + TackleEngageCommitmentK · commit
+                     + TackleEngageProximityK · (1 − reach))                  # reach per intent, §5.3
 
 foulShare  = clamp(TackleFoulShareBase + TackleFoulShareAggressionK · aggression
                    − TackleFoulShareTacklingK · q                             # timing replaces raw Tackling
@@ -240,59 +281,87 @@ cleanShare = clamp01(TackleCleanShareBase
                      − CLEAN_MAN_FIRST_K · [manFirst])                        # NEW: man-first rarely wins it cleanly
 ```
 
+`commit` replaces `cos(approachAngle)` (§5.4). `TackleEngageCommitmentK` keeps its value and meaning:
+the weight of a fully committed challenge.
+
 | New constant | Tag | Proposed | Range |
 |---|---|---|---|
-| `ENGAGE_EXPOSURE_K` | `[GT]` (proposed) | 0.20 | [0, 0.4] |
-| `ENGAGE_LUNGE_K` | `[GT]` (proposed) | 0.04 s/m | [0, 0.1] |
 | `FOUL_BEHIND_K` | `[GT]` (proposed) | 0.25 | [0, 0.5] |
 | `FOUL_MAN_FIRST_K` | `[GT]` (proposed) | 0.30 | [0, 0.6] |
 | `CLEAN_EXPOSURE_K` | `[GT]` (proposed) | 0.30 | [0, 0.6] |
 | `CLEAN_MAN_FIRST_K` | `[GT]` (proposed) | 0.25 | [0, 0.5] |
 
-Existing `[GT]` values are unchanged by this proposal.
+v0.1's `ENGAGE_EXPOSURE_K` and `ENGAGE_LUNGE_K` are withdrawn. Existing `[GT]` values are unchanged.
 
-**Worked example.** Tackling 0.7, Aggression 0.5; carrier Dribbling 0.6, Balance 0.5, running
-straight at 3 m/s. The tackler comes from behind at 8.5 m/s: `c = 5.5`, `L = 4`, `q = 0.38`;
-`d_b = 0.30 + 0.08·3·0.7 = 0.468 m`, `X = 0`, `X' = 0.084`. Man-first, `cos approachAngle = 1`,
-`reachFraction = 0.5`.
+**What a lunge no longer does.** v0.1 made a lunge miss more by overrunning the ball. Overrun and
+evasion depend on the carrier reacting to the lunge, which needs a carrier-evasion model. That is
+out of B′ scope and recorded as a C′ question.
 
-- `engage = 0.10 + 0.25 + 0.10 + 0.20·(−0.416) − 0.04·4·0.3 = 0.319`
-- `foulShare = 0.14 + 0.06 − 0.038 + 0.25 + 0.30 = 0.712`
-- `retain = 0.565`
-- `cleanShare = clamp01(0.30 + 0.60·(−0.185) + 0.30·(−0.416) − 0.25) = 0`
+**Worked example 1 — lunge from behind.**
+- Abilities: tackler Tackling 0.7, Aggression 0.5; carrier Dribbling 0.6, Balance 0.5.
+- Carrier at (50, 34), velocity (3, 0) m/s, facing (1, 0).
+- Tackler at (49.4, 34), velocity (8.5, 0) m/s, so he is directly behind.
 
-Outcome probabilities: Missed ≈ 0.68, Foul ≈ 0.23, BallLoose ≈ 0.09, BallWon 0.
+Derived inputs:
+- `n = (1, 0)`, `c = 5.5`, `commit = 1`, `L = 4`, `q = 0.38`.
+- `cosφ = −1`, so `X = 0`.
+- `d_b = 0.30 + 0.08·3·0.7 = 0.468 m`, `X' = 0.084`, `p_b = (50.468, 34)`.
+- `d_ball = 1.068 m`, `d_man = 0.60 m`, so `d_ch = 0.60` and he is eligible.
+- `m = 0.05 + 0.125 + 0.30·0.916 = 0.450`.
+- `retain = 0.565`.
 
-The same player, set and ball-first from the front against a carrier at speed (`X' = 1`, `q = 0.7`,
-`L = 0`):
+| Intent (probability) | `reach` | `engage` | `foulShare` | `cleanShare` | Missed | Foul | BallLoose | BallWon |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| man-first (0.450) | 0.60 | 0.430 | 0.712 | 0 | 0.570 | 0.306 | 0.124 | 0 |
+| ball-first (0.550) | 1.00 | 0.350 | 0.412 | 0.064 | 0.650 | 0.144 | 0.193 | 0.013 |
+| **mixed** | | | | | **0.614** | **0.217** | **0.162** | **0.007** |
 
-- `engage = 0.10 + 0.25 + 0.10 + 0.10 = 0.55`
-- `foulShare = 0.14 + 0.06 − 0.07 = 0.13`
-- `cleanShare = 0.30 + 0.60·0.135 + 0.15 = 0.531`
+**Worked example 2 — set defender in front.**
+- Same abilities.
+- Carrier at (50, 34), velocity (3, 0) m/s, facing (1, 0).
+- Defender at (51.2, 34), jockeying backwards at velocity (2, 0) m/s.
 
-Outcome probabilities: Missed 0.45, Foul ≈ 0.07, BallWon ≈ 0.25, BallLoose ≈ 0.23.
+Derived inputs:
+- `n = (−1, 0)`, `c = (2 − 3)·(−1) = 1.0 m/s`, `commit = 0.667`, `L = 0`, `q = 0.70`.
+- `cosφ = +1`, so `X = 1` and `X' = 1`.
+- `p_b = (50.468, 34)`, `d_ball = 0.732 m`, `d_man = 1.20 m`, so `d_ch = 0.732` and he is eligible.
+- `m = 0.05 + 0.125 + 0 = 0.175`.
 
-These numbers illustrate direction only; no band is claimed realistic (§6).
+| Intent (probability) | `reach` | `engage` | `foulShare` | `cleanShare` | Missed | Foul | BallLoose | BallWon |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| man-first (0.175) | 1.00 | 0.267 | 0.430 | 0.281 | 0.733 | 0.115 | 0.109 | 0.043 |
+| ball-first (0.825) | 0.732 | 0.320 | 0.130 | 0.531 | 0.680 | 0.042 | 0.131 | 0.148 |
+| **mixed** | | | | | **0.689** | **0.054** | **0.127** | **0.130** |
 
-### 5.6 BallLoose under B′
+The two challenges have identical abilities. The lunge from behind fouls four times as often and
+almost never wins the ball cleanly. The set frontal challenge wins it cleanly in one in eight
+attempts. The probabilities show direction only; no band is claimed realistic (§6).
 
-§4's formula stays, with the poke line depending on intent:
-- **ball-first:** pokes along `n` toward the virtual ball;
-- **man-first:** knocks the ball on with the carrier's momentum (`LOOSE_POKE_K` scaled by
-  `1 − INTENT_KNOCK_DAMP`, proposed 0.5 `[GT]`).
+### 5.7 BallLoose under B′
+
+The ball is released at `p_b`, with the velocity from §4. The poke line depends on intent:
+- **ball-first:** the poke goes along `n`;
+- **man-first:** the ball is knocked on with the carrier's momentum, with `LOOSE_POKE_K` scaled by
+  `1 − INTENT_KNOCK_DAMP`. `INTENT_KNOCK_DAMP` is `[GT]` (proposed) 0.5, range [0, 1].
 
 ## 6. Measurement and acceptance
 
 - **Wiring status.** The tackle path is wired and live (W2), so KD-W1 does not block design work here.
   Tuning `[GT]` values remains a calibration pass gated on the owner's §7 decisions and the open
   window rules (D-05).
-- **No football bands are invented.** Directional checks are preregistered as **signs**, not rates,
-  each mirrored home/away:
-  - from-behind challenges foul more and win cleanly less than frontal ones;
-  - lunging challenges miss and foul more than set ones;
-  - faster carriers concede more BallWon from the side.
+- **Directional checks are preregistered as signs, with their conditioning stated.** Each is mirrored
+  home/away, and the formulas must guarantee each sign:
 
-  Numeric realism bands need sourced `[GT]` references (owner, §7 D4) before any calibration.
+  | Check | Holds | Why it holds in §5.6 |
+  |---|---|---|
+  | A lunge raises P(Foul) and lowers P(BallWon) per **attempted** challenge | unconditionally, at fixed positions, abilities and carrier motion | `engage` and `m` do not depend on `L`; `q` is non-increasing in `L`; so `foulShare` is non-decreasing and `cleanShare` non-increasing (strictly while `q > 0` and no clamp binds). |
+  | From behind fouls more and wins cleanly less than from the front | **conditional on connecting**, at equal reach | `X` enters only `foulShare` (+) and `cleanShare` (−, via `X'`) and raises `m`. Across real positions `engage` differs, because the reach target differs, so the unconditional rate is reported descriptively, not asserted. |
+  | A faster carrier concedes more BallWon from the side | conditional on connecting, at equal reach | `d_b`, and so `X'`, rises with carrier speed; `CLEAN_EXPOSURE_K > 0`. |
+
+  **Check against the v0.1 counterexample** (carrier at 1.5 m/s, defender 0.6 m behind, abilities as
+  in §5.6): the defender at 3 m/s has P(Foul) 0.207; at 7 m/s it is 0.220. Under v0.1 the same pair
+  gave 0.136 and 0.118, which was the wrong direction.
+- **Numeric realism bands** need sourced `[GT]` references (owner, §7 D4) before any calibration.
 - **Neutrality.** B′ changes default behaviour (every tackle reads new inputs). It is a
   behaviour-changing landing and must not land inside an open measurement window. It needs a six-seed
   before/after characterization and pinned-host Unity validation.
@@ -304,7 +373,7 @@ These numbers illustrate direction only; no band is claimed realistic (§6).
 | ID | Decision | Recommendation |
 |---|---|---|
 | D1 | Cut #440 to A′: geometry-derived knock plus one-frame fence, with correctness acceptance only. This withdraws the Stage B 48-run experiment and its 25 % caps. | **Yes.** PR #544's Stage A instrument and evidence stay valuable as the before-baseline. |
-| D2 | Approve B′ (Duel v2) for a design-to-spec pass on #14 §3.6.5. | **Yes, after A′.** |
+| D2 | Approve B′ (Duel v2) for a design-to-spec pass on #14 §3.6.5, including §5.3's single challenge geometry and §5.4's closing-speed commitment, which replaces `cos(approachAngle)`. | **Yes, after A′.** |
 | D3 | Intent draw: (a) second keyed derivation, or (b) one more nesting level. | **(a)** |
 | D4 | Source for numeric realism bands (foul share by approach side, clean-win rate, lunge outcomes). | Owner to name acceptable data. Until then, signs only. |
 | D5 | C′ (carried ball and touch model) as a separate spec programme, after PM-2. | **Defer.** The B′ virtual ball point covers the heavy-touch case abstractly. |
@@ -314,4 +383,5 @@ These numbers illustrate direction only; no band is claimed realistic (§6).
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.2 | November 16, 2026 | — | Codex review of PR #548 (three P2 findings and one A′ recommendation). (1) §5.3: one challenge geometry for eligibility, selection and resolution, using the minimum of virtual-ball and carrier distance, with reach by intent and BallLoose released at `p_b`. (2) §5.6: lunge, side of approach and intent no longer enter `engage`, so a lunge cannot lower P(Foul). The v0.1 counterexample (0.136 → 0.118) now gives 0.207 → 0.220. §6 states each sign's conditioning; `ENGAGE_EXPOSURE_K` and `ENGAGE_LUNGE_K` are withdrawn. (3) §5.4: commitment comes from relative closing speed, not the tackler's own velocity, and both worked examples are rebuilt from explicit positions, velocities and facing. All figures were script-checked. §4: delayed-regain reporting kept for A′. |
 | 0.1 | November 16, 2026 | — | Created from the owner's review of #440 Stage B: current state verified at `e0d1e626`; A′ / B′ / C′ staging, proposed formulas with worked examples, owner decisions D1–D6. Nothing implemented. |
