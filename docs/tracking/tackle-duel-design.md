@@ -1,6 +1,6 @@
 # Tackle duel — design note (scaling back #440, proposing a richer duel)
 
-> **Created:** November 16, 2026 · **Version:** 0.2 · **Status:** DRAFT — design supplement, not an
+> **Created:** November 16, 2026 · **Version:** 0.3 · **Status:** DRAFT — design supplement, not an
 > approved spec. Nothing here is implemented, measured or authorized. Every constant below is a
 > proposal, and every decision in §7 is the owner's.
 > **Purpose:** The owner reviewed #440 Stage B and judged the tackle model a poor fit for real
@@ -191,14 +191,25 @@ d_man  = |p_c − p_t|               # to the carrier's body
 d_ch   = min(d_ball, d_man)        # challenge distance
 eligible   ⇔  Commit intent  ∧  d_ch ≤ TackleContactRadiusM
 selection  :  the eligible Commit with the smallest d_ch (ties: lowest agent id, as today)
-reach      :  ball-first → clamp01(d_ball / TackleContactRadiusM)
-              man-first  → clamp01(d_man  / TackleContactRadiusM)
+targets    :  ball reachable ⇔ d_ball ≤ TackleContactRadiusM;  man reachable ⇔ d_man ≤ TackleContactRadiusM
+intent     :  both reachable → drawn with probability m (§5.5)
+              only the man   → man-first  (m_eff = 1)
+              only the ball  → ball-first (m_eff = 0)
+reach      :  ball-first → d_ball / TackleContactRadiusM      # ∈ [0, 1] by construction
+              man-first  → d_man  / TackleContactRadiusM
 BallLoose  :  the ball is released at p_b (§5.7), not at p_c
 ```
 
+**A tackler only commits to a target he can reach** (review finding, v0.3). Eligibility guarantees
+that at least one target is within `TackleContactRadiusM`, so `reach` never needs a clamp and an
+out-of-range target never contributes a positive `engage`. v0.2 clamped an unreachable target to
+`reach = 1`, which still gave it about 35 % engagement. The rejected alternative, resolving an
+out-of-range intent as a certain Missed, would waste challenges the trigger already approved and turn
+intent into a hidden miss penalty.
+
 **Why the minimum.** A defender 1.5 m ahead of a carrier with a 0.66 m lead is 0.84 m from the ball,
-so he can challenge it. A defender 0.6 m directly behind (same 0.66 m lead) can reach the man but not a ball 1.26 m away.
-He is eligible, but only a man-first challenge reaches its target (§5.6). Using the ball distance alone
+so he can challenge it, and only ball-first. A defender 0.6 m directly behind (same 0.66 m lead) can
+reach the man but not a ball 1.26 m away. He is eligible, and his challenge is man-first (§5.6). Using the ball distance alone
 would make him ineligible. Using the carrier distance alone would let him win a ball outside his reach.
 
 **Known limitation until C′.** The virtual ball exists only inside the tackle path. Pressing,
@@ -237,8 +248,8 @@ Closing faster is a lunge, and timing degrades. So does a carrier who is changin
 m = clamp01(INTENT_MAN_BASE + INTENT_MAN_AGGRESSION_K · aggression + INTENT_MAN_SHIELD_K · (1 − X'))
 ```
 
-`m` is the probability of a man-first challenge. When the ball is shielded, more challenges go through
-the man. Intent is drawn **after** selection and **before** resolution, because it picks the reach
+`m` is the probability of a man-first challenge when both targets are reachable; §5.3 sets `m_eff`
+otherwise. When the ball is shielded, more challenges go through the man. Intent is drawn **after** selection and **before** resolution, because it picks the reach
 target (§5.3). `m` does not depend on the tackler's speed.
 
 **Draw-site decision (owner, §7 D3).** Two options:
@@ -307,34 +318,33 @@ Derived inputs:
 - `cosφ = −1`, so `X = 0`.
 - `d_b = 0.30 + 0.08·3·0.7 = 0.468 m`, `X' = 0.084`, `p_b = (50.468, 34)`.
 - `d_ball = 1.068 m`, `d_man = 0.60 m`, so `d_ch = 0.60` and he is eligible.
-- `m = 0.05 + 0.125 + 0.30·0.916 = 0.450`.
+- The ball is out of reach (1.068 m > 1.0 m), so the challenge is man-first: `m_eff = 1`. The
+  formula `m` would be 0.450 and is not used.
 - `retain = 0.565`.
 
 | Intent (probability) | `reach` | `engage` | `foulShare` | `cleanShare` | Missed | Foul | BallLoose | BallWon |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| man-first (0.450) | 0.60 | 0.430 | 0.712 | 0 | 0.570 | 0.306 | 0.124 | 0 |
-| ball-first (0.550) | 1.00 | 0.350 | 0.412 | 0.064 | 0.650 | 0.144 | 0.193 | 0.013 |
-| **mixed** | | | | | **0.614** | **0.217** | **0.162** | **0.007** |
+| man-first (1.000, forced) | 0.60 | 0.430 | 0.712 | 0 | **0.570** | **0.306** | **0.124** | **0** |
 
 **Worked example 2 — set defender in front.**
 - Same abilities.
 - Carrier at (50, 34), velocity (3, 0) m/s, facing (1, 0).
-- Defender at (51.2, 34), jockeying backwards at velocity (2, 0) m/s.
+- Defender at (50.95, 34), jockeying backwards at velocity (2, 0) m/s.
 
 Derived inputs:
 - `n = (−1, 0)`, `c = (2 − 3)·(−1) = 1.0 m/s`, `commit = 0.667`, `L = 0`, `q = 0.70`.
 - `cosφ = +1`, so `X = 1` and `X' = 1`.
-- `p_b = (50.468, 34)`, `d_ball = 0.732 m`, `d_man = 1.20 m`, so `d_ch = 0.732` and he is eligible.
-- `m = 0.05 + 0.125 + 0 = 0.175`.
+- `p_b = (50.468, 34)`, `d_ball = 0.482 m`, `d_man = 0.95 m`, so `d_ch = 0.482` and he is eligible.
+- Both targets are within 1.0 m, so intent is drawn: `m = 0.05 + 0.125 + 0 = 0.175`.
 
 | Intent (probability) | `reach` | `engage` | `foulShare` | `cleanShare` | Missed | Foul | BallLoose | BallWon |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| man-first (0.175) | 1.00 | 0.267 | 0.430 | 0.281 | 0.733 | 0.115 | 0.109 | 0.043 |
-| ball-first (0.825) | 0.732 | 0.320 | 0.130 | 0.531 | 0.680 | 0.042 | 0.131 | 0.148 |
-| **mixed** | | | | | **0.689** | **0.054** | **0.127** | **0.130** |
+| man-first (0.175) | 0.95 | 0.277 | 0.430 | 0.281 | 0.723 | 0.119 | 0.113 | 0.044 |
+| ball-first (0.825) | 0.482 | 0.370 | 0.130 | 0.531 | 0.630 | 0.048 | 0.151 | 0.171 |
+| **mixed** | | | | | **0.646** | **0.061** | **0.144** | **0.149** |
 
-The two challenges have identical abilities. The lunge from behind fouls four times as often and
-almost never wins the ball cleanly. The set frontal challenge wins it cleanly in one in eight
+The two challenges have identical abilities. The lunge from behind fouls five times as often and
+never wins the ball cleanly. The set frontal challenge wins it cleanly in about one in seven
 attempts. The probabilities show direction only; no band is claimed realistic (§6).
 
 ### 5.7 BallLoose under B′
@@ -354,13 +364,25 @@ The ball is released at `p_b`, with the velocity from §4. The poke line depends
 
   | Check | Holds | Why it holds in §5.6 |
   |---|---|---|
-  | A lunge raises P(Foul) and lowers P(BallWon) per **attempted** challenge | unconditionally, at fixed positions, abilities and carrier motion | `engage` and `m` do not depend on `L`; `q` is non-increasing in `L`; so `foulShare` is non-decreasing and `cleanShare` non-increasing (strictly while `q > 0` and no clamp binds). |
+  | A faster approach never lowers P(Foul) per **attempted** challenge | at fixed positions, abilities and carrier motion, over all closing speeds | Below `TIMING_SET_SPEED_M_S`, `L = 0`: `commit`, and so `engage`, rises while `foulShare` is fixed. Above it, `commit = 1` fixes `engage` while `foulShare` rises with `L`. Neither `m` nor which targets are reachable depends on the tackler's velocity. |
+  | A lunge lowers P(BallWon) per attempted challenge | **only for `c ≥ TIMING_SET_SPEED_M_S`**, same fixed conditions | `engage` is saturated; `foulShare` is non-decreasing and `cleanShare` non-increasing in `L` (strictly while `q > 0` and no clamp binds). |
+  | Below the set speed, closing harder raises P(BallWon) | for `c ≤ TIMING_SET_SPEED_M_S`, same fixed conditions | `engage` rises with `commit`; `q`, `foulShare` and `cleanShare` are fixed. Intended: a defender who never closes does not win the ball. |
   | From behind fouls more and wins cleanly less than from the front | **conditional on connecting**, at equal reach | `X` enters only `foulShare` (+) and `cleanShare` (−, via `X'`) and raises `m`. Across real positions `engage` differs, because the reach target differs, so the unconditional rate is reported descriptively, not asserted. |
   | A faster carrier concedes more BallWon from the side | conditional on connecting, at equal reach | `d_b`, and so `X'`, rises with carrier speed; `CLEAN_EXPOSURE_K > 0`. |
 
   **Check against the v0.1 counterexample** (carrier at 1.5 m/s, defender 0.6 m behind, abilities as
   in §5.6): the defender at 3 m/s has P(Foul) 0.207; at 7 m/s it is 0.220. Under v0.1 the same pair
   gave 0.136 and 0.118, which was the wrong direction.
+
+  **Check against the v0.2 counterexample** (review, v0.3: carrier at (50, 34) moving (3, 0), frontal
+  defender at (50.9, 34), abilities as in §5.6). Moving (2, 0), `c = 1` and P(BallWon) is 0.153. Moving
+  (1, 0), `c = 2` and it is 0.177. The two speeds straddle the set speed, so the commitment gain below
+  it outweighs the 0.5 m/s lunge excess above it. v0.2 claimed the BallWon sign unconditionally; v0.3
+  claims it only where commitment is saturated.
+
+  **Sweep.** 2.6 million script evaluations found no violation of the three rows above. The sweep
+  covered an ability grid, carrier speeds 0–9 m/s, tackler positions 0.3–1.5 m all round the carrier,
+  and tackler speeds −4 to +14 m/s along `n`.
 - **Numeric realism bands** need sourced `[GT]` references (owner, §7 D4) before any calibration.
 - **Neutrality.** B′ changes default behaviour (every tackle reads new inputs). It is a
   behaviour-changing landing and must not land inside an open measurement window. It needs a six-seed
@@ -383,5 +405,6 @@ The ball is released at `p_b`, with the velocity from §4. The poke line depends
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.3 | November 16, 2026 | — | Second Codex review of PR #548 (two P2 findings). (1) §5.3: a tackler only commits to a target within `TackleContactRadiusM`. When only one target is reachable, intent is forced to it (`m_eff`), so `reach` is never clamped and an out-of-range target never connects. Worked example 1 becomes man-first only; worked example 2 moves to 0.95 m so that both targets are reachable. (2) §6: the lunge check is split at `TIMING_SET_SPEED_M_S`. P(Foul) is non-decreasing in closing speed everywhere; P(BallWon) falls only once commitment is saturated, and rises below that. The reviewer's counterexample (0.153 → 0.177) is reproduced and explained. All figures script-checked, plus a 2.6-million-point sweep. |
 | 0.2 | November 16, 2026 | — | Codex review of PR #548 (three P2 findings and one A′ recommendation). (1) §5.3: one challenge geometry for eligibility, selection and resolution, using the minimum of virtual-ball and carrier distance, with reach by intent and BallLoose released at `p_b`. (2) §5.6: lunge, side of approach and intent no longer enter `engage`, so a lunge cannot lower P(Foul). The v0.1 counterexample (0.136 → 0.118) now gives 0.207 → 0.220. §6 states each sign's conditioning; `ENGAGE_EXPOSURE_K` and `ENGAGE_LUNGE_K` are withdrawn. (3) §5.4: commitment comes from relative closing speed, not the tackler's own velocity, and both worked examples are rebuilt from explicit positions, velocities and facing. All figures were script-checked. §4: delayed-regain reporting kept for A′. |
 | 0.1 | November 16, 2026 | — | Created from the owner's review of #440 Stage B: current state verified at `e0d1e626`; A′ / B′ / C′ staging, proposed formulas with worked examples, owner decisions D1–D6. Nothing implemented. |

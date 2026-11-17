@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 16, 2026 — (v2.239) `docs/tracking/tackle-duel-design.md` v0.1 → v0.2 after Codex review of PR #548: one challenge geometry (minimum of virtual-ball and carrier distance) for eligibility, selection and resolution; lunge, side and intent removed from `engage` so the stated signs hold; closing-speed commitment; worked examples rebuilt from explicit kinematics and script-checked; A′ keeps delayed-regain reporting. No path added or removed. **Modified:** `CHANGELOG.md` and this manifest.
+**Last Updated:** November 16, 2026 — (v2.240) `docs/tracking/tackle-duel-design.md` v0.2 → v0.3 after the second Codex review of PR #548: a tackler only commits to a reachable target (intent forced when only one target is in reach, so `reach` is never clamped); the lunge check is split at the set speed (P(Foul) non-decreasing everywhere, P(BallWon) falls only once commitment saturates); worked examples regenerated and a 2.6-million-point sweep script-checked. No path added or removed. **Modified:** `CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 16, 2026 — (v2.239) `docs/tracking/tackle-duel-design.md` v0.1 → v0.2 after Codex review of PR #548: one challenge geometry (minimum of virtual-ball and carrier distance) for eligibility, selection and resolution; lunge, side and intent removed from `engage` so the stated signs hold; closing-speed commitment; worked examples rebuilt from explicit kinematics and script-checked; A′ keeps delayed-regain reporting. No path added or removed. **Modified:** `CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 16, 2026 — (v2.238) **New design supplement** `docs/tracking/tackle-duel-design.md` v0.1 (DRAFT): owner review of #440 Stage B; proposes cutting #440 to a geometry-derived knock plus one-frame fence (A′), a Duel v2 for #14 §3.6.5 reading facing, side of approach, closing speed, a virtual ball point and ball-first/man-first intent (B′), and a deferred carried-ball model (C′); owner decisions D1–D6. Documentation only; no code, spec, schema or RNG change. **Modified:** `CHANGELOG.md` and this manifest.
 
@@ -4203,7 +4205,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/branch-cleanup-disposition.md` | v0.5 audited branch dispositions (October 30 A3.4 author reconciliation; independent review still open), provenance archive messages and gates, plus the executed record: owner authorization, verified annotated archive tags, eight lease-protected deletions and post-delete remote checks; deferred-work reviewer assignments open |
 | `docs/tracking/PROGRESS.md` | Stage progress, milestones, and current status notes |
 | `docs/tracking/spec-error-log.md` | Cross-spec error tracking (`ERR-*`) |
-| `docs/tracking/tackle-duel-design.md` | Tackle duel design note v0.2 (DRAFT, November 16, 2026; design supplement, not an approved spec). Scales #440 back to a geometry-derived BallLoose knock plus a one-frame carrier fence (A′); proposes Duel v2 for #14 §3.6.5 (side of approach, carrier facing/speed, virtual ball point, timing via closing speed, ball-first/man-first intent) (B′); defers a carried-ball/touch model (C′). Proposed `[GT]` constants with worked examples; owner decisions D1–D6. Nothing implemented. |
+| `docs/tracking/tackle-duel-design.md` | Tackle duel design note v0.3 (DRAFT, November 16, 2026; design supplement, not an approved spec). Scales #440 back to a geometry-derived BallLoose knock plus a one-frame carrier fence (A′); proposes Duel v2 for #14 §3.6.5 (side of approach, carrier facing/speed, virtual ball point, timing via closing speed, ball-first/man-first intent) (B′); defers a carried-ball/touch model (C′). Proposed `[GT]` constants with worked examples; owner decisions D1–D6. Nothing implemented. |
 | `docs/tracking/w-defender-marking-wiring-plan.md` | W13 defender-marking wiring plan v0.8 (APPROVED FOR IMPLEMENTATION). W13.0 (§9 ② ③ ④) landed on `claude/great-sagan-rpcmhp`, unmerged; W13.1 (§9 ⑤–⑨) not started; §3 diagnosis is a hand-off |
 | `docs/tracking/spec-error-log-err012-addendum.md` | ERR-012 addendum details |
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
@@ -4821,8 +4823,9 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
-| 2.239 | 2026-11-16 | — | `tackle-duel-design.md` v0.2 (PR #548 review fixes). Documentation only. |
-| 2.238 | 2026-11-16 | — | New `docs/tracking/tackle-duel-design.md` v0.1 (since v0.2; DRAFT design supplement). Documentation only. |
+| 2.240 | 2026-11-16 | — | `tackle-duel-design.md` v0.3 (second PR #548 review). Documentation only. |
+| 2.239 | 2026-11-16 | — | `tackle-duel-design.md` v0.2 (since v0.3; PR #548 review fixes). Documentation only. |
+| 2.238 | 2026-11-16 | — | New `docs/tracking/tackle-duel-design.md` v0.1 (since v0.3; DRAFT design supplement). Documentation only. |
 | 2.237 | 2026-11-16 | — | Merge main `3871c9ac` into W13 (`claude/great-sagan-rpcmhp`): no path added or removed; header chains kept newest first; spec-error-log pointers at v3.08, data-contract-index row v1.9, MatchEngine.cs v2.22 / MatchEngineConstants.cs v1.48 rows. |
 | 2.236 | 2026-11-16 | — | Merge remote main `75485fca` (PR #543): no path added or removed; header chains kept newest first; pointers at spec-error-log v2.103. |
 | 2.235 | 2026-11-16 | — | Evidence-only: PR #539 host request and pinned-host Unity receipt (merged `src` 967655cc; compile 0 error CS; EditMode 1,220/0/7); AR-2 README v1.9 and SHA256SUMS. No source change; full-scope review still pending. |
