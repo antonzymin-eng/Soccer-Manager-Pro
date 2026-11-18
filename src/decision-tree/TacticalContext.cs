@@ -2,8 +2,10 @@
 // Created:  2026-05-29
 // Modified: 2026-07-23
 // Modified: 2026-07-26 (ERR-008-014 — + LooseBallCollector routing field, host-designated)
+// Modified: 2026-11-12 (W13.1c / ERR-008-028 — + MarkTargetSpeed, the marked man's speed for the mark-MOVE pace tier)
+// Modified: 2026-11-11 (W13.1 / ERR-008-027 — + HasMarkTarget / MarkTarget per-agent mark-point carrier, host-written, default off)
 // Author:   —
-// Spec:     Decision Tree #8 §2.2.6, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
+// Spec:     Decision Tree #8 §2.2.6, §3.1.7.2, §3.1.8.2, ERR-008-027, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
 //           Stage 0: hardcoded defaults via Stage0Default(formationSlot).
 //           Stage 1+: Formation System (Positioning AI #12) populates live values.
@@ -124,6 +126,38 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public bool LooseBallCollector;
 
+        /// <summary>
+        /// W13.1 (ERR-008-027, Defensive AI #14 §3.13.1): true only for an agent the host has given a
+        /// per-tick mark point — a defender marking a specific opponent. When set, <see cref="MarkTarget"/>
+        /// is the MOVE_TO_POSITION target (replacing the depth-adjusted formation slot) and
+        /// <c>OptionGenerator</c> generates PRESS for this agent only for the ball carrier within
+        /// <c>PRESS_TRIGGER_DISTANCE</c> (priority 1), never the "nearest opponent" of priority 2 —
+        /// otherwise every marker would sprint onto his man from about 6 m (#8 §3.1.8.2).
+        /// The Decision Tree receives a <b>position and a flag</b>, never a #14 type (no reference to
+        /// <c>TacticalDirector.DefensiveAI</c>). Written solely by <c>MatchEngine.RunMechanicsAI</c> under
+        /// the engine's mark-movement switch (default off). Zero value <c>false</c> = identity (safe
+        /// unseeded, like <see cref="LooseBallCollector"/>); <see cref="Stage0Default"/> seeds it explicitly.
+        /// </summary>
+        public bool HasMarkTarget;
+
+        /// <summary>
+        /// W13.1 (ERR-008-027): the mark point in WORLD metres (X goal-to-goal 0-105, Y touchline-to-
+        /// touchline 0-68), valid only when <see cref="HasMarkTarget"/> is true; zero otherwise. The host
+        /// has already mapped #14's canonical-frame point to world space for the away team.
+        /// </summary>
+        public Vector2 MarkTarget;
+
+        /// <summary>
+        /// W13.1c (ERR-008-028, #8 §3.5.6): the speed (m/s) of the opponent this agent is marking, read from the
+        /// CURRENT stride's world state by the host and written in the same block as <see cref="MarkTarget"/>;
+        /// 0 when there is no marked man (no target, or a COVER_GK_ZONE point). A speed is frame-invariant, so no
+        /// mirror applies. Consumed only by <c>ActionDispatcher</c> when <see cref="HasMarkTarget"/>: a MOVE to the
+        /// mark point paces at the LARGER of its distance tier and this man's speed tier, so a marker is never
+        /// walking after a runner. Zero value = identity (unused unless <see cref="HasMarkTarget"/>);
+        /// <see cref="Stage0Default"/> seeds 0. Per-stride input; not serialized.
+        /// </summary>
+        public float MarkTargetSpeed;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -165,6 +199,9 @@ namespace TacticalDirector.DecisionTree
                 RestDefenseSufficient = true,
                 SaveAvailable      = false,
                 LooseBallCollector = false,
+                HasMarkTarget      = false,
+                MarkTarget         = Vector2.zero,
+                MarkTargetSpeed    = 0f,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -235,4 +272,10 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   MatchEngine.RunMechanicsAI for the ONE agent per team       |
 // |         |            |        |   designated to collect a resting loose ball. Host-designated |
 // |         |            |        |   because only the host knows who is sent off.                |
+// | 1.10    | 2026-11-11 | —      | W13.1 (ERR-008-027): + HasMarkTarget / MarkTarget routing fields (zero value false /  |
+// |         |            |        | zero = identity; Stage0Default seeds them). Set only by MatchEngine under the           |
+// |         |            |        | mark-movement switch; MOVE targets the point and PRESS priority 2 is skipped for the    |
+// |         |            |        | agent. A position + a flag: no #14 type, no asmdef reference.                          |
+// | 1.11    | 2026-11-12 | —      | W13.1c (ERR-008-028): + MarkTargetSpeed (m/s of the marked man; 0 = none), written beside |
+// |         |            |        |   MarkTarget by MatchEngine; read by ActionDispatcher for the mark-MOVE pace tier.          |
 #endregion

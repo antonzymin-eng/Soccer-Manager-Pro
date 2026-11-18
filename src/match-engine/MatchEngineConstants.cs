@@ -1,5 +1,8 @@
 // File:     src/match-engine/MatchEngineConstants.cs
+// Modified: 2026-11-16 (merge of W13 with main: version history only)
+// Modified: 2026-11-11 (W13.1 / ERR-014-010 — [GT] MarkMovementEnabled, the default-off engine switch for Defensive AI mark-target movement; no schema change)
 // Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Created:  2026-06-16
@@ -749,6 +752,21 @@ namespace TacticalDirector.MatchEngine
         public static readonly int TackleCooldownStrides = Config.GetInt("match-engine", "TackleCooldownStrides", 20);
 
         /// <summary>
+        /// [GT] Sole gate for Defensive AI (#14) mark-target movement (W13.1, <c>ERR-014-010</c> /
+        /// <c>ERR-008-027</c> / <c>ERR-021-010</c>), <b>default off</b>. When true, <c>RunMechanicsAI</c> turns each
+        /// non-possessing defender's committed MAN_MARK / INTERCEPT_RUNNER / COVER_GK_ZONE assignment into a
+        /// per-agent mark point (<c>MarkTargetComposer</c>, goal-side of his man) that the Decision Tree's
+        /// MOVE_TO_POSITION targets, and enables #14 anti-chaos Invariant 4 (one marker per opponent). When false
+        /// no mark target is ever composed, Invariant 4 does not run, and PRESS / MOVE generation are exactly
+        /// the pre-W13.1 behaviour. ENGINE-WIDE (both teams mark or neither); a per-team scheme is the planned
+        /// W13.2. Config-level, NOT serialized per match: a save restored under a different value diverges, as
+        /// for any [GT] (OD-11). The precedent is <c>ClubFinancesConstants.DeepRevenueEnabled</c>.
+        /// <c>MatchEngine.TestOnly_ArmMarkMovement</c> is a measurement/test seam, not the production
+        /// activation path. Config key [match-engine] MarkMovementEnabled. UN-CALIBRATED.
+        /// </summary>
+        public static readonly bool MarkMovementEnabled = Config.GetBool("match-engine", "MarkMovementEnabled", false);
+
+        /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
         /// collision to qualify as a CANDIDATE foul — the "hard enough for the referee to consider it"
         /// gate (design note §3; balance pass `foul-discipline-balance-design.md` §4.1). Sits at the p99
@@ -1134,4 +1152,6 @@ namespace TacticalDirector.MatchEngine
 // | 1.45 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 1.46 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 // | 1.47 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
+// | 1.47 (branch-local W13) | 2026-11-11 | — | W13.1 / ERR-014-010: [GT] MarkMovementEnabled (default false) — the engine-wide switch for #14 mark-target movement. No schema, RNG or domain-tag change. |
+// | 1.48 | 2026-11-16 | — | Merge main 3871c9ac into W13: both v1.47 rows kept (#434 and W13 MarkMovementEnabled). No value change. |
 #endregion

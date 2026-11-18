@@ -1,11 +1,15 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
+// Modified: 2026-11-12 (W13.1c final pass: MarkStandoffTightM doc records the body-contact limitation, W13-F8; no value change)
+// Modified: 2026-11-10 (W13.1 / ERR-014-010 — the §3.13.1 mark stand-off: 2 [GT] (MarkStandoffM, MarkStandoffTightM) + 1 [DERIVED] OwnGoalCenter)
 // Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
 // Author:   —
-// Spec:     Defensive AI #14 §6.1, FR-DA-007, Code Standards #20 §4.2 FR-CS-025
+// Spec:     Defensive AI #14 §6.1, §3.13.1, FR-DA-007, ERR-014-010, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #14. Contains all assignment thresholds,
 //           hysteresis timing, offside-trap parameters, tackle-intent constants, anti-chaos
 //           floors, GK zone bounds, and cross-spec scalar imports.
+
+using UnityEngine;
 
 using TacticalDirector.PressingAI;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
@@ -31,6 +35,20 @@ namespace TacticalDirector.DefensiveAI
         /// Defensive AI #14 §3.6.5.
         /// </summary>
         public const float TACKLE_FOUL_SHARE_CEILING = 0.95f;
+
+        #endregion
+
+        #region Derived
+
+        /// <summary>
+        /// [DERIVED] The defended goal's centre point (m) in the canonical frame every #14 snapshot uses
+        /// (own goal on the x = 0 goal-line for BOTH teams, #14 §2.3 / ERR-014-008): <c>(0, PITCH_WIDTH_M / 2)</c>
+        /// = (0, 34). Formula: x = 0 (the canonical own goal-line), y = PITCH_WIDTH_M / 2. Source
+        /// constants: <see cref="PITCH_WIDTH_M"/> [CROSS: #1 §1.2]. The reference point of the §3.13.1
+        /// mark-target composition (goal-side = closer to this point than the marked opponent); the
+        /// <c>ownGoalCenter</c> of §3.5.2 with <c>defendsX0</c> the constant true. Defensive AI #14 §3.13.1.
+        /// </summary>
+        public static readonly Vector2 OwnGoalCenter = new Vector2(0.0f, PITCH_WIDTH_M / 2.0f);
 
         #endregion
 
@@ -292,6 +310,37 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         public static readonly float MaxMarkDisplacementM = Config.GetFloat("defensive-ai", "MaxMarkDisplacementM", 20.0f);
 
+        // ── Mark-Target Composition (§3.13.1 — W13.1, ERR-014-010) ─────────────
+        //
+        // BOTH ARE UN-CALIBRATED. They are first plausible values for a surface that has never moved a
+        // defender (the stand-off is the distance a marker holds goal-side of his man; nobody has ever
+        // marked anyone in this engine). KD-W1 permits new dials on a not-yet-wired surface and forbids
+        // tuning them there; they are the calibration pass's input, not its output. They are inert
+        // while MatchEngineConstants.MarkMovementEnabled is false (the shipped default).
+
+        /// <summary>
+        /// [GT] Stand-off (m) a marking defender holds goal-side of his marked opponent: the §3.13.1
+        /// mark point is this far from the opponent's LIVE position, on the line to <see cref="OwnGoalCenter"/>.
+        /// UN-CALIBRATED. Range invariant (locked by <c>MarkTargetComposerTests</c>):
+        /// <c>MarkStandoffTightM &lt; MarkStandoffM &lt; min(TackleEligibleRadiusM, MARKING_RADIUS_M)</c> (= 3.0 m
+        /// by default) — below the tackle-eligibility radius and the #23 "marked" radius, so a marker that
+        /// reaches the point is eligible to tackle his man and counts as marking him. Config key
+        /// [defensive-ai] MarkStandoffM. Defensive AI #14 §3.13.1 / §6.1.
+        /// </summary>
+        public static readonly float MarkStandoffM = Config.GetFloat("defensive-ai", "MarkStandoffM", 2.0f);
+
+        /// <summary>
+        /// [GT] Stand-off (m) used instead of <see cref="MarkStandoffM"/> when the marking agent's #21
+        /// <c>PlayerInstructions.TightMarking</c> is set (#21 §3.4, via <see cref="TacticTranslation.MarkStandoffM"/>).
+        /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. KNOWN LIMITATION (open issue
+        /// W13-F8, blocks the default flip): 1.0 m is at or below the body-contact separation of two players, so against a MOVING
+        /// (and a stationary) man the marker stops in contact beside him — measured 0.82-0.84 m, level with him, not goal-side on
+        /// 54 of 60 strides away / 1 home against a 2.6 m/s runner — rather than 1.0 m goal-side. Whether the constant, a
+        /// contact-aware stand-off floor or the goal-side criterion should change is a calibration / owner decision (KD-W1:
+        /// not tuned here). Config key [defensive-ai] MarkStandoffTightM. Defensive AI #14 §3.13.1 / §6.1.
+        /// </summary>
+        public static readonly float MarkStandoffTightM = Config.GetFloat("defensive-ai", "MarkStandoffTightM", 1.0f);
+
         // ── GK Zone (§3.9) ─────────────────────────────────────────────────────
 
         /// <summary>
@@ -334,4 +383,8 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        | numerical guarantee that the second inverse transform never divides   |
 // |         |            |        | by zero, not a football judgment a config may reach. First [FIXED]    |
 // |         |            |        | region in this catalogue. ALL TEN [GT] UN-CALIBRATED per KD-W1.       |
+// | 1.4     | 2026-11-10 | —      | W13.1 / ERR-014-010: + the §3.13.1 mark stand-off — [GT] MarkStandoffM 2.0 and |
+// |         |            |        | MarkStandoffTightM 1.0 (UN-CALIBRATED, range invariant documented and locked   |
+// |         |            |        | by test) and the first [DERIVED] region, OwnGoalCenter (0, PITCH_WIDTH_M / 2). |
+// | 1.5     | 2026-11-12 | —      | W13.1c final pass: MarkStandoffTightM documents the known body-contact limitation (W13-F8); doc only, value unchanged. |
 #endregion

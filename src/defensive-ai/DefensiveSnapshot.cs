@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/DefensiveSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-11-10
+// Modified: 2026-11-10 (W13.1 / ERR-014-010 — + MarkMovementActive per-tick input)
 // Author:   —
-// Spec:     Defensive AI #14 §2.3, §4.4, ERR-014-008, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
+// Spec:     Defensive AI #14 §2.3, §4.4, ERR-014-008, ERR-014-010, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-022 / FR-TI-033)
 // Purpose:  Full tick input container for DefensiveAITick. Populated once per tick by
 //           the match orchestrator from #7, #12, #13 state before Tick() is called.
 
@@ -22,28 +22,20 @@ namespace TacticalDirector.DefensiveAI
     /// <see cref="DefensiveTeamId"/> to obtain own-team or opponent agents.
     ///
     /// <para>
-    /// <b>Frame contract (ERR-014-008, #14 §2.3).</b> Every position and velocity in this snapshot
-    /// (<see cref="BallPosition"/>, <see cref="BallVelocity"/>, <see cref="GkPosition"/>, and each
-    /// <see cref="DefensiveAgentSnapshot"/> <c>Position</c> / <c>Velocity</c> / <c>BaselineSlot</c>,
-    /// opponents included) is expressed in the <b>defending team's canonical attack-toward-+X frame</b>:
-    /// the defended goal-line is x = 0 and the goal being attacked is x = 105, for BOTH teams. The
-    /// composition root performs the away-team 180-degree pitch mirror before filling the snapshot, so
-    /// this is NOT world space. <see cref="DefensiveTeamId"/> identifies who is defending and which
-    /// agents are own-team; it says nothing about which goal is defended. Defensive AI must read the
-    /// defended goal from <see cref="IsOwnGoalAtX0"/>, never from the team id.
+    /// <b>Frame contract (ERR-014-008, #14 §2.3).</b> Defensive AI #14 is <b>canonical-only</b>. Every
+    /// position and velocity in this snapshot (<see cref="BallPosition"/>, <see cref="BallVelocity"/>,
+    /// <see cref="GkPosition"/>, and each <see cref="DefensiveAgentSnapshot"/> <c>Position</c> /
+    /// <c>Velocity</c> / <c>BaselineSlot</c>, opponents included) is expressed in the <b>defending team's
+    /// canonical attack-toward-+X frame</b>: the defended goal-line is x = 0 and the goal being attacked
+    /// is x = 105, for BOTH teams. That is a fixed invariant of the input, not a switch: #14 has no
+    /// "defends x = 105" mode, so a producer holding world-space data must rotate it (the away team's
+    /// 180-degree pitch mirror) BEFORE filling the snapshot, as the composition root does. This is NOT
+    /// world space. <see cref="DefensiveTeamId"/> identifies who is defending and which agents are
+    /// own-team; it says nothing about which goal is defended and must never be used to pick one.
     /// </para>
     /// </summary>
     public sealed class DefensiveSnapshot
     {
-        /// <summary>
-        /// True when the defended goal-line is x = 0 in this snapshot's frame. Always true: the frame
-        /// contract above places the defended goal at x = 0 for both teams (ERR-014-008). Every
-        /// <c>defendsX0</c> decision in #14 (threat ranking, runner direction, last-man selection,
-        /// tackle coverage depth, offside-trap half test and step-up depth) is sourced here, so the
-        /// frame is stated once and a future non-canonical producer has exactly one place to change.
-        /// </summary>
-        public static bool IsOwnGoalAtX0 => true;
-
         /// <summary>
         /// Tick index when this snapshot was captured. Used for F1 stale-perception detection
         /// (FR-DA-029): if snapshot.TickIndex &lt; lastProcessedTick, reuse previous tick output.
@@ -52,8 +44,7 @@ namespace TacticalDirector.DefensiveAI
 
         /// <summary>
         /// TeamId of the team running the defensive algorithm (0 = home, 1 = away). Identifies the own
-        /// team only; it does NOT select the defended goal (see the frame contract on the class and
-        /// <see cref="IsOwnGoalAtX0"/>).
+        /// team only; it does NOT select the defended goal (see the frame contract on the class).
         /// </summary>
         public int DefensiveTeamId;
 
@@ -129,6 +120,17 @@ namespace TacticalDirector.DefensiveAI
         public MarkingOrientation MarkingOrientation;
 
         /// <summary>
+        /// W13.1 (ERR-014-010) per-tick input: true when the composition root will CONSUME this tick's
+        /// assignments as per-agent mark targets (§3.13.1) — i.e. the engine's mark-movement switch is on
+        /// for this tick. It activates anti-chaos Invariant 4 (one marker per opponent, §3.10.2) in
+        /// <see cref="InvariantEnforcer"/>; while <c>false</c> (the class-field default, and the only value
+        /// the shipped engine writes) Invariant 4 does not run, so assignments and tackle intents are exactly
+        /// the pre-W13.1 ones. A per-tick input like every other field here: set by the producer before
+        /// <see cref="DefensiveAITick.Tick"/>, never read across ticks, NOT serialized.
+        /// </summary>
+        public bool MarkMovementActive;
+
+        /// <summary>
         /// Constructs a snapshot with a pre-allocated agents array of the given capacity.
         /// </summary>
         public DefensiveSnapshot(int agentCapacity = DefensiveAIConstants.SQUAD_SIZE)
@@ -154,4 +156,9 @@ namespace TacticalDirector.DefensiveAI
 // | 1.5     | 2026-11-10 | —      | ERR-014-008: documents the canonical-frame contract (own goal at x = 0 for |
 // |         |            |        |   both teams; positions were mis-documented as world space) and adds the   |
 // |         |            |        |   IsOwnGoalAtX0 frame accessor that replaces every team-id goal decision.  |
+// | 1.6     | 2026-11-10 | —      | W13.0 review M1: IsOwnGoalAtX0 removed. #14 is canonical-only — own goal at x = 0 is a    |
+// |         |            |        |   fixed frame invariant, not a per-producer switch; the unreachable x = 105 branches are  |
+// |         |            |        |   gone from production code.                                                              |
+// | 1.7     | 2026-11-10 | —      | W13.1 / ERR-014-010: + MarkMovementActive (per-tick input, default false, not serialized) — |
+// |         |            |        |   activates Invariant 4 (one marker per opponent, §3.10.2).                                  |
 #endregion
