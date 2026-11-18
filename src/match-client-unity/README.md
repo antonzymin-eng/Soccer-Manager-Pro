@@ -351,6 +351,10 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 
 ## P7b career binding
 
+Startup scene wiring enabled November 18, 2026. Unity 6000.4.9f1 compile and Play
+validation are pending for this change. The PR #539 host receipt covers the earlier
+source and scene.
+
 The build scene, `Assets/Scenes/Scene.unity`, enables career entry on the Main Menu and
 assigns inactive Career Home, New Career and Load Career roots under the active shell.
 Custom demo-only scenes can leave `_enableCareer` off.
@@ -368,7 +372,7 @@ To validate in an isolated host checkout:
    the demo action; no duplicate operation or UI hang. Matchday still resolves on Career Home.
 6. Verify the actual updated result/table after a round, autosave failure feedback, manual-save retry,
    damaged/incompatible slots, and repeat new/load/quit cycles.
-7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, smallest
+7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, focus return after a successful save, visible feedback on failure, the smallest
    desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
    career labels. All career pages use the existing wrapped/scrolled factory and shared focus rings.
 8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content

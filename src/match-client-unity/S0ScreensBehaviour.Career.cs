@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 using TacticalDirector.ClientApp;
@@ -31,6 +32,7 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<Button> _careerLoadButtons = new List<Button>();
         private Button _careerContinue, _careerStart, _careerProgress, _careerRetry, _demoButton;
         private ScreenId _careerLastScreen;
+        private Selectable _careerFocusReturn;
         private string _careerUiError;
 
         private string C(string role) => _careerText.Label(role);
@@ -42,6 +44,8 @@ namespace TacticalDirector.MatchClientUnity
                 if (_career.IsBusy) return;
                 try { action(); _careerUiError = null; }
                 catch (InvalidOperationException exception) { _careerUiError = exception.Message; }
+                if (_career.IsBusy && _view.Screen == _careerLastScreen)
+                    _careerFocusReturn = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
                 _applyVisibility();
                 RefreshCareer(true);
             }, kind);
@@ -64,9 +68,9 @@ namespace TacticalDirector.MatchClientUnity
             _careerNewHeading = Heading(n, C("new"), _careerNewScroll);
             _careerNotices.Add(_ui.Reason(n, true));
             _careerChoice = _ui.Label(n, "");
-            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll, S0UiFactory.ControlKind.Primary);
             CareerControl(n, C("back"), career.CancelNewCareer, _careerNewScroll);
             _careerClubs = _ui.Column("Career clubs", n);
+            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll, S0UiFactory.ControlKind.Primary);
             RectTransform l = Page(load, out _careerLoadScroll, S0UiConstants.ENTRY_MAX_WIDTH);
             _careerLoadHeading = Heading(l, C("load"), _careerLoadScroll);
             _careerNotices.Add(_ui.Reason(l, true));
@@ -105,9 +109,8 @@ namespace TacticalDirector.MatchClientUnity
             _careerLastScreen = screen;
             foreach (Button button in _careerIdleButtons) button.interactable = _career.IsInitialized && !_career.IsBusy;
             _demoButton.interactable = !_career.IsBusy;
-            bool canRetry = !_career.IsInitialized && !_career.IsBusy;
-            _careerRetry.gameObject.SetActive(canRetry);
-            _careerRetry.interactable = canRetry;
+            _careerRetry.gameObject.SetActive(!_career.IsInitialized);
+            _careerRetry.interactable = !_career.IsInitialized && !_career.IsBusy;
             _careerContinue.interactable = _career.CanContinue;
             _careerStart.interactable = _career.CanStart;
             CareerHomeViewModel home = _career.Home;
@@ -149,10 +152,15 @@ namespace TacticalDirector.MatchClientUnity
                 (home.AutosaveError != null ? _careerText.Text.Format("autosave", "autosave.error", home.AutosaveError) :
                 screen == ClientScreens.MainMenu && _career.IsInitialized && present && !_career.Load.CanContinue ? C("no_save") : "");
             foreach (Text label in _careerNotices) S0UiFactory.SetBoxed(label, notice);
-            if (changedScreen || _career.IsBusy)
+            Selectable heading = screen == ClientScreens.MainMenu ? _menuHeading : CareerHeading(screen);
+            if ((changedScreen || _career.IsBusy) && heading != null)
+                Focus(heading);
+            if (!_career.IsBusy && _careerFocusReturn != null)
             {
-                Selectable heading = screen == ClientScreens.MainMenu ? _menuHeading : CareerHeading(screen);
-                if (heading != null) Focus(heading);
+                if (!changedScreen && string.IsNullOrEmpty(notice) && heading != null &&
+                    EventSystem.current?.currentSelectedGameObject == heading.gameObject)
+                    Focus(_careerFocusReturn);
+                _careerFocusReturn = null;
             }
             RecoverFocus();
         }
@@ -165,4 +173,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.2 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.3 | 2026-11-05 | — | AR-3 M1: display labels use the same admitted CareerScreenText instance as coordinator failure copy. |
 // | 1.4 | 2026-11-18 | — | Keep career feedback and recovery controls near the heading and hide unpopulated slot rows. |
+// | 1.5 | 2026-11-18 | — | Follow the club list with Start, retain the pending Retry control and restore focus after same-screen work. |
 #endregion
