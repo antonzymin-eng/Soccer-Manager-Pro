@@ -2,17 +2,17 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.1
+**Version:** 0.2
 
 **Status:** Draft for technical review
 
-**Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner selected cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction on November 18, 2026.
+**Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft.
 
 ## Player behavior
 
 Closing the game or stopping Play during matchday requests cancellation. The last completed save remains available. On relaunch, the player resumes from that save and plays any unfinished matchday again. Days, transfers, or other changes since that save follow the existing unsaved-progress policy. If a save transaction has already begun, shutdown waits for it to finish or for its existing error recovery to run. A quit confirmation is optional follow-up work. Cancellation and writer safety must also work for Editor Stop, scene teardown, and other paths that bypass a confirmation.
 
-Keep the tracked scene's default enablement gated on this fix and pinned Unity acceptance. The current career branch has enablement on for review and Play testing.
+The tracked scene defaults to the demo shell. Use explicit career opt-in for Play testing. Enable career by default in the shutdown-fix follow-up once the fix and pinned Unity acceptance are complete.
 
 ## Season loop and cancellation points
 
@@ -36,20 +36,22 @@ Current `ClientCareerCoordinator.Dispose` waits on a single idle event covering 
 | Filesystem mutation already admitted | Let the worker finish the admitted transaction and signal the write barrier in a finally block, including when I/O fails. Dispose waits only for that barrier. The worker skips further projection and UI publication. |
 | Finished or completion queued for UI publication | Clear pending navigation/completion and stop publication. Dispose returns without running a callback. |
 
-Prepare the round's save bytes from the quiescent loop before requesting the permit. Extract the existing `SeasonSaveManager.Save` capture and encoding path so its current callers reuse the same implementation and destination checks. Pass the prepared bytes and the metadata required for those checks into the existing `CareerSaveSlots.Write` transaction. A cancellation during capture can discard the buffer and leave the store untouched. Once the worker has prepared the bytes, it requests the permit before entering the store transaction. The permit covers slot sequence selection and the read checks it relies on, temp-file and sidecar staging, flush, digest, paired swaps, rollback and cleanup. Snapshot capture stays before file open as required by FR-SN-021. Test that preparation preserves the existing encoded bytes and overwrite guards.
-
-Measure the time inside the permit, including storage latency. A slow or blocked disk can still delay shutdown. Continue holding the permit until the save succeeds or its error recovery finishes.
+Start with the existing `CareerSaveSlots.Write` transaction. Measure encoding separately from slot sequence selection, disk staging, flush, digest, paired swaps and cleanup. If encoding has a small and consistent cost on representative saves, acquire the permit at entry to `Write` and keep the existing `SeasonSaveManager.Save` path. This treats preparation within `Write` as part of the admitted save. If encoding materially extends the shutdown wait, extract the existing capture and encoding into a shared preparation step before acquiring the permit. Preserve FR-SN-021's capture-before-file-open order, encoded bytes, destination checks and recovery in either case. Slow storage can still delay shutdown. Continue holding the permit until the save succeeds or its error recovery finishes.
 
 Cover every mutation reachable from an accepted career operation through the same gate. This includes creation/autosaves and manual saves, interrupted-write recovery and directory creation when opening the store, and `CareerSession.Resume` setting aside a damaged sidecar. Pure slot reads and projection can be skipped or allowed to unwind with the detached worker. A read already in progress must acquire the permit before it can invalidate a slot. Cancellation cannot mark a healthy save damaged or surface as an autosave failure. For the existing single-shell contract, a replacement shell can open the same directory after disposal returns because the old one has finished or been denied every future write.
 
 Keep UI and worker cleanup distinct. Disposal closes admission and clears UI publication under the shared gate, then waits outside it only if a writer was admitted. Defer disposal of token/signal resources and clearing worker-owned state until the final worker user has exited. Preserve idempotence across `OnApplicationQuit`, `OnDestroy`, wiring rejection and schedule failure. Avoid a worker-thread Unity callback or a continuation that depends on the Unity synchronization context to release the write barrier.
 
+### Measure whether a short cancellation join is viable
+
+Record the time from cancellation request to the round worker acknowledging it and finishing cleanup. Include match boot, matchday preparation, fixture bookkeeping, complete tick batches, and the point immediately before write admission. The estimated time for a batch of engine ticks does not bound these other phases. Assess a cooperative join only for an already-running round whose remaining work has demonstrated prompt, cancelling checkpoints and no blocking I/O. Queued work, loads and projections can have other delays. Retain the current proposal to wait only for admitted writes unless the owner accepts a short, measured cancellation join. Any approved join waits for real worker exit without a timeout that releases its ownership.
+
 ## Acceptance
 
 1. **Cancel after work has started.** Use deterministic test barriers, with a fixture known to resolve before the managed match. Cancel after at least one previous fixture has applied and after the real engine has completed ticks inside the managed match. Verify worker exit before the engine reaches full time, no report or navigation publication, and byte-identical pre-existing save and sidecar. Check slot sequence, latest-slot choice and absence of new temporary or backup files. Keep the bytes in the checkpoint as the replay input.
 2. **Replay and compare.** Start uninterrupted and resume-after-cancel runs from identical pre-round save bytes, using identical inputs and resolution mode. Compare ordered results, cursor, season snapshot and the entire serialized career payload, including world, training, medical, appearances, progression, discipline, finances and transfers. Compare the completed autosave payload and sidecar from independent stores with identical slot history. The existing `ResumedCareer_ContinuesExactlyAsTheUninterruptedOne` is the quick-sim precedent. Add an engine-backed case so the in-match poll and discipline tap are exercised.
-3. **Prove both sides of writer admission.** Park the real worker during save capture, then after write admission, including cancellation between the pair swaps. Before admission, dispose returns, the original pair stays intact and the old worker cannot write after a new shell opens the store. After admission, dispose waits until success or rollback and returns even if a subsequent projection would be blocked. Verify queued cancellation, repeated disposal, failed scheduling, initialization recovery and damaged-slot invalidation races. Use barriers to determine phase ordering. Test timeouts detect hangs and do not drive production behavior.
-4. **Verify on the pinned host.** Compile the exact source/scene tree in Unity 6000.4.9f1, run affected EditMode suites and the [career Play checklist](../../src/match-client-unity/README.md#p7b-career-binding). Exercise window close in a player and Editor Stop during the real match loop and during a save, including a second Play session using the same directory. Record stop latency and time spent in the write phase separately, successful re-open and continued play, Console output and steady-state allocations. Verify no-cancel result identity against the existing path and check that polling has no material impact on match throughput. Keep default enablement gated until the receipts cover the updated tree.
+3. **Prove both sides of writer admission.** Park the real worker immediately before write admission, then after admission, including cancellation between the pair swaps. Before admission, dispose returns, the original pair stays intact and the old worker cannot write after a new shell opens the store. After admission, dispose waits until success or rollback and returns even if a subsequent projection would be blocked. Verify queued cancellation, repeated disposal, failed scheduling, initialization recovery and damaged-slot invalidation races. Use barriers to determine phase ordering. Test timeouts detect hangs and do not drive production behavior.
+4. **Verify on the pinned host.** Compile the exact source/scene tree in Unity 6000.4.9f1, run affected EditMode suites and the [career Play checklist](../../src/match-client-unity/README.md#p7b-career-binding). Exercise window close in a player and Editor Stop during the real match loop and during a save, including a second Play session using the same directory. Record stop latency, save encoding and time spent in the write phase separately, successful re-open and continued play, Console output and steady-state allocations. Verify no-cancel result identity against the existing path and check that polling has no material impact on match throughput. Keep default enablement gated until the receipts cover the updated tree.
 
 The small Unity focus guard reported in review can use explicit Unity-object null checks in both focus capture and focus return when the binding next changes.
 
@@ -57,4 +59,5 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.2 | 2026-11-18 | Keep the scene opt-in. Measure cancellation completion and encoding before changing the shutdown wait policy or extracting save preparation. |
 | 0.1 | 2026-11-18 | Draft cooperative cancellation, discard and writer ownership design with acceptance cases. |

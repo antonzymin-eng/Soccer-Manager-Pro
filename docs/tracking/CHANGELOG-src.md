@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 18, 2026 — (v2.235 — **Career menu startup and recovery.** Discard previous setup before preparing a new club list, derive Continue and picker rows from one scan, and refine the Unity menu action order and busy focus. At `fabac94e`, the targeted Linux ClientApp run passed 276, failed 0 and skipped 3 diagnostic cases, with `S0DemoFixtureComparisonTests` excluded. The full PR gate remains unverified at that head. The pre-commit hook had previously timed out at 60 seconds and was bypassed for the follow-up commit. Exact-tree Unity verification remains open.)
+> **Last Updated:** November 18, 2026 — (v2.236 — **Career startup remains opt-in.** The tracked build scene disables career startup pending safe shutdown and pinned Unity acceptance. The shutdown design is a draft. At `fabac94e`, Linux ClientApp passed 276, failed 0 and skipped three diagnostics with `S0DemoFixtureComparisonTests` excluded. The full PR gate was outside that run. The 60-second pre-commit timeout preceded a one-commit bypass. Pinned Unity verification remains open.)
+
+> **Last Updated (prior):** November 18, 2026 — (v2.235 — **Career menu startup and recovery.** Discard previous setup before preparing a new club list, derive Continue and picker rows from one scan, and refine the Unity menu action order and busy focus. Exact-tree Unity verification remains open.)
 
 > **Last Updated (prior):** November 16, 2026 (UTC) — (v2.234 — **W13 branch merges main `3871c9ac` (PR #543 kickoff formation/Duty, PR #539 career P7/P8, PR #546 W13.0 records).** `src` conflicts were header/version-history comments only: `MatchEngine.cs` keeps main's v2.18 (#434), W13's v2.18 row is marked branch-local W13 and a v2.22 merge row is added; `MatchEngineConstants.cs` likewise keeps main's v1.47 and adds v1.48. Every W13 code hunk and every #543/#539 code hunk merged without conflict. Both histories kept newest first; W13's v2.221–v2.225 labels are branch-local W13 records. No schema, RNG, domain-tag or draw-order change; `MarkMovementEnabled` stays false. **Gate:** full `bash tools/run-tests-local.sh --pr` PASSED on the merged tree (non-certifying; Windows .NET SDK 8.0.425 standing in for the Linux lane): **4,770 passed / 0 failed / 227 skipped** over 37 assemblies (MatchEngine 1,024 / 0 / 17); quarantine empty; no owner-held RED configured; `tools/doc-consistency-check.py` PASS.)
 
@@ -2930,6 +2932,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.236 | 2026-11-18 | — | Keep the tracked career scene opt-in. Record earlier Linux evidence and the open Unity checks. |
 | 2.235 | 2026-11-18 | — | Career menu startup, preview recovery, single-scan slot selection, and busy focus follow-up. Unity host checks pending. |
 | 2.234 | 2026-11-16 | — | Merge main `3871c9ac` into W13 (`claude/great-sagan-rpcmhp`): header-comment conflicts in `MatchEngine.cs` (v2.22) and `MatchEngineConstants.cs` (v1.48) only; W13's duplicate v2.221–v2.225 labels are branch-local W13 records. No behaviour change; switch stays off. |
 | 2.233 | 2026-11-16 | — | Merge remote main `75485fca` (PR #543) into PR #539: no `src` conflict (merged tree `406a2ab9`); tracking histories kept newest first; the PR's duplicate v2.219–v2.224 labels are branch-local #539 records. Unity re-validation due. |
