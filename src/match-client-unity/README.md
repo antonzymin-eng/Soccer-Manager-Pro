@@ -382,11 +382,10 @@ The shared formatter admits both catalogues with the existing typed-placeholder 
 Career copy/layout is a binding candidate, not S1 Gate-G/H/I approval. Record source identity, actual
 loaded copy identity, compile/EditMode and runtime receipts before claiming host acceptance.
 
-**Known shutdown limitation:** `ClientCareerCoordinator.Dispose` waits on the main thread, without a
-timeout, for accepted career work to finish. During engine-resolved matchday work this can leave the
-application unresponsive until the full round completes (about two minutes at the recorded compute
-rate). The operation cannot currently be cancelled safely. Releasing its owner on a timeout could
-interrupt saving or race career mutation. The owner selected cooperative cancellation with
-write-phase protection. See the [draft shutdown design](../../docs/tracking/career-shutdown-cancellation-design.md)
-for the proposed behavior and pinned-host close and Editor Stop checks. Default enablement on merge
-requires the shutdown fix and the pinned Unity checks.
+**Career shutdown validation:** Close the player and stop Editor Play during managed matchday
+resolution, then reopen the same save directory and resume the previous complete save.
+Repeat with a write already in progress and verify the save pair commits or rolls back.
+Use the `SeasonSave.Encode` and `CareerSaveSlots.Write` Profiler markers for timings.
+See the [shutdown design](../../docs/tracking/career-shutdown-cancellation-design.md)
+for the race and replay acceptance cases. The tracked scene remains opt-in pending the
+pinned Unity checks.

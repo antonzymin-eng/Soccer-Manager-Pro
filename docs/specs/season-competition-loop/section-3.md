@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** October 20, 2026 (v2.26 — ERR-030-057: §3.5 (d″) pseudocode guards a null #28 boundary and derives #31's window from the next calendar's opening fixture day; the (c′) note records that the window's close does not follow roll timing)
+**Last Updated:** November 18, 2026 (v2.27 — Describe shutdown checkpoints and discard of a cancelled round.)
+**Last Updated (prior):** October 20, 2026 (v2.26 — ERR-030-057: §3.5 (d″) pseudocode guards a null #28 boundary and derives #31's window from the next calendar's opening fixture day; the (c′) note records that the window's close does not follow roll timing)
 **Last Updated (prior):** October 20, 2026 (v2.25 — ERR-030-056: §3.5 gains step (d″), #31's staged boundary, and names `SubmitTransferBid` as ERR-030-005's mid-season roster commit)
 **Last Updated (prior):** October 19, 2026 (v2.24 — ERR-028-025: step (d) LIVE — the staged #28 season boundary)
 **Last Updated (prior):** October 9, 2026 (v2.23 — ERR-030-053: complete the final fixture day before settlement; preserve refused-roll atomicity)
@@ -235,7 +236,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.26
+**Version:** 2.27
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -473,6 +474,16 @@ slots 0–11 run at the top of `AdvanceAndPlayNextRound`, before selection and r
   runs the slots only after every one of its guards, so a refused call advances no cursor.
 
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
+
+**Cooperative shutdown.** The owned-squad `AdvanceAndPlayNextRound(CancellationToken)` entry
+checks the host's token before mutable round work, between fixtures, between complete batches of
+engine ticks, and before advancing the round cursor. Each engine tick completes its discipline
+observation before a checkpoint. Cancellation does not enter engine state, the RNG or a save.
+If observed, it throws `OperationCanceledException` after clearing the active match. The host
+owns an exclusive, discardable loop and MUST abandon it without publishing or saving it. Matchday
+preparation and any earlier fixtures may already have modified the discarded loop. Resume by
+loading the last completed save into a fresh loop. The two existing non-cancellable entry points
+and the full-round result order remain authoritative for completed commands.
 
 A fixture-day begins by running the day's own KD-2 slots pre-round (§3.3.2 / ERR-030-027), then
 resolves the **whole round** — every one of its `N/2` fixtures — and applies **all**
@@ -1209,4 +1220,5 @@ formula inputs and tuning remain T3b2; this back-prop grants no amount-productio
 | 2.24 | 2026-10-19 | — | **ERR-028-025** (#28 boundary landing): §3.5 pseudocode replaces the reserved `AdvanceAges()` with the staged `PrepareSeasonBoundary` / `CommitSeasonBoundary`, (d′) reconciles against the planned rosters, commits after (e), and the FR-DC-013 retirement drop follows; the "only partly landed" paragraph is superseded. |
 | 2.25 | 2026-10-20 | — | **ERR-030-056** (#31 T2): §3.5 pseudocode gains step (d″) — #31's `PrepareSeasonBoundary` staged after (d)/(d′), installed after (e); the new paragraph names `SeasonLoop.SubmitTransferBid` as ERR-030-005's mid-season roster commit (exact-value #40 staging, `SeasonTransferRoster` re-home, publish on Accepted) and records the `TransferFee` refusal once #31 is wired. |
 | 2.26 | 2026-10-20 | — | **ERR-030-057** (#31 T2 AR round 2): §3.5 (d″) pseudocode read `boundary.RetiredPlayerIds` unconditionally although `boundary` is null without #28 — now `boundary ? … : []` for the retirees, the arrivals and the FR-DC-013 drop, matching `SeasonLoop.RollToNextSeason`; (d″) derives the window as `SummerWindowFor(clock, Calendar.DayOfRound(0))` against the already-rolled calendar (ERR-031-011, was `SummerWindowFrom(clock)`); the (d″) paragraph and the (c′) correction note record that the window's close no longer follows roll timing — only its open day (the season-begin day) and #28's regen construction day do. |
+| 2.27 | 2026-11-18 | — | Describe shutdown checkpoints and discard of a cancelled round. |
 #endregion

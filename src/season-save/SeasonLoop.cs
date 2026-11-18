@@ -1,5 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-11-18 (Cooperative career shutdown.)
 // Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
 //           the constructor/Restore/RollToNextSeason/SubmitTransferBid exception docs list every confirmed cause, ActiveMatch and
 //           AvailableTransferBudget are sim-thread-only, AvailableTransferBudget is the season CEILING.)
@@ -99,6 +100,7 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading;
 
 using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
@@ -137,6 +139,11 @@ namespace TacticalDirector.SeasonSave
     /// </summary>
     public sealed class SeasonLoop
     {
+        // [EST] Cancellation latency and polling cost are measured on the client host.
+        private const int ROUND_CANCELLATION_POLL_TICKS = 64;
+
+        // Instance-only test seam at the real engine checkpoint, after observing a complete tick batch.
+        internal System.Action RoundCancellationCheckpointProbe;
         private readonly WorldStore _world;
         private readonly SeasonState _state;
         private readonly List<MatchResult> _outcomes = new List<MatchResult>();
@@ -982,7 +989,13 @@ namespace TacticalDirector.SeasonSave
         /// the re-run inside the next day-advance's <see cref="RunWorldTickInFixedOrder"/> is a no-op
         /// over the cursors.
         /// </remarks>
-        public MatchResult[] AdvanceAndPlayNextRound()
+        public MatchResult[] AdvanceAndPlayNextRound() => AdvanceAndPlayNextRound(CancellationToken.None);
+
+        /// <summary>Resolves the whole round using the loop's owned squads, with cooperative shutdown checkpoints.</summary>
+        /// <param name="cancellation">The host's shutdown token. The caller must discard this loop if cancelled,
+        /// because daily steps and earlier fixtures may already have changed its state.</param>
+        /// <exception cref="System.OperationCanceledException">Cancellation was observed. Discard this loop without saving it.</exception>
+        public MatchResult[] AdvanceAndPlayNextRound(CancellationToken cancellation)
         {
             // The reachable entry point for a loop that owns its provider (ERR-028-010). When #28 is
             // wired the constructor PROJECTS the provider from the progression store and keeps it
@@ -1000,7 +1013,7 @@ namespace TacticalDirector.SeasonSave
                     + "supplies the rosters.");
             }
 
-            return PlayNextRound(_careerSquads);
+            return PlayNextRound(_careerSquads, cancellation);
         }
 
         /// <summary>
@@ -1042,12 +1055,12 @@ namespace TacticalDirector.SeasonSave
                     nameof(squads));
             }
 
-            return PlayNextRound(squads);
+            return PlayNextRound(squads, CancellationToken.None);
         }
 
         // The one body both overloads run. Extracted rather than duplicated: two copies of a
         // twelve-guard round resolution is the parallel-surface defect this repo keeps filing.
-        private MatchResult[] PlayNextRound(ISquadProvider squads)
+        private MatchResult[] PlayNextRound(ISquadProvider squads, CancellationToken cancellation)
         {
             if (_state.Calendar.IsSeasonComplete)
             {
@@ -1103,6 +1116,7 @@ namespace TacticalDirector.SeasonSave
             // substitute an implementation whose RequireCommittableConfig() throws, proving the call is
             // both reached and reached BEFORE RunCareerDaySteps/the fixture loop below
             // (SeasonLoopDisciplineTests.RequireCommittableConfigDriver_RunsBeforeAnyFixtureIsResolved).
+            cancellation.ThrowIfCancellationRequested();
             if (_disciplineDriver != null)
             {
                 _disciplineDriver.RequireCommittableConfig();
@@ -1123,9 +1137,10 @@ namespace TacticalDirector.SeasonSave
 
             for (int i = 0; i < indices.Length; i++)
             {
+                cancellation.ThrowIfCancellationRequested();
                 Fixture fixture = _state.FixtureAt(indices[i]);
                 MatchResult result = ResolveFixture(
-                    in fixture, squads, worldDay,
+                    in fixture, squads, worldDay, cancellation,
                     out int[] homeXi, out int[] awayXi,
                     out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold fold);
 
@@ -1230,6 +1245,7 @@ namespace TacticalDirector.SeasonSave
                 results[i] = result;
             }
 
+            cancellation.ThrowIfCancellationRequested();
             _state.AdvanceCursorOneRound();
             return results;
         }
@@ -1819,7 +1835,7 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         private MatchResult ResolveFixture(
-            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            in Fixture fixture, ISquadProvider squads, uint worldDay, CancellationToken cancellation,
             out int[] homeXi, out int[] awayXi,
             out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold foldOrNull)
         {
@@ -1828,7 +1844,7 @@ namespace TacticalDirector.SeasonSave
             if (ShouldPlayThroughEngine(Mode, managed))
             {
                 return PlayThroughEngine(
-                    in fixture, squads, worldDay, out homeXi, out awayXi,
+                    in fixture, squads, worldDay, cancellation, out homeXi, out awayXi,
                     out homeRosterIds, out awayRosterIds, out foldOrNull);
             }
 
@@ -1920,7 +1936,7 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         private MatchResult PlayThroughEngine(
-            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            in Fixture fixture, ISquadProvider squads, uint worldDay, CancellationToken cancellation,
             out int[] homeXi, out int[] awayXi,
             out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold foldOrNull)
         {
@@ -1954,6 +1970,8 @@ namespace TacticalDirector.SeasonSave
             _activeMatch = engine;
             try
             {
+                cancellation.ThrowIfCancellationRequested();
+                int ticksUntilCheckpoint = ROUND_CANCELLATION_POLL_TICKS;
                 while (!engine.MatchEnded)
                 {
                     engine.RunTick();
@@ -1962,8 +1980,15 @@ namespace TacticalDirector.SeasonSave
                     // (#37 KD-7): a skipped call does not defer those records, it loses them. Read-only,
                     // so the fixture's digest is identical observed or not (FR-DC-003).
                     fold?.ObserveTick(tap);
+                    if (--ticksUntilCheckpoint == 0)
+                    {
+                        RoundCancellationCheckpointProbe?.Invoke();
+                        cancellation.ThrowIfCancellationRequested();
+                        ticksUntilCheckpoint = ROUND_CANCELLATION_POLL_TICKS;
+                    }
                 }
 
+                cancellation.ThrowIfCancellationRequested();
                 // The fold is handed back UNCOMMITTED, deliberately — see PlayNextRound, where the
                 // commit is sequenced after this fixture's own ban-serving decrement. A fixture that
                 // throws mid-match therefore commits nothing: the buffered half-fixture is discarded
@@ -2569,4 +2594,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.45 | 2026-10-20 | — | AR round 4 S4-L2/L3/L5: the constructor's KD-4 refusal delegates to SeasonCalendar.RequireCursorInvariant (shared with League.CreateLoop; ParamName stays "season"); RollToNextSeason's ArgumentException doc lists all four (d″) causes and #28's worldDay-span refusal, plus SummerWindowFor's ArgumentOutOfRangeException; TransfersSnapshot and FinanceView state that they are sim-thread-only. |
 // | 1.46 | 2026-10-20 | — | AR round 5 (doc comments only, no behaviour change): L17 Progression's doc names the mutators' real visibility (internal to PlayerProgression, visible to SeasonSave and the test assemblies via InternalsVisibleTo; CanMovePlayer is a predicate); S-L2 the constructor, Restore, RollToNextSeason and SubmitTransferBid list the InvalidOperationException / ArgumentException causes confirmed in source (cursor-vs-clock band, PrepareSettlement and StageFor uninitialized finances, #28 Prepare, PrepareRosterSync, BeginNextSeason); S-L4 ActiveMatch and AvailableTransferBudget are sim-thread-only; S-L5 AvailableTransferBudget is documented as the season ceiling (headroom = ceiling - TransfersSnapshot().CommittedSpendThisWindow). |
 // | 1.47 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
+// | 1.48 | 2026-11-18 | — | Add opt-in stop checkpoints between complete season fixtures and match tick batches. |
 #endregion

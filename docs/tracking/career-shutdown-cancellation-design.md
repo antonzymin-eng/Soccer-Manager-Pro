@@ -2,9 +2,9 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.2
+**Version:** 0.3
 
-**Status:** Draft for technical review
+**Status:** Implemented on the career branch. Pinned-host acceptance pending.
 
 **Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft.
 
@@ -23,7 +23,7 @@ The tracked scene defaults to the demo shell. Use explicit career opt-in for Pla
 - The poll reads a host cancellation flag synchronously. It allocates nothing on the running path and does not register a callback, consult a clock, or enter the engine's deterministic state. Keep `MatchEngine.RunTick`, RNG, match tick and tap ordering, result application and the save format as they are. Observe cancellation with a distinct outcome, such as a matching-token `OperationCanceledException` at the checkpoint. Ordinary engine and storage errors keep their existing handling.
 - The cancellation-aware #30 entry is for callers that can discard the loop. Document that contract and make the client enforce it through shutdown ownership. `PlayNextRound` can already have applied earlier fixtures, including table rows, buffered outcomes, appearances and discipline. Matchday morning work can already have advanced career subsystem cursors. The engine's `finally` clears `ActiveMatch` and the unfinished match's card fold is discarded. The worker discards the entire career on shutdown, including any earlier completed fixtures and transient counters. Skip publication, further projections and autosave on this path. A new career session restores from the persisted save through the existing restore seam. The current outcome producer buffers locally, and #22 ingest remains deferred under KD-3. Future externally visible consumers would need a review of this discard boundary.
 
-Amend the cancellation-aware contract in #30 with its implementation, covering §3.4 success/cancel behavior and §5 test traceability. Record the client lifetime and storage boundary in §5-P7 of the interactive client design. The existing full-round contract remains authoritative for successful calls. This draft adds no normative spec text.
+Amend the cancellation-aware contract in #30 with its implementation, covering §3.4 success/cancel behavior and §5 test traceability. Record the client lifetime and storage boundary in §5-P7 of the interactive client design. The existing full-round contract remains authoritative for successful calls. The #30 requirements, algorithm and test plan record the cancellation overload and its discard contract.
 
 ## Shutdown and save ownership
 
@@ -46,6 +46,14 @@ Keep UI and worker cleanup distinct. Disposal closes admission and clears UI pub
 
 Record the time from cancellation request to the round worker acknowledging it and finishing cleanup. Include match boot, matchday preparation, fixture bookkeeping, complete tick batches, and the point immediately before write admission. The estimated time for a batch of engine ticks does not bound these other phases. Assess a cooperative join only for an already-running round whose remaining work has demonstrated prompt, cancelling checkpoints and no blocking I/O. Queued work, loads and projections can have other delays. Retain the current proposal to wait only for admitted writes unless the owner accepts a short, measured cancellation join. Any approved join waits for real worker exit without a timeout that releases its ownership.
 
+## Implementation status
+
+The first implementation acquires the permit at entry to the existing `CareerSaveSlots.Write`
+transaction. Unity Profiler markers `SeasonSave.Encode` and `CareerSaveSlots.Write` expose separate
+encoding and admitted-write timings for the pinned run. Dispose drains admitted writes and leaves
+cancelled or read-only work to unwind under worker ownership. There are no measured pinned-host
+timings yet.
+
 ## Acceptance
 
 1. **Cancel after work has started.** Use deterministic test barriers, with a fixture known to resolve before the managed match. Cancel after at least one previous fixture has applied and after the real engine has completed ticks inside the managed match. Verify worker exit before the engine reaches full time, no report or navigation publication, and byte-identical pre-existing save and sidecar. Check slot sequence, latest-slot choice and absence of new temporary or backup files. Keep the bytes in the checkpoint as the replay input.
@@ -59,5 +67,6 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.3 | 2026-11-18 | Record the implementation and the encoding and write-phase markers. Pinned-host measurements remain due. |
 | 0.2 | 2026-11-18 | Keep the scene opt-in. Measure cancellation completion and encoding before changing the shutdown wait policy or extracting save preparation. |
 | 0.1 | 2026-11-18 | Draft cooperative cancellation, discard and writer ownership design with acceptance cases. |

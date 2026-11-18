@@ -33,8 +33,8 @@ namespace TacticalDirector.ClientApp
         private readonly CareerScreenText _screenText;
         private readonly RoundResolutionMode _mode;
         private readonly Action<Action> _schedule;
-        private readonly object _publicationGate = new object();
-        private readonly ManualResetEventSlim _idle = new ManualResetEventSlim(true);
+        private readonly object _lifetimeGate = new object();
+        private readonly CancellationTokenSource _shutdown = new CancellationTokenSource();
         private readonly CareerSessionHolder _holder = new CareerSessionHolder();
         private ClientScreenFlow _flow;
         private CareerSaveSlots _slots;
@@ -49,7 +49,25 @@ namespace TacticalDirector.ClientApp
         private Action _afterSuccess;
         private ScreenId _operationScreen;
         private bool _initialized;
-        private bool _disposed;
+        private volatile bool _disposed;
+        private bool _workerActive;
+        private bool _isWriting;
+
+        private sealed class WriteLease : IDisposable
+        {
+            private readonly ClientCareerCoordinator _owner;
+
+            internal WriteLease(ClientCareerCoordinator owner) => _owner = owner;
+
+            public void Dispose()
+            {
+                lock (_owner._lifetimeGate)
+                {
+                    _owner._isWriting = false;
+                    Monitor.PulseAll(_owner._lifetimeGate);
+                }
+            }
+        }
 
         /// <summary>The five projected views; names the failing one for the test seam and the projection note.</summary>
         internal enum ProjectionKind
@@ -86,6 +104,8 @@ namespace TacticalDirector.ClientApp
         // handled exactly like a real failure of that step.
         internal Action WorkProbe;
         internal Action<ProjectionKind> ProjectionProbe;
+        internal Action WriteAdmissionProbe;
+        internal Action AfterSaveSwapProbe;
 
         /// <summary>Creates a coordinator without touching disk; call Initialize after flow composition.</summary>
         public ClientCareerCoordinator(string directory,
@@ -190,7 +210,10 @@ namespace TacticalDirector.ClientApp
             if (_initialized) throw new InvalidOperationException("Career storage is already initialized.");
             Begin(() =>
             {
-                var slots = new CareerSaveSlots(_directory);
+                var slots = new CareerSaveSlots(_directory, AcquireWrite)
+                {
+                    AfterSaveSwapProbe = () => AfterSaveSwapProbe?.Invoke(),
+                };
                 var home = new CareerHomeSource(_holder);
                 var setup = new NewCareerSetup(_holder, slots, _mode);
                 var load = new LoadCareerSource(_holder, slots, _mode);
@@ -231,7 +254,7 @@ namespace TacticalDirector.ClientApp
         {
             RequireScreen(ClientScreens.NewCareer);
             if (!NewCareer.HasSelection) throw new InvalidOperationException("Select a club before starting.");
-            Begin(() => { _setup.Start(); _loadSource.Refresh(); return true; }, _flow.StartCareer);
+            Begin(() => { _setup.Start(); RefreshSlots(); return true; }, _flow.StartCareer);
         }
 
         /// <summary>Discards the form's navigation; the next entry prepares a fresh preview.</summary>
@@ -288,7 +311,7 @@ namespace TacticalDirector.ClientApp
             if (!IntentRouting.IsSeasonIntent(intent.Kind) || CareerProgress.ActionFor(intent.Kind) != Home.NextAction)
                 throw new InvalidOperationException("Only the currently offered season action may be dispatched.");
             ManagerIntent accepted = intent;
-            Begin(() => { _dispatcher.Dispatch(in accepted); _loadSource.Refresh(); return true; });
+            Begin(() => { _dispatcher.Dispatch(in accepted, _shutdown.Token); RefreshSlots(); return true; });
         }
 
         /// <summary>Writes one manual slot off-thread; an autosave write is never exposed as a manual request.</summary>
@@ -297,7 +320,7 @@ namespace TacticalDirector.ClientApp
             RequireScreen(ClientScreens.CareerHome);
             if (!Enum.IsDefined(typeof(CareerSaveSlot), slot) || slot == CareerSaveSlot.Autosave)
                 throw new ArgumentOutOfRangeException(nameof(slot), "Choose a manual slot.");
-            Begin(() => { _holder.Require().SaveTo(slot); _loadSource.Refresh(); return true; });
+            Begin(() => { _holder.Require().SaveTo(slot); RefreshSlots(); return true; });
         }
 
         /// <summary>Career Home → Transfers; the market snapshot is already current (refreshed after every operation).</summary>
@@ -394,6 +417,23 @@ namespace TacticalDirector.ClientApp
             if (_flow.Current != screen) throw new InvalidOperationException("This career action is not available on the current screen.");
         }
 
+        private void RefreshSlots()
+        {
+            if (!_disposed) _loadSource.Refresh();
+        }
+
+        private IDisposable AcquireWrite()
+        {
+            WriteAdmissionProbe?.Invoke();
+            var lease = new WriteLease(this);
+            lock (_lifetimeGate)
+            {
+                _shutdown.Token.ThrowIfCancellationRequested();
+                _isWriting = true;
+            }
+            return lease;
+        }
+
         private void Begin(Func<bool> work, Action afterSuccess = null)
         {
             IsBusy = true;
@@ -401,36 +441,49 @@ namespace TacticalDirector.ClientApp
             _operationScreen = _flow.Current;
             _afterSuccess = afterSuccess;
             Revision++;
-            lock (_publicationGate) _idle.Reset();
             try
             {
                 _schedule(() => Complete(work));
             }
             catch (Exception exception)
             {
-                Publish(new Completion { Error = exception.Message });
+                lock (_lifetimeGate)
+                {
+                    if (!_disposed)
+                        Volatile.Write(ref _completion, new Completion { Error = exception.Message });
+                }
             }
         }
 
         private void Complete(Func<bool> work)
         {
+            lock (_lifetimeGate)
+            {
+                if (_disposed) return;
+                _workerActive = true;
+            }
+
             var result = new Completion();
             _workerTransferResult = default;
             try
             {
-                WorkProbe?.Invoke();
-                if (!work()) result.Error = _loadSource.Project().LastError ?? "The career operation did not complete.";
-            }
-            catch (Exception exception)
-            {
-                result.Error = exception.Message;
-            }
-            try
-            {
-                // Sources are read only by the worker after all mutation has stopped. Each view is projected
-                // independently (M1): a throwing source costs only its own refresh, never the committed
-                // outcome or the other views.
-                if (_slots != null)
+                try
+                {
+                    WorkProbe?.Invoke();
+                    _shutdown.Token.ThrowIfCancellationRequested();
+                    if (!work()) result.Error = _loadSource.Project().LastError ?? "The career operation did not complete.";
+                }
+                catch (OperationCanceledException exception) when (_disposed && exception.CancellationToken == _shutdown.Token)
+                {
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    result.Error = exception.Message;
+                }
+
+                // A throwing source costs only its own refresh, never the operation outcome or the other views.
+                if (!_disposed && _slots != null)
                 {
                     result.Initialized = true;
                     result.HasSnapshot = true;
@@ -442,29 +495,31 @@ namespace TacticalDirector.ClientApp
                     result.HasFinances = TryProject(ProjectionKind.Finances, _financesSource, out result.Finances, result);
                 }
             }
-            catch (Exception exception)
-            {
-                // Only reachable if the bookkeeping itself fails; the operation error stays distinct.
-                result.ProjectionError = Note(result.ProjectionError, exception.Message);
-            }
             finally
             {
-                Publish(result);
+                lock (_lifetimeGate)
+                {
+                    _workerActive = false;
+                    if (_disposed) ReleaseWorkerState();
+                    else Volatile.Write(ref _completion, result);
+                }
             }
         }
 
         private bool TryProject<T>(ProjectionKind kind, IViewModelSource<T> source, out T view, Completion result)
             where T : struct
         {
+            view = default;
+            if (_disposed) return false;
             try
             {
                 ProjectionProbe?.Invoke(kind);
+                if (_disposed) return false;
                 view = source.Project();
                 return true;
             }
             catch (Exception exception)
             {
-                view = default;
                 result.ProjectionError = Note(result.ProjectionError, kind + ": " + exception.Message);
                 return false;
             }
@@ -472,23 +527,12 @@ namespace TacticalDirector.ClientApp
 
         private static string Note(string existing, string next) => existing == null ? next : existing + " " + next;
 
-        private void Publish(Completion completion)
-        {
-            // Reset/Dispose cannot overlap Set: observing IsSet alone does not prove Set returned.
-            // This gate covers only publication, never disk, simulation, or UI work.
-            lock (_publicationGate)
-            {
-                Volatile.Write(ref _completion, completion);
-                _idle.Set();
-            }
-        }
-
         /// <summary>Accepts a finished immutable snapshot on the UI thread, then performs its named navigation.</summary>
         public void Refresh()
         {
             using (RefreshMarker.Auto())
             {
-                if (_disposed || !IsBusy || !_idle.IsSet) return;
+                if (_disposed || !IsBusy) return;
                 Completion result = Interlocked.Exchange(ref _completion, null);
                 if (result == null) return;
                 if (result.HasSnapshot)
@@ -537,21 +581,29 @@ namespace TacticalDirector.ClientApp
                 throw new InvalidOperationException("The career worker could not be scheduled.");
         }
 
-        /// <summary>
-        /// Waits for accepted work before releasing the owner. Shutdown may wait for synchronous #30
-        /// resolution; it never aborts a writer or permits a later UI callback after disposal.
-        /// </summary>
+        private void ReleaseWorkerState()
+        {
+            _holder.Clear();
+            _shutdown.Dispose();
+        }
+
+        /// <summary>Requests shutdown and waits only for an already admitted filesystem mutation.
+        /// Running work retains its in-memory state until it exits, without publishing a completion.</summary>
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-            _idle.Wait();
-            lock (_publicationGate)
+            lock (_lifetimeGate)
             {
-                _completion = null;
-                _afterSuccess = null;
-                _holder.Clear();
-                _idle.Dispose();
+                if (!_disposed)
+                {
+                    _disposed = true;
+                    _shutdown.Cancel();
+                    _completion = null;
+                    _afterSuccess = null;
+                    if (!_workerActive) ReleaseWorkerState();
+                }
+
+                // Waiting releases the gate so the writer can finish the pair or its rollback.
+                while (_isWriting) Monitor.Wait(_lifetimeGate);
             }
         }
     }
@@ -569,4 +621,5 @@ namespace TacticalDirector.ClientApp
 // | 1.7 | 2026-11-05 | — | AR-1 M1: check live transfer capability before owner diagnosis and publish TransfersUnavailable for supported optional-empty saves. |
 // | 1.8 | 2026-11-05 | — | AR-3 M1: expose the admitted career formatter to the Unity view binding, preventing duplicate default-locale construction. |
 // | 1.9 | 2026-11-18 | — | Prevent a failed preview from publishing an earlier career setup. |
+// | 1.10 | 2026-11-18 | — | Cancel the worker and drain only an admitted filesystem mutation at shutdown. |
 #endregion
