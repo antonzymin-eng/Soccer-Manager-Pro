@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED November 18, 2026 (#440 owner decision D1; PR #544 merges main `4cdb4823`), v1.48:** Owner decision D1 (November 18, 2026) cuts #440 to A′: a geometry-derived BallLoose knock plus the one-frame carrier fence, accepted by correctness tests only. The Stage B 48-run experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; Stage A's observer and evidence are the before-baseline. See [design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026). The branch-local #440 v1.41–v1.44 entries below are kept as history.
+> **UPDATED November 18, 2026 (#440 A′ implemented, `ERR-014-011`), v1.49:** A′ (#440, owner decision D1) is implemented on branch `claude/440-a-prime`, `ERR-014-011` filed and resolved in the same commit. A `BALL_LOOSE` tackle used to leave the ball at rest at the carrier's feet, and he re-took it in the same frame (37 of 37 Stage A episodes). #14 §3.6.5.8 now knocks the ball with `0.6·max(c, 2.0 m/s)·n + 0.5·v_c` (n tackler→carrier, c closing speed; three un-calibrated `[GT]` plus a 0.01 m `[FIXED]` facing fallback) and fences the carrier out of first touch, loose pickup and keeper hand contact for that frame. The fence is a frame-local mask cleared at Input, every restart and Events entry; never serialized; no schema, RNG, draw-site or draw-order change. W2 stays wired and active; the change is behavioural by design. The D1 six-seed characterization and pinned-host Unity run are still to do.
+
+> **UPDATED (prior) November 18, 2026 (#440 owner decision D1; PR #544 merges main `4cdb4823`), v1.48:** Owner decision D1 (November 18, 2026) cuts #440 to A′: a geometry-derived BallLoose knock plus the one-frame carrier fence, accepted by correctness tests only. The Stage B 48-run experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; Stage A's observer and evidence are the before-baseline. See [design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026). The branch-local #440 v1.41–v1.44 entries below are kept as history.
 
 > **UPDATED (prior) November 16, 2026 (W13 merges main `3871c9ac`), v1.47:** W13's branch-local v1.41–v1.46 entries and main's #434 v1.41–v1.46 entries are both kept below, newest first. #434 (PR #543) is now on main beneath W13; W13.1 still ships switched OFF, and the W13 section's open items (F5–F10, §10 measurement, OD-2) are unchanged.
 
@@ -878,6 +880,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.49 | 2026-11-18 | — | #440 A′ implemented (ERR-014-011): geometry knock + same-frame carrier fence; correctness tests; characterization and Unity pending. |
 | 1.48 | 2026-11-18 | — | #440 D1: cut to A′ (geometry knock + one-frame fence, correctness acceptance); Stage B experiment and caps withdrawn. PR #544 merged with main; branch-local #440 v1.41–v1.44 rows kept. No code. |
 | 1.47 | 2026-11-16 | — | Merge main `3871c9ac` into W13: both histories kept; W13's v1.41–v1.46 rows are branch-local W13. No status or design change. |
 | 1.46 (branch-local W13) | 2026-11-13 | — | W13 landing checks: W13.0 status corrected to merged (PR #545); switch-off full-match neutrality vs main (non-certifying) and pinned Unity host receipt at `6491de79` recorded. No design change. |

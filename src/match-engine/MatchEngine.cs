@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-18 (A′ / ERR-014-011: BallLoose knock from duel geometry + frame-local carrier fence on first touch, pickup and keeper hand contact; no schema/RNG change)
 // Modified: 2026-11-18 (merge of main into #440 Stage A: version history only)
 // Modified: 2026-11-16 (merge of W13 with main: version history only)
 // Modified: 2026-11-12 (ERR-008-028 amendment: pure SelectMarkTargetSpeed helper; read-only TestOnly_Command seam)
@@ -427,6 +428,18 @@ namespace TacticalDirector.MatchEngine
         // zero is retained only as an explicit test/measurement negative control. GameplayConfig
         // binding is one-shot per process, so tests use the override instead of rebinding config.
         private float _tackleContactRadiusOverrideM = -1f;
+
+        // A′ / ERR-014-011 (#14 §3.6.5.8): carriers dispossessed by a BallLoose outcome THIS FRAME, as a
+        // roster bit mask (SQUAD_SIZE <= 32, the AppliedBallTouchMask convention). Ordinary recovery —
+        // first touch, loose-ball pickup and a keeper's hand contact — skips a fenced agent, so the
+        // carrier cannot take the knocked ball straight back in the tackle frame.
+        //
+        // FRAME-LOCAL, NOT serialized, and that is a proof obligation rather than a convenience
+        // (w-440-ball-loose-design.md "One-frame fence state/save audit"): it is zeroed at Input entry,
+        // at every restart, and at Events entry, so it is identically zero at the Snapshot phase, after
+        // RunTick returns, and at every off-tick surface (save, restore, tactic/substitution staging,
+        // test seams). No consumer outside the three admission paths reads it.
+        private uint _ballLooseFenceMask;
 
         // W13.1: test/measurement override of MatchEngineConstants.MarkMovementEnabled (null = use the
         // config constant). Per-engine, NOT serialized — the TestOnly_ArmTackleChallenge pattern.
@@ -3540,6 +3553,10 @@ namespace TacticalDirector.MatchEngine
             // Reset per-tick observation state (the AI phase may or may not run this tick).
             _aiPhaseRanThisTick = false;
 
+            // A′ (ERR-014-011): no fence survives into a new frame, including one a test seam armed
+            // off-tick.
+            ClearBallLooseFence();
+
             // P1 KD-P1-3: same lifecycle — a restart is reported only for the tick it was applied on.
             _restartAppliedThisTick = RestartCue.None;
             _restartAwardedTeamThisTick = MatchEngineConstants.NO_RESTART_TEAM;
@@ -4442,14 +4459,7 @@ namespace TacticalDirector.MatchEngine
                     break;
 
                 case TackleOutcome.BallLoose:
-                    // Dispossessed, but nobody has it. The ball is left exactly where it lies and the
-                    // ordinary loose-ball paths (first touch while it moves, pickup once it settles)
-                    // decide who gets it — which is what makes this a 50-50 rather than a slower way of
-                    // awarding possession to the tackler.
-                    ReleaseControlledPossession(placeAtGround: false);
-                    ClearPassInFlight();
-                    _tackleFlag[carrier] = true;
-                    _tackleLooseCount++;
+                    ApplyBallLooseOutcome(tackler, carrier);
                     break;
 
                 case TackleOutcome.Foul:
@@ -4463,6 +4473,55 @@ namespace TacticalDirector.MatchEngine
                     break;
             }
         }
+
+        /// <summary>
+        /// #14 §3.6.5.8 (A′, <c>ERR-014-011</c>): the carrier is dispossessed and nobody has the ball.
+        /// The ball is released and given the knock velocity from the duel geometry, and the carrier is
+        /// fenced out of ordinary recovery for the rest of this frame. Ordinary loose-ball paths (first
+        /// touch while it moves, pickup once it settles) then decide who gets it — a 50-50 rather than a
+        /// slower way of awarding possession to either player.
+        ///
+        /// <para>Before A′ the ball was left where it lay with zero velocity, and the carrier, standing
+        /// over it, re-took it by passive pickup in the same frame in all 37 #440 Stage A episodes. The
+        /// knock is a plain BallState write through <c>BallCollision.ApplyKick</c> (already serialized);
+        /// it consumes no RNG and records no touch, exactly as the pre-A′ release recorded none.</para>
+        /// </summary>
+        private void ApplyBallLooseOutcome(int tackler, int carrier)
+        {
+            ReleaseControlledPossession(placeAtGround: false);
+            ClearPassInFlight();
+
+            Vector2 knock = TackleOutcomeResolver.LooseBallVelocity(
+                _agents[carrier].Position, _agents[carrier].Velocity, _agents[carrier].FacingDirection,
+                _agents[tackler].Position, _agents[tackler].Velocity);
+            BallCollision.ApplyKick(
+                ref _ball, new Vector3(knock.x, knock.y, 0f), Vector3.zero,
+                tackler, _clock.CurrentMatchTimeSeconds, logger: null);
+
+            _ballLooseFenceMask |= 1u << carrier;
+            _tackleFlag[carrier] = true;
+            _tackleLooseCount++;
+        }
+
+        /// <summary>A′ (#14 §3.6.5.8): true while <paramref name="agentId"/> was dispossessed by a
+        /// BallLoose outcome earlier in the current frame.</summary>
+        private bool IsBallLooseFenced(int agentId) =>
+            agentId >= 0 && agentId < MatchEngineConstants.SQUAD_SIZE
+            && (_ballLooseFenceMask & (1u << agentId)) != 0u;
+
+        /// <summary>A′: clears the frame-local fence. Called at Input entry, at every restart and at
+        /// Events entry so the mask is zero at Snapshot and at every off-tick surface.</summary>
+        private void ClearBallLooseFence() => _ballLooseFenceMask = 0u;
+
+        /// <summary>Test-only (A′): applies the production §3.6.5.8 BallLoose consequence for this
+        /// tackler/carrier pair outside a tick, so a test can drive the Physics/Resolve admission paths
+        /// against the armed fence. The fence clears at the next RunTick's Input phase.</summary>
+        internal void TestOnly_ApplyBallLooseOutcome(int tackler, int carrier) =>
+            ApplyBallLooseOutcome(tackler, carrier);
+
+        /// <summary>Test-only (A′): the live fence mask (0 except between a BallLoose outcome and the
+        /// end of that frame).</summary>
+        internal uint TestOnly_BallLooseFenceMask => _ballLooseFenceMask;
 
         /// <summary>
         /// The §3.6.5 draw: a keyed SplitMix64 derivation over
@@ -6085,6 +6144,8 @@ namespace TacticalDirector.MatchEngine
             ObserveBallLooseStageA(BallLooseStageAKind.Restart, awardedTeam, detail: (int)cue);
 #endif
             ClearHandlingLawAtRestart();
+            // A′ (ERR-014-011): a law stop ends the tackle frame's fence; the award itself is law-governed.
+            ClearBallLooseFence();
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
@@ -6697,6 +6758,11 @@ namespace TacticalDirector.MatchEngine
                 {
                     continue;
                 }
+                // A′ (ERR-014-011): the carrier just dispossessed this frame cannot receive the knock.
+                if (IsBallLooseFenced(i))
+                {
+                    continue;
+                }
                 Vector2 toAgent = _agents[i].Position - ballPosXY;
                 float distSq = toAgent.sqrMagnitude;
                 if (distSq > bestSq)
@@ -6833,6 +6899,11 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 if (_isSentOff[i])
+                {
+                    continue;
+                }
+                // A′ (ERR-014-011): the carrier just dispossessed this frame cannot pick the ball back up.
+                if (IsBallLooseFenced(i))
                 {
                     continue;
                 }
@@ -6994,6 +7065,8 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Phase 5 — Events. Enters the Events phase and drains the tick's ledger.</summary>
         private void RunEventsPhase()
         {
+            // A′ (ERR-014-011): the fence ends with the frame's mechanics, before Snapshot serializes.
+            ClearBallLooseFence();
             EventBus.BeginPhase(PhaseId.Events);
             EventBus.DrainTick();
         }
@@ -11427,4 +11500,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.22 | 2026-11-16 | — | Merge main 3871c9ac (#434 / PR #543 at v2.18) into W13: both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change; MarkMovementEnabled stays false. |
 // | 2.17 (branch-local #440) | 2026-11-10 | — | #440 Stage A development-only observer at tackle/ownership/censor boundaries. No gameplay, snapshot, RNG or tuning change. |
 // | 2.23 | 2026-11-18 | — | Merge main 4cdb4823 into #440 Stage A (PR #544): both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change. |
+// | 2.24 | 2026-11-18 | — | A′ / ERR-014-011 (#14 §3.6.5.8, owner decision D1): BallLoose releases the ball with the geometry knock and fences the carrier out of first touch, loose pickup and keeper hand contact for the tackle frame. Fence is frame-local (cleared at Input, restart and Events), never serialized; no schema, RNG or draw change. |
 #endregion

@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 12, 2026 (v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
-**Version:** 0.14
+**Last Updated:** November 18, 2026 (v0.15 — A′ / `ERR-014-011`: new §3.6.5.8 BallLoose release — geometry knock and same-frame carrier fence; §3.6.5.2 and §3.6.5.5 point to it. Prior: v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
+**Version:** 0.15
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -601,7 +601,7 @@ DT-emitted `RUSH`.
 |---|---|
 | `MISSED` | The challenge did not connect. Possession unchanged; nothing is emitted. |
 | `BALL_WON` | The tackler takes the ball cleanly and becomes the holder. |
-| `BALL_LOOSE` | The carrier is dispossessed but nobody gains control — the ball is knocked free and resolves through the ordinary loose-ball paths. |
+| `BALL_LOOSE` | The carrier is dispossessed but nobody gains control — the ball is knocked free with the §3.6.5.8 velocity, the carrier is fenced out of ordinary recovery for the tackle frame, and the ordinary loose-ball paths resolve it (`ERR-014-011`). |
 | `FOUL` | The challenge is a foul on the tackler. The restart and the card are the match-flow discipline path's, which remains the single authority on cards. |
 
 **`BALL_LOOSE` is not an implementation detail.** The obvious three-outcome model — won, fouled,
@@ -676,7 +676,8 @@ of position or one attribute point never flips a challenge from certain success 
 
 ### 3.6.5.5 Constants
 
-Ten `[GT]` plus one `[FIXED]`, all in `DefensiveAIConstants.cs` per KD-14. **Every `[GT]` here is
+Ten `[GT]` plus one `[FIXED]`, all in `DefensiveAIConstants.cs` per KD-14. §3.6.5.8's release adds three
+`[GT]` and one `[FIXED]` of its own (`ERR-014-011`), tabled there. **Every `[GT]` here is
 un-calibrated**: no player in this engine had ever made a tackle, so there was no prior behaviour to
 preserve and nothing was fitted against anything. KD-W1 permits new dials on a dead surface and
 forbids tuning them at the wiring pass; they are the calibration pass's input, not its output.
@@ -761,6 +762,75 @@ example that recomputes one term and not the other reads as correct, and `Worked
 locked only the first tackler, so nothing would have failed.
 
 ---
+
+### 3.6.5.8 BallLoose release (A′ — `ERR-014-011`)
+
+**The defect.** §3.6.5.2 said a `BALL_LOOSE` ball "resolves through the ordinary loose-ball paths" and
+said nothing about its velocity or about who may recover it. The composition root therefore released a
+controlled ball **at rest at the carrier's feet**, and the carrier, standing over it, re-took it by
+passive pickup in the same 60 Hz frame. The #440 Stage A census measured this in **37 of 37** BallLoose
+episodes across six seeds, every one a passive pickup with zero release velocity and unchanged release
+position (`docs/tracking/w-440-ball-loose-design.md`, evidence `ball-loose-stage-a-20261110`).
+`BALL_LOOSE` was a clean win for the carrier in all but name, which contradicts §3.6.5.2's own
+statement that the carrier is dispossessed.
+
+**The contract.** In the frame the resolver returns `BALL_LOOSE`, the composition root:
+
+1. releases control and ends any pass in flight (unchanged);
+2. **knocks the ball** with the pitch-plane velocity below, applied as a kick impulse (`z` component 0,
+   so Ball Physics' own speed cap and state transition apply);
+3. **fences the carrier** out of ordinary recovery — first touch, loose-ball pickup and goalkeeper hand
+   contact — for the rest of that physics frame.
+
+```
+d      = p_c − p_t                                   # tackler → carrier, agent positions (m)
+n      = d / |d|                    if |d| ≥ TACKLE_LOOSE_COINCIDENT_M
+       = f_c / |f_c|                else, if the carrier's facing f_c is non-degenerate
+       = 0                          otherwise (no poke; the carry alone remains)
+c      = (v_t − v_c) · n                             # closing speed (m/s); > 0 means closing
+v_ball = TACKLE_LOOSE_POKE_K · max(c, TACKLE_LOOSE_POKE_MIN_M_S) · n
+       + TACKLE_LOOSE_CARRY_K · v_c                  # m/s, pitch plane
+```
+
+Valid ranges: `c` about −10 to +18 m/s (the agents' speed envelope); `|v_ball|` is bounded by Ball
+Physics' kick cap. The poke always moves the ball away from the tackler; the carry keeps part of the
+carrier's momentum, so a ball taken off a running man runs on. The `n` fallback decides only the
+ball's direction, never an outcome, so §3.6.5.3's continuity rule is not engaged.
+
+| Constant | Tag | Default | Range | Unit | Meaning |
+|---|---|---|---|---|---|
+| `TACKLE_LOOSE_POKE_K` | `[GT]` | 0.6 | (0, 1.5] | — | Fraction of the closing speed transferred along the poke line. |
+| `TACKLE_LOOSE_POKE_MIN_M_S` | `[GT]` | 2.0 | [0, 5] | m/s | Floor on the poke's closing speed, so a standing tackler still moves the ball. |
+| `TACKLE_LOOSE_CARRY_K` | `[GT]` | 0.5 | [0, 1] | — | Fraction of the carrier's velocity the ball keeps. |
+| `TACKLE_LOOSE_COINCIDENT_M` | `[FIXED]` | 0.01 | — | m | Separation below which `d` carries no direction. A numerical guard, not a football judgment. |
+
+The three `[GT]` are **un-calibrated** proposals (`tackle-duel-design.md` §4); owner decision D1 (November
+18, 2026) accepts the release on correctness evidence only, and a calibration pass owns the values.
+
+**Worked example.** Tackler at (50, 30) moving (4, 0) m/s; carrier at (51, 30) moving (3, 1) m/s.
+`d = (1, 0)`, so `n = (1, 0)` and `c = (4 − 3)·1 = 1 m/s`, below the floor, so the poke uses 2.0:
+`v_ball = 0.6 · 2.0 · (1, 0) + 0.5 · (3, 1) = (2.7, 0.5) m/s`, speed 2.75 m/s. A lunge from 0.6 m behind at
+8.5 m/s on a carrier running (3, 0): `c = 5.5`, `v_ball = 0.6 · 5.5 · (1, 0) + 0.5 · (3, 0) = (4.8, 0) m/s`.
+
+**The fence's lifetime is the frame.** It is cleared at the start of every frame, at every restart (a
+law stop ends it; restart awards stay law-governed and are never filtered), and before the Snapshot
+phase. It is never serialized: it is identically zero at Snapshot, after the tick returns, and at every
+off-tick surface (save, restore, tactic and substitution staging). No schema, RNG stream, draw site or
+draw order changes. Several carriers dispossessed in one frame are all fenced (a union, never an
+overwrite).
+
+**What A′ deliberately does not change.**
+- The outcome probabilities (§3.6.5.3) — side of approach, timing and touch are the separate B′
+  proposal in `tackle-duel-design.md` §5, pending owner decisions D2 and D4.
+- Restart attribution after the knock: the composition root's Stage-0 last-touch approximation is the
+  last **holder**, so a knock that leaves play is attributed as if the carrier touched it last. Recorded,
+  not fixed here.
+- The tackler records no ball touch, exactly as the pre-A′ release recorded none.
+
+**Acceptance (owner decision D1).** Correctness only: zero same-frame ordinary re-acquisition by the
+carrier, exact save/restore continuation at the tackle frame, mirrored home/away geometry, and a
+six-seed before/after characterization reported descriptively with the Stage A time-to-regain bins.
+No football-rate gate.
 
 ## 3.7 Offside Trap Algorithm (KD-9)
 
@@ -1449,6 +1519,10 @@ are not duplicated here.
 | `TACKLE_RETAIN_DRIBBLING_WEIGHT` | `[GT]` | §3.6.5.3 |
 | `TACKLE_RETAIN_BALANCE_WEIGHT` | `[GT]` | §3.6.5.3 |
 | `TACKLE_FOUL_SHARE_CEILING` | `[FIXED]` | §3.6.5.5 |
+| `TACKLE_LOOSE_POKE_K` | `[GT]` | §3.6.5.8 |
+| `TACKLE_LOOSE_POKE_MIN_M_S` | `[GT]` | §3.6.5.8 |
+| `TACKLE_LOOSE_CARRY_K` | `[GT]` | §3.6.5.8 |
+| `TACKLE_LOOSE_COINCIDENT_M` | `[FIXED]` | §3.6.5.8 |
 | `OFFSIDE_BALL_SPEED_THRESHOLD_M_S` | `[GT]` | §3.7.2 |
 | `OFFSIDE_TRAP_DWELL_TICKS` | `[GT]` | §3.7.2 |
 | `OFFSIDE_STEP_SIZE_M` | `[GT]` | §3.7.4 |
@@ -1709,3 +1783,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.12 | November 12, 2026 | AI agent (W13.1c) | `ERR-008-028`: §3.13.1 gains "Pace" — the composition root writes the marked man's current speed (m/s; 0 for COVER_GK_ZONE) beside the mark target so #8 §3.5.6 can pace a mark-point MOVE at max(distance tier, man's speed tier). Cross-reference only; #14's composer is unchanged. |
 | 0.13 | November 12, 2026 | AI agent (W13.1c review) | `ERR-008-028` amendment: §3.13.1 "Pace" wording corrected — `v` is the magnitude of the world-frame agent velocity (`_agents[id].Velocity`), frame-invariant, not of the #14 snapshot velocity; the #8 speed tier applies only while the marker is slower than his man. Documentation only. |
 | 0.14 | November 12, 2026 | AI agent (W13.1c final pass) | §3.13.1 stand-off paragraph gains the W13-F8 known limitation (the 1.0 m tight stand-off is at / below body contact; measured separations). No value or formula change. |
+| 0.15 | November 18, 2026 | AI agent (A′, owner decision D1) | `ERR-014-011`: new §3.6.5.8 "BallLoose release" — the knock velocity from closing speed and carrier momentum (three un-calibrated `[GT]`, one `[FIXED]` direction guard), the frame-local carrier fence on first touch, pickup and keeper hand contact, its lifetime and non-serialization, worked examples and correctness-only acceptance. §3.6.5.2's `BALL_LOOSE` row and §3.6.5.5 point to it; the constant index gains four rows. Spec and code in the same commit. |

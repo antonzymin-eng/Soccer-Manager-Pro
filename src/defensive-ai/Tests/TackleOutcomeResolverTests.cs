@@ -1,5 +1,6 @@
 // File:     src/defensive-ai/Tests/TackleOutcomeResolverTests.cs
 // Created:  2026-08-12
+// Modified: 2026-11-18 (A′ / ERR-014-011: §3.6.5.8 knock-velocity locks)
 // Modified: 2026-09-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.6.5, §5, Code Standards #20
@@ -9,6 +10,8 @@
 using System;
 
 using NUnit.Framework;
+
+using UnityEngine;
 
 namespace TacticalDirector.DefensiveAI.Tests
 {
@@ -332,6 +335,94 @@ namespace TacticalDirector.DefensiveAI.Tests
             Assert.That(TackleOutcomeResolver.Resolve(better, 0.18f), Is.EqualTo(TackleOutcome.BallWon),
                 "below the 0.1853 threshold the same challenge is won cleanly");
         }
+        // ── §3.6.5.8 BallLoose knock (A′, ERR-014-011) ──────────────────────
+
+        private static void AssertVec(Vector2 expected, Vector2 actual, string why)
+        {
+            Assert.That(actual.x, Is.EqualTo(expected.x).Within(1e-5f), why + " (x)");
+            Assert.That(actual.y, Is.EqualTo(expected.y).Within(1e-5f), why + " (y)");
+        }
+
+        [Test]
+        public void LooseBallVelocity_WorkedExampleMatchesSection3658()
+        {
+            // §3.6.5.8: tackler (50, 30) moving (4, 0); carrier (51, 30) moving (3, 1). n = (1, 0),
+            // c = 1 m/s is below the 2.0 floor, so v = 0.6·2.0·(1, 0) + 0.5·(3, 1) = (2.7, 0.5).
+            Vector2 v = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(51f, 30f), new Vector2(3f, 1f), Vector2.right,
+                new Vector2(50f, 30f), new Vector2(4f, 0f));
+            AssertVec(new Vector2(2.7f, 0.5f), v, "worked example");
+        }
+
+        [Test]
+        public void LooseBallVelocity_LungeAboveFloorUsesClosingSpeed()
+        {
+            // Lunge from behind: c = 8.5 − 3 = 5.5 > floor ⇒ poke 0.6·5.5 = 3.3, carry 0.5·3 = 1.5.
+            Vector2 v = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(50f, 34f), new Vector2(3f, 0f), Vector2.right,
+                new Vector2(49.4f, 34f), new Vector2(8.5f, 0f));
+            AssertVec(new Vector2(4.8f, 0f), v, "closing speed above the floor must drive the poke");
+        }
+
+        [Test]
+        public void LooseBallVelocity_MovesBallAwayFromTacklerForEveryApproach()
+        {
+            // Both players standing: only the floored poke acts, along tackler → carrier, so the ball
+            // always leaves the tackler. A sign error in n would knock it INTO him.
+            for (int deg = 0; deg < 360; deg += 15)
+            {
+                float r = deg * Mathf.Deg2Rad;
+                Vector2 carrier = new Vector2(52.5f, 34f);
+                Vector2 tackler = carrier - 0.6f * new Vector2(Mathf.Cos(r), Mathf.Sin(r));
+                Vector2 v = TackleOutcomeResolver.LooseBallVelocity(
+                    carrier, Vector2.zero, Vector2.right, tackler, Vector2.zero);
+                Assert.That(Vector2.Dot(v, carrier - tackler), Is.GreaterThan(0f), $"approach {deg} deg");
+                Assert.That(v.magnitude, Is.EqualTo(1.2f).Within(1e-5f), $"floored poke speed at {deg} deg");
+            }
+        }
+
+        [Test]
+        public void LooseBallVelocity_MirrorsBetweenEnds()
+        {
+            // Home/away mirror (x → 105 − x, velocities' x negated): the knock mirrors exactly.
+            Vector2 home = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(30f, 20f), new Vector2(2f, 1f), new Vector2(1f, 0f),
+                new Vector2(29.5f, 19.7f), new Vector2(6f, 0.5f));
+            Vector2 away = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(75f, 20f), new Vector2(-2f, 1f), new Vector2(-1f, 0f),
+                new Vector2(75.5f, 19.7f), new Vector2(-6f, 0.5f));
+            AssertVec(new Vector2(-home.x, home.y), away, "mirrored knock");
+        }
+
+        [Test]
+        public void LooseBallVelocity_CoincidentPlayersUseFacingThenCarryOnly()
+        {
+            Vector2 p = new Vector2(40f, 30f);
+            // Inside the 0.01 m guard: the poke line is the carrier's facing.
+            Vector2 facing = TackleOutcomeResolver.LooseBallVelocity(
+                p, Vector2.zero, new Vector2(0f, 2f), p + new Vector2(0.004f, 0f), Vector2.zero);
+            AssertVec(new Vector2(0f, 1.2f), facing, "facing fallback, normalized");
+
+            // Facing degenerate too: no poke, the carry alone remains — finite, never NaN.
+            Vector2 carry = TackleOutcomeResolver.LooseBallVelocity(
+                p, new Vector2(4f, -2f), Vector2.zero, p, new Vector2(1f, 1f));
+            AssertVec(new Vector2(2f, -1f), carry, "degenerate geometry keeps only the carry");
+        }
+
+        [Test]
+        public void LooseBallVelocity_CarryTermFollowsCarrier()
+        {
+            // Same geometry, carrier faster ⇒ closing speed falls (floor binds) but the carry grows:
+            // the knocked ball runs on with the man it was taken from.
+            Vector2 slow = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(50f, 34f), new Vector2(1f, 0f), Vector2.right,
+                new Vector2(50f, 34.6f), new Vector2(1f, -1.5f));
+            Vector2 fast = TackleOutcomeResolver.LooseBallVelocity(
+                new Vector2(50f, 34f), new Vector2(6f, 0f), Vector2.right,
+                new Vector2(50f, 34.6f), new Vector2(6f, -1.5f));
+            Assert.That(fast.x - slow.x, Is.EqualTo(0.5f * 5f).Within(1e-5f), "carry = 0.5 of the speed gain");
+            Assert.That(fast.y, Is.EqualTo(slow.y).Within(1e-5f), "poke unchanged at equal closing speed");
+        }
     }
 }
 
@@ -341,4 +432,6 @@ namespace TacticalDirector.DefensiveAI.Tests
 // |         |            |        | partition, each monotonicity as its own isolating case, the P1   |
 // |         |            |        | continuity requirement asserted rather than claimed, the [FIXED] |
 // |         |            |        | ceiling's numerical guarantee, and the §3.6.5.7 worked example.  |
+// | 1.1     | 2026-11-18 | —      | A′ / ERR-014-011: §3.6.5.8 knock locks — worked example, lunge,  |
+// |         |            |        | away-from-tackler sweep, home/away mirror, degenerate fallbacks. |
 #endregion

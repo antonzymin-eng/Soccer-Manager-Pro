@@ -1,8 +1,9 @@
 // File:     src/defensive-ai/TackleOutcomeResolver.cs
 // Created:  2026-08-12
+// Modified: 2026-11-18 (A′ / ERR-014-011: + LooseBallVelocity / PokeDirection, the §3.6.5.8 BallLoose knock)
 // Modified: 2026-08-12
 // Author:   —
-// Spec:     Defensive AI #14 §3.6.5, Deterministic Simulation #16 §3.4.4, Code Standards #20
+// Spec:     Defensive AI #14 §3.6.5 (incl. §3.6.5.8), Deterministic Simulation #16 §3.4.4, Code Standards #20
 // Purpose:  Pure static resolution of one committed tackle into Missed / BallWon / BallLoose / Foul,
 //           from the two players' abilities and the geometry of the challenge. No state, no RNG
 //           service — the caller supplies the draw.
@@ -129,6 +130,55 @@ namespace TacticalDirector.DefensiveAI
         }
 
         /// <summary>
+        /// The pitch-plane velocity (m/s) of a ball a challenge has knocked loose (§3.6.5.8, A′,
+        /// <c>ERR-014-011</c>):
+        /// <c>v = TackleLoosePokeK · max(c, TackleLoosePokeMinSpeedMS) · n + TackleLooseCarryK · v_c</c>,
+        /// where <c>n</c> is the unit vector from tackler to carrier and <c>c = (v_t − v_c) · n</c> the
+        /// closing speed.
+        ///
+        /// <para><b>Why a velocity at all.</b> Before A′ the ball was left exactly where it lay, at the
+        /// carrier's feet with zero velocity, and the nearest player — almost always the carrier — picked
+        /// it straight back up in the same frame (37 of 37 #440 Stage A episodes). The poke moves it away
+        /// from the tackler; the carry keeps part of the carrier's own momentum, so a ball taken off a
+        /// running man runs on.</para>
+        ///
+        /// <para><b>Direction fallback.</b> Below <see cref="DefensiveAIConstants.TACKLE_LOOSE_COINCIDENT_M"/>
+        /// the poke line is the carrier's facing; if that is degenerate too, the poke is dropped and
+        /// only the carry remains. This decides where the ball goes, never which outcome occurred, so it
+        /// is not a §3.6.5.3 continuity threshold.</para>
+        /// </summary>
+        public static Vector2 LooseBallVelocity(
+            Vector2 carrierPosition, Vector2 carrierVelocity, Vector2 carrierFacing,
+            Vector2 tacklerPosition, Vector2 tacklerVelocity)
+        {
+            Vector2 n = PokeDirection(carrierPosition, carrierFacing, tacklerPosition);
+            float closing = Vector2.Dot(tacklerVelocity - carrierVelocity, n);
+            float poke = DefensiveAIConstants.TackleLoosePokeK
+                         * Mathf.Max(closing, DefensiveAIConstants.TackleLoosePokeMinSpeedMS);
+            return poke * n + DefensiveAIConstants.TackleLooseCarryK * carrierVelocity;
+        }
+
+        /// <summary>
+        /// The §3.6.5.8 poke line: unit vector from tackler to carrier, else the carrier's facing when
+        /// the two nearly coincide, else zero (no poke).
+        /// </summary>
+        public static Vector2 PokeDirection(Vector2 carrierPosition, Vector2 carrierFacing, Vector2 tacklerPosition)
+        {
+            Vector2 d = carrierPosition - tacklerPosition;
+            float guard = DefensiveAIConstants.TACKLE_LOOSE_COINCIDENT_M;
+            if (d.sqrMagnitude >= guard * guard)
+            {
+                return d / d.magnitude;
+            }
+
+            float facingSq = carrierFacing.sqrMagnitude;
+            return facingSq > DegenerateFacingSq ? carrierFacing / Mathf.Sqrt(facingSq) : Vector2.zero;
+        }
+
+        /// <summary>Squared length below which a facing vector carries no direction.</summary>
+        private const float DegenerateFacingSq = 1e-12f;
+
+        /// <summary>
         /// The largest value <see cref="Resolve"/> will treat as a draw. A draw of exactly 1.0 would
         /// compare <c>u &gt;= engage</c> true for every reachable <c>engage</c> and make the outcome
         /// unreachable-by-construction rather than merely unlikely; clamping just below keeps the
@@ -145,4 +195,7 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        | outcomes. Continuous in every input per football-judgment §6 P1. |
 // |         |            |        | ApproachAngle is used ONLY as commitment (cos, clamped at 0) —   |
 // |         |            |        | it does not encode which side of the carrier the tackler is on.  |
+// | 1.1     | 2026-11-18 | —      | A′ / ERR-014-011 (owner decision D1): + LooseBallVelocity and    |
+// |         |            |        | PokeDirection, the §3.6.5.8 knock from closing speed and carrier |
+// |         |            |        | momentum. Pure, no RNG; Resolve is unchanged.                    |
 #endregion

@@ -1,7 +1,7 @@
 # #440 BallLoose — Stage A investigation and proposed choices
 
 Created November 9, 2026. Purpose: freeze episode measurement, collect within-frame
-ownership chronology and present a concrete gameplay choice. Version 1.6.
+ownership chronology and present a concrete gameplay choice. Version 1.7.
 Status: Stage A measured. **Owner decision D1 (November 18, 2026) cuts #440 to A′** ([tackle duel note §7](tackle-duel-design.md#7-owner-decisions)): a geometry-derived knock plus a one-frame carrier fence, accepted by correctness tests only. The Stage B experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; their sections below are kept as the historical record. No A′ gameplay code exists yet.
 Branch `codex/440-ball-loose`; source baseline `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 #434 remains a separate draft; Stage A therefore measures main, not its unmerged head.
@@ -41,7 +41,12 @@ floor, the per-team review warning, the breach rule, the twelve-seed freeze and 
 **Kept.** The Stage A observer, frozen definitions and [retained evidence](evidence/ball-loose-stage-a-20261110/README.md)
 are the before-baseline for A′.
 
-**Next.** A′ amends #14 §3.6.5 through `err-file-and-backprop` (new ERR; spec and code in one
+**Implemented November 18, 2026** as `ERR-014-011` (#14 §3.6.5.8; branch `claude/440-a-prime`). The fence is a
+frame-local roster mask cleared at Input, at every restart and at Events entry, and is read only by first
+touch, loose pickup and keeper hand contact, which meets this note's audit contract; the proofs are in
+`MatchEngineBallLooseReleaseTests`. Still to do: the six-seed characterization and pinned Unity.
+
+**Next (as decided).** A′ amends #14 §3.6.5 through `err-file-and-backprop` (new ERR; spec and code in one
 commit). It is behaviour-changing, so it must not land inside an open measurement window, and it
 needs pinned-host Unity validation. Football acceptance of tackles moves to B′ (tackle duel note
 §5–§6), pending the owner's D2 and D4.
@@ -523,3 +528,5 @@ no merge or tuning is implied by an experimental pass.
 | 1.5 | November 10, 2026 | Owner accepts review recommendations: G2 through f+60, f+24 descriptive, twelve fixed seeds / 48 runs, retained 30 pooled complete-window floor, 50% per-team review warning and mandatory review after a pass. Records exact reply/scope and reproducible added seeds; distinguishes Stage A endpoints from cumulative regains. C/caps/policy/parameter/run freeze remain pending; no gameplay/capture. |
 
 | 1.6 | November 18, 2026 | Owner decision D1 (tackle duel note §7): #440 cut to A′, a geometry-derived knock plus the one-frame fence, accepted by correctness tests only. New D1 section records what is adopted, withdrawn and kept; Stage B experiment, 25% caps, coverage floor, team warning, breach rule and fixed 2.5 m/s knock withdrawn. Superseded sections keep their headings and text as history. Stage A definitions and evidence unchanged. Branch merged with main `4cdb4823`. No code. |
+
+| 1.7 | November 18, 2026 | A′ implemented as `ERR-014-011` (#14 §3.6.5.8): geometry knock and frame-local carrier fence on first touch, pickup and keeper hands; correctness tests in `MatchEngineBallLooseReleaseTests`. Characterization and pinned Unity pending. |
