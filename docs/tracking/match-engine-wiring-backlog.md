@@ -10,7 +10,9 @@
 
 ---
 
-> **UPDATED November 16, 2026 (W13 merges main `3871c9ac`), v1.47:** W13's branch-local v1.41–v1.46 entries and main's #434 v1.41–v1.46 entries are both kept below, newest first. #434 (PR #543) is now on main beneath W13; W13.1 still ships switched OFF, and the W13 section's open items (F5–F10, §10 measurement, OD-2) are unchanged.
+> **UPDATED November 18, 2026 (#440 owner decision D1; PR #544 merges main `4cdb4823`), v1.48:** Owner decision D1 (November 18, 2026) cuts #440 to A′: a geometry-derived BallLoose knock plus the one-frame carrier fence, accepted by correctness tests only. The Stage B 48-run experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; Stage A's observer and evidence are the before-baseline. See [design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026). The branch-local #440 v1.41–v1.44 entries below are kept as history.
+
+> **UPDATED (prior) November 16, 2026 (W13 merges main `3871c9ac`), v1.47:** W13's branch-local v1.41–v1.46 entries and main's #434 v1.41–v1.46 entries are both kept below, newest first. #434 (PR #543) is now on main beneath W13; W13.1 still ships switched OFF, and the W13 section's open items (F5–F10, §10 measurement, OD-2) are unchanged.
 
 > **UPDATED (prior) November 13, 2026 (W13 landing checks), v1.46:** W13.0 D1/D2 are recorded as merged to main (PR #545, `c7ec1131`). On `6491de79` (W13 merged with main `39de4662`): six-seed full-match switch-off digests equal main on every tick, armed control differs ([six-seed full-match switch-off comparison](evidence/w13-switch-off-neutrality-20261113/README.md), non-certifying .NET 8.0.425); pinned Unity compile and MatchEngine / DefensiveAI / DecisionTree EditMode 0 failures ([pinned-host receipt](evidence/host-w13-6491de79-20261113/README.md)). Frozen-lane identity and §10 remain open; the default stays off.
 
@@ -876,6 +878,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.48 | 2026-11-18 | — | #440 D1: cut to A′ (geometry knock + one-frame fence, correctness acceptance); Stage B experiment and caps withdrawn. PR #544 merged with main; branch-local #440 v1.41–v1.44 rows kept. No code. |
 | 1.47 | 2026-11-16 | — | Merge main `3871c9ac` into W13: both histories kept; W13's v1.41–v1.46 rows are branch-local W13. No status or design change. |
 | 1.46 (branch-local W13) | 2026-11-13 | — | W13 landing checks: W13.0 status corrected to merged (PR #545); switch-off full-match neutrality vs main (non-certifying) and pinned Unity host receipt at `6491de79` recorded. No design change. |
 | 1.45 (branch-local W13) | 2026-11-12 | — | Promote the stale-request limitation to F9 under ERR-014-010; track unresolved mirror asymmetry as F10 and hold tight-floor calibration; qualify F5/F6 evidence without changing gameplay. |

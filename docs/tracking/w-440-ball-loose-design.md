@@ -1,10 +1,50 @@
 # #440 BallLoose — Stage A investigation and proposed choices
 
 Created November 9, 2026. Purpose: freeze episode measurement, collect within-frame
-ownership chronology and present a concrete gameplay choice. Version 1.5.
-Status: Stage A measured; option C proposed as a bounded Stage B experiment. The owner accepted the revised window/sample/coverage/warning choices below; the complete C experiment, caps, gameplay policy/parameter and source/run freeze remain pending. No Stage B gameplay code or capture is authorized here.
+ownership chronology and present a concrete gameplay choice. Version 1.6.
+Status: Stage A measured. **Owner decision D1 (November 18, 2026) cuts #440 to A′** ([tackle duel note §7](tackle-duel-design.md#7-owner-decisions)): a geometry-derived knock plus a one-frame carrier fence, accepted by correctness tests only. The Stage B experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; their sections below are kept as the historical record. No A′ gameplay code exists yet.
 Branch `codex/440-ball-loose`; source baseline `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 #434 remains a separate draft; Stage A therefore measures main, not its unmerged head.
+
+## Owner decision D1 — November 18, 2026
+
+The owner approved D1 of the [tackle duel design note](tackle-duel-design.md) (§3 and §4 there
+define A′). The owner's reasons, as discussed: a 48-match result on a stopgap knock would be
+invalidated once the duel (B′) decides knock direction and speed; the 25% caps had no sourced
+football reference; and the defect (a resting ball re-picked by its carrier in the tackle frame) is
+a correctness bug that deterministic tests can prove fixed.
+
+**Adopted (A′).**
+- The scoped ordinary-recovery policy proposed below ("Policy decision required after Stage A"):
+  the original carrier cannot regain through ordinary recovery (first touch, passive pickup and
+  applicable keeper paths) in the tackle's physics frame. Restart awards stay law-governed.
+- Option C's one-frame fence, with this note's state/save audit ("One-frame fence state/save audit")
+  as the implementation's proof obligation.
+- A knock from duel geometry instead of a fixed 2.5 m/s:
+  `v_ball = LOOSE_POKE_K · max(c, LOOSE_POKE_MIN_M_S) · n + LOOSE_CARRY_K · v_c`, where `n` points
+  from tackler to carrier and `c` is the closing speed (tackle duel note §4). The three constants
+  (0.6, 2.0 m/s, 0.5) remain proposed `[GT]` values; implementation confirms them with the spec
+  amendment.
+
+**Acceptance (correctness only).**
+- zero same-frame ordinary carrier re-acquisition;
+- exact restore and next-frame proofs;
+- mirrored home/away geometry tests;
+- a six-seed before/after characterization, reported descriptively, including this note's
+  time-to-regain bins (f+1..3, f+4..12, f+13..24, f+25..60, complete-without-regain, censored) and
+  the f+3, f+24 and f+60 cumulative bounds. Nothing in the characterization gates.
+
+**Withdrawn.** The 48-run Stage B experiment, both 25% ceilings (G1, G2), the 30-window coverage
+floor, the per-team review warning, the breach rule, the twelve-seed freeze and the fixed 2.5 m/s
+`BALL_LOOSE_KNOCK_SPEED_M_S`. Option B and the symmetric lockout (D) stay unselected.
+
+**Kept.** The Stage A observer, frozen definitions and [retained evidence](evidence/ball-loose-stage-a-20261110/README.md)
+are the before-baseline for A′.
+
+**Next.** A′ amends #14 §3.6.5 through `err-file-and-backprop` (new ERR; spec and code in one
+commit). It is behaviour-changing, so it must not land inside an open measurement window, and it
+needs pinned-host Unity validation. Football acceptance of tackles moves to B′ (tackle duel note
+§5–§6), pending the owner's D2 and D4.
 
 ## Observation versus contract
 
@@ -127,6 +167,8 @@ filed until an owner-approved Stage B implementation lands with its amendment.
 
 ## Candidate fixes — proposals, not code or approved constants
 
+> **Superseded by D1 (November 18, 2026).** A′ takes C's fence with a geometry-derived knock in place of the fixed 2.5 m/s below. Historical record.
+
 | Choice | Mechanism and realism | Proposed constants / example | RNG and snapshot | Expected metrics / risk |
 | --- | --- | --- | --- | --- |
 | A — velocity only | Give a deterministic knocked ball a direction and speed, leaving all normal eligibility intact. Physical flight/first touch decide recovery. | `BALL_LOOSE_KNOCK_SPEED_M_S = 2.5` **[GT] (proposed)**, m/s, proposed authoring range (0,6]. At 60 Hz, 2.5/60 = 0.04167 m before the next integration. Direction away from tackler through contact, with the carrier's facing as the coincident-position fallback. | No new RNG; existing ball kinematics already serialize. No new persistent state. | More moving-ball contacts; opponent recovery may rise, but first touch can still restore the original carrier **in the same frame**. Does not guarantee the proposed policy. No guarantee of which team wins. |
@@ -139,6 +181,8 @@ Owner choice must approve a new parameter before Stage B adds it. The initial
 2.5 m/s value is uncalibrated, not inferred from this census.
 
 ## Expected Stage B directions and limits
+
+> **Withdrawn by D1 (November 18, 2026).** Historical record; A′ reports these metrics descriptively only.
 
 | Frozen metric | A: velocity only | B: six-frame exclusion | C: velocity plus one-frame fence |
 | --- | --- | --- | --- |
@@ -160,6 +204,8 @@ Do not tune or declare realism from a zero tackle-frame regain count alone.
 
 ## Policy decision required after Stage A
 
+> **Adopted by D1 (November 18, 2026)** as A′'s policy. The mechanism is A′, not the fixed-knock C.
+
 Proposed policy: the original carrier cannot regain through **ordinary recovery**
 in the tackle's physics frame before any intervening whistle/restart. Restart awards
 remain governed by the Laws and are censored, not rewritten to enforce a tackle
@@ -170,6 +216,8 @@ Stage B writes the exact policy and chosen mechanism into #14 §3.6.5 with a new
 verified ERR ID and spec version history, in the same commit as the fix.
 
 ## Proposed Stage B experiment — owner approval required
+
+> **Withdrawn by D1 (November 18, 2026).** This section and its subsections (configuration, caps, team warning, denominators, breach rule) are the historical record of the proposal; none of it gates A′. The time-to-regain bins and censoring definitions are reused descriptively.
 
 This section is a proposal, not an approved football acceptance contract or a
 result. No C/D gameplay code, new [GT] parameter, snapshot change, new match capture
@@ -383,6 +431,8 @@ failed implementation, not something tolerated up to 25%.
 
 ## One-frame fence state/save audit — design feasibility, not implemented proof
 
+> **Applies to A′ (D1, November 18, 2026).** A′ uses this fence; the audit below is its proof obligation.
+
 Audit baseline: `ce32b38078596c21adc14682357e0c47f83dd5f8`, production source identical
 to the measured Stage A observer. The proposed fence does not exist yet. Relevant
 paths (line references are this audited base):
@@ -433,6 +483,8 @@ preserve a “cheap” experiment. Outer framing changes need separate justifica
 
 ## Symmetric lockout — fallback only
 
+> **Still unselected after D1.** No D work is authorized.
+
 D remains unselected: investigate physical knock plus exclusion of carrier and
 tackler **only if C fails and the owner authorizes a new design**. Reuse the same
 stop definitions to compare candidates, with any new eligibility window frozen
@@ -443,6 +495,8 @@ implementation, derive an unqualified escape guarantee, or automatically tune C
 into D. No symmetric-lockout gameplay code is authorized.
 
 ## Owner stop
+
+> **Superseded by D1 (November 18, 2026).** The pending choices below were for the withdrawn Stage B experiment; the current next step is the A′ amendment above. Historical record.
 
 The owner accepted f+1..f+60 for G2, descriptive f+24, twelve seeds / 48 runs,
 the retained 30 pooled complete-window floor, the 50% team-review warning and
@@ -467,3 +521,5 @@ no merge or tuning is implied by an experimental pass.
 | 1.4 | November 10, 2026 | Review revision, still proposed: G2 f+1..f+24 with geometric caveats and first-regain distribution; pooled-only gates, no per-team quota; retains proposed 30 pooled coverage floor and explicit inconclusive risk. No gameplay/capture or approval. |
 
 | 1.5 | November 10, 2026 | Owner accepts review recommendations: G2 through f+60, f+24 descriptive, twelve fixed seeds / 48 runs, retained 30 pooled complete-window floor, 50% per-team review warning and mandatory review after a pass. Records exact reply/scope and reproducible added seeds; distinguishes Stage A endpoints from cumulative regains. C/caps/policy/parameter/run freeze remain pending; no gameplay/capture. |
+
+| 1.6 | November 18, 2026 | Owner decision D1 (tackle duel note §7): #440 cut to A′, a geometry-derived knock plus the one-frame fence, accepted by correctness tests only. New D1 section records what is adopted, withdrawn and kept; Stage B experiment, 25% caps, coverage floor, team warning, breach rule and fixed 2.5 m/s knock withdrawn. Superseded sections keep their headings and text as history. Stage A definitions and evidence unchanged. Branch merged with main `4cdb4823`. No code. |
