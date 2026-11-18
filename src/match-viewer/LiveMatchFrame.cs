@@ -1,6 +1,6 @@
 // File:     src/match-viewer/LiveMatchFrame.cs
 // Created:  2026-07-15
-// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue)
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified (prior): 2026-07-27 (P1 AR-1 M-6: the score and restart triples collapsed into Scoreline /
 //           RestartBanner, so no two constructor parameters share a type)
 // Author:   —
@@ -63,6 +63,9 @@ namespace TacticalDirector.MatchViewer
         /// </summary>
         public readonly PendingSubstitution[] PendingSubstitutions;
 
+        /// <summary>Requested and effective formations. Effective choices stay fixed for this match.</summary>
+        public readonly MatchFormationState Formations;
+
         /// <summary>Goals, home and away.</summary>
         public readonly Scoreline Score;
 
@@ -94,7 +97,8 @@ namespace TacticalDirector.MatchViewer
             bool matchEnded,
             MatchPeriod period,
             RestartBanner restart,
-            PendingSubstitution[] pendingSubstitutions = null)
+            PendingSubstitution[] pendingSubstitutions = null,
+            MatchFormationState formations = default)
         {
             Tick              = tick;
             BallPosition      = ballPosition;
@@ -107,6 +111,7 @@ namespace TacticalDirector.MatchViewer
             Period            = period;
             Restart           = restart;
             PendingSubstitutions = pendingSubstitutions;
+            Formations = formations;
         }
     }
 }
@@ -128,4 +133,5 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | LastRestart* are replaced by Score / Restart (all readers      |
 // |         |            |        | updated) rather than kept as duplicate accessors.              |
 // | 1.3     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): PendingSubstitutions, an immutable copy with sequence identities (null for older or test-built frames). |
+// | 1.4 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

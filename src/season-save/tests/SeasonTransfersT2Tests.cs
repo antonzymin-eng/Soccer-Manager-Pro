@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonTransfersT2Tests.cs
 // Created:  2026-10-20
-// Modified: 2026-10-21 (AR round 5 L-A — v1.6: the counterparty-ledger test is renamed ..._InTheInterimMinimalTier)
+// Modified: 2026-11-05 (AR-2 T1: owner observer wrappers)
+// Modified (prior): 2026-11-04 (ERR-040-004 — v1.7: composed genesis career buys in its first window at the base ceiling)
+//           2026-10-21 (AR round 5 L-A — v1.6: the counterparty-ledger test is renamed ..._InTheInterimMinimalTier)
 //           2026-10-20 (AR round 5 S-L6 — v1.5: AssertSameRecord compares WeakFootRating; the roll-window Assume.That sits below the core assertions)
 //           2026-10-20 (AR round 4 — v1.4)
 // Author:   —
@@ -74,6 +76,95 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         // ── genesis ──────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// ERR-040-004 (owner decision D-13): a career composed through the production <c>League.CreateLoop</c>,
+        /// with no test-set budget, starts with the zero-prize base ceiling and can buy in its first window.
+        /// Before ERR-040-004 the genesis ceiling was 0 and this bid returned <c>InsufficientBudget</c>.
+        /// </summary>
+        [Test]
+        public void TransferObserverWrappers_UseLiveOwnershipAndOwnerHeadroomWithoutMutation()
+        {
+            Rig c = NewCareer();
+            int target = c.Progression.SquadFor(Seller).GetPlayer(0).PlayerId;
+            var offer = new Offer(target, Seller, 1_000_000L, 0L, 1, true);
+            byte[] before = Snapshot(c);
+            Assert.AreEqual(TransferBidIssue.None, c.Loop.DiagnoseTransferBid(in offer));
+            Assert.AreEqual(Budget, c.Loop.RemainingTransferBudget(Managed));
+            CollectionAssert.AreEqual(before, Snapshot(c));
+            Assert.AreEqual(TransferSubmissionOutcome.Accepted, c.Loop.SubmitTransferBid(in offer));
+            Assert.AreEqual(Budget - offer.Fee, c.Loop.RemainingTransferBudget(Managed));
+            Assert.AreEqual(TransferBidIssue.WrongDirection, c.Loop.DiagnoseTransferBid(in offer));
+        }
+
+        [Test]
+        public void GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(1, WorldSeed);
+            ProgressionEngine progression = SeedFor(league, world);
+            var career = PlayerCareerStates.ForLeague(
+                new ProgressionSquads(progression), ClubIds(ClubCount), injuryOccurrenceEnabled: false);
+            SeasonLoop loop = league.CreateLoop(
+                world, Managed, RoundResolutionMode.QuickSimAll, null, career, progression, new DisciplineState());
+
+            Assert.That(loop.AvailableTransferBudget(Managed), Is.EqualTo(ClubFinancesConstants.BaseTransferBudget),
+                "genesis ceiling = BASE_TRANSFER_BUDGET under the identity board (ERR-040-004)");
+            Assert.That(ClubFinancesConstants.BaseTransferBudget, Is.EqualTo(100_000L), "catalogue default");
+
+            // The cheapest player any other club owns, valued exactly as the counterparty values him.
+            int target = -1;
+            long cheapest = long.MaxValue;
+            for (int club = 0; club < ClubCount; club++)
+            {
+                if (club == Managed)
+                {
+                    continue;
+                }
+
+                Squad squad = progression.SquadFor(club);
+                for (int i = 0; i < squad.Count; i++)
+                {
+                    int id = squad.GetPlayer(i).PlayerId;
+                    long value = ValueFor(progression, id, buy: true);
+                    if (value < cheapest)
+                    {
+                        cheapest = value;
+                        target = id;
+                    }
+                }
+            }
+
+            int affordable = 0, total = 0;
+            for (int club = 0; club < ClubCount; club++)
+            {
+                if (club == Managed)
+                {
+                    continue;
+                }
+
+                Squad squad = progression.SquadFor(club);
+                for (int i = 0; i < squad.Count; i++, total++)
+                {
+                    if (ValueFor(progression, squad.GetPlayer(i).PlayerId, buy: true) <= ClubFinancesConstants.BaseTransferBudget)
+                    {
+                        affordable++;
+                    }
+                }
+            }
+
+            TestContext.Out.WriteLine(
+                $"cheapest other-club player value = {cheapest}; affordable at the base ceiling: {affordable} of {total}");
+            Assert.That(cheapest, Is.LessThanOrEqualTo(ClubFinancesConstants.BaseTransferBudget),
+                "non-vacuity: at least one player must be affordable at the base ceiling");
+            Assert.That(progression.TryFindPlayer(target, out _, out int seller), Is.True);
+            long balanceBefore = loop.FinanceView(Managed).Balance;
+
+            TransferSubmissionOutcome outcome = loop.SubmitTransferBid(new Offer(target, seller, cheapest, 1_000L, 1, true));
+
+            Assert.That(outcome, Is.EqualTo(TransferSubmissionOutcome.Accepted));
+            Assert.That(loop.FinanceView(Managed).Balance, Is.EqualTo(balanceBefore - cheapest));
+        }
 
         [Test]
         public void CreateLoop_WithAProgressionStore_SeedsOneGenesisContractPerManagedPlayer()
@@ -1287,4 +1378,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.4     | 2026-10-20 | —      | AR round 4: L9 T-TX-REKEY-005 asserts the #28 PlayerRecord (id, names, age, position, every attribute) is unchanged by the re-home; S4-L2 the unwired CreateLoop KD-4 refusal asserts ParamName == "world"; R4-L2 the roll-window non-vacuity leg is an Assume.That. |
 // | 1.5     | 2026-10-20 | —      | AR round 5 S-L6: AssertSameRecord also compares Attributes.WeakFootRating (PlayerAttributes.ToArray() excludes it, so a re-home that clobbered it passed T-TX-REKEY-005); APromptRoll_OpensOnTheRollDay_AndCoversTheOpeningFixtureDay moves its non-vacuity Assume.That below the two core assertions, so a [GT] retune cannot silently skip them. |
 // | 1.6     | 2026-10-21 | —      | AR round 5 L-A (ERR-031-015): AnAcceptedTransfer_LeavesTheCounterpartyClubsLedgerUntouched_ByDesign renamed ..._InTheInterimMinimalTier — the unposted counterparty is the interim option (b), not a design decision (the (a)-vs-(b) owner decision is open, §7.2); the v1.3 row keeps the name it recorded. |
+// | 1.7     | 2026-11-04 | —      | ERR-040-004: GenesisCareer_FirstWindowBuy_IsAffordableAtTheBaseCeiling — production League.CreateLoop, no test-set budget, buys the cheapest other-club player in the first window. |
+// | 1.8 | 2026-11-05 | — | T1 / ERR-030-059: live observer wrappers preserve state and share owner headroom. |
 #endregion

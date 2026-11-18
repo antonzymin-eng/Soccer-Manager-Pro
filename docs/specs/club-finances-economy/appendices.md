@@ -1,14 +1,15 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** October 13, 2026 (v0.10 — live config keys and pending capacity mapped to the implementation)
+**Last Updated:** November 4, 2026 (v0.11 — ERR-040-004: genesis budget ceilings are the zero-prize base (owner decision D-13))
+**Last Updated (prior):** October 13, 2026 (v0.10 — live config keys and pending capacity mapped to the implementation)
 **Last Updated (prior):** October 11, 2026 (v0.9 — PR #497 review: sponsorship is in-season only)
 **Last Updated (prior):** October 10, 2026 (v0.8 — T3b2 revenue constants; the T3b1 `[FIXED]` gate becomes the `[GT]` config-owned `DeepRevenueEnabled`)
 **Last Updated (prior):** October 8, 2026 (v0.7 — sole disabled T3b1 gate added to catalogue)
 **Last Updated (prior):** September 11, 2026 (v0.6 — ERR-030-051: season-boundary worked example corrected to synchronous atomic RollToNextSeason semantics)
 **Last Updated (prior):** September 6, 2026 (v0.5 — PR #363 critique: config-loader range disclosure and T1a terminology)
 **Last Updated (prior):** September 4, 2026 (v0.4 — T1 self-identifying save framing back-prop)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -35,9 +36,9 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `STARTING_CLUB_BALANCE` | 500,000 | [GT] | `ClubFinances.CreateInitial`'s default starting `Balance` at league/game bootstrap. |
 | `PRIZE_MONEY_WINNER` | 2,000,000 | [GT] | Prize money for finishing **position 1** — the top endpoint of the linear interpolation (§3.1.1). |
 | `PRIZE_MONEY_LAST_PLACE` | 200,000 | [GT] | Prize money for finishing **last place** — the bottom endpoint. MUST be `≤ PRIZE_MONEY_WINNER` (a catalogue invariant — a non-negative `span`, §3.1.1). |
-| `BASE_TRANSFER_BUDGET` | 100,000 | [GT] | Flat per-season transfer-budget allocation before the prize-money share is added (§3.1). |
+| `BASE_TRANSFER_BUDGET` | 100,000 | [GT] | Flat per-season transfer-budget allocation before the prize-money share is added (§3.1). Also the genesis `TransferBudget` `CreateInitial` seeds (ERR-040-004). |
 | `TRANSFER_BUDGET_PRIZE_SHARE_PERMILLE` | 400 | [GT] | Per-mille share of `prizeMoney` folded into `TransferBudget` (§3.1). |
-| `BASE_WAGE_BUDGET` | 50,000 | [GT] | Flat per-season wage-budget allocation before the prize-money share is added (§3.1). |
+| `BASE_WAGE_BUDGET` | 50,000 | [GT] | Flat per-season wage-budget allocation before the prize-money share is added (§3.1). Also the genesis `WageBudget` `CreateInitial` seeds (ERR-040-004). |
 | `WAGE_BUDGET_PRIZE_SHARE_PERMILLE` | 150 | [GT] | Per-mille share of `prizeMoney` folded into `WageBudget` (§3.1). |
 | `CLUB_FINANCES_BUDGET_CEILING_MAX` | 50,000,000 | [GT] | A generous sanity ceiling on `TransferBudget`/`WageBudget` after the `BoardModifier` multiply. |
 
@@ -84,8 +85,9 @@ ERR-030-051 atomicity correction.
 With the deep dials off, `BoardModifier.Identity` (`BudgetMultiplierMillPermille = 1000`), and all
 deep-tier accumulators at `0`, `SettleFinances` for club 12 at position 4 of 20 (§3.5's worked example)
 yields **exactly** `TransferBudget = 786,316` / `WageBudget = 307,368`. `ClubFinances.CreateInitial`
-produces `{ Balance: startingBalance, TransferBudget: 0, WageBudget: 0, WageBillAggregate: 0,
-SeasonRevenueAccrued: 0, FfpBalanceWindow: 0 }`. Because the minimal tier registers **no** RNG stream at all,
+produces `{ Balance: startingBalance, TransferBudget: 100,000, WageBudget: 50,000, WageBillAggregate: 0,
+SeasonRevenueAccrued: 0, FfpBalanceWindow: 0 }` — the zero-prize identity-board ceilings (ERR-040-004;
+before it, both budgets were 0). Because the minimal tier registers **no** RNG stream at all,
 reserving `_RESERVED_0x29_`/91 leaves every existing stream cursor byte-identical trivially (T-FN-NEU-003).
 
 #region VersionHistory
@@ -101,4 +103,5 @@ reserving `_RESERVED_0x29_`/91 leaves every existing stream cursor byte-identica
 | 0.8 | 2026-10-10 | — | **T3b2 formula half.** Adds `DeepRevenueEnabled` [GT] (default false), `DAILY_SPONSORSHIP_REVENUE`, the two fill per-mille endpoints, `MATCHDAY_REVENUE_PER_SPECTATOR` and the `[CROSS-PENDING]` `MATCHDAY_STADIUM_CAPACITY`. `DEEP_REVENUE_ENABLED` stays until the code slice replaces it. |
 | 0.9 | 2026-10-11 | — | **PR #497 review.** `DAILY_SPONSORSHIP_REVENUE` accrues on in-season days only (§3.7 v0.14), so roll timing cannot move break-day sponsorship between seasons. |
 | 0.10 | 2026-10-13 | — | **T3b2 implementation.** live config keys and pending capacity mapped to the implementation. Default remains off; pinned Unity compilation pending. |
+| 0.11 | 2026-11-04 | — | **ERR-040-004.** `BASE_TRANSFER_BUDGET` / `BASE_WAGE_BUDGET` rows note they are also the genesis ceilings; the Appendix B `CreateInitial` worked value updated. No constant value change. |
 #endregion

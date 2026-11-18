@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §1.2.1 scope gains tackle outcome resolution; §1.3.1 #3 dependency row, §1.4 glossary "Tackle intent" entry (+ new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, and §1.7's last bullet corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch; §1.8 gains a scoped Stage-0-runtime-code amendment for §3.6.5 only.)
-**Version:** 0.5
+**Last Updated:** November 11, 2026 (v0.8 — W13.1 `ERR-014-010`: §1.2.1 scope, §1.4 glossary "Anti-chaos invariant" and the §1.5 KD-17 row note the gated fourth invariant, one marker per opponent.)
+**Version:** 0.8
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -70,7 +70,9 @@ NOT STARTED at the time of this draft).
 - Assignment-transition dwell-time hysteresis bound to Agent Movement
   #2 §3.1 pattern (§3.11, KD-11).
 - Three measurable anti-chaos invariants: `MIN_BACKLINE_AGENTS`,
-  `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (KD-17).
+  `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (KD-17), plus the
+  gated fourth, one marker per opponent (§3.10.2 Invariant 4, W13.1
+  `ERR-014-010`).
 - Phase gating via #12 phase enum: `IN_POSSESSION` produces all-ZONAL
   directive with no further computation (§3.1, KD-19).
 - Canonical exploit-resistance test corpus (§5, KD-18).
@@ -186,7 +188,7 @@ declaration between them at Stage 0.
 | **Last-man predicate** | A deterministic per-tick boolean derived from `IsLastManCandidate` and `IsLastManThreat` (KD-12). When both are true, the identified agent is overridden to `INTERCEPT_RUNNER` mode. GK is excluded from this predicate. |
 | **Tackle intent** | A per-agent per-tick intent signal (`COMMIT` / `JOCKEY` / `HOLD`) produced by #14 for agents within `TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent (§3.6). **Amended (KD-6 revised — `ERR-014-006`):** the original entry read "#8 reads this to construct an `AgentAction`; #3 owns the contact physics" — that dispatch has no working delegate at Stage 0 (see the KD-6 row in §1.5), so a `COMMIT` intent that becomes a challenge is resolved by #14 itself into a `TackleOutcome` (§3.6.5), not handed to #8 or #3. |
 | **Tackle outcome** | The result of a committed tackle challenge: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`, resolved by #14 as an abstract attribute duel between the tackler and the ball carrier (§3.6.5, KD-6 revised — `ERR-014-006`). Digest-visible; ordinals are stable and append-only. |
-| **Anti-chaos invariant** | One of the three measurable constraints in KD-17, enforced before directive publication: minimum backline count (`MIN_BACKLINE_AGENTS`), maximum simultaneous man-mark count (`MAX_MAN_MARK_ASSIGNMENTS`), and maximum mark displacement from #12 anchor (`MAX_MARK_DISPLACEMENT_M`). |
+| **Anti-chaos invariant** | One of the three measurable constraints in KD-17, enforced before directive publication: minimum backline count (`MIN_BACKLINE_AGENTS`), maximum simultaneous man-mark count (`MAX_MAN_MARK_ASSIGNMENTS`), and maximum mark displacement from #12 anchor (`MAX_MARK_DISPLACEMENT_M`). **Amended (W13.1, `ERR-014-010`):** a fourth, gated invariant — one marker per opponent — is enforced only while the engine's mark-movement switch is on (§3.10.2). |
 | **Assignment hysteresis** | Per-agent dwell counter tracking how long an agent has held its current `MarkAssignment` mode. Transitions are gated on the `MARK_DWELL_TICKS [GT]` dwell-time pattern from #2 §3.1. |
 | **OffsideLineState** | Per-team internal state tracking the current line x-depth, step-up dwell counter, and post-trap cooldown ticks remaining. Digested per #16 §6.2. |
 
@@ -212,7 +214,7 @@ Cross-reference to the 19 KDs catalogued in `outline-detailed.md` v1.0:
 | KD-14 | Single constant catalogue `DefensiveAIConstants.cs` per #20 §4.2 | §4.2 |
 | KD-15 | Event System binding (#17) — `MARK_ASSIGNED` / `LINE_STEPPED` channels at Stage 1 via ERR-014-002/003 | §7.5 |
 | KD-16 | Stage-0/Stage-1 scope discipline | §1.8, §7 |
-| KD-17 | Three anti-chaos invariants: `MIN_BACKLINE_AGENTS`, `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` | §3.10 |
+| KD-17 | Three anti-chaos invariants: `MIN_BACKLINE_AGENTS`, `MAX_MAN_MARK_ASSIGNMENTS`, `MAX_MARK_DISPLACEMENT_M` (+ gated Invariant 4, one marker per opponent — W13.1, `ERR-014-010`) | §3.10 |
 | KD-18 | Exploit-resistance test corpus — four canonical exploits | §5 |
 | KD-19 | Phase enumeration — #12 `IN_POSSESSION` → all-ZONAL directive; `OUT_OF_POSSESSION` / `TRANSITION` → full algorithm | §3.1 |
 
@@ -248,7 +250,15 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
   closer to their own goal. All last-man predicate and offside-trap
   formulas use a normalised `distanceToOwnGoal` scalar computed once
   per tick per agent so that the same formula body applies to both
-  teams without per-team branching.
+  teams without per-team branching. **Frame contract (`ERR-014-008`):**
+  the snapshot #14 receives is expressed in the *defending team's
+  canonical attack-toward-+X frame* for BOTH teams (§2.3), so in the
+  engine the defended goal is always x = 0. #14 is **canonical-only**:
+  own goal at x = 0 is a fixed invariant of its input, not a switch, so
+  `defendsX0` is the constant true and is never inferred from the team id.
+  The x = 105 alternatives printed in §3 are the formulas' generic
+  two-orientation statement; #14 does not implement them, and a producer
+  holding world-space data must rotate it before filling the snapshot.
 - **Fatigue convention:** `0.0 = fully rested`, `1.0 = fully fatigued`.
   Cited from CLAUDE.md. Any inversion is a critical error (KD-1, KD-8 FR-DA-008).
 - **Tick rates:** 10 Hz tactical (this spec); 60 Hz physics (#1, #2,
@@ -321,3 +331,6 @@ the rest of #14's runtime, which this revision does not touch.
 | 0.3 | May 17, 2026 | AI agent | PASS-3 clean-up. §1.6 boundary matrix row for #7 Perception: removed `Anticipation` from attribute lookups (consistent with M6 fix in §2.3 and XC-014-005 — `Anticipation` is not consumed by #14 at Stage 0); retained `FirstTouch` (threat score §3.5) and `Tackling` (declared for future tackle-quality use). |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`. |
 | 0.5 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") is dead — #8's `ActionType` ordinal space is exhausted and has no tackle model; #3 defers slide-tackle collision to Stage 2 and never landed the `TackleContactFlag` amendment (`XC-4.4-02`). #14 now resolves the tackle outcome itself (new §3.6.5, an abstract attribute duel with four outcomes). Corrected every site in this file that stated the dead delegation or implied #14 stops at intent: §1.2.1 scope (new bullet), §1.3.1 #3 dependency row, §1.4 glossary (amended "Tackle intent" entry + new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, §1.7 last bullet, §1.8 (scoped Stage-0-runtime-code amendment for §3.6.5 only — the broader three-precondition Stage-1 gate is untouched by this revision). |
+| 0.6 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §1.7 own-half normalisation bullet states the snapshot frame contract (canonical attack-toward-+X frame for both teams; `defendsX0` from the frame, not the team id). Implemented in `DefensiveSnapshot.IsOwnGoalAtX0` and the five `defendsX0` consumers. Spec text was never wrong about the formulas; it omitted which frame its inputs are in, and the code filled the gap with `teamId == 0`. |
+| 0.7 | November 10, 2026 | AI agent (W13.0 review M1) | §1.7 Frame contract reworded: #14 is canonical-only (own goal at x = 0 is a fixed invariant, not a per-producer switch). Supersedes the v0.6 wording that `defendsX0` is "read from the snapshot frame" and the `DefensiveSnapshot.IsOwnGoalAtX0` accessor, which is removed. |
+| 0.8 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §1.2.1, §1.4 and the §1.5 KD-17 row note the gated Invariant 4 (one marker per opponent, active only while the engine's mark-movement switch is on; §3.10.2). Documentation only; KD-17's three standing invariants are unchanged. |

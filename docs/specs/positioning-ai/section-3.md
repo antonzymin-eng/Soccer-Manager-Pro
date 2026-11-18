@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** August 8, 2026 (v0.8 — ERR-012-011: §3.0 now classifies phase from the orchestrator-supplied TEAM in possession rather than #7's on-ball carrier. A team keeps the ball while a pass it played travels to a team-mate; the carrier is absent for the whole flight of every pass, which committed `InPoss` on 7.5% of final-third samples and read a passing team as being in transition. New §3.0.5 worked example covers a pass flight. The V0 velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant are unchanged. See `match-engine-wiring-backlog.md` C1.)
-**Version:** 0.8
+**Last Updated:** November 9, 2026 (v0.9 — ERR-012-013: kickoff-only named family routing and agent-owned Duty anchor stage; Support identity and fixed roster-index mapping.)
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -118,6 +118,35 @@ rather than passed, `teamInPossession` is `null` from the contact
 tick, because a shot is not played to a team-mate.
 
 ## 3.1 Anchor Computation
+
+### 3.1.0 Kickoff family and per-agent Duty (ERR-012-013)
+
+The #12 consumer owns a named `TacticFormation` → `FormationFamily` translation:
+F442 → F442, F433 → F433, F4231 → F4231. Unknown **live** values resolve to F442
+(FR-PA-043/F2). Saved effective metadata is validated strictly, never defaulted.
+The engine selects the final pending pre-match choice on its first `RunTick` entry,
+while its physics clock is 0, before advancing to frame 1. This is initialization,
+not a tactic-stride commit or in-match switch. Retain the existing positioning object
+and seed the matching anchors, hysteresis and rotation catalogue in place. Provision
+storage before this boundary; no first-tick allocation. F442 takes the exact no-op path.
+FR-PA-039 remains in force: a second-half kickoff or later tactic request cannot relock.
+
+At this landing, starters remain selected by F442 and map to formation rows by roster
+index, GK at row 0. F433 rows 5–10 are DM, CM1, CM2, LW, ST, RW; F4231 rows 5–10
+are DM1, DM2, LAM, CAM, RAM, ST. This knowingly permits LM at DM and RM at CAM.
+Formation-aware selection is deferred; no fit or remapping algorithm is implied.
+
+After computing each **outfield** anchor and before ball-relative offset, apply
+`anchor.x += DutyForeOffsetM[agent.Duty]` in the canonical attacking frame (metres,
+Defend −3, Support 0, Attack +3, `[CROSS: #21 Appendix A]`). Support skips arithmetic
+for exact float identity. GK uses its dedicated formula unchanged. Duty belongs to
+an agent; rotation changes its slot/positional role and preserves its Duty.
+The remaining order is ball offset → context → build-up → spacing → dismark → clamp
+→ line/lane resolution. The orchestrator mirrors to world space for the away side.
+
+Worked example: an unmodified anchor at x=50 m becomes 47/50/53 m for
+Defend/Support/Attack. Before later stages, the away-world anchor is respectively
+58/55/52 m on a 105 m pitch. No catalogue or tuning value changes.
 
 ### 3.1.1 Formula
 
@@ -584,6 +613,12 @@ match remains byte-identical to the Stage-0 pipeline above.
   `RotationController` is its **sole** post-seed writer (single-writer rule, #25 §4.4). No other
   system may reassign a slot binding.
 
+**ERR-012-013 (#434):** the anchor-stage Duty insertion in §3.1.0 precedes the
+ball-relative offset in the combined pipeline above. `AgentPositioningData.Duty`
+follows the agent through the controller's binding rewrite. Family initialization
+occurs before the first physics frame and never replaces this team's positioning
+object; no runtime switching or settling delay is introduced.
+
 ## 3.8 Hysteresis (Binding to #2 §3.1)
 
 Anchor, line, lane, and phase hysteresis all parameterise the
@@ -720,3 +755,6 @@ that agent (§4.4.3).
 | 0.6 | July 10, 2026 | AI agent | Back-props ERR-012-007/008/009 (#23/#24/#25 `APPROVED` same day): new §3.7.1 records the Stage-1 pipeline amendments — build-up overlay stage (between ContextModifier and spacing), dismark offset stage (between spacing and pitch clamp, FR-DM-008), `RotationController` pre-composition position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). All stages identity-no-op at zero-value dials; owning specs hold formulas/constants/tests. |
 | 0.7 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4. |
 | 0.8 | August 8, 2026 | AI agent (wiring-backlog C1) | ERR-012-011: §3.0.1/§3.0.2 reclassify phase from the orchestrator-supplied TEAM in possession instead of #7's on-ball carrier, with the football definition of team possession stated normatively and the reason #7 cannot own the input recorded. New §3.0.5 worked example walks a pass between team-mates tick by tick and contrasts it with the loose-ball and shot cases — the settled-possession-with-a-moving-ball case the section previously had no example of, which is how the defect survived. Measured: `InPoss` on 7.5% of final-third samples pre-fix. V0, the velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant unchanged; §6.1 untouched (no new constant). |
+
+
+| 0.9 | November 9, 2026 | — | ERR-012-013: kickoff-only named family routing and agent-owned Duty anchor stage; Support identity and fixed roster-index mapping. |

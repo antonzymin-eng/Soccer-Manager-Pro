@@ -1,0 +1,42 @@
+using System;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.DeterministicSim;
+class Program {
+ const int Frames=1200, Repeats=8;
+ static void WarmCodec(MatchEngine engine) {
+  var orchestrator=(TickOrchestrator)typeof(MatchEngine).GetField("_orchestrator",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(engine);
+  var codec=(SnapshotCodec)typeof(TickOrchestrator).GetField("_codec",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(orchestrator);
+  codec.ValidateCurrentDigest(orchestrator.CurrentHeader,orchestrator.CurrentPayload);
+ }
+ static void Main(string[] args) {
+  // Warm global/JIT dependencies on another match, then measure fresh matches.
+  var warm=new MatchEngine(0x0123456789ABCDEFUL);
+  for(int frame=0;frame<Frames;frame++)warm.RunTick();
+  long[,] samples=new long[Repeats,Frames];
+  for(int repeat=0;repeat<Repeats;repeat++) {
+   var engine=new MatchEngine(0x0123456789ABCDEFUL);WarmCodec(engine);
+   for(int frame=0;frame<Frames;frame++) {
+    long before=GC.GetAllocatedBytesForCurrentThread();
+    engine.RunTick();
+    long allocated=GC.GetAllocatedBytesForCurrentThread()-before;
+    samples[repeat,frame]=allocated;
+   }
+  }
+  using(var writer=new StreamWriter(args[0])) {
+   writer.WriteLine("repeat,physics_frame,allocated_bytes");
+   for(int repeat=0;repeat<Repeats;repeat++)for(int frame=0;frame<Frames;frame++)writer.WriteLine(repeat+","+(frame+1)+","+samples[repeat,frame]);
+  }
+  Console.WriteLine("Runtime="+RuntimeInformation.FrameworkDescription+"; assembly="+typeof(MatchEngine).Assembly.ManifestModule.ModuleVersionId);
+  for(int phase=0;phase<6;phase++) {
+   long min=long.MaxValue,max=0,total=0;int n=0,nonzero=0;
+   for(int repeat=0;repeat<Repeats;repeat++)for(int frame=1;frame<Frames;frame++)if((frame+1)%6==phase) {
+    long b=samples[repeat,frame];min=Math.Min(min,b);max=Math.Max(max,b);total+=b;n++;if(b>0)nonzero++;
+   }
+   Console.WriteLine("frames 2..1200 phase="+phase+" samples="+n+" nonzero="+nonzero+" min="+min+" max="+max+" total="+total);
+  }
+  for(int repeat=0;repeat<Repeats;repeat++)Console.WriteLine("first tick repeat="+repeat+" bytes="+samples[repeat,0]);
+ }
+}

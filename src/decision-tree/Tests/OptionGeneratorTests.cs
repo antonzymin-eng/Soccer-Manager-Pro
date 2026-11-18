@@ -4,12 +4,15 @@
 // Modified: 2026-08-04 (ERR-008-020 — §3.1.3.3 pass-lane threat model locks, home + away)
 // Modified: 2026-08-05 (ERR-008-021 — §3.2.3.2 shot-lane block model locks, home + away + the GK exemption)
 // Modified: 2026-08-07 (ERR-008-023 — keeper-body lock added; far-post value recomputed; GK-read sweep de-tautologised)
+// Modified: 2026-11-11 (W13.1 / ERR-008-027 — mark-point MOVE override + PRESS priority-2 skip locks, home + away)
 // Modified: 2026-08-09 (ERR-008-024 — two §3.1.5.2 sector-selection locks: goalward wins an all-clear tie; space still governs a blocked sector)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
 //           PASS candidate cap, stale-snapshot INTERCEPT rejection, pitch-bounds
 //           invariant, and option set invariants (§3.1.10).
+
+using System;
 
 using NUnit.Framework;
 using UnityEngine;
@@ -1189,6 +1192,136 @@ namespace TacticalDirector.DecisionTree.Tests
             return -1.0f;
         }
 
+        // ── W13.1 (ERR-008-027): the per-agent mark point ─────────────────────
+
+        private static int IndexOf(ActionOption[] buf, int count, ActionType type)
+        {
+            for (int i = 0; i < count; i++)
+                if (buf[i].Type == type) return i;
+            return -1;
+        }
+
+        /// <summary>
+        /// Off-ball context for team <paramref name="team"/> with a raised defensive line (0.8), so the
+        /// depth-adjusted slot differs from the raw one, and ONE opponent that is NOT the ball carrier
+        /// within PRESS_TRIGGER_DISTANCE (the carrier, id 15, is far away).
+        /// </summary>
+        private static DecisionContext BuildMarkContext(int team, bool hasMarkTarget, Vector2 markTarget)
+        {
+            DecisionContext ctx = BuildOffBallContext();
+            ctx.AgentTeamId = team;
+            ctx.TacticalContext.DefensiveLineDepth = 0.8f;
+            ctx.MatchContext.PossessingAgentId = 15;
+            ctx.Snapshot.VisibleOpponentsCount = 2;
+            ctx.Snapshot.VisibleOpponents = new PerceivedAgent[2]
+            {
+                new PerceivedAgent { AgentId = 15, PerceivedPosition = new Vector2(80.0f, 10.0f), ConfidenceScore = 1.0f },
+                new PerceivedAgent { AgentId = 16, PerceivedPosition = new Vector2(54.0f, 34.0f), ConfidenceScore = 1.0f },
+            };
+            ctx.TacticalContext.HasMarkTarget = hasMarkTarget;
+            ctx.TacticalContext.MarkTarget = markTarget;
+            return ctx;
+        }
+
+        [Test]
+        public void MarkTarget_DefaultsAreFalseAndZero()
+        {
+            TacticalContext tc = TacticalContext.Stage0Default(new Vector2(50.0f, 34.0f));
+            Assert.IsFalse(tc.HasMarkTarget);
+            Assert.AreEqual(Vector2.zero, tc.MarkTarget);
+            Assert.IsFalse(default(TacticalContext).HasMarkTarget);
+        }
+
+        /// <summary>Unset: MOVE targets the depth-adjusted, clamped slot bit-for-bit, and PRESS still takes priority 2.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetUnset_MoveIsTheAdjustedSlot_AndPressPriority2Unchanged(int team)
+        {
+            DecisionContext ctx = BuildMarkContext(team, hasMarkTarget: false, markTarget: new Vector2(99.0f, 1.0f));
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            Vector2 expected = PitchGeometry.ClampToPitch(ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, team));
+            Assert.AreNotEqual(ctx.TacticalContext.GetFormationSlot(ctx.AgentId), expected, "precondition: the depth adjustment moves the slot");
+            int move = IndexOf(Buffer, count, ActionType.MOVE_TO_POSITION);
+            Assert.GreaterOrEqual(move, 0);
+            Assert.AreEqual(BitConverter.SingleToInt32Bits(expected.x), BitConverter.SingleToInt32Bits(Buffer[move].TargetPosition.x));
+            Assert.AreEqual(BitConverter.SingleToInt32Bits(expected.y), BitConverter.SingleToInt32Bits(Buffer[move].TargetPosition.y));
+
+            int press = IndexOf(Buffer, count, ActionType.PRESS);
+            Assert.GreaterOrEqual(press, 0, "a non-carrier within 8 m is pressed via priority 2 (unchanged behaviour)");
+            Assert.AreEqual(16, Buffer[press].TargetAgentId);
+        }
+
+        /// <summary>Set: MOVE targets MarkTarget exactly (no depth adjustment); DistanceToSlot is the distance to it.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetSet_MoveTargetsTheMarkPoint_WithoutDepthAdjustment(int team)
+        {
+            Vector2 mark = new Vector2(61.5f, 22.25f);
+            DecisionContext ctx = BuildMarkContext(team, hasMarkTarget: true, markTarget: mark);
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            int move = IndexOf(Buffer, count, ActionType.MOVE_TO_POSITION);
+            Assert.GreaterOrEqual(move, 0);
+            Assert.AreEqual(mark, Buffer[move].TargetPosition);
+            Assert.AreNotEqual(PitchGeometry.ClampToPitch(ctx.TacticalContext.GetAdjustedFormationSlot(ctx.AgentId, team)),
+                Buffer[move].TargetPosition);
+            Assert.AreEqual(Vector2.Distance(ctx.AgentPosition, mark), Buffer[move].DistanceToSlot, 1e-5f);
+        }
+
+        /// <summary>A mark point off the pitch is clamped (INV-GEN-06) like the slot.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetSet_OffPitchPointIsClamped(int team)
+        {
+            DecisionContext ctx = BuildMarkContext(team, hasMarkTarget: true, markTarget: new Vector2(110.0f, -3.0f));
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            int move = IndexOf(Buffer, count, ActionType.MOVE_TO_POSITION);
+            Assert.AreEqual(new Vector2(105.0f, 0.0f), Buffer[move].TargetPosition);
+        }
+
+        /// <summary>Set: with only a non-carrier within 8 m there is NO PRESS (priority 2 skipped); MOVE remains.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetSet_NoPressOnANonCarrier(int team)
+        {
+            DecisionContext ctx = BuildMarkContext(team, hasMarkTarget: true, markTarget: new Vector2(55.0f, 36.0f));
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            Assert.AreEqual(-1, IndexOf(Buffer, count, ActionType.PRESS), "a marking agent does not press the nearest non-carrier");
+            Assert.GreaterOrEqual(IndexOf(Buffer, count, ActionType.MOVE_TO_POSITION), 0);
+        }
+
+        /// <summary>Set: the carrier within 8 m is still pressed (priority 1), even if he is not the marked man.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetSet_StillPressesTheCarrierWithinRange(int team)
+        {
+            DecisionContext ctx = BuildMarkContext(team, hasMarkTarget: true, markTarget: new Vector2(55.0f, 36.0f));
+            ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
+            {
+                AgentId = 15, PerceivedPosition = new Vector2(56.0f, 34.0f), ConfidenceScore = 1.0f
+            };
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            int press = IndexOf(Buffer, count, ActionType.PRESS);
+            Assert.GreaterOrEqual(press, 0);
+            Assert.AreEqual(15, Buffer[press].TargetAgentId, "the carrier, not the nearer non-carrier 16");
+        }
+
+        /// <summary>The possession branch is untouched by a mark target (an agent on the ball has no MOVE / PRESS).</summary>
+        [Test]
+        public void MarkTargetSet_PossessionBranchUnchanged()
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            int plain = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            ctx.TacticalContext.HasMarkTarget = true;
+            ctx.TacticalContext.MarkTarget = new Vector2(30.0f, 30.0f);
+            int marked = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            Assert.AreEqual(plain, marked);
+            Assert.AreEqual(-1, IndexOf(Buffer, marked, ActionType.MOVE_TO_POSITION));
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
 
         private static DecisionContext BuildPossessionContext()
@@ -1370,4 +1503,7 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | DribbleDirection_GoalwardSectorBlocked_IsNotChosenDespiteBeingGoalward  |
 // |         |            |        | (KD-CC6: DirectionQuality is floored at 0.80, so it cannot overturn a   |
 // |         |            |        | genuinely blocked sector — space still governs).                        |
+// | 1.12    | 2026-11-11 | —      | W13.1 (ERR-008-027): + MarkTarget locks (home + away) — unset MOVE is the adjusted slot       |
+// |         |            |        | bit-for-bit and PRESS priority 2 unchanged; set MOVE targets the point without depth          |
+// |         |            |        | adjustment, clamped; no PRESS on a non-carrier, PRESS on the carrier; possession branch same. |
 #endregion

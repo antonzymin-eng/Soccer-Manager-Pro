@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §2.2.3 `TackleIntentRequest` "read by" clause corrected — #8/#3 dispatch is dead; new §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome` structs added.)
-**Version:** 0.3
+**Last Updated:** November 11, 2026 (v0.7 — W13.1 `ERR-014-010`: FR-DA-038 (mark-target composition) and FR-DA-039 (Invariant 4) added; §2.3 documents the per-tick `markMovementActive` input.)
+**Version:** 0.7
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -54,6 +54,8 @@ in this spec.
 | FR-DA-035 | Every constant carries exactly one tag: `[GT]`, `[EST]`, `[FIXED]`, `[DERIVED]`, `[CROSS]`, or `[CROSS-PENDING]`. | MUST | KD-13 |
 | FR-DA-036 | No interface or accessor surface is produced against Attacking AI #15 at Stage 0. | MUST | CLAUDE.md / KD-8 |
 | FR-DA-037 | Stage-1 activation is gated on all three preconditions being satisfied: (a) #8 ERR-014-001 amendment ratified; (b) #12 Positioning AI reaches `APPROVED`; (c) ERR-014-002 / ERR-014-003 #17 channel rows landed. | MUST | KD-16 / §7 |
+| FR-DA-038 | Mark-target composition (W13.1, `ERR-014-010`): for a HOLD_SHAPE agent whose committed assignment is `MAN_MARK` / `INTERCEPT_RUNNER`, #14 composes the goal-side mark point of §3.13.1 (a point `MARK_STANDOFF_M [GT]` from the target's LIVE position toward the own-goal centre); `COVER_GK_ZONE` passes its zone centre through; `ZONAL`, a stale `validThroughTick`, or a missing / inactive target yields no target. Pure, canonical frame, no state, no RNG. | MUST | §3.13.1 / `ERR-014-010` |
+| FR-DA-039 | Anti-chaos invariant 4 (W13.1, `ERR-014-010`): when `DefensiveSnapshot.markMovementActive` is true, at most one HOLD_SHAPE agent holds a non-ZONAL assignment on any one opponent; the keeper is an emergency override, else the lowest `|agent − opponent|²`, else the lowest EntityId. When `markMovementActive` is false the invariant does not run. | MUST | §3.10.2 / `ERR-014-010` |
 
 ## 2.2 Data Structures
 
@@ -109,6 +111,30 @@ current perceived position from the #7 snapshot — not a predicted future
 position. `validThroughTick` is defensive hygiene; any consumer reading a
 `MarkAssignment` with `validThroughTick < currentTick` must treat it as
 stale.
+
+**Retained assignments (`ERR-014-009`).** "Current" holds on **every tick the
+assignment is published**, including ticks where the §3.11 hysteresis retains
+it (dwell lock, or the same-target / held-candidate gate path): mode and
+`targetEntityId` are retained, `targetPosition` is **refreshed from the live
+snapshot** every tick, so §3.10 Invariant 3 and any consumer see where the
+opponent is now, not where he was when the mark committed. If the retained
+target is **absent from the snapshot or not `isActive`**, there is no position
+to publish: the assignment is **released to ZONAL immediately** (`mode = ZONAL`,
+`targetEntityId = null`, `targetPosition = formationSlot`) and the agent's
+`MarkHysteresisState` is reset exactly as on the §3.3.3 Step 6 ZONAL bypass.
+The release resets the **candidate accumulator** as well as the dwell counter
+(`holdTicks = 0`, `candidateMode = ZONAL`, `candidateTargetId = null`), so
+re-acquiring any mark — including one on the very opponent who was the standing
+candidate when the old target vanished — pays a full `MARK_DWELL_TICKS` of
+consecutive preference again. The dwell lock exists to suppress candidate
+thrash; it does not keep a mark on a player who has left the pitch. The rule is a pure function of the snapshot and
+the prior assignment (deterministic; no RNG, no new state). *Example:* agent at
+slot (30.0, 34.0) marks opponent 40 committed at (40.0, 34.0) (10.0 m from the
+slot); during the lock the opponent runs to (49.0, 34.0): published
+`targetPosition = (49.0, 34.0)` (19.0 m, Invariant 3 satisfied); then to
+(55.0, 34.0): published `(55.0, 34.0)`, 25.0 m > `MAX_MARK_DISPLACEMENT_M` →
+demoted to ZONAL the same tick, although the lock still has ticks left (the
+pre-fix stale 10.0 m point would have kept the mark).
 
 ### 2.2.3 `TackleIntentRequest` (Stage 1; spec'd at Stage 0)
 
@@ -275,6 +301,45 @@ All inputs below are consumed as read-only values captured at the start of the
 | #14-internal | Prior `MarkHysteresisState[N]` | struct array | From previous tick; hysteresis transitions (FR-DA-015) |
 | #14-internal | Prior `OffsideLineState` | struct | From previous tick; step-up dwell and cooldown state (FR-DA-018) |
 
+**Frame contract (`ERR-014-008`).** Every position, velocity and formation slot
+in the §2.3 inputs above — the ball, the GK, and **both** teams' agents,
+opponents included — is expressed in the **defending team's canonical
+attack-toward-+X frame**: the goal #14 defends is at **x = 0** and the goal it
+attacks is at x = 105, for the home team **and** for the away team. The
+composition root performs the away team's 180° pitch rotation
+(`x' = 105 − x`, `y' = 68 − y`, velocities negated) before filling the
+snapshot, so the snapshot is **not** world space. The team id says who is
+defending and which agents are own-team; it does **not** say which goal is
+defended. **#14 is canonical-only:** own goal at x = 0 is a fixed invariant of
+its input, not a switch, and #14 has no "defends x = 105" mode. A producer
+holding world-space data must rotate it into this frame before filling the
+snapshot; nothing in #14 can be told otherwise. Every `team.defendsX0` in §3
+(threat proximity §3.5.2, runner direction §3.3.3 Step 3, last-man and
+advancing-attacker selection §3.8, GK-zone centre §3.9.2, tackle coverage depth
+§3.6.2, trap half test, line spread and step-up x §3.7) is therefore the
+constant **true**: the code uses x directly and does not implement the
+`x = 105` alternatives, which are the formulas' generic two-orientation
+statement. (They survive only as `internal` test-pinned helpers,
+`LastManDetector.DistToOwnGoal(x, defendsX0)` / `ComputeAbandonedZoneCenter(defendsX0)`, unreachable from production.) It is never inferred from the
+team id.
+
+*Worked example.* Away defender at world (90.0, 30.0) with a home striker at
+world (80.0, 40.0). Canonical: defender (15.0, 38.0), striker (25.0, 28.0).
+Striker `distToOwnGoal = 25.0 m` and `threat` proximity
+`1 − 25/105 = 0.762` — identical to a home defender whose snapshot holds the
+same two canonical points. Resolving the goal from the team id (`teamId == 0`)
+gives the away team `distToOwnGoal = 105 − 25 = 80.0 m` and proximity `0.238`
+— the inverted value this section corrects. *Valid range:* every x ∈ [0, 105],
+y ∈ [0, 68]; units metres.
+
+**`markMovementActive` (W13.1, `ERR-014-010`).** A `bool` per-tick input on the
+snapshot, default `false`: the producer sets it when it will consume this tick's
+assignments as per-agent mark targets (§3.13.1). It activates §3.10.2
+Invariant 4 and nothing else. It is read within the tick only and is **not**
+part of any serialized or digested state (the committed `MarkAssignment[]` and
+`MarkHysteresisState[]` are unchanged in shape). While `false` the pipeline is
+exactly the pre-W13.1 one.
+
 **Note on GK exclusion:** The GK's EntityId is known via #7 perception
 (`isGoalkeeper` flag or team roster). #14 filters it out before building
 the HOLD_SHAPE pool (FR-DA-009). The GK's position is still readable via
@@ -362,3 +427,7 @@ and F6 in #13 §2.4). No special failure mode is required because the
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §2.1 (37 FRs FR-DA-001..037), §2.2 (7 structs), §2.3 (inputs table), §2.4 (F1–F5 failure modes) authored. Data structure field definitions follow `pressing-ai/section-2.md` v0.2 readonly-struct convention. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H2: `MarkAssignment` struct (§2.2.2) now declares `overriddenThisTick` and `isManuallyAssigned` fields that were used in §3 algorithms but absent from struct definition; `targetEntityId` comment clarified to "null for ZONAL and COVER_GK_ZONE". H4: `MarkHysteresisState` struct (§2.2.4) rewritten to four-field definition matching §3.11.2 (`dwellCounter`, `candidateMode`, `candidateTargetId`, `holdTicks`); v0.1 had only `currentMode` + `dwellCounter`. M2: `OffsideLineState` struct (§2.2.5) now declares `coverGkZoneActiveTicks` field used in §3.9.2/§3.13 but missing from struct. M3: §2.3 inputs table row "Per-agent FirstTouch" corrected to "Per-opponent FirstTouch" (#14 reads opponents, not own-team agents). M6: `Tackling` description in §2.3 clarified to "Declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0". |
 | 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): §2.2.3 `TackleIntentRequest`'s "read by #8, which translates it into an `AgentAction` dispatched to Collision System #3" clause corrected — that dispatch has no working delegate; a committed intent is now resolved by #14 itself. Added §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome`, the two new public types backing §3.6.5's tackle-outcome resolution. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |
+| 0.4 | November 10, 2026 | AI agent (W13.0) | `ERR-014-008`: §2.3 gains the "Frame contract" paragraph and worked example. The snapshot is the defending team's canonical attack-toward-+X frame for BOTH teams (own goal at x = 0), as `MatchEngine.FillDefensiveSnapshot` has always supplied it; `defendsX0` is read from the frame, never from the team id. §3's `team.defendsX0` pseudocode is annotated to match (section-3 v0.6). Code: `DefensiveSnapshot.IsOwnGoalAtX0`; `LastManDetector`, `MarkAssigner`, `TackleIntentEvaluator`, `OffsideTrapController`, `InvariantEnforcer`. |
+| 0.5 | November 10, 2026 | AI agent (W13.0) | `ERR-014-009`: §2.2.2 gains "Retained assignments" — a retained `MAN_MARK` / `INTERCEPT_RUNNER` refreshes `targetPosition` from the live snapshot every tick, and a retained target that is absent or inactive releases the mark to ZONAL at once (hysteresis reset). Matches the §2.2.2 sentence that `targetPosition` is the opponent's current perceived position, which §3.3.3 Step 1 / §3.11.3 contradicted by retaining the whole record (section-3 v0.7). Code: `MarkAssigner.RefreshRetained`. |
+| 0.6 | November 10, 2026 | AI agent (W13.0 review M1/L2) | §2.3 Frame contract reworded: #14 is canonical-only, the `x = 105` alternatives are not implemented, the "one place to change" claim and the `DefensiveSnapshot.IsOwnGoalAtX0` accessor are withdrawn (supersedes v0.4's wording). §2.2.2 Retained assignments: the vanished-target release resets the candidate accumulator (full `MARK_DWELL_TICKS` to re-acquire); covered by `VanishedTarget_ApplyGatePath_ReleasesAndResetsCandidateAccumulator`. |
+| 0.7 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: FR-DA-038 / FR-DA-039 added (the file's own "37 FRs" statements in v0.1 and the §9 checklist are historical). §2.3 gains the `markMovementActive` per-tick input (default false, not serialized). Code: `MarkTargetComposer`, `InvariantEnforcer`, `DefensiveSnapshot.MarkMovementActive`. |

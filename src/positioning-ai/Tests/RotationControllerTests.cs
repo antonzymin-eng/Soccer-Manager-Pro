@@ -1,6 +1,6 @@
 // File:     src/positioning-ai/Tests/RotationControllerTests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Author:   —
 // Spec:     Positional Rotations #25 §3.1–§3.4 (T-RO-U-001..008, T-RO-U-012 gates), FR-RO-004..013
 // Purpose:  Unit tests for the RotationController: trigger predicate + dwell commit, hold/revert,
@@ -89,6 +89,23 @@ namespace TacticalDirector.PositioningAI.Tests
         };
 
         // ── FM-RO-01/02: trigger dwell and commit ─────────────────────────────
+
+        [Test]
+        public void Rebinding_PreservesAgentDuty_WhenSlotsExchange()
+        {
+            var snap = MakeSnapshot(RotationFreedom.Off);
+            var a = snap.Agents[6];
+            snap.Agents[6] = new AgentPositioningData(a.EntityId, a.SlotIndex, a.Position,
+                a.IsActive, a.Role, a.IsGoalkeeper, Duty.Attack);
+            var binding = new int[SquadSize]; for (int i = 0; i < SquadSize; i++) binding[i] = i;
+            binding[6] = 7; binding[7] = 6;
+            var rot = new RotationController(FormationFamily.F442, SquadSize);
+            rot.RestoreBinding(binding);
+            rot.Run(snap, Phase.InPoss, F);
+            Assert.AreEqual(7, snap.Agents[6].SlotIndex);
+            Assert.AreEqual(Duty.Attack, snap.Agents[6].Duty);
+            Assert.AreEqual(Duty.Support, snap.Agents[7].Duty);
+        }
 
         [Test]
         public void Trigger_CommitsOnFifthConsecutiveHeartbeat_AtomicSwap()
@@ -400,4 +417,5 @@ namespace TacticalDirector.PositioningAI.Tests
 // | 1.0     | 2026-07-11 | —      | Initial implementation: FM-RO-01/02 trigger/dwell/commit/revert, |
 // |         |            |        |   partner lock, commit cap, phase freeze, Off identity, F2/F5/F6 |
 // |         |            |        |   validating seams.                                              |
+// | 1.1 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

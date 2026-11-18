@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/TacticTranslation.cs
 // Created:  2026-06-29
-// Modified: 2026-07-07
+// Modified: 2026-11-10 (W13.1 / ERR-014-010 — + MarkStandoffM(bool tight))
 // Author:   —
-// Spec:     Tactical Instructions #21 §3.4, FR-TI-022 / FR-TI-025 / FR-TI-031; Defensive AI #14 §3.7 / KD-9
+// Spec:     Tactical Instructions #21 §3.4, FR-TI-022 / FR-TI-025 / FR-TI-031; Defensive AI #14 §3.7 / KD-9, §3.13.1, ERR-014-010
 // Purpose:  Consumer-side (T2) translation seam: resolves the #21 OffsideTrap toggle onto the #14
 //           offside-trap request. Pure functions, translate-once (FR-TI-025); never allocates.
 
@@ -40,6 +40,18 @@ namespace TacticalDirector.DefensiveAI
             => TacticalInstructionsConstants.MarkingOrientationScalar[
                    ClampIndex((int)orientation, TacticalInstructionsConstants.MarkingOrientationScalar.Length)];
 
+        /// <summary>
+        /// #21 §3.4 / #14 §3.13.1 (W13.1, ERR-014-010): the per-agent <c>PlayerInstructions.TightMarking</c> flag → the
+        /// §3.13.1 mark stand-off (m): <see cref="DefensiveAIConstants.MarkStandoffTightM"/> when set,
+        /// else <see cref="DefensiveAIConstants.MarkStandoffM"/>. Pure lookup, <c>false</c> is the
+        /// <see cref="TeamTactic.Balanced"/> / <c>PlayerInstructions.Default</c> identity (FR-TI-031).
+        /// Consumer-side (KD-2): the #21 data layer never references #14.
+        /// </summary>
+        /// <param name="tightMarking">The marking agent's TightMarking instruction.</param>
+        /// <returns>Stand-off in metres; always in (0, 3.0) under the documented constant invariant.</returns>
+        public static float MarkStandoffM(bool tightMarking)
+            => tightMarking ? DefensiveAIConstants.MarkStandoffTightM : DefensiveAIConstants.MarkStandoffM;
+
         private static int ClampIndex(int index, int count)
         {
             if (index < 0) return 0;
@@ -55,4 +67,6 @@ namespace TacticalDirector.DefensiveAI
 // | 1.1     | 2026-07-07 | —      | Cheap-item addition: + MarkRadiusScalar(MarkingOrientation) →     |
 // |         |            |        |   #14 MAN_MARK candidate radius scalar (direct ordinal lookup,    |
 // |         |            |        |   §3.1 F5 clamp; Balanced ⇒ ×1.0 identity).                       |
+// | 1.2     | 2026-11-10 | —      | W13.1 / ERR-014-010: + MarkStandoffM(bool tightMarking) — #21 §3.4    |
+// |         |            |        |   TightMarking → the §3.13.1 mark stand-off (tight 1.0 m / normal 2.0 m).            |
 #endregion

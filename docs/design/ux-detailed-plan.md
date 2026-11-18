@@ -1,11 +1,12 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** October 30, 2026\
-**Version:** 1.35\
+**Last Updated:** November 5, 2026 (v1.37 — T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged.)
+**Last Updated (prior):** November 4, 2026\
+**Version:** 1.37\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF; S0 J TECHNICAL REVIEW FAIL October 19; FIXES J-01/J-02/J-04 LANDED October 22; J-05 LANDED October 30 (PR #520); S0 GATE J PASS AND ACCEPTED BY THE OWNER October 30, 2026\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
-**Release target:** Early Access centered on PM-2, with PM-1 as prerequisite
+**Release target:** owner-played PM-2 with PM-1 as prerequisite; Early Access is not currently planned (roadmap D-14).
 
 ---
 
@@ -803,13 +804,19 @@ Candidate modules are admitted only when their data is `LIVE`/`DESIGNABLE` or ex
 
 ## 7.6 S1 usability tasks
 
+**November 4 owner scope amendment (roadmap D-11):** interactive career matches and coach
+delegation wait together until staff ships. Current S1 validates PM-2's existing Home round-resolution
+journey. All eight task IDs/outcomes remain prescribed; the preparation/round tasks below are
+explicitly re-scoped, not omitted. The later interactive/delegation journey needs a separate
+contract/source-backed UX delta. This amendment grants no Gate-F/G/J pass or participant waiver.
+
 Two participants attempt, at minimum:
 
 - start or resume the supported career mode;
 - identify next match and league position;
-- reach preparation;
+- inspect the admitted next-fixture readiness context (Home/fixture/squad information, without requiring career Tactics Setup);
 - progress correctly;
-- complete a round through the match/report loop;
+- resolve a round from Career Home and read its result/table feedback;
 - understand the changed table/result;
 - save/quit/resume according to the product promise;
 - find settings/accessibility.
@@ -849,12 +856,16 @@ Recorded September 6, 2026 by symbol search over `src/`, **not** by folder namin
 | Training/progression (#28/#29) | implementation present (T0) | `src/training-system/`, `src/player-progression/` |
 | Injuries/availability (#41) | implementation present (T0) | `src/injuries-medical/` |
 | **Board objectives** | **partially present** | `BoardState`, `BoardObjective` in `src/season-save/` — another capability living under a differently-named assembly |
-| Transfers/contracts (#31) | **implementation-absent** | no type matches; `HeadingSpinTransfer` and `GoalkeeperPositioningContract` are physics false positives |
+| Transfers/contracts (#31) | **DESIGNABLE / LIVE (host-free) / HOST-UNVERIFIED** | November 5 refresh: `src/transfers/` T0–T2, `SeasonLoop.SubmitTransferBid` / `DiagnoseTransferBid`, client market/source/coordinator; Unity pages pending |
 | Scouting (#32) | **implementation-absent** | no matching type in `src/` |
-| Finances / wages | **implementation-absent** | no matching type; `BudgetRollupEntry` is a `performance-optimization` perf budget, not club finance |
+| Finances / wages | **DESIGNABLE / LIVE (host-free) / HOST-UNVERIFIED** | November 5 refresh: `src/club-finances/`, `SeasonLoop.FinanceView`, `ClubFinancesSource`; wage-bill producer remains absent (#40 KD-5) |
 | Staff | **implementation-absent** | no matching type in `src/` |
 
-The four marked implementation-absent are `FUTURE-BLOCKED` for UX purposes: design research is permitted, an implementation handoff is not. **The false positives are the point of recording the evidence column** — a folder-name or bare-keyword search would have reported transfers, contracts and budgets as present, and reported board objectives as absent. Every row is re-derived at F1.1 against the tree of the day.
+The remaining implementation-absent rows (scouting and staff) stay `FUTURE-BLOCKED`: research is permitted,
+an implementation handoff is not. Transfers and finances now have owner seams and host-free client code;
+their Gate A and draft Gates B–C are in [ux-s2-transfers-finances.md](ux-s2-transfers-finances.md).
+The November 5 refresh supersedes only those two September hypotheses. It supplies no Unity-host or UX
+acceptance evidence; every capability remains gated on its actual implementation and verification.
 
 ---
 
@@ -1086,7 +1097,8 @@ timing from F4 exit to pre-Gate-F; under that revised rule F4 is complete and th
   subsequent September 11 decisions assign Anton Zymin, make participant identities private, and
   leave the two real independent completions binding at Gate G;
 - no simulation, view-model, command, save or navigation contract is created, and the career-return move F2 identified is still owed by the client workstream, not by UX;
-- **S2 stays `FUTURE-BLOCKED`** where §8.1 records the owning implementation as absent.
+- **S2 is capability-gated:** the Transfers/Finances rows in §8.1 are DESIGNABLE with LIVE host-free code
+  and HOST-UNVERIFIED rendering; absent scouting/staff capabilities remain `FUTURE-BLOCKED`.
 
 Acceptance is a dated project-owner decision recorded here, in `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md` and `docs/tracking/file-manifest.md`. It is not an agent's to record, infer or extend.
 
@@ -1132,3 +1144,5 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.33 | October 19, 2026 | S0 Gate-J technical review against the real client on the pinned host: FAIL on two substitution-contract gaps (J-01 keeper pairs, J-02 Law 3 windows). B8/B10 host obligations discharged. Owner items J-04 (visual) and J-05 (10× delivers about 5.5×) remain. Record: `docs/tracking/p5b-real-client-acceptance.md`. Gate definitions unchanged. |
 | 1.34 | October 22, 2026 | S0 Gate J: the owner's October 20 decisions are implemented and host-verified (J-01 greyed goalkeeper pairs with reasons, J-02 typed refusal rows with the button kept, J-04 H v0.2 skin with whole-pitch view and statistics in the rail). Technical verdict CONDITIONAL PASS. Record: `docs/tracking/p5b-real-client-acceptance.md` v0.2. |
 | 1.35 | October 30, 2026 | S0 Gate J **ACCEPTED**: the B8/B10 re-capture and an uninterrupted I-Q15 pass on the H v0.2 skin (October 29), the owner's wording approval and J-04 visual acceptance (October 28) and J-05 (PR #520, merged `642294d1`; 10× at 601–602 ticks/s) completed §7 of [`p5b-real-client-acceptance.md`](../tracking/p5b-real-client-acceptance.md); the owner signed off on October 30 (record v0.15 §19). |
+| 1.36 | November 4, 2026 | Apply owner D-11 deferral of interactive career/delegation until staff; current S1 retains all eight tasks with readiness inspection, Home round/result feedback and between-round save/resume. Update current D-14 release-target pointer. No gate verdict or prior approval/evidence changed. |
+| 1.37 | 2026-11-05 | T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged. |

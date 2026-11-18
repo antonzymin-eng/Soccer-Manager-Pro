@@ -1,7 +1,7 @@
 // ============================================================================
 // File:     src/club-finances/FinanceStep.cs
 // Created:  2026-09-04
-// Modified: 2026-10-13
+// Modified: 2026-11-04 (ERR-040-004: zero-prize genesis ceilings)
 // Author:   —
 // Specs:    Spec #20 §3.6.2 (style & docs governance)
 //           Spec #40 §3.1/§3.7/§7.1, FR-FN-001/005-008/011/018/028 (settlement + daily revenue)
@@ -240,6 +240,22 @@ namespace TacticalDirector.ClubFinances
             }
         }
 
+        /// <summary>
+        /// The transfer ceiling a settlement with zero prize money under <see cref="BoardModifier.Identity"/>
+        /// would set: <c>BASE_TRANSFER_BUDGET</c>, clamped exactly as <see cref="SettleFinances"/> clamps it.
+        /// <see cref="ClubFinances.CreateInitial"/> seeds it as the genesis ceiling (ERR-040-004).
+        /// </summary>
+        internal static long ZeroPrizeTransferCeiling() =>
+            ScaleAndClampBudget(ClubFinancesConstants.BaseTransferBudget, ClubFinancesConstants.BOARD_MODIFIER_IDENTITY_PERMILLE);
+
+        /// <summary>
+        /// The wage ceiling a settlement with zero prize money under <see cref="BoardModifier.Identity"/>
+        /// would set: <c>BASE_WAGE_BUDGET</c>, clamped exactly as <see cref="SettleFinances"/> clamps it.
+        /// <see cref="ClubFinances.CreateInitial"/> seeds it as the genesis ceiling (ERR-040-004).
+        /// </summary>
+        internal static long ZeroPrizeWageCeiling() =>
+            ScaleAndClampBudget(ClubFinancesConstants.BaseWageBudget, ClubFinancesConstants.BOARD_MODIFIER_IDENTITY_PERMILLE);
+
         private static long ScaleAndClampBudget(long baseCeiling, int multiplier)
         {
             if (baseCeiling <= 0)
@@ -289,4 +305,5 @@ namespace TacticalDirector.ClubFinances
 // | 1.7     | 2026-09-11 | OpenAI | Review: name the completed-season revenue handoff and clarify coherence-before-gate semantics. |
 // | 1.8     | 2026-09-11 | OpenAI | Review close-out: remove the misleading reset helper and name prior-season FFP consumption ordering at the direct zero reset. |
 // | 1.9     | 2026-10-13 | —      | T3b2: checked integer sponsorship/attendance amounts and catalogue/input validation. |
+// | 1.10    | 2026-11-04 | —      | ERR-040-004: expose the zero-prize identity-board transfer/wage ceilings for genesis seeding. |
 #endregion

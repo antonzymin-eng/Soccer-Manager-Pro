@@ -1,9 +1,9 @@
 // File:     src/client-app/ClientScreenFlow.cs
 // Created:  2026-08-07
-// Modified: 2026-10-18
+// Modified: 2026-11-05 (AR-3 L2: clarify PM-1-only five-edge summary.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P5a / §5-P5b (navigation graph),
-//           §5-P7 (career entry/exit moves),
+//           §5-P7 (career entry/exit moves), §5-P8 (Transfers / Club Finances moves),
 //           UI / Client Framework #38 §3.2 (FR-UI-009/010/011), Code Standards #20
 // Purpose:  The client's navigation graph, encoded as guarded moves over a privately-owned
 //           NavigationShell. An edge not encoded here does not exist; the P5b binding forwards button
@@ -25,11 +25,11 @@ namespace TacticalDirector.ClientApp
     ///    └──────────────────ReturnToMainMenu (Pop)────────────────────────── PostMatchReport
     /// </code>
     /// <para>
-    /// The shell is privately owned, so these five moves are the <b>only</b> navigation surface — the
-    /// graph is enforced by encapsulation, not convention. Each move guards on the screen it departs
-    /// from and throws otherwise (the <c>NavigationShell</c> fail-loud posture, FR-UI-011): a binding
-    /// that wires a button to the wrong move fails at the click, not by silently landing on a wrong
-    /// screen.
+    /// These five moves are the complete <b>PM-1 match-screen graph</b> built by the four-registration
+    /// constructor. The seven- and nine-registration constructors add the career and transfer/finance
+    /// moves documented below. All moves remain encapsulated here; each guards its departure screen and
+    /// throws otherwise (the <c>NavigationShell</c> fail-loud posture, FR-UI-011), so a button wired to
+    /// the wrong move fails rather than navigating to an unintended screen.
     /// </para>
     /// <para>
     /// Two edges are <c>Replace</c>, deliberately. TacticsSetup → MatchView replaces because a running
@@ -130,8 +130,37 @@ namespace TacticalDirector.ClientApp
             HasCareerScreens = true;
         }
 
-        /// <summary>True when the flow was built with the career screens (the seven-registration constructor).</summary>
+        /// <summary>
+        /// Registers the seven §5-P7 screens plus Transfers and Club Finances (§5-P8), rooting the shell at
+        /// <see cref="ClientScreens.MainMenu"/>. Every registration is catalogue-checked.
+        /// </summary>
+        /// <exception cref="ArgumentException">A registration's id does not match its parameter's
+        /// catalogue screen.</exception>
+        public ClientScreenFlow(
+            in ScreenRegistration mainMenu,
+            in ScreenRegistration tacticsSetup,
+            in ScreenRegistration matchView,
+            in ScreenRegistration postMatchReport,
+            in ScreenRegistration careerHome,
+            in ScreenRegistration newCareer,
+            in ScreenRegistration loadCareer,
+            in ScreenRegistration transfers,
+            in ScreenRegistration clubFinances)
+            : this(in mainMenu, in tacticsSetup, in matchView, in postMatchReport, in careerHome, in newCareer, in loadCareer)
+        {
+            RequireCatalogueId(transfers, ClientScreens.Transfers, nameof(transfers));
+            RequireCatalogueId(clubFinances, ClientScreens.ClubFinances, nameof(clubFinances));
+
+            _shell.Register(in transfers);
+            _shell.Register(in clubFinances);
+            HasTransferScreens = true;
+        }
+
+        /// <summary>True when the flow was built with the career screens (the seven- or nine-registration constructor).</summary>
         public bool HasCareerScreens { get; }
+
+        /// <summary>True when the flow also carries Transfers and Club Finances (the nine-registration constructor, §5-P8).</summary>
+        public bool HasTransferScreens { get; }
 
         /// <summary>The screen the client is currently showing. Never throws: the constructor roots the shell.</summary>
         public ScreenId Current => _shell.Current;
@@ -255,6 +284,52 @@ namespace TacticalDirector.ClientApp
             _shell.Pop();
         }
 
+        /// <summary>Career Home → Transfers (Push — Back pops to Career Home; nothing is pending to abandon).</summary>
+        /// <exception cref="InvalidOperationException">No transfer screens, or the current screen is not Career Home.</exception>
+        public void OpenTransfers()
+        {
+            RequireTransfers(nameof(OpenTransfers));
+            RequireCurrent(ClientScreens.CareerHome, nameof(OpenTransfers));
+            _shell.Push(ClientScreens.Transfers);
+        }
+
+        /// <summary>Transfers → Career Home (Pop).</summary>
+        /// <exception cref="InvalidOperationException">No transfer screens, or the current screen is not Transfers.</exception>
+        public void CloseTransfers()
+        {
+            RequireTransfers(nameof(CloseTransfers));
+            RequireCurrent(ClientScreens.Transfers, nameof(CloseTransfers));
+            _shell.Pop();
+        }
+
+        /// <summary>Career Home → Club Finances (Push — read-only; Back pops to Career Home).</summary>
+        /// <exception cref="InvalidOperationException">No transfer screens, or the current screen is not Career Home.</exception>
+        public void OpenClubFinances()
+        {
+            RequireTransfers(nameof(OpenClubFinances));
+            RequireCurrent(ClientScreens.CareerHome, nameof(OpenClubFinances));
+            _shell.Push(ClientScreens.ClubFinances);
+        }
+
+        /// <summary>Club Finances → Career Home (Pop).</summary>
+        /// <exception cref="InvalidOperationException">No transfer screens, or the current screen is not Club Finances.</exception>
+        public void CloseClubFinances()
+        {
+            RequireTransfers(nameof(CloseClubFinances));
+            RequireCurrent(ClientScreens.ClubFinances, nameof(CloseClubFinances));
+            _shell.Pop();
+        }
+
+        private void RequireTransfers(string move)
+        {
+            if (!HasTransferScreens)
+            {
+                throw new InvalidOperationException(
+                    move + " is a transfer/finance move, and this flow was built without those screens " +
+                    "(use the nine-registration constructor, §5-P8).");
+            }
+        }
+
         private void RequireCareer(string move)
         {
             if (!HasCareerScreens)
@@ -299,4 +374,6 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | moves (New/Load/Continue entry, Quit exit); career edges into  |
 // |         |            |        | Tactics/Match deliberately absent (D-P7-6). The PM-1 graph and |
 // |         |            |        | its four-registration constructor are unchanged.               |
+// | 1.2     | 2026-11-05 | —      | §5-P8: nine-registration constructor and four Career Home ↔ Transfers / Club Finances moves. |
+// | 1.3     | 2026-11-05 | —      | AR-3 L2: qualify the five-edge summary as PM-1-only; P7/P8 moves are also part of this class. |
 #endregion

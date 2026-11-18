@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/ClientShellBehaviour.cs
 // Created:  2026-09-04
-// Modified: 2026-10-08 (P5b screens)
+// Modified: 2026-11-05 (AR-2: T6: prevent refresh and visibility callbacks after wiring rejection.)
+// Modified (prior): 2026-11-03 (P7b optional seven-root binding)
 // Modified (prior): 2026-10-05 (PR #470 review: report ancestor activation to the validator)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P5b),
@@ -9,6 +10,8 @@
 //           gate-compiled client-app decisions, applies the resulting visibility, and forwards UI events.
 
 using System;
+using System.IO;
+using System.Security.Cryptography;
 
 using Unity.Profiling;
 using UnityEngine;
@@ -46,6 +49,12 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private MatchClientBehaviour _matchRenderer;
         [SerializeField] private S0ScreensBehaviour _screens;
 
+        [Header("P7b career binding — opt in after assigning three inactive roots")]
+        [SerializeField] private bool _enableCareer;
+        [SerializeField] private GameObject _careerHomeRoot;
+        [SerializeField] private GameObject _newCareerRoot;
+        [SerializeField] private GameObject _loadCareerRoot;
+
         private ClientMatchCoordinator _coordinator;
         private bool _wiringRejected;
 
@@ -63,6 +72,13 @@ namespace TacticalDirector.MatchClientUnity
                 in tacticsSetup,
                 in matchView,
                 in postMatchReport);
+            if (_enableCareer)
+            {
+                ClientShellRootSnapshot home = CaptureSnapshot(_careerHomeRoot);
+                ClientShellRootSnapshot create = CaptureSnapshot(_newCareerRoot);
+                ClientShellRootSnapshot load = CaptureSnapshot(_loadCareerRoot);
+                fault = ClientShellWiringValidator.Validate(shell, mainMenu, tacticsSetup, matchView, postMatchReport, home, create, load);
+            }
             if (fault != ClientShellWiringFault.None)
             {
                 RejectWiring("host-free shell validation returned " + fault + ".");
@@ -75,11 +91,21 @@ namespace TacticalDirector.MatchClientUnity
                 RejectWiring("pitch renderer must be assigned on or beneath Match View.");
                 return;
             }
-            _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved());
+            var career = _enableCareer ? new ClientCareerCoordinator(Path.Combine(Application.persistentDataPath, "careers")) : null;
+            _coordinator = new ClientMatchCoordinator(_matchRenderer, S0DemoFixture.CreateApproved(), career);
             ApplyCurrentScreen();
             if (_screens == null) { RejectWiring("localized screen binding is required."); return; }
-            try { _screens.Initialize(_coordinator, _mainMenuRoot, _tacticsSetupRoot, _matchViewRoot, _postMatchReportRoot, _matchRenderer, ApplyCurrentScreen); }
+            try { _screens.Initialize(_coordinator, _mainMenuRoot, _tacticsSetupRoot, _matchViewRoot, _postMatchReportRoot, _matchRenderer, ApplyCurrentScreen,
+                _careerHomeRoot, _newCareerRoot, _loadCareerRoot, CreateCareerSeed); career?.Initialize(); }
+
             catch (Exception exception) { RejectWiring("screen construction failed: " + exception.Message); Debug.LogException(exception, this); }
+        }
+
+        private static ulong CreateCareerSeed()
+        {
+            var bytes = new byte[sizeof(ulong)];
+            using (RandomNumberGenerator entropy = RandomNumberGenerator.Create()) entropy.GetBytes(bytes);
+            return BitConverter.ToUInt64(bytes, 0);
         }
 
         /// <summary>Forwards Main Menu's New Demo Match action to the host-free navigation graph.</summary>
@@ -106,7 +132,7 @@ namespace TacticalDirector.MatchClientUnity
             {
                 _coordinator.Refresh(Time.time);
                 if (_coordinator.IsRejected) RejectWiring("required pitch renderer was lost.");
-                else { ApplyCurrentScreen(); _screens.Refresh(); }
+                else { ApplyCurrentScreen(); if (!_wiringRejected) _screens.Refresh(); }
             }
             catch (Exception exception)
             {
@@ -159,6 +185,7 @@ namespace TacticalDirector.MatchClientUnity
 
         private void ApplyCurrentScreen()
         {
+            if (_wiringRejected || _coordinator == null) return;
             ClientScreenVisibility visibility;
             try
             {
@@ -174,10 +201,27 @@ namespace TacticalDirector.MatchClientUnity
             if (!visibility.TacticsSetup) _tacticsSetupRoot.SetActive(false);
             if (!visibility.MatchView) _matchViewRoot.SetActive(false);
             if (!visibility.PostMatchReport) _postMatchReportRoot.SetActive(false);
+            if (_enableCareer)
+            {
+                if (!visibility.CareerHome) _careerHomeRoot.SetActive(false);
+                if (!visibility.NewCareer) _newCareerRoot.SetActive(false);
+                if (!visibility.LoadCareer) _loadCareerRoot.SetActive(false);
+            }
             if (visibility.MainMenu) _mainMenuRoot.SetActive(true);
             if (visibility.TacticsSetup) _tacticsSetupRoot.SetActive(true);
             if (visibility.MatchView) _matchViewRoot.SetActive(true);
             if (visibility.PostMatchReport) _postMatchReportRoot.SetActive(true);
+            if (_enableCareer)
+            {
+                if (visibility.CareerHome) _careerHomeRoot.SetActive(true);
+                if (visibility.NewCareer) _newCareerRoot.SetActive(true);
+                if (visibility.LoadCareer) _loadCareerRoot.SetActive(true);
+            }
+            // The Transfers / Club Finances screens (§5-P8) have no root on this shell yet. Without this check
+            // every root would deactivate and none activate: a silent blank screen instead of a rejection.
+            bool isRootShown = visibility.MainMenu || visibility.TacticsSetup || visibility.MatchView || visibility.PostMatchReport ||
+                (_enableCareer && (visibility.CareerHome || visibility.NewCareer || visibility.LoadCareer));
+            if (!isRootShown) RejectWiring("the current screen has no root bound on this shell.");
         }
 
         private void RequireReady(string action)
@@ -201,6 +245,12 @@ namespace TacticalDirector.MatchClientUnity
                 DeactivateIfAssigned(_tacticsSetupRoot);
                 DeactivateIfAssigned(_matchViewRoot);
                 DeactivateIfAssigned(_postMatchReportRoot);
+                if (_enableCareer)
+                {
+                    DeactivateIfAssigned(_careerHomeRoot);
+                    DeactivateIfAssigned(_newCareerRoot);
+                    DeactivateIfAssigned(_loadCareerRoot);
+                }
                 Debug.LogError("ClientShellBehaviour rejected wiring: " + reason, this);
             }
         }
@@ -228,4 +278,7 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | an inactive ancestor are refused rather than shown blank.      |
 // | 1.4     | 2026-10-06 | —      | Consume stable lifecycle coordinator; renderer containment and outgoing-first visibility. |
 // | 1.5     | 2026-10-08 | —      | Compose the localized UGUI screens and apply visibility before view/focus refresh. |
+// | 1.6 | 2026-11-03 | — | Optional seven-root career composition, entropy and storage boundary. |
+// | 1.7 | 2026-11-05 | — | L1: ApplyCurrentScreen rejects wiring when the current screen (Transfers / Club Finances) has no root on this shell. |
+// | 1.8 | 2026-11-05 | — | T6: prevent refresh and visibility callbacks after wiring rejection. |
 #endregion

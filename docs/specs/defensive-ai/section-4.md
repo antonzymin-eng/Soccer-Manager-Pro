@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §4.2 file structure gains the three new tackle-outcome files and a constant-catalogue mention; §4.1 and §4.5's dead #8-mediates/#3-owns-contact claims corrected, §4.5.2 rewritten as the corrected boundary; §4.3 gains a `TackleOutcomeResolver` row; §4.6 per-tick digest row gains `TackleOutcome`.)
-**Version:** 0.3
+**Last Updated:** November 11, 2026 (v0.4 — W13.1 `ERR-014-010`: §4.2 file layout gains `MarkTargetComposer.cs`; §4.3 gains its module row and the Invariant 4 input; §4.4.4 and §4.5.1 state the per-agent mark-target carrier and the composition rule; §4.7 check 8 includes Invariant 4.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -62,7 +62,8 @@ src/DefensiveAI/                                     (Stage 1+)
 ├── TackleOutcomeResolver.cs    (§3.6.5.3 — KD-6 revised, `ERR-014-006`)
 ├── OffsideTrapController.cs    (§3.7; OffsideLineState is authoritative)
 ├── LastManDetector.cs          (§3.8 + §3.9)
-├── InvariantEnforcer.cs        (§3.10 + KD-17)
+├── MarkTargetComposer.cs       (§3.13.1 — goal-side mark point; W13.1, `ERR-014-010`)
+├── InvariantEnforcer.cs        (§3.10 + KD-17; Invariant 4 gated, W13.1)
 ├── MarkHysteresis.cs           (§3.11; MarkHysteresisState is authoritative)
 └── DefensiveAIConstants.cs     (SINGLE constant catalogue per FR-CS-025 / KD-14)
 ```
@@ -95,7 +96,8 @@ Each module's input/output is declared as `readonly struct` parameters
 | `TackleOutcomeResolver` (KD-6 revised, `ERR-014-006`, §3.6.5) | `in TackleDuelInputs`, `float uniform` | `TackleOutcome` — pure static, no state, no RNG service call (caller supplies the draw) |
 | `OffsideTrapController` | `HoldShapePool`, `PerceptionSnapshot`, `PressDirective`, `ref OffsideLineState` | Updated `OffsideLineState`; DEFENSE-line `MarkAssignment` overrides if trap fires |
 | `LastManDetector` | `HoldShapePool`, `PerceptionSnapshot` | `LastManResult { isEmergency, lastManEntityId, advancingAttackerEntityId, isGKOutOfZone }` |
-| `InvariantEnforcer` | `HoldShapePool`, `ReadOnlySpan<MarkAssignment>`, `BaselineDefensiveShapeView` | `bool allClean`; corrected `Span<MarkAssignment>` |
+| `InvariantEnforcer` | `HoldShapePool`, `ReadOnlySpan<MarkAssignment>`, `BaselineDefensiveShapeView` | `bool allClean`; corrected `Span<MarkAssignment>`. W13.1: also reads the per-tick `markMovementActive` input to run Invariant 4 (§3.10.2) |
+| `MarkTargetComposer` (W13.1, `ERR-014-010`, §3.13.1) | `in MarkAssignment`, `DefensiveSnapshot`, `tick`, stand-off `s` (m) | `bool` + canonical-frame `Vector2` mark point — pure static, no state, no RNG |
 | `MarkHysteresis` | current `MarkHysteresisState`, proposed `MarkAssignment` | updated `MarkHysteresisState`, committed `MarkAssignment` |
 
 All public surfaces pass `Span<T>`, `ReadOnlySpan<T>`, and `ref` / `in`
@@ -172,6 +174,17 @@ ctx.MarkDirective = defensiveAI.GetMarkDirective(team);   // null → #8 ignores
 if (ctx.MarkDirective.HasValue) { /* adjust target via MarkAssignment */ }
 ```
 
+**Amended (W13.1, `ERR-014-010`, November 11, 2026) — the per-agent target.** The
+team-level `MarkDirective` cannot carry a per-agent target, and the pseudocode
+above ("adjust target via MarkAssignment") gave no rule. The per-agent target
+is a **position plus a flag**, never a #14 type, so the Decision Tree gains no
+reference to #14: the orchestrator calls `MarkTargetComposer.TryCompose`
+(§3.13.1) per HOLD_SHAPE agent after `Tick`, maps the canonical result to world
+space, and writes `TacticalContext.HasMarkTarget` / `MarkTarget` (#8 §2.2.6;
+`ERR-008-027`). `MarkDirective.OffensiveLineDepth` and the `MarkDirective?`
+stub are unchanged. #8 targets the point in `MOVE_TO_POSITION` only; INTERCEPT
+consumption is deferred.
+
 Rationale for Option B: aligns with the `TacticalContext.PressDirective?`
 freeze-then-amend pattern already chosen for #13 (ERR-013-001); single
 struct-field read is cheaper than a cross-subsystem accessor call on the
@@ -192,7 +205,12 @@ ReadOnlySpan<TackleIntentRequest> DefensiveAI.GetTackleIntentRequests();
 `GetAssignments()` supplies the per-agent assignment span used by the
 orchestrator to compose the per-agent target for #8 (HOLD_SHAPE agents use
 #14's mark target; PRIMARY_PRESS / COVER_SHADOW agents retain their #13
-target). `GetTackleIntentRequests()` surfaces tackle intents; **see the
+target). **Composition rule (W13.1, `ERR-014-010`):** the orchestrator calls
+`MarkTargetComposer.TryCompose` (§3.13.1) for each pool agent — implemented with
+the per-agent `DefensiveAITick.GetAssignment(entityId)` accessor — and writes
+the result into that agent's `TacticalContext`; PRIMARY_PRESS / COVER_SHADOW
+agents are outside the pool, so they get no mark target and their #13 target
+stays unconsumed. `GetTackleIntentRequests()` surfaces tackle intents; **see the
 `ERR-014-006` amendment to §4.5.2 below — they are no longer routed through
 #8/#3.** `GetMarkDirective()` is used to write `TacticalContext.MarkDirective?`
 (Option B per §4.4.4).
@@ -278,7 +296,7 @@ at section-file draft time.
 | 5 | Offside adjudication absent: grep §3.7 for "offside rule", "VAR", "goal line distance", "offside decision" → zero hits | FR-DA-020 / KD-9 | build-time lint |
 | 6 | #15 interface absent at Stage 0: grep section files for any code interface referencing #15 → zero hits | FR-DA-036 / KD-8 | build-time lint |
 | 7 | Disjoint role partition per tick: PRIMARY_PRESS ⊕ COVER_SHADOW ⊕ HOLD_SHAPE covers every active outfield agent | FR-DA-010 / KD-4 | every tick |
-| 8 | Anti-chaos invariants satisfied before publication (3-pass limit; F4 fallback if violated) | FR-DA-024 / KD-17 | every tick |
+| 8 | Anti-chaos invariants satisfied before publication (3-pass limit; F4 fallback if violated); Invariant 4 included when `markMovementActive` (W13.1) | FR-DA-024 / KD-17 / FR-DA-039 | every tick |
 | 9 | Single constant catalogue file: build-time grep for `DefensiveAI` constant definitions outside `DefensiveAIConstants.cs` → zero hits | FR-DA-007 / KD-14 | build-time lint |
 | 10 | Zero allocations on hot path | FR-DA-006 | profiler integration test (§5.5) |
 
@@ -289,3 +307,4 @@ at section-file draft time.
 | 0.1 | May 17, 2026 | AI agent | Initial draft. KD-5 Option B resolved: `TacticalContext.MarkDirective?` via ERR-014-001 (mirrors #13 ERR-013-001 precedent). Q2 resolved: #3 §3.3 tackle contact surface. `TackleIntentRequest` surfaced via `DefensiveAI.GetTackleIntentRequests()` accessor. Stage 1+ file layout declared. #12 Stage 1 accessor names confirmed per ERR-013-007/008 precedent. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L3: §4.4.2 accessor declaration corrected `LocalPhase` → `Phase` (non-existent type; canonical enum is `Phase` from #12 §2.1). M7: §4.6 domain tag block layout updated to reflect ERR-011-001/ERR-012-001 race: #11 may occupy `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |
 | 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") has no working delegate. §4.2 file structure gains `TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs` and a constant-catalogue mention of the new tackle-outcome region. §4.1 gains a scoped Stage-0-runtime-code amendment. §4.3 gains a `TackleOutcomeResolver` module-contract row. §4.5.1's "read by #8" clause corrected; §4.5.2 rewritten in place (its original text quoted verbatim, then corrected) to describe the composition root calling `TackleOutcomeResolver` directly instead of a #8→#3 dispatch. §4.6 per-tick digest row gains `TackleOutcome`. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |
+| 0.4 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §4.4.4 amended — the per-agent mark target is a position + flag on `TacticalContext` (no #14 type reaches #8); §4.5.1 states the composition rule ("composes the per-agent target" now has a formula: §3.13.1); §4.2 / §4.3 / §4.7 list `MarkTargetComposer` and the gated Invariant 4. Option B (`MarkDirective?`) unchanged. |

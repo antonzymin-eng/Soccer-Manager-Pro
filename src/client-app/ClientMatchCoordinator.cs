@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientMatchCoordinator.cs
 // Created:  2026-10-06
-// Modified: 2026-10-08 (P5b screens)
+// Modified: 2026-11-05 (§5-P8: nine-screen career composition)
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
 // Purpose:  Consumes one lifecycle with transaction, accepted-frame end barrier and repeat-match teardown.
@@ -28,7 +28,9 @@ namespace TacticalDirector.ClientApp
         private bool _rejected;
         private bool _disposed;
         private long _attachmentId;
-        /// <summary>One fixed five-move graph with lifetime-stable registrations.</summary>
+        /// <summary>Optional career coordinator sharing this shell; absent for the original PM-1 composition.</summary>
+        public ClientCareerCoordinator Career { get; }
+        /// <summary>Lifetime-stable match registrations, plus career registrations when composed.</summary>
         public ClientScreenFlow Flow { get; }
         /// <summary>Current setup draft; reset on cancel/re-entry.</summary>
         public Mentality DraftMentality { get; private set; } = Mentality.Balanced;
@@ -48,6 +50,12 @@ namespace TacticalDirector.ClientApp
 
         /// <summary>Constructs one shell with explicit renderer and admitted approved fixture.</summary>
         public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture)
+            : this(renderer, fixture, null)
+        {
+        }
+
+        /// <summary>Composes the independent career screens into the same guarded shell as PM-1.</summary>
+        public ClientMatchCoordinator(IMatchRendererBinding renderer, S0DemoFixture fixture, ClientCareerCoordinator career)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
@@ -55,7 +63,18 @@ namespace TacticalDirector.ClientApp
             var setup = new ScreenRegistration(ClientScreens.TacticsSetup, null, null);
             var match = new ScreenRegistration(ClientScreens.MatchView, MatchView, MatchView);
             var report = new ScreenRegistration(ClientScreens.PostMatchReport, Report, null);
-            Flow = new ClientScreenFlow(in menu, in setup, in match, in report);
+            Career = career;
+            if (career == null)
+            {
+                Flow = new ClientScreenFlow(in menu, in setup, in match, in report);
+            }
+            else
+            {
+                Flow = new ClientScreenFlow(in menu, in setup, in match, in report,
+                    career.HomeRegistration, career.NewRegistration, career.LoadRegistration,
+                    career.TransfersRegistration, career.FinancesRegistration);
+                career.AttachFlow(Flow);
+            }
         }
 
         /// <summary>Opens a fresh Balanced draft without constructing a session.</summary>
@@ -127,7 +146,9 @@ namespace TacticalDirector.ClientApp
         {
             using (RefreshMarker.Auto())
             {
-                if (_disposed || _rejected || _context == null || _context.IsFullTime) return;
+                if (_disposed || _rejected) return;
+                Career?.Refresh();
+                if (_context == null || _context.IsFullTime) return;
                 try
                 {
                     if (_context.Session.TryGetLatestFrame(out LiveMatchFrame frame) && _context.Accept(in frame, presentationTime))
@@ -182,14 +203,19 @@ namespace TacticalDirector.ClientApp
         private void RequireReady()
         {
             if (_disposed || _rejected) throw new InvalidOperationException("The client shell is disposed or rejected.");
+            if (Career != null && Career.IsBusy) throw new InvalidOperationException("A career operation is running.");
         }
         /// <summary>Quiesces playback, invalidates callbacks, clears handles and detaches visuals; idempotent.</summary>
         public void Dispose()
         {
             if (_disposed) return;
             _rejected = true;
-            ClearOwnedMatch();
-            _disposed = true;
+            try { ClearOwnedMatch(); }
+            finally
+            {
+                Career?.Dispose();
+                _disposed = true;
+            }
         }
     }
 }
@@ -198,4 +224,6 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
+// | 1.2     | 2026-11-03 | —      | Optional career composition, UI completion polling and busy guard. |
+// | 1.3     | 2026-11-05 | —      | §5-P8: compose the career's Transfers and Club Finances registrations (nine screens). |
 #endregion

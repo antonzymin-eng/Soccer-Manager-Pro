@@ -1,0 +1,37 @@
+# Source identity — pinned-host Unity run for PR #539 (P7/P8/AR-2) merged with main
+# PR #539 head conflicted with main in docs and tooling only. The run validates the Unity inputs that
+# a merge of main into the PR produces; that src merge has no conflicts.
+
+PR head (work): 34f29b843b0f1ffb67bc5112030a5cc69c7e606a
+main: 39de4662841dec3c1c537a4e4c93bef553441725
+merge base: b6505350c76968b15decaf5e56c37cc1b1ba2707
+merged tree (git merge-tree --write-tree work main): 4aed12185520079b17612b1f7197a686cda1b1df
+conflicted paths (none under src, Assets, Packages or ProjectSettings):
+  docs/tracking/CHANGELOG-src.md
+  docs/tracking/CHANGELOG.md
+  docs/tracking/file-manifest.md
+  docs/tracking/path-to-playable-roadmap.md
+  docs/tracking/spec-error-log.md
+  tools/tests/test_evidence_manifests.py
+
+tree src (validated, merged): 967655cc8ccfff5a2524ddce110bf0a195c5e7ac
+tree src (PR head, for reference): f4ef93415df57e367939201a03d76d433999e227
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55 (identical on PR head, main and merge)
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b (identical on PR head, main and merge)
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea (identical on PR head, main and merge)
+
+worktree: detached at the PR head, then `git checkout 4aed12185520079b17612b1f7197a686cda1b1df -- src`; Library absent before the compile.
+worktree HEAD before and after: 34f29b843b0f1ffb67bc5112030a5cc69c7e606a
+index src tree (git write-tree --prefix=src/): 967655cc8ccfff5a2524ddce110bf0a195c5e7ac
+porcelain (`git status --porcelain -- src Packages ProjectSettings Assets`): 34 lines before the compile and
+  34 identical lines after the EditMode run; all are staged src entries (30 M, 4 A),
+  exactly the PR-head -> merged src delta. No unstaged, untracked or other-path changes.
+compile start: 2026-11-16T15:23:27Z
+compile exit: 0 end: 2026-11-16T15:25:05Z
+tests start: 2026-11-16T15:25:26Z
+tests exit: 0 end: 2026-11-16T15:38:59Z
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src
+
+Coverage rule: any later PR #539 commit whose src, Assets, Packages and ProjectSettings trees equal the hashes above
+is covered by this run. A different src tree supersedes it.

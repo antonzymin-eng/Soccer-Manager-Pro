@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Appendices
 
 **Created:** May 17, 2026
-**Last Updated:** August 12, 2026 (v0.4 — KD-6 revised (`ERR-014-006`, wiring backlog W2): Appendix A.12 rationale prose corrected (dead #8/#3 execution clause); Appendix F `TackleIntentRequest` entry corrected and two new entries (`TackleDuelInputs`, `TackleOutcome`) added — glossary is now 18 entries, making the "16-entry" description in §9.1 item 32 / Appendix H v0.1 stale.)
-**Version:** 0.4
+**Last Updated:** November 11, 2026 (v0.5 — W13.1 `ERR-014-010`: Appendix A gains A.23 / A.24, the derivation records for `MARK_STANDOFF_M` and `MARK_STANDOFF_TIGHT_M`.)
+**Version:** 0.5
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -361,6 +361,24 @@ formal assignment label catches up within 400 ms. This is acceptable: the
 agent is moving toward cover before the label formally commits.
 
 **Stage 0 default:** 2 ticks.
+
+---
+
+### A.23 `MARK_STANDOFF_M = 2.0 m` and A.24 `MARK_STANDOFF_TIGHT_M = 1.0 m` (W13.1, `ERR-014-010`)
+
+**Rationale (UN-CALIBRATED first values, KD-W1).** A marker should stand close enough to
+tackle and to count as marking — inside `TACKLE_ELIGIBLE_RADIUS_M` (3.0 m, A.12) and the #23
+`MARKING_RADIUS_M` (3.0 m) — yet not so close that two bodies overlap (the player-player
+contact radius is well below 1 m) or that a one-step feint of the opponent carries him past
+the marker. 2.0 m is about two body lengths, the usual "goal-side and touch-tight" gap for a
+defender who is covering rather than challenging; the tight value (1.0 m) is roughly one body
+length, used when the manager sets `TightMarking`. Neither was fitted against anything: no
+defender in this engine has ever been moved to a mark point, so there is no prior behaviour to
+preserve. They are inputs to the calibration pass, not its output. **Range invariant:**
+`0 < tight < normal < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M)`; both must stay strictly
+below 3.0 m or a marker standing on the point would be outside his own tackle radius.
+
+**Stage 0 default:** 2.0 m / 1.0 m (inert while the engine's mark-movement switch is off).
 
 ---
 
@@ -787,3 +805,4 @@ They do not affect the deterministic simulation output.
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L4: Appendix A.9 typo corrected — "time for a restart restart pass" → "time for a restart pass". |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): Appendix F glossary entry for `DOMAIN_TAG_DEFENSIVE_AI` — `[CROSS-PENDING]` (ERR-014-004) promoted to `[CROSS: #16 §3.4]`; ERR-014-004 resolved May 18, 2026. |
 | 0.4 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): Appendix A.12 `TACKLE_ELIGIBLE_RADIUS_M` rationale's closing clause corrected — "giving #8 / #3 enough frames to execute the physical action" had no working delegate; value (3.0 m) and the rest of the rationale unaffected. Appendix F `TackleIntentRequest` entry corrected ("Consumed by #8 → dispatched to #3" superseded); added `TackleDuelInputs` and `TackleOutcome` entries. Glossary is now 18 entries (was 16) — `section-9-approval-checklist.md` §9.1 item 32's "16-entry" evidence is now stale and is flagged, not recounted, in this pass. |
+| 0.5 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: Appendix A gains A.23 / A.24, the derivation records of the two un-calibrated mark stand-offs (`MARK_STANDOFF_M` 2.0 m, `MARK_STANDOFF_TIGHT_M` 1.0 m) with their range invariant. |

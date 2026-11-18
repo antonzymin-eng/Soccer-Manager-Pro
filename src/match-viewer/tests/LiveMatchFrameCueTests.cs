@@ -1,6 +1,6 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-10-15 (Match Flow §6.2.5: pending queue copy lock)
+// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified (prior): 2026-10-06 (P5b lifecycle/identity)
 // Modified (prior): 2026-08-03
 // Author:   —
@@ -14,6 +14,7 @@
 using NUnit.Framework;
 
 using TacticalDirector.MatchEngine;
+using TacticalDirector.TacticalInstructions;
 
 namespace TacticalDirector.MatchViewer.Tests
 {
@@ -27,6 +28,22 @@ namespace TacticalDirector.MatchViewer.Tests
         // and RestartLatch_* asserts a restart really was observed, so a bound that stopped working
         // fails the test rather than silently skipping the property under check.
         private const int RestartSearchTicks = 8000;
+
+        [Test]
+        public void CapturedFrame_SeparatesRequestedFromEffectiveFormation()
+        {
+            var engine = new MatchEngine.MatchEngine(Seed);
+            var streamer = new LiveMatchStreamer(engine);
+            streamer.TickOnce();
+            var b = TeamTactic.Balanced;
+            engine.SetTeamTactic(0, new TeamTactic(b.Mentality, TacticFormation.F4231, b.Tempo, b.Width,
+                b.Passing, b.Pressing, b.LineOfEngagement, b.DefensiveLine, b.DefensiveWidth,
+                b.TransitionWon, b.TransitionLost, b.OffsideTrap, b.TriggerPressMask,
+                b.FocusPlay, b.GkDistribution, b.TimeWasting));
+            var frame = streamer.TickOnce();
+            Assert.AreEqual(TacticFormation.F4231, frame.Formations.HomeRequested);
+            Assert.AreEqual(TacticFormation.F442, frame.Formations.HomeEffective);
+        }
 
         [Test]
         public void CapturedFrame_CarriesOneCuePerAgent_InLockstepWithPositions()
@@ -229,4 +246,5 @@ namespace TacticalDirector.MatchViewer.Tests
 // | 1.3     | 2026-10-06 | —      | Explicit neutral identity in synthetic cue producers. |
 // | 1.4     | 2026-10-06 | —      | Positional cue test asserts a distinct PlayerId. |
 // | 1.5     | 2026-10-15 | —      | Match Flow §6.2.5 (PR #505): captured frames copy pending requests and their sequence identities. The keeper-cue lock keeps the immediate swap, now an internal engine helper reached through the match-engine test friend. |
+// | 1.6 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 #endregion

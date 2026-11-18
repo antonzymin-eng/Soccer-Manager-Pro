@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientMatchCoordinatorTests.cs
 // Created:  2026-10-06
-// Modified: 2026-10-15 (Match Flow §6: deferred roster change)
+// Modified: 2026-11-03 (P7b shared-shell composition lock)
 // Modified (prior): 2026-10-06
 // Author:   —
 // Spec:     P5b lifecycle/identity plan §§4–7, S0 binding contracts §2, Code Standards #20
@@ -57,6 +57,29 @@ namespace TacticalDirector.ClientApp.Tests
                 Failure = null;
                 if (ThrowOnDetach) throw new InvalidOperationException("detach failure");
             }
+        }
+
+        [Test]
+        public void CareerCompositionSharesTheShell_AndPublishesWithoutAMatchContext()
+        {
+            using var temp = new TempSlots();
+            Action pending = null;
+            var career = new ClientCareerCoordinator(temp.Directory,
+                TacticalDirector.SeasonSave.RoundResolutionMode.QuickSimAll, work => pending = work);
+            using var shell = new ClientMatchCoordinator(new Renderer(), S0DemoFixture.CreateApproved(), career);
+            Assert.IsTrue(shell.Flow.HasCareerScreens);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.CareerHome).ViewModelSource);
+            Assert.AreSame(career, shell.Flow.GetRegistration(ClientScreens.CareerHome).Dispatcher);
+            career.Initialize();
+            Assert.Throws<InvalidOperationException>(shell.OpenTacticsSetup, "A demo cannot start beside a career writer.");
+            pending();
+            Assert.IsFalse(career.IsInitialized);
+            shell.Refresh(0f);
+            Assert.IsTrue(career.IsInitialized, "Career completion must be serviced even without a match context.");
+            Assert.IsFalse(shell.HasMatch);
+            shell.OpenTacticsSetup();
+            shell.CancelTacticsSetup();
+            Assert.AreEqual(ClientScreens.MainMenu, shell.Flow.Current);
         }
 
         [Test]
@@ -409,4 +432,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0     | 2026-10-06 | —      | Consumed P5b lifecycle/identity implementation. |
 // | 1.1     | 2026-10-06 | —      | Restore keeps BootRoster before any substitution; after one (either team) restore and playback continue while BootRoster refuses. |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution leaves the roster unchanged until a restart; the driver log records acceptance, not application. |
+// | 1.3     | 2026-11-03 | —      | P7b composition, worker/demo exclusion and idle-context refresh. |
 #endregion

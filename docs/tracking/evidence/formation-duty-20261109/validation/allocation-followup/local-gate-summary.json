@@ -1,0 +1,1982 @@
+{
+  "assemblies": 37,
+  "consoleSummaries": 37,
+  "consoleFailed": 0,
+  "consolePassed": 4521,
+  "consoleSkipped": 225,
+  "addedNonPassed": [],
+  "removedNonPassed": [],
+  "records": [
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_10.trx",
+      "counters": {
+        "total": "94",
+        "executed": "94",
+        "passed": "94",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_10[1].trx",
+      "counters": {
+        "total": "90",
+        "executed": "67",
+        "passed": "67",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "Determinism_RngDomainTagIsolation_NoCrossDomainBleed",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 DeterministicRngService with DOMAIN_TAG_ATTACKING_AI wired \u2014 activate when Stage 1 RNG integration is complete (\u00a75.4 T-AT-D-003)."
+        },
+        {
+          "name": "Integration_PossessionToTransitionToOutOfPossession_15Ticks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick AttackingAITick driver with phase injection \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-004 / FR-AT-009)."
+        },
+        {
+          "name": "Integration_OverloadDeclared_CorrectFlank",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-005)."
+        },
+        {
+          "name": "Determinism_InvariantDemotion_IdenticalOrderAcross1000Runs",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-run deterministic driver \u2014 activate when Stage 1 simulation runtime is available (\u00a75.4 T-AT-D-006)."
+        },
+        {
+          "name": "Integration_9AgentInPossession_PossessionProfile_InvariantsSatisfied",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline with perception snapshot wiring \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-001)."
+        },
+        {
+          "name": "Performance_PerTick_9Agents_PossessionProfile_Under0_1ms",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host certification platform pinned in docs/tracking/certification-platform.md \u2014 activate when Stage 0+1 perf-gate infrastructure is ready (\u00a75.5 T-AT-P-001)."
+        },
+        {
+          "name": "Determinism_TransitionHoldState_RoundTrip",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 SnapshotCodec serialization of TransitionHoldState \u2014 activate when Stage 1 snapshot integration is complete (\u00a75.4 T-AT-D-005)."
+        },
+        {
+          "name": "Performance_PerTick_10Agents_CounterAttackProfile_Under0_1ms",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host certification platform pinned in docs/tracking/certification-platform.md \u2014 activate when Stage 0+1 perf-gate infrastructure is ready (\u00a75.5 T-AT-P-002)."
+        },
+        {
+          "name": "Determinism_HysteresisStateDigest_RoundTrip",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 SnapshotCodec serialization of AttackHysteresisState[] \u2014 activate when Stage 1 snapshot integration is complete (\u00a75.4 T-AT-D-004)."
+        },
+        {
+          "name": "Integration_OutOfPossession_SkipsAllComputation_5Ticks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick AttackingAITick driver \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-010)."
+        },
+        {
+          "name": "Determinism_90MinuteReplay_BitIdenticalDigest",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 replay infrastructure and full 90-minute match simulation \u2014 activate when deterministic replay is wired (\u00a75.4 T-AT-D-001 / #16 \u00a75)."
+        },
+        {
+          "name": "Integration_WidthHolding_BothSides",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-012)."
+        },
+        {
+          "name": "Integration_OverloadNotDeclared_WeakSideExcluded",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-006)."
+        },
+        {
+          "name": "Integration_AllDefenseLineMembership_ZeroRunners",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-008)."
+        },
+        {
+          "name": "Performance_PerTick_AntiChaosWorstCase_Under0_1ms",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host certification platform pinned in docs/tracking/certification-platform.md \u2014 activate when Stage 0+1 perf-gate infrastructure is ready (\u00a75.5 T-AT-P-003)."
+        },
+        {
+          "name": "Integration_AntiChaosCombination_Resolved",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-007)."
+        },
+        {
+          "name": "Determinism_EntityIdIterationOrder_StableAcrossRuns",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-run deterministic driver \u2014 activate when Stage 1 simulation runtime is available (\u00a75.4 T-AT-D-002)."
+        },
+        {
+          "name": "Integration_DepthOffset_VerifiedAcrossAllThreeProfiles",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-011)."
+        },
+        {
+          "name": "Integration_Hysteresis_OscillationSuppressedOver10Ticks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick AttackingAITick driver \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-009)."
+        },
+        {
+          "name": "InvariantEnforcer_RunsAfterAssignmentBeforePublish",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline including publish phase to verify ordering \u2014 activate when AttackingAITick integration tests are wired at Stage 1 (FR-AT-021)."
+        },
+        {
+          "name": "Tick_InPossession_LooseBall_EmitsEmptyDirective",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires a PositioningAIView phase seam to drive AttackingAITick.Tick with phase=IN_POSSESSION and carrier=-1 \u2014 activate when the AttackingAITick driver is wired (FR-AT-008)."
+        },
+        {
+          "name": "Integration_9AgentInPossession_CounterAttackProfile_FastestTiming",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-003)."
+        },
+        {
+          "name": "Integration_9AgentInPossession_DirectProfile_MaxThreeRunners",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full AttackingAITick pipeline \u2014 activate when Stage 1 simulation runtime is available (\u00a75.3 T-AT-I-002)."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_12.trx",
+      "counters": {
+        "total": "120",
+        "executed": "120",
+        "passed": "120",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_14.trx",
+      "counters": {
+        "total": "195",
+        "executed": "192",
+        "passed": "192",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "S0MovementDiagnostic_ReportsPlayerTravelAndSpread",
+          "outcome": "NotExecuted",
+          "message": "Set TD_MOVEMENT_DIAGNOSTIC=1 to run the S0 player-movement measurement."
+        },
+        {
+          "name": "S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit",
+          "outcome": "NotExecuted",
+          "message": "Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark."
+        },
+        {
+          "name": "S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs",
+          "outcome": "NotExecuted",
+          "message": "Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_15.trx",
+      "counters": {
+        "total": "70",
+        "executed": "70",
+        "passed": "70",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_17.trx",
+      "counters": {
+        "total": "49",
+        "executed": "40",
+        "passed": "40",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "ThreeAgentsCluster_AllProcessedNoInfiniteLoop",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode 3-agent scenario \u2014 \u00a75.3"
+        },
+        {
+          "name": "GroundedObstacle_RunnerStumbles",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode stumble/grounded logic \u2014 \u00a75.3"
+        },
+        {
+          "name": "SameTeamCollision_ReducedMomentumNoFall",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with team-ID filtering \u2014 \u00a75.3"
+        },
+        {
+          "name": "AgentHitsBall_BallCollisionHandlerCalled",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with BallPhysics #1 wired \u2014 \u00a75.3"
+        },
+        {
+          "name": "CrossSystem_CollisionTriggersAgentMovementStateChange",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires AgentMovement #2 and CollisionSystem #3 both wired \u2014 \u00a75.3"
+        },
+        {
+          "name": "SprintingHitsStationary_StationaryKnockedBack",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with AgentMovement #2 wired \u2014 \u00a75.3"
+        },
+        {
+          "name": "CornerKickClustering_PerformanceUnder500us",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with Profiler \u2014 \u00a75.3"
+        },
+        {
+          "name": "TwoAgentsApproach_BothBounceBack",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with full CollisionSystem.Tick \u2014 \u00a75.3"
+        },
+        {
+          "name": "FullMatch90Minutes_NoCrashNoNaN",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 90-minute match simulation \u2014 \u00a75.3"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_20.trx",
+      "counters": {
+        "total": "133",
+        "executed": "129",
+        "passed": "129",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "Balance_HighPressing_IncreasesPressBehaviorShare",
+          "outcome": "NotExecuted",
+          "message": "BAL-DT-03: requires full team PRESS/INTERCEPT share measurement vs MEDIUM baseline over \u226550 ticks. Expected outcome: PRESS + INTERCEPT combined share rises measurably vs MEDIUM instruction."
+        },
+        {
+          "name": "Balance_LowComposure_ShowsHigherSelectionVariance",
+          "outcome": "NotExecuted",
+          "message": "BAL-DT-02: requires comparative run between Composure=1 and Composure=20 agents over \u2265100 ticks with identical match state. Expected outcome: suboptimal choice rate measurably above elite composure baseline."
+        },
+        {
+          "name": "Balance_HighFinishingStriker_SelectsShoot_InAttackingThird",
+          "outcome": "NotExecuted",
+          "message": "BAL-DT-01: requires Stage 0+1 full-match simulation infrastructure (22-agent heartbeat at 10Hz, \u226550 qualifying ticks where striker is in attacking third with clear goal angle). Expected outcome: SHOOT selected in \u226580% of qualifying ticks."
+        },
+        {
+          "name": "Balance_ShortPassing_SelectsShortPassMoreOften",
+          "outcome": "NotExecuted",
+          "message": "BAL-DT-04: requires passing length distribution comparison SHORT vs DIRECT over \u226550 passes each. Expected outcome: short PASS candidates (distance < 15m) selected more often than long PASS (distance > 30m) under SHORT style; reversed under DIRECT style."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_22.trx",
+      "counters": {
+        "total": "106",
+        "executed": "78",
+        "passed": "78",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "AntiChaos_T_DA_EXP_004_GkOutOfPositionCoverAssignedSameTick",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires live GK position tracking \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Performance_T_DA_PERF_002_ZeroHeapAllocationsPerTick",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Unity Memory Profiler with Allocation Tracking \u2014 activate when DefensiveAITick is wired into TickOrchestrator and #18 \u00a73.7 gate is active"
+        },
+        {
+          "name": "AntiChaos_T_DA_INV_001_MinBacklineAgentsViolationDemotionRestoresBackline",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent pipeline with engineered backline-depletion \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_DA_DET_004_EntityIdIterationOrderDeterminism",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full pipeline with controllable EntityId ordering \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_068_GkReentryReleaseCoverGkZone",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires GK position tracking across ticks \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_DA_DET_001_NinetyMinReplayBitIdenticalPerTickDigests",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference-host replay harness and #16 \u00a75 digest comparison \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_063_OffsideTrapFourDefenderBacklineAdvancesSimultaneously",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick dwell + DEFENSE-line position data \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_DA_DET_002_TwoIndependentSimsIdenticalInitialStateFirstThousandTicks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires two fresh simulation instances \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_DA_INV_002_MaxManMarkExceededLowestThreatDemoted",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered over-assignment scenario \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_069_PostTrapCooldownBlocksRefire",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick cooldown tracking \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_DA_EXP_002_BallSwitchToUnguardedChannelCoveredWithinLatency",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires live ball-switch detection and multi-tick scenario \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_DA_DET_005_RngReproducibilityViaDomainTagDefensiveAI",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 DeterministicRngService wired into DefensiveAITick \u2014 activate when DOMAIN_TAG_DEFENSIVE_AI (0x1A) RNG draws are live"
+        },
+        {
+          "name": "Performance_T_DA_PERF_003_AntiChaosWorstCaseWithinBudget",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host and isolated InvariantEnforcer micro-benchmark \u2014 activate when certification-platform.md Stage-0 host pin is confirmed"
+        },
+        {
+          "name": "Determinism_T_DA_DET_003_MidMatchSnapshotResumeDigestContinuity",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Spec #16 SnapshotCodec mid-match serialisation \u2014 activate when DeterministicSim snapshot round-trip is verified"
+        },
+        {
+          "name": "AntiChaos_T_DA_EXP_003_LastManOneOnOneTackleIntentNotCommit",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent pipeline with engineered last-man 1v1 scenario \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_060_PressAndDefendPartitionDisjointAcrossTenTicks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires PressingAI + DefensiveAI wired into TickOrchestrator \u2014 activate when both #13 and #14 are live in the full pipeline"
+        },
+        {
+          "name": "Performance_T_DA_PERF_001_WorstCasePerTickWithinBudget",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host (Ryzen 7 5800X) and Unity Stopwatch micro-benchmark harness \u2014 activate when certification-platform.md Stage-0 host pin is confirmed"
+        },
+        {
+          "name": "Integration_T_DA_065_AntiChaosCascadeResolvesWithinThreePasses",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered over-assignment scenario \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_071_PhaseChangeTakesEffectImmediately",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires live PositioningAI phase input \u2014 activate when DefensiveAITick reads phase in same tick as #12 update"
+        },
+        {
+          "name": "Integration_T_DA_064_EmergencyLastManAndGkOutOfPositionSameTick",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent snapshot with engineered emergency state \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_DA_DET_006_AntiChaosTerminatesInThreePassesForAllInputs",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires 1,000-iteration randomised anti-chaos harness \u2014 activate when DefensiveAITick is wired into TickOrchestrator and InvariantEnforcer iteration count is observable"
+        },
+        {
+          "name": "Integration_T_DA_061_PhaseTransitionCycleWithHysteresisPreservation",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires live PositioningAI phase input across 3 ticks \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_067_AssignThenSuppressOpponentExitsRadiusMidDwell",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick dwell injection \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_066_IdenticalInputsProduceBitIdenticalOutput",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full pipeline invocation with a fixed snapshot \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_DA_INV_003_MaxMarkDisplacementExceededOverDisplacedDemoted",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered displacement-exceeding assignment \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_062_TransitionPhasePossessionTurnoverInterceptRunner",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires live phase-change injection \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_DA_070_NinetyMinMatchPoolSizesConsistentWithPressingPartition",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation with #13 press-role data \u2014 activate when both #13 and #14 are wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_DA_EXP_001_OffsideTrapNotSpringEarlyOnRunnerStart",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick dwell sequence with concurrent INTERCEPT_RUNNER \u2014 activate when DefensiveAITick is wired into TickOrchestrator"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_23.trx",
+      "counters": {
+        "total": "91",
+        "executed": "90",
+        "passed": "90",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "SaveLoad_MidTickSnapshot_SaveAndLoad",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: SaveManager.SaveAtomicMidTick does not exist at Stage 0 \u2014 activate when the mid-tick save overload is added at Stage 1 (\u00a75.3 T-DS-005 / \u00a74.6.1)."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_25.trx",
+      "counters": {
+        "total": "146",
+        "executed": "146",
+        "passed": "146",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_26.trx",
+      "counters": {
+        "total": "65",
+        "executed": "54",
+        "passed": "54",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "FR_EVT_013_TierB_Activation_Stage5Plus",
+          "outcome": "NotExecuted",
+          "message": "Stage 5+ only \u2014 Tier B activation is Stage 5+ (FR-EVT-013)"
+        },
+        {
+          "name": "FR_EVT_081_VersionIncompatibleFixtureLoad_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 fixture loader not yet implemented (FR-EVT-081)"
+        },
+        {
+          "name": "FR_EVT_012_SnapshotRoundTrip_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 snapshot round-trip test (FR-EVT-012)"
+        },
+        {
+          "name": "FR_EVT_080_UnknownOrdinalFixtureLoad_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 fixture loader not yet implemented (FR-EVT-080)"
+        },
+        {
+          "name": "FR_EVT_048_PerPublishZeroAllocation_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 allocation-tracker tooling activates at Stage 0+1 (FR-EVT-048)"
+        },
+        {
+          "name": "FR_EVT_031_G1_PhaseDigestGolden_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 G1 golden fixture not yet captured (FR-EVT-031)"
+        },
+        {
+          "name": "FR_EVT_006_CanonicalNoPaddingLayout_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 strict no-padding canonical serialization is Stage 0+1 (FR-EVT-006)"
+        },
+        {
+          "name": "FR_EVT_043_G2_CosmeticDropGolden_Stage0Plus1",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 only \u2014 G2 golden fixture not yet captured (FR-EVT-043)"
+        },
+        {
+          "name": "FR_EVT_077_ReplayIsolation_Stage1Plus",
+          "outcome": "NotExecuted",
+          "message": "Stage 1+ only \u2014 replay channel not yet implemented (FR-EVT-077)"
+        },
+        {
+          "name": "Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable",
+          "outcome": "NotExecuted",
+          "message": "Golden digest not yet pinned. Observed sha256=de1e5d82327d5b74e5b9483ac04fd277862847b77c54157eca0702c583d2faa6 \u2014 pin atomically with the AM #2 registrar landing."
+        },
+        {
+          "name": "FR_EVT_072_Fixed64_Reverification_Stage5Plus",
+          "outcome": "NotExecuted",
+          "message": "Stage 5+ only \u2014 Fixed64 is Stage 5+ (FR-EVT-072)"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_28.trx",
+      "counters": {
+        "total": "79",
+        "executed": "71",
+        "passed": "71",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "PossessionChange_UpdatesTeamPossessionState",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus PossessionChangedEvent wired \u2014 IT-003"
+        },
+        {
+          "name": "EventEmission_FirstTouchEventPublishedOnContact",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus + EventBusRegistrar wired \u2014 IT-004"
+        },
+        {
+          "name": "PressureQueryFromSpatialHash_ReturnsCorrectOpponents",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires SpatialHashGrid wired into PressureEvaluator \u2014 IT-007"
+        },
+        {
+          "name": "GoalkeeperFootControl_ProcessedNormally",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with Goalkeeper Mechanics #11 wired \u2014 IT-006"
+        },
+        {
+          "name": "ReplayDeterminism_IdenticalMatchStateProducesIdenticalResults",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Deterministic Simulation #16 digest comparison \u2014 IT-005"
+        },
+        {
+          "name": "CollisionToFirstTouchToBallPhysics_CompletePipeline",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with CollisionSystem #3 + BallPhysics #1 wired \u2014 IT-001"
+        },
+        {
+          "name": "ControlledOutcome_AgentMovementReceivesDribblingModifier",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires AgentMovement #2 wired \u2014 IT-002"
+        },
+        {
+          "name": "ConsecutiveTouches_OneTwoPass_BothEvaluateCorrectly",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode multi-tick scenario \u2014 IT-008"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_29.trx",
+      "counters": {
+        "total": "138",
+        "executed": "111",
+        "passed": "111",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "T_GK_I_008_RushAbortOnInterception",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when rush-abort pipeline is wired to BallSystem"
+        },
+        {
+          "name": "T_GK_C_004_PositioningAiConstantPromotion",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: scripted gate \u2014 activate when Positioning AI #12 constants are verified at commit-time of status flip"
+        },
+        {
+          "name": "T_GK_I_006_OneVsOneConfrontation",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when OneOnOne state pipeline is wired"
+        },
+        {
+          "name": "T_GK_I_003_PenaltySave",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when penalty shot pipeline is wired"
+        },
+        {
+          "name": "T_GK_C_005_NoSystemRandom",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: grep gate \u2014 activate when CI grep tooling is wired (Testing Strategy #19)"
+        },
+        {
+          "name": "T_GK_I_010_DeterministicReplay",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when deterministic RNG wiring to DeterministicSimulation #16 is complete"
+        },
+        {
+          "name": "T_GK_C_001_NoSaveTypeSymbol",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: grep gate \u2014 activate when CI grep tooling is wired (Testing Strategy #19)"
+        },
+        {
+          "name": "T_GK_V_003_FatigueGradient",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when full dive-kinematics fatigue path is exercised end-to-end"
+        },
+        {
+          "name": "T_GK_V_001_MatchPeakHandlingLabelDistribution",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent match simulation \u2014 activate when Stage 0+1 match loop is operational"
+        },
+        {
+          "name": "T_GK_C_003_RngRoutingDiscipline",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: grep gate against System.Random and Random.Range \u2014 activate when CI grep tooling is wired"
+        },
+        {
+          "name": "T_GK_I_007_MistimedDiveNoBallChange",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "T_GK_I_002_FreeKickSave",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when set-piece pipeline is wired"
+        },
+        {
+          "name": "FailureCause_MistimedDive_DiveStartedTooEarly",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "FailureCause_MissedContact_BallOutsideReach",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "FailureCause_WrongDirection_DiveInWrongDirection",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "FailureCause_DisturbedInDuel_DuelDisturbanceAboveThreshold",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "T_GK_C_006_CrossReferenceResolution",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: scripted cross-reference resolution gate \u2014 activate when spec-tooling for XC-NNN resolution is wired"
+        },
+        {
+          "name": "FailureCause_OutOfReach_BallBeyondReachEnvelope",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics.ProcessSaveAttempt is wired"
+        },
+        {
+          "name": "T_GK_C_007_CrossClaimDuelIterationOrder",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation with Deterministic Simulation #16 entity-order wiring \u2014 activate when duel entity ordering is validated"
+        },
+        {
+          "name": "T_GK_I_005_CornerCrossClaimHeadPath",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when head-contact routing to Heading Mechanics #10 is wired"
+        },
+        {
+          "name": "T_GK_I_001_OpenPlaySave",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when GoalkeeperMechanics is wired to Shot Mechanics #6 ShotExecutedEvent"
+        },
+        {
+          "name": "T_GK_I_009_SaveAndDistributionCycle",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when distribution-to-pass-mechanics pipeline is wired"
+        },
+        {
+          "name": "T_GK_C_002_ConstantTagVerification",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: programmatic constant-tag verification \u2014 activate when Code Standards #20 \u00a73 tooling is wired"
+        },
+        {
+          "name": "T_GK_I_011_PositioningBaselineSlotRatification",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: baseline read wired (ERR-011-018, locked by match-engine GoalkeeperBaselineSlotTests); activate when the KD-13 reactive-radius clamp has a production consumer"
+        },
+        {
+          "name": "T_GK_V_002_ReflexABDivergence",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when reaction pipeline is wired end-to-end"
+        },
+        {
+          "name": "T_GK_V_004_OneVsOneConversionRate",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when OneOnOne state pipeline is fully wired and stat collection is operational"
+        },
+        {
+          "name": "T_GK_I_004_CornerCrossClaimHandPath",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full match simulation \u2014 activate when cross-claim duel is wired to event bus"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_31.trx",
+      "counters": {
+        "total": "90",
+        "executed": "75",
+        "passed": "75",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "Integration_T_HE_I_004_GoalkeeperHeadedClearanceUsesStandardPipeline",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Goalkeeper Mechanics #11 integration \u2014 activate when HeadingMechanics is wired into TickOrchestrator alongside GoalkeeperMechanics"
+        },
+        {
+          "name": "Integration_T_HE_I_002_CornerKickHeaderRoutesIdenticallyToOpenPlay",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Pass Mechanics #5 set-piece delivery \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_HE_I_001_OpenPlayHeaderFromCrossProducesOutgoingVelocity",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Pass Mechanics #5 cross delivery and 22-agent match tick loop \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_HE_I_009_DeterministicReplay1000TickByteIdentical",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 SnapshotCodec and replay harness \u2014 activate when DeterministicSim snapshot round-trip is verified and HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_HE_I_008_OwnGoalShapeFlagPublishedToEventSystem",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Event System #17 mock subscriber \u2014 activate when EventBus HeaderExecutedEvent (0x12) subscription is available in test harness"
+        },
+        {
+          "name": "Integration_T_HE_I_007_MistimedJumpEmitsFailedEventAndLeavesBalUnchanged",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick heading pipeline with intent staleness re-validation \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Conformance_T_HE_C_002_ConstantTagVerification",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: CI-time constant-tag grep gate \u2014 activate when #20 \u00a73.x constant-tag lint is wired into CI pipeline"
+        },
+        {
+          "name": "Integration_T_HE_I_003_FreeKickHeaderFarPostDownwardVolley",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Pass Mechanics #5 wide free-kick delivery \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Conformance_T_HE_C_003_RngRoutingDisciplineNoSystemRandom",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: CI-time RNG routing grep gate \u2014 activate when #16 DeterministicRngService is wired into HeadingMechanics and CI lint checks are live"
+        },
+        {
+          "name": "Conformance_T_HE_C_001_NoHeaderTypeSymbolInSrc",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: CI-time grep gate \u2014 activate when heading-mechanics assembly is included in the CI pipeline grep lint checks"
+        },
+        {
+          "name": "Validation_T_HE_V_002_CornerABHeadingAttributeSensitivity",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires identical-seed corner delivery with two striker attribute profiles \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_HE_I_005_Contested2WayDuelWinnerAndLoserEmitCorrectEvents",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full duel pipeline with two simultaneous header commits \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Validation_T_HE_V_003_FatigueGradientReducesOutgoingSpeedByTwelvePercent",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires identical-seed delivery with two fatigue states \u2014 activate when HeadingMechanics is wired into TickOrchestrator and fatigue input is live"
+        },
+        {
+          "name": "Integration_T_HE_I_006_Contested3WayDuelTightAndLopsidedSubScenarios",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires three simultaneous header commits \u2014 activate when HeadingMechanics is wired into TickOrchestrator"
+        },
+        {
+          "name": "Validation_T_HE_V_001_22AgentMatchSegmentHeaderFrequencyAndTimingDistribution",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires 22-agent match simulation \u2014 activate when HeadingMechanics is wired into TickOrchestrator and telemetry pipeline is live"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_33.trx",
+      "counters": {
+        "total": "76",
+        "executed": "76",
+        "passed": "76",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_34.trx",
+      "counters": {
+        "total": "129",
+        "executed": "129",
+        "passed": "129",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_36.trx",
+      "counters": {
+        "total": "67",
+        "executed": "67",
+        "passed": "67",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_37.trx",
+      "counters": {
+        "total": "59",
+        "executed": "59",
+        "passed": "59",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_40.trx",
+      "counters": {
+        "total": "192",
+        "executed": "192",
+        "passed": "192",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_44.trx",
+      "counters": {
+        "total": "60",
+        "executed": "60",
+        "passed": "60",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_01_47.trx",
+      "counters": {
+        "total": "999",
+        "executed": "982",
+        "passed": "982",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters",
+          "outcome": "NotExecuted",
+          "message": "Set TD_HEADER441_DIAGNOSTIC=1 to run the #441 header-reachability counters."
+        },
+        {
+          "name": "GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel",
+          "outcome": "NotExecuted",
+          "message": "Set TD_CONVERSION_DIAGNOSTIC=1 to run the conversion-at-contact instrument."
+        },
+        {
+          "name": "MatchBalanceDiagnostic_ReportsScorelineAsymmetry",
+          "outcome": "NotExecuted",
+          "message": "Set TD_BALANCE_DIAGNOSTIC=1 to run the \u00a75.Z.11 balance characterisation."
+        },
+        {
+          "name": "GkSaveDiagnostic_ReportsSaveFunnel",
+          "outcome": "NotExecuted",
+          "message": "Set TD_GK_DIAGNOSTIC=1 to run the \u00a75.Z.15 goalkeeper save-pipeline characterisation."
+        },
+        {
+          "name": "W8StageADiagnostic_ReportsFrozenSixSeedBaseline",
+          "outcome": "NotExecuted",
+          "message": "Set TD_W8_STAGE_A=1 to run the preregistered W8 Stage A census."
+        },
+        {
+          "name": "CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel",
+          "outcome": "NotExecuted",
+          "message": "Set TD_CREATION_DIAGNOSTIC=1 to run the close-chance creation instrument."
+        },
+        {
+          "name": "ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice",
+          "outcome": "NotExecuted",
+          "message": "  too few connecting challenges to judge the share (won=4 loose=10 foul=1 missed=75 dispossessions=4)\n  Expected: greater than 30\n  But was:  15\n"
+        },
+        {
+          "name": "ShotOutcomeDiagnostic_ReportsDistribution",
+          "outcome": "NotExecuted",
+          "message": "Set TD_SHOT_DIAGNOSTIC=1 to run the shot-outcome-distribution characterisation."
+        },
+        {
+          "name": "TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier",
+          "outcome": "NotExecuted",
+          "message": "Set TD_TACKLE_DIAGNOSTIC=1 to run the tackle-intent census instrument."
+        },
+        {
+          "name": "W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates",
+          "outcome": "NotExecuted",
+          "message": "Set TD_W12_GATE_DIAGNOSTIC=1 to run the W12 gate-firing census."
+        },
+        {
+          "name": "GkSaveDiagnostic_ReportsHandlingQualityCeiling",
+          "outcome": "NotExecuted",
+          "message": "Set TD_GK_DIAGNOSTIC=1 to run the \u00a75.Z.15 goalkeeper save-pipeline characterisation."
+        },
+        {
+          "name": "MatchBalanceDiagnostic_ReportsContactStream",
+          "outcome": "NotExecuted",
+          "message": "Set TD_BALANCE_DIAGNOSTIC=1 to run the \u00a75.Z.11 balance characterisation."
+        },
+        {
+          "name": "FoulRateDiagnostic_ReportsRateVersusThreshold",
+          "outcome": "NotExecuted",
+          "message": "Set TD_FOUL_DIAGNOSTIC=1 to run the #435 \u00a72.1 source-complete foul/card measurement."
+        },
+        {
+          "name": "PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace",
+          "outcome": "NotExecuted",
+          "message": "Set TD_PLATFORM_DIVERGENCE_OUT=<dir> to run the six-seed platform-divergence diagnostic."
+        },
+        {
+          "name": "W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings",
+          "outcome": "NotExecuted",
+          "message": "Set TD_W8_B=1 for frozen B distribution and landing evidence."
+        },
+        {
+          "name": "GkContactRateDiagnostic_ReportsEpisodeAnatomy",
+          "outcome": "NotExecuted",
+          "message": "Set TD_GK_DIAGNOSTIC=1 to run the keeper contact-rate anatomy instrument."
+        },
+        {
+          "name": "GkRushDiagnostic_ReportsRushAnatomy",
+          "outcome": "NotExecuted",
+          "message": "Set TD_GK_DIAGNOSTIC=1 to run the keeper rush anatomy instrument."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_33.trx",
+      "counters": {
+        "total": "78",
+        "executed": "78",
+        "passed": "78",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_35.trx",
+      "counters": {
+        "total": "107",
+        "executed": "95",
+        "passed": "95",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "ReplayDeterminism_IdenticalPassesProduceIdenticalResults",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Deterministic Simulation #16 digest comparison \u2014 IT-012 CRITICAL"
+        },
+        {
+          "name": "ChipPass_ApplyKick_VelocityYLarge",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassBallSystem mock \u2014 IT-003"
+        },
+        {
+          "name": "AgentAttributes_ReadCorrectlyFromAgentState",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassAgentQuery mock wired \u2014 IT-005"
+        },
+        {
+          "name": "FullPassCycle_IdleToComplete_CorrectEventOrder",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires all interfaces mocked and EventBus wired \u2014 IT-011"
+        },
+        {
+          "name": "TackleInterrupt_FromCollision_CancelsPass",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassCollisionQuery mock with tackle flag \u2014 IT-007"
+        },
+        {
+          "name": "Fatigue_PropagatesFromAgentStateToErrorCalculation",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassAgentQuery mock with Fatigue=0.9 \u2014 IT-006"
+        },
+        {
+          "name": "ApplyKick_ClearsPossession_PostPass",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1 [ERR-008-BLOCKED]: requires BallState.PossessingAgentId API \u2014 IT-004"
+        },
+        {
+          "name": "GroundPass_ApplyKick_CalledWithNonZeroVelocity",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassBallSystem mock wired to PassExecutor \u2014 IT-001"
+        },
+        {
+          "name": "PassCompletedEvent_PublishedOnFollowThroughCompletion",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus wired \u2014 IT-009"
+        },
+        {
+          "name": "LoftedPass_ApplyKick_VelocityYPositive",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IPassBallSystem mock \u2014 IT-002"
+        },
+        {
+          "name": "PassAttemptEvent_PublishedOnContact",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus wired via EventBusStub \u2014 IT-008"
+        },
+        {
+          "name": "TackleInterrupt_PublishesCancelledNotAttempt",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus + IPassCollisionQuery wired \u2014 IT-010"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_37.trx",
+      "counters": {
+        "total": "69",
+        "executed": "54",
+        "passed": "54",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "PressureQuery_UsesDistinct3mRadiusCall",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires SpatialHashGrid wired \u2014 IT-CS-002"
+        },
+        {
+          "name": "Determinism_100Heartbeats_IdenticalInputsProduceBytIdenticalSnapshots",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode + Deterministic Simulation #16 digest comparison \u2014 IT-FULL-006"
+        },
+        {
+          "name": "QueryRadius_ReturnsCorrectCandidateCount_SelfExcluded",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires SpatialHashGrid wired into PerceptionSystem.Tick \u2014 IT-CS-001"
+        },
+        {
+          "name": "AnticipationAttribute_ReadCorrectlyForShoulderCheckInterval",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with PlayerAttributes injection \u2014 IT-AM-004"
+        },
+        {
+          "name": "Perception_NeverWritesToSpatialHash",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires SpatialHashGrid wired; verifies no writes during Perception.Tick \u2014 IT-CS-003"
+        },
+        {
+          "name": "LrecTracking_NoMemoryLeakOverExtendedSimulation",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode memory profiler over \u2265 100 ticks \u2014 IT-FULL-005"
+        },
+        {
+          "name": "Awareness_BuildsOverFirstTicks_ColdStart",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode multi-tick simulation \u2014 IT-FULL-002"
+        },
+        {
+          "name": "AgentBehindOpponentWall_IsPerceptionIsolated",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with OcclusionFilter wired into full pipeline \u2014 IT-FULL-003"
+        },
+        {
+          "name": "BallPosition_3DTo2DProjection_Correct",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with BallPhysics #1 wired \u2014 IT-BP-001"
+        },
+        {
+          "name": "DecisionsAttribute_ReadCorrectlyFromPlayerAttributes",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with PlayerAttributes injection \u2014 IT-AM-003"
+        },
+        {
+          "name": "BallContactForcedRefresh_ReachesCorrectAgentsOnly",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode with EventBus BallContactEvent \u2014 IT-BP-002"
+        },
+        {
+          "name": "Fov_RecomputedFreshEachHeartbeat",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode 22-agent simulation \u2014 IT-AM-002"
+        },
+        {
+          "name": "FullHeartbeat_22Agents_AllSnapshotsProducedNoNulls",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode PerceptionSystem.Tick with all 22 agents \u2014 IT-FULL-004"
+        },
+        {
+          "name": "FovOrientation_FollowsAgentStateFacingDirection",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode 22-agent simulation with AgentMovement #2 wired \u2014 IT-AM-001"
+        },
+        {
+          "name": "EliteMidfielder_VsNoviceDefender_MeasurableFovDifference",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Play Mode 22-agent scenario with scripted agent attributes \u2014 IT-FULL-001"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_38.trx",
+      "counters": {
+        "total": "10",
+        "executed": "10",
+        "passed": "10",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_40.trx",
+      "counters": {
+        "total": "50",
+        "executed": "50",
+        "passed": "50",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_41.trx",
+      "counters": {
+        "total": "193",
+        "executed": "193",
+        "passed": "193",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_43.trx",
+      "counters": {
+        "total": "156",
+        "executed": "143",
+        "passed": "143",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "Determinism_EntityIdPermutation_SameOutput",
+          "outcome": "NotExecuted",
+          "message": "T-D-003: requires Stage 0+1 determinism harness bound to #16 \u00a75 DigestEngine"
+        },
+        {
+          "name": "Determinism_RngIsolation_CrossSubsystem",
+          "outcome": "NotExecuted",
+          "message": "T-D-006: requires multi-subsystem RNG stream registration \u2014 Stage 0+1"
+        },
+        {
+          "name": "Integration_PhaseOscillationSuppressed",
+          "outcome": "NotExecuted",
+          "message": "T-I-006: requires >=20 tick simulation to measure transition frequency per PHASE_HYSTERESIS_TICKS"
+        },
+        {
+          "name": "Performance_ZeroHeapAlloc_InHotPath",
+          "outcome": "NotExecuted",
+          "message": "T-P-002: requires Unity GC Alloc profiler \u2014 Stage 0+1"
+        },
+        {
+          "name": "Determinism_SaveLoad_ResumesIdentically",
+          "outcome": "NotExecuted",
+          "message": "T-D-005: requires SnapshotCodec + SaveManager integration \u2014 Stage 0+1"
+        },
+        {
+          "name": "Integration_SubstitutionSentinel_Preserved",
+          "outcome": "NotExecuted",
+          "message": "T-I-007: requires sentinel AR-S1-07 injection test (substitution mid-match)"
+        },
+        {
+          "name": "Integration_OrchestratorNonInvocation_OfStage0Default",
+          "outcome": "NotExecuted",
+          "message": "T-I-010: requires AR-S1-04 orchestrator mock to verify Stage0Default not called on hot path"
+        },
+        {
+          "name": "Integration_LaneOverload_Resolved_BySpacing",
+          "outcome": "NotExecuted",
+          "message": "T-I-008: requires 11-agent formation with lane overload scenario"
+        },
+        {
+          "name": "Integration_F2Fallback_ValidArchetype",
+          "outcome": "NotExecuted",
+          "message": "T-I-009: requires invalid archetype enum value injection"
+        },
+        {
+          "name": "Performance_SpacingBudget_Under0_05ms",
+          "outcome": "NotExecuted",
+          "message": "T-P-003: requires Stopwatch-based timing \u2014 Stage 0+1 perf gate activation"
+        },
+        {
+          "name": "Integration_4231_TransToAtk_AMAdvances",
+          "outcome": "NotExecuted",
+          "message": "T-I-005: requires Stage 0+1 full-match to measure AM advance distance across multiple ticks"
+        },
+        {
+          "name": "Determinism_DigestStability_IdenticalInputs",
+          "outcome": "NotExecuted",
+          "message": "T-D-004: requires DeterministicRngService integration \u2014 deferred to Stage 0+1"
+        },
+        {
+          "name": "Integration_FullMatch_90Min_StateConsistency",
+          "outcome": "NotExecuted",
+          "message": "T-I-011: requires 90-min simulation (54000 ticks at 10Hz); Stage 0+1 milestone only"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_45.trx",
+      "counters": {
+        "total": "91",
+        "executed": "65",
+        "passed": "65",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "AntiChaos_T_C_007_BacklineBreachTriggersF5InOneIteration",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered Defense-line agent forced into PRIMARY_PRESS with backlineCount < MinBacklineAgents = 3 \u2014 activate when PressingAITick is wired into TickOrchestrator and InvariantEnforcer iteration telemetry is observable"
+        },
+        {
+          "name": "AntiChaos_T_C_003_CoverShadowBeyond25mRejectedAndDemoted",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered cover-shadow assignment exceeding MaxPressDisplacementM \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_C_001_FourCandidatesInBallThirdOneDemotes",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent pipeline with engineered over-count scenario \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_I_001_EachTriggerOutOfPossProducesActiveDirective",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent match simulation \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_I_007_ThreeAgentCostTieResolvesDeteterministicallyByEntityId",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full agent-pool injection into PrimaryPressSelector with tied costs \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_C_002_BacklineFloorBlocksPrimaryPressPromotion",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full 22-agent pipeline with engineered backline-depletion scenario \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_I_006_SimultaneousTriggersTieBreakByEntityId",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires simultaneous trigger injection into the full pipeline \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_D_004_TenConsecutiveRunsProduceSameFinalDigest",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference-host replay harness \u2014 activate when PressingAITick is wired into TickOrchestrator and #16 \u00a75 regression suite is available"
+        },
+        {
+          "name": "Determinism_T_D_003_HysteresisAndTriggerDigestContributionsNonEmpty",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventLedger digest emission from PressingAITick \u2014 activate when #16 SerializeLedger path includes Pressing AI state contributions"
+        },
+        {
+          "name": "Integration_T_I_008_F5FallbackOnMaxDisplacementViolation",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered cover-shadow assignment exceeding 25 m displacement \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_D_001_NinetyMinReplayBitIdenticalDigests",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference-host replay harness and DeterministicSim digest comparison \u2014 activate when PressingAITick is wired into TickOrchestrator and #16 \u00a75 regression suite is available"
+        },
+        {
+          "name": "Integration_T_I_004_DisengageRoundTripOver50Ticks",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full tick-loop driving PressingAITick \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_C_005_UnresolvableCascadeTriggersF5Fallback",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered structurally-unresolvable invariant violation \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Performance_T_P_001_PerTickWallClockWithinBudget",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host (Ryzen 7 5800X) and Unity Stopwatch micro-benchmark harness \u2014 activate when certification-platform.md Stage-0 host pin is confirmed"
+        },
+        {
+          "name": "Integration_T_I_002_InPossPhaseBoundaryEmptiesDirective",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires phase input from PositioningAI \u2014 activate when PressingAITick reads live phase transitions from PositioningAITick"
+        },
+        {
+          "name": "AntiChaos_T_C_004_CascadingViolationsResolveInThreeIterations",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires engineered compound invariant violation scenario \u2014 activate when PressingAITick is wired into TickOrchestrator and InvariantEnforcer iteration telemetry is observable"
+        },
+        {
+          "name": "Integration_T_I_010_IdenticalInputsProduceBitIdenticalOutput",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full pipeline invocation with a fixed snapshot \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_D_002_EntityIdPermutedInputProducesIdenticalState",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires #16 \u00a73.2.5 EntityId-ascending iteration guarantee and full pipeline \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "AntiChaos_T_C_006_RepeatedF5FallbackDoesNotCorruptHysteresisState",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick F5-triggering scenario with hysteresis state inspection \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Integration_T_I_009_HysteresisStateSurvivesSaveRestoreRoundTrip",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Spec #16 SnapshotCodec round-trip \u2014 activate when DeterministicSim SnapshotCodec is wired and PressingAITick exposes snapshot serialisation"
+        },
+        {
+          "name": "Determinism_T_D_005_SaveLoadMidPressDigestContinuity",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Spec #16 SnapshotCodec mid-press serialisation \u2014 activate when DeterministicSim snapshot round-trip is verified and PressingAITick state is included in the snapshot payload"
+        },
+        {
+          "name": "Integration_T_I_003_PossessionTurnoverSequenceProducesCorrectEvolution",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires multi-tick phase-change injection \u2014 activate when PressingAITick is wired into TickOrchestrator"
+        },
+        {
+          "name": "Determinism_T_D_006_DomainTagIsolationPreservesStream",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: regression for stochastic Stage 1+ press steps \u2014 activate when DOMAIN_TAG_PRESSING_AI RNG draws are introduced in PressingAITick"
+        },
+        {
+          "name": "Performance_T_P_002_ZeroHeapAllocationsOnHotPath",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Unity Memory Profiler with Allocation Tracking \u2014 activate when PressingAITick is wired into TickOrchestrator and #18 \u00a73.7 allocation-tracking gate is active"
+        },
+        {
+          "name": "Performance_T_P_003_CoverShadowCandidateScanWithinCostBudget",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires reference host and isolated CoverShadowSelector micro-benchmark \u2014 activate when certification-platform.md Stage-0 host pin is confirmed"
+        },
+        {
+          "name": "Integration_T_I_005_SubstitutionPreservesLastPressAssignment",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires SubstitutionEvent from event bus \u2014 activate when EventBus SubstitutionEvent (0x08) is wired into PressingAITick"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_46.trx",
+      "counters": {
+        "total": "26",
+        "executed": "26",
+        "passed": "26",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_07_47.trx",
+      "counters": {
+        "total": "554",
+        "executed": "551",
+        "passed": "551",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "Pilot_ExtremeDifferentialsAreDistinguishable",
+          "outcome": "NotExecuted",
+          "message": "Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches)."
+        },
+        {
+          "name": "EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes",
+          "outcome": "NotExecuted",
+          "message": "Set TD_ENGINE_DIAGNOSTIC=1 to run the ERR-030-014 characterisation (one full match)."
+        },
+        {
+          "name": "Corpus_GeneratesTheRequestedSlice",
+          "outcome": "NotExecuted",
+          "message": "Set TD_CALIBRATION_SAMPLES (plus optional TD_CALIBRATION_DELTA_FROM / _TO / _OUT) to generate an A4a corpus slice. Each sample is a full ~2-minute engine match."
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_50.trx",
+      "counters": {
+        "total": "102",
+        "executed": "89",
+        "passed": "89",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": [
+        {
+          "name": "CollisionInterface_TackleInterruptDuringWindup_CancelsShot",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IShotCollisionQuery mock returning tackle flag \u2014 IT-003"
+        },
+        {
+          "name": "CollisionInterface_TackleInterruptDuringContact_DoesNotCancel",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IShotCollisionQuery mock \u2014 IT-004"
+        },
+        {
+          "name": "CriticalDeterminism_IdenticalInputs_ProduceIdenticalOutputs",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires Deterministic Simulation #16 digest comparison \u2014 IT-012 CRITICAL"
+        },
+        {
+          "name": "EventInterface_TackleCancelled_PublishesCancelledNotExecuted",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus wired to ShotEventEmitter \u2014 IT-006"
+        },
+        {
+          "name": "BM007_PoorMechanicsHighPower_StumbleTriggered",
+          "outcome": "NotExecuted",
+          "message": "BM-007: Could not produce Score < StumbleThreshold under test inputs; skip stumble check."
+        },
+        {
+          "name": "AgentMovementInterface_AgentProperties_FrozenAtInitiating",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IShotAgentQuery mock wired \u2014 IT-002"
+        },
+        {
+          "name": "BallPhysicsInterface_ApplyKick_CalledWithValidArguments",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires IShotBallSystem mock wired to ShotExecutor \u2014 IT-001"
+        },
+        {
+          "name": "EndToEnd_ChipShotProfile_ProducesElevatedLaunchAngle",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full ShotExecutor pipeline \u2014 IT-008"
+        },
+        {
+          "name": "EndToEnd_DrivenShotProfile_ProducesLowAngleAndHighSpeed",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full ShotExecutor pipeline \u2014 IT-009"
+        },
+        {
+          "name": "EventInterface_ShotExecutedEvent_PublishedWithCompletePayload",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires EventBus wired to ShotEventEmitter \u2014 IT-005"
+        },
+        {
+          "name": "EndToEnd_WeakFootShot_HigherErrorAndLowerSpeedThanStrongFoot",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full ShotExecutor with IShotAgentQuery \u2014 IT-010"
+        },
+        {
+          "name": "ShotAnimationData_PopulatedOnCompletion_NotPublished",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full ShotExecutor pipeline; ShotAnimationData is Stage 1+ \u2014 IT-011"
+        },
+        {
+          "name": "EndToEnd_TopCornerPlacement_ProducesCorrectAimDirection",
+          "outcome": "NotExecuted",
+          "message": "Stage 0+1: requires full ShotExecutor pipeline with IShotBallSystem \u2014 IT-007"
+        }
+      ]
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_51.trx",
+      "counters": {
+        "total": "59",
+        "executed": "59",
+        "passed": "59",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_53.trx",
+      "counters": {
+        "total": "33",
+        "executed": "33",
+        "passed": "33",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_54.trx",
+      "counters": {
+        "total": "52",
+        "executed": "52",
+        "passed": "52",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_56.trx",
+      "counters": {
+        "total": "69",
+        "executed": "69",
+        "passed": "69",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    },
+    {
+      "trx": "_6d8cbbcb43c0_2026-11-10_18_11_58.trx",
+      "counters": {
+        "total": "52",
+        "executed": "52",
+        "passed": "52",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "nonPassed": []
+    }
+  ]
+}

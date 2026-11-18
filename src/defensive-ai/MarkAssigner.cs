@@ -1,8 +1,8 @@
 // File:     src/defensive-ai/MarkAssigner.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-11-10
 // Author:   —
-// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
+// Spec:     Defensive AI #14 §3.3, §3.4, §3.5, §4.3, ERR-014-008, ERR-014-009, Code Standards #20; Tactical Instructions #21 §3.4 (FR-TI-033)
 // Purpose:  Pure static module: implements the mark-mode assignment algorithm (§3.3),
 //           displacement cost (§3.4), and threat score (§3.5) for the HOLD_SHAPE pool.
 
@@ -18,6 +18,12 @@ namespace TacticalDirector.DefensiveAI
     /// </summary>
     public static class MarkAssigner
     {
+        /// <summary>
+        /// Unit vector pointing toward the defended goal in the canonical frame (own goal at x = 0).
+        /// A frame invariant of the snapshot (#14 §2.3), not a per-team value (ERR-014-008).
+        /// </summary>
+        private static readonly Vector2 OwnGoalDirection = new Vector2(-1f, 0f);
+
         // ── Public entry ──────────────────────────────────────────────────────
 
         /// <summary>
@@ -38,8 +44,6 @@ namespace TacticalDirector.DefensiveAI
             MarkAssignment[]       assignments,
             MarkHysteresisState[]  hysteresis)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(snapshot.DefensiveTeamId);
-
             for (int p = 0; p < poolCount; p++)
             {
                 // Skip agents already set by emergency overrides (Steps 4/4a).
@@ -59,13 +63,16 @@ namespace TacticalDirector.DefensiveAI
                 // as stale (FR-DA-029 / §2.2.2).
                 if (MarkHysteresis.PreCheck(ref assignments[p], ref hysteresis[p]))
                 {
+                    // ERR-014-009 / §2.2.2: a retained mark publishes the target's CURRENT position, so
+                    // Invariant 3 and any consumer see the live point rather than the commit-time one.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                     assignments[p].ValidThroughTick = currentTick;
                     continue;
                 }
 
                 // Evaluate candidates.
                 SelectBestCandidate(
-                    snapshot, agent, defendsX0, currentTick,
+                    snapshot, agent, currentTick,
                     out MarkAssignment candidate);
 
                 // §3.3.3 Step 6: a ZONAL fallback commits DIRECTLY, bypassing the
@@ -86,6 +93,10 @@ namespace TacticalDirector.DefensiveAI
                 {
                     // Apply hysteresis gate (§3.11) before committing.
                     MarkHysteresis.ApplyGate(candidate, ref assignments[p], ref hysteresis[p]);
+
+                    // The gate may retain the current assignment (same target, or a competing
+                    // candidate still inside its dwell): refresh it as on the dwell-lock path.
+                    RefreshRetained(snapshot, agent, currentTick, ref assignments[p], ref hysteresis[p]);
                 }
 
                 // Stamp the agent EntityId and tick on the committed assignment.
@@ -94,12 +105,45 @@ namespace TacticalDirector.DefensiveAI
             }
         }
 
+        // ── Retained-assignment refresh (ERR-014-009) ─────────────────────────
+
+        /// <summary>
+        /// Refreshes a retained MAN_MARK / INTERCEPT_RUNNER assignment from the live snapshot (#14 §2.2.2:
+        /// <c>TargetPosition</c> is the opponent's current perceived position, not the commit-time one).
+        /// When the retained target is absent from the snapshot or not active (sent off, substituted) there
+        /// is no position to publish, so the mark is released to ZONAL immediately (target -1, own
+        /// formation slot) and the hysteresis state is reset exactly as on the §3.3.3 Step 6 ZONAL bypass
+        /// (dwell counter AND candidate accumulator, so re-acquiring any mark pays a full
+        /// <see cref="DefensiveAIConstants.MarkDwellTicks"/> again) —
+        /// the dwell lock exists to suppress candidate thrash, not to hold a mark on a player who is gone.
+        /// ZONAL and COVER_GK_ZONE assignments are left untouched. Pure; no allocation.
+        /// </summary>
+        private static void RefreshRetained(
+            DefensiveSnapshot            snapshot,
+            in DefensiveAgentSnapshot    agent,
+            int                          currentTick,
+            ref MarkAssignment           assignment,
+            ref MarkHysteresisState      hysteresis)
+        {
+            if (assignment.Mode != MarkMode.ManMark && assignment.Mode != MarkMode.InterceptRunner)
+                return;
+
+            int oIdx = HoldShapePoolFilter.SnapshotIndexOf(snapshot, assignment.TargetEntityId);
+            if (oIdx >= 0 && snapshot.Agents[oIdx].IsActive)
+            {
+                assignment.TargetPosition = snapshot.Agents[oIdx].Position;
+                return;
+            }
+
+            assignment = MarkAssignment.MakeZonal(agent.EntityId, agent.BaselineSlot, currentTick);
+            MarkHysteresis.Reset(ref hysteresis);
+        }
+
         // ── Candidate selection ───────────────────────────────────────────────
 
         private static void SelectBestCandidate(
             DefensiveSnapshot              snapshot,
             in DefensiveAgentSnapshot      agent,
-            bool                           defendsX0,
             int                            currentTick,
             out MarkAssignment             candidate)
         {
@@ -124,14 +168,15 @@ namespace TacticalDirector.DefensiveAI
                 if (!opp.IsActive)
                     continue;
 
-                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch, defensiveTeam);
+                float threat = ThreatScore(opp.Position, opp.PerceivedFirstTouch);
 
                 // Check INTERCEPT_RUNNER eligibility (§3.3.3 Step 3).
                 float speed = opp.Velocity.magnitude;
                 if (speed > DefensiveAIConstants.RunnerVelocityThresholdMS)
                 {
                     // Opponent velocity must point toward own goal (dot product with own-goal direction).
-                    Vector2 ownGoalDir = defendsX0 ? new Vector2(-1f, 0f) : new Vector2(1f, 0f);
+                    // Canonical frame: the defended goal is at x = 0, so "toward own goal" is -X.
+                    Vector2 ownGoalDir = OwnGoalDirection;
                     Vector2 velNorm    = opp.Velocity / speed;
                     float   dot        = Vector2.Dot(velNorm, ownGoalDir);
 
@@ -200,13 +245,12 @@ namespace TacticalDirector.DefensiveAI
         /// Computes the threat score for an opponent. Defensive AI #14 §3.5.
         /// Output range [0, 1]; product of goal proximity and receiving attribute.
         /// </summary>
-        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        /// <param name="oppPos">Opponent position in the canonical frame (m); the defended goal is x = 0.</param>
+        /// <param name="perceivedFirstTouch">Perceived FirstTouch on the 1-20 scale.</param>
+        public static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch)
         {
-            bool defendsX0 = LastManDetector.DefendsX0(defensiveTeamId);
-
-            // Goal proximity: 1 - (xDist / PITCH_LENGTH_M). X-axis only (Stage 0).
-            float ownGoalX = defendsX0 ? 0f : DefensiveAIConstants.PITCH_LENGTH_M;
-            float xDist    = UnityEngine.Mathf.Abs(oppPos.x - ownGoalX);
+            // Goal proximity: 1 - (xDist / PITCH_LENGTH_M). X-axis only (Stage 0). Own goal at x = 0.
+            float xDist    = UnityEngine.Mathf.Abs(oppPos.x);
             float proximity = 1f - (xDist / DefensiveAIConstants.PITCH_LENGTH_M);
             proximity = UnityEngine.Mathf.Clamp01(proximity);
 
@@ -215,6 +259,18 @@ namespace TacticalDirector.DefensiveAI
             float receivingAttr = (attr - 1f) / 19f;
 
             return proximity * receivingAttr;
+        }
+
+        /// <summary>
+        /// COMPATIBILITY SHIM — the <paramref name="defensiveTeamId"/> argument is IGNORED. #14 is
+        /// canonical-only (the defended goal is x = 0 for every team, ERR-014-008), so team 0 and team 1
+        /// score identically. Kept <c>internal</c> solely because the pre-existing ThreatScoreTests call
+        /// it with a named <c>defensiveTeamId:</c> argument; production code uses
+        /// <see cref="ThreatScore(Vector2, float)"/>.
+        /// </summary>
+        internal static float ThreatScore(Vector2 oppPos, float perceivedFirstTouch, int defensiveTeamId)
+        {
+            return ThreatScore(oppPos, perceivedFirstTouch);
         }
 
         // ── Tie-break comparator ──────────────────────────────────────────────
@@ -280,4 +336,16 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   re-acquisition of the same opponent commit MAN_MARK immediately, skipping the dwell. |
 // | 1.4     | 2026-07-07 | —      | Cheap-item addition (FR-TI-033): MAN_MARK candidate radius scaled by                  |
 // |         |            |        |   TacticTranslation.MarkRadiusScalar(snapshot.MarkingOrientation); Balanced ⇒ ×1.0.     |
+// | 1.5     | 2026-11-10 | —      | ERR-014-008: defendsX0 taken from DefensiveSnapshot.IsOwnGoalAtX0 (canonical frame),  |
+// |         |            |        |   not teamId == 0. ThreatScore gains a bool defendsX0 overload; the int teamId overload   |
+// |         |            |        |   is kept for source compatibility and ignores the id. The away team previously ranked    |
+// |         |            |        |   threat and runner direction against x = 105 while its snapshot has the goal at x = 0.   |
+// | 1.6     | 2026-11-10 | —      | ERR-014-009: a retained non-ZONAL assignment (dwell lock or same-target/held-candidate gate |
+// |         |            |        |   path) now refreshes TargetPosition from the live snapshot each tick (§2.2.2), so Invariant 3  |
+// |         |            |        |   tests the live point. A retained target that is absent or inactive releases the mark to    |
+// |         |            |        |   ZONAL at once and resets hysteresis. COVER_GK_ZONE / ZONAL untouched.                      |
+// | 1.7     | 2026-11-10 | —      | W13.0 review M1/L1/L2: canonical-only — the bool defendsX0 plumbing and the x = 105 branches  |
+// |         |            |        |   are removed (ThreatScore(oppPos, firstTouch); OwnGoalDirection). The int teamId ThreatScore    |
+// |         |            |        |   overload is now an INTERNAL compatibility shim that ignores the id. RefreshRetained's release  |
+// |         |            |        |   also resets the candidate accumulator, so re-acquisition pays a full MarkDwellTicks.          |
 #endregion

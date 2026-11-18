@@ -1,0 +1,4507 @@
+{
+  "passed": true,
+  "uniqueObservedFullMatches": 90,
+  "framesPerMatch": 324000,
+  "audits": [
+    {
+      "path": "control/base/C0/0000000000000001/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "82ce2eeee91271f58bd68b22ef92652edb49746f9a48ee1e3d3a58204b632032",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "05ea02c0448f6a15b143f0b01e8ffdc42e7da63f73ae246eb8d8ddd64fb586f2"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1879b7c562d662820d94d404f311a182114bcefa0378116fe6aa7efe30e3e065"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c9b58f0565c57bd19eac9bb609648769b5ef3ec63c7c43c2172b714099bae483"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b90a727a0f835d031752c82b1a67a8845cdae95bddb54d15b57459bb587af53e"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500554,
+          "sha256Uncompressed": "984de0cf5f9a565bc2a90d13e923a477782ccf0d029d1ea3a644bf5ff6bd5090"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "556a90367f3b79779b663d0528e74e8c602c242fff7a48ec4b8072c839628f1f"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.588520783261348,
+          "meanSlotMaxX": 75.82284133507898,
+          "meanSlotMinY": 4.971325359493894,
+          "meanSlotMaxY": 63.120997433538875,
+          "meanMinimumPairDistance": 11.639331658183783,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.90138068976505,
+          "meanSlotMaxX": 76.50569605291763,
+          "meanSlotMinY": 4.842503160663785,
+          "meanSlotMaxY": 63.04752003628006,
+          "meanMinimumPairDistance": 11.650635610878668,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "e6b11c340d28089efb182d7478a21b530beb14709fd2b261f9726e6a4d2b927c",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "4159fbe86d95f76e339267db856d457171065e907138471906c985b0543a6ab2"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1879b7c562d662820d94d404f311a182114bcefa0378116fe6aa7efe30e3e065"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c9b58f0565c57bd19eac9bb609648769b5ef3ec63c7c43c2172b714099bae483"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b90a727a0f835d031752c82b1a67a8845cdae95bddb54d15b57459bb587af53e"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500554,
+          "sha256Uncompressed": "984de0cf5f9a565bc2a90d13e923a477782ccf0d029d1ea3a644bf5ff6bd5090"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "556a90367f3b79779b663d0528e74e8c602c242fff7a48ec4b8072c839628f1f"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.588520783261348,
+          "meanSlotMaxX": 75.82284133507898,
+          "meanSlotMinY": 4.971325359493894,
+          "meanSlotMaxY": 63.120997433538875,
+          "meanMinimumPairDistance": 11.639331658183783,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.90138068976505,
+          "meanSlotMaxX": 76.50569605291763,
+          "meanSlotMinY": 4.842503160663785,
+          "meanSlotMaxY": 63.04752003628006,
+          "meanMinimumPairDistance": 11.650635610878668,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/base/C0/000000005A5A5A5A/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "32d2413f933e26f7078e8d9640b82cbaa0b958fb37cccc136640f99a355b50f2",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8be4dcf6dda5437da57b90e4e4ef4851631f0fbf9ff2168d2592dbb8a1216287"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "f91d90cbb761ab13857619f278dbeac651e49708c8094ab5bc2c9fec8b0b48c4"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "90d760f86820cd8c71cf5c4a002c2bb5ad5ba9e987ae95ecb3eb20f819d5afd6"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "2b812092a0923de1f8aea96a5d6b5bf24439142f0242a309ba479ebc1e93e2ee"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1514644,
+          "sha256Uncompressed": "7f50fc55e469724186e5a7a0c5d1cc8cbd1404bc628bec0afb29a32f438ebc91"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "01966b57e14e37635ea46b63c1d7cc7480023168c89cdb134b97b576752a0601"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.862750544292215,
+          "meanSlotMaxX": 75.92640607465066,
+          "meanSlotMinY": 5.764904117762605,
+          "meanSlotMaxY": 59.42600941254025,
+          "meanMinimumPairDistance": 11.429400417133115,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.553018568957274,
+          "meanSlotMaxX": 76.31112167589262,
+          "meanSlotMinY": 4.59052930907604,
+          "meanSlotMaxY": 63.07712621909075,
+          "meanMinimumPairDistance": 11.70920051293262,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "f601221bfc29a28fe928b3230967f567ee84364ca3b9e3a965571831261c7ccd",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1c4d34ee2f9875b106e2c9bbadf68daf81fd6e74f6fc0eb4bba6e8542566ee1f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "f91d90cbb761ab13857619f278dbeac651e49708c8094ab5bc2c9fec8b0b48c4"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "90d760f86820cd8c71cf5c4a002c2bb5ad5ba9e987ae95ecb3eb20f819d5afd6"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "2b812092a0923de1f8aea96a5d6b5bf24439142f0242a309ba479ebc1e93e2ee"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1514644,
+          "sha256Uncompressed": "7f50fc55e469724186e5a7a0c5d1cc8cbd1404bc628bec0afb29a32f438ebc91"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "01966b57e14e37635ea46b63c1d7cc7480023168c89cdb134b97b576752a0601"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.862750544292215,
+          "meanSlotMaxX": 75.92640607465066,
+          "meanSlotMinY": 5.764904117762605,
+          "meanSlotMaxY": 59.42600941254025,
+          "meanMinimumPairDistance": 11.429400417133115,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.553018568957274,
+          "meanSlotMaxX": 76.31112167589262,
+          "meanSlotMinY": 4.59052930907604,
+          "meanSlotMaxY": 63.07712621909075,
+          "meanMinimumPairDistance": 11.70920051293262,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/base/C0/0000000099887766/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "104cc13e7bbe3e2294504b4640ce687567c05cc3bf94cb81a8dff061208e6e2f",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "833fac461067cfc38321b6d31bb8fee7be8ea58bccbb91641be1773db306fc5f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9076f1250a06821d8f1e2303586e3fb43e0fbd1fac5f9111aebac6ff26a171e3"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "fdb54b125bc4c20aa9c700fae8af620225a1ac1a91634ee2e0f5d094f627d86b"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "07c84a301845a0c3bb3697f932ce3fbe6a478caeb9103688d6cc00d066b30528"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1509042,
+          "sha256Uncompressed": "f687c61213c33024bcc748fedb72c91269fe35578d8e8d1ccd3117d3159d2fb7"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d3ef183518c12acf3a6667b0c57f42c27c5717719ed3238e806cb8b7bf944551"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.66584999251051,
+          "meanSlotMaxX": 76.19892441098537,
+          "meanSlotMinY": 4.828069839621652,
+          "meanSlotMaxY": 63.15147483968526,
+          "meanMinimumPairDistance": 11.675009138043402,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.871978111502333,
+          "meanSlotMaxX": 76.14022913559995,
+          "meanSlotMinY": 5.002311530039309,
+          "meanSlotMaxY": 63.00621185835389,
+          "meanMinimumPairDistance": 11.60946508864058,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "9fe1e020d8e82da955d3b6cab7b9293aa144a62e75d538b5a8574445dffc66b7",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9fff4fbb3383b3bb09cade75cb260467f2dcdcaa462d0fafa4dd20d564c0c842"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9076f1250a06821d8f1e2303586e3fb43e0fbd1fac5f9111aebac6ff26a171e3"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "fdb54b125bc4c20aa9c700fae8af620225a1ac1a91634ee2e0f5d094f627d86b"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "07c84a301845a0c3bb3697f932ce3fbe6a478caeb9103688d6cc00d066b30528"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1509042,
+          "sha256Uncompressed": "f687c61213c33024bcc748fedb72c91269fe35578d8e8d1ccd3117d3159d2fb7"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d3ef183518c12acf3a6667b0c57f42c27c5717719ed3238e806cb8b7bf944551"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.66584999251051,
+          "meanSlotMaxX": 76.19892441098537,
+          "meanSlotMinY": 4.828069839621652,
+          "meanSlotMaxY": 63.15147483968526,
+          "meanMinimumPairDistance": 11.675009138043402,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.871978111502333,
+          "meanSlotMaxX": 76.14022913559995,
+          "meanSlotMinY": 5.002311530039309,
+          "meanSlotMaxY": 63.00621185835389,
+          "meanMinimumPairDistance": 11.60946508864058,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/base/C0/00000000ABCDEF12/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "adbb4c93ff7025a56ffcab54f0bd8448b70453e025544ffd6c712bd16041a3e7",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c574d58892ba60d5918a13ac841f39a0b401ba76307e44851ce53719bf9720e6"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "afe32e68db61516d3876c70745036c698b5ee7efbefb45d6714e1c1b8de092ee"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c903cee4be71eac75daca082eb0097ef763153004a50383681a9bcef653a761f"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "111a881de777429f51dbd83352b00d69ab0a46304445a44df57e9c57dc1b23b5"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1504307,
+          "sha256Uncompressed": "59252ae0dcc00c3cb293ad3d11ed022224a7d94ef92d250cef9d7136295904cf"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "5bd953fba7edaed981bb5522dd0a828194d766909e447efc3f0bb25843299254"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.822975993843002,
+          "meanSlotMaxX": 76.10248291250728,
+          "meanSlotMinY": 5.026265414225313,
+          "meanSlotMaxY": 63.06056076760765,
+          "meanMinimumPairDistance": 11.619569944384788,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.696965574288793,
+          "meanSlotMaxX": 76.24350242916395,
+          "meanSlotMinY": 4.836796951491748,
+          "meanSlotMaxY": 63.07499511270303,
+          "meanMinimumPairDistance": 11.659068041853217,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "3c0d00ab14615d98f6e50d821282b2ef56124466ec09e8f55931dfc4f36e50aa",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "21a2d3cad173182ee976f2bcb17de5046411b6d8e9f64ed569ff5859f7693784"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "afe32e68db61516d3876c70745036c698b5ee7efbefb45d6714e1c1b8de092ee"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c903cee4be71eac75daca082eb0097ef763153004a50383681a9bcef653a761f"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "111a881de777429f51dbd83352b00d69ab0a46304445a44df57e9c57dc1b23b5"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1504307,
+          "sha256Uncompressed": "59252ae0dcc00c3cb293ad3d11ed022224a7d94ef92d250cef9d7136295904cf"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "5bd953fba7edaed981bb5522dd0a828194d766909e447efc3f0bb25843299254"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.822975993843002,
+          "meanSlotMaxX": 76.10248291250728,
+          "meanSlotMinY": 5.026265414225313,
+          "meanSlotMaxY": 63.06056076760765,
+          "meanMinimumPairDistance": 11.619569944384788,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.696965574288793,
+          "meanSlotMaxX": 76.24350242916395,
+          "meanSlotMinY": 4.836796951491748,
+          "meanSlotMaxY": 63.07499511270303,
+          "meanMinimumPairDistance": 11.659068041853217,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/base/C0/00000000D1A6D05E/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "c25534251f87a973a95a28fbe1f06828bc01bb0c65425c2857d5dce14002bdfb",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "609e4047ad9472f1012a9425eef1f471c6309e2246a1da693c48498886120e6e"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a06c1d458b6ab0a17b8980edcbaee6a514b7f62f817d45087aed23fba300bdfc"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b24e8eb55ed6d447ae77c6de0810e3e8d4ec9b4466817b74c08715d6f8c4701b"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "8ccbb7a0ff5d2d81ab9be982a614731e802f926b52f68a5e6f07b6c491961e9b"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500094,
+          "sha256Uncompressed": "7e308e502572db3eee1a5143943d608d3271f7be917e5833de12e15cacaccdee"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "6dce180629ef8e5e442b00064d4e6f47cada178869b93b0ed44b145f0223dbdd"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.075002075396224,
+          "meanSlotMaxX": 76.26155020535907,
+          "meanSlotMinY": 5.114943007795534,
+          "meanSlotMaxY": 62.97569083033647,
+          "meanMinimumPairDistance": 11.583363123833179,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.470865038020136,
+          "meanSlotMaxX": 76.07937817584232,
+          "meanSlotMinY": 4.723874259263061,
+          "meanSlotMaxY": 63.17550977868225,
+          "meanMinimumPairDistance": 11.706959266353884,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "72e186fa2cf176c5fd74c49269b052465573adfc3376c8b16bd2f8b8be017c0f",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c018caa826101016914bdb68d168216203fcfee772ebbcebb2478d53caf8b954"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a06c1d458b6ab0a17b8980edcbaee6a514b7f62f817d45087aed23fba300bdfc"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b24e8eb55ed6d447ae77c6de0810e3e8d4ec9b4466817b74c08715d6f8c4701b"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "8ccbb7a0ff5d2d81ab9be982a614731e802f926b52f68a5e6f07b6c491961e9b"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500094,
+          "sha256Uncompressed": "7e308e502572db3eee1a5143943d608d3271f7be917e5833de12e15cacaccdee"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "6dce180629ef8e5e442b00064d4e6f47cada178869b93b0ed44b145f0223dbdd"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.075002075396224,
+          "meanSlotMaxX": 76.26155020535907,
+          "meanSlotMinY": 5.114943007795534,
+          "meanSlotMaxY": 62.97569083033647,
+          "meanMinimumPairDistance": 11.583363123833179,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.470865038020136,
+          "meanSlotMaxX": 76.07937817584232,
+          "meanSlotMinY": 4.723874259263061,
+          "meanSlotMaxY": 63.17550977868225,
+          "meanMinimumPairDistance": 11.706959266353884,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/base/C0/0F1E2D3C4B5A6978/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "e4ea26b70934be89498ae50ec4033440d4f72e5a6bb7d55747b96cd2c816ae01",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "7ff245e25504ada8a031ca322e161d362869a019eae04fc72531c9537f4c5778"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "97a6b3a8fb54a3f400bb3b4904fc38d3244519e5ba55028324f554a071799163"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "8c864cbb673834235627034c6eedda2540e6d520ecf77faf64b6fe2c94c14ed7"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "5392bb10fdb71c3d7f0363c2ab8245da1944cb196c8af9784f92dd45c336e508"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1498115,
+          "sha256Uncompressed": "305b158445dc6fb65ba6b18d56e5c3ad723948934aed24760d66d6ad6b46b2b5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "1371c367eceb869b1af402f8d15909330506f4313e15a78fc2ab6a64ac252580"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.78793438641384,
+          "meanSlotMaxX": 76.09984809031859,
+          "meanSlotMinY": 4.955009750018361,
+          "meanSlotMaxY": 63.04500566595327,
+          "meanMinimumPairDistance": 11.629056476302036,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.714771081567722,
+          "meanSlotMaxX": 76.23154407090709,
+          "meanSlotMinY": 4.876952046374374,
+          "meanSlotMaxY": 63.128657666018114,
+          "meanMinimumPairDistance": 11.664203449069054,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "control/head/C0/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "fcd84916ab9d65c1e0a4ba4bad98ca86d12ff618b5ecd6e082bda134469ff299",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d41ebcf8274795f3466230a4e017e355d175602d5aeef013e8f0a18d672fcce5"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "97a6b3a8fb54a3f400bb3b4904fc38d3244519e5ba55028324f554a071799163"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "8c864cbb673834235627034c6eedda2540e6d520ecf77faf64b6fe2c94c14ed7"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "5392bb10fdb71c3d7f0363c2ab8245da1944cb196c8af9784f92dd45c336e508"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1498115,
+          "sha256Uncompressed": "305b158445dc6fb65ba6b18d56e5c3ad723948934aed24760d66d6ad6b46b2b5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "1371c367eceb869b1af402f8d15909330506f4313e15a78fc2ab6a64ac252580"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.78793438641384,
+          "meanSlotMaxX": 76.09984809031859,
+          "meanSlotMinY": 4.955009750018361,
+          "meanSlotMaxY": 63.04500566595327,
+          "meanMinimumPairDistance": 11.629056476302036,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.714771081567722,
+          "meanSlotMaxX": 76.23154407090709,
+          "meanSlotMinY": 4.876952046374374,
+          "meanSlotMaxY": 63.128657666018114,
+          "meanMinimumPairDistance": 11.664203449069054,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "0d1623026ced17aabb4b3c9959e8ed7195568a9b7b95c90493be3cc1edec87b7",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8d2d074b281561ebccfcce40e94abb9555e57016dc755fd477ca0cbfb8f3ae35"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "b338f3774ebb25541b349cd0881dbd05da45e4ca868df03785e864dfb6867a55"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "3052a022e3922a97f224025870b8cea9be0ec073787bd4babd6ec3aa9f048c5c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0d9d370f1b86b4be35ec49e1f5798633a5a0f459605fce8d910beb1a39821f5b"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1508174,
+          "sha256Uncompressed": "8ea2a22834433e372d1b4fe5b89e925e0a027c464a230f43d493d4a610c7e213"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "1f35bca4aacc0ac33935141b5b7c796fe5b6f55caf629fa73f707365597f913b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.428427877800384,
+          "meanSlotMaxX": 78.8822978591276,
+          "meanSlotMinY": 5.2760901846274875,
+          "meanSlotMaxY": 63.118976152553174,
+          "meanMinimumPairDistance": 15.596328747812771,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.33381849999017,
+          "meanSlotMaxX": 75.77821743993636,
+          "meanSlotMinY": 4.626652405326853,
+          "meanSlotMaxY": 63.04528218117128,
+          "meanMinimumPairDistance": 11.697633604365002,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "3b8d11d6662e27f1871da799d2d87368e2cbdd4d22070f224485d253b421b571",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "7c2bccc2e6b16acc0370023325fc90d3530509643e2dcdab08f581b2d3812985"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "fbb9b1970d010042d18a39b23def3bdc2aa438b62f148a05c8b909329ca92324"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b5206299c2adfdf5c0aa55fe016ec071ade0a340cbc9cfcdaca0887d25a84890"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "7f6775c162288c91c40057608012065670f4f3fa0367489ad4ba574fd8d6f9bc"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1494420,
+          "sha256Uncompressed": "9890fae1dd99695b13b9bed0731320440e3b99282759d59120417d8998c3a0ed"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "49defd6144049931339d7af03e739ed820a276af61b4b68bce0d54f488d1d72c"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.347648799299087,
+          "meanSlotMaxX": 73.14619753490071,
+          "meanSlotMinY": 5.225013223179455,
+          "meanSlotMaxY": 62.82207213446141,
+          "meanMinimumPairDistance": 15.57838247643603,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.83906068651585,
+          "meanSlotMaxX": 75.82211467194935,
+          "meanSlotMinY": 5.032398912548526,
+          "meanSlotMaxY": 62.915349197832754,
+          "meanMinimumPairDistance": 11.590691451971265,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "78feb50f7d88c3f8b2f7a97852f59ef10960143f0b0bf23f89260129f203bdbf",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8db70dc6d100e366ae08ecbf06801e18c4c625308d9b79d7609cb069d11e68f2"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "3d1f939692796656404b9a908446c14822319481904fe6a054fe5a18389864ce"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "0f2b727f135ce5c4ff4075b8ea4fac9f4d2e0d0a5d390db08e10860242f9a551"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e44325ffc2166d5a20c8b714ff19e06a6567055906ecf6241120dd77389a6bf8"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507029,
+          "sha256Uncompressed": "5361c1a86ea7d20b1fd2379dc6cf62e0044ed872e63979b48bd40458b21e8605"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "4711bd3a9d318a0e830a67498a0d45afc787b70c8843a4249115b717b2ff0543"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.255111262737334,
+          "meanSlotMaxX": 78.87182632644374,
+          "meanSlotMinY": 4.878602492005501,
+          "meanSlotMaxY": 62.854697573191366,
+          "meanMinimumPairDistance": 15.641188919570716,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.492781112608167,
+          "meanSlotMaxX": 75.77538935779062,
+          "meanSlotMinY": 5.018934767909283,
+          "meanSlotMaxY": 63.2358899758757,
+          "meanMinimumPairDistance": 11.65819777390496,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "03daa3facd4f8eea3c626c97c71e042ce33c77beceefafeb66f11ab8eb7ac07e",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "16fc19c8baea270e35033965ba382d212e3ca2a974fee36f2d2b3246a909f2dc"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d687bdb66379d5b1bdab6f74b798ea391e64ba810fd03641f98e8221ffc658b1"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "44bfd3fbf773ae57077f8d4d25bd211025149ab2442a13826f11520bd6d07755"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "d1bde62375f69be039965163c51956dcc18c702513575db0aca4aa37f759cdfe"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1510436,
+          "sha256Uncompressed": "815575b731eeec024deafde707006a7e52d78fb7f29e5e02951687c70ba154d1"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "f9f6dbe638c35190bccbbab1d6f0a3d71120fe15d836641839d19dc88e6f33b0"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.73715800215031,
+          "meanSlotMaxX": 79.73953101473337,
+          "meanSlotMinY": 5.1289345158054,
+          "meanSlotMaxY": 63.03192049208503,
+          "meanMinimumPairDistance": 15.68627920962194,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 23.98437424570029,
+          "meanSlotMaxX": 74.93830181589418,
+          "meanSlotMinY": 4.783992564762744,
+          "meanSlotMaxY": 63.068385173357,
+          "meanMinimumPairDistance": 11.66959343439747,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "085b91eaf6e9ecd6cf47469636a7e546e03c35e2a537c3ee8c9d83123bc2f78d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "17288f780e656411ddb990b3b7e762b99c9baf0f07af64c12da36f99bcfc0ecd"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "7ce76e7693b12d637f39f8ff634cdaf5df03d06f561de77a4e5a9edea1f1faf2"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b691af0d8ce887a780de17ad210e720170b9cee26b432119e82d13e8b2acc7e5"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "415e9aac57985c19412bb1a149847a6cb51f833bf56965898dd93175bcba6908"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1501614,
+          "sha256Uncompressed": "cfcb21ff14381e276d1af009ed2f67cfeccb0ac5d3fb79a3610eb93329efeae5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "247f721f94347f33554181140e3f167fcf7cf1ec0d4aad47d606873b60828edd"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.45581078508606,
+          "meanSlotMaxX": 79.10812351946879,
+          "meanSlotMinY": 5.210521199852938,
+          "meanSlotMaxY": 63.07174460519987,
+          "meanMinimumPairDistance": 15.62152302506624,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.271262988123347,
+          "meanSlotMaxX": 75.54045694927261,
+          "meanSlotMinY": 4.715171472366507,
+          "meanSlotMaxY": 63.02556834973861,
+          "meanMinimumPairDistance": 11.676464641652073,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C1/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "ba11055d2679b333d55e89ba66e54bc8da0321d5f237d01dce80c2ac3ac1587d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "5e4be6644d40d21c48b2db85d73152b58b1983fe44471ea25cf8c75398a0eb66"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a56668f9fdc00532389a6aca207d22b900cd2b4485e3835789b07bab38313f6e"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a15ecfee7ded9ee9e9481b9169456a5c6655c21d8b92ee918c61c03ef454dccc"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "649dd192088a01691278b10b9e876cd3bc41416b2a5ecd36514b1e55dab20bbc"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507540,
+          "sha256Uncompressed": "e5259c3c6972c5c4b9354429255fb429dfdf8cfa7b3c9f74a6cb2134f0d3ccaf"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "261d78c41e0fa6ac870e0af32e90bf06fdb1f36ed182d03f982d425269c40d47"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.547202390093158,
+          "meanSlotMaxX": 79.1364647051072,
+          "meanSlotMinY": 5.015757756113209,
+          "meanSlotMaxY": 62.79758520593828,
+          "meanMinimumPairDistance": 15.61200788088274,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.185792790375125,
+          "meanSlotMaxX": 75.52076934818409,
+          "meanSlotMinY": 4.885184238697834,
+          "meanSlotMaxY": 63.281389966942925,
+          "meanMinimumPairDistance": 11.693757718822582,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "e168847430639c3259c5bb16ee7f2aff1a289436b247d284bd48b1caa36451a0",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9ee5e3cae100cfe5589229a8a47a4e8db5dd0ec9268af6a3c1ed0eae61c5f495"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "7884543712ef0dc05e1419aaba15a2f8ce7b986ce36d3c11686c04d93f8f59bb"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "7249715491e878fc8ba0b8e5554fca67a1e1929ccee3b579d439a1b168f8a463"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "6181bf75b800a4129a28669706ecb18739ffa154415f6182fe7969d1d7c94781"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1513416,
+          "sha256Uncompressed": "5851de5d32f8634928235aa92e1f5583d8507bf004b9dafc824d4a8bdeb53a52"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "432c28546584a011c9e28c75e9247190cad5c47cc2ebdbba2beca7eb1553f252"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.43669351645471,
+          "meanSlotMaxX": 75.55408044340795,
+          "meanSlotMinY": 4.915742180034358,
+          "meanSlotMaxY": 63.03685671726985,
+          "meanMinimumPairDistance": 11.638490175485156,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.28782212591831,
+          "meanSlotMaxX": 79.07508900975357,
+          "meanSlotMinY": 4.9941303819596214,
+          "meanSlotMaxY": 63.05229284613262,
+          "meanMinimumPairDistance": 15.680164674684779,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "d649fbf2e8c01e358c73622d1525f254023ef5de03809b1c30e64e2e449673ea",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "497a24fe5072358e7722297059fc36b52943c2002a54e40f1b213fa31acf4c98"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8d64a9938a2d965a13563537bf8af26c32154ed6fa0d6ec0a7b4ece117d66028"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "db177c81de50af8951d08575ccb52f878c4c7a268bd4ca250361252cdc0b139c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "8211aabab1d41a621e7945a69bee2831aa60aed9bf55453567e4643e33dbe9fe"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507177,
+          "sha256Uncompressed": "827a7e0cb4a3e0523c376a425d7f57968c086a07766336f27a368ad281d72f8f"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "e5be6a954acc56d58361eddf62537fd9f9fab3b6312d83a2a43e9ec07751420a"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.691775303857963,
+          "meanSlotMaxX": 75.84355417114998,
+          "meanSlotMinY": 5.0097294193556685,
+          "meanSlotMaxY": 62.527277716861995,
+          "meanMinimumPairDistance": 11.512494229195717,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.4093368986774,
+          "meanSlotMaxX": 79.2408768240197,
+          "meanSlotMinY": 5.228323214535236,
+          "meanSlotMaxY": 63.17671844649706,
+          "meanMinimumPairDistance": 15.648847484508968,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "4ba69fc19b69bfc0cd71abf2ad3da1166a0a2463448bb85fba736c77b4177d8a",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ec1dc64680c176509a29027248ac1045ae57366b8a00dec1f91b20e78bc72295"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9b27c7924872bcc790fc870680a7f228f83af65327aba3cdebd61828d649a7c0"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "dfb04571af9cf34a9ea39bf4a5ef8bc69b34dde6b21a7e33dedebd4ae49aeafc"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "51c0ea5f221f30d321024be2b41805fd895286d7a12aeae57979424c4cf44a6e"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1505802,
+          "sha256Uncompressed": "15e79e1c865b71e66724a5377306d00601a3143ec88abf8a927584a48bf53e8e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "f6dec76141694d5586b257897ffc813882eae920393bd28667f733a149dcab08"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.15770600924203,
+          "meanSlotMaxX": 75.58028795334182,
+          "meanSlotMinY": 4.819907044390378,
+          "meanSlotMaxY": 63.29450836623871,
+          "meanMinimumPairDistance": 11.708811373226634,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.567463406925015,
+          "meanSlotMaxX": 79.0663723757087,
+          "meanSlotMinY": 5.076784692103515,
+          "meanSlotMaxY": 62.83848393451073,
+          "meanMinimumPairDistance": 15.624384459173108,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "2213f75f3afaf7d24a170d41144644702f2c11a9c4ec30313ac54da82b8f5510",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "21719290a1ff0cae3279e78541ba6637502e2d6e85bf43d193f7e740f9248914"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "21b25ccfa606fd2fde96cb7037620ce5d032354719c1c0bab96d56f17a693a62"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "7cc94835b8d64768950f07d6bd7c6ffed5f3116b9076b5956e5029f246b708db"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b501a26a18171ebfad455e69e6c140526f97abc1510ae8a5ceb3547295d4af66"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1508417,
+          "sha256Uncompressed": "d0d8c6cd83ee6336bb35c1b5e67c756da5d1be2525ff78f84df79423f00e62a5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "a5ee8b48e69f93e2a4d6acbd11556bd81802d03c7b4e83256c255165e1fe4883"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.228942499401132,
+          "meanSlotMaxX": 75.46604642382542,
+          "meanSlotMinY": 4.802223104298447,
+          "meanSlotMaxY": 63.124436732492995,
+          "meanMinimumPairDistance": 11.679522804848435,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.480468675435414,
+          "meanSlotMaxX": 79.1802608952213,
+          "meanSlotMinY": 5.094454922908593,
+          "meanSlotMaxY": 62.97966300623711,
+          "meanMinimumPairDistance": 15.662286563886928,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "280ec92512f2fee820053353b6483da41f6c8f8af945444592840929d4ddb566",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c5a12654efc95dcb82615751a06d24cd6c6fa8234c6b045ab870bf7ae001f453"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "6f77693f387af8609aa96611c01972a510415692023561a3673f22ae2b24554a"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "194e854df6f41485a55b46c43c9d1059c299c9187da4f64d633c1a426eb0db6e"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "985eab3cb6c0abc1120156cb97da7fef134e1549ce7601f84dafabfac463e009"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506037,
+          "sha256Uncompressed": "55696db83f5553be8a8fe072ae21efaadef78ac5f44a9c3fa22159edeee42161"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "3bfa10ffb820e6618d9cd4b375042d668f8614b49a8fc1e45494f270ad5ba0ec"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.233574684475233,
+          "meanSlotMaxX": 75.69336282439792,
+          "meanSlotMinY": 4.674261345373515,
+          "meanSlotMaxY": 63.13694451538249,
+          "meanMinimumPairDistance": 11.707626418433001,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.52054116275523,
+          "meanSlotMaxX": 78.96392449350869,
+          "meanSlotMinY": 5.215441569661376,
+          "meanSlotMaxY": 62.98444979714341,
+          "meanMinimumPairDistance": 15.621903695965912,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C2/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "9909e70b68535753ca1f7cca40b5596838fa0cd7a593e98b277fc5f7886c2ed2",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "e76408360c679c9ef071c9f5d75b496252a17ca9d6f674a032a7f0f8b2ee7455"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "4a11202ee8db4ad03bb51c7348bdc41154b6aece704a0cb312364a14c7f4109a"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a36b2ecd84595e53f7da8de8f9b2f93fadd3a9ab3a1e7f2cf7a14d23fffa30aa"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "d0b0d7067d209f70688817528227abeec14fd086d761f8628af869f91cc26109"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502546,
+          "sha256Uncompressed": "38e85aadf6a65f68f84b8623577f4eb5a472ffd31bb5d05de46b50b53a40b028"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d00585ca9678d2e736def382fee77dcdbbaa0e9adadea732204a3efb36781363"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.447914129787137,
+          "meanSlotMaxX": 75.66700858492663,
+          "meanSlotMinY": 4.907916157494523,
+          "meanSlotMaxY": 63.11155622431401,
+          "meanMinimumPairDistance": 11.651637334563462,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.298211665393605,
+          "meanSlotMaxX": 78.97196733710717,
+          "meanSlotMinY": 4.986126619245492,
+          "meanSlotMaxY": 63.01068949418151,
+          "meanMinimumPairDistance": 15.671343768278193,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "dfcc1381f29e449b75847112e2528e7fa3fdb77c9b066a614a76f0611fa18790",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1accbcf1aa326df5d1d2bac1339db9b3780ea8a73cd54b970461cdebe6b8aa24"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "b05dc6639991064346937e5f7d6f4210a0cae23e5f60293f74adb6353c7c9d53"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "8df666203c254e9c04c0a053231f14441c4b67ee5fed09644b035d21759077f6"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "d2e49cafe637354e9cfc50642b0a68ba4f07937baa2af56ea77495f23213cc22"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1526374,
+          "sha256Uncompressed": "ea99d64104a86a8f5e9f441ffa2dcac30c95c10245d016aef80040fa91115515"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "31e20f3bbe2eba8ad1930af63317b8140eacef0a9de2473105abff243a9d5104"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.525345842591783,
+          "meanSlotMaxX": 81.50940331162501,
+          "meanSlotMinY": 8.031038624487218,
+          "meanSlotMaxY": 60.161459861807224,
+          "meanMinimumPairDistance": 15.398967252191817,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.64341662871811,
+          "meanSlotMaxX": 74.4569017222401,
+          "meanSlotMinY": 5.29734645685193,
+          "meanSlotMaxY": 62.47568781278441,
+          "meanMinimumPairDistance": 11.445010729252328,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "ed69033a205b42239e966f428f46a1951b409d03a37f4d216c5624986bdd1d13",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "410b170aaf5f2f138c22d18e68f530690805955c442a8afa5b608ee7ca101b29"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "49fc48d2e1a3070afd454fc0b3bed27a2eec327779effd66892d480c72a37836"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "24a7bdf04c4decbe5bb198084e1c1dd5ae5dee5d42b0c9e8e4fe518774dba6da"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3a0f1f26065d55a725da1988731f49644bbe085d1aa8f1eb725419a041b71502"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1523715,
+          "sha256Uncompressed": "6a7b487998e1cf2d810c1cb93eff76586d56b857ed23e833e629e2e518adbfe5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "4e03ae4a810cfcdc745fdce9299cbfa7b3e16e0286b3e4ef3ac7bf8610aff2ec"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.564044719161906,
+          "meanSlotMaxX": 80.73572720382634,
+          "meanSlotMinY": 8.58028064562406,
+          "meanSlotMaxY": 59.66844709017676,
+          "meanMinimumPairDistance": 15.17301984584422,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.66757651125427,
+          "meanSlotMaxX": 75.27820932988108,
+          "meanSlotMinY": 5.0430756554444365,
+          "meanSlotMaxY": 62.70080462058219,
+          "meanMinimumPairDistance": 11.543632319976728,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "178d101dabd15b291d1b7690656ac1083f8d45f73e3054a3e4f471c4199021b5",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "49940a5197e204cdf8ba332cc145dd48d69ca990ab1067617b58a3760872e55a"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "2a458773c11f7ed9801d877f4d65542da2395cc7f4e819f9542b09c25d144146"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "9860bccde0af4d7fe4f7eae5288e1ded25b32be5b083336cb1acd89b722a8dea"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "f05bc51cad8c2eccb0829e59e341a4cd18e175935f2859edd25a00debbe01ca9"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1525830,
+          "sha256Uncompressed": "aa2ce6a894da6cfa694fe094834a88c639ed2d5eea7ae427d6cf5682cb444825"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "41e04819f91081fe8f8074e46a442f7f67a0d848b5785b4d8363b01c1293055b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.661024163247443,
+          "meanSlotMaxX": 81.62558815441704,
+          "meanSlotMinY": 7.985214036160808,
+          "meanSlotMaxY": 60.08821673311921,
+          "meanMinimumPairDistance": 15.384288178360968,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.546953584360224,
+          "meanSlotMaxX": 74.35544349793189,
+          "meanSlotMinY": 5.309964917426167,
+          "meanSlotMaxY": 62.59171603484035,
+          "meanMinimumPairDistance": 11.467580573395752,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "3124ddc8857a47bb57b1eb59e50f72737e7291e0d17af76953547afe2b4c6375",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "952ecd5ce9715c15b2a9e6f82b6cb1f0d881b308a0172e8ed37e7cd4ad0c76e3"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ce9b7991129539a4c6edae9d811a788d4d38bbc8cf9211341bd6c4ae23a4c583"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "e0d4dbdf93a156b1001a654ecca502de395b0193cfaa9960e48232c61d0c5df0"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "bdce6d157deed767a1121e2badfabf784826eab1fb2f5395833fc96ec6ff46ad"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1537774,
+          "sha256Uncompressed": "806660d8f314b7de7a98968af7cccaf9e1691e64cebd4e7dc79aa47f153cea32"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "37f3adf1f4d57f1c3947a1b0036c5b54c69787bc3e584d8ed6f647fc2aad5d4a"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.49382545586906,
+          "meanSlotMaxX": 81.69913655460873,
+          "meanSlotMinY": 7.905017041085364,
+          "meanSlotMaxY": 60.19876896435006,
+          "meanMinimumPairDistance": 15.482525039541185,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.694460910073797,
+          "meanSlotMaxX": 74.27948410395028,
+          "meanSlotMinY": 5.4553086804947135,
+          "meanSlotMaxY": 62.465035988941494,
+          "meanMinimumPairDistance": 11.411719667847288,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "97502d9480cfee28c60e9039d1f27f8ec54b157c1b9703158c760b60944ecaa6",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ab3718b8c2fe2b2e364e77e99ae3693e4cc7a2497bff0c34490ab803c4f2b69c"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "cf489d5caaf8b143d638809cf0d267925ec167bc22cd3a30c815059675aad36c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "6ab2d8927d10bd917a75f65f4ecab06a33c62e677f6b9af3d460dfb3736efd7e"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "294f6a6b19b62d2854a16ad02e19ff615b23a48c064f7b758a653da493788357"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1532086,
+          "sha256Uncompressed": "0f43ca7e0e3bee1faef1637433430d6e6149df570cb114880f89a9bc1d502a5a"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "10db5c5561e0319c2e5b3c061af561d913e802b072b7d0b0ef76c75e39f3a202"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.41840902073573,
+          "meanSlotMaxX": 81.43368589812074,
+          "meanSlotMinY": 7.9207516799522955,
+          "meanSlotMaxY": 60.176595143025516,
+          "meanMinimumPairDistance": 15.430544390806746,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.795703988712905,
+          "meanSlotMaxX": 74.546858007187,
+          "meanSlotMinY": 5.358055987162322,
+          "meanSlotMaxY": 62.43272225235424,
+          "meanMinimumPairDistance": 11.426552373437202,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C3/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "a60db71b1eb8abd5368c17ac2249d85c2d008371bfec957031ee88dd2e3150ef",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "fa4206dbfc05c3d386da694ebbdcbbba052e59b832a4a8b9c05ef2dd376eea6b"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a37dba428121943dc2295d8b183f8de13f9162cad2478e48bc4f4ecfeea8632d"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "eff79e6fd942f85fc4bdff771673a64a9f872394fe97b96e6a24b30298369eae"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "c486eed483ba36bc9dddc456aae98bd8c531cbfbadfd7eb545436491a0ff19c3"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1531059,
+          "sha256Uncompressed": "c9b06568e9f3c7185a90c055b3d41c8629585057772cac30b0a6cb4af3b8c865"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "7c38ae8f0b46fdc8288572fa9bfb20831ad23ed554120943c1cb68ac5ab362cd"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.53997598312266,
+          "meanSlotMaxX": 81.45152010524089,
+          "meanSlotMinY": 8.053995045942894,
+          "meanSlotMaxY": 60.17790444667839,
+          "meanMinimumPairDistance": 15.396275833422026,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.65261421570255,
+          "meanSlotMaxX": 74.5314946334365,
+          "meanSlotMinY": 5.276093887071675,
+          "meanSlotMaxY": 62.48984041812519,
+          "meanMinimumPairDistance": 11.456783655915062,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "6735570b56df6f4d08cdf3098d5b9b1fac97197380be1fad4883fc0a35885bb9",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d2a22f3cdad2d089cbea7f0dd88ed1404e6e0147d54b884cf2bad3a67e4c6584"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "52e2df6bd4a80e8310c825b4eba1af1a94477f21d70e9ef8aa01bff84845d834"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "f5de3b930c0de845b7024088f2723ab61ffe2f4ab4ab843dc11d7e455d5ae5f8"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e3248f779d0c80a9a81e92662bd714c8ea56e93770adbd2120ebbfe61b88212a"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1533580,
+          "sha256Uncompressed": "2bb82d944e9d0278de11150d8dad9beda5ea254afeca9d70ae34eb8ad432f467"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "789783597b358714430cd5a193053f681435059aadd24e595fff58ad78adc400"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.993057143280012,
+          "meanSlotMaxX": 74.92472624584036,
+          "meanSlotMinY": 5.654312729599295,
+          "meanSlotMaxY": 62.707364663117175,
+          "meanMinimumPairDistance": 11.418800944374562,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.21404860366236,
+          "meanSlotMaxX": 81.06351867824417,
+          "meanSlotMinY": 7.752328620729372,
+          "meanSlotMaxY": 59.96707591283926,
+          "meanMinimumPairDistance": 15.403755510893587,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "96dab986bd878d84ce5dfc194857c4a8ca0081b34610651b8a3bd97f7e470ad8",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "eb9823de8d83b936f15b2966b716d7f06e7f6b9c2d0ad3e162730139a72661c8"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8ab9671603c95d69bf2dbfcd4e86a5b766393631eb20b591b20e9e9ff12c7499"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "dac328a33c377f9d053ba26d042285f4172bb631ab8106c2cc6e395944c49327"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "7b169f837032eadbd92ea2de4fcf0ed51cff1c10766dcfd2590ae93d59a8d771"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1519149,
+          "sha256Uncompressed": "c2f3058f0c958f4fc75e7ca76f78195ca485f86207968bfbef8a5ec86754793a"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "a8709844f689bdfba71a13b267b8cd2769cbd8e1946d658b11c09d957e804d3d"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.4978440501482,
+          "meanSlotMaxX": 74.2220340345093,
+          "meanSlotMinY": 5.924018127463165,
+          "meanSlotMaxY": 62.36455462885317,
+          "meanMinimumPairDistance": 11.296935437685887,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.603370437511867,
+          "meanSlotMaxX": 81.62380887573764,
+          "meanSlotMinY": 7.856986054897476,
+          "meanSlotMaxY": 59.98781234642875,
+          "meanMinimumPairDistance": 15.425573773412474,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "668c97dd1149238ca66fa964557d33aa33fe04be9bf6b1beb1179e58d302e7f2",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c879541b31193c07cfa3b13f7c586bc8a8c307386a5fc9c3afc07da94aa89f96"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ecf080193ecc25d9a8c0846a90c14c943334bbd6258d83d73f488a01be5bdd42"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "28b10e05e433c59c3723faba34512fd93aadbd5b83efdebfa3c6d6937c3dd566"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "75ed9e91e75302de70c1f4b7f9af63f94a9e37851258143f7ecb174ec4fd1cbf"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1531853,
+          "sha256Uncompressed": "004cc96aec59e3dda409a2513deb152282c09edb4fb9d3f9b204c50a0ee6e977"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "07339a6e0a5498432c62e8a13ba11edd1e5afea45edbf65a5dab179989e578ac"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.98785843242793,
+          "meanSlotMaxX": 74.98516973780426,
+          "meanSlotMinY": 5.6202120788980565,
+          "meanSlotMaxY": 62.747880407924065,
+          "meanMinimumPairDistance": 11.43619104765899,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.28576725840902,
+          "meanSlotMaxX": 80.9966990300405,
+          "meanSlotMinY": 7.773153711467781,
+          "meanSlotMaxY": 59.96096681627945,
+          "meanMinimumPairDistance": 15.354804421569245,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "a5c8ebc24c9974693bb0147863fdc614b0578a1aab4e29316c928f5c01a9e243",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "bab835d4dab9d6f119ad24c4e2fe40dfa62cf305b382cdb85d6fe983bb1877ba"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "acc9331f513ce8d4c0bfce77c5b257b32a7986431ff1a07c17088b0fd56407c9"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a2a4dd2809382090b38b8957333fa9783b1a9588a7b2efc1a8b72cb1ef8336a5"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "c2235260268c09f181401f07cc837dc83a70f3775eb3123b72c75ea4cc447b7a"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1528970,
+          "sha256Uncompressed": "7c8e03630ab9ee6bff943cc75dbd4b04fd6de7dcd49912244d3aef1ed8a05f78"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "3fdacc3475d7bc853ea69e32202732abf1173812ff4b218f5edecfa8ac66e28b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.84197550588728,
+          "meanSlotMaxX": 75.06213333793087,
+          "meanSlotMinY": 5.577748582650958,
+          "meanSlotMaxY": 62.93370206016208,
+          "meanMinimumPairDistance": 11.483622405985514,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.417366622441318,
+          "meanSlotMaxX": 80.91110315169048,
+          "meanSlotMinY": 7.843939021255408,
+          "meanSlotMaxY": 59.86077239406151,
+          "meanMinimumPairDistance": 15.293960855808523,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "792b43cdc3ea62bb102a301b7f8e4e4efd2976ed8962a613ccdf062a56b6ba1d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "6472ad5301d01e18ae494e1fdeaaa92dfbfc839b7361dbf56537c9551cb6c3d1"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "e243ca209965575335ab7a1532eec7319f9601ee53c024517e05d6ce3c3cec73"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "d3fa4a3c29f62b59c81947e339d3b08b50ae18be65923ef53745b7eea3aaa674"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "ccc204071f13f80b7f1d5bb6e173ac4be61447b70ae4a2eebcc1c8754a8a5c47"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1525479,
+          "sha256Uncompressed": "84a7a91fe2682db1170d28cf65037858c86e8085031db11dd1f7af4d0f3c9b7d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "47e3f8a7bc3f704777c5eecdaac7c4f34cdc1e0d00afeec7aae04a092a62862a"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.818466410923627,
+          "meanSlotMaxX": 74.99397678396791,
+          "meanSlotMinY": 5.329993046597884,
+          "meanSlotMaxY": 62.65680993827427,
+          "meanMinimumPairDistance": 11.478637405672714,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.432285316396783,
+          "meanSlotMaxX": 80.96955502524429,
+          "meanSlotMinY": 8.0112327009897,
+          "meanSlotMaxY": 60.02724770735444,
+          "meanMinimumPairDistance": 15.307188067319295,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C4/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "a629f7ab02cb3fd7a90d87091e60766c16cf52122045a3f1d0153672af275193",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "02c1bb669e252ef262f05541912db47ae356690bf0732e92b8be9c4a428e2bdf"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1bd8aeb82fcab78f51ecc2a19dedd064b29a43a00c0968325ccee73c34291e0c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "689124f1211fc4e9c7ae3f382210daa525322a047b7af32560883d193ffb30cc"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3b9a4437267b2d8a22199e62658d898c36ec0f7e061dc06cfa3fc913e592061d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1525587,
+          "sha256Uncompressed": "3decd9c70bef1bc0c261d95c5cef45fe477842ea12eada7b47b326028b1a0d25"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "85d50e2d250791dd1f8a321a6c0b92818f169739159c79a2940cb0b8eaa490f9"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.894044788924123,
+          "meanSlotMaxX": 74.88087567239495,
+          "meanSlotMinY": 5.513105790039644,
+          "meanSlotMaxY": 62.66553720520762,
+          "meanMinimumPairDistance": 11.442793797333131,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.332849006219785,
+          "meanSlotMaxX": 81.09899654708798,
+          "meanSlotMinY": 7.820904836215082,
+          "meanSlotMaxY": 59.989524257437175,
+          "meanMinimumPairDistance": 15.375083415817576,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/0000000000000001/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "68cc8f4537b589b1c13f4cc3baf71a6717230dc84733fa4fed5b3806e51fdc62",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a72f43e4797e10f49670e089cf77f4d3af28b83e4c024666d587e688419bad78"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "e2687f452b61c4dd0a38d4f327cd7b5d8bcebf5e6e106e3811f13575e7b8c9bc"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "eb0fa3f27717989238f803a06883ae7c279b354f1a52927e7ddce7e25c3c1fd3"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "324903ccedc73b28f7b9f091a9d08e8a03deb11df06c90de2faadef928adba49"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502843,
+          "sha256Uncompressed": "da85bb7007bce64e53d0c0e8abc1a28774ecff9b1f06b396c9b2b5e2c316894d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d203c49e95a4dbdbb926c376cc6035c9c78dbdf619211d85dffab2fdcd265f03"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.91296926946401,
+          "meanSlotMaxX": 76.11013352096288,
+          "meanSlotMinY": 5.069957704472894,
+          "meanSlotMaxY": 63.030970312873116,
+          "meanMinimumPairDistance": 11.603511297322417,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.602324491412656,
+          "meanSlotMaxX": 76.22036103159037,
+          "meanSlotMinY": 4.735544691024178,
+          "meanSlotMaxY": 63.1433700548525,
+          "meanMinimumPairDistance": 11.690169495391295,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "7f7f8d407e4951ef6ab740698337df4f02e51e22643b4ee1b0ef07f1dcd89121",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d1c559971dcc474877e48d4dee4c8a15d44680ae49098da5b26105bc912b0f29"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8a4fe0e685c12da080574ef8e065ea5af12a44fa325561bd8ad92c46667fb2ea"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "d8547a3fef7beabf1bddd20db275b65401b88c6d04487cadc6cfccf6d239711e"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "77ac84f30ca54abb3e5960cce35d429bc7a25d44852cb4ab6ea498d94619793f"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500401,
+          "sha256Uncompressed": "eeffd2ed5a7c7faf2a436ce3f06a9d4a26ddffbe3711dd7a54b806aad276d8fe"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "bc4c00ec55879e081eb1eeb6befbf82e514ed5973597b45ed8f0cb639d9aa2ef"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.537751259857902,
+          "meanSlotMaxX": 72.62351916481357,
+          "meanSlotMinY": 4.930582601875417,
+          "meanSlotMaxY": 62.974479397803925,
+          "meanMinimumPairDistance": 11.625729603467953,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.93273240037864,
+          "meanSlotMaxX": 76.69430051723867,
+          "meanSlotMinY": 4.9464710873297735,
+          "meanSlotMaxY": 63.15555950221239,
+          "meanMinimumPairDistance": 11.658341015790816,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/000000005A5A5A5A/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "c8b5a945612e5256bdffc646578f848a64624a3074a53465d9cf6889953ddd58",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9aa83e1557d27fab9c6c3318093ed1de23fe132471c1139d9c18e4b75fd5903e"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "7e19a10e6d3de38145b2b28a7b61951de09043d2614745f8d2b4c226d38fdc71"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "55ac730fcd0f92221fac537768d4ecaa6adc947e2af0474c9cedb16ec4774a25"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "44840c63ebb271dc26a0acd7c71afd62995f60f2b1dffa3a6a9d73644c27af5d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1496713,
+          "sha256Uncompressed": "7f895f976285b0a65211179035da49f9d4e4ba17e5df62f47c113689f87928e2"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "29620784f8d3b4cc547071877037db0d844d8e1b6b0077499c0cefaeef5f73d8"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.859276787634546,
+          "meanSlotMaxX": 76.93703729055217,
+          "meanSlotMinY": 4.942689380883468,
+          "meanSlotMaxY": 63.36768412803283,
+          "meanMinimumPairDistance": 11.711335416391966,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.53303538506317,
+          "meanSlotMaxX": 75.28239225722672,
+          "meanSlotMinY": 8.564219848056924,
+          "meanSlotMaxY": 62.274689141740474,
+          "meanMinimumPairDistance": 11.436677270841704,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "19a34ce59151073076ea8a3dcde8eb528a74b841347ee16ec1814369fe9397e2",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "083bc6e5047fd42a9596a6bb191648cee66ac9a388d29de794751f0d6ac41070"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "cbd77dfeed03026a950ebde531d1c8adc8d3bdec90a404ddff2b5fba04490b69"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "9bfd30fd192c740e9f5f0b41d08f908b9881690bf6813ac11dddaf28a3ce4e7f"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e86cad3a05b6e44a8e72284e1c42e2450e7385d69570ef1189e6090532864b3c"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1492937,
+          "sha256Uncompressed": "9b9d1d594e802c05cc1f31c0350bc4f009d5dcac979b923bc363190efef79fcb"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "5caa984fdc1a75ba08f30f6ebe8410fe90fde3c1c12f151f542d1ae81aa9faeb"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.74605751560362,
+          "meanSlotMaxX": 73.82531263392096,
+          "meanSlotMinY": 4.813446967495237,
+          "meanSlotMaxY": 63.375960768583774,
+          "meanMinimumPairDistance": 11.725421204553975,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.616435968716274,
+          "meanSlotMaxX": 75.37995362165678,
+          "meanSlotMinY": 5.430426502667541,
+          "meanSlotMaxY": 62.453835023959726,
+          "meanMinimumPairDistance": 11.411083631275844,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/0000000099887766/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "a1df3b1d94a743c2d067da0149b76c463376fa68e9ba65087302665b2e34e108",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "70e6a834b7a89478bda830e9f45b39735f9c5b8323bccdf84af9d88f1405e864"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d44aef7af62f1611abc4a72229db2fb38f43585c1748321dbee2bdc6a19dd829"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "411c49ccc3a6bed71f438dcd62ea78ce9ca7c4e8ce6da258962635e17558987c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "c432e019ac8650763077fdcf2c683c3e31a6d422cecf1b351f41b1a011701969"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1501044,
+          "sha256Uncompressed": "45f888c99e912dcba70487e081b3037313a0398bc5dd9f5fafa8638e6c50cedf"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "a443f2c974374fc133d3cd59a992a533f5dee97e81824ad3ac09eadadff413f4"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.75525670274191,
+          "meanSlotMaxX": 76.19592971757959,
+          "meanSlotMinY": 4.823266713596582,
+          "meanSlotMaxY": 62.97343199668865,
+          "meanMinimumPairDistance": 11.644920915684772,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.7468807860351,
+          "meanSlotMaxX": 76.14635576674046,
+          "meanSlotMinY": 5.0420313047306164,
+          "meanSlotMaxY": 63.18501529790032,
+          "meanMinimumPairDistance": 11.642677313910715,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "008bc912be7c6b8f7bbe24954758c87b250deea6cc18520edec42daceb5bf176",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d9232988127110510ab0bff187c05d395deff5f3a40f5c41f140945b4b1eeb72"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9a98f205c4a3416c378fc41efb8a6604e5312ffeceb1932f4b3a80280dc6528e"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "295b2ac443cf732da367e32c028b63c348a0c5d203abbd1a0471f631dab1863f"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3cd937c915d9a7f77c9927b785285289f5eb2e76ee84f17f08f341f11667c876"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1505557,
+          "sha256Uncompressed": "ff07899f8bcc9219127e495baacca9eb3b00445cf5e34631de08c32503b56777"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "267780daa8a76fad94dedd3e9c940fcf476b96237b3a28088a91c107567c8724"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.637182204917053,
+          "meanSlotMaxX": 72.82547247509825,
+          "meanSlotMinY": 5.044088523125953,
+          "meanSlotMaxY": 63.101553420781734,
+          "meanMinimumPairDistance": 11.62868471840942,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.884196321894372,
+          "meanSlotMaxX": 76.50863679349571,
+          "meanSlotMinY": 4.831190194626022,
+          "meanSlotMaxY": 62.99412788212102,
+          "meanMinimumPairDistance": 11.65045614664121,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/00000000ABCDEF12/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "b40eca871b630a5dfc0e0900ca6adc084e7df551d891cc20b790c3d913de2665",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "34b809c65e894e5d4378e4396fddb39aef794b88318971678bc13e12a43b70f9"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "481dcdaaa1d1a452aff13a6f5c43e16ac4104ee6aeee36cbbe24e084ec27b900"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "370447f4b8d43257a6f40a63182b569ccfd70297e94a76b69a6df83433918b45"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "123693b2ffe6f6d2fec1a1d7275c22c3ba5f459fb5674c4728a9b604505c1c27"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1504703,
+          "sha256Uncompressed": "ec2036057a9ff7284047b9ce74d25d6440c52de4bd5a5ae2e731ef2133ab2a8c"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "cbe0d143464158bb7e8c9089c6f2f63cfdc7e592e94f85f0d880e66e08192600"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.71043846227012,
+          "meanSlotMaxX": 76.08912637879727,
+          "meanSlotMinY": 5.011580446896353,
+          "meanSlotMaxY": 63.18149042819177,
+          "meanMinimumPairDistance": 11.645438872120305,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.810645375451074,
+          "meanSlotMaxX": 76.2391942484352,
+          "meanSlotMinY": 4.839755749344378,
+          "meanSlotMaxY": 62.97340538034651,
+          "meanMinimumPairDistance": 11.637983407763901,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "1263fe2f872f9cdc6d25f99e9d621b2f3258b8816166d06d9bed7b01d16152f7",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "56a9cd1c3f789f8606c4df48c06f2abb4035275692e35de5b65a90842544c197"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "00a1dc1c6ded8dab535ad52e7f610380b9995369d5649e3a64327ec5c5e1762c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "68a24eb65e5710a2ab754a34e46a846c5add33415e3ca1c7fefbe3a4019555de"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3d5af20d80c24e0360bd66ae6649c27d40807c1f87c021af8f81d03f231d31ab"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1499029,
+          "sha256Uncompressed": "bf1ff1a5cbbe3a5a293d5de5dc03f6943fd21cca76e3f5ee262777ee01587782"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "0597d329707c9b1fc8aa12b94883c20c775b5ef3a3bb17ded4ad44e3c7413e19"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.592141126155386,
+          "meanSlotMaxX": 72.80175905116927,
+          "meanSlotMinY": 4.9209914936061505,
+          "meanSlotMaxY": 63.02557297811175,
+          "meanMinimumPairDistance": 11.64218909973705,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.91803637679262,
+          "meanSlotMaxX": 76.52704746714919,
+          "meanSlotMinY": 4.966326038330431,
+          "meanSlotMaxY": 63.12191652140332,
+          "meanMinimumPairDistance": 11.64769626180782,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/00000000D1A6D05E/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "533882eb7df3337032f8523888061ec9df2bdc078cafb8438536eb636e7aa89d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a60d45c5523c0886747de6bb3fdd66df868b53250af837d3d8231a7e4079d3d5"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "85f660f2ef61a69e8616259ea46872a61df2c55f342c7171ec9d5bc0215b9263"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c8783446885608c08bed1c5cfd6d8d13fc1bade8626d2e8d4334d058baa27eef"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "332adff546f596dc53bfe32958ad2a6723913d0a95dd013aba19cbf950de2bbf"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500567,
+          "sha256Uncompressed": "8eae9c0393f3cc2900aa2b46b858df9ed9cd5f9237bdf1d6b5b0d2a26aad3c45"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "2089083949454afbf321e1669ad72301337afe4f28fe5598a104c43973b4d240"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.00870895601206,
+          "meanSlotMaxX": 76.3332474433629,
+          "meanSlotMinY": 4.95759072361435,
+          "meanSlotMaxY": 62.949032525958486,
+          "meanMinimumPairDistance": 11.60923469689831,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.525994691803014,
+          "meanSlotMaxX": 75.98779841694501,
+          "meanSlotMinY": 4.894216941699697,
+          "meanSlotMaxY": 63.2342826790844,
+          "meanMinimumPairDistance": 11.681749811816934,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "909924b786ad4c6221ef3cce1c5650379290fb70432ee2fd8ae7b224145521c9",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "022da84e9094f6afef2a5092b76644e0cf011b8d3c5414accae6fad0fa2e7560"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ea0e2b18675efe9d579c0b87b6917b1bb2c07b51c0acd723be5669c9fc077198"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "c72596188b19098533da0949b8078da5438487fa4633216855b063e522333992"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "afe200714d962e31a4bb244f500d373a2d73bae9fc7b7e28784ee28b56476cb2"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1501569,
+          "sha256Uncompressed": "6ef33353fe7a48b7841c75f4ced42af59cdb9782436e211d0abb4a0f2c72f82e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "70fae30a17b69335ba94d5b4f6fdc0d3168261aa9b540aba6e4a63559c820dae"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.824599884309563,
+          "meanSlotMaxX": 73.24473423241584,
+          "meanSlotMinY": 4.69533666588359,
+          "meanSlotMaxY": 62.80314665286284,
+          "meanMinimumPairDistance": 11.637161768675535,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.68350015926119,
+          "meanSlotMaxX": 76.08092077077897,
+          "meanSlotMinY": 5.16474639011508,
+          "meanSlotMaxY": 63.33599242333291,
+          "meanMinimumPairDistance": 11.655424871034791,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C5/0F1E2D3C4B5A6978/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "fa9d2015afdd6ac6074bd93735e1be9c61634367dd14af16565225bd045e0477",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "98b16cb24f2ed3302480b6e7374d0f2d69b3c4a46dfd7009cd3ed1b114a5abdd"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "180c7852256c7478ccfa96968c0ad0787947b0a5c21487ce8953b18490456f90"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b078f639d1bac167b8e0cf890a92e143477b7e295c2d76420c9caecaf0a563f4"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "ab2900951b44397ebb8b5388d03a0c8c5fcea3450bfc589e9cbde6aa10783816"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507436,
+          "sha256Uncompressed": "3c165d7c93d69276575a1998d1dea7e950014f0d0bd05b658ab74d0f8544cd02"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d006bfa44e099fd257b877055aba75ab1e311c0bb095a9de9e86d26b185d85be"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.666649290481256,
+          "meanSlotMaxX": 76.16615074831799,
+          "meanSlotMinY": 4.753563642055892,
+          "meanSlotMaxY": 63.01497842184727,
+          "meanMinimumPairDistance": 11.661325508542529,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.829945022378705,
+          "meanSlotMaxX": 76.1785696779159,
+          "meanSlotMinY": 5.0904037896128775,
+          "meanSlotMaxY": 63.16576481828001,
+          "meanMinimumPairDistance": 11.62367032223687,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C5/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "3d9e7194046e48ae2b415e870d35d22049f288b67472945634dd81f07cb3ae3d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ece5baf21e0ea645cb018f9a8ece6e5c1d502a57d5b9983160eed883fce09797"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8eb7a2430d32febf401d7b825abed7230aeb434a0781f19a6bc06550c6992928"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "10e7d221a820737d50de29efa2d67d770d50cadeffc94729a62302fa8056eccb"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3c4985f81aeb0ce6340f15a867b064a7888bda2ccc97c1c1b7e1f85a97cef7bf"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500281,
+          "sha256Uncompressed": "c8b17294fbf5a9dcdef0767be568a25d59da6335294ac4b356d02202bdde92e3"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "699f4ad23bb376deacf991ec180e2649c88c5e2530aa25cf1f7e34f2ff0c5c2f"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 21.77480103026081,
+          "meanSlotMaxX": 73.059623565671,
+          "meanSlotMinY": 4.958105051605129,
+          "meanSlotMaxY": 63.002267698179416,
+          "meanMinimumPairDistance": 11.624477328016823,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.720493653974774,
+          "meanSlotMaxX": 76.26587778757354,
+          "meanSlotMinY": 4.910946619153237,
+          "meanSlotMaxY": 63.123818963043654,
+          "meanMinimumPairDistance": 11.661210533592374,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/0000000000000001/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "4e5ceb7dcf0d3b2d1da9e7f8117e9b834b6eca1506d933d010af481edffabcb0",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c13afc2ee818d7aadb86f036e54adb1bcb39c83b0e8f3539c4ff010036d0252e"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a8fab7a9f0d9ed02e5cb3fdb08a6eacdc3061d3c9e560880b7b33304ae24e0d9"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "596c3f36f77f93ef56b46965bfdb810c5e6852f0e538592a99d1380105e02fe7"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "f6df44b4f6976e6726d33fc158e4a951ed2f51152c535dcb2eee943f45f09389"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507808,
+          "sha256Uncompressed": "091eb28a5eb337ce95df02c193d4e43a6b0df3254ed5078a1ba87f8da164609e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "4c55956b62236b127cdac2f2c02d9f3d1b80d845a18c65068680da46ad0048be"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.897571142400782,
+          "meanSlotMaxX": 76.49386762452546,
+          "meanSlotMinY": 4.949317770354489,
+          "meanSlotMaxY": 63.14940245642185,
+          "meanMinimumPairDistance": 11.653292629471041,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.632173891427257,
+          "meanSlotMaxX": 75.85027536707177,
+          "meanSlotMinY": 4.878002042308905,
+          "meanSlotMaxY": 63.02953618853072,
+          "meanMinimumPairDistance": 11.642392180001693,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "9edf2bca4ae85ef32634e60d03f6bd36cf009b8d817420dd64029aa3db9a9cd9",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "1e50903734f92b6a73af63f55f32e2645c784c15c3b41d928c6f9c2604fe29df"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "e0f51ec8bbf31aeda4647eb7f7bfcdd314326d7248be1ab1e5b30a0b169e8d7f"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "601831b0b334d1b7a0b2603294dc6e720e3d3d5d42aabee8b0f5d81a7116992e"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "f661b799019eaa9f1e7bd89800b8c2da76c4ab9660cfdd1083ca8f320d580549"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500720,
+          "sha256Uncompressed": "c9833fe4abb425534c9c9900961c7e54c968bad8fc99efda75b782745a8d2262"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "4c5c05bced3d7f2cbd7a1d38ccc656886fc4a334e7c45319ce858cc36a479c04"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.025315669367107,
+          "meanSlotMaxX": 76.54981335550042,
+          "meanSlotMinY": 4.855729628201778,
+          "meanSlotMaxY": 62.873576640720714,
+          "meanMinimumPairDistance": 11.6251754441432,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.48141819783614,
+          "meanSlotMaxX": 72.7709941334538,
+          "meanSlotMinY": 5.046055411137454,
+          "meanSlotMaxY": 63.24068242825081,
+          "meanMinimumPairDistance": 11.659181569770066,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/000000005A5A5A5A/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "2773683f4f58178a9b9aac4a70f16b47c4c4d5ff1dd1a6a333a5ce5b873ca849",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "711d47fc31565bf740d0f961eb081ee1294d81b6755b61f2f3809440981d3041"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "dc036049ca8db411d216b7513dfae83e77bc1ad1bd1c96dbad364f1625ad1bed"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "ac75d514b1ddeb497de20886c24dab0793cab9e04a187ee5f0cff2ff834e595f"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0114942ee689359759c95675f7a468e9d9c30ca72bbb4dc07455b743b93ad2f1"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502972,
+          "sha256Uncompressed": "ecafc93911201fad7fa7529fefa731b6dcf19c2421a868f8f8a99167bf971f1e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "749f2a740ca6f6fd26ea1449576ec4db7205b5416ba73288dd7f5c0c4df48f19"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.713472180045176,
+          "meanSlotMaxX": 76.34695910653348,
+          "meanSlotMinY": 4.733689889017901,
+          "meanSlotMaxY": 62.95339516836258,
+          "meanMinimumPairDistance": 11.656333218738082,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 25.17652489937275,
+          "meanSlotMaxX": 76.43617508306723,
+          "meanSlotMinY": 5.524812850495789,
+          "meanSlotMaxY": 62.87051449783838,
+          "meanMinimumPairDistance": 11.475145167029675,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "512287fc971164893f3b76ae906b48be919e9fd27a3488e1a0366746204b006d",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "4a2d1e70230390a8b5e74ce6f61e5d02a2ca51da481b8db14217fc96d4331c50"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "8a29a7b84956a8ba71ea27180035d67758bd51930eddeb362f4363b9ae805ebd"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b403a92b5dacc1cca6a0208bfb08534639188989e0ba2737a9b93078d24ff5e5"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0234b2df4e3cb88af1c05ff2a223af297b329619eecc72eb09a12e1ed26f1d24"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502018,
+          "sha256Uncompressed": "d42ee4a3768362930e6156d7d602c3226c26a973dc152e47e97f3385449b8ca5"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "bab5fc48b02bfa7df763b4551758301c70f7cdc66832a5457596112a29e6e7ca"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.94499323493863,
+          "meanSlotMaxX": 76.47936833992952,
+          "meanSlotMinY": 5.135744059102844,
+          "meanSlotMaxY": 63.18601872971809,
+          "meanMinimumPairDistance": 11.626603743758858,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.975408411305928,
+          "meanSlotMaxX": 73.283036277295,
+          "meanSlotMinY": 5.139826244291446,
+          "meanSlotMaxY": 62.6260967069905,
+          "meanMinimumPairDistance": 11.50773302340795,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/0000000099887766/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "bc19723f0bf086dfbf077b68650952a9e81806d7963ca2ae06cf8e0687082ff7",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "836e990801677c2de7bdeec3932f7f52f27634e4e2b058f5b8c33b49f8bf143f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "2f94c46bb2006a7467165c365f96830b24ff5ca10706dc7ec7d431e5c07379e2"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "67b446e559ea1ddc99b38551f5229333ba8d854f02ad5d379a02734403a7c424"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "c4483dc600557ae3185f74e6c6ea2b06cdb9cd35dcc39b9bdf22e1d630314ec9"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1497558,
+          "sha256Uncompressed": "2032ab965f86cf81ae3707b90d4f733454eb433c47d483bd5b020e9e3b505fcc"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "09fa915134065ae4086fb78c7cf14b3a53f3a46eedf937d1a0db6a5e66b536f6"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.83098892768305,
+          "meanSlotMaxX": 76.33314140030326,
+          "meanSlotMinY": 4.655827781664389,
+          "meanSlotMaxY": 62.875224085895596,
+          "meanMinimumPairDistance": 11.654507952925563,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.698761955491104,
+          "meanSlotMaxX": 76.00619728926074,
+          "meanSlotMinY": 5.180586626667493,
+          "meanSlotMaxY": 63.30277124550893,
+          "meanMinimumPairDistance": 11.638290097407538,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "60427be91aeb8678d868df8715af590c330ca2e9aab1f6c6a8bcce7b44c94a99",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "97838956d9980f15d9711be3b043b543f586984eefd732b9eab1c0ffbf8f2999"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "49a56a963f3a809512305157e34c921d20ff202da9d8204b89ff9f56e25536b9"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "e6bcde1f7140e64db4e1789f94c3ac0fcb97157277218dbe59fb3235fec582fd"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e7cbe5c3158e45eebf32f183a9e23daa9b73b0fb41d5f57173e234de8dfee4e4"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502782,
+          "sha256Uncompressed": "3f8840b1dcaafd6911b60146395cd60188feb0c124e55e5116e3bc64b4b7d2c3"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "3e0abccb13287c87e08e6378e23cefaabaac982c4d6d43ab2957618f5ab8ee60"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.06352266276924,
+          "meanSlotMaxX": 76.50294545181646,
+          "meanSlotMinY": 4.967733489992212,
+          "meanSlotMaxY": 62.98706350678168,
+          "meanMinimumPairDistance": 11.620274014551464,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.456512396281603,
+          "meanSlotMaxX": 72.82756286802224,
+          "meanSlotMinY": 4.869054384329939,
+          "meanSlotMaxY": 63.1869561933902,
+          "meanMinimumPairDistance": 11.682880698280178,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/00000000ABCDEF12/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "6c196e11097186d1e80b1a0dae533b7173b565584b1a397e6d9fe02d3790f488",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "4098905936e9794c88f7773643b1bdcdbf8ef97a80938b6334503b097c574f9f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "bf9a37357ba6ed23a16ce64e335afddf5a5939390f64ead25899b7144f89a182"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "ba700a630a5f3f1af498d97d53cf5f4eaa7e6efe3596ca53132f0cc84f1f2c75"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "9ec764b9738acfd8b8b3e0e5cd9236baa4154f1b516448d903f272c7ea2d4b84"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507992,
+          "sha256Uncompressed": "4d32da168c3c37fd35d452c202b314f3f8c82c5a2a4cad5191ceefb343bc680d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "264567c44ece03b13d115f8593afc2baf4b55e05e3b9b377cca83bd5c130f766"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.84178979256548,
+          "meanSlotMaxX": 76.4872755124376,
+          "meanSlotMinY": 4.9411681352247765,
+          "meanSlotMaxY": 63.16127746743947,
+          "meanMinimumPairDistance": 11.656095428536029,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.66735393869124,
+          "meanSlotMaxX": 75.84741486095297,
+          "meanSlotMinY": 4.889925230030449,
+          "meanSlotMaxY": 62.977507679675995,
+          "meanMinimumPairDistance": 11.626113114625177,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "8e4e0611fcc66ea3465910cc6f77992214e3b0951acade20b5600615eda336c5",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "01864f165c771e785475fef68457b4e936d65034283c0d1e4f5903cdac2fc088"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c1d2edd5a09c1c6b4a6e37e8162f766932a6c4b23f6cec2be7b983861b891d7f"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "80b98a7adf3cfc533222f49251a66e5a5e43961670e76a02e26bc1392fefaa26"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "2dfe31ea1fb04ccd232bc0a52602601b0e641482bc029d8a2c14be01f13bef88"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1490504,
+          "sha256Uncompressed": "7cad5f2692f52153a13777ed9181295dcfe15f288b1daad9b5114e340b69060b"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "6e7d3edd56df0ab65e30f1695712485e1dbf534403489aae90ab163b16cda97b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.97320888687914,
+          "meanSlotMaxX": 76.15293025898049,
+          "meanSlotMinY": 5.056527418477347,
+          "meanSlotMaxY": 62.92667215259303,
+          "meanMinimumPairDistance": 11.593500949662735,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.562241572821925,
+          "meanSlotMaxX": 73.18313843872939,
+          "meanSlotMinY": 4.818183066176076,
+          "meanSlotMaxY": 63.1739085590988,
+          "meanMinimumPairDistance": 11.694085079669184,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/00000000D1A6D05E/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "412c1daa064ca0214b0e4d13a5d24921051442e58f534e9d786c416345dc4255",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d0c0650cf990e0e6b45de9db636acfe53e8b744aa249a21ab310452707d67fb9"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "edfb02cd90f61e6393b1855fbbe1f8158555bc5057377c0dfe4d27fed09bb226"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "235589646a6411eaf96b6dad83b31d778cd59dbbdc0287e13d20baa9b577dc8d"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b77d1d83be29afee9cb7edf6ede1580ebdc43f0fbce1ad9f03ecee7906f34eae"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506305,
+          "sha256Uncompressed": "745b503b2619b4508bf5a1478a4e7d5ecd18c4508a8141dd82205a5a83c03a62"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "9db9e4e4da8c21d78b1cb1cb03925d47e2b907e3d509f8add0cef8a5deb643ad"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.610225674381905,
+          "meanSlotMaxX": 75.95265905096649,
+          "meanSlotMinY": 5.007871764574111,
+          "meanSlotMaxY": 63.24579290970248,
+          "meanMinimumPairDistance": 11.658965561009726,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.927500549860646,
+          "meanSlotMaxX": 76.38941726977036,
+          "meanSlotMinY": 4.809281277672891,
+          "meanSlotMaxY": 62.9347243457638,
+          "meanMinimumPairDistance": 11.637025572100857,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "ee539f899d312e7d7e2a2b24ebab2c0ce4d3b37c23a1a92e80e6a58e751e4524",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "f8d562a515e18faabd9cc0b6e4b8dc7ea40764229e836499fb20aca7986505aa"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "0ccd9b1c940d1017b3a819c66493e3beea5dbfa5e73832bed2d965a43cc1264c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "37de2db6c6ea2c1be052b7d1b1c2899e25b17a9a061b897ae563d2c5a5631a1a"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "6a1ac0add5d5d56e2fdf1ef67adf24c56dee36d521ce56d626be1eccd82f48d3"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1504281,
+          "sha256Uncompressed": "5a850a7a0b8cc8a890a0e17fb002a079dd1b5dca3b01c6e0d59d9a0f5bf3b0fb"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "de63012b7780b2bb616b67700745d49ecde8805cb9408bb1bff4110f39c6c032"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.960769040167015,
+          "meanSlotMaxX": 76.29708971661367,
+          "meanSlotMinY": 4.782324350825743,
+          "meanSlotMaxY": 62.74469822340867,
+          "meanMinimumPairDistance": 11.609522281760395,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.578864581805824,
+          "meanSlotMaxX": 73.03538655241312,
+          "meanSlotMinY": 5.112221828374437,
+          "meanSlotMaxY": 63.384805793517074,
+          "meanMinimumPairDistance": 11.674827158284405,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C6/0F1E2D3C4B5A6978/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "64842fa14678b461b0608837cf95a756999b44a55b5b460b9876135004c20db9",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "177fa9b24296578c465f45809d5d9c1c8f0dca5bb5f88b6f5612a4ee04ac488f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "0dd49cfb36a57893afbbf7be306a757c113d10758593b1684222f03605fb8158"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "356217305d188ae783f9dbee7cb8d21fbae2decdf8c96b18744d14391a8a52fd"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "336197db00ff756546afda3a855b647efb6e788c59cdd3117018546cc3924d9c"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1498360,
+          "sha256Uncompressed": "f5d937579d468bdc4797cecd878de01f26d85abd9b05b2ab4c24cbf103053e5f"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "6d33deeb79d904dbd93b5cf8b5152f272da40a45a92669551744d0deeb0db5e2"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.75238791829416,
+          "meanSlotMaxX": 76.29332370143808,
+          "meanSlotMinY": 4.937723329829787,
+          "meanSlotMaxY": 63.14860277849316,
+          "meanMinimumPairDistance": 11.656014362775245,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.725340811993764,
+          "meanSlotMaxX": 76.05270330131349,
+          "meanSlotMinY": 4.88716833046488,
+          "meanSlotMaxY": 63.007562001216556,
+          "meanMinimumPairDistance": 11.635945805399663,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C6/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "7845b8fbba3366d0791b4a0094379c17747754102b83215e9bed915ec689cf08",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9f0dc4427a00bfbb18240a3bcdf0dfb86cd35e8f669e2b4fbb1c3b7e33ff31d0"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "b186ce0752a38904e0c46687deb73f65e7032a8e8eb66479f05f285d2446e2b1"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "e99ddc4f0d8b827258d396c1bbd6350e9496a12729d622b14abf7bed4a71bb26"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "de38f3fa1d8d2a3a0d7edaaaa1c56358c0da2161c6511a6ece933b906f0c2bcb"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1493878,
+          "sha256Uncompressed": "e2ebfaca3f24a43949b539648476061f2f728804b96e820c9618ce9e208e4f47"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "f02d07d2e9e1b46145e50700fa9ee7c328013123823a9a11949a1684ecae3490"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.757194748458872,
+          "meanSlotMaxX": 76.55120188538353,
+          "meanSlotMinY": 4.776260718563914,
+          "meanSlotMaxY": 63.11900770485177,
+          "meanMinimumPairDistance": 11.69039542696344,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 21.76162095492777,
+          "meanSlotMaxX": 72.76780374994252,
+          "meanSlotMinY": 5.1051436690070515,
+          "meanSlotMaxY": 62.98557780458719,
+          "meanMinimumPairDistance": 11.59440323227359,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/0000000000000001/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "9ff2a6345036f3202a16cc2d27f42f749fe1a754581430e8b7fe5848c6e9d159",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "49140734a6cd71d434677beac63718a14f8f3f8c0795819ee5d721648edfc690"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "2f06930919845367ca1cb473920e14944b136b325774a7e893887f9f08598664"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "f80cfbf17d218143aa9974f3d53ec659379068395ce8f73648e0b78a358d4150"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3df93682cbc6e6cceda148bfe6e88bfcc30e81f8b1a84565911244c308eede4a"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506999,
+          "sha256Uncompressed": "ac4f2c89075f8e919c42c7e7c41f6eb56aa655e78fff246fd1e744c26914a187"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "9e17d742fec7fef284a5d4e628037fa9355ea3da690bf0494dce1e80d08cb478"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 25.007396186889792,
+          "meanSlotMaxX": 76.23826577730136,
+          "meanSlotMinY": 5.113489637489851,
+          "meanSlotMaxY": 62.974609838988805,
+          "meanMinimumPairDistance": 11.583724196666845,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.50696144004396,
+          "meanSlotMaxX": 76.10708869627912,
+          "meanSlotMinY": 4.744524336609148,
+          "meanSlotMaxY": 63.16966613253548,
+          "meanMinimumPairDistance": 11.694534216031501,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "32eb9e6d971d2c3fd0e102fffae4a7ecbec09b676feef4603abc81a80a8e9368",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "18ee7dd031f35c9bbcbb3fc3661cc72c1eaf491c0c9b04063afbcb0fadd8c24d"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "3c0ab4df3a559143b2e79640a00e3279dbded1f93c4f89cc7e10696a7c2d19fd"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "5e87c5586c497564b12e0e2a6e6fa83b5ad68dc6b173869267a0c6997fd2e793"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "004c7cf04572aabcb831601a2354594633a9f21d0a74527f99cf42a39b3be88d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506757,
+          "sha256Uncompressed": "605b75e7e11bf785ba3d936945391568086b2032af650f8bd0334abc82e6984d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "2d6240ed67bcdf310871af9aa27c9659f1bbc4d3c886e4eba4ec061b974a8577"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 28.088748361047134,
+          "meanSlotMaxX": 79.54551777283075,
+          "meanSlotMinY": 5.087243200110079,
+          "meanSlotMaxY": 63.062063410762555,
+          "meanMinimumPairDistance": 11.601588494994159,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.402908496047463,
+          "meanSlotMaxX": 75.8152389103917,
+          "meanSlotMinY": 4.739990666008924,
+          "meanSlotMaxY": 63.11058477854808,
+          "meanMinimumPairDistance": 11.683662262807792,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/000000005A5A5A5A/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "d9ffee728ba8ab6b2773a1ffc3d91d70f4a78d17e3b3110c2314f27eb7aa1dcf",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "40060fe06501bc7294d706684fda64512f8f76d910d1cf329bebdc3a474ae485"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "a5c8767cb6e465bf462d6b270c6e0d9da1cc1b1ef0dc0c5db62684c3e55fe74a"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b122b3b71537b7a1e4555331fe863d923be50aa823727e5ee1f97a7be6dfe070"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0f279aaa742df708161063cf34c15dfeace45374e161653d38926d235747385d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1497143,
+          "sha256Uncompressed": "a78e412bb897b0bd3af620a88257c0ee1f6850dc774eca523e67560e1c1d9153"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "05533442ec98d7d5f859f0feea61dcf19fb4b399fdb02d2bdca833495d4663b2"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.57530118276478,
+          "meanSlotMaxX": 75.83469402172156,
+          "meanSlotMinY": 5.830753043911259,
+          "meanSlotMaxY": 59.62834356191386,
+          "meanMinimumPairDistance": 11.477797741311468,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.81886361405996,
+          "meanSlotMaxX": 76.41302166459481,
+          "meanSlotMinY": 4.546298098017982,
+          "meanSlotMaxY": 62.771261300441765,
+          "meanMinimumPairDistance": 11.661871396320153,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "adaae15dfb39f98800624f82a5c1a3ada12c62f0d64067069ba9cbe82e2699bb",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "33e075f0fe9b9c58adca5de1406e8338ecd7716787506361a1e4e12947f646ee"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "fca53cc5d8d86e6eb2ffdf276b6eda1cd57e5f5251c36c3e7fd2927506a191ed"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "b36051d4aa4ea5a8aa44db02d4286646a5fb0487bbe9cc7d2e2032b691dd85e4"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "998192b5b4fac7a143eac792529ba294fed86d9cd98ec813bbe4eef3e3823c1d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1499180,
+          "sha256Uncompressed": "af35a585317268809ac8c41396f36889a37e8ea21cd8fa4f46b6fe775870de59"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "a51c3ce24a6f189c7075a7d19d166b6baeff6f6b23c594a7d0467b1749087249"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.75484180254403,
+          "meanSlotMaxX": 79.4364766619462,
+          "meanSlotMinY": 4.843993994604162,
+          "meanSlotMaxY": 63.24885151099668,
+          "meanMinimumPairDistance": 11.691249317230014,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.66462261672064,
+          "meanSlotMaxX": 75.76303491486618,
+          "meanSlotMinY": 5.304978706454385,
+          "meanSlotMaxY": 62.51501290219217,
+          "meanMinimumPairDistance": 11.450993334430883,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/0000000099887766/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "446b83fa816098ddcf76fa5b2789de619b9653b605e1fed62e8527471c1dfc8f",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "f3713d5df3ddc2148c49bc2c516992366bab37a862a409af7a7eae796efd93ce"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ebaf144b8f7379d17717169b6853a3c793eec7bdaff127eabfd181e68ce3d428"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "0e2c29eb70c307cd65c941474264490614f650e154ba695e9716844d9f09cf76"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "444ec45c1a714feb471bd5aad81f1e1b90daef7bce7fc65dbe0f2635d2fe0f0a"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506400,
+          "sha256Uncompressed": "939c913c2d2bd1dcf4cd0fdb3e81e14a6c234b3887566584fff0d999a925e305"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "f4c17ac2c49ea8d2ea07c826f6c103976974e57b95821e716f8e8569a8dba479"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.775008714137915,
+          "meanSlotMaxX": 76.05220927572945,
+          "meanSlotMinY": 4.8791057570280545,
+          "meanSlotMaxY": 62.91631622751032,
+          "meanMinimumPairDistance": 11.616155816752853,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.714777837557012,
+          "meanSlotMaxX": 76.28433536803709,
+          "meanSlotMinY": 4.967441740074689,
+          "meanSlotMaxY": 63.24579605568506,
+          "meanMinimumPairDistance": 11.66587275021491,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "de71a3c9aa72370b1906b67c74e0fb544d57f14831eb2231bcc1d44ecea9b854",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "bf42422f7ad23c7877892a9c3bfe0387744c63aaa10be456460b40cb21367440"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "0b565f3c2c596213161b8ae1dd5492fa414bfacdf2db0ad9ed12307a26f46794"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "9b551375a320ce1e8934f7e61aa819e2eeb2cdaef05729129e2aaf2acf9a4abe"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "4f199550451ed35a40516811c2d15b2d594b638afef8ffc5097c3ac4b69b13df"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506910,
+          "sha256Uncompressed": "97fdd92116b182f402ec273bc3fce6b222467e3c3a4997c3993bcf3b3e166777"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "1dd40e9c40044f24aedab9e83f7943009c3d8401b9e8a80bf5cb12ed5b2d28de"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 28.099393878054354,
+          "meanSlotMaxX": 79.62249522522738,
+          "meanSlotMinY": 4.969506487338357,
+          "meanSlotMaxY": 63.02952522728964,
+          "meanMinimumPairDistance": 11.619046004627075,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.446177976105258,
+          "meanSlotMaxX": 75.72783563739249,
+          "meanSlotMinY": 4.880647054943619,
+          "meanSlotMaxY": 63.15371875674281,
+          "meanMinimumPairDistance": 11.663706633759379,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/00000000ABCDEF12/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "fae3e0010b1ed1a4a0a2a302bf8e69588f31da48fef461db5aec123f002f6e35",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "2404200b01374ee9490b58cbbb462429b74ab2e5ad65c008a517620721796700"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "f6d11de427fcd3b34292a5a527e7c859d753332875175b60106afb06afd2cd8e"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "f624f2e0bb1b835595e62446201bf4a7c17c142774457fb3c3874c21a594e791"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3a711ea5680f7767e6e8a23baa0ac245a8d628ca50a49bbef944d82439f20e27"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1508803,
+          "sha256Uncompressed": "10af243b9b7c290bb992254bc2c95709ec11c929a70e6c0790dc5e99d7fe07f9"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "66471eb71b923cf3c40300ee85d171a7877ea1f168c98489d37f3a08caf6cb42"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.73310548511818,
+          "meanSlotMaxX": 76.17926903437167,
+          "meanSlotMinY": 4.964514517903772,
+          "meanSlotMaxY": 63.15902214041109,
+          "meanMinimumPairDistance": 11.650289053978657,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.814387033722106,
+          "meanSlotMaxX": 76.16361204217382,
+          "meanSlotMinY": 4.893273843050237,
+          "meanSlotMaxY": 62.998848776302594,
+          "meanMinimumPairDistance": 11.632119643025694,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "bbf4ac1aab96ca80a45b6644ce743a1dfb87494d4597119b2b342ce0b149dd7c",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "756a8fd469de77605a6cbf4a0df1f85e925d4a1bf83ea1b7004eab9635dce5e7"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c85da5bf627c8d1cafb2abb760f75d09e2740d5582c431a033bb557d4c491c92"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "bebfe5f3543b9cae6b88f4bc8adbc0151bef379ff2446673df2813ca12e70dd2"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "bd9279b87758fa7f438ad43140c195193a9035605eb469c4985cdbaf13dadc7f"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1505584,
+          "sha256Uncompressed": "f39665505d9a0dc2484fed070b7787600608416daa5e63fd20c005962eae3405"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "bcb819758b752aa2e5c36ce88e674155f720c876e0d077c00c98ca0e9833a231"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.95445384635566,
+          "meanSlotMaxX": 79.60386616953342,
+          "meanSlotMinY": 4.856926504639635,
+          "meanSlotMaxY": 63.085780285784914,
+          "meanMinimumPairDistance": 11.654107065500511,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.539840137435984,
+          "meanSlotMaxX": 75.74265884382177,
+          "meanSlotMinY": 4.976199152222426,
+          "meanSlotMaxY": 63.13240422566543,
+          "meanMinimumPairDistance": 11.640017133476217,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/00000000D1A6D05E/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "b58d31fb159ad6ac407032c29e009797f930bae7a543c8b0afedb8fe268279fd",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ce6c2eacfe215c6b2b19f62011d62c22b95bd2d74d85ba4a37035ddeb798ac1a"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "612226581153298471c40187015402cccd5eda0a0a44f8b2caadc8568255e17f"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "772ce41b8276a4e9434146b9a18e65682d3c09e96c80b743bd72f3e442e1d4fd"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b95d66533d91b69258ee0fcbecea1b50f546fb4df5e97b51272aa20f7efcb4c1"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1513202,
+          "sha256Uncompressed": "5cfcc2994367f1fe7e4f780ec06253594e4de003c942d5260efb8048a6faa708"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "314418a17d140215d49da032b915225c080869187a18e3a5b9451d6d1d500522"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.708325011970516,
+          "meanSlotMaxX": 76.22926913660746,
+          "meanSlotMinY": 4.913958607233198,
+          "meanSlotMaxY": 63.18993840395701,
+          "meanMinimumPairDistance": 11.666105290978425,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.8060550761754,
+          "meanSlotMaxX": 76.10834258534175,
+          "meanSlotMinY": 4.898851540815446,
+          "meanSlotMaxY": 62.97182755482727,
+          "meanMinimumPairDistance": 11.626332367739657,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "27db7ad076200d1992d4134c6fb059e4e4ac77f6f75f8d93dc67ec1098a109fb",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "41c9ed0cc6eee055dffe32532034394f39b01476240e305233fe68b9d78089b6"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "3fc9f4ed1712470ecc15886fc61a465cc3f9bd20c3a405437e10e5e017b90021"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "cd435ba1642089adcbd1592e0e33532a0360c67248eefc81204abe62ecec13a6"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "759d06ed88e0cc0f7308da60112e77c5760e8b3f1000e5fc30c2c12b8975624a"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1499542,
+          "sha256Uncompressed": "891208cb48f162f41ed6248b3da0d6f4459d71980f1e1bda8d885b8063e51fd9"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "3ee8716594136d2d45f100bc23df8b99baa34bfd7598de7124b23e405ad2f6de"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.94622460390745,
+          "meanSlotMaxX": 79.21497908383665,
+          "meanSlotMinY": 5.101142496737633,
+          "meanSlotMaxY": 63.05952544531917,
+          "meanMinimumPairDistance": 11.599417876052835,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.558919881184426,
+          "meanSlotMaxX": 76.12639794882766,
+          "meanSlotMinY": 4.699210358464291,
+          "meanSlotMaxY": 63.11863388634869,
+          "meanMinimumPairDistance": 11.693899790033875,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C7/0F1E2D3C4B5A6978/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "46b554510b8167853a056dccdf4537cb79be0f6c6a0383e0b46379c0e4dce148",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "cd48b2d904478f6dc930d0811c8401296f2b274b46b5bfdba8089d57befd4ec5"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "cdf440f701c422b4ad98a271bb8c5b65df57d673e46349451afbbf6a7cef28a2"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "47ad1a357a24184d733a501e787d455adaad59efc1bca213641ff137c4f52cf4"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0d4e7a642250c8452c0c47ed533c1d25165e971eba6b159d8d32a4dfd5b388b1"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507057,
+          "sha256Uncompressed": "9c479a44be855d3f423095e9972103fc40a05a1c858653b76f3761a0c6efce0d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "2bfd4e8879120061f40cc37720736c233e233d2883e09c09b39e851b6e9c1839"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.854382805423466,
+          "meanSlotMaxX": 76.32517089473576,
+          "meanSlotMinY": 4.897896891719873,
+          "meanSlotMaxY": 63.0789992098751,
+          "meanMinimumPairDistance": 11.644651402685186,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.67446730306814,
+          "meanSlotMaxX": 76.02368423848195,
+          "meanSlotMinY": 4.9008686813297695,
+          "meanSlotMaxY": 63.11303264305886,
+          "meanMinimumPairDistance": 11.653286770376074,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C7/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "563b0346bbfc77128197cc4bbd1c1f05abb68541144daea8ede73aa599c31919",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "c241909e9d323facfa86692b33f2ce7d04fab6e7a6bcc246fc6219ab4fa93c64"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "be1d2937f28ad117300036fb991b9e5c2ea8febbb0fcdae7994e502b42881d16"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "13aa25fff8c7a9c53732e94fc628863d50ad4936cb531e958fab7e5ed4e627a8"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "c8b5d4d58e60f7c9db61e3d57c69e4b2532d8e9659932d39be56c71f94e04c0d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1504077,
+          "sha256Uncompressed": "9ed08caac491c505b88390f9fdcb3d62934ea9400fd8374a3326335dbcaeb649"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "8ad8736813546a962e90740915592ddda8c9f261ada620cb7787596b843c00a0"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 27.834762284838668,
+          "meanSlotMaxX": 79.27827851564219,
+          "meanSlotMinY": 4.964016701500094,
+          "meanSlotMaxY": 63.06478589532879,
+          "meanMinimumPairDistance": 11.629165638994095,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.647284739269022,
+          "meanSlotMaxX": 76.07900549746034,
+          "meanSlotMinY": 4.88563181838759,
+          "meanSlotMaxY": 63.09934976224151,
+          "meanMinimumPairDistance": 11.649439826912632,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/0000000000000001/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "ac910164ce76402f35a6b3d41363c0601fdedd1047b5d4e7c8d86f5076724b92",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ec511c45528e87efb57350dd02a3ffda9f7e8881eb2e1a5c663f29e415292558"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "5b9b6b6533fdfce830f9a7440b72c57a3cfe255da28c285f8ce049b83b5c3fd3"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "8e179e96cd259b8b3331b4dd7cdf5f9355239fbd595ccb11b09a53e29dd89166"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "595acea3a7d2f021aea00249ba03846e2362e4055862923d98407c7ff4733868"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1506440,
+          "sha256Uncompressed": "cff054ea0ab958155b929354e97e779e9b12e761aeed04d0984877345f16421d"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "3b59c8f491266533b072515cc5fb49a3d273294ff2c089a0672356af71e778f4"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.70491104261613,
+          "meanSlotMaxX": 76.18328793715251,
+          "meanSlotMinY": 4.899395858745433,
+          "meanSlotMaxY": 63.099752866576544,
+          "meanMinimumPairDistance": 11.653612881815542,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.798977773364697,
+          "meanSlotMaxX": 76.14614413570887,
+          "meanSlotMinY": 4.953241224463254,
+          "meanSlotMaxY": 63.04353418217586,
+          "meanMinimumPairDistance": 11.627734606415125,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "e13b4ad7bd3e683894e842be9ca8a2ad7adcf71093db47a1ddded4d1ca92770c",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "751bd547b74796947d1693d31cdf132c484f0febaf0e6c76d224472d17540275"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "64f0fabac3ef16059c843b46c548e234d59ab9349a7bdbde3563ff9ee9ac59a5"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a359fbb6700f860607904cda28a6602a310fb1f80d6bab92f8aa16a97ca3a4a8"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "693578c449ce1691ff994aca48fffa2ed438acf984312b53dbf1fe9fdec2dbff"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1508112,
+          "sha256Uncompressed": "9e56a7afc1fe9d304ab25b1997cee14a513de3bf9e93914968e89ad2de99e9d0"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "20befbd6a346ac833c28b506b0e6b965313819b4ca31c64e68189ebcbbb293b6"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.78072252568321,
+          "meanSlotMaxX": 75.97222467287308,
+          "meanSlotMinY": 4.982010926654417,
+          "meanSlotMaxY": 63.01236934340789,
+          "meanMinimumPairDistance": 11.612828412147188,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.711587633940287,
+          "meanSlotMaxX": 79.37746105866267,
+          "meanSlotMinY": 4.814917221751756,
+          "meanSlotMaxY": 63.17650627659419,
+          "meanMinimumPairDistance": 11.680763310221721,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/000000005A5A5A5A/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "8c84da3293644d55d0715125f7a5e9e21fa7cc07da8bb27c08afef887b0cff04",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "b47a5324747b0da23c2e7097604f7f315b0c38ee762a966c07fbbab005d7b8ca"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "88cd96a092ad098c78f4aa0bc6cc3826bab81354f7c7dc61995721a73f33c04c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "e20b22d1e06c01b9dec2ac23568ba91d2504921ebec72c0e0d45bf044d4d642e"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "14836e1f727e8e1295c3cb92574cbe43c6746f15946dca6098aae66a2dfaa141"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1500258,
+          "sha256Uncompressed": "c132718bddf514e12e0d86d52099265e4c3a59a8ffe4b4f565b2a549c2b5e121"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d152de8c5210511406f7ee29aba1a5fa8ae78e81f290e0c2e15e49f3bd334f99"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.88180391676203,
+          "meanSlotMaxX": 75.90981075014392,
+          "meanSlotMinY": 5.342045902907842,
+          "meanSlotMaxY": 62.365962799634026,
+          "meanMinimumPairDistance": 11.41152983266876,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.479347702706242,
+          "meanSlotMaxX": 76.30005891168689,
+          "meanSlotMinY": 4.842320221208083,
+          "meanSlotMaxY": 63.39253229939405,
+          "meanMinimumPairDistance": 11.723273408697937,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "c8295920d806d86cbee3f65aec4d5444baa50d8b6901ccc31ce43c0ec0a0e899",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "eeb4400b44ac8f3934ecfe3b5ee36f716b51a9e1bc752ec92b8ea86c0ede13c9"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "fb5bc16da49a7eaa6b62c37b78b625757cade751d6ffbd5de8b0344f01f42472"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "685ec57592b08afcb6f96856add37d008bd763f7cb1d7af25626ab9586f523d4"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "45b035ee460134689e444a9b75160153055dcc04432ac3834c6c59b7f64c964d"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1490712,
+          "sha256Uncompressed": "b50619f888eb73f459063669464aec0587afe909c984a5ab3821241cc4c2a344"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "bbf2806b28e7e91bd4cffaee138044510d06b35418899bd17d0c0f9759bc719e"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.877809280108412,
+          "meanSlotMaxX": 76.07934965762645,
+          "meanSlotMinY": 5.008269792512716,
+          "meanSlotMaxY": 63.04956210888117,
+          "meanMinimumPairDistance": 11.617852311012566,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.07201147721444,
+          "meanSlotMaxX": 78.74810176385871,
+          "meanSlotMinY": 5.220782746977094,
+          "meanSlotMaxY": 62.75572658483645,
+          "meanMinimumPairDistance": 15.856524613589372,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/0000000099887766/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "ad20fe044d8b4433e7145dba4745fb4f764e855f9c0d40f7be94cf1d3be22f14",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "240e0abec5ba8816fd4fe81eb9e959b2ac6b44c357e5398f39ff1a06a226fec2"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "56dfbcb52f617dec329e0f5b2058fafceeeff08dbf63d8de13cf0d6cc08dc0e7"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "da1c51c3b0836c295b78f0a8458edcc2f7c38861f7b586f80c4159868e78aa1c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e5cf1d222a62b8e661eefb98726fbea7d09b5d6c47fe977d97f1bb3f823e2dcd"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1501825,
+          "sha256Uncompressed": "6c995a44851100db10af12d9199b92311178b384897348b4b6bda5949752a15b"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "5b7b0a24c47b3dc0e12837fb31946facb8576e45327a1f22462183d75dadff1a"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.71763602313131,
+          "meanSlotMaxX": 76.11074676496717,
+          "meanSlotMinY": 4.863161111796802,
+          "meanSlotMaxY": 63.07903413287436,
+          "meanMinimumPairDistance": 11.654841907492532,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.809592429711934,
+          "meanSlotMaxX": 76.22902873388986,
+          "meanSlotMinY": 4.954168146554071,
+          "meanSlotMaxY": 63.114683821690576,
+          "meanMinimumPairDistance": 11.641684281609452,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "de6125b9678622a7cccf7a636fbdc8c11a511de615497bc5b179f9a55a037b61",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "6d2695723de6d054973e13d4afaacca09a5fb360edef569a5a8baa40d4ff2a64"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "54906284643d43637597831d704e10fb6052258624abdfcabacbb243b561ecdb"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "00637bbfe90a41ea4404c7072ff988c7b45af437b72983e134368f6dd1578b31"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "34f31723fb28549207652a2f2c89a5e89aca3484ede43053d79ad87fbacd6ced"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1495158,
+          "sha256Uncompressed": "e4ae15b066ce7814afdab9315ebfccaec78bcb47969279bd9ffadc046ef5fba1"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "2f530204262063bfd3af94f68fce34f4d5f6317a8225797988e17651da68ef70"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.88838608519815,
+          "meanSlotMaxX": 76.41423724038917,
+          "meanSlotMinY": 4.7885877439036575,
+          "meanSlotMaxY": 62.95769119792524,
+          "meanMinimumPairDistance": 11.642663045936974,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.947432964704095,
+          "meanSlotMaxX": 79.30421285470854,
+          "meanSlotMinY": 5.4135373960669595,
+          "meanSlotMaxY": 62.93809113707105,
+          "meanMinimumPairDistance": 11.511536819974273,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/00000000ABCDEF12/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "d75daca1c7f34836cc9e063556a5bdc409ef38d33228693e770e2a6d7e8268b5",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "417a03ec73707ee182d988cb1199e1b22e16cd8bd717e1da5aaead80c0cf4420"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "baf3f117bdb1063c790e1a2f9dfad74e40fb3788305876a91f59f3bdac171ddf"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "16d9594a1b2fb4345955a7b206633fdc19b85b868317b70b7a1b54b89c8515a8"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "d6c03a88ed477c65c1c9961c0af7dce87398bb3fd619c2afb7c909f1b097c0ac"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1502970,
+          "sha256Uncompressed": "deb8b8e33adfc8ea647f7ab21c4f66b95bbf1e5c8e77de37af378b064acbd393"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "e83cc85e847c0e3b8c60710c508b92735f0a2048c09400d6d9adcdd62462dbab"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.71443595413623,
+          "meanSlotMaxX": 76.10902992895208,
+          "meanSlotMinY": 5.03275129156145,
+          "meanSlotMaxY": 63.208018490317954,
+          "meanMinimumPairDistance": 11.645893155982087,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.791380913823325,
+          "meanSlotMaxX": 76.22628922472089,
+          "meanSlotMinY": 4.81612676060525,
+          "meanSlotMaxY": 62.94824486087522,
+          "meanMinimumPairDistance": 11.636040342271556,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "ae420c6d7cd5f50e495f795e728689d1b9a282442643e117459212198b354a60",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "cda0897468ce8afea90a014c442906b163a5923226bde8461d5f8117ff90ffe8"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "5cf6b99d573e75a3807d6a9d51f81204c05b6c94df5b97e363e2172159822c44"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "d9a7f97a445ceb27ad55ddd6e28aa76f16da5d531680c73c53d42e4757f20a92"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "bb8d6166a4f4c3a2a8f0a3e123a06f9f0422ff135708f752bc794ee70048677b"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1510297,
+          "sha256Uncompressed": "c107016c13bad5fe51479a43bdaabc5b75a359f3f639182978b33e48c702c04e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "8e57e7de9e425dd847839673bca70ebd0e7ac4c50644140517533707bb0bcf82"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.72662118472939,
+          "meanSlotMaxX": 75.81226588105288,
+          "meanSlotMinY": 4.997368183000703,
+          "meanSlotMaxY": 62.9471153721712,
+          "meanMinimumPairDistance": 11.597717732755685,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.76815981578733,
+          "meanSlotMaxX": 79.54020572151528,
+          "meanSlotMinY": 4.840423422775109,
+          "meanSlotMaxY": 63.223840485568594,
+          "meanMinimumPairDistance": 11.685611887793556,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/00000000D1A6D05E/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "0ba9309d578091af73ebb2aa6b23dbf20e23319c47b68bbab18e17cea7bf2bc1",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "3cf75c1170b2205252bd911ca2a30637425a6d6541683181203346fb82d1d31f"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "5f08efb89b449d741168328e79ba49374414a8be8b03112e95ae5c90d2019028"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a755e8c360e670d9a833d14d5c0649c9cd0ecec7652e71ad55f47c7993b2eb99"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "29368c68f8da19feecf5c3be069c8b238f5a246a6076818a5c317e324db71aa7"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1501526,
+          "sha256Uncompressed": "c090250eeb7a2f8482e01ebcf7d1de9ab323b5128dd9de739c3255b45c5141dd"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "76e56cc6df00f0917d886aeb8b78588a830bf34e5ccc3fe7e5ef8d9892ff3b3a"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.791281296881518,
+          "meanSlotMaxX": 76.4425304382253,
+          "meanSlotMinY": 4.768798475788797,
+          "meanSlotMaxY": 63.05939484751686,
+          "meanMinimumPairDistance": 11.67067666208217,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.7190802139751,
+          "meanSlotMaxX": 75.90925857845453,
+          "meanSlotMinY": 5.080917612151147,
+          "meanSlotMaxY": 63.126836331006025,
+          "meanMinimumPairDistance": 11.620458628654957,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "73f6782b32a74de5c27b86d1313641d789aba4a6c38e1c39c3c52cd8f4f6712a",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "5099814c8e9afd90d1eefa4c80ee9160fc41b1c500cf2aec79759bec8d178197"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ebccfabfc0564800379ba6d8081cbf2137658dcb796a4128c1200e086ab2c05a"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "6eafc82909aa5aea3a77a730225bb2905cadedaf61c31aee62c78770ee3e2e29"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "ea25086fc2f8b163b43c08df7c79ca2c25c5eb36914095e7434af57856e325a6"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1512696,
+          "sha256Uncompressed": "7c317945bc0ed5e2f4f47ad665e3ec72a4139de9ed34aa17cc1a5d29cea5b496"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "5c5926f4e8c67c7cb1d6ee886dd9c73c49ff3af5add04b62bf9c80bb4083c957"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.677377927042595,
+          "meanSlotMaxX": 76.25301987652549,
+          "meanSlotMinY": 4.772402863274764,
+          "meanSlotMaxY": 63.08540173103554,
+          "meanMinimumPairDistance": 11.670065187918247,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.825043423877528,
+          "meanSlotMaxX": 79.1126871664446,
+          "meanSlotMinY": 5.051694957310916,
+          "meanSlotMaxY": 63.08855249012869,
+          "meanMinimumPairDistance": 11.615885281360146,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/base/C8/0F1E2D3C4B5A6978/observed",
+      "schema": 28,
+      "buildHash": "abc1162036b5058b3c9bb0898790bda8b6e2ffadfd1fb91b9b1ea4d22d5746ec",
+      "terminalDigest": "588045ec19ad7ad4f4f8899cd2db85a6d5979139f976e0a059f148aa307f93aa",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "6e21c7802ceb296bd5d452ac8bf65dfd65d2802d8af555d5128fd18c3cac2c4a"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "87b208c5e063730cd6f11d8793672939b0a5b032d42b6d284267f1fcbd1b2009"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "6e17d90a3179eac8a1c5d4758b12c6df60ef905727e047dc50e8ef9f9951228c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "77ff9b61db4218813fd698972b67fe7b13f319fa80a06186326299e603fad0ed"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1507294,
+          "sha256Uncompressed": "79c79f3e4d872592652c4a6556cb0174129711c7ff93cbcb647db1724b53ffb9"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "7c0390cca31c2a18b00041ebee5c7dee7a92804604799928869490415c9e008e"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.73149774687346,
+          "meanSlotMaxX": 76.07290679409441,
+          "meanSlotMinY": 4.802553601979251,
+          "meanSlotMaxY": 62.92536449974565,
+          "meanMinimumPairDistance": 11.636491751034601,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 24.784930373847956,
+          "meanSlotMaxX": 76.27025431198871,
+          "meanSlotMinY": 5.03863158738446,
+          "meanSlotMaxY": 63.241974454607885,
+          "meanMinimumPairDistance": 11.652984209441616,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C8/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "3bce522c91cab37302c64feb2edc90abfac7714480fe54e3cb3d115cca9b38c8",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "133d53f235bb249969dc615b680ee7cd46879a60264d37106fae82841ae3b2e7"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "588018818600bb8c2a8edc63610d458074778a26c8647d61ccd408a7329acda4"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "575076e57598e1b700a3ab409b85ae35282384c4558dc5047a21a71ef7bc2cb3"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "0f0ccea2156655c6e60e3654398df8f2f1056ad099f01a23df0b6fcefef1e953"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1510778,
+          "sha256Uncompressed": "31e5b62cea923952e07f4f3ce2998dcabbaac211915bbacf6f53410e239f4667"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "08031e7a6e34b5c781c1c88f020697584dfbfb4fc4e60b9d036c0aaae0f11b0b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 24.654537979670216,
+          "meanSlotMaxX": 76.00967803778751,
+          "meanSlotMinY": 4.904921220720679,
+          "meanSlotMaxY": 63.11188980174878,
+          "meanMinimumPairDistance": 11.648530221113013,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 27.865752542378072,
+          "meanSlotMaxX": 79.3406048012843,
+          "meanSlotMinY": 4.904663814452205,
+          "meanSlotMaxY": 63.06290066620383,
+          "meanMinimumPairDistance": 11.640840188761848,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/0000000000000001/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "b37761c0b91b59d9dcffc764a9967091a8f788f381fd6aecd2b4592a663316c4",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "dc09db03240cdb93f1a1af485985cdbfae1416d5a6ebff93028ce5b4ad559b0c"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "21989ecadc38bfa2612f45a079f7f32311415130f69126aeec15c4656bb89aed"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "97f0d78a844fd5d9259cab2004cefe180b0f2dd9ca22b4b221ea1460a0366e02"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e8252ca330207436ce5e9072d83787c3b4ff1725655d0fd339e9697d7feea32e"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1538310,
+          "sha256Uncompressed": "f123b157e34e8712cd612640f988ae74236a47cc0439493e06f2071b4605af3b"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "4e8bcd3cdf2be66e3c584368a3311263a5182e7146e405d84fce8bb41b3cb64c"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.600556633689187,
+          "meanSlotMaxX": 79.9522442894778,
+          "meanSlotMinY": 8.342648381354529,
+          "meanSlotMaxY": 59.702389673815034,
+          "meanMinimumPairDistance": 15.02159469307343,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.54341927652732,
+          "meanSlotMaxX": 79.53178372304791,
+          "meanSlotMinY": 8.36091239646765,
+          "meanSlotMaxY": 59.5569249016459,
+          "meanMinimumPairDistance": 14.937490950557747,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/000000005A5A5A5A/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "06ab4794efa013d0d62b4c44e1d369a04649e1d14defdb42b002ea483ceae651",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "fd1460f412a456f2aede32e930483eac408d6f54b67f18e514137da2764e4227"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "aa42976b630492e9942d6b0cc509291f4a8b3e020e542bee9cf38249c56d9109"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "5143d7ca2302582265211f903ff21b9c896ac085ce7d2356de751128843b3605"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "e697c470bf5eb35a3f8c55eb919d286d5ff54b142442e0f3f3b8c88ab4d241bf"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1517517,
+          "sha256Uncompressed": "ec64a84793657a617d70e88bdec61f53275f41041a332b79f78b559749c67ed0"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "c538dba27c2314332600d4be7f185d5680267dd4d5111f5701212f3ed844cd51"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.710532696998264,
+          "meanSlotMaxX": 78.89725939200832,
+          "meanSlotMinY": 9.012439301200313,
+          "meanSlotMaxY": 59.0531732639067,
+          "meanMinimumPairDistance": 14.69101847954793,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.47572390621098,
+          "meanSlotMaxX": 80.68817746406789,
+          "meanSlotMinY": 8.010117356879935,
+          "meanSlotMaxY": 59.77768609596139,
+          "meanMinimumPairDistance": 15.232043863395093,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/0000000099887766/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "6483b9b688def177d0e8b095ac3ff93a6f591626a194b74a067360b44fcdf01b",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "daf0fb6e40299a99be37a323e11896860ba8aa695c9cea9788eefd5f8705ecd4"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "4aa52b6452b6ec7252b4db095460ce8667bea5daf55773a80effbee9cd20db44"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "9d9b583697a7a54726a5a3ac214948c5ec905df065a8f96d94bbd13bdf566d7d"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "f516da45d4177272207238c33cb7959e08db5f81686f070825c2cfcb18cddf4c"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1526232,
+          "sha256Uncompressed": "603539f14ad92048c5eb807b65268d9cf4ffd5afede812281b7917c9be1ca9c7"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "d41a8dab3912c5a2ba5916add7d35fed4d42b431501ef3f99cd7341ba6eaaee3"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.5195932115797,
+          "meanSlotMaxX": 79.51014120981127,
+          "meanSlotMinY": 8.487116350854144,
+          "meanSlotMaxY": 59.67353524661761,
+          "meanMinimumPairDistance": 14.898408419663813,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.59118636364111,
+          "meanSlotMaxX": 80.00919882438212,
+          "meanSlotMinY": 8.293379721057581,
+          "meanSlotMaxY": 59.67323182746634,
+          "meanMinimumPairDistance": 15.015036680234898,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/00000000ABCDEF12/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "8c453dd042d85579f4c2b51df6a56c015fbed594cc2946ebf326573da2ab0536",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "38788f23453b4dc075a88650c984bd587e87f2512b6489f398ff0200f0335ad6"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "73a1d06082144e64058c2c14426bf4fa6768ba663b0b7f37cead24b5a16e9d0c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "d3e468ea65eb260ca9432263daee0c2b9718900e1bf4db85e24c7422d90ca49c"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "3df50b1449deeaf734fd3cfa028de2ab96e4fb8afea9f29c384ecf1cc29204f5"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1533021,
+          "sha256Uncompressed": "4fc4028b01e66884ff6377e2bcff7e9f9f18468d479c157bca2c8f955a445f6c"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "48f85321b8cd64ab32f4ed02b33a480165d6f7dc4565ef7f73b35d74e454d5e6"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.60224448905375,
+          "meanSlotMaxX": 79.84386509719934,
+          "meanSlotMinY": 8.256162218121316,
+          "meanSlotMaxY": 59.53895602629545,
+          "meanMinimumPairDistance": 14.981166295185151,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.56320877596547,
+          "meanSlotMaxX": 79.66957522972453,
+          "meanSlotMinY": 8.466511643143278,
+          "meanSlotMaxY": 59.70965108064531,
+          "meanMinimumPairDistance": 14.94801298233607,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/00000000D1A6D05E/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "5f0601e2c8503b55553e1ab674aa4891fb89bb46ebc57874d0fcb7ed984ad863",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "dfc4ba7440468e8ebae2fb95a1e1af6ee9002855b0a69b1aa46148a82f75bf7b"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "d9138ad54b22dd764b0fad0b8407acecd0cb7c6718fd5cdfe4fbc87246397f1c"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "a190d9e0d4272f961dbb5d559f7c27f8768d6344e558b9c8d3289a31ff045ac2"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "bfed34229f136cb611a02cb525c1b517103200b29a92a5ecce910cffedd11edc"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1538691,
+          "sha256Uncompressed": "db2d3d80fe60f0c9dffab23d57f9694c5dfa3ef609de3967006ace73cd83b66e"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "7f65fa9ac44f6b9e4b84950912ce59401d5d77400fcd867686cdeea5d6ec7c3b"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.612340945738676,
+          "meanSlotMaxX": 79.93011686300737,
+          "meanSlotMinY": 8.27385258030438,
+          "meanSlotMaxY": 59.581979485365565,
+          "meanMinimumPairDistance": 14.981080501952073,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.538998740922853,
+          "meanSlotMaxX": 79.60815968120798,
+          "meanSlotMinY": 8.4805499643248,
+          "meanSlotMaxY": 59.69145584000479,
+          "meanMinimumPairDistance": 14.924256388286253,
+          "geometrySamples": 53999
+        }
+      ]
+    },
+    {
+      "path": "matrix/head/C9/0F1E2D3C4B5A6978/observed",
+      "schema": 29,
+      "buildHash": "e2add0e42ad6cfe6da28f7c0e3b3d255662e57e61891b6bf209851c3b6c3f200",
+      "terminalDigest": "af6d8c5e87f5031445fbf5dbe4039e3d838623f9b2562ae621d116fedd7d13e3",
+      "streams": {
+        "digests.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "ded88646fe711b441aefd10504dc0b5b93d38ef8e50438489c5221fcfe69f954"
+        },
+        "aligned.bin.gz": {
+          "bytes": 10368000,
+          "sha256Uncompressed": "9aee28d2f9f6c05f08d9727bb3999c48330127a92c674045ed964607fd3b325d"
+        },
+        "trajectory.bin.gz": {
+          "bytes": 79056000,
+          "sha256Uncompressed": "669d7f69010db307cbbf5ce051463690ae3e5e00396ca0796c5ea29785edb184"
+        },
+        "team-possession.bin.gz": {
+          "bytes": 2592000,
+          "sha256Uncompressed": "b300b275d9d28f221bb8ddf371024b2ee117a25caef478d15876058bdab43c77"
+        },
+        "ledger.bin.gz": {
+          "bytes": 1534812,
+          "sha256Uncompressed": "6fe2ceedd03a1d83c36b1badae79161931e9b65607874a9d484d3e4535944f8c"
+        },
+        "geometry.bin.gz": {
+          "bytes": 10151812,
+          "sha256Uncompressed": "eee237e341e19b587c0393395d14ab666e4ae7c935115ab622c51bab83592a3c"
+        }
+      },
+      "geometry": [
+        {
+          "meanSlotMinX": 26.626454024997564,
+          "meanSlotMaxX": 79.78743261074025,
+          "meanSlotMinY": 8.33600417924666,
+          "meanSlotMaxY": 59.58412529012468,
+          "meanMinimumPairDistance": 14.959440491656945,
+          "geometrySamples": 53999
+        },
+        {
+          "meanSlotMinX": 26.553458032975556,
+          "meanSlotMaxX": 79.73790188263442,
+          "meanSlotMinY": 8.405276006463613,
+          "meanSlotMaxY": 59.69591849107085,
+          "meanMinimumPairDistance": 14.971349155294085,
+          "geometrySamples": 53999
+        }
+      ]
+    }
+  ]
+}

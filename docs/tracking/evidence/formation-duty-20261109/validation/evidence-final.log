@@ -1,0 +1,2 @@
+Evidence integrity contracts: PASS (37 SHA-256 manifests; 35 full-coverage, 2 artifact-scoped; 40 registered directories)
+Materialized files: payload SHA-256; Git LFS pointers: referenced OID only.

@@ -11,9 +11,10 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** October 10, 2026 (v1.9 — `ERR-008-025`: §3.1.13 names the real `SaveAvailable` producer, `KeeperPerceptionGate` (raw `SaveArmed` geometry plus current-frame all-body line of sight), and states that the rush veto stays on raw geometry. Spec text only; the code already does this. Prior update below.)
+**Updated:** November 11, 2026 (v1.10 — `ERR-008-027` (W13.1; spec + code, same commit): §3.1.7.2 gains the mark-point MOVE override (`TacticalContext.HasMarkTarget` / `MarkTarget`, pitch-clamped, no depth adjustment) and §3.1.8.2 states that a marking agent generates PRESS only via priority 1; defaults leave both sections unchanged.)
+**Updated (prior):** October 10, 2026 (v1.9 — `ERR-008-025`: §3.1.13 names the real `SaveAvailable` producer, `KeeperPerceptionGate` (raw `SaveArmed` geometry plus current-frame all-body line of sight), and states that the rush veto stays on raw geometry. Spec text only; the code already does this. Prior update below.)
 **Updated (prior):** August 9, 2026 (v1.8 — CORRECTION to v1.7: `ERR-008-024`'s fix was implemented, measured, and REFUSED, not landed. §3.1.5.2's pseudocode reverted to match the shipped code — `best_direction = argmax(space_in_dir)`, ties to the earliest sector — and the ERR-008-024 callout now records a KNOWN, MEASURED, UNFIXED defect with the refusal evidence. See the version-history table.)
-**Version:** 1.9
+**Version:** 1.10
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -896,6 +897,23 @@ the `runTargetPosition` derived from `AttackIntent.runParameters` (§3.4 of Atta
 roles (SUPPORT_BALL / HOLD_WIDTH / WEAK_SIDE). This override is a Stage 1 deliverable;
 at Stage 0 `TacticalContext.AttackIntent` is always null.
 
+**Mark-point override (W13.1, `ERR-008-027`).** When `TacticalContext.HasMarkTarget` is true the
+`MOVE_TO_POSITION` target is `TacticalContext.MarkTarget` — the world-space point #14 §3.13.1
+composes goal-side of the agent's marked opponent — instead of the formation slot:
+
+```
+target = HasMarkTarget ? Clamp(MarkTarget)                                   // INV-GEN-06 pitch clamp
+                       : Clamp(GetAdjustedFormationSlot(AgentId, TeamId))   // §3.4.5 depth adjustment
+distance_to_slot = |target − AgentPosition|                                   // m; feeds §3.2.2
+```
+
+The §3.4.5 defensive-line-depth adjustment is **not** applied to the mark point: it is anchored to
+the opponent, not to the formation. `HasMarkTarget` false (the default, and the only value the shipped
+match engine writes until its mark-movement switch is turned on) leaves this section exactly as it was.
+*Units/ranges:* `MarkTarget` in metres, X ∈ [0, 105], Y ∈ [0, 68] after the clamp. *Worked example:*
+away agent at (52, 34), `MarkTarget` = (61.5, 22.25): target = (61.5, 22.25) regardless of
+`DefensiveLineDepth`; `distance_to_slot` = 15.1 m. An off-pitch `MarkTarget` (110, −3) clamps to (105, 0).
+
 ### 3.1.7.3 MoveOption Construction
 
 ```csharp
@@ -948,6 +966,16 @@ Priority 2: VisibleOpponent O nearest to AgentPosition
 
 Priority 3: No valid target → PRESS not generated (Gate 3 fails)
 ```
+
+**Marking agents skip priority 2 (W13.1, `ERR-008-027`).** When `TacticalContext.HasMarkTarget` is
+true, priority 2 is **not evaluated**: the agent generates PRESS only for the ball carrier within
+`PRESS_TRIGGER_DISTANCE` (priority 1, which may or may not be his man); with only a non-carrier in range,
+no PRESS is generated and MOVE_TO_POSITION to the mark point (§3.1.7.2) governs. Reason: without the rule a
+marker 6.2 m or closer from his man scores PRESS above MOVE (PRESS ≈ 0.098 at 6 m vs MOVE ≈ 0.052 once the
+suppression applies; PRESS ≈ 0.245 vs 0.019 at 3 m, neutral attributes, MEDIUM pressing — #14 wiring plan §4.5),
+so it would sprint onto the man's *current* position (contact distance, not goal-side) and could switch to a
+different nearest opponent. Agents without a mark target are unchanged, and `HasMarkTarget` false is the
+default.
 
 ```
 PRESS_TRIGGER_DISTANCE = 8.0m [GT]
@@ -1084,3 +1112,4 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.7 | August 9, 2026 | — | ERR-008-024 (spec + code, same commit). §3.1.5.2's 8-sector scan now ranks on `space_in_dir(dir) × DirectionQuality_DRIBBLE(dir, toGoal)` instead of `space_in_dir` alone. `space_in_dir` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old strict-improvement scan always kept the first sector visited — sector 0, `AgentFacingDirection` by construction — whenever two or more sectors were clear, the common case in the final third: goal direction never entered the choice of `best_direction` at all, which is why ERR-008-018's scoring-stage fix could suppress a retreating dribble but never redirect it (close-chance-creation KD-CC3 / §7 item 6, now closed). Ranks on the SAME `DirectionQuality_DRIBBLE` term §3.2.4.1 already applies at scoring — no new constant; the floor is `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80 (§3.2.4.1, unchanged), so direction can outrank at most a 20% space deficit. `SpaceScore` itself (§3.1.5.3) is unaffected — it remains the raw space fraction of whichever sector the ranking picks. Consumers: `OptionGenerator.cs` v1.11, `UtilityWeights.cs` v1.14, `UtilityScorer.cs` v1.16, `OptionGeneratorTests.cs` v1.11. Measured: `sim_match_engine_close_chance` meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); `DecisionTree.Tests` 131 passed / 4 skipped / 0 failed. **[CORRECTED at v1.8 below — this fix was implemented, measured, and REFUSED. It was never actually landed: the same build stalls `sim_match_engine_play_develops` outright and zeroes `goals-still-scored`. The pseudocode and callout described here have been reverted.]** |
 | 1.8 | August 9, 2026 | — | CORRECTION to v1.7: `ERR-008-024`'s tie-break fix was implemented, measured, and REFUSED — not landed. §3.1.5.2's pseudocode reverted to `best_direction = argmax(space_in_dir)`, ties to the earliest sector — the code `OptionGenerator.cs` actually runs, byte-identical in logic to the pre-fix baseline. The "sector selection is no longer space-only" claim and the ERR-008-024 callout are corrected to record a KNOWN, MEASURED, UNFIXED defect with the refusal evidence: the tie-break form passes `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but stalls play outright (`sim_match_engine_play_develops` fails, ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. Kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` (the hoisted §3.2.4.1 formula) and `UtilityScorer`'s delegation to it. The two v1.7 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `close-chance-creation-design.md` §7 item 6 (reopened). |
 | 1.9 | October 10, 2026 | — | `ERR-008-025` (spec-text drift; no code change). §3.1.13 said `SaveAvailable` came from `GkHeadingIntentSource.SaveArmed` geometry. Since W4 (PR #403, September 13, 2026), the producer has been `KeeperPerceptionGate.SaveAvailable`: raw `SaveArmed` AND current-frame all-body line of sight via `OcclusionFilter.IsOccludedByAnyAgent`, with balls above `AgentReachHeight` never screened. §3.1.13 now names that producer, says the rush veto stays on raw `SaveArmed`, and adds a worked example. SAVE generation, scoring and dispatch are unchanged. Determinism impact: none (text only). |
+| 1.10 | November 11, 2026 | — | `ERR-008-027` (W13.1; spec + code, same commit). §3.1.7.2: when `TacticalContext.HasMarkTarget`, the MOVE target is the host-composed per-agent mark point `MarkTarget` (pitch-clamped; the §3.4.5 depth adjustment is not applied); §3.1.8.2: a marking agent skips priority 2 (nearest opponent) and generates PRESS only for the carrier within `PRESS_TRIGGER_DISTANCE`. Both flag-gated: false (the default) is the prior text exactly. Producer: Defensive AI #14 §3.13.1 via `MatchEngine.RunMechanicsAI`. Code: `OptionGenerator.GenerateMoveCandidate` / `GeneratePressCandidate`. |

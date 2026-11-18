@@ -1,8 +1,8 @@
 # Positional Rotations Specification #25 — Appendices
 
 **Created:** July 8, 2026
-**Last Updated:** July 10, 2026 (v0.3)
-**Version:** 0.3
+**Last Updated:** November 9, 2026 (v0.4 — ERR-025-001: v29 metadata/count/contiguous-row order, strict validation and byte arithmetic.)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -63,10 +63,29 @@ across rows under the FR-RO-008 partner lock as above). The double pivot rotates
 
 ## Appendix B — Snapshot field order (pinned before wiring, FR-RO-013)
 
-1. Per agent, roster order: `SlotIndex` (int32) — the binding permutation
-2. Per agent, roster order: `LastComposedTarget.X` (float32), `LastComposedTarget.Y` (float32) — PASS-1 H-1 cache
-3. Per pair, table-row order: `TriggerDwellTicks` (int32), `Rotated` (byte), `HoldTicksRemaining` (int32)
-4. `TeamTactic.RotationFreedom` (byte) via `WriteTeamTactic` per the append-order coordination rule
+World-state v29 (ERR-025-001), in the engine's existing little-endian canonical encoding:
+
+- Immediately after `uint32 worldSchema`, `uint64 tick`: team order 0,1, each
+  `uint8 initialized` followed by `int32 effective TacticFormation` (10 bytes total).
+  Validate this before reading any positioning hysteresis; select the saved family first.
+- At each team's existing rotation location: `int32 rowCount`, then:
+  1. Per agent, roster order: `SlotIndex` int32 (binding permutation).
+  2. Per agent, roster order: `LastComposedTarget.X/Y` float32 (cache).
+  3. Per pair, table-row order: `TriggerDwellTicks` int32, `Rotated` uint8,
+     `HoldTicksRemaining` int32. Each row is 9 bytes; do not split row 5 into a trailer.
+- The existing `TeamTactic.RotationFreedom` uses int32 through `WriteTeamTactic`,
+  despite the enum's byte backing; its previous position and all tactic bytes stay unchanged.
+
+For eleven agents, each block has 132 agent bytes plus 4 count bytes plus 45/54 row
+bytes = 181/190 bytes. Compared with v28, total overhead is 18 bytes for two five-row
+teams, 27 for one six-row team, 36 for two. This owner-approved one-off layout change
+excepts the repository snapshot skill's append-last rule; v28 is rejected, not migrated.
+The reader mirrors this order and rejects mismatched counts before reading rows.
+
+Restore's initialized metadata must be 0/1, effective family one of F442/F433/F4231.
+Uninitialized is allowed only for a synthetic tick-0 F442 body. An initialized tick-0
+body retains its saved choice and cannot resample on its first resumed tick. Requested
+and effective formations may differ legally after kickoff (#21 §4.6.1).
 
 ## Appendix C — FR traceability matrix (completed as tests land)
 
@@ -118,4 +137,5 @@ analyzer re-sorting mid-hold is harmless — it operates on positions and the bi
 | 0.1 | 2026-07-08 | — | Initial appendices: 4-4-2 exemplar, snapshot order, traceability, FR-RO-007 derivation. |
 | 0.2 | 2026-07-08 | — | PASS-1: Appendix B gains the `LastComposedTarget` block (H-1); Appendix D line-dwell value verified = 5 (L-3). |
 | 0.3 | 2026-07-10 | — | Appendix A completed: A.2 (4-3-3, 5 rows) + A.3 (4-2-3-1, 6 rows) authored against the verified `Family433`/`Family4231` slot rosters; A.1 slot-name↔source-order mapping note added; F1 hand-audit recorded per table. Closes the §9.1 family-completeness item. |
+| 0.4 | November 9, 2026 | — | ERR-025-001: v29 metadata/count/contiguous-row order, strict validation and byte arithmetic. |
 #endregion

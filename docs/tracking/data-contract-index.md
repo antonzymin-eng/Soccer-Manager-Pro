@@ -117,7 +117,7 @@ file inventory. This file adds only the entity → (spec §, assembly) hop those
 | Build identity (`buildHash`) | #16 §2.3.2 | `deterministic-sim`, `match-engine` | `BuildIdentity`, `BuildModule`, `SnapshotHeader.BuildHash`, `MatchEngineBuildIdentity` (declares the closure) |
 | Match world-state snapshot (the live one) | `match-engine-design.md` | `match-engine` | `SNAPSHOT_SCHEMA_VERSION` in `MatchEngineConstants` — **see §9 hazard 2** |
 | Match clock / phase | #16, #8 | `deterministic-sim`, `decision-tree` | `MatchClock`, `MatchPhase`, `MatchContext` |
-| Per-layer AI snapshots | #14, #15 | `defensive-ai`, `attacking-ai` | `DefensiveSnapshot`, `AttackingSnapshot`, and their `*AgentSnapshot` rows |
+| Per-layer AI snapshots | #14, #15 | `defensive-ai`, `attacking-ai` | `DefensiveSnapshot`, `AttackingSnapshot`, and their `*AgentSnapshot` rows. **`DefensiveSnapshot.MarkMovementActive` (W13.1, `ERR-014-010`):** a per-tick producer input (default false, **not serialized**) that activates anti-chaos Invariant 4 (one marker per opponent) and the 1 → 3 → 4 → 2 invariant order; the shipped engine writes it only under the default-off `MarkMovementEnabled`. **`DefensiveSnapshot` frame contract (`ERR-014-008`):** every position and velocity is in the *defending team's canonical attack-toward-+X frame* (own goal at x = 0 for BOTH teams; the composition root rotates the away team before filling it), and #14 is canonical-only: the team id never selects a goal. Specified at #14 §2.3, documented on `DefensiveSnapshot`; `MatchEngine.FillDefensiveSnapshot` is the producer |
 | Match statistics | #37 §2.2 | `match-analytics` | `MatchAnalyticsResult`, `MatchAnalyticsAggregator`, `MatchEngineObservation` |
 
 > **Six of `#16 §2.3`'s nine names do not resolve to types — now filed as `ERR-016-009`.**
@@ -173,12 +173,13 @@ read the value from the file.
 | Entity | Owning spec § | Assembly | Type(s) |
 |---|---|---|---|
 | Team tactic | #21 §2.2.1 | `tactical-instructions` | `TeamTactic` |
+| Requested/effective kickoff formation observation | #12 FR-PA-039, #21 §4.6.1 | `match-engine` → `match-viewer` | `MatchFormationState` → `LiveMatchFrame.Formations` |
 | Player instructions | #21 §2.2.2 | `tactical-instructions` | `PlayerInstructions` |
 | Per-agent resolved tactic | #21 §2.2.3 | `tactical-instructions` | `PlayerTactic` |
 | Tactic enums (APPEND-only) | #21 §2.2.4, Appendix A | `tactical-instructions` | see §2.2.4 |
 | Tactic presets | #26 | `tactical-instructions` | `ITacticPresetCatalogue` + implementations |
 | Engine-side tactic config | `match-engine-design.md` | `match-engine` | `TeamTacticConfig`, `PlayerTacticConfig` |
-| AI-side tactical context | #8 | `decision-tree` | `TacticalContext` |
+| AI-side tactical context | #8 | `decision-tree` | `TacticalContext`. **W13.1 / W13.1c per-agent mark carrier** (`ERR-008-027`, `ERR-008-028`): `HasMarkTarget` (bool), `MarkTarget` (world metres) and `MarkTargetSpeed` (m/s, 0 = no marked man), written only by `MatchEngine.RunMechanicsAI` under `MatchEngineConstants.MarkMovementEnabled` (default off); rebuilt every stride, **not serialized**; a position, a flag and a speed — no #14 type reaches #8 |
 
 ---
 
@@ -263,6 +264,10 @@ career-roster projection, `season-save`). They are three different layers of the
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.9 | November 16, 2026 | Merge main `3871c9ac` into W13: main's #434 v1.7 and W13's v1.7/v1.8 rows are all kept (W13's v1.7 marked branch-local W13). No row content changed. |
+| v1.8 | November 12, 2026 | W13.1 / W13.1c (`ERR-014-010`, `ERR-008-027`, `ERR-008-028`): the `TacticalContext` row states the per-agent mark carrier (`HasMarkTarget` / `MarkTarget` / `MarkTargetSpeed`, not serialized) and the per-layer AI snapshots row states `DefensiveSnapshot.MarkMovementActive` (per-tick input, not serialized). No serialized contract changed; implementation is on branch `claude/great-sagan-rpcmhp`, unmerged, switched off by default. |
+| v1.7 | November 10, 2026 | #434: maps the concrete requested/effective formation observation to its owning engine producer and frame consumer; definitions remain in #12/#21. |
+| v1.7 (branch-local W13) | November 10, 2026 | W13.0 (`ERR-014-008`): the per-layer AI snapshots row states the `DefensiveSnapshot` canonical-frame contract. No other row changed; implementation is on branch `claude/great-sagan-rpcmhp`, unmerged. |
 | v1.6 | October 30, 2026 | Cross-document consistency review at `38395f8`: §8 still listed #44 and #49 as having no assembly although `src/discipline/` and `src/localization/` exist — both rows removed and pointed at instead (§3 discipline row, §7 localization row). §5: `SEASON_STATE_FORMAT_VERSION` re-pointed to `SeasonLoopConstants.cs` (it was never in `SeasonSaveConstants.cs`); `DISCIPLINE_SAVE_FORMAT_VERSION` and `CAREER_SLOT_META_FORMAT_VERSION` rows added. No version values added. |
 | v1.5 | October 21, 2026 | #31 T2 AR round 5 (ERR-031-015): the Manager-transfer-command row no longer says the counterparty ledger is untouched "by design" — it is the interim option (b) with the (a)-vs-(b) owner decision open (§7.2, open-issues `transfer-counterparty-ledger`). Pointer wording only; no contract changed. |
 | v1.4 | September 21, 2026 | PR #407 closeout: removed #31 from the “Specified but NOT implemented” table now that this same index already points at the live `transfers` assembly and its managed-state / negotiation / roster-port surfaces. No contract definition changed. |
