@@ -388,6 +388,7 @@ loaded copy identity, compile/EditMode and runtime receipts before claiming host
 timeout, for accepted career work to finish. During engine-resolved matchday work this can leave the
 application unresponsive until the full round completes (about two minutes at the recorded compute
 rate). The operation cannot currently be cancelled safely. Releasing its owner on a timeout could
-interrupt saving or race career mutation, so a responsive shutdown requires a separate asynchronous
-lifetime/cancellation design. The future D-P7-6 finish/save/exit flow must address that requirement;
-the current P7b binding does not implement it. Verify shutdown explicitly on the pinned host.
+interrupt saving or race career mutation. The owner selected cooperative cancellation with
+write-phase protection. See the [draft shutdown design](../../docs/tracking/career-shutdown-cancellation-design.md)
+for the proposed behavior and pinned-host close and Editor Stop checks. Default enablement on merge
+requires the shutdown fix and the pinned Unity checks.

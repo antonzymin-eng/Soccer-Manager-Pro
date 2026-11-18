@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 18, 2026 — (v2.244) Career menu startup and review follow-up. Updated `Assets/Scenes/Scene.unity`, the career coordinator, setup, slot store and source in `src/client-app/`, its coordinator regression tests, the UGUI career binding and README in `src/match-client-unity/`, and C3/C4 tracking.
+**Last Updated:** November 18, 2026 — (v2.245) Added `docs/tracking/career-shutdown-cancellation-design.md` v0.1. Updated the career shutdown open issue and recorded the prior Linux validation in the source changelog.
+
+**Last Updated (prior):** November 18, 2026 — (v2.244) Career menu startup and review follow-up. Updated `Assets/Scenes/Scene.unity`, the career coordinator, setup, slot store and source in `src/client-app/`, its coordinator regression tests, the UGUI career binding and README in `src/match-client-unity/`, and C3/C4 tracking.
 
 **Last Updated (prior):** November 18, 2026 — (v2.243) `docs/tracking/tackle-duel-design.md` v0.5 → v0.6 after Codex's review of v0.5 (PR #548): §5.2 fades side of approach and closing speed to neutral near coincidence (new `APPROACH_BLEND_M`, 0.10 m `[GT]`), removing a probability cliff at the 0.01 m direction fallback; B′ now adds seven `[GT]`. No path added or removed. **Modified:** `CHANGELOG.md` and this manifest.
 
