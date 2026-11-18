@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-3 M1: assert one localized career formatter is retained for binding.)
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -909,6 +909,34 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void FailedNewPreview_DoesNotRestorePreviousSelection()
+        {
+            using var h = new Harness();
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+            h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            h.Career.CancelNewCareer();
+
+            h.Career.WorkProbe = () => throw new InvalidOperationException("Preview unavailable");
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+
+            Assert.AreEqual(ClientScreens.NewCareer, h.Flow.Current);
+            Assert.AreEqual("Preview unavailable", h.Career.LastError);
+            Assert.IsNull(h.Career.NewCareer.Clubs);
+            Assert.IsFalse(h.Career.CanStart);
+
+            h.Career.WorkProbe = null;
+            h.Career.CancelNewCareer();
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNotEmpty(h.Career.NewCareer.Clubs);
+            Assert.IsFalse(h.Career.CanStart);
+        }
+
+        [Test]
         public void SaveFailureLeavesProgressIntact_AndSuccessfulRetryClearsTheError()
         {
             using var h = new Harness();
@@ -1086,4 +1114,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
 // | 1.9 | 2026-11-05 | — | AR-2 M1: four Continue/Load cases covering empty #40 migration, nondefault populated preservation, complete finance state, market projections and accepted offers. |
 // | 1.10 | 2026-11-05 | — | AR-3 M1: localized career formatter identity is retained and exposed for the Unity binding. |
+// | 1.11 | 2026-11-18 | — | Cover failed preview recovery after abandoning an earlier selection. |
 #endregion

@@ -349,20 +349,18 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 | PR #470 compile | October 4, 2026 | Records the passed exact-head Unity 6000.4.9f1 compile at db38e211; the Validation-status block is discharged. |
 | PR #470 refresh | October 4, 2026 | Records landed Gate I, foundation-only scope, real lifecycle/renderer ownership, temporary tracked demo opt-in and exact-head Unity blocker. Earlier host checks remain historical. |
 
-## P7b career binding candidate — November 3, 2026
+## P7b career binding
 
-Source candidate only; not compiled or exercised in the pinned editor. The default scene remains
-PM-1 because `ClientShellBehaviour._enableCareer` defaults to false. No scene/settings asset was edited.
+The build scene, `Assets/Scenes/Scene.unity`, enables career entry on the Main Menu and
+assigns inactive Career Home, New Career and Load Career roots under the active shell.
+Custom demo-only scenes can leave `_enableCareer` off.
 
 To validate in an isolated host checkout:
 
-1. Under the same always-active shell that owns `S0ScreensBehaviour`, create three independent roots:
-   Career Home, New Career, Load Career. Save all three inactive, outside every other screen root.
-2. Assign them to the shell's new serialized fields and enable career binding. Keep the original four
-   roots, renderer, font and camera assignments. The shared seven-root validator rejects missing,
-   duplicated, nested, initially-active non-menu and inactive-ancestor roots.
-3. Force recursive source reimport; verify zero compiler errors in Unity **6000.4.9f1** before Play.
-   MatchClientUnity now explicitly references SeasonSave; it remains excluded from the Linux shim.
+1. Open the tracked scene and check the three career root references on the shell.
+2. Force recursive source reimport and verify zero compiler errors in Unity **6000.4.9f1** before Play.
+   MatchClientUnity explicitly references SeasonSave and is excluded from the Linux shim.
+3. Enter Play and verify that startup shows career actions and the demo match on the Main Menu.
 4. Check async storage initialization, retry after an inaccessible save directory, New/club selection,
    Start/autosave, Continue, all four picker states, each manual slot, Back, and explicit unsaved return.
    Saves live under `Application.persistentDataPath/careers`; seed entropy enters only at the host boundary.

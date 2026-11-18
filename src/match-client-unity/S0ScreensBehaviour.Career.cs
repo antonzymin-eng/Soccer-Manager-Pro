@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
 // Purpose:  Career UGUI adapter over cached coordinator snapshots; no worker or domain-state reads.
@@ -34,7 +34,8 @@ namespace TacticalDirector.MatchClientUnity
         private string _careerUiError;
 
         private string C(string role) => _careerText.Label(role);
-        private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll)
+        private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll,
+            S0UiFactory.ControlKind kind = S0UiFactory.ControlKind.Secondary)
         {
             Button button = _ui.Button(parent, text, () =>
             {
@@ -43,7 +44,7 @@ namespace TacticalDirector.MatchClientUnity
                 catch (InvalidOperationException exception) { _careerUiError = exception.Message; }
                 _applyVisibility();
                 RefreshCareer(true);
-            });
+            }, kind);
             Register(button, scroll, S0FocusNavigation.Role.Action);
             _careerIdleButtons.Add(button);
             return button;
@@ -54,32 +55,31 @@ namespace TacticalDirector.MatchClientUnity
         {
             _career = career;
             _careerText = career.ScreenText;
-            CareerControl(menu, C("new"), () => career.OpenNewCareer(seed()), _menuScroll);
+            _careerNotices.Add(_ui.Reason(menu, true));
+            CareerControl(menu, C("new"), () => career.OpenNewCareer(seed()), _menuScroll, S0UiFactory.ControlKind.Primary);
             _careerContinue = CareerControl(menu, C("continue"), career.ContinueCareer, _menuScroll);
             CareerControl(menu, C("load"), career.OpenLoadCareer, _menuScroll);
             _careerRetry = CareerControl(menu, C("retry"), career.Initialize, _menuScroll);
-            _careerNotices.Add(_ui.Reason(menu, true));
             RectTransform n = Page(setup, out _careerNewScroll, S0UiConstants.ENTRY_MAX_WIDTH);
             _careerNewHeading = Heading(n, C("new"), _careerNewScroll);
-            _ui.Label(n, C("choose"));
-            _careerChoice = _ui.Label(n, "");
-            _careerClubs = _ui.Column("Career clubs", n);
-            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll);
-            CareerControl(n, C("back"), career.CancelNewCareer, _careerNewScroll);
             _careerNotices.Add(_ui.Reason(n, true));
+            _careerChoice = _ui.Label(n, "");
+            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll, S0UiFactory.ControlKind.Primary);
+            CareerControl(n, C("back"), career.CancelNewCareer, _careerNewScroll);
+            _careerClubs = _ui.Column("Career clubs", n);
             RectTransform l = Page(load, out _careerLoadScroll, S0UiConstants.ENTRY_MAX_WIDTH);
             _careerLoadHeading = Heading(l, C("load"), _careerLoadScroll);
+            _careerNotices.Add(_ui.Reason(l, true));
             for (int i = 0; i < CareerSaveSlots.SlotCount; i++)
             {
                 CareerSaveSlot slot = (CareerSaveSlot)i;
                 _careerLoadButtons.Add(CareerControl(l, "", () => career.LoadCareer(slot), _careerLoadScroll));
             }
             CareerControl(l, C("back"), career.CancelLoadCareer, _careerLoadScroll);
-            _careerNotices.Add(_ui.Reason(l, true));
             RectTransform h = Page(home, out _careerHomeScroll);
             _careerHomeHeading = Heading(h, C("home"), _careerHomeScroll);
-            _careerSummary = _ui.Label(h, "");
             _careerNotices.Add(_ui.Reason(h, true));
+            _careerSummary = _ui.Label(h, "");
             _careerProgress = CareerControl(h, "", career.Progress, _careerHomeScroll);
             _ui.Label(h, C("warning"));
             for (int i = 1; i <= ClientAppConstants.CAREER_MANUAL_SLOT_COUNT; i++)
@@ -105,8 +105,9 @@ namespace TacticalDirector.MatchClientUnity
             _careerLastScreen = screen;
             foreach (Button button in _careerIdleButtons) button.interactable = _career.IsInitialized && !_career.IsBusy;
             _demoButton.interactable = !_career.IsBusy;
-            _careerRetry.gameObject.SetActive(!_career.IsInitialized);
-            _careerRetry.interactable = !_career.IsBusy;
+            bool canRetry = !_career.IsInitialized && !_career.IsBusy;
+            _careerRetry.gameObject.SetActive(canRetry);
+            _careerRetry.interactable = canRetry;
             _careerContinue.interactable = _career.CanContinue;
             _careerStart.interactable = _career.CanStart;
             CareerHomeViewModel home = _career.Home;
@@ -127,21 +128,32 @@ namespace TacticalDirector.MatchClientUnity
                 Button button = _careerClubButtons[i];
                 button.gameObject.SetActive(i < clubs);
                 button.interactable = !_career.IsBusy;
-                if (i < clubs) _ui.SetButton(button, _careerText.Text.Format("club." + i, preview.HasSelection &&
-                    preview.SelectedClubId == preview.Clubs[i].ClubId ? "selected" : "select", preview.Clubs[i].Name));
+                if (i >= clubs) continue;
+                bool selected = preview.HasSelection && preview.SelectedClubId == preview.Clubs[i].ClubId;
+                _ui.SetSelected(button, selected);
+                _ui.SetButton(button, _careerText.Text.Format("club." + i, selected ? "selected" : "select", preview.Clubs[i].Name));
             }
-            S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("selection.ready") : C("choose"));
+            _careerChoice.gameObject.SetActive(clubs > 0);
+            if (clubs > 0)
+                S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("selection.ready") : C("choose"));
+            var slots = _career.Load.Slots;
+            bool present = slots != null;
             for (int i = 0; i < _careerLoadButtons.Count; i++)
             {
-                bool present = _career.Load.Slots != null;
-                _careerLoadButtons[i].interactable = present && !_career.IsBusy && _career.Load.Slots[i].IsLoadable;
-                if (present) _ui.SetButton(_careerLoadButtons[i], _careerText.Slot(_career.Load.Slots[i]));
+                Button button = _careerLoadButtons[i];
+                button.gameObject.SetActive(present);
+                button.interactable = present && !_career.IsBusy && slots[i].IsLoadable;
+                if (present) _ui.SetButton(button, _careerText.Slot(slots[i]));
             }
             string notice = _career.IsBusy ? C("busy") : _careerUiError ?? _career.LastError ?? _career.LastProjectionError ??
                 (home.AutosaveError != null ? _careerText.Text.Format("autosave", "autosave.error", home.AutosaveError) :
-                screen == ClientScreens.MainMenu && !_career.Load.CanContinue ? C("no_save") : "");
+                screen == ClientScreens.MainMenu && _career.IsInitialized && present && !_career.Load.CanContinue ? C("no_save") : "");
             foreach (Text label in _careerNotices) S0UiFactory.SetBoxed(label, notice);
-            if (changedScreen && CareerHeading(screen) != null) Focus(CareerHeading(screen));
+            if (changedScreen || _career.IsBusy)
+            {
+                Selectable heading = screen == ClientScreens.MainMenu ? _menuHeading : CareerHeading(screen);
+                if (heading != null) Focus(heading);
+            }
             RecoverFocus();
         }
     }
@@ -152,4 +164,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.1 | 2026-11-04 | — | Separate selected-club status from the Start action and cache club rows independently. |
 // | 1.2 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.3 | 2026-11-05 | — | AR-3 M1: display labels use the same admitted CareerScreenText instance as coordinator failure copy. |
+// | 1.4 | 2026-11-18 | — | Keep career feedback and recovery controls near the heading and hide unpopulated slot rows. |
 #endregion

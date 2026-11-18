@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSaveSlots.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7, Season & Competition Loop #30 §4
@@ -156,11 +156,13 @@ namespace TacticalDirector.ClientApp
         /// The most recently written <see cref="CareerSlotState.Ready"/> slot — what Continue loads
         /// (D-P7-2). False when no slot is loadable.
         /// </summary>
-        public bool TryGetLatest(out CareerSlotSummary latest)
+        public bool TryGetLatest(out CareerSlotSummary latest) => TryGetLatest(List(), out latest);
+
+        internal static bool TryGetLatest(CareerSlotSummary[] rows, out CareerSlotSummary latest)
         {
             latest = default;
             bool found = false;
-            foreach (CareerSlotSummary row in List())
+            foreach (CareerSlotSummary row in rows)
             {
                 if (row.IsLoadable && (!found || row.Sequence > latest.Sequence))
                 {
@@ -740,4 +742,5 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | SwapIn(temp, dest, backup) and MoveBackIfMissing helper;       |
 // |         |            |        | RestoreDamaged documented as groundwork (no caller yet).       |
 // | 1.7     | 2026-10-30 | —      | PR 521 merge: include the #31 sub-blob in the D-10 stamp.      |
+// | 1.8 | 2026-11-18 | — | Reuse slot selection against an already-read scan. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/client-app/ClientCareerCoordinator.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-3: expose single admitted career text instance to the Unity view binding.)
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8,
 //           UI / Client Framework #38 FR-UI-002/006/009/012, Code Standards #20 §12 rule 1
@@ -212,6 +212,7 @@ namespace TacticalDirector.ClientApp
         {
             RequireScreen(ClientScreens.MainMenu);
             _flow.OpenNewCareer();
+            _setup.Clear();
             NewCareer = default;
             Begin(() => { _setup.Prepare(seed); return true; });
         }
@@ -567,4 +568,5 @@ namespace TacticalDirector.ClientApp
 // | 1.6 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.7 | 2026-11-05 | — | AR-1 M1: check live transfer capability before owner diagnosis and publish TransfersUnavailable for supported optional-empty saves. |
 // | 1.8 | 2026-11-05 | — | AR-3 M1: expose the admitted career formatter to the Unity view binding, preventing duplicate default-locale construction. |
+// | 1.9 | 2026-11-18 | — | Prevent a failed preview from publishing an earlier career setup. |
 #endregion
