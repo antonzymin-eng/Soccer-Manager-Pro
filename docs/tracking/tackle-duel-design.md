@@ -1,6 +1,6 @@
 # Tackle duel — design note (scaling back #440, proposing a richer duel)
 
-> **Created:** November 16, 2026 · **Version:** 0.5 · **Status:** DRAFT — design supplement, not an
+> **Created:** November 16, 2026 · **Version:** 0.6 · **Status:** DRAFT — design supplement, not an
 > approved spec. Nothing here is implemented, measured or authorized. Every constant below is a
 > proposal, and every decision in §7 is the owner's.
 > **Purpose:** The owner reviewed #440 Stage B and judged the tackle model a poor fit for real
@@ -80,7 +80,7 @@ would change those numbers anyway.
 | Stage | Scope | New physics? | Snapshot / RNG |
 |---|---|---|---|
 | **A′ — #440 minimal fix** | BallLoose gives the ball a direction and speed from the duel geometry (§4), and the carrier cannot re-acquire in the tackle frame. Correctness tests only; no 48-run acceptance experiment. | No | Fence: frame-local if provable, otherwise next free schema (v30). No new draw. |
-| **B′ — Duel v2 (slim)** | Resolver reads side of approach, carrier facing, speed and turn rate, and closing speed (timing). Same eligibility, one target, six new constants (§5). Remains an abstract duel. | No | No cross-tick state (all inputs are per-frame) and no new draw. |
+| **B′ — Duel v2 (slim)** | Resolver reads side of approach, carrier facing, speed and turn rate, and closing speed (timing). Same eligibility, one target, seven new constants (§5). Remains an abstract duel. | No | No cross-tick state (all inputs are per-frame) and no new draw. |
 | **C′ — Carried ball** | A real dribbled ball: touches release the ball with velocity, and the carrier re-collects it. The heavy-touch case becomes physical, and B′'s touch-exposure term is retired. | Yes: new spec work across #2 / #4 / #14 | New persistent state, so a schema bump. |
 
 A′ can land before B′. B′ keeps A′'s BallLoose direction rule unchanged. C′ is a separate specification
@@ -92,7 +92,9 @@ Notation (all in the pitch plane, metres and seconds):
 
 - `p_c` is the carrier position and `v_c` the carrier velocity; `p_t` and `v_t` are the tackler's.
 - `n = (p_c − p_t) / |p_c − p_t|` is the unit vector from tackler to carrier. If `|p_c − p_t| < 0.01 m`,
-  use the carrier's facing.
+  use the carrier's facing. This fallback only gives the A′ knock a direction (a loosed ball must go
+  somewhere). B′'s outcome probabilities never use it: they fade side of approach and closing speed
+  to neutral near coincidence (§5.2), so no probability jumps at 0.01 m.
 - **Closing speed** `c = (v_t − v_c) · n`, in m/s. Positive means the tackler is closing.
   Valid range is about −10 to +18 m/s.
 
@@ -155,8 +157,8 @@ state or new draw is added. Notation follows §4, plus `f_c`, the carrier's faci
 | Two-target challenge geometry and reach taper | `REACH_TAPER_M` |
 | Drawn ball-first / man-first intent and its outcome terms | `INTENT_MAN_BASE`, `INTENT_MAN_AGGRESSION_K`, `INTENT_MAN_SHIELD_K`, `FOUL_MAN_FIRST_K`, `CLEAN_MAN_FIRST_K`, `INTENT_KNOCK_DAMP` |
 
-Twelve constants are withdrawn and one is added (`TOUCH_EXPOSE_K`, §5.3), so B′'s new `[GT]` constants
-fall from 17 to 6, a net cut of 11.
+Twelve constants are withdrawn and one is added (`TOUCH_EXPOSE_K`, §5.3), so in v0.5 B′'s new `[GT]`
+constants fell from 17 to 6, a net cut of 11. v0.6 adds `APPROACH_BLEND_M` (§5.2), making seven.
 
 **Why.** Every review finding on v0.2–v0.4 came from the two-target machinery:
 - eligibility measured to one target and reach to the other;
@@ -174,8 +176,8 @@ honest home for a real touch gap is C′.
 
 With a single target, the reach defects cannot arise.
 
-B′ now adds **six** `[GT]` constants and one `[CROSS]` reference, where v0.4 had 17. A′ adds three
-more (§4).
+B′ now adds **seven** `[GT]` constants and one `[CROSS]` reference, where v0.4 had 17: v0.5's six,
+plus v0.6's near-coincident blend width `APPROACH_BLEND_M` (§5.2). A′ adds three more (§4).
 
 ### 5.2 Side of approach — exposure
 
@@ -188,6 +190,31 @@ X    = (1 + cosφ) / 2    # ball exposure ∈ [0, 1]: front 1, side 0.5, behind 
 
 From behind, the carrier's body is between the tackler and the ball (low `X`). From the front, the
 ball is between them (high `X`).
+
+**Near coincidence.** When the two players almost overlap, the direction `n` is undefined and flips
+as the tackler crosses the carrier. v0.5 used §4's 0.01 m facing fallback here, which turned a
+tackler directly in front into one directly behind at 0.01 m: a probability cliff (Codex review,
+v0.6). B′ instead fades both direction-dependent inputs to neutral:
+
+```
+w  = clamp01(|p_c − p_t| / APPROACH_BLEND_M)     # 0 at coincidence, 1 from APPROACH_BLEND_M outward
+X  = 0.5 + w · ((1 + cosφ)/2 − 0.5)              # side of approach fades to "side" (0.5)
+c̃  = w · c                                       # effective closing speed fades to 0 (§5.4)
+```
+
+At coincidence (`w = 0`), `X = 0.5` and `c̃ = 0` whatever direction the fallback would pick, so `n`
+is never needed there. Beyond `APPROACH_BLEND_M`, `X` and `c̃` equal the plain values, so every
+worked example below is unchanged. The fade is Lipschitz: `w` cancels the `1/d` growth of `n`'s
+derivative, so the slope stays bounded (§6).
+
+| Constant | Tag | Proposed | Range | Meaning |
+|---|---|---|---|---|
+| `APPROACH_BLEND_M` | `[GT]` (proposed) | 0.10 m | [0.05, 0.3] | separation below which side of approach and closing speed fade to neutral; a numerical guard, not a calibration dial |
+
+**Worked example.** Both players stationary, carrier facing (1, 0), worked-example abilities, tackler
+directly in front. Under v0.5, moving him from 0.010001 m to 0.009999 m flipped `X` from 1 to 0:
+P(Foul) jumped from 0.0387 to 0.1132 and P(BallWon) fell from 0.1377 to 0.0427. Under v0.6,
+`w ≈ 0.1` and `X ≈ 0.55` on both sides: P(Foul) is 0.0723 and P(BallWon) 0.0894 on both sides.
 
 ### 5.3 Heavy touch — exposure rises with speed and falls with close control
 
@@ -214,11 +241,12 @@ Dribbling 0.6:
 v0.1 kept `cos(approachAngle)`, the tackler's **own** velocity direction, as commitment. That
 penalizes a set or retreating defender, whose velocity points away from the carrier even while the
 carrier runs into him (review finding, v0.2). B′ derives both commitment and timing from the
-**relative** closing speed `c` (§4):
+**relative** closing speed, in its effective form `c̃` (§5.2: equal to `c` from §4 beyond
+`APPROACH_BLEND_M`, fading to 0 at coincidence):
 
 ```
-commit = clamp01(c / TIMING_SET_SPEED_M_S)                 # 0 when not closing, 1 at the set speed or above
-L      = max(0, c − TIMING_SET_SPEED_M_S)                  # lunge excess (m/s)
+commit = clamp01(c̃ / TIMING_SET_SPEED_M_S)                # 0 when not closing, 1 at the set speed or above
+L      = max(0, c̃ − TIMING_SET_SPEED_M_S)                 # lunge excess (m/s)
 q      = clamp01(tackling − TIMING_LUNGE_K · L − TIMING_TURN_K · |turnRate_c| / TURN_RATE_REF)
 ```
 
@@ -274,7 +302,7 @@ connects**, never whether he connects. That keeps the §6 signs provable.
 | `CLEAN_EXPOSURE_K` | `[GT]` (proposed) | 0.30 | [0, 0.6] |
 
 Existing `[GT]` values are unchanged. Every term is a continuous function of positions, velocities
-and abilities. The eligibility edge at `TackleContactRadiusM` behaves exactly as it does today.
+and abilities, including at near coincidence (§5.2). The eligibility edge at `TackleContactRadiusM` behaves exactly as it does today.
 
 **What a lunge does not do.** It does not make the tackler miss more by overrunning the ball. That
 needs a carrier-evasion model, which is a C′ question.
@@ -345,19 +373,24 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
   | Check | Holds | Why it holds in §5.6 |
   |---|---|---|
   | A faster approach never lowers P(Foul) per **attempted** challenge | at fixed positions, abilities and carrier motion, over all closing speeds | Below `TIMING_SET_SPEED_M_S`, `L = 0`: `commit`, and so `engage`, rises while `foulShare` is fixed. Above it, `commit = 1` fixes `engage` while `foulShare` rises with `L`. |
-  | A lunge lowers P(BallWon) per attempted challenge | **only for `c ≥ TIMING_SET_SPEED_M_S`**, same fixed conditions | `engage` is saturated; `foulShare` is non-decreasing and `cleanShare` non-increasing in `L` (strictly while `q > 0` and no clamp binds). |
-  | Below the set speed, closing harder raises P(BallWon) | for `c ≤ TIMING_SET_SPEED_M_S`, same fixed conditions | `engage` rises with `commit`; `q`, `foulShare` and `cleanShare` are fixed. Intended: a defender who never closes does not win the ball. |
+  | A lunge lowers P(BallWon) per attempted challenge | **only for `c̃ ≥ TIMING_SET_SPEED_M_S`**, same fixed conditions | `engage` is saturated; `foulShare` is non-decreasing and `cleanShare` non-increasing in `L` (strictly while `q > 0` and no clamp binds). |
+  | Below the set speed, closing harder raises P(BallWon) | for `c̃ ≤ TIMING_SET_SPEED_M_S`, same fixed conditions | `engage` rises with `commit`; `q`, `foulShare` and `cleanShare` are fixed. Intended: a defender who never closes does not win the ball. |
   | From behind fouls more and wins cleanly less, per attempted challenge | at equal distance and closing speed | `engage` does not depend on `X`. Lower `X` raises `foulShare` and lowers `X'`, and so `cleanShare`. This now holds per attempt, not only conditional on connecting. |
   | A faster carrier concedes more BallWon | at a fixed position and closing speed | Once `c` is fixed, carrier speed enters only `X'`, which is non-decreasing in it (strictly while Dribbling < 1 and no clamp binds). |
-  | Continuity (#14 §3.6.5.3) | over the eligible region | Every term is continuous (clamps and products). There is one target and no threshold inside resolution. The eligibility edge is unchanged from today. |
+  | Continuity (#14 §3.6.5.3) | over the eligible region, separation 0 included | Every term is continuous (clamps and products). There is one target and no threshold inside resolution. Near coincidence, side of approach and closing speed fade to neutral (§5.2), so the 0.01 m direction fallback never reaches a probability. The eligibility edge is unchanged from today. |
 
-  **Earlier counterexamples under v0.5.**
+  At a fixed position `w` is fixed, so `c̃ = w · c` rises with `c` and the closing-speed rows hold in
+  `c̃` as written; beyond `APPROACH_BLEND_M`, `c̃ = c`.
+
+  **Earlier counterexamples under the current formulas.**
   - **v0.1's foul reversal** (carrier at 1.5 m/s, defender 0.6 m behind at 3 m/s and then 7 m/s):
     P(Foul) rises from 0.163 to 0.177. Under v0.1 it fell from 0.136 to 0.118.
   - **v0.2's BallWon case** (frontal defender 0.9 m away, closing at 1 m/s and then 2 m/s):
     P(BallWon) rises from 0.132 to 0.162. That is the intended below-set-speed rise.
   - **v0.3's two cases**, an unreachable ball and an intent cliff at 1 m, cannot arise: there is no
     virtual ball and no intent.
+  - **v0.5's near-coincident cliff** (tackler directly in front, 0.010001 m against 0.009999 m):
+    P(Foul) 0.0387 against 0.1132 under v0.5; 0.0723 on both sides under v0.6 (§5.2).
 
   **Sweeps** (script, v0.5 formulas, ability grid throughout) found no violation of the rows above:
   - **Closing speed:** 3.9 million evaluations. Carrier speeds were 0–9 m/s, tackler positions
@@ -366,6 +399,11 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
     distance and closing speed.
   - **Carrier speed:** 157,000 evaluations, raising carrier speed from 0 to 9 m/s at a fixed
     position and closing speed.
+  - **Near coincidence (v0.6).** The sweeps above start at 0.2 m and missed the 0.01 m fallback.
+    A further 7.7 million sign evaluations at separations 0–0.2 m (exactly 0 included; closing
+    speed, and front-to-behind rotation at fixed closing speed) found no violation. A continuity
+    sweep over a 0.3 m disc round the carrier, 2.4 million perturbation pairs of 10 µm, found a
+    worst slope of 15.1 probability per metre and no jump.
 - **Numeric realism bands** need sourced `[GT]` references (owner, §7 D4) before any calibration.
 - **Neutrality.** B′ changes default behaviour (every tackle reads new inputs). It is a
   behaviour-changing landing and must not land inside an open measurement window. It needs a six-seed
@@ -388,6 +426,7 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.6 | November 18, 2026 | — | Codex review of v0.5 at `1079bf9c` (one P2). §4's 0.01 m facing fallback reversed `n` for a tackler directly in front, a probability cliff (P(Foul) 0.0387 → 0.1132) that contradicted §6's continuity. §5.2 adds a near-coincident fade: side of approach and closing speed blend to neutral below `APPROACH_BLEND_M` (new, 0.10 m `[GT]`), so B′ adds seven `[GT]` constants. §4 limits the fallback to the A′ knock direction; §5.4 and §6 use effective closing speed `c̃`. Worked examples unchanged. New near-coincident sweeps (7.7 million sign evaluations, 2.4 million continuity pairs, separations from 0) found no violation and no jump. §3 updated. |
 | 0.5 | November 16, 2026 | — | Owner review: B′ judged overbuilt. §5 is rewritten as a slim duel on today's §3.6.5 skeleton, with the same eligibility, one target and one draw. It adds side-of-approach exposure, heavy touch as exposure (new `TOUCH_EXPOSE_K` 0.10 s/m), closing-speed commitment and timing, and keeps the existing Aggression term as the man-first lean. Withdrawn: the virtual ball point, two-target geometry, reach taper and drawn intent: 12 constants withdrawn and one added (`TOUCH_EXPOSE_K`), so B′'s new `[GT]` constants fall from 17 to 6, plus one `[CROSS]`. Kept from the reviews: closing-speed commitment, the set-speed-conditional lunge sign and continuity. The from-behind sign now holds per attempt. §3 and §7 are updated, and D3 is withdrawn. Three new worked examples; sign sweeps run on the v0.5 formulas found no violation. |
 | 0.4 | November 16, 2026 | — | Third Codex review of PR #548 (two P2 findings). (1) §5.6: `cleanShare` carries the ball-reach weight `ρ_b`, so no challenge wins a ball out of reach, whatever the intent. The reviewer's case (ball 1.128 m away, P(BallWon) 7.14 %) now gives 0. (2) §5.3: v0.3's hard intent forcing at 1 m is replaced by continuous reach weights `ρ` (new `REACH_TAPER_M` 0.25 m `[GT]`, proposed). Intent `π_m` is `m` reweighted by reachability, and `engage` is scaled by `ρ_ch`, so P(Missed) → 1 at the eligibility edge. The reviewer's 0.9999 m / 1.0001 m pair (14.48 % → 16.64 %) now gives 16.64 % on both sides. Worked example 2 and the §6 counterexample figures are regenerated. Sweeps: 2.6 million sign evaluations and 17 million continuity pairs, with no violation; the steepest response at body separations of at least 0.3 m is under 8 % per metre. |
 | 0.3 | November 16, 2026 | — | Second Codex review of PR #548 (two P2 findings). (1) §5.3: a tackler only commits to a target within `TackleContactRadiusM`. When only one target is reachable, intent is forced to it (`m_eff`), so `reach` is never clamped and an out-of-range target never connects. Worked example 1 becomes man-first only; worked example 2 moves to 0.95 m so that both targets are reachable. (2) §6: the lunge check is split at `TIMING_SET_SPEED_M_S`. P(Foul) is non-decreasing in closing speed everywhere; P(BallWon) falls only once commitment is saturated, and rises below that. The reviewer's counterexample (0.153 → 0.177) is reproduced and explained. All figures script-checked, plus a 2.6-million-point sweep. |
