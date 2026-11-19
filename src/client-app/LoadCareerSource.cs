@@ -1,6 +1,6 @@
 // File:     src/client-app/LoadCareerSource.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2, D-10),
 //           ux-experience-architecture.md §7, UI / Client Framework #38 §3.1, Code Standards #20
@@ -92,7 +92,7 @@ namespace TacticalDirector.ClientApp
         private void Rebuild(string error)
         {
             CareerSlotSummary[] rows = _slots.List();
-            bool canContinue = _slots.TryGetLatest(out CareerSlotSummary latest);
+            bool canContinue = CareerSaveSlots.TryGetLatest(rows, out CareerSlotSummary latest);
             _view = new LoadCareerViewModel(
                 new ReadOnlyCollection<CareerSlotSummary>(rows),
                 canContinue,
@@ -105,4 +105,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7).                                      |
+// | 1.1 | 2026-11-18 | — | Publish the picker rows and Continue target from a single scan. |
 #endregion

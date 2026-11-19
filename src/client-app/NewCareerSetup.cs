@@ -1,6 +1,6 @@
 // File:     src/client-app/NewCareerSetup.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1), roadmap C4 (league
 //           bootstrap → season start → save slot), UI / Client Framework #38 §3.1, Code Standards #20
@@ -100,6 +100,12 @@ namespace TacticalDirector.ClientApp
             return session;
         }
 
+        internal void Clear()
+        {
+            _league = null;
+            _view = default;
+        }
+
         private void RequirePrepared()
         {
             if (_league == null)
@@ -113,4 +119,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7 / C4).                                 |
+// | 1.1 | 2026-11-18 | — | Clear discarded club previews before beginning another. |
 #endregion

@@ -1,5 +1,6 @@
 // File:     src/client-app/SeasonCommandDispatcher.cs
 // Created:  2026-10-18
+// Modified: 2026-11-18 (Cooperative career shutdown.)
 // Modified: 2026-10-18
 // Author:   —
 // Spec:     UI / Client Framework #38 Appendix C (the season dispatcher), §3.3 (F3), FR-UI-003/012;
@@ -8,6 +9,7 @@
 //           career's progress command, and refuses every other kind fail-loud. A router, never a seam.
 
 using System;
+using System.Threading;
 
 using TacticalDirector.UiFramework;
 
@@ -41,7 +43,9 @@ namespace TacticalDirector.ClientApp
         /// <inheritdoc />
         /// <exception cref="InvalidOperationException">The intent is not a season intent (F3), no career
         /// is active, or the action is not legal now.</exception>
-        public void Dispatch(in ManagerIntent intent)
+        public void Dispatch(in ManagerIntent intent) => Dispatch(in intent, CancellationToken.None);
+
+        internal void Dispatch(in ManagerIntent intent, CancellationToken cancellation)
         {
             if (intent.Kind == IntentKind.None)
             {
@@ -56,7 +60,7 @@ namespace TacticalDirector.ClientApp
                     "IntentKind." + intent.Kind + " is not a season intent; the season dispatcher has no seam for it.");
             }
 
-            _holder.Require().Execute(CareerProgress.ActionFor(intent.Kind));
+            _holder.Require().Execute(CareerProgress.ActionFor(intent.Kind), cancellation);
         }
     }
 }
@@ -64,4 +68,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): the #38 Appendix C season dispatcher.|
+// | 1.1 | 2026-11-18 | — | Pass the career worker shutdown token through the existing routing. |
 #endregion

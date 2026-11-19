@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSaveSlots.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-18
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7, Season & Competition Loop #30 §4
@@ -14,6 +14,8 @@ using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+
+using Unity.Profiling;
 
 using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
@@ -87,17 +89,25 @@ namespace TacticalDirector.ClientApp
             + ",finance=" + ClubFinancesConstants.FINANCE_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture)
             + ",transfers=" + TransfersConstants.TRANSFERS_SAVE_FORMAT_VERSION.ToString(CultureInfo.InvariantCulture);
 
+        private static readonly ProfilerMarker WriteMarker = new ProfilerMarker("CareerSaveSlots.Write");
+
         // No byte-order mark: a BOM would prefix the first key and the sidecar would never parse.
         private static readonly Encoding SidecarEncoding = new UTF8Encoding(false);
 
         private readonly string _directory;
+        private readonly Func<IDisposable> _acquireWrite;
+        internal Action AfterSaveSwapProbe;
 
         /// <summary>
         /// Opens (and creates if needed) the slot store rooted at <paramref name="directory"/>, recovering
         /// any slot whose last write was interrupted between its two swaps (see the class remarks).
         /// </summary>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is null or empty.</exception>
-        public CareerSaveSlots(string directory)
+        public CareerSaveSlots(string directory) : this(directory, null)
+        {
+        }
+
+        internal CareerSaveSlots(string directory, Func<IDisposable> acquireWrite)
         {
             if (string.IsNullOrEmpty(directory))
             {
@@ -105,6 +115,8 @@ namespace TacticalDirector.ClientApp
             }
 
             _directory = directory;
+            _acquireWrite = acquireWrite;
+            using var write = _acquireWrite?.Invoke();
             Directory.CreateDirectory(_directory);
             for (int i = 0; i < SlotCount; i++)
             {
@@ -156,11 +168,13 @@ namespace TacticalDirector.ClientApp
         /// The most recently written <see cref="CareerSlotState.Ready"/> slot — what Continue loads
         /// (D-P7-2). False when no slot is loadable.
         /// </summary>
-        public bool TryGetLatest(out CareerSlotSummary latest)
+        public bool TryGetLatest(out CareerSlotSummary latest) => TryGetLatest(List(), out latest);
+
+        internal static bool TryGetLatest(CareerSlotSummary[] rows, out CareerSlotSummary latest)
         {
             latest = default;
             bool found = false;
-            foreach (CareerSlotSummary row in List())
+            foreach (CareerSlotSummary row in rows)
             {
                 if (row.IsLoadable && (!found || row.Sequence > latest.Sequence))
                 {
@@ -189,6 +203,8 @@ namespace TacticalDirector.ClientApp
                 throw new ArgumentNullException(nameof(loop));
             }
 
+            using var write = _acquireWrite?.Invoke();
+            using var profile = WriteMarker.Auto();
             long sequence = NextSequence();
             SeasonState season = loop.State;
             var summary = new CareerSlotSummary(
@@ -223,6 +239,7 @@ namespace TacticalDirector.ClientApp
                 SwapIn(saveTemp, savePath, saveBackup);
                 try
                 {
+                    AfterSaveSwapProbe?.Invoke();
                     SwapIn(sidecarTemp, sidecarPath, sidecarBackup);
                 }
                 catch
@@ -260,6 +277,7 @@ namespace TacticalDirector.ClientApp
         public bool MarkDamaged(CareerSaveSlot slot)
         {
             RequireSlot(slot);
+            using var write = _acquireWrite?.Invoke();
             try
             {
                 string sidecarPath = SidecarPath(slot);
@@ -294,6 +312,7 @@ namespace TacticalDirector.ClientApp
         public bool RestoreDamaged(CareerSaveSlot slot)
         {
             RequireSlot(slot);
+            using var write = _acquireWrite?.Invoke();
             string savePath = SavePath(slot);
             string sidecarPath = SidecarPath(slot);
             string damagedPath = DamagedSidecarPath(slot);
@@ -740,4 +759,6 @@ namespace TacticalDirector.ClientApp
 // |         |            |        | SwapIn(temp, dest, backup) and MoveBackIfMissing helper;       |
 // |         |            |        | RestoreDamaged documented as groundwork (no caller yet).       |
 // | 1.7     | 2026-10-30 | —      | PR 521 merge: include the #31 sub-blob in the D-10 stamp.      |
+// | 1.8 | 2026-11-18 | — | Reuse slot selection against an already-read scan. |
+// | 1.9 | 2026-11-18 | — | Admit all mutations through the owning career shutdown gate. |
 #endregion

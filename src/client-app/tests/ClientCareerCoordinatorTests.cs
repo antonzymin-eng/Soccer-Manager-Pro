@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
 // Modified: 2026-11-19
+// Modified (prior): 2026-11-18
 // Modified (prior): 2026-11-05 (AR-3 M1: assert one localized career formatter is retained for binding.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
@@ -42,12 +43,11 @@ namespace TacticalDirector.ClientApp.Tests
                 Finish();
             }
 
+            internal Thread StartWorker() => StartThread(Work.Dequeue());
+
             internal void RunWorker()
             {
-                Action work = Work.Dequeue();
-                var worker = new Thread(() => work()) { IsBackground = true };
-                worker.Start();
-                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)), "Career operation did not finish.");
+                Assert.IsTrue(StartWorker().Join(TimeSpan.FromSeconds(30)), "Career operation did not finish.");
             }
 
             internal void Finish()
@@ -917,6 +917,34 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void FailedNewPreview_DoesNotRestorePreviousSelection()
+        {
+            using var h = new Harness();
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+            h.Career.SelectClub(CareerTestSupport.MANAGED_CLUB);
+            h.Career.CancelNewCareer();
+
+            h.Career.WorkProbe = () => throw new InvalidOperationException("Preview unavailable");
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+
+            Assert.AreEqual(ClientScreens.NewCareer, h.Flow.Current);
+            Assert.AreEqual("Preview unavailable", h.Career.LastError);
+            Assert.IsNull(h.Career.NewCareer.Clubs);
+            Assert.IsFalse(h.Career.CanStart);
+
+            h.Career.WorkProbe = null;
+            h.Career.CancelNewCareer();
+            h.Career.OpenNewCareer(CareerTestSupport.WORLD_SEED);
+            h.Finish();
+
+            Assert.IsNull(h.Career.LastError);
+            Assert.IsNotEmpty(h.Career.NewCareer.Clubs);
+            Assert.IsFalse(h.Career.CanStart);
+        }
+
+        [Test]
         public void SaveFailureLeavesProgressIntact_AndSuccessfulRetryClearsTheError()
         {
             using var h = new Harness();
@@ -1010,30 +1038,233 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
-        public void ShutdownWaitsForAcceptedWork_AndDoesNotPublishItsLateCompletion()
+        public void ShutdownSkipsQueuedInitializationAndSuppressesItsCompletion()
         {
             using var temp = new TempSlots();
+            string directory = Path.Combine(temp.Directory, "queued-store");
             Action pending = null;
-            var career = new ClientCareerCoordinator(temp.Directory, RoundResolutionMode.QuickSimAll, work => pending = work);
+            using var career = new ClientCareerCoordinator(directory, RoundResolutionMode.QuickSimAll,
+                work => pending = work);
             Compose(career);
             career.Initialize();
-            using var entered = new ManualResetEventSlim();
-            using var finished = new ManualResetEventSlim();
-            var shutdown = new Thread(() => { entered.Set(); career.Dispose(); finished.Set(); }) { IsBackground = true };
-            shutdown.Start();
-            Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(5)));
+
+            Thread shutdown = StartThread(career.Dispose);
+            bool returnedBeforeWorker = shutdown.Join(TimeSpan.FromSeconds(5));
+            pending();
+            Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
+            Assert.IsTrue(returnedBeforeWorker, "Shutdown must not wait for queued work.");
+            career.Dispose();
+            career.Refresh();
+
+            Assert.IsFalse(Directory.Exists(directory));
+            Assert.IsFalse(career.IsInitialized);
+            Assert.Throws<ObjectDisposedException>(career.Initialize);
+        }
+
+        [Test]
+        public void ShutdownBeforeWriteAdmissionPreservesThePairAndAllowsDeterministicReplay()
+        {
+            using var h = new Harness();
+            h.Start();
+            ReachMatchday(h);
+            string save = h.Temp.Slots.SavePath(CareerSaveSlot.Autosave);
+            string sidecar = Path.ChangeExtension(save, ".slot");
+            byte[] oldSave = File.ReadAllBytes(save);
+            byte[] oldSidecar = File.ReadAllBytes(sidecar);
+            long oldSequence = h.Temp.Slots.Describe(CareerSaveSlot.Autosave).Sequence;
+            using var awaitingAdmission = new ManualResetEventSlim();
+            using var releaseWorker = new ManualResetEventSlim();
+            h.Career.WriteAdmissionProbe = () =>
+            {
+                awaitingAdmission.Set();
+                releaseWorker.Wait();
+            };
+            h.Career.Progress();
+            Thread worker = h.StartWorker();
+            Thread shutdown = null;
+            byte[] replayedSave;
+            byte[] replayedSidecar;
             try
             {
-                Assert.IsFalse(finished.Wait(TimeSpan.FromMilliseconds(20)), "Shutdown cannot release an accepted writer.");
+                Assert.IsTrue(awaitingAdmission.Wait(TimeSpan.FromSeconds(30)));
+                shutdown = StartThread(h.Career.Dispose);
+                Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)), "A writer awaiting admission must not delay shutdown.");
+
+                CollectionAssert.AreEqual(oldSave, File.ReadAllBytes(save));
+                CollectionAssert.AreEqual(oldSidecar, File.ReadAllBytes(sidecar));
+                CollectionAssert.AreEquivalent(new[] { save, sidecar }, Directory.GetFiles(h.Temp.Directory));
+                var replacement = new CareerSaveSlots(h.Temp.Directory);
+                Assert.IsTrue(replacement.TryGetLatest(out CareerSlotSummary latest));
+                Assert.AreEqual(CareerSaveSlot.Autosave, latest.Slot);
+                Assert.AreEqual(oldSequence, latest.Sequence);
+                CareerSession resumed = CareerSession.ContinueLatest(replacement, RoundResolutionMode.QuickSimAll);
+                CareerTestSupport.ProgressUntil(resumed, CareerProgressAction.PlayMatchday);
+                resumed.Progress();
+                replayedSave = File.ReadAllBytes(save);
+                replayedSidecar = File.ReadAllBytes(sidecar);
             }
             finally
             {
-                pending();
-                Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(30)));
+                releaseWorker.Set();
+                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)));
+                if (shutdown != null) Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
             }
-            career.Refresh();
-            Assert.IsFalse(career.IsInitialized, "Disposed UI never consumes a worker completion.");
-            Assert.Throws<ObjectDisposedException>(career.Initialize);
+
+            using var baseline = new TempSlots();
+            CareerSession uninterrupted = CareerTestSupport.StartQuick(baseline.Slots);
+            CareerTestSupport.ProgressUntil(uninterrupted, CareerProgressAction.PlayMatchday);
+            uninterrupted.Progress();
+            string expectedSave = baseline.Slots.SavePath(CareerSaveSlot.Autosave);
+            CollectionAssert.AreEqual(File.ReadAllBytes(expectedSave), replayedSave);
+            CollectionAssert.AreEqual(File.ReadAllBytes(Path.ChangeExtension(expectedSave, ".slot")), replayedSidecar);
+            CollectionAssert.AreEqual(replayedSave, File.ReadAllBytes(save), "The old writer must not change the replacement save.");
+            CollectionAssert.AreEqual(replayedSidecar, File.ReadAllBytes(sidecar));
+            CollectionAssert.AreEquivalent(new[] { save, sidecar }, Directory.GetFiles(h.Temp.Directory));
+            h.Career.Refresh();
+            Assert.IsNull(h.Career.LastError);
+            Assert.AreEqual(CareerProgressAction.PlayMatchday, h.Career.Home.NextAction, "No completed round may publish after shutdown.");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ShutdownWaitsForAnAdmittedPairToCommitOrRollBack(bool failSwap)
+        {
+            using var h = new Harness();
+            h.Start();
+            ReachMatchday(h);
+            string save = h.Temp.Slots.SavePath(CareerSaveSlot.Autosave);
+            string sidecar = Path.ChangeExtension(save, ".slot");
+            byte[] oldSave = File.ReadAllBytes(save);
+            byte[] oldSidecar = File.ReadAllBytes(sidecar);
+            using var betweenSwaps = new ManualResetEventSlim();
+            using var finishSwap = new ManualResetEventSlim();
+            using var drainingWriter = new ManualResetEventSlim();
+            h.Career.WriteDrainProbe = drainingWriter.Set;
+            h.Career.AfterSaveSwapProbe = () =>
+            {
+                betweenSwaps.Set();
+                finishSwap.Wait();
+                if (failSwap) throw new IOException("Injected sidecar swap failure.");
+            };
+            bool wasProjected = false;
+            h.Career.ProjectionProbe = _ => wasProjected = true;
+
+            h.Career.Progress();
+            Thread worker = h.StartWorker();
+            Thread shutdown = null;
+            try
+            {
+                Assert.IsTrue(betweenSwaps.Wait(TimeSpan.FromSeconds(30)));
+                CollectionAssert.AreEqual(oldSidecar, File.ReadAllBytes(sidecar));
+                shutdown = StartThread(h.Career.Dispose);
+                Assert.IsTrue(drainingWriter.Wait(TimeSpan.FromSeconds(5)),
+                    "Shutdown must acquire the lifetime gate and reach the writer drain.");
+                Assert.IsFalse(shutdown.Join(TimeSpan.FromMilliseconds(100)),
+                    "Shutdown returned before the admitted pair finished.");
+            }
+            finally
+            {
+                finishSwap.Set();
+                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)));
+                if (shutdown != null) Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
+            }
+
+            h.Career.Refresh();
+            Assert.IsFalse(wasProjected);
+            Assert.IsNull(h.Career.LastError);
+            if (failSwap)
+            {
+                CollectionAssert.AreEqual(oldSave, File.ReadAllBytes(save));
+                CollectionAssert.AreEqual(oldSidecar, File.ReadAllBytes(sidecar));
+            }
+            var reopened = new CareerSaveSlots(h.Temp.Directory);
+            Assert.AreEqual(failSwap ? 0 : 1, reopened.Describe(CareerSaveSlot.Autosave).RoundsPlayed);
+            Assert.AreEqual(failSwap ? 0 : 1, reopened.Load(CareerSaveSlot.Autosave).Season.Calendar.NextRoundIndex);
+            CollectionAssert.AreEquivalent(new[] { save, sidecar }, Directory.GetFiles(h.Temp.Directory));
+        }
+
+        [Test]
+        public void ShutdownDuringLoadCannotInvalidateAReplacementSave()
+        {
+            using var h = new Harness();
+            h.Start();
+            h.Career.QuitToMainMenu();
+            string save = h.Temp.Slots.SavePath(CareerSaveSlot.Autosave);
+            string sidecar = Path.ChangeExtension(save, ".slot");
+            byte[] validSave = File.ReadAllBytes(save);
+            byte[] validSidecar = File.ReadAllBytes(sidecar);
+            File.WriteAllBytes(save, new byte[] { 0 });
+
+            using var awaitingInvalidation = new ManualResetEventSlim();
+            using var releaseWorker = new ManualResetEventSlim();
+            h.Career.WriteAdmissionProbe = () => { awaitingInvalidation.Set(); releaseWorker.Wait(); };
+            h.Career.ContinueCareer();
+            Thread worker = h.StartWorker();
+            Thread shutdown = null;
+            try
+            {
+                Assert.IsTrue(awaitingInvalidation.Wait(TimeSpan.FromSeconds(5)));
+                shutdown = StartThread(h.Career.Dispose);
+                Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
+                File.WriteAllBytes(save, validSave);
+            }
+            finally
+            {
+                releaseWorker.Set();
+                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)));
+                if (shutdown != null) Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
+            }
+
+            h.Career.Refresh();
+            Assert.AreEqual(ClientScreens.MainMenu, h.Flow.Current);
+            Assert.IsNull(h.Career.LastError);
+            CollectionAssert.AreEqual(validSidecar, File.ReadAllBytes(sidecar));
+            Assert.AreEqual(CareerSlotState.Ready, h.Temp.Slots.Describe(CareerSaveSlot.Autosave).State);
+        }
+
+        [Test]
+        public void ShutdownDoesNotWaitForReadOnlyProjection()
+        {
+            using var h = new Harness();
+            h.Start();
+            using var projecting = new ManualResetEventSlim();
+            using var finishProjection = new ManualResetEventSlim();
+            h.Career.ProjectionProbe = _ => { projecting.Set(); finishProjection.Wait(); };
+            uint day = h.Career.Home.WorldDay;
+            h.Career.Progress();
+            Thread worker = h.StartWorker();
+            Thread shutdown = null;
+            try
+            {
+                Assert.IsTrue(projecting.Wait(TimeSpan.FromSeconds(5)));
+                shutdown = StartThread(h.Career.Dispose);
+                Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)), "Shutdown must not join read-only work.");
+            }
+            finally
+            {
+                finishProjection.Set();
+                Assert.IsTrue(worker.Join(TimeSpan.FromSeconds(30)));
+                if (shutdown != null) Assert.IsTrue(shutdown.Join(TimeSpan.FromSeconds(5)));
+            }
+            h.Career.Refresh();
+            Assert.AreEqual(day, h.Career.Home.WorldDay);
+        }
+
+        private static Thread StartThread(Action action)
+        {
+            var worker = new Thread(() => action()) { IsBackground = true };
+            worker.Start();
+            return worker;
+        }
+
+        private static void ReachMatchday(Harness h)
+        {
+            while (h.Career.Home.NextAction == CareerProgressAction.AdvanceDay)
+            {
+                h.Career.Progress();
+                h.Finish();
+            }
+            Assert.AreEqual(CareerProgressAction.PlayMatchday, h.Career.Home.NextAction);
         }
 
         private static void WaitForWorker(ClientCareerCoordinator career)
@@ -1094,5 +1325,8 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
 // | 1.9 | 2026-11-05 | — | AR-2 M1: four Continue/Load cases covering empty #40 migration, nondefault populated preservation, complete finance state, market projections and accepted offers. |
 // | 1.10 | 2026-11-05 | — | AR-3 M1: localized career formatter identity is retained and exposed for the Unity binding. |
-// | 1.11 | 2026-11-19 | — | Verify pending and completed worker publication carries dated fixtures. |
+// | 1.11 | 2026-11-18 | — | Cover failed preview recovery after abandoning an earlier selection. |
+// | 1.12 | 2026-11-18 | — | Exercise queued cancellation, write admission and rollback races, and replay from unchanged slots. |
+// | 1.13 | 2026-11-18 | — | Observe actual writer drain entry before asserting that shutdown waits. |
+// | 1.14 | 2026-11-19 | — | Verify pending and completed worker publication carries dated fixtures. |
 #endregion

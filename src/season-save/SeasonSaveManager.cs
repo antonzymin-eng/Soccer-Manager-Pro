@@ -1,5 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-11-18 (Profile serialization separately from filesystem work.)
 // Modified: 2026-10-20 (AR round 4 S4-L3 — v1.34: the guard summary's <see cref> names the real long-form Save signature; comments only.)
 // Modified: 2026-10-20 (L2 doc drift — v1.33: Load summary names the #31 transfers state and the FOUR
 //           cross-blob coherence rules; comments only.)
@@ -89,6 +90,7 @@ namespace TacticalDirector.SeasonSave
     /// </summary>
     public static class SeasonSaveManager
     {
+        private static readonly ProfilerMarker s_encodeMarker = new ProfilerMarker("SeasonSave.Encode");
         private static readonly ProfilerMarker s_saveMarker = new ProfilerMarker("SeasonSave.Save");
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
@@ -291,19 +293,23 @@ namespace TacticalDirector.SeasonSave
 
             using var _ = s_saveMarker.Auto();
 
-            byte[] worldBlob = world.Snapshot();
-            byte[] seasonBlob = SeasonStateCodec.Encode(season);
-            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
-            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
-            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
-            var progressionBlock = new ProgressionBlock(progression.Snapshot());
-            var disciplineBlock = new DisciplineBlock(DisciplineSaveCodec.Encode(discipline));
-            var financeBlock = new FinanceBlock(ClubFinancesSaveCodec.Encode(canonicalFinances));
-            var transfersBlock = new TransfersBlock(TransfersSaveCodec.Encode(transfersOrNull));
-            byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
-            byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
-                in progressionBlock, in disciplineBlock, in financeBlock, in transfersBlock, matchBlob);
+            byte[] blob;
+            using (s_encodeMarker.Auto())
+            {
+                byte[] worldBlob = world.Snapshot();
+                byte[] seasonBlob = SeasonStateCodec.Encode(season);
+                var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
+                var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
+                var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
+                var progressionBlock = new ProgressionBlock(progression.Snapshot());
+                var disciplineBlock = new DisciplineBlock(DisciplineSaveCodec.Encode(discipline));
+                var financeBlock = new FinanceBlock(ClubFinancesSaveCodec.Encode(canonicalFinances));
+                var transfersBlock = new TransfersBlock(TransfersSaveCodec.Encode(transfersOrNull));
+                byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
+                blob = SeasonSaveCodec.Encode(
+                    worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
+                    in progressionBlock, in disciplineBlock, in financeBlock, in transfersBlock, matchBlob);
+            }
 
             // ERR-028-008: refuse to overwrite a roster with an empty one. #28's block is the
             // serialized roster (KD-4), so writing a zero-club block over a file that carries one
@@ -1521,4 +1527,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | transfers state and counts FOUR cross-blob coherence rules (KD-4 |
 // |         |            |        | cursor, career cursors, finance, transfers), not "TWO".          |
 // | 1.34    | 2026-10-20 | —      | AR round 4 S4-L3 (comments only): the DisciplineState guard summary's <see cref> pointed at a Save overload that no longer exists (the long form gained ClubFinanceEntry[] and TransfersState); it names the real signature. |
+// | 1.35 | 2026-11-18 | — | Measure serialization separately from save file work on the pinned host. |
 #endregion

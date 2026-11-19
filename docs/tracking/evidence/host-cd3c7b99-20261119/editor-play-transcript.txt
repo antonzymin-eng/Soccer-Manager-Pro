@@ -1,0 +1,209 @@
+# Editor Play transcript — owner's open Unity 6000.4.9f1 editor on the main checkout at cd3c7b99
+# Career enabled in memory only (scene never saved). Buttons were clicked through Button.onClick from
+# EditorApplication.update drivers sent over the Unity MCP RunCommand tool. Times are UTC.
+# First Play attempt (05:20–05:21) is omitted: the scene had been reloaded before the new scripts compiled,
+# so the in-memory shell had null career roots and rejected wiring (MissingRoot). Reopening the scene from
+# disk fixed it; the scene file assigns all three roots (checklist item 1).
+
+## playmode.log (play-mode transitions; StopRequested marks the driver's ExitPlaymode call)
+2026-11-19T05:22:02.3087385Z ProbeRegistered frame=997
+2026-11-19T05:26:02.0007992Z ExitingPlayMode
+2026-11-19T05:26:02.4257067Z EnteredEditMode
+2026-11-19T05:26:27.8403564Z ProbeRegistered frame=2182
+2026-11-19T05:27:19.7425577Z StopRequested
+2026-11-19T05:27:19.7481220Z ExitingPlayMode
+2026-11-19T05:27:19.9614840Z EnteredEditMode
+2026-11-19T05:28:09.3318505Z ProbeRegistered run3 frame=3251
+2026-11-19T05:31:28.9525519Z StopRequested trialA
+2026-11-19T05:31:28.9571521Z ExitingPlayMode
+2026-11-19T05:31:29.2601991Z EnteredEditMode
+2026-11-19T05:31:59.2218317Z run4 driver registered frame=398
+2026-11-19T05:31:59.5148629Z StopRequested trialB
+2026-11-19T05:33:13.4465992Z run5 driver registered frame=2974
+
+## actions.log (clicks and UI dumps; club-selection rows elided)
+2026-11-19T05:22:13.9627096Z frame=5217 click 'New career'
+2026-11-19T05:22:26.0181770Z frame=9223 click 'Select Thorncliff United'
+2026-11-19T05:22:26.0201849Z frame=9223 click 'Start career'
+2026-11-19T05:22:41.7208212Z frame=14789 click 'Advance one day' #1
+2026-11-19T05:22:41.7632338Z frame=14791 click 'Advance one day' #2
+2026-11-19T05:22:41.8250804Z frame=14793 click 'Advance one day' #3
+2026-11-19T05:22:41.8493672Z frame=14794 click 'Advance one day' #4
+2026-11-19T05:22:41.8725766Z frame=14795 click 'Advance one day' #5
+2026-11-19T05:22:41.8976720Z frame=14796 click 'Advance one day' #6
+2026-11-19T05:22:41.9153520Z frame=14797 click 'Advance one day' #7
+2026-11-19T05:22:41.9330444Z frame=14798 matchday reached after 7 day clicks
+2026-11-19T05:22:55.8793252Z frame=19846 click 'Save to manual slot 1'
+2026-11-19T05:23:11.9703589Z frame=25548 click 'Resolve matchday (on Career Home)' (run UNINT)
+2026-11-19T05:26:39.5633219Z frame=6087 run2 click 'Continue career'
+2026-11-19T05:26:39.7292693Z frame=6114 run2 click 'Resolve matchday' (will stop at +40s)
+2026-11-19T05:27:19.7425577Z frame=18595 run2 STOP requested (EditorApplication.ExitPlaymode) during managed matchday
+2026-11-19T05:28:09.3915915Z frame=3252 run3 click 'Continue career'
+2026-11-19T05:28:09.5508163Z frame=3278 run3 click 'Resolve matchday' (let it finish)
+2026-11-19T05:30:33.7184012Z frame=42684 run3 round complete
+2026-11-19T05:31:28.9414839Z frame=62319 trialA click 'Save to manual slot 2'
+2026-11-19T05:31:28.9485955Z frame=62319 trialA temp seen=True after 5.826 ms; sending OnApplicationQuit
+2026-11-19T05:31:28.9525519Z frame=62319 trialA OnApplicationQuit (Dispose) returned after 4.799 ms; files: autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave
+2026-11-19T05:31:59.2820633Z frame=399 run4 click 'Continue career'
+2026-11-19T05:31:59.4847551Z frame=423 run4 continued into: Thorncliff United | Season 1, day 7 | Position 1 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 2. Board target: position 10 or better. Objective on track.
+ / Next: Stanbury Athletic (away), day 14, in 7 days.
+2026-11-19T05:31:59.4857682Z frame=423 trialB click 'Save to manual slot 3' then OnApplicationQuit in the same frame
+2026-11-19T05:31:59.5148629Z frame=423 trialB click->quit gap 5.078 ms, manual-3 present before quit=False, Dispose returned after 22.813 ms
+2026-11-19T05:33:13.5567399Z frame=2979 run5 click 'Load career'
+2026-11-19T05:33:13.6278883Z frame=2984 run5 PICKER:
+    BTN[on] Back
+    BTN[on] Manual slot 3: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 1
+    BTN[off] Manual slot 2: Incompatible with this build - cannot load | Thorncliff United | Season 1, day 7, round 1/38, position 1
+    BTN[off] Manual slot 1: Empty
+    BTN[on] Autosave: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 1
+    TXT Load career
+2026-11-19T05:33:13.6300381Z frame=2984 run5 click 'Back'
+2026-11-19T05:33:13.6924939Z frame=2989 run5 MAIN MENU before Continue:
+    BTN[on] Play a demo match
+    BTN[on] Load career
+    BTN[on] Continue career
+    BTN[on] New career
+    TXT Manage the home side in one demo match. The opponent is AI-managed.
+    TXT From the touchline
+2026-11-19T05:33:13.6955252Z frame=2989 run5 click 'Continue career'
+2026-11-19T05:33:13.8425470Z frame=3022 run5 AFTER first Continue:
+    BTN[on] Return to Main Menu (without saving)
+    BTN[on] Save to manual slot 3
+    BTN[on] Save to manual slot 2
+    BTN[on] Save to manual slot 1
+    BTN[on] Advance one day
+    TXT League table
+    TXT Saves may become incompatible until the release-readiness checkpoint. Keep a manual save before leaving.
+    TXT Thorncliff United | Season 1, day 7 | Position 1 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 2. Board target: position 10 or better. Objective on track.
+ / Next: Stanbury Athletic (away), day 14, in 7 days.
+    TXT Career home
+2026-11-19T05:33:13.8802588Z frame=3032 run5 CAREER HOME after Continue:
+    BTN[on] Return to Main Menu (without saving)
+    BTN[on] Save to manual slot 3
+    BTN[on] Save to manual slot 2
+    BTN[on] Save to manual slot 1
+    BTN[on] Advance one day
+    TXT League table
+    TXT Saves may become incompatible until the release-readiness checkpoint. Keep a manual save before leaving.
+    TXT Thorncliff United | Season 1, day 7 | Position 1 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 2. Board target: position 10 or better. Objective on track.
+ / Next: Stanbury Athletic (away), day 14, in 7 days.
+    TXT Career home
+2026-11-19T05:33:13.8830527Z frame=3032 run5 click 'Advance one day'
+2026-11-19T05:33:13.9194502Z frame=3037 run5 AFTER Advance one day:
+    BTN[on] Return to Main Menu (without saving)
+    BTN[on] Save to manual slot 3
+    BTN[on] Save to manual slot 2
+    BTN[on] Save to manual slot 1
+    BTN[on] Advance one day
+    TXT League table
+    TXT Saves may become incompatible until the release-readiness checkpoint. Keep a manual save before leaving.
+    TXT Thorncliff United | Season 1, day 8 | Position 1 | Rounds 1/38
+ / Last action: Day advanced
+ / Injured players: 2. Board target: position 10 or better. Objective on track.
+ / Next: Stanbury Athletic (away), day 14, in 6 days.
+    TXT Career home
+2026-11-19T05:33:55.3403515Z frame=19918 run5b click 'Return to Main Menu (without saving)'
+2026-11-19T05:33:55.3673009Z frame=19923 run5b click 'Load career'
+2026-11-19T05:33:55.4018914Z frame=19928 run5b PICKER (slot 2 save removed):
+    BTN[on] Back
+    BTN[on] Manual slot 3: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 1
+    BTN[off] Manual slot 2: Damaged or unreadable - cannot load
+    BTN[off] Manual slot 1: Empty
+    BTN[on] Autosave: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 1
+    TXT Load career
+2026-11-19T05:33:55.4034640Z frame=19928 run5b click 'Back'
+2026-11-19T05:33:55.4335155Z frame=19933 run5b MAIN MENU:
+    BTN[on] Play a demo match
+    BTN[on] Load career
+    BTN[on] Continue career
+    BTN[on] New career
+    TXT Manage the home side in one demo match. The opponent is AI-managed.
+    TXT From the touchline
+2026-11-19T05:45:03.4369360Z frame=7012 retry STARTUP with blocked storage:
+    BTN[on] Play a demo match
+    BTN[on] Retry career storage
+    BTN[off] Load career
+    BTN[off] Continue career
+    BTN[off] New career
+    TXT Manage the home side in one demo match. The opponent is AI-managed.
+    TXT Cannot create '%USERPROFILE%\AppData\LocalLow\DefaultCompany\System XI\careers' because a file or directory with the same name already exists.
+    TXT From the touchline
+2026-11-19T05:45:09.3467127Z frame=8904 retry blocker gone
+2026-11-19T05:45:09.3492049Z frame=8904 retry click 'Retry career storage'
+2026-11-19T05:45:09.4572103Z frame=8934 retry AFTER Retry:
+    BTN[on] Play a demo match
+    BTN[on] Load career
+    BTN[off] Continue career
+    BTN[on] New career
+    TXT Manage the home side in one demo match. The opponent is AI-managed.
+    TXT No loadable career save. Start a career or choose Load to inspect slots.
+    TXT From the touchline
+    careers is directory=True
+2026-11-19T05:45:22.5196330Z frame=13998 demo click 'Play a demo match'
+2026-11-19T05:45:22.6652872Z frame=14028 demo TACTICS SETUP (career enabled):
+    BTN[on] Back
+    BTN[on] Start match
+    BTN[on] Very Attacking — Most risk in on-ball choices; highest defensive line.
+    BTN[on] Attacking — More risk in on-ball choices; higher defensive line.
+    BTN[on] Positive — Slightly more risk in on-ball choices; slightly higher defensive line.
+    BTN[on] Balanced — Standard risk in on-ball choices and standard defensive line.
+    BTN[on] Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line.
+    BTN[on] Defensive — Less risk in on-ball choices; deeper defensive line.
+    BTN[on] Very Defensive — Least risk in on-ball choices; deepest defensive line.
+    TXT Ready to start with Balanced.
+    TXT Home Mentality — choose one
+    TXT You manage Home. Away is AI-managed.
+    TXT Tactics Setup
+
+## markers.csv (ProfilerRecorder LastValue per frame for SeasonSave.Encode / CareerSaveSlots.Write, ns; a save that spans a frame boundary splits across rows)
+# session 2026-11-19T05:22:02.3077210Z encValid=True writeValid=True
+2026-11-19T05:22:26.1599605Z,9224,enc_ns=15518200,write_ns=40925300
+2026-11-19T05:22:55.8981955Z,19847,enc_ns=1220700,write_ns=16476800
+2026-11-19T05:25:40.5172704Z,70508,enc_ns=0,write_ns=458600
+2026-11-19T05:25:40.5284351Z,70509,enc_ns=1720600,write_ns=0
+# session 2026-11-19T05:26:27.8398148Z encValid=True writeValid=True
+# session run3 2026-11-19T05:28:09.3313081Z
+2026-11-19T05:30:33.6746595Z,42675,enc_ns=0,write_ns=4197200
+2026-11-19T05:30:33.6782128Z,42676,enc_ns=3340000,write_ns=0
+
+## status-busy-unint.txt (UI 3 s into the uninterrupted round)
+utc=2026-11-19T05:23:19.6345776Z frame=27838
+BTN[off] Return to Main Menu (without saving)
+BTN[off] Save to manual slot 3
+BTN[off] Save to manual slot 2
+BTN[off] Save to manual slot 1
+BTN[off] Resolve matchday (on Career Home)
+TXT 1. Ashford Town | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 2. Belmont Rovers | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 3. Carrowmore City | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 4. Dunhaven United | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 5. Eastvale Athletic | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 6. Fernbrook FC | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 7. Granton Wanderers | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 8. Halloway City | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 9. Ironbridge United | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 10. Juniper Park FC | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 11. Kesgrave Rovers | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 12. Langmere Athletic | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 13. Marlow Heath | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 14. Northgate United | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 15. Oakenfield FC | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 16. Pendleton City | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 17. Quarrywood Town | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 18. Redmarsh Rovers | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 19. Stanbury Athletic | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+ / 20. Thorncliff United | Played 0, W 0, D 0, L 0, GF 0, GA 0, points 0
+TXT League table
+TXT Saves may become incompatible until the release-readiness checkpoint. Keep a manual save before leaving.
+TXT Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38
+ / Last action: Day advanced
+ / Injured players: 2. Board target: position 10 or better. Objective off track.
+ / Next: Halloway City (home), day 7, in 0 days.
+TXT Working... Please wait; navigation and changes are unavailable.
+TXT Career home

@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-11-03 (P7b: optional career pages sharing layout/focus)
+// Modified: 2026-11-18
 // Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
@@ -130,14 +130,15 @@ namespace TacticalDirector.MatchClientUnity
             _renderer.WholePitchView = true;
             RectTransform m = _ui.Panel("Menu entry", Page(menu, out _menuScroll, S0UiConstants.ENTRY_MAX_WIDTH), true);
             _menuHeading = Heading(m, L("heading.menu"), _menuScroll);
-            _ui.Label(m, L("context.menu"));
-            _demoButton = Control(m, L("action.demo"), _view.OpenSetup, _menuScroll, S0UiFactory.ControlKind.Primary);
             if (coordinator.Career != null)
             {
                 if (careerHome == null || newCareer == null || loadCareer == null || careerSeed == null)
                     throw new InvalidOperationException("Career roots and host seed provider are required.");
                 BuildCareer(coordinator.Career, m, careerHome, newCareer, loadCareer, careerSeed);
             }
+            _ui.Label(m, L("context.menu"));
+            _demoButton = Control(m, L("action.demo"), _view.OpenSetup, _menuScroll,
+                coordinator.Career == null ? S0UiFactory.ControlKind.Primary : S0UiFactory.ControlKind.Secondary);
             RectTransform s = _ui.Panel("Setup entry", Page(setup, out _setupScroll, S0UiConstants.ENTRY_MAX_WIDTH));
             _setupHeading = Heading(s, L("heading.setup"), _setupScroll);
             _ui.Label(s, L("context.setup"));
@@ -1338,4 +1339,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.11    | 2026-10-28 | —      | Owner decisions (October 28): the report's partial-statistics toggle keeps one title, "Partial statistics — incomplete", with the ▸/▾ glyph (`action.statistics_close` no longer shown). A pop-up (Change Mentality, Make substitution) has a "✕ Close" control beside its title and closes on a left click on the dimmed backdrop outside its frame; both discard the draft as Cancel and Escape do. The backdrop is a sibling node behind the frame so clicks inside the frame never reach it. |
 // | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 // | 1.13 | 2026-11-03 | — | Optional career pages and shared keyboard/focus refresh. |
+// | 1.14 | 2026-11-18 | — | Put career actions first in the startup menu when the career shell is enabled. |
 #endregion

@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 5: Test Plan
 
 **Created:** July 22, 2026
-**Last Updated:** August 16, 2026, round 5 (v0.6 — L-t1: T-SN-DET-005's "names all five within-tier-search
+**Last Updated:** November 18, 2026 (v0.7 — Add executable shutdown cancellation and serialized replay coverage.)
+**Last Updated (prior):** August 16, 2026, round 5 (v0.6 — L-t1: T-SN-DET-005's "names all five within-tier-search
 locks" was wrong — the suite has always had TEN cases, all scoped to the tier-2 choice. New
 **T-SN-DET-006** names the five it missed (`BenchDepthExtremis` ×2, `ForcedStartExtremis`,
 `MultiReinstatementExtremis` ×2); T-SN-DET-005's claim annotated in place, not rewritten. Pure
@@ -9,7 +10,7 @@ traceability — no code or suite change)
 **Last Updated (prior):** August 16, 2026 (v0.5 — round-4 reviewed-findings pass over the `ERR-030-046` landing: new **T-SN-DET-005** names the ERR-030-046 within-tier search suite, `AvailabilityCompositionExtremisTests` — the id had been missing since that suite's own creation, the F8 §5-id precedent recurring)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 L5: T-SN-DET-004 names the depleted-squad locks; the ERR-030-029 back-prop reaches #30's own test plan)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010: T-SN-FIX-001 re-anchored + new T-SN-FIX-008)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -88,6 +89,13 @@ schedule (advancing the world between them), and assert (a) the table reflects t
 every no-fixture day. The match-engine capstone (`match-engine-kickoff-multi-second`) precedent. Not
 required at the design stage; T2 has since wired the loop, so this is now simply the outstanding §5 addition (noted at the lint sweep).
 
+### Round shutdown and replay (FR-SN-012/021/024)
+
+| ID | Check | Layer |
+|---|---|---|
+| T-SN-DET-007 | `ManagedRoundCancellation_DiscardsTheActiveEngineAfterCompletedTicks` applies a quick-sim fixture, then cancels while the managed engine is live. The active match clears and the round cursor stays put. | Unit |
+| T-SN-DET-008 | `sim_CancelledManagedRoundReplaysExactlyFromThePreRoundSave` verifies the pre-round save bytes survive and compares ordered results, season snapshot and full serialized save with an uninterrupted managed round. | Simulation |
+
 ## 5.8 FR traceability
 
 Every FR-SN-001..034 + 013a/013b maps to at least one test above (fixture: 001–007; table: TAB-001..005; calendar
@@ -105,4 +113,5 @@ not by an execution test — nothing ticks there yet.
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (L5) + the lint sweep**: *(lint: §5.7's "once T2 wires the loop" tensed — T2 wired it.)* ERR-030-029's back-prop had reached #36's test plan and not #30's own — **T-SN-DET-004** names the two existing depleted-squad locks (back-fill + terminal refusal). |
 | 0.5 | 2026-08-16 | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (Low)**: no test-plan id traced `AvailabilityCompositionExtremisTests` at all, the ERR-030-029/T-SN-DET-004 gap recurring one ERR later. New **T-SN-DET-005** names all five within-tier-search locks — `WeakPositionExtremis`, `MinimalStallExtremis`, `CapFallbackExtremis`, and the round-4 additions `InCapBoundaryExtremis` + `TiedForcedStartExtremis`. **ANNOTATED 2026-08-16, round 5 (L-t1) — the "all five" claim is WRONG:** the suite has always had TEN cases, all scoped to the tier-2 choice, and this row named only five of them — `BenchDepthExtremis` ×2, `ForcedStartExtremis`, and `MultiReinstatementExtremis` ×2 were left untraced. Named at the new **T-SN-DET-006** (v0.6). |
 | 0.6 | 2026-08-16, round 5 | — | **L-t1**: new **T-SN-DET-006** names the five `AvailabilityCompositionExtremisTests` cases v0.5's T-SN-DET-005 missed — `BenchDepthExtremis_ReinstatesACandidateTheSelectorBenches_NotTheEarliestOnTheRoster`, `BenchDepthExtremis_TheReinstatedSuspendedPlayer_StillServesHisBan`, `ForcedStartExtremis_TheOnlyGoalkeeper_IsReinstatedIntoTheXi_AndHisBanStalls`, `MultiReinstatementExtremis_PressesTheWeakestBannedPlayersBack_AndTerminatesDeterministically`, `MultiReinstatementExtremis_KeepsEveryBannedPlayerOutOfTheXi_WhenACompletingChoiceExists`. T-SN-DET-005's "all five" claim annotated in place, not rewritten. No code or suite change — both rows are pure traceability. |
+| 0.7 | 2026-11-18 | — | Add executable shutdown cancellation and serialized replay coverage. |
 #endregion

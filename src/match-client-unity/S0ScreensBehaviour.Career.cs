@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
 // Modified: 2026-11-19
+// Modified (prior): 2026-11-18
 // Modified (prior): 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 using TacticalDirector.ClientApp;
@@ -32,6 +34,7 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<Button> _careerLoadButtons = new List<Button>();
         private Button _careerContinue, _careerStart, _careerProgress, _careerRetry, _demoButton;
         private ScreenId _careerLastScreen;
+        private Selectable _careerFocusReturn;
         private string _careerUiError;
         private RectTransform _careerSchedule, _careerWeekControls;
         private Button _careerScheduleToggle, _careerFixtures, _careerCalendar, _careerPreviousWeek, _careerNextWeek;
@@ -42,16 +45,19 @@ namespace TacticalDirector.MatchClientUnity
         private CareerCalendarWeek _careerWeek;
 
         private string C(string role) => _careerText.Label(role);
-        private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll)
+        private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll,
+            S0UiFactory.ControlKind kind = S0UiFactory.ControlKind.Secondary)
         {
             Button button = _ui.Button(parent, text, () =>
             {
                 if (_career.IsBusy) return;
                 try { action(); _careerUiError = null; }
                 catch (InvalidOperationException exception) { _careerUiError = exception.Message; }
+                if (_career.IsBusy && _view.Screen == _careerLastScreen)
+                    _careerFocusReturn = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
                 _applyVisibility();
                 RefreshCareer(true);
-            });
+            }, kind);
             Register(button, scroll, S0FocusNavigation.Role.Action);
             _careerIdleButtons.Add(button);
             return button;
@@ -62,32 +68,31 @@ namespace TacticalDirector.MatchClientUnity
         {
             _career = career;
             _careerText = career.ScreenText;
-            CareerControl(menu, C("new"), () => career.OpenNewCareer(seed()), _menuScroll);
+            _careerNotices.Add(_ui.Reason(menu, true));
+            CareerControl(menu, C("new"), () => career.OpenNewCareer(seed()), _menuScroll, S0UiFactory.ControlKind.Primary);
             _careerContinue = CareerControl(menu, C("continue"), career.ContinueCareer, _menuScroll);
             CareerControl(menu, C("load"), career.OpenLoadCareer, _menuScroll);
             _careerRetry = CareerControl(menu, C("retry"), career.Initialize, _menuScroll);
-            _careerNotices.Add(_ui.Reason(menu, true));
             RectTransform n = Page(setup, out _careerNewScroll, S0UiConstants.ENTRY_MAX_WIDTH);
             _careerNewHeading = Heading(n, C("new"), _careerNewScroll);
-            _ui.Label(n, C("choose"));
-            _careerChoice = _ui.Label(n, "");
-            _careerClubs = _ui.Column("Career clubs", n);
-            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll);
-            CareerControl(n, C("back"), career.CancelNewCareer, _careerNewScroll);
             _careerNotices.Add(_ui.Reason(n, true));
+            _careerChoice = _ui.Label(n, "");
+            CareerControl(n, C("back"), career.CancelNewCareer, _careerNewScroll);
+            _careerClubs = _ui.Column("Career clubs", n);
+            _careerStart = CareerControl(n, C("start"), career.StartCareer, _careerNewScroll, S0UiFactory.ControlKind.Primary);
             RectTransform l = Page(load, out _careerLoadScroll, S0UiConstants.ENTRY_MAX_WIDTH);
             _careerLoadHeading = Heading(l, C("load"), _careerLoadScroll);
+            _careerNotices.Add(_ui.Reason(l, true));
             for (int i = 0; i < CareerSaveSlots.SlotCount; i++)
             {
                 CareerSaveSlot slot = (CareerSaveSlot)i;
                 _careerLoadButtons.Add(CareerControl(l, "", () => career.LoadCareer(slot), _careerLoadScroll));
             }
             CareerControl(l, C("back"), career.CancelLoadCareer, _careerLoadScroll);
-            _careerNotices.Add(_ui.Reason(l, true));
             RectTransform h = Page(home, out _careerHomeScroll);
             _careerHomeHeading = Heading(h, C("home"), _careerHomeScroll);
-            _careerSummary = _ui.Label(h, "");
             _careerNotices.Add(_ui.Reason(h, true));
+            _careerSummary = _ui.Label(h, "");
             _careerProgress = CareerControl(h, "", career.Progress, _careerHomeScroll);
             BuildCareerSchedule(h);
             _ui.Label(h, C("warning"));
@@ -176,7 +181,7 @@ namespace TacticalDirector.MatchClientUnity
             foreach (Button button in _careerIdleButtons) button.interactable = _career.IsInitialized && !_career.IsBusy;
             _demoButton.interactable = !_career.IsBusy;
             _careerRetry.gameObject.SetActive(!_career.IsInitialized);
-            _careerRetry.interactable = !_career.IsBusy;
+            _careerRetry.interactable = !_career.IsInitialized && !_career.IsBusy;
             _careerContinue.interactable = _career.CanContinue;
             _careerStart.interactable = _career.CanStart;
             CareerHomeViewModel home = _career.Home;
@@ -198,21 +203,37 @@ namespace TacticalDirector.MatchClientUnity
                 Button button = _careerClubButtons[i];
                 button.gameObject.SetActive(i < clubs);
                 button.interactable = !_career.IsBusy;
-                if (i < clubs) _ui.SetButton(button, _careerText.Text.Format("club." + i, preview.HasSelection &&
-                    preview.SelectedClubId == preview.Clubs[i].ClubId ? "selected" : "select", preview.Clubs[i].Name));
+                if (i >= clubs) continue;
+                bool selected = preview.HasSelection && preview.SelectedClubId == preview.Clubs[i].ClubId;
+                _ui.SetSelected(button, selected);
+                _ui.SetButton(button, _careerText.Text.Format("club." + i, selected ? "selected" : "select", preview.Clubs[i].Name));
             }
-            S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("selection.ready") : C("choose"));
+            _careerChoice.gameObject.SetActive(clubs > 0);
+            if (clubs > 0)
+                S0UiFactory.Set(_careerChoice, preview.HasSelection ? C("selection.ready") : C("choose"));
+            var slots = _career.Load.Slots;
+            bool present = slots != null;
             for (int i = 0; i < _careerLoadButtons.Count; i++)
             {
-                bool present = _career.Load.Slots != null;
-                _careerLoadButtons[i].interactable = present && !_career.IsBusy && _career.Load.Slots[i].IsLoadable;
-                if (present) _ui.SetButton(_careerLoadButtons[i], _careerText.Slot(_career.Load.Slots[i]));
+                Button button = _careerLoadButtons[i];
+                button.gameObject.SetActive(present);
+                button.interactable = present && !_career.IsBusy && slots[i].IsLoadable;
+                if (present) _ui.SetButton(button, _careerText.Slot(slots[i]));
             }
             string notice = _career.IsBusy ? C("busy") : _careerUiError ?? _career.LastError ?? _career.LastProjectionError ??
                 (home.AutosaveError != null ? _careerText.Text.Format("autosave", "autosave.error", home.AutosaveError) :
-                screen == ClientScreens.MainMenu && !_career.Load.CanContinue ? C("no_save") : "");
+                screen == ClientScreens.MainMenu && _career.IsInitialized && present && !_career.Load.CanContinue ? C("no_save") : "");
             foreach (Text label in _careerNotices) S0UiFactory.SetBoxed(label, notice);
-            if (changedScreen && CareerHeading(screen) != null) Focus(CareerHeading(screen));
+            Selectable heading = screen == ClientScreens.MainMenu ? _menuHeading : CareerHeading(screen);
+            if ((changedScreen || _career.IsBusy) && heading != null)
+                Focus(heading);
+            if (!_career.IsBusy && _careerFocusReturn != null)
+            {
+                if (!changedScreen && string.IsNullOrEmpty(notice) && heading != null &&
+                    EventSystem.current?.currentSelectedGameObject == heading.gameObject)
+                    Focus(_careerFocusReturn);
+                _careerFocusReturn = null;
+            }
             RecoverFocus();
         }
     }
@@ -223,5 +244,7 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.1 | 2026-11-04 | — | Separate selected-club status from the Start action and cache club rows independently. |
 // | 1.2 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.3 | 2026-11-05 | — | AR-3 M1: display labels use the same admitted CareerScreenText instance as coordinator failure copy. |
-// | 1.4 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
+// | 1.4 | 2026-11-18 | — | Keep career feedback and recovery controls near the heading and hide unpopulated slot rows. |
+// | 1.5 | 2026-11-18 | — | Follow the club list with Start, retain the pending Retry control and restore focus after same-screen work. |
+// | 1.6 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
 #endregion

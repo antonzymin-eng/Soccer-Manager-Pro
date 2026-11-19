@@ -1,5 +1,6 @@
 // File:     src/client-app/CareerSession.cs
 // Created:  2026-10-18
+// Modified: 2026-11-18 (Cooperative career shutdown.)
 // Modified: 2026-11-05 (AR-2 review: use the #30 owner Restore path for legacy empty #40 finance blocks.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1..D-P7-5), roadmap C3/C4,
@@ -11,6 +12,7 @@
 
 using System;
 using System.IO;
+using System.Threading;
 
 using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
@@ -252,7 +254,9 @@ namespace TacticalDirector.ClientApp
         /// </summary>
         /// <exception cref="InvalidOperationException">An operation is already running, or
         /// <paramref name="action"/> is not the legal action now.</exception>
-        public CareerChange Execute(CareerProgressAction action)
+        public CareerChange Execute(CareerProgressAction action) => Execute(action, CancellationToken.None);
+
+        internal CareerChange Execute(CareerProgressAction action, CancellationToken cancellation)
         {
             BeginOperation(nameof(Execute));
             try
@@ -264,6 +268,7 @@ namespace TacticalDirector.ClientApp
                         "Progress action " + action + " is not legal now; the legal action is " + legal + ".");
                 }
 
+                cancellation.ThrowIfCancellationRequested();
                 CareerChange change;
                 switch (action)
                 {
@@ -272,7 +277,7 @@ namespace TacticalDirector.ClientApp
                         change = CareerChange.Plain(CareerChangeKind.DayAdvanced, _loop.CurrentWorldDay);
                         break;
                     case CareerProgressAction.PlayMatchday:
-                        MatchResult[] results = _loop.AdvanceAndPlayNextRound();
+                        MatchResult[] results = _loop.AdvanceAndPlayNextRound(cancellation);
                         change = CareerChange.RoundPlayed(_loop.CurrentWorldDay, results, ManagedClubId);
                         break;
                     case CareerProgressAction.StartNextSeason:
@@ -283,6 +288,7 @@ namespace TacticalDirector.ClientApp
                         throw new InvalidOperationException("Unreachable: " + action + " passed the legality check.");
                 }
 
+                cancellation.ThrowIfCancellationRequested();
                 LastChange = change;
                 if (action != CareerProgressAction.AdvanceDay)
                 {
@@ -429,4 +435,5 @@ namespace TacticalDirector.ClientApp
 // | 1.7     | 2026-11-05 | —      | L3: SubmitTransfer exception docs — a wrong-direction offer is InvalidOperationException, not ArgumentOutOfRangeException. |
 // | 1.8 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 // | 1.9 | 2026-11-05 | — | AR-2 M1: resume through SeasonLoop.Restore so optional-empty persisted finances migrate only at the owner restore boundary. |
+// | 1.10 | 2026-11-18 | — | Propagate shutdown through round execution and skip autosave on cancellation. |
 #endregion
