@@ -1,0 +1,30 @@
+# SHA-256 of every save file per snapshot; slot sidecar sequence and saveDigest check.
+## dsnap-ALLOC
+a4799b51d96facf107cf22e1e216e51d84a7b6dcab2f5b7762736e5c2e3eaa14  autosave.slot 403  sequence=3 saveDigest=747d1c2e320c4749 body=match
+747d1c2e320c47490315aeb388fdaa64eed41c1f7b56315f33492fb767a5b780  autosave.tdsave 116803
+5a45d91b021ffbc54afaee0962548657c941e93435c70cbab0a10ed807bdcd20  manual-1.slot 404  sequence=2 saveDigest=c1dbcf2e93433c24 body=match
+c1dbcf2e93433c24ff776551356c551195f6e29ec7b0f934b7776135b313a067  manual-1.tdsave 116787
+## dsnap-SQ1
+a4799b51d96facf107cf22e1e216e51d84a7b6dcab2f5b7762736e5c2e3eaa14  autosave.slot 403  sequence=3 saveDigest=747d1c2e320c4749 body=match
+747d1c2e320c47490315aeb388fdaa64eed41c1f7b56315f33492fb767a5b780  autosave.tdsave 116803
+5a45d91b021ffbc54afaee0962548657c941e93435c70cbab0a10ed807bdcd20  manual-1.slot 404  sequence=2 saveDigest=c1dbcf2e93433c24 body=match
+c1dbcf2e93433c24ff776551356c551195f6e29ec7b0f934b7776135b313a067  manual-1.tdsave 116787
+577d934bbc4b6fa316f6c0ff334847efc84a660c7f7056695f0cb639dbba418f  manual-2.slot 403  sequence=4 saveDigest=747d1c2e320c4749 body=match
+747d1c2e320c47490315aeb388fdaa64eed41c1f7b56315f33492fb767a5b780  manual-2.tdsave 116803
+## dsnap-FINAL
+a4799b51d96facf107cf22e1e216e51d84a7b6dcab2f5b7762736e5c2e3eaa14  autosave.slot 403  sequence=3 saveDigest=747d1c2e320c4749 body=match
+747d1c2e320c47490315aeb388fdaa64eed41c1f7b56315f33492fb767a5b780  autosave.tdsave 116803
+5a45d91b021ffbc54afaee0962548657c941e93435c70cbab0a10ed807bdcd20  manual-1.slot 404  sequence=2 saveDigest=c1dbcf2e93433c24 body=match
+c1dbcf2e93433c24ff776551356c551195f6e29ec7b0f934b7776135b313a067  manual-1.tdsave 116787
+0fee8f04b7736a4ec31cf7c2891fc68807788e78826d61c080d177c58c0d3f57  manual-2.slot 403  sequence=7 saveDigest=747d1c2e320c4749 body=match
+747d1c2e320c47490315aeb388fdaa64eed41c1f7b56315f33492fb767a5b780  manual-2.tdsave 116803
+## careers-after-alloc2
+2b627c059b447c8aad6dc50315f5f7b0e0b36dd51beef204963051b8afaaebed  autosave.slot 404  sequence=3 saveDigest=9fcde0ea37d5d3d5 body=match
+9fcde0ea37d5d3d589dca7be925c56fe1d5616565730a0db4129af29f9789d67  autosave.tdsave 116822
+5dcebe53777694dfc4e84325e38421fc39f32f9214fbd62c150897f0245850e0  manual-1.slot 404  sequence=2 saveDigest=3dbfd06596699db0 body=match
+3dbfd06596699db0517dff0378ef3d1e96584408bcb18990c811a41c66f25a0b  manual-1.tdsave 116774
+## dsnap-CONTROL
+2b627c059b447c8aad6dc50315f5f7b0e0b36dd51beef204963051b8afaaebed  autosave.slot 404  sequence=3 saveDigest=9fcde0ea37d5d3d5 body=match
+9fcde0ea37d5d3d589dca7be925c56fe1d5616565730a0db4129af29f9789d67  autosave.tdsave 116822
+5dcebe53777694dfc4e84325e38421fc39f32f9214fbd62c150897f0245850e0  manual-1.slot 404  sequence=2 saveDigest=3dbfd06596699db0 body=match
+3dbfd06596699db0517dff0378ef3d1e96584408bcb18990c811a41c66f25a0b  manual-1.tdsave 116774

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Runs the career round bench for each arm in order, checking out the arm's commit in the sparse worktree.
+S=/c/Users/<user>/AppData/Local/Temp/claude/6568328289615498/cf08044f-8c42-466b-9a2b-42a536697828/scratchpad
+SW=$(cygpath -m "$S")
+UNITY="/c/Program Files/Unity/Hub/Editor/6000.4.9f1/Editor/Unity.exe"
+OUT="$SW/bench/results.txt"
+RUNS=${RUNS:-5}
+for spec in "$@"; do
+  arm=${spec%%=*}; commit=${spec#*=}
+  (cd "$S/wt-bench" && git -c core.longpaths=true checkout -q -f --detach "$commit") || { echo "checkout failed $commit" >> "$S/bench/results.txt"; exit 1; }
+  echo "$(date -u +%FT%TZ) start arm=$arm commit=$(cd "$S/wt-bench" && git rev-parse HEAD) src-tree=$(cd "$S/wt-bench" && git rev-parse HEAD:src)" >> "$S/bench/results.txt"
+  "$UNITY" -batchmode -nographics -releaseCodeOptimization -projectPath "$SW/wt-bench" \
+    -executeMethod CareerRoundBench.Run -benchArm "$arm" -benchRuns "$RUNS" -benchOut "$OUT" \
+    -logFile "$SW/bench/unity-$arm.log"
+  echo "$(date -u +%FT%TZ) end arm=$arm exit=$?" >> "$S/bench/results.txt"
+done

@@ -1,0 +1,336 @@
+// Scratch host-validation driver. Never committed. Active only with -careerProbe <alloc|savequit|verify> -probeDir <dir>.
+// Clicks the same UGUI buttons a player would. "alloc" samples main-thread GC allocation per frame
+// (development player) in four steady states; "savequit" posts WM_CLOSE to its own window the moment
+// a manual save's temporary file appears; "verify" reopens the store and reports the slots.
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel.Unsafe;
+using UnityEngine;
+using UnityEngine.UI;
+
+[DefaultExecutionOrder(-32000)]
+public sealed class CareerProbe : MonoBehaviour
+{
+    private const int SAMPLE_FRAMES = 600;
+    private const int SETTLE_FRAMES = 120;
+    private static readonly Stopwatch Clock = Stopwatch.StartNew();
+
+    private string _mode, _dir, _careers;
+    private int _phase, _wait, _dayClicks, _sampleIndex, _settle;
+    private float _sinceLast;
+    private string _sampleLabel;
+    private readonly long[] _bytes = new long[SAMPLE_FRAMES];
+    private readonly long[] _counts = new long[SAMPLE_FRAMES];
+    private readonly long[] _threadBytes = new long[SAMPLE_FRAMES];
+    private long _threadMark;
+    private ProfilerRecorder _gcBytes, _gcCount, _mainAlloc;
+    private readonly long[] _mainCounts = new long[SAMPLE_FRAMES];
+    private IntPtr _window;
+    private bool _controlMain;
+    private volatile bool _controlWorker;
+    private object _sink;
+
+    [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr l);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+    private delegate bool EnumProc(IntPtr hWnd, IntPtr l);
+    private const uint WM_CLOSE = 0x0010;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Boot()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string mode = null, dir = null;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "-careerProbe") mode = args[i + 1];
+            if (args[i] == "-probeDir") dir = args[i + 1];
+        }
+        if (mode == null || dir == null) return;
+        Application.runInBackground = true;
+        var go = new GameObject("CareerProbe");
+        DontDestroyOnLoad(go);
+        var probe = go.AddComponent<CareerProbe>();
+        probe._mode = mode;
+        probe._dir = dir;
+        probe._careers = Path.Combine(Application.persistentDataPath, "careers");
+        probe._gcBytes = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
+        probe._gcCount = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocation In Frame Count");
+        var handles = new List<ProfilerRecorderHandle>();
+        ProfilerRecorderHandle.GetAvailable(handles);
+        foreach (ProfilerRecorderHandle h in handles)
+            if (ProfilerRecorderHandle.GetDescription(h).Name == "GC.Alloc")
+            {
+                probe._mainAlloc = new ProfilerRecorder(h, 1,
+                    ProfilerRecorderOptions.Default | ProfilerRecorderOptions.CollectOnlyOnCurrentThread | ProfilerRecorderOptions.SumAllSamplesInFrame);
+                probe._mainAlloc.Start();
+                break;
+            }
+        Application.wantsToQuit += () => { probe.Mark("wantsToQuit files=" + probe.Listing()); return true; };
+        Application.quitting += () => probe.Mark("quitting files=" + probe.Listing());
+        probe.Mark("boot mode=" + mode + " mainThreadGcAllocRecorder=" + probe._mainAlloc.Valid + " development=" + UnityEngine.Debug.isDebugBuild
+            + " recorderValid=" + probe._gcBytes.Valid + "/" + probe._gcCount.Valid);
+    }
+
+    private void Mark(string s) => File.AppendAllText(Path.Combine(_dir, "player-probe.log"),
+        DateTime.UtcNow.ToString("o") + " t=" + Clock.Elapsed.TotalMilliseconds.ToString("F1") + "ms frame=" + Time.frameCount + " " + s + Environment.NewLine);
+
+    private static Button Find(string label)
+    {
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && t.text == label) return b;
+        }
+        return null;
+    }
+
+    private static bool Busy()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.text.StartsWith("Working...", StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    private static string Summary()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.text.Contains("| Season ")) return t.text.Replace("\n", " / ");
+        return "(no summary)";
+    }
+
+    private bool Click(string label)
+    {
+        Button b = Find(label);
+        if (b == null || !b.interactable) return false;
+        Mark("click '" + label + "'");
+        b.onClick.Invoke();
+        _wait = 0;
+        return true;
+    }
+
+    private void OnApplicationQuit() => Mark("OnApplicationQuit (probe) files=" + Listing());
+
+    private string Listing()
+    {
+        try
+        {
+            var text = new StringBuilder();
+            foreach (string f in Directory.GetFiles(_careers))
+                text.Append(Path.GetFileName(f)).Append(':').Append(new FileInfo(f).Length).Append(' ');
+            return text.ToString();
+        }
+        catch (Exception e) { return "(" + e.GetType().Name + ")"; }
+    }
+
+    // Sampling: no Find/Busy calls, no logging; only array writes.
+    private bool Sampling => _sampleLabel != null;
+
+    private void BeginSample(string label)
+    {
+        _sampleLabel = label;
+        _sampleIndex = 0;
+        _settle = SETTLE_FRAMES;
+    }
+
+    private void LateUpdate()
+    {
+        if (!Sampling) return;
+        if (_controlMain) _sink = new byte[256];
+        if (_settle > 0) { if (--_settle == 0) _threadMark = GC.GetAllocatedBytesForCurrentThread(); return; }
+        long now = GC.GetAllocatedBytesForCurrentThread();
+        _bytes[_sampleIndex] = _gcBytes.Valid ? _gcBytes.LastValue : -1;
+        _counts[_sampleIndex] = _gcCount.Valid ? _gcCount.LastValue : -1;
+        _threadBytes[_sampleIndex] = now - _threadMark;
+        _mainCounts[_sampleIndex] = _mainAlloc.Valid && _mainAlloc.Count > 0 ? _mainAlloc.GetSample(0).Count : -1;
+        _threadMark = now;
+        if (++_sampleIndex < SAMPLE_FRAMES) return;
+        long total = 0, max = 0, nonZero = 0, count = 0, thread = 0, threadNonZero = 0, main = 0, mainNonZero = 0;
+        for (int i = 0; i < SAMPLE_FRAMES; i++)
+        {
+            total += _bytes[i]; count += _counts[i]; thread += _threadBytes[i];
+            if (_bytes[i] > max) max = _bytes[i];
+            if (_bytes[i] != 0) nonZero++;
+            if (_threadBytes[i] != 0) threadNonZero++;
+            main += _mainCounts[i];
+            if (_mainCounts[i] != 0) mainNonZero++;
+        }
+        var raw = new StringBuilder();
+        for (int i = 0; i < SAMPLE_FRAMES; i++) raw.Append(_bytes[i]).Append(',').Append(_counts[i]).Append(',').Append(_mainCounts[i]).Append(' ');
+        Mark("SAMPLE " + _sampleLabel + " frames=" + SAMPLE_FRAMES + " gcBytesTotal=" + total + " gcBytesMax=" + max
+            + " framesWithAlloc=" + nonZero + " gcAllocCount=" + count + " mainThreadBytes=" + thread
+            + " mainThreadFramesWithAlloc=" + threadNonZero + " mainThreadGcAllocSamples=" + main
+            + " mainThreadFramesWithGcAllocSample=" + mainNonZero);
+        File.AppendAllText(Path.Combine(_dir, "samples-" + _sampleLabel + ".txt"), raw.ToString() + Environment.NewLine);
+        _sampleLabel = null;
+        _wait = 0;
+    }
+
+    private void Update()
+    {
+        if (Sampling) return;
+        if (++_wait < 5) return;
+        if (_mode == "alloc") Alloc();
+        else if (_mode == "savequit") SaveQuit();
+        else if (_mode == "verify") Verify();
+        else if (_mode == "control") Control();
+    }
+
+    private void Alloc()
+    {
+        // The busy round is sampled while the worker runs; every other state waits for idle first.
+        if (_phase < 8 && Busy()) return;
+        switch (_phase)
+        {
+            case 0: if (Find("New career") != null) { BeginSample("main-menu-idle"); _phase = 1; } break;
+            case 1: if (Click("New career")) _phase = 2; break;
+            case 2:
+                foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+                {
+                    var t = b.GetComponentInChildren<Text>();
+                    if (b.isActiveAndEnabled && b.interactable && t != null && t.text.StartsWith("Select ", StringComparison.Ordinal))
+                    { if (Click(t.text)) _phase = 3; break; }
+                }
+                break;
+            case 3: if (Click("Start career")) _phase = 4; break;
+            case 4:
+                if (Find("Resolve matchday (on Career Home)") != null) { _phase = 5; break; }
+                if (_dayClicks < 40 && Click("Advance one day")) _dayClicks++;
+                break;
+            case 5: if (Click("Save to manual slot 1")) _phase = 6; break;
+            case 6: Mark("MATCHDAY " + Summary()); BeginSample("career-home-idle-before-round"); _phase = 7; break;
+            case 7: if (Click("Resolve matchday (on Career Home)")) _phase = 8; break;
+            case 8: if (Busy()) { Mark("round busy"); BeginSample("round-in-progress"); _phase = 9; } break;
+            case 9:
+                if (!Busy()) Mark("WARNING round finished before busy sample ended");
+                _phase = 10;
+                break;
+            case 10: if (Busy()) return; Mark("ROUND COMPLETE " + Summary()); BeginSample("career-home-idle-after-round"); _phase = 11; break;
+            case 11: Mark("ALLOC DONE"); File.WriteAllText(Path.Combine(_dir, "done.flag"), "done"); _phase = 12; break;
+            case 12:
+                _sinceLast += Time.unscaledDeltaTime;
+                if (_sinceLast > 1f) { Mark("Application.Quit"); _phase = 13; Application.Quit(); }
+                break;
+        }
+    }
+
+    private void Control()
+    {
+        switch (_phase)
+        {
+            case 0: if (Find("New career") != null) { _controlMain = true; BeginSample("control-main-thread-allocates"); _phase = 1; } break;
+            case 1:
+                _controlMain = false;
+                _controlWorker = true;
+                new Thread(() => { while (_controlWorker) { _sink = new byte[256]; Thread.Sleep(1); } }) { IsBackground = true }.Start();
+                BeginSample("control-worker-thread-allocates");
+                _phase = 2;
+                break;
+            case 2:
+                _controlWorker = false;
+                BeginSample("control-idle");
+                _phase = 3;
+                break;
+            case 3: Mark("Application.Quit"); _phase = 4; Application.Quit(); break;
+        }
+    }
+
+    private void SaveQuit()
+    {
+        if (Busy()) return;
+        switch (_phase)
+        {
+            case 0: if (Click("Continue career")) _phase = 1; break;
+            case 1:
+                if (Find("Save to manual slot 2") == null) return;
+                Mark("CONTINUED " + Summary() + " files=" + Listing());
+                _window = OwnWindow();
+                Mark("window=" + _window);
+                StartWatcher();
+                if (Click("Save to manual slot 2")) { Mark("save clicked files=" + Listing()); _phase = 2; }
+                break;
+        }
+    }
+
+    private void Verify()
+    {
+        switch (_phase)
+        {
+            case 0: if (Busy()) return; Mark("MENU files=" + Listing()); if (Click("Load career")) _phase = 1; break;
+            case 1:
+                var slots = new StringBuilder();
+                foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+                {
+                    var t = b.GetComponentInChildren<Text>();
+                    if (b.isActiveAndEnabled && t != null && t.text.Contains("lot"))
+                        slots.Append('[').Append(t.text.Replace("\n", " ")).Append(b.interactable ? "" : " (disabled)").Append("] ");
+                }
+                Mark("PICKER " + slots);
+                if (Click("Back")) _phase = 2;
+                break;
+            case 2: if (Click("Continue career")) _phase = 3; break;
+            case 3:
+                if (Busy() || Find("Save to manual slot 2") == null) return;
+                Mark("CONTINUED " + Summary());
+                File.WriteAllText(Path.Combine(_dir, "done.flag"), "done");
+                _phase = 4;
+                break;
+            case 4:
+                _sinceLast += Time.unscaledDeltaTime;
+                if (_sinceLast > 1f) { Mark("Application.Quit"); _phase = 5; Application.Quit(); }
+                break;
+        }
+    }
+
+    private static IntPtr OwnWindow()
+    {
+        uint pid = (uint)Process.GetCurrentProcess().Id;
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, l) =>
+        {
+            GetWindowThreadProcessId(h, out uint owner);
+            if (owner == pid && IsWindowVisible(h)) { found = h; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    private void StartWatcher()
+    {
+        string careers = _careers, log = Path.Combine(_dir, "watcher.log");
+        IntPtr window = _window;
+        var thread = new Thread(() =>
+        {
+            double start = Clock.Elapsed.TotalMilliseconds;
+            while (Clock.Elapsed.TotalMilliseconds - start < 10000)
+            {
+                string[] tmp = Directory.GetFiles(careers, "*.tmp");
+                if (tmp.Length == 0) continue;
+                bool posted = PostMessage(window, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                double at = Clock.Elapsed.TotalMilliseconds;
+                File.AppendAllText(log, DateTime.UtcNow.ToString("o") + " t=" + at.ToString("F2") + "ms tmp-seen " + string.Join(",", Array.ConvertAll(tmp, Path.GetFileName))
+                    + " WM_CLOSE posted=" + posted + Environment.NewLine);
+                double last = -1;
+                while (Clock.Elapsed.TotalMilliseconds - at < 5000)
+                {
+                    double now = Clock.Elapsed.TotalMilliseconds;
+                    if (now - last < 2.0) { Thread.Sleep(0); continue; }
+                    last = now;
+                    var text = new StringBuilder();
+                    foreach (string f in Directory.GetFiles(careers)) text.Append(Path.GetFileName(f)).Append(' ');
+                    File.AppendAllText(log, "t=" + now.ToString("F2") + "ms " + text + Environment.NewLine);
+                }
+                return;
+            }
+            File.AppendAllText(log, "no temporary file seen within 10 s" + Environment.NewLine);
+        }) { IsBackground = true, Priority = System.Threading.ThreadPriority.Highest };
+        thread.Start();
+    }
+}

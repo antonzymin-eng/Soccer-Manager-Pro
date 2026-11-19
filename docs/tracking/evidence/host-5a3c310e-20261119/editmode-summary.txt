@@ -1,0 +1,21 @@
+# EditMode, merged main 5a3c310e, Unity 6000.4.9f1 batch mode in the compile worktree (Library from the clean import).
+command: Unity.exe -batchmode -nographics -projectPath <scratch>/wt-main -runTests -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.SeasonSave.Tests" -testResults <scratch>/m-editmode-results.xml
+start: 2026-11-19T19:17:23Z
+end/exit: exit=0 2026-11-19T19:37:51Z 
+run duration: 1215.0 s (the player allocation probe and bench rebuilds ran on the same machine during part of it)
+
+assembly                                 total  passed  failed  skipped
+TacticalDirector.ClientApp.Tests.dll       285     282       0        3
+TacticalDirector.SeasonSave.Tests.dll      559     555       0        4
+all                                        844     837       0        7
+
+ClientCareerCoordinatorTests: 47/47 passed, including ShutdownBeforeWriteAdmissionPreservesThePairAndAllowsDeterministicReplay.
+SeasonLoopTests.sim_CancelledManagedRoundReplaysExactlyFromThePreRoundSave: passed, 195.3 s.
+Skipped (existing opt-in diagnostics, unchanged from the cd3c7b99 run):
+  S0MovementDiagnostic_ReportsPlayerTravelAndSpread
+  S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs
+  S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit
+  CareerDriftDiagnostic_ReportsClubStrengthAndRegenQualityOverSeasons
+  EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes
+  Corpus_GeneratesTheRequestedSlice
+  Pilot_ExtremeDifferentialsAreDistinguishable

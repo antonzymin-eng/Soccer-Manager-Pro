@@ -1,0 +1,20 @@
+param([string]$Mode, [string]$Tag, [int]$TimeoutSeconds = 600)
+# Launches the development probe player in one mode, waits for it to exit, and snapshots the save directory.
+$ErrorActionPreference = 'Stop'
+$S = '<scratch>'
+$P = Join-Path $S 'dprobe'
+$C = '%USERPROFILE%\AppData\LocalLow\DefaultCompany\System XI\careers'
+New-Item -ItemType Directory -Force $P | Out-Null
+Remove-Item (Join-Path $P '*.flag') -ErrorAction SilentlyContinue
+function Note($s) { $line = (Get-Date).ToUniversalTime().ToString('o') + ' ' + $s; Add-Content -Path (Join-Path $P 'harness.log') -Value $line; $line }
+
+$argv = @('-careerProbe', $Mode, '-probeDir', $P, '-screen-fullscreen', '0', '-screen-width', '1024', '-screen-height', '768', '-logFile', (Join-Path $P "player-$Tag.log"))
+$sw = [Diagnostics.Stopwatch]::StartNew()
+$proc = Start-Process -FilePath (Join-Path $S 'dplayer\SystemXI.exe') -ArgumentList $argv -PassThru
+Note "launched $Mode ($Tag) pid=$($proc.Id)"
+$exited = $proc.WaitForExit($TimeoutSeconds * 1000)
+if (-not $exited) { Note "TIMEOUT ($Tag); killing"; $proc.Kill(); $proc.WaitForExit() }
+Note ("exitTime=" + $proc.ExitTime.ToUniversalTime().ToString("o") + " exited ($Tag) after " + [math]::Round($sw.Elapsed.TotalSeconds, 1) + " s exitCode=" + $proc.ExitCode)
+$dst = Join-Path $S ("dsnap-" + $Tag)
+if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
+if (Test-Path $C) { Copy-Item -Recurse $C $dst; Get-ChildItem $dst | ForEach-Object { Note ("  " + $_.Name + " " + $_.Length) } }
