@@ -111,6 +111,78 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.Throws<ArgumentException>(() => CareerCalendarWeek.At(default, 0));
         }
 
+        /// <summary>Fixture pages cover every fixture exactly once, in order, and stop at both ends.</summary>
+        [Test]
+        public void CareerFixturePages_CoverTheSeasonInOrderAndStopAtBothEnds()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            holder.Set(CareerTestSupport.StartQuick(temp.Slots));
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            int total = home.Fixtures.Count;
+            Assert.Greater(total, CareerFixturePage.FIXTURES_PER_PAGE, "The season must span several pages.");
+
+            CareerFixturePage page = CareerFixturePage.Current(in home);
+            Assert.AreEqual(0, page.First, "A new career's next fixture is on the first page.");
+            Assert.IsFalse(page.HasPrevious);
+            Assert.AreEqual(page.First, page.PreviousFirst);
+            int covered = 0;
+            while (true)
+            {
+                Assert.AreEqual(covered, page.First);
+                Assert.AreEqual(total, page.Total);
+                Assert.AreEqual(Math.Min(CareerFixturePage.FIXTURES_PER_PAGE, total - covered), page.Count);
+                covered += page.Count;
+                if (!page.HasNext)
+                {
+                    break;
+                }
+
+                CareerFixturePage next = CareerFixturePage.At(in home, page.NextFirst);
+                Assert.AreEqual(page.First, next.PreviousFirst);
+                Assert.IsTrue(next.HasPrevious);
+                page = next;
+            }
+
+            Assert.AreEqual(total, covered, "The pages must reach the last fixture.");
+            Assert.AreEqual(page.First, page.NextFirst);
+            Assert.AreEqual(page.First, CareerFixturePage.At(in home, int.MaxValue).First);
+            Assert.AreEqual(0, CareerFixturePage.At(in home, -5).First);
+            Assert.AreEqual(CareerFixturePage.FIXTURES_PER_PAGE,
+                CareerFixturePage.At(in home, CareerFixturePage.FIXTURES_PER_PAGE + 3).First);
+        }
+
+        /// <summary>The current page follows the next unplayed fixture as rounds are played.</summary>
+        [Test]
+        public void CareerFixturePage_CurrentFollowsTheNextUnplayedFixture()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            holder.Set(session);
+            var source = new CareerHomeSource(holder);
+            for (int round = 0; round < CareerFixturePage.FIXTURES_PER_PAGE; round++)
+            {
+                CareerTestSupport.ProgressUntil(session, CareerProgressAction.PlayMatchday);
+                session.Progress();
+            }
+
+            CareerHomeViewModel home = source.Project();
+            Assert.IsTrue(home.Fixtures[CareerFixturePage.FIXTURES_PER_PAGE - 1].IsPlayed);
+            Assert.IsFalse(home.Fixtures[CareerFixturePage.FIXTURES_PER_PAGE].IsPlayed);
+            CareerFixturePage current = CareerFixturePage.Current(in home);
+            Assert.AreEqual(CareerFixturePage.FIXTURES_PER_PAGE, current.First);
+            Assert.AreEqual(0, current.PreviousFirst);
+        }
+
+        /// <summary>Verifies that a fixture page cannot be requested before a career is published.</summary>
+        [Test]
+        public void CareerFixturePage_RequiresAnActiveCareer()
+        {
+            Assert.Throws<ArgumentException>(() => CareerFixturePage.Current(default));
+            Assert.Throws<ArgumentException>(() => CareerFixturePage.At(default, 0));
+        }
+
         [Test]
         public void CareerHome_ProjectsTheSeasonFromSeasonLoopsOwnState()
         {
@@ -359,4 +431,5 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | be restored over the save it no longer describes.              |
 // | 1.3     | 2026-11-19 | —      | Verify schedule projection, refresh and resume.                |
 // | 1.4     | 2026-11-19 | —      | Verify calendar paging across the season.                     |
+// | 1.5     | 2026-11-19 | —      | Verify fixture paging coverage, bounds and the current page.  |
 #endregion

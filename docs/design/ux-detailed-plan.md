@@ -1,10 +1,11 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** November 19, 2026 (v1.38 — Career Home schedule UX acceptance criteria.)
+**Last Updated:** November 19, 2026 (v1.39 — Schedule keyboard acceptance run; fixture list paged.)
+**Last Updated (prior):** November 19, 2026 (v1.38 — Career Home schedule UX acceptance criteria.)
 **Last Updated (prior):** November 5, 2026 (v1.37 — T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged.)
 **Last Updated (prior):** November 4, 2026\
-**Version:** 1.38\
+**Version:** 1.39\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF; S0 J TECHNICAL REVIEW FAIL October 19; FIXES J-01/J-02/J-04 LANDED October 22; J-05 LANDED October 30 (PR #520); S0 GATE J PASS AND ACCEPTED BY THE OWNER October 30, 2026\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** owner-played PM-2 with PM-1 as prerequisite; Early Access is not currently planned (roadmap D-14).
@@ -812,6 +813,16 @@ Verify that the rows remain readable at 100% and 200% text scale and that focus 
 Record whether finding and reading fixtures requires individually focusable rows before closing the
 schedule UX item.
 
+**Result (November 19, 2026, pinned host, [evidence](../tracking/evidence/host-ad8d4f80-20261119/README.md)).**
+At 1280×720 the keyboard-only task passed at 100%: the summary and the first fixture row name the next
+opponent, date and venue, week browsing works, and the focus ring was visible at every stop. At 200%, the
+unpaged 38-row list sat between Calendar and the first save control, and rows 11–25 never came on screen
+without a mouse. One read-only block was therefore not enough. The owner chose paging over individually
+focusable rows. The list shows eight fixtures under a position heading, with *Earlier fixtures*, *Upcoming
+fixtures* and *Later fixtures* controls that follow the calendar's boundary-focus rule. Re-run at both
+scales, every line of every page came on screen during a Tab cycle. Rows stay read-only text. Shift+Tab, long
+club names and other window sizes were not verified in this run.
+
 ## 7.6 S1 usability tasks
 
 **November 4 owner scope amendment (roadmap D-11):** interactive career matches and coach
@@ -1156,4 +1167,5 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.35 | October 30, 2026 | S0 Gate J **ACCEPTED**: the B8/B10 re-capture and an uninterrupted I-Q15 pass on the H v0.2 skin (October 29), the owner's wording approval and J-04 visual acceptance (October 28) and J-05 (PR #520, merged `642294d1`; 10× at 601–602 ticks/s) completed §7 of [`p5b-real-client-acceptance.md`](../tracking/p5b-real-client-acceptance.md); the owner signed off on October 30 (record v0.15 §19). |
 | 1.36 | November 4, 2026 | Apply owner D-11 deferral of interactive career/delegation until staff; current S1 retains all eight tasks with readiness inspection, Home round/result feedback and between-round save/resume. Update current D-14 release-target pointer. No gate verdict or prior approval/evidence changed. |
 | 1.37 | 2026-11-05 | T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged. |
+| 1.39 | November 19, 2026 | Record the schedule keyboard run: 200% reach gap, owner's paging decision and the passing re-run. |
 | 1.38 | November 19, 2026 | Record the Career Home schedule candidate and its pinned-host keyboard and text-scale acceptance checks. |

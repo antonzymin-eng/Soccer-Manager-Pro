@@ -105,6 +105,33 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual("Resolve matchday (on Career Home)", text.Progress(CareerProgressAction.PlayMatchday));
         }
 
+        /// <summary>The fixture list shows one page under a heading that says where it is in the season.</summary>
+        [Test]
+        public void FixtureListShowsOnePageUnderItsPositionHeading()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            holder.Set(CareerTestSupport.StartQuick(temp.Slots));
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            var text = new CareerScreenText();
+            int size = CareerFixturePage.FIXTURES_PER_PAGE;
+            CareerFixturePage second = CareerFixturePage.At(in home, size);
+
+            string[] lines = text.FixtureList(home, second).Split('\n');
+            Assert.AreEqual(1 + second.Count, lines.Length);
+            Assert.AreEqual("Fixtures " + (size + 1) + " to " + (size + second.Count) + " of " + home.Fixtures.Count,
+                lines[0].TrimEnd('\r'));
+            for (int i = 0; i < second.Count; i++)
+            {
+                CareerFixtureView fixture = home.Fixtures[size + i];
+                StringAssert.StartsWith("Day " + fixture.WorldDay + " | " + fixture.OpponentName + " (", lines[1 + i]);
+            }
+
+            Assert.AreEqual("Earlier fixtures", text.Label("schedule.page.previous"));
+            Assert.AreEqual("Upcoming fixtures", text.Label("schedule.page.current"));
+            Assert.AreEqual("Later fixtures", text.Label("schedule.page.next"));
+        }
+
         /// <summary>Both schedule views format fixture data through the same authored locale.</summary>
         [Test]
         public void ScheduleViewsUseLocalizedRowsAndRefreshFixtureStatus()
@@ -123,9 +150,10 @@ namespace TacticalDirector.ClientApp.Tests
             CareerHomeViewModel home = source.Project();
             CareerFixtureView fixture = home.Fixtures[0];
             CareerCalendarWeek week = CareerCalendarWeek.At(in home, fixture.WorldDay);
+            CareerFixturePage page = CareerFixturePage.At(in home, 0);
             string expected = fixture.OpponentName + " (" + (fixture.IsHome ? "home" : "away") +
                 ") / [Upcoming] / Day " + fixture.WorldDay;
-            StringAssert.Contains(expected, text.FixtureList(home));
+            StringAssert.Contains(expected, text.FixtureList(home, page));
             StringAssert.Contains(expected, text.Calendar(home, week));
             StringAssert.Contains("No club fixture", text.Calendar(home, week));
 
@@ -134,7 +162,7 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains("Matchday / Day " + fixture.WorldDay + " (today)", text.Calendar(home, week));
             session.Progress();
             home = source.Project();
-            StringAssert.Contains("Played / Day " + fixture.WorldDay, text.FixtureList(home));
+            StringAssert.Contains("Played / Day " + fixture.WorldDay, text.FixtureList(home, page));
             StringAssert.Contains("Played / Day " + fixture.WorldDay, text.Calendar(home, week));
         }
     }
@@ -144,4 +172,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.0 | 2026-11-03 | — | Career copy isolation, pseudo-locale schemas, save states and real Home/result text. |
 // | 1.1 | 2026-11-04 | — | Cover translated slot composition, per-row caching and neutral/release-checkpoint copy. |
 // | 1.2 | 2026-11-19 | — | Cover localized list and calendar rows and their matchday and played states. |
+// | 1.3 | 2026-11-19 | — | Cover the paged fixture list, its position heading and paging labels. |
 #endregion

@@ -1,0 +1,175 @@
+2026-11-19T22:16:38.1095418Z frame=30 boot window=721832 screen=1280x720
+2026-11-19T22:16:38.1200893Z frame=31 click 'New career'
+2026-11-19T22:16:38.1573905Z frame=40 click 'Select Thorncliff United'
+2026-11-19T22:16:38.1746844Z frame=46 click 'Start career'
+2026-11-19T22:16:38.3999393Z frame=161 CAREER HOME focus='Career home'
+2026-11-19T22:16:38.4193257Z frame=161 screenshot 01-career-home.bmp 1280x720
+2026-11-19T22:16:38.4339391Z frame=167 key#1 Tab -> focus 'Advance one day' [inView, ring] rows=none
+2026-11-19T22:16:38.4455201Z frame=173 key#2 Tab -> focus 'Schedule' [inView, ring] rows=none
+2026-11-19T22:16:38.4649016Z frame=179 key#3 Enter -> focus 'Schedule' [inView, ring] rows=1-18/38
+2026-11-19T22:16:38.4800736Z frame=189 SCHEDULE after opening (default view):
+Day 7 | Stanbury Athletic (away) | Upcoming
+Day 14 | Juniper Park FC (home) | Upcoming
+Day 21 | Kesgrave Rovers (away) | Upcoming
+Day 28 | Quarrywood Town (home) | Upcoming
+Day 35 | Ashford Town (away) | Upcoming
+Day 42 | Marlow Heath (away) | Upcoming
+Day 49 | Oakenfield FC (home) | Upcoming
+Day 56 | Langmere Athletic (away) | Upcoming
+Day 63 | Fernbrook FC (home) | Upcoming
+Day 70 | Eastvale Athletic (away) | Upcoming
+Day 77 | Granton Wanderers (home) | Upcoming
+Day 84 | Redmarsh Rovers (away) | Upcoming
+Day 91 | Belmont Rovers (home) | Upcoming
+Day 98 | Carrowmore City (away) | Upcoming
+Day 105 | Pendleton City (away) | Upcoming
+Day 112 | Halloway City (home) | Upcoming
+Day 119 | Dunhaven United (away) | Upcoming
+Day 126 | Northgate United (home) | Upcoming
+Day 133 | Ironbridge United (away) | Upcoming
+Day 140 | Stanbury Athletic (home) | Upcoming
+Day 147 | Juniper Park FC (away) | Upcoming
+Day 154 | Kesgrave Rovers (home) | Upcoming
+Day 161 | Quarrywood Town (away) | Upcoming
+Day 168 | Ashford Town (home) | Upcoming
+Day 175 | Marlow Heath (home) | Upcoming
+Day 182 | Oakenfield FC (away) | Upcoming
+Day 189 | Langmere Athletic (home) | Upcoming
+Day 196 | Fernbrook FC (away) | Upcoming
+Day 203 | Eastvale Athletic (home) | Upcoming
+Day 210 | Granton Wanderers (away) | Upcoming
+Day 217 | Redmarsh Rovers (home) | Upcoming
+Day 224 | Belmont Rovers (away) | Upcoming
+Day 231 | Carrowmore City (home) | Upcoming
+Day 238 | Pendleton City (home) | Upcoming
+Day 245 | Halloway City (away) | Upcoming
+Day 252 | Dunhaven United (home) | Upcoming
+Day 259 | Northgate United (away) | Upcoming
+Day 266 | Ironbridge United (home) | Upcoming
+--- end
+2026-11-19T22:16:38.4934102Z frame=195 key#4 Tab -> focus 'Fixtures' [inView, ring] rows=1-18/38
+2026-11-19T22:16:38.5100912Z frame=195 screenshot 02-list-focus-fixtures.bmp 1280x720
+2026-11-19T22:16:38.5228190Z frame=201 key#5 Tab -> focus 'Calendar' [inView, ring] rows=1-18/38
+2026-11-19T22:16:38.5358507Z frame=207 key#6 Tab -> focus 'Save to manual slot 1' [inView, ring] rows=8-38/38
+2026-11-19T22:16:38.5546453Z frame=207 screenshot 03-list-focus-after-calendar.bmp 1280x720
+2026-11-19T22:16:38.5672475Z frame=213 key#7 Tab -> focus 'Save to manual slot 2' [inView, ring] rows=10-38/38
+2026-11-19T22:16:38.5820071Z frame=219 key#8 Tab -> focus 'Save to manual slot 3' [inView, ring] rows=13-38/38
+2026-11-19T22:16:38.5958649Z frame=225 key#9 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] rows=15-38/38
+2026-11-19T22:16:38.6097505Z frame=231 key#10 Tab -> focus 'Advance one day' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.6196524Z frame=237 key#11 Tab -> focus 'Schedule' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.6319854Z frame=243 key#12 Tab -> focus 'Fixtures' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.6332652Z frame=243 LIST MODE rows ever visible during the Tab cycle: 38 of 38
+2026-11-19T22:16:38.6446778Z frame=249 key#13 Tab -> focus 'Calendar' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.6591448Z frame=255 key#14 Tab -> focus 'Save to manual slot 1' [inView, ring] rows=8-38/38
+2026-11-19T22:16:38.6733624Z frame=261 key#15 Shift+Tab -> focus 'Save to manual slot 2' [inView, ring] rows=10-38/38
+2026-11-19T22:16:38.6744035Z frame=261 Shift+Tab from 'Save to manual slot 1' -> 'Save to manual slot 2'
+2026-11-19T22:16:38.6882479Z frame=267 key#16 Tab -> focus 'Save to manual slot 3' [inView, ring] rows=13-38/38
+2026-11-19T22:16:38.7035923Z frame=273 key#17 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] rows=15-38/38
+2026-11-19T22:16:38.7180457Z frame=279 key#18 Tab -> focus 'Advance one day' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.7293119Z frame=285 key#19 Tab -> focus 'Schedule' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.7422086Z frame=291 key#20 Tab -> focus 'Fixtures' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.7527896Z frame=297 key#21 Tab -> focus 'Calendar' [inView, ring] rows=1-25/38
+2026-11-19T22:16:38.7672821Z frame=303 key#22 Enter -> focus 'Calendar' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.7816781Z frame=313 SCHEDULE calendar, current week:
+Days 0 to 6
+Day 0 (today) | No club fixture
+Day 1 | No club fixture
+Day 2 | No club fixture
+Day 3 | No club fixture
+Day 4 | No club fixture
+Day 5 | No club fixture
+Day 6 | No club fixture
+--- end
+2026-11-19T22:16:38.7989089Z frame=313 screenshot 04-calendar-current-week.bmp 1280x720
+2026-11-19T22:16:38.8096779Z frame=319 key#23 Tab -> focus 'Current week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.8197024Z frame=325 key#24 Tab -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.8323169Z frame=331 key#25 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.8590759Z frame=347 key#26 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.8739360Z frame=357 SCHEDULE calendar, two weeks ahead:
+Days 14 to 20
+Day 14 | Juniper Park FC (home) | Upcoming
+Day 15 | No club fixture
+Day 16 | No club fixture
+Day 17 | No club fixture
+Day 18 | No club fixture
+Day 19 | No club fixture
+Day 20 | No club fixture
+--- end
+2026-11-19T22:16:38.8749789Z frame=357 after paging, focus on Next week: rows=1-8/8
+2026-11-19T22:16:38.8938128Z frame=357 screenshot 05-calendar-later-week-focus-next.bmp 1280x720
+2026-11-19T22:16:38.9059903Z frame=363 key#27 Tab -> focus 'Save to manual slot 1' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.9255975Z frame=363 screenshot 06-calendar-later-week-focus-after.bmp 1280x720
+2026-11-19T22:16:38.9428683Z frame=369 key#28 Tab -> focus 'Save to manual slot 2' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.9571695Z frame=375 key#29 Tab -> focus 'Save to manual slot 3' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.9692322Z frame=381 key#30 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.9829409Z frame=387 key#31 Tab -> focus 'Advance one day' [inView, ring] rows=1-8/8
+2026-11-19T22:16:38.9938503Z frame=393 key#32 Tab -> focus 'Schedule' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0042217Z frame=399 key#33 Tab -> focus 'Fixtures' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0057477Z frame=399 CALENDAR MODE week rows ever visible during the Tab cycle: 8 of 8
+2026-11-19T22:16:39.0155300Z frame=405 key#34 Tab -> focus 'Calendar' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0272616Z frame=411 key#35 Tab -> focus 'Previous week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0374223Z frame=417 key#36 Tab -> focus 'Current week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0486571Z frame=423 key#37 Enter -> focus 'Current week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0647557Z frame=433 SCHEDULE calendar, back to current week:
+Days 0 to 6
+Day 0 (today) | No club fixture
+Day 1 | No club fixture
+Day 2 | No club fixture
+Day 3 | No club fixture
+Day 4 | No club fixture
+Day 5 | No club fixture
+Day 6 | No club fixture
+--- end
+2026-11-19T22:16:39.0664899Z frame=433 at current (first) week: Previous week interactable=False
+2026-11-19T22:16:39.0771124Z frame=439 key#38 Tab -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.0887772Z frame=445 key#39 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1081863Z frame=455 key#40 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1262147Z frame=465 key#41 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1430928Z frame=475 key#42 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1596215Z frame=485 key#43 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1757091Z frame=495 key#44 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.1929332Z frame=505 key#45 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2096477Z frame=515 key#46 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2264585Z frame=525 key#47 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2429555Z frame=535 key#48 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2586910Z frame=545 key#49 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2769061Z frame=555 key#50 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.2935483Z frame=565 key#51 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3112424Z frame=575 key#52 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3277878Z frame=585 key#53 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3448420Z frame=595 key#54 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3624561Z frame=605 key#55 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3793554Z frame=615 key#56 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.3963979Z frame=625 key#57 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.4129979Z frame=635 key#58 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.4325632Z frame=645 key#59 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.4491713Z frame=655 key#60 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.4661908Z frame=665 key#61 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.4839551Z frame=675 key#62 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5025112Z frame=685 key#63 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5195059Z frame=695 key#64 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5369256Z frame=705 key#65 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5533798Z frame=715 key#66 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5704002Z frame=725 key#67 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.5874049Z frame=735 key#68 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6041350Z frame=745 key#69 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6209483Z frame=755 key#70 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6399151Z frame=765 key#71 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6554590Z frame=775 key#72 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6736741Z frame=785 key#73 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.6905404Z frame=795 key#74 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.7081104Z frame=805 key#75 Enter -> focus 'Next week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.7285636Z frame=815 key#76 Enter -> focus 'Current week' [inView, ring] rows=1-8/8
+2026-11-19T22:16:39.7352066Z frame=819 paged 38 weeks; Next week interactable=False; focus after the last page='Current week'
+2026-11-19T22:16:39.7362071Z frame=819 SCHEDULE calendar, last week:
+Days 266 to 272
+Day 266 | Ironbridge United (home) | Upcoming
+Day 267 | No club fixture
+Day 268 | No club fixture
+Day 269 | No club fixture
+Day 270 | No club fixture
+Day 271 | No club fixture
+Day 272 | No club fixture
+--- end
+2026-11-19T22:16:39.7529881Z frame=819 screenshot 07-calendar-last-week.bmp 1280x720
+2026-11-19T22:16:39.7529881Z frame=819 DONE keys=76

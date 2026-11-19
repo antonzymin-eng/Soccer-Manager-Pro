@@ -1,0 +1,310 @@
+// Scratch host-validation driver. Never committed. Active only with -scheduleProbe <dir>.
+// Sets up a new career with mouse-equivalent clicks, then performs the UX plan's keyboard-only schedule
+// task with real key messages posted to the player's own window (legacy Input Manager): Tab / Shift+Tab /
+// Enter. Logs the focused control after every key, the schedule text, focus-ring visibility and whether the
+// focused control is inside the scroll viewport, and captures screenshots.
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+public sealed class ScheduleProbe : MonoBehaviour
+{
+    private const uint WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101;
+    private const int VK_TAB = 0x09, VK_RETURN = 0x0D, VK_SHIFT = 0x10;
+    [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr l);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+    private delegate bool EnumProc(IntPtr hWnd, IntPtr l);
+    [DllImport("user32.dll")] private static extern bool GetKeyboardState(byte[] state);
+    [DllImport("user32.dll")] private static extern bool SetKeyboardState(byte[] state);
+    private const int VK_LSHIFT = 0xA0;
+    private readonly System.Collections.Generic.HashSet<int> _seenRows = new System.Collections.Generic.HashSet<int>();
+
+    private string _dir;
+    private IntPtr _window;
+    private int _keys;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Boot()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string dir = null;
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == "-scheduleProbe") dir = args[i + 1];
+        if (dir == null) return;
+        Application.runInBackground = true;
+        var go = new GameObject("ScheduleProbe");
+        DontDestroyOnLoad(go);
+        var probe = go.AddComponent<ScheduleProbe>();
+        probe._dir = dir;
+        probe.StartCoroutine(probe.Run());
+    }
+
+    private void Mark(string s) => File.AppendAllText(Path.Combine(_dir, "schedule-probe.log"),
+        DateTime.UtcNow.ToString("o") + " frame=" + Time.frameCount + " " + s + Environment.NewLine);
+
+    private static string Label(GameObject go)
+    {
+        if (go == null) return "(none)";
+        var t = go.GetComponentInChildren<Text>();
+        return t == null ? go.name : t.text.Replace("\n", " / ");
+    }
+
+    private static Button Find(string label)
+    {
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && t.text == label) return b;
+        }
+        return null;
+    }
+
+    private static bool Busy()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.text.StartsWith("Working...", StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    private static Text ScheduleText()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.transform.parent != null && t.transform.parent.name == "Career schedule"
+                && t.GetComponentInParent<Button>() == null)
+                return t;
+        return null;
+    }
+
+    private IEnumerator Frames(int n) { for (int i = 0; i < n; i++) yield return null; }
+
+    private IEnumerator Until(Func<bool> condition, string what, int maxFrames = 3000)
+    {
+        for (int i = 0; i < maxFrames; i++)
+        {
+            if (condition()) yield break;
+            yield return null;
+        }
+        Mark("TIMEOUT waiting for " + what);
+    }
+
+    private IEnumerator Click(string label)
+    {
+        yield return Until(() => { var b = Find(label); return b != null && b.interactable && !Busy(); }, "'" + label + "'");
+        Mark("click '" + label + "'");
+        Find(label)?.onClick.Invoke();
+        yield return Frames(5);
+    }
+
+    private IEnumerator Key(int vk, bool shift = false)
+    {
+        var state = new byte[256];
+        if (shift)
+        {
+            GetKeyboardState(state);
+            state[VK_SHIFT] = 0x80; state[VK_LSHIFT] = 0x80;
+            SetKeyboardState(state);
+            PostMessage(_window, WM_KEYDOWN, (IntPtr)VK_SHIFT, (IntPtr)0x002A0001);
+        }
+        PostMessage(_window, WM_KEYDOWN, (IntPtr)vk, IntPtr.Zero);
+        yield return Frames(2);
+        PostMessage(_window, WM_KEYUP, (IntPtr)vk, (IntPtr)unchecked((int)0xC0000001));
+        if (shift)
+        {
+            PostMessage(_window, WM_KEYUP, (IntPtr)VK_SHIFT, (IntPtr)unchecked((int)0xC02A0001));
+            GetKeyboardState(state);
+            state[VK_SHIFT] = 0; state[VK_LSHIFT] = 0;
+            SetKeyboardState(state);
+        }
+        yield return Frames(4);
+        _keys++;
+        GameObject focused = EventSystem.current?.currentSelectedGameObject;
+        Mark("key#" + _keys + " " + (vk == VK_TAB ? (shift ? "Shift+Tab" : "Tab") : "Enter") + " -> focus '" + Label(focused) + "' "
+            + Visibility(focused) + " " + VisibleRows());
+    }
+
+    // Is the focused control inside its scroll viewport, and is a focus ring drawn on it?
+    private static string Visibility(GameObject focused)
+    {
+        if (focused == null) return "";
+        var rect = focused.GetComponent<RectTransform>();
+        var scroll = focused.GetComponentInParent<ScrollRect>();
+        string inView = "n/a";
+        if (rect != null && scroll != null && scroll.viewport != null)
+        {
+            var c = new Vector3[4];
+            rect.GetWorldCorners(c);
+            var v = new Vector3[4];
+            scroll.viewport.GetWorldCorners(v);
+            inView = c[0].y >= v[0].y - 0.5f && c[1].y <= v[1].y + 0.5f ? "inView" : "OUTSIDE-VIEW";
+        }
+        bool ring = false;
+        foreach (Transform child in focused.GetComponentsInChildren<Transform>(false))
+            if (child != focused.transform && child.name.IndexOf("focus", StringComparison.OrdinalIgnoreCase) >= 0) ring = true;
+        return "[" + inView + (ring ? ", ring" : ", no-ring-child") + "]";
+    }
+
+    // Which schedule text rows are inside the scroll viewport right now (rows are equal-height lines).
+    private string VisibleRows()
+    {
+        Text t = ScheduleText();
+        if (t == null) return "rows=none";
+        var scroll = t.GetComponentInParent<ScrollRect>();
+        if (scroll == null || scroll.viewport == null) return "rows=no-viewport";
+        string[] lines = t.text.Split((char)10);
+        var rect = t.rectTransform;
+        var c = new Vector3[4];
+        rect.GetWorldCorners(c);
+        var v = new Vector3[4];
+        scroll.viewport.GetWorldCorners(v);
+        float top = c[1].y, bottom = c[0].y, h = (top - bottom) / lines.Length;
+        int first = -1, last = -1;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            float lineTop = top - i * h, lineBottom = top - (i + 1) * h;
+            if (lineBottom >= v[0].y - 0.5f && lineTop <= v[1].y + 0.5f)
+            {
+                if (first < 0) first = i;
+                last = i;
+                _seenRows.Add(i);
+            }
+        }
+        return first < 0 ? "rows=0/" + lines.Length + " visible" : "rows=" + (first + 1) + "-" + (last + 1) + "/" + lines.Length;
+    }
+
+    private IEnumerator TabTo(string label, int max = 40)
+    {
+        for (int i = 0; i < max; i++)
+        {
+            if (Label(EventSystem.current?.currentSelectedGameObject) == label) yield break;
+            yield return Key(VK_TAB);
+        }
+        Mark("FAILED to reach '" + label + "' by Tab within " + max + " presses");
+    }
+
+    private IEnumerator Shot(string name)
+    {
+        yield return new WaitForEndOfFrame();
+        int w = Screen.width, h = Screen.height;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        Color32[] px = tex.GetPixels32();
+        Destroy(tex);
+        int stride = (w * 3 + 3) & ~3;
+        var bmp = new byte[54 + stride * h];
+        void Put(int at, int v) { bmp[at] = (byte)v; bmp[at + 1] = (byte)(v >> 8); bmp[at + 2] = (byte)(v >> 16); bmp[at + 3] = (byte)(v >> 24); }
+        bmp[0] = (byte)'B'; bmp[1] = (byte)'M'; Put(2, bmp.Length); Put(10, 54); Put(14, 40); Put(18, w); Put(22, h);
+        bmp[26] = 1; bmp[28] = 24; Put(34, stride * h);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                Color32 c = px[y * w + x];
+                int o = 54 + y * stride + x * 3;
+                bmp[o] = c.b; bmp[o + 1] = c.g; bmp[o + 2] = c.r;
+            }
+        File.WriteAllBytes(Path.Combine(_dir, name + ".bmp"), bmp);
+        Mark("screenshot " + name + ".bmp " + w + "x" + h);
+    }
+
+    private void DumpSchedule(string what)
+    {
+        Text t = ScheduleText();
+        Mark("SCHEDULE " + what + ":\n" + (t == null ? "(schedule text not found)" : t.text) + "\n--- end");
+    }
+
+    private IEnumerator Run()
+    {
+        yield return Frames(30);
+        uint pid = (uint)Process.GetCurrentProcess().Id;
+        EnumWindows((h, l) => { GetWindowThreadProcessId(h, out uint owner); if (owner == pid && IsWindowVisible(h)) { _window = h; return false; } return true; }, IntPtr.Zero);
+        Mark("boot window=" + _window + " screen=" + Screen.width + "x" + Screen.height);
+
+        // Setup with clicks (the keyboard task starts on Career Home).
+        yield return Click("New career");
+        yield return Until(() => { foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.None)) { var t = b.GetComponentInChildren<Text>(); if (b.isActiveAndEnabled && t != null && t.text.StartsWith("Select ", StringComparison.Ordinal)) return true; } return false; }, "club list");
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && t.text.StartsWith("Select ", StringComparison.Ordinal)) { Mark("click '" + t.text + "'"); b.onClick.Invoke(); break; }
+        }
+        yield return Frames(5);
+        yield return Click("Start career");
+        yield return Until(() => Find("Schedule") != null && !Busy(), "Career Home with Schedule");
+        yield return Frames(30);
+        Mark("CAREER HOME focus='" + Label(EventSystem.current?.currentSelectedGameObject) + "'");
+        yield return Shot("01-career-home");
+
+        // Keyboard-only task (UX plan, schedule candidate).
+        yield return TabTo("Schedule");
+        yield return Key(VK_RETURN);
+        yield return Frames(10);
+        DumpSchedule("after opening (default view)");
+        // LIST MODE: one full Tab cycle, recording which fixture rows each focus stop shows.
+        _seenRows.Clear();
+        yield return TabTo("Fixtures");
+        yield return Shot("02-list-focus-fixtures");
+        yield return Key(VK_TAB);
+        yield return Key(VK_TAB);
+        yield return Shot("03-list-focus-after-calendar");
+        for (int i = 0; i < 6; i++) yield return Key(VK_TAB);
+        Mark("LIST MODE rows ever visible during the Tab cycle: " + _seenRows.Count + " of " + ScheduleText().text.Split((char)10).Length);
+        // Shift+Tab: from the control after Calendar back to Calendar.
+        yield return TabTo("Save to manual slot 1", 20);
+        yield return Key(VK_TAB, shift: true);
+        Mark("Shift+Tab from 'Save to manual slot 1' -> '" + Label(EventSystem.current?.currentSelectedGameObject) + "'");
+        // CALENDAR MODE.
+        yield return TabTo("Calendar");
+        yield return Key(VK_RETURN);
+        yield return Frames(10);
+        DumpSchedule("calendar, current week");
+        yield return Shot("04-calendar-current-week");
+        yield return TabTo("Next week");
+        yield return Key(VK_RETURN);
+        yield return Frames(10);
+        yield return Key(VK_RETURN);
+        yield return Frames(10);
+        DumpSchedule("calendar, two weeks ahead");
+        _seenRows.Clear();
+        Mark("after paging, focus on Next week: " + VisibleRows());
+        yield return Shot("05-calendar-later-week-focus-next");
+        yield return Key(VK_TAB);
+        yield return Shot("06-calendar-later-week-focus-after");
+        for (int i = 0; i < 6; i++) yield return Key(VK_TAB);
+        Mark("CALENDAR MODE week rows ever visible during the Tab cycle: " + _seenRows.Count + " of " + ScheduleText().text.Split((char)10).Length);
+        yield return TabTo("Current week");
+        yield return Key(VK_RETURN);
+        yield return Frames(10);
+        DumpSchedule("calendar, back to current week");
+        Button previous = Find("Previous week");
+        Mark("at current (first) week: Previous week interactable=" + (previous != null && previous.interactable));
+        // Last-week boundary (#551 focus fix): page to the end with Enter on Next week.
+        yield return TabTo("Next week");
+        int pages = 0;
+        while (pages < 80)
+        {
+            Button next = Find("Next week");
+            if (next == null || !next.interactable) break;
+            if (Label(EventSystem.current?.currentSelectedGameObject) != "Next week") break;
+            yield return Key(VK_RETURN);
+            yield return Frames(4);
+            pages++;
+        }
+        Button nextAtEnd = Find("Next week");
+        Mark("paged " + pages + " weeks; Next week interactable=" + (nextAtEnd != null && nextAtEnd.interactable)
+            + "; focus after the last page='" + Label(EventSystem.current?.currentSelectedGameObject) + "'");
+        DumpSchedule("calendar, last week");
+        yield return Shot("07-calendar-last-week");
+        Mark("DONE keys=" + _keys);
+        File.WriteAllText(Path.Combine(_dir, "done.flag"), "done");
+        yield return Frames(60);
+        Application.Quit();
+    }
+}

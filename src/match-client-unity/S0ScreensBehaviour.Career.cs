@@ -36,14 +36,17 @@ namespace TacticalDirector.MatchClientUnity
         private ScreenId _careerLastScreen;
         private Selectable _careerFocusReturn;
         private string _careerUiError;
-        private RectTransform _careerSchedule, _careerWeekControls;
+        private RectTransform _careerSchedule, _careerPageControls, _careerWeekControls;
         private Button _careerScheduleToggle, _careerFixtures, _careerCalendar;
+        private Button _careerPreviousPage, _careerCurrentPage, _careerNextPage;
         private Button _careerPreviousWeek, _careerCurrentWeek, _careerNextWeek;
         private Text _careerScheduleText;
         private bool _isCareerScheduleOpen, _isCareerCalendarSelected;
         private int _careerScheduleSeason = -1;
         private uint? _careerCalendarDay;
         private CareerCalendarWeek _careerWeek;
+        private int? _careerFixtureFirst;
+        private CareerFixturePage _careerPage;
 
         private string C(string role) => _careerText.Label(role);
         private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll,
@@ -116,6 +119,13 @@ namespace TacticalDirector.MatchClientUnity
                 () => _isCareerCalendarSelected = false, _careerHomeScroll);
             _careerCalendar = CareerControl(_careerSchedule, C("schedule.calendar"),
                 () => _isCareerCalendarSelected = true, _careerHomeScroll);
+            _careerPageControls = _ui.Column("Fixture navigation", _careerSchedule, 0);
+            _careerPreviousPage = CareerControl(_careerPageControls, C("schedule.page.previous"),
+                () => _careerFixtureFirst = _careerPage.PreviousFirst, _careerHomeScroll);
+            _careerCurrentPage = CareerControl(_careerPageControls, C("schedule.page.current"),
+                () => _careerFixtureFirst = null, _careerHomeScroll);
+            _careerNextPage = CareerControl(_careerPageControls, C("schedule.page.next"),
+                () => _careerFixtureFirst = _careerPage.NextFirst, _careerHomeScroll);
             _careerWeekControls = _ui.Column("Calendar navigation", _careerSchedule, 0);
             _careerPreviousWeek = CareerControl(_careerWeekControls, C("schedule.previous"),
                 () => _careerCalendarDay = _careerWeek.PreviousWeek, _careerHomeScroll);
@@ -149,32 +159,45 @@ namespace TacticalDirector.MatchClientUnity
             {
                 _careerScheduleSeason = home.SeasonNumber;
                 _careerCalendarDay = null;
+                _careerFixtureFirst = null;
             }
 
             _ui.SetSelected(_careerFixtures, !_isCareerCalendarSelected);
             _ui.SetSelected(_careerCalendar, _isCareerCalendarSelected);
             _careerWeekControls.gameObject.SetActive(_isCareerCalendarSelected);
+            _careerPageControls.gameObject.SetActive(!_isCareerCalendarSelected);
+            bool canBrowse = _career.IsInitialized && !_career.IsBusy;
             if (_isCareerCalendarSelected)
             {
                 _careerWeek = CareerCalendarWeek.At(in home, _careerCalendarDay ?? home.WorldDay);
-                bool canBrowse = _career.IsInitialized && !_career.IsBusy;
-                bool hasPreviousWeek = _careerWeek.PreviousWeek != _careerWeek.FirstDay;
-                bool hasNextWeek = _careerWeek.NextWeek != _careerWeek.FirstDay;
-                GameObject selected = EventSystem.current?.currentSelectedGameObject;
-                _careerPreviousWeek.interactable = canBrowse && hasPreviousWeek;
-                _careerNextWeek.interactable = canBrowse && hasNextWeek;
                 S0UiFactory.Set(_careerScheduleText, _careerText.Calendar(in home, in _careerWeek));
-
-                // Keep focus in the calendar when paging disables the selected button.
-                if (canBrowse && ((!hasPreviousWeek && selected == _careerPreviousWeek.gameObject) ||
-                                  (!hasNextWeek && selected == _careerNextWeek.gameObject)))
-                {
-                    Focus(_careerCurrentWeek);
-                }
+                RefreshSchedulePaging(canBrowse, _careerWeek.PreviousWeek != _careerWeek.FirstDay,
+                    _careerWeek.NextWeek != _careerWeek.FirstDay,
+                    _careerPreviousWeek, _careerCurrentWeek, _careerNextWeek);
             }
             else
             {
-                S0UiFactory.Set(_careerScheduleText, _careerText.FixtureList(in home));
+                _careerPage = _careerFixtureFirst.HasValue
+                    ? CareerFixturePage.At(in home, _careerFixtureFirst.Value)
+                    : CareerFixturePage.Current(in home);
+                S0UiFactory.Set(_careerScheduleText, _careerText.FixtureList(in home, in _careerPage));
+                RefreshSchedulePaging(canBrowse, _careerPage.HasPrevious, _careerPage.HasNext,
+                    _careerPreviousPage, _careerCurrentPage, _careerNextPage);
+            }
+        }
+
+        // Shared by week and fixture paging: a disabled end control keeps focus in the group by moving it to
+        // the current-page control, so a keyboard user is never stranded on an unavailable button.
+        private void RefreshSchedulePaging(bool canBrowse, bool hasPrevious, bool hasNext,
+            Button previous, Button current, Button next)
+        {
+            GameObject selected = EventSystem.current?.currentSelectedGameObject;
+            previous.interactable = canBrowse && hasPrevious;
+            next.interactable = canBrowse && hasNext;
+            if (canBrowse && ((!hasPrevious && selected == previous.gameObject) ||
+                              (!hasNext && selected == next.gameObject)))
+            {
+                Focus(current);
             }
         }
 
@@ -259,4 +282,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.5 | 2026-11-18 | — | Follow the club list with Start, retain the pending Retry control and restore focus after same-screen work. |
 // | 1.6 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
 // | 1.7 | 2026-11-19 | — | Keep keyboard focus in the calendar at the first and last week. |
+// | 1.8 | 2026-11-19 | — | Page the fixture list (Earlier / Upcoming / Later fixtures) so every row is reachable by keyboard at 200% text scale; share the boundary focus rule with week paging. |
 #endregion
