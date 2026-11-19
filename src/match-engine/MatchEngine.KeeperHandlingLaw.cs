@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.KeeperHandlingLaw.cs
+// Modified: 2026-11-18 (A′ / ERR-014-011: fenced keeper makes no hand contact)
 // Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Created:  2026-10-16
 // Modified: 2026-10-18
@@ -47,6 +48,9 @@ namespace TacticalDirector.MatchEngine
         private bool TryKeeperHandContact(int agentId, Vector3 position)
         {
             if (_pendingHandlingOffender >= 0) return false;
+            // A′ (ERR-014-011): a keeper dispossessed by a BallLoose challenge this frame makes no hand
+            // contact with the knocked ball. Refused before any law state is touched, so no offence.
+            if (IsBallLooseFenced(agentId)) return false;
             bool restricted = _releasedHandKeeper == agentId;
             if (restricted || !IsInsideOwnPenaltyArea(_teamIds[agentId], position))
             {
@@ -203,4 +207,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.3 | 2026-10-18 | — | D-07 review: goal-line overhang is on the line; restart spot clamped to the pitch; carries compare against the previous attached position. |
 // | 1.4 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 // | 1.5 | 2026-11-06 | — | PR #542 review: omit the fixture-only whistle counter call from release execution. |
+// | 1.6 | 2026-11-18 | — | A′ / ERR-014-011: a keeper fenced by this frame's BallLoose outcome makes no hand contact (refused before law state). |
 #endregion
