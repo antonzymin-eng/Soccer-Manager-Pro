@@ -1,0 +1,104 @@
+[
+  {
+    "seed": "0F1E2D3C4B5A6978",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "0F1E2D3C4B5A6978",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\0F1E2D3C4B5A6978",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:36:37.299911+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:41:23.272435+00:00"
+  },
+  {
+    "seed": "00000000D1A6D05E",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "00000000D1A6D05E",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\00000000D1A6D05E",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:36:37.299619+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:41:22.208552+00:00"
+  },
+  {
+    "seed": "0000000000000001",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "0000000000000001",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\0000000000000001",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:36:37.299815+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:41:22.811042+00:00"
+  },
+  {
+    "seed": "00000000ABCDEF12",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "00000000ABCDEF12",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\00000000ABCDEF12",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:41:22.208988+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:44:59.362515+00:00"
+  },
+  {
+    "seed": "0000000099887766",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "0000000099887766",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\0000000099887766",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:41:22.811448+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:45:00.515586+00:00"
+  },
+  {
+    "seed": "000000005A5A5A5A",
+    "command": [
+      "C:\\Program Files\\dotnet\\dotnet.exe",
+      "--fx-version",
+      "8.0.31",
+      "<work>\\before\\engine\\capture\\bin\\Debug\\net8.0\\TacticalDirector.MatchEngine.Tests.dll",
+      "000000005A5A5A5A",
+      "0",
+      "observed",
+      "<work>\\before\\results\\observed\\000000005A5A5A5A",
+      "324000"
+    ],
+    "startedUtc": "2026-11-18T23:41:23.273186+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-18T23:45:00.140952+00:00"
+  }
+]
