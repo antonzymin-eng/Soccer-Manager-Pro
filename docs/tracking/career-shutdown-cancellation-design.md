@@ -2,11 +2,11 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.3
+**Version:** 0.4
 
 **Status:** Implemented on the career branch. Pinned-host acceptance pending.
 
-**Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft.
+**Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft. On November 19, 2026 the owner approved the resulting #30 FR-SN-012 wording (`section-2.md` v2.5, recorded at v2.6).
 
 ## Player behavior
 
@@ -67,6 +67,7 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.4 | 2026-11-19 | Record owner approval of the #30 FR-SN-012 cancellation wording. Pinned-host acceptance remains due. |
 | 0.3 | 2026-11-18 | Record the implementation and the encoding and write-phase markers. Pinned-host measurements remain due. |
 | 0.2 | 2026-11-18 | Keep the scene opt-in. Measure cancellation completion and encoding before changing the shutdown wait policy or extracting save preparation. |
 | 0.1 | 2026-11-18 | Draft cooperative cancellation, discard and writer ownership design with acceptance cases. |

@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** November 18, 2026 (v2.5 — Define the opt-in shutdown cancellation contract for FR-SN-012.)
+**Last Updated:** November 19, 2026 (v2.6 — Owner approval of the v2.5 FR-SN-012 shutdown cancellation wording; no text change.)
+**Last Updated (prior):** November 18, 2026 (v2.5 — Define the opt-in shutdown cancellation contract for FR-SN-012.)
 **Last Updated (prior):** October 9, 2026 (v2.4 — ERR-030-053: require final fixture day completion before the atomic boundary roll)
 **Last Updated (prior):** October 8, 2026 (v2.3 — FR-SN-034 includes finance completion slot 11a without renumbering existing slots)
 **Last Updated (prior):** September 10, 2026 (v2.2 — **`ERR-030-050`** review correction: #40 finance is loop-held T1b state, restored through `financesOrNull`; empty is legal pre-T2 and a non-empty set exactly matches `SeasonState.ClubIds`. Prior update follows)
@@ -40,7 +41,7 @@ the two `disciplineOrNull` parameters and the internal `IFixtureDisciplineDriver
 **Last Updated (prior):** July 27, 2026 (v0.9 — back-props ERR-030-016 / -020 / -021 / -022 landed atomically with the ten-spec approval wave: the tick order reconciled after the duplicate `ERR-030-007` filing, FR-SN-013b's `ManagedClubId` made an explicit optional, FR-SN-034 extended to #32/#35/#53/#54)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in FR-SN-013; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.5
+**Version:** 2.6
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -265,4 +266,5 @@ the outline's pass-13 L4 class, in the FR preamble).
 | 2.3 | 2026-10-08 | — | **T3b1 / ERR-030-052.** FR-SN-034 includes finance completion slot 11a without renumbering existing slots. |
 | 2.4 | 2026-10-09 | — | **ERR-030-053 / PR #491 Codex review.** require final fixture day completion before the atomic boundary roll. |
 | 2.5 | 2026-11-18 | — | Define the opt-in shutdown cancellation contract for FR-SN-012. |
+| 2.6 | 2026-11-19 | — | Owner approved the v2.5 FR-SN-012 wording as stated: a successful round command resolves the whole round; only the owned-squad cancellation overload may stop during shutdown (§3.4), and the caller then discards the loop and resumes from the last completed save. No requirement text changed. |
 #endregion

@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 18, 2026 — (v2.247) Implemented career shutdown admission and round cancellation in existing ClientApp and SeasonSave files. Updated #30 §§2, 3 and 5, the career design and the pinned-host checklist. No paths added or removed.
+**Last Updated:** November 19, 2026 — (v2.248) Recorded owner approval of #30 FR-SN-012 in `docs/specs/season-competition-loop/section-2.md` v2.6 and `docs/tracking/career-shutdown-cancellation-design.md` v0.4. No path added or removed. **Modified:** those two files, `CHANGELOG.md` and this manifest.
+
+**Last Updated (prior):** November 18, 2026 — (v2.247) Implemented career shutdown admission and round cancellation in existing ClientApp and SeasonSave files. Updated #30 §§2, 3 and 5, the career design and the pinned-host checklist. No paths added or removed.
 
 **Last Updated (prior):** November 18, 2026 — (v2.246) Revised the career shutdown draft to v0.2 and disabled career startup in `Assets/Scenes/Scene.unity`. Updated the career checklist, tracking entries and design-supplement count.
 

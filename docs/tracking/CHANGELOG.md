@@ -12,7 +12,9 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** November 18, 2026 — **Career shutdown implemented on the branch.** The cancellation path discards an unfinished round and preserves an admitted save through commit or rollback. The tracked scene remains opt-in pending Unity 6000.4.9f1 compile, Play, close and Stop evidence. [Design and acceptance](career-shutdown-cancellation-design.md).
+> **Last Updated:** November 19, 2026 — **Owner approval of #30 FR-SN-012 shutdown wording, documentation only.** The owner approved the v2.5 FR-SN-012 text as stated: a successful round command resolves the whole round, and only the owned-squad cancellation overload may stop during shutdown, after which the caller discards the loop and resumes from the last completed save. Recorded in `season-competition-loop/section-2.md` v2.6 (no requirement text changed) and the [shutdown design](career-shutdown-cancellation-design.md) v0.4. This closes the sign-off item listed as open in `CHANGELOG-src.md` v2.238. Pinned Unity 6000.4.9f1 compile, EditMode, and player close / Editor Stop checks remain open.
+
+> **Last Updated (prior):** November 18, 2026 — **Career shutdown implemented on the branch.** The cancellation path discards an unfinished round and preserves an admitted save through commit or rollback. The tracked scene remains opt-in pending Unity 6000.4.9f1 compile, Play, close and Stop evidence. [Design and acceptance](career-shutdown-cancellation-design.md).
 
 > **Last Updated (prior):** November 18, 2026 — **P7b shutdown cancellation design and opt-in scene.** The [shutdown draft](career-shutdown-cancellation-design.md) records the agreed behavior and the measurements needed before choosing any worker-join or save-encoding refactor. The tracked scene retains the career roots and requires explicit opt-in. Default enablement requires the shutdown fix and pinned Unity compile and Play evidence.
 
