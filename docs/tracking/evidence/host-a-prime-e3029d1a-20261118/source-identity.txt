@@ -1,0 +1,10 @@
+Created: 2026-11-18. Source identity and process record for the A′ pinned-host Unity run.
+
+parent commits: 7ccc847fa00ece12f63c8cb7c7053c62576c1b90
+commit e3029d1a9040972fbc68500271ef6e02813a9abd src 033873ac5b26cc9b50f1aec05eb9b8e81cd72529 Packages d71ce2b8dcdf897a4088717b7847023315f9423b ProjectSettings 5dec802e2a7397b9e02b933200a8db0860bc5eea Assets dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+td_mxcsr.dll sha256 1adf9ebfe91cfbfd3e3fb74d63129e718b4305492f534c2c664561d3cfffe703 (LFS materialized)
+compile: 2026-11-18T23:37:21Z -> 2026-11-18T23:39:30Z EXIT=0
+EditMode: 2026-11-18T23:53:08Z -> 2026-11-19T00:25:53Z EXIT=2
+porcelain (src, Packages, ProjectSettings) after the test run: 0
+Unity: 6000.4.9f1 (f7258d6eebbe), Mono, batch mode; fresh detached worktree, empty Library; Assets/Scripts = directory junction to the worktree's own src; LFS materialized for Assets/** and src/**
+EXIT=2 is Unity's batch runner treating the one Inconclusive case as a failure for the process exit code; the XML records 0 failed.

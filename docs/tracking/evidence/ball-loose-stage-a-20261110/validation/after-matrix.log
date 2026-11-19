@@ -1,0 +1,29 @@
+Audited 90 unique observed full matches; report rows 240 paired team rows 120
+{"seed": "0F1E2D3C4B5A6978", "mode": "plain", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "0F1E2D3C4B5A6978", "0", "plain", "/workspace/work/440-capture-final/results/plain/0F1E2D3C4B5A6978", "324000"], "startedUtc": "2026-11-10T02:27:24.815610+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:28:50.637413+00:00"}
+{"seed": "0F1E2D3C4B5A6978", "mode": "observed", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "0F1E2D3C4B5A6978", "0", "observed", "/workspace/work/440-capture-final/results/observed/0F1E2D3C4B5A6978", "324000"], "startedUtc": "2026-11-10T02:27:24.815688+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:29:15.995336+00:00"}
+{"seed": "00000000D1A6D05E", "mode": "plain", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "00000000D1A6D05E", "0", "plain", "/workspace/work/440-capture-final/results/plain/00000000D1A6D05E", "324000"], "startedUtc": "2026-11-10T02:28:50.638155+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:30:26.508726+00:00"}
+{"seed": "00000000D1A6D05E", "mode": "observed", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "00000000D1A6D05E", "0", "observed", "/workspace/work/440-capture-final/results/observed/00000000D1A6D05E", "324000"], "startedUtc": "2026-11-10T02:29:15.995795+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:31:05.034794+00:00"}
+{"seed": "0000000000000001", "mode": "plain", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "0000000000000001", "0", "plain", "/workspace/work/440-capture-final/results/plain/0000000000000001", "324000"], "startedUtc": "2026-11-10T02:30:26.509310+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:31:50.762154+00:00"}
+{"seed": "0000000000000001", "mode": "observed", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "0000000000000001", "0", "observed", "/workspace/work/440-capture-final/results/observed/0000000000000001", "324000"], "startedUtc": "2026-11-10T02:31:05.042237+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:32:47.986216+00:00"}
+{"seed": "00000000ABCDEF12", "mode": "plain", "frames": 324000, "command": ["/workspace/work/dotnet-8.0.426/dotnet", "--fx-version", "8.0.32", "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll", "00000000ABCDEF12", "0", "plain", "/workspace/work/440-capture-final/results/plain/00000000ABCDEF12", "324000"], "startedUtc": "2026-11-10T02:31:50.763086+00:00", "exitCode": 0, "endedUtc": "2026-11-10T02:33:14.855293+00:00"}
+Traceback (most recent call last):
+  File "/workspace/Soccer-Manager-Pro-440/docs/tracking/evidence/ball-loose-stage-a-20261110/run.py", line 54, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/workspace/Soccer-Manager-Pro-440/docs/tracking/evidence/ball-loose-stage-a-20261110/run.py", line 36, in main
+    record=future.result();records.append(record);print(json.dumps(record),flush=True);(w/'runs.json').write_text(json.dumps(records,indent=2)+'\n')
+           ^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/Soccer-Manager-Pro-440/docs/tracking/evidence/ball-loose-stage-a-20261110/run.py", line 25, in task
+    target=root/mode/seed;target.mkdir(parents=True)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+OSError: [Errno 28] No space left on device: '/workspace/work/440-capture-final/results/plain/0000000099887766'

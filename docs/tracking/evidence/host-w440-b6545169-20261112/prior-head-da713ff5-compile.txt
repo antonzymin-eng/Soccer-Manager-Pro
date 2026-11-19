@@ -1,0 +1,16 @@
+# Unity compile — full import at the prior head da713ff5 (detached worktree, no Library): FAILED
+# Excerpt of the batch-mode Editor log; the full redacted log is prior-head-da713ff5-compile-editor-log.txt.xz.
+command: Unity.exe -batchmode -quit -projectPath <worktree> -logFile <log>
+
+Built from '6000.4/staging' branch; Version is '6000.4.9f1 (f7258d6eebbe) revision 16197005'; Using compiler version '194234433'; Build Type 'Release'
+*** Tundra build failed (54.10 seconds), 1148 items updated, 1203 evaluated
+Scripts have compiler errors.
+Exiting without the bug reporter. Application will terminate with return code 1
+
+distinct errors:
+Assets\Scripts\match-engine\tests\BallLooseEpisodeObserverTests.cs(18,19): error CS0246: The type or namespace name 'NonParallelizable' could not be found (are you missing a using directive or an assembly reference?)
+Assets\Scripts\match-engine\tests\BallLooseEpisodeObserverTests.cs(18,19): error CS0246: The type or namespace name 'NonParallelizableAttribute' could not be found (are you missing a using directive or an assembly reference?)
+
+counts: distinct error CS = 2 (one source location); distinct warnings = 3 (the same three as at b6545169)
+assemblies: 74 TacticalDirector.*.dll in Library/ScriptAssemblies for 75 src asmdefs (TacticalDirector.MatchEngine.Tests not built)
+compile window: 2026-11-12T14:43:49Z to 2026-11-12T14:56:02Z; process exit code: 1

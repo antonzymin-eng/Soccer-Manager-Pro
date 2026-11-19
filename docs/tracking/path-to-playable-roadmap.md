@@ -1,10 +1,17 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 16, 2026 — v0.98: PR #539 merges main `75485fca` (PR #543); both histories kept, the PR's duplicate v0.89–v0.94 labels are branch-local #539 records. Scope, order and status unchanged.
+**Last Updated:** November 18, 2026 — v1.1: #440 A′ six-seed characterization (0/29 same-frame regains after, 24/24 before; regain mostly deferred, reported not gated) and pinned-host Unity pass recorded on PR #549. Step 3 updated.
+
+**Last Updated (prior):** November 18, 2026 — v1.0: #440 A′ implemented on branch `claude/440-a-prime` (`ERR-014-011`, #14 §3.6.5.8): geometry knock plus same-frame carrier fence, correctness tests passing; D1 characterization and pinned Unity pending. Step 3 updated.
+
+**Last Updated (prior):** November 18, 2026 — v0.99: #440 owner decision D1 cuts #440 to A′ (geometry-derived BallLoose knock plus one-frame carrier fence, correctness acceptance only); the Stage B 48-run experiment and its caps are withdrawn. PR #544 merges main; its branch-local v0.93 entry is kept. Step 3 updated; scope and order otherwise unchanged.
+
+**Last Updated (prior):** November 16, 2026 — v0.98: PR #539 merges main `75485fca` (PR #543); both histories kept, the PR's duplicate v0.89–v0.94 labels are branch-local #539 records. Scope, order and status unchanged.
 
 > **November 10 — #434 implemented and measured (v0.94):** [Draft PR #543](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/543) implements kickoff-only formation/Duty. [Evidence](evidence/formation-duty-20261109/README.md): all six default pairs are exact after approved structural layout alignment; 90 primary matches and the full Linux gate pass. Non-default football metrics are descriptive with material scoring changes; owner review and pinned Unity validation remain open. Formation-aware lineup selection/runtime switching remain follow-ups. #440 stays independent and requires its Stage A owner decision before any gameplay fix.
 
 > **November 12 — W8 C closeout (v0.93):** W8 C merged in PR #542 on November 6 as `d4b026aa`, with its paired Linux comparison complete and pinned-host Unity checks passed at `fdbbff5a`: **939 passed / 0 failed / 16 skipped / 1 existing inconclusive** ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)). Step 8 and engine-lane item 2 now record that closeout; the November 6 outstanding-host note below is superseded.
+> **November 10 — #440 Stage A complete (v0.93, branch-local):** [Draft PR #544](https://github.com/antonzymin-eng/Soccer-Manager-Pro/pull/544) measures main independently of #434. [Evidence](evidence/ball-loose-stage-a-20261110/README.md): exact observer neutrality, 37/37 passive same-frame carrier regains, complete endpoint/censor accounting and full Linux gate pass. This is not a gameplay landing. Fix mechanism, proposed parameter and scoped no-regain policy await owner decision; pinned Unity remains pending.
 
 > **November 6 — W8 C implementation authored (v0.92):** snapshot v28 and the law/restore/feet-guard implementation are in the [C validation record](w8-c-implementation-results.md). Pinned-host compile and whole MatchEngine EditMode remain open; this is not C closeout.
 
@@ -539,7 +546,7 @@ decided.
    passed with 0 `error CS`; whole MatchEngine EditMode at `fdbbff5a` had 939 passed / 0 failed /
    16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)).
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
-   final D-08. Land with separate attribution. **#434: implemented/measured in draft PR #543; pinned Unity and owner football review pending.** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: separate main-based Stage A; no fix until its owner decision.**
+   final D-08. Land with separate attribution. **#434: implemented/measured in draft PR #543; pinned Unity and owner football review pending.** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: Stage A measured in PR #544; owner decision D1 (November 18) cuts the fix to A′, a geometry-derived knock plus a one-frame carrier fence with correctness acceptance only ([design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026)). A′ is implemented with its #14 §3.6.5.8 amendment (`ERR-014-011`) on branch `claude/440-a-prime`; its six-seed characterization and pinned Unity run are done (PR #549); it lands after PR #544.**
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
@@ -949,9 +956,14 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.1 | November 18, 2026 | #440 A′ characterization and pinned Unity recorded. |
+| v1.0 | November 18, 2026 | #440 A′ implemented (ERR-014-011); characterization and Unity pending. |
+| v0.99 | November 18, 2026 | #440 D1: cut to A′; Stage B experiment and caps withdrawn; step 3 updated. PR #544 merges main. |
 | v0.98 | November 16, 2026 | Merge remote main `75485fca` (PR #543) into PR #539: both header and version histories kept newest first; the PR's duplicate v0.89–v0.94 labels are branch-local #539 records. Scope, order and status unchanged. |
 | v0.94 | November 10, 2026 | #434 implemented/measured in draft PR #543; six-seed default identity, 90 primary captures and full Linux gate pass. Host and owner football review pending; #440 remains separate Stage A. Renumbered from v0.93 when merging main #546 (November 16). |
 | v0.93 | November 12, 2026 | Reconcile step 8 and engine-lane item 2 to W8 C / PR #542's completed paired comparison and passing pinned-host run at `fdbbff5a` (939 passed, 0 failed, 16 skipped, 1 existing inconclusive). No gameplay or sequencing decision. |
+| v0.93 (branch-local #440) | November 10, 2026 | Branch-local #440 Stage A complete: exact six-seed observer neutrality, 37/37 passive immediate regains and full Linux gate pass; owner and Unity pending. |
+
 | v0.92 | November 6, 2026 | Historical header entry above: W8 C implementation authored with snapshot v28; pinned-host validation was still outstanding at that writing, subsequently completed and merged in PR #542. |
 | v0.97 | November 5, 2026 | AR-2 T5: maintained client-design pointers advance to v0.42; owner preflight, projection recovery and test-gap fixes recorded in §5-P8. No scope, order or status change. |
 | v0.96 | November 5, 2026 | Citation sync only: `interactive-unity-client-design.md` is now v0.41 (§5-P8 brought up to the reviewed client; ERR-031-016 filed, ERR-038-006 amends #38). No scope, order or status change. |

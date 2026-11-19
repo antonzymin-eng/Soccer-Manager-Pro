@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "matches": 6,
+  "episodes": 37,
+  "sameFrameCarrierRegains": 37,
+  "endFrame": {
+    "original-carrier": 37
+  },
+  "horizon": {
+    "still-loose": 30,
+    "opponent": 2,
+    "original-carrier": 5
+  },
+  "censorReasons": {},
+  "dispossessions": 12,
+  "teammateRecoveries": 0,
+  "firstSameFrameRegainPaths": {
+    "passive-pickup": 37
+  }
+}

@@ -1,0 +1,34 @@
+# Source identity — pinned-host Unity run at b6545169 (PR #544 head)
+# The run script recorded tree hashes and counted
+# `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`
+# lines before the compile, after the compile and after the EditMode run.
+
+commit: b6545169e722de39e2227878b47b278030f22f93
+parent: da713ff5d0830ca417845ff080e8d93ca8f5052e (da713ff5, the prior PR head; its compile failed, see prior-head-da713ff5-compile.txt)
+tree repo: 80469ae6241e5ce7badfd991c7b1b9db75b5aac0
+tree src: 96a657be45955eca14fc1f38988efcbd95a5b863
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: dd8cde21cb8f442beb23fb0dfd5916eec6bd5c55
+porcelain lines before compile: 0
+Library present before compile: no
+compile start: 2026-11-12T19:59:58Z
+compile exit: 0 end: 2026-11-12T20:01:22Z
+porcelain lines after compile: 0
+tests start: 2026-11-12T20:01:22Z
+tests exit: 2 end: 2026-11-12T20:31:51Z
+porcelain lines after tests: 0
+HEAD after tests: b6545169e722de39e2227878b47b278030f22f93
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe)
+Assets/Scripts: directory junction -> <worktree>/src (detached worktree; Library, Logs, Temp and obj deleted before the compile)
+
+# Prior head da713ff5 (superseded)
+commit: da713ff5d0830ca417845ff080e8d93ca8f5052e
+tree repo: 5edc57cf5c39eae2364338ca8ec76925c2945738
+tree src: 6384884fb7e555fdb99b0f945f7ff55f2e9d9b71 (identical to the src tree at 210ede77)
+porcelain lines before compile: 0
+Library present before compile: no
+compile start: 2026-11-12T14:43:49Z
+compile exit: 1 end: 2026-11-12T14:56:02Z
+porcelain lines after compile: 0
+src difference da713ff5 -> b6545169: src/match-engine/tests/BallLooseEpisodeObserverTests.cs only (3 insertions, 2 deletions)

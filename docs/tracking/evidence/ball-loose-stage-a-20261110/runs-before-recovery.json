@@ -1,0 +1,135 @@
+[
+  {
+    "seed": "0F1E2D3C4B5A6978",
+    "mode": "plain",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0F1E2D3C4B5A6978",
+      "0",
+      "plain",
+      "/workspace/work/440-capture-final/results/plain/0F1E2D3C4B5A6978",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:27:24.815610+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:28:50.637413+00:00"
+  },
+  {
+    "seed": "0F1E2D3C4B5A6978",
+    "mode": "observed",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0F1E2D3C4B5A6978",
+      "0",
+      "observed",
+      "/workspace/work/440-capture-final/results/observed/0F1E2D3C4B5A6978",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:27:24.815688+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:29:15.995336+00:00"
+  },
+  {
+    "seed": "00000000D1A6D05E",
+    "mode": "plain",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000D1A6D05E",
+      "0",
+      "plain",
+      "/workspace/work/440-capture-final/results/plain/00000000D1A6D05E",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:28:50.638155+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:30:26.508726+00:00"
+  },
+  {
+    "seed": "00000000D1A6D05E",
+    "mode": "observed",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000D1A6D05E",
+      "0",
+      "observed",
+      "/workspace/work/440-capture-final/results/observed/00000000D1A6D05E",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:29:15.995795+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:31:05.034794+00:00"
+  },
+  {
+    "seed": "0000000000000001",
+    "mode": "plain",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000000000001",
+      "0",
+      "plain",
+      "/workspace/work/440-capture-final/results/plain/0000000000000001",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:30:26.509310+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:31:50.762154+00:00"
+  },
+  {
+    "seed": "0000000000000001",
+    "mode": "observed",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "0000000000000001",
+      "0",
+      "observed",
+      "/workspace/work/440-capture-final/results/observed/0000000000000001",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:31:05.042237+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:32:47.986216+00:00"
+  },
+  {
+    "seed": "00000000ABCDEF12",
+    "mode": "plain",
+    "frames": 324000,
+    "command": [
+      "/workspace/work/dotnet-8.0.426/dotnet",
+      "--fx-version",
+      "8.0.32",
+      "/workspace/work/440-capture-final/engine/capture/bin/Debug/net8.0/TacticalDirector.MatchEngine.Tests.dll",
+      "00000000ABCDEF12",
+      "0",
+      "plain",
+      "/workspace/work/440-capture-final/results/plain/00000000ABCDEF12",
+      "324000"
+    ],
+    "startedUtc": "2026-11-10T02:31:50.763086+00:00",
+    "exitCode": 0,
+    "endedUtc": "2026-11-10T02:33:14.855293+00:00"
+  }
+]

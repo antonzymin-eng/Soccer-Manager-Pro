@@ -1,10 +1,11 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
+// Modified: 2026-11-18 (A′ / ERR-014-011 — §3.6.5.8 BallLoose knock: 3 [GT] TackleLoosePokeK, TackleLoosePokeMinSpeedMS, TackleLooseCarryK + 1 [FIXED] TACKLE_LOOSE_COINCIDENT_M)
 // Modified: 2026-11-12 (W13.1c final pass: MarkStandoffTightM doc records the body-contact limitation, W13-F8; no value change)
 // Modified: 2026-11-10 (W13.1 / ERR-014-010 — the §3.13.1 mark stand-off: 2 [GT] (MarkStandoffM, MarkStandoffTightM) + 1 [DERIVED] OwnGoalCenter)
 // Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
 // Author:   —
-// Spec:     Defensive AI #14 §6.1, §3.13.1, FR-DA-007, ERR-014-010, Code Standards #20 §4.2 FR-CS-025
+// Spec:     Defensive AI #14 §6.1, §3.6.5.8, §3.13.1, FR-DA-007, ERR-014-010, ERR-014-011, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #14. Contains all assignment thresholds,
 //           hysteresis timing, offside-trap parameters, tackle-intent constants, anti-chaos
 //           floors, GK zone bounds, and cross-spec scalar imports.
@@ -35,6 +36,14 @@ namespace TacticalDirector.DefensiveAI
         /// Defensive AI #14 §3.6.5.
         /// </summary>
         public const float TACKLE_FOUL_SHARE_CEILING = 0.95f;
+
+        /// <summary>
+        /// [FIXED] Separation (m) below which the §3.6.5.8 poke line from tackler to carrier is treated
+        /// as undefined and the carrier's facing is used instead. A numerical guard for a near-zero
+        /// vector, not a football judgment. It decides only the knocked ball's direction, never an
+        /// outcome probability, so #14 §3.6.5.3's continuity rule is not engaged. Defensive AI #14 §3.6.5.8.
+        /// </summary>
+        public const float TACKLE_LOOSE_COINCIDENT_M = 0.01f;
 
         #endregion
 
@@ -290,6 +299,32 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         public static readonly float TackleRetainBalanceWeight = Config.GetFloat("defensive-ai", "TackleRetainBalanceWeight", 0.35f);
 
+        // ── BallLoose release (§3.6.5.8 — A′, ERR-014-011) ─────────────────────
+        //
+        // ALL THREE ARE UN-CALIBRATED proposals (tackle-duel-design.md §4, owner decision D1). They set
+        // the knocked ball's velocity from the duel geometry; acceptance is correctness only, and a
+        // calibration pass owns their values.
+
+        /// <summary>
+        /// [GT] Fraction of the closing speed transferred to the ball along the tackler-to-carrier line
+        /// when a challenge knocks it loose (§3.6.5.8). Dimensionless; authoring range (0, 1.5].
+        /// Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleLoosePokeK = Config.GetFloat("defensive-ai", "TackleLoosePokeK", 0.6f);
+
+        /// <summary>
+        /// [GT] Floor (m/s) on the closing speed used for the poke, so a standing or retreating tackler
+        /// still moves the ball off the carrier (§3.6.5.8). Authoring range [0, 5]. Defensive AI #14 §6.1.
+        /// UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleLoosePokeMinSpeedMS = Config.GetFloat("defensive-ai", "TackleLoosePokeMinSpeedMS", 2.0f);
+
+        /// <summary>
+        /// [GT] Fraction of the carrier's velocity the knocked ball keeps (§3.6.5.8). Dimensionless;
+        /// authoring range [0, 1]. Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleLooseCarryK = Config.GetFloat("defensive-ai", "TackleLooseCarryK", 0.5f);
+
         // ── Anti-Chaos Invariants (§3.10) ──────────────────────────────────────
 
         /// <summary>
@@ -387,4 +422,5 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        | MarkStandoffTightM 1.0 (UN-CALIBRATED, range invariant documented and locked   |
 // |         |            |        | by test) and the first [DERIVED] region, OwnGoalCenter (0, PITCH_WIDTH_M / 2). |
 // | 1.5     | 2026-11-12 | —      | W13.1c final pass: MarkStandoffTightM documents the known body-contact limitation (W13-F8); doc only, value unchanged. |
+// | 1.6     | 2026-11-18 | —      | A′ / ERR-014-011: + §3.6.5.8 BallLoose knock — [GT] TackleLoosePokeK 0.6, TackleLoosePokeMinSpeedMS 2.0 m/s, TackleLooseCarryK 0.5 (UN-CALIBRATED; owner decision D1) and [FIXED] TACKLE_LOOSE_COINCIDENT_M 0.01 m (degenerate-direction guard). |
 #endregion
