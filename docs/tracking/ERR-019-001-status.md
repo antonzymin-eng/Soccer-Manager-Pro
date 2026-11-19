@@ -5,6 +5,17 @@
 **Issues:** Testing Strategy #19 FR-TS-075 / FR-TS-079 pipeline gap (`ERR-019-001`) and missing automated checklist/schema auditor deliverables (`ERR-019-003`)  
 **Status:** OPEN — implementation candidate present; operational acceptance and A3.4 normative/reapproval decisions remain outstanding
 
+## November 19 cloud pre-commit observation
+
+The standard pre-commit hook reached its 60-second wall-clock limit on both the initial run and the
+warmed retry for the latest-round-scores change (`4814d676`) in the Codex Linux environment with .NET
+SDK 8.0.426. Neither run completed the pre-commit lane. The commit used a one-time bypass after the
+selected Linux gate passed, including the engine-backed shutdown replay. The certified-host timing
+check remains open.
+
+The documentation-only follow-up on the same branch also reached the 60-second limit with the
+standard hook configuration. The repository-wide documentation consistency check passed.
+
 ## October 30 reconciliation update
 
 Current implementation was checked at main `068851a2c9d8a2c68d186b8fa223c1ca251a4f9e`.

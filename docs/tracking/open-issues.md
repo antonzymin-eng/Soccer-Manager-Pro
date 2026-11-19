@@ -1,6 +1,8 @@
 # Open Issues
 
-**Last Updated:** November 19, 2026 (later) — Close and archive `career-shutdown-main-thread-wait`: the [merged-main run at `5a3c310e`](evidence/host-5a3c310e-20261119/README.md) recorded the last acceptance-item-4 checks. 50 active / 77 archived.
+**Last Updated:** November 19, 2026 — Extend the pinned-host Career Home checks to cover completed-round scores and the new standings layout.
+
+**Last Updated (prior):** November 19, 2026 (later) — Close and archive `career-shutdown-main-thread-wait`: the [merged-main run at `5a3c310e`](evidence/host-5a3c310e-20261119/README.md) recorded the last acceptance-item-4 checks. 50 active / 77 archived.
 
 **Last Updated (prior):** November 19, 2026 — Record the pinned-host career run at `cd3c7b99` against the startup and shutdown entries; both stay open with their remaining checks named. Add the save-digest-on-load finding. 51 active / 76 archived.
 
@@ -76,7 +78,7 @@ history by the original convention; they were not merged.
 
 <a id="career-startup-unity-acceptance"></a>
 
-- **P7b career startup scene — pinned-host acceptance PARTLY RECORDED; OPEN.** *Since November 18, 2026; updated November 19, 2026.* The build scene wires the Main Menu, New Career, Load Career and Career Home for explicit opt-in. PR #539's Unity receipt predates this scene and binding diff. The [pinned-host run at `cd3c7b99`](evidence/host-cd3c7b99-20261119/README.md#startup-checklist-readme-p7b-items) compiled the tree (0 `error CS`, 75 assemblies) and covered checklist items 1–5 and part of 6 with Career enabled in memory only: storage failure and Retry, new career and club selection, Start with autosave, Continue, manual saves, the busy state, the Ready / Empty / Incompatible / Damaged picker states, Return to Main Menu and the demo entry. **Still due before close:** item 6's autosave-failure feedback, manual-save retry and repeated new/load/quit cycles; item 7's keyboard Tab / Shift-Tab, focus recovery, layouts, 200% text scale and long names; item 8's full PM-1 journey with Career on and off; and screenshots. Checklist: [binding README](../../src/match-client-unity/README.md).
+- **P7b career startup scene — pinned-host acceptance PARTLY RECORDED; OPEN.** *Since November 18, 2026; updated November 19, 2026.* The build scene wires the Main Menu, New Career, Load Career and Career Home for explicit opt-in. PR #539's Unity receipt predates this scene and binding diff. The [pinned-host run at `cd3c7b99`](evidence/host-cd3c7b99-20261119/README.md#startup-checklist-readme-p7b-items) compiled the tree (0 `error CS`, 75 assemblies) and covered checklist items 1–5 and part of 6 with Career enabled in memory only: storage failure and Retry, new career and club selection, Start with autosave, Continue, manual saves, the busy state, the Ready / Empty / Incompatible / Damaged picker states, Return to Main Menu and the demo entry. **Still due before close.** Item 6 requires checking that all scores from the latest round appear after each of two consecutive matchdays, the standings and goal difference refresh with them, and Continue restores the standings. It also covers autosave-failure feedback, manual-save retry and repeated new/load/quit cycles. Item 7 covers keyboard Tab / Shift-Tab, focus recovery, layouts, 200% text scale and long names. Check the ten-column standings and score block for header alignment, wrapping and clipping at the smallest supported layout and 200% text scale. Item 8 covers the full PM-1 journey with Career on and off. Screenshots are still due. [Binding checklist](../../src/match-client-unity/README.md#p7b-career-binding).
 
 <a id="career-shutdown-main-thread-wait"></a>
 
