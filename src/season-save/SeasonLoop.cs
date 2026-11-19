@@ -139,9 +139,6 @@ namespace TacticalDirector.SeasonSave
     /// </summary>
     public sealed class SeasonLoop
     {
-        // [EST] Cancellation latency and polling cost are measured on the client host.
-        private const int ROUND_CANCELLATION_POLL_TICKS = 64;
-
         // Instance-only test seam at the real engine checkpoint, after observing a complete tick batch.
         internal System.Action RoundCancellationCheckpointProbe;
         private readonly WorldStore _world;
@@ -1971,7 +1968,7 @@ namespace TacticalDirector.SeasonSave
             try
             {
                 cancellation.ThrowIfCancellationRequested();
-                int ticksUntilCheckpoint = ROUND_CANCELLATION_POLL_TICKS;
+                int ticksUntilCheckpoint = SeasonLoopConstants.ROUND_CANCELLATION_POLL_TICKS;
                 while (!engine.MatchEnded)
                 {
                     engine.RunTick();
@@ -1984,7 +1981,7 @@ namespace TacticalDirector.SeasonSave
                     {
                         RoundCancellationCheckpointProbe?.Invoke();
                         cancellation.ThrowIfCancellationRequested();
-                        ticksUntilCheckpoint = ROUND_CANCELLATION_POLL_TICKS;
+                        ticksUntilCheckpoint = SeasonLoopConstants.ROUND_CANCELLATION_POLL_TICKS;
                     }
                 }
 
@@ -2595,4 +2592,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.46 | 2026-10-20 | — | AR round 5 (doc comments only, no behaviour change): L17 Progression's doc names the mutators' real visibility (internal to PlayerProgression, visible to SeasonSave and the test assemblies via InternalsVisibleTo; CanMovePlayer is a predicate); S-L2 the constructor, Restore, RollToNextSeason and SubmitTransferBid list the InvalidOperationException / ArgumentException causes confirmed in source (cursor-vs-clock band, PrepareSettlement and StageFor uninitialized finances, #28 Prepare, PrepareRosterSync, BeginNextSeason); S-L4 ActiveMatch and AvailableTransferBudget are sim-thread-only; S-L5 AvailableTransferBudget is documented as the season ceiling (headroom = ceiling - TransfersSnapshot().CommittedSpendThisWindow). |
 // | 1.47 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 // | 1.48 | 2026-11-18 | — | Add opt-in stop checkpoints between complete season fixtures and match tick batches. |
+// | 1.49 | 2026-11-18 | — | Read the shutdown checkpoint interval from the season constant catalogue. |
 #endregion

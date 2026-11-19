@@ -1129,6 +1129,8 @@ namespace TacticalDirector.ClientApp.Tests
             byte[] oldSidecar = File.ReadAllBytes(sidecar);
             using var betweenSwaps = new ManualResetEventSlim();
             using var finishSwap = new ManualResetEventSlim();
+            using var drainingWriter = new ManualResetEventSlim();
+            h.Career.WriteDrainProbe = drainingWriter.Set;
             h.Career.AfterSaveSwapProbe = () =>
             {
                 betweenSwaps.Set();
@@ -1146,10 +1148,10 @@ namespace TacticalDirector.ClientApp.Tests
                 Assert.IsTrue(betweenSwaps.Wait(TimeSpan.FromSeconds(30)));
                 CollectionAssert.AreEqual(oldSidecar, File.ReadAllBytes(sidecar));
                 shutdown = StartThread(h.Career.Dispose);
-                Assert.IsTrue(SpinWait.SpinUntil(
-                    () => !shutdown.IsAlive || (shutdown.ThreadState & System.Threading.ThreadState.WaitSleepJoin) != 0,
-                    TimeSpan.FromSeconds(5)));
-                Assert.IsTrue(shutdown.IsAlive, "Shutdown returned before the admitted pair finished.");
+                Assert.IsTrue(drainingWriter.Wait(TimeSpan.FromSeconds(5)),
+                    "Shutdown must acquire the lifetime gate and reach the writer drain.");
+                Assert.IsFalse(shutdown.Join(TimeSpan.FromMilliseconds(100)),
+                    "Shutdown returned before the admitted pair finished.");
             }
             finally
             {
@@ -1316,4 +1318,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.10 | 2026-11-05 | — | AR-3 M1: localized career formatter identity is retained and exposed for the Unity binding. |
 // | 1.11 | 2026-11-18 | — | Cover failed preview recovery after abandoning an earlier selection. |
 // | 1.12 | 2026-11-18 | — | Exercise queued cancellation, write admission and rollback races, and replay from unchanged slots. |
+// | 1.13 | 2026-11-18 | — | Observe actual writer drain entry before asserting that shutdown waits. |
 #endregion

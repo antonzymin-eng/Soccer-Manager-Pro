@@ -106,6 +106,7 @@ namespace TacticalDirector.ClientApp
         internal Action<ProjectionKind> ProjectionProbe;
         internal Action WriteAdmissionProbe;
         internal Action AfterSaveSwapProbe;
+        internal Action WriteDrainProbe;
 
         /// <summary>Creates a coordinator without touching disk; call Initialize after flow composition.</summary>
         public ClientCareerCoordinator(string directory,
@@ -495,6 +496,11 @@ namespace TacticalDirector.ClientApp
                     result.HasFinances = TryProject(ProjectionKind.Finances, _financesSource, out result.Finances, result);
                 }
             }
+            catch (Exception exception)
+            {
+                // A failure while assembling the completion must not escape the worker.
+                result.ProjectionError = Note(result.ProjectionError, exception.Message);
+            }
             finally
             {
                 lock (_lifetimeGate)
@@ -603,7 +609,11 @@ namespace TacticalDirector.ClientApp
                 }
 
                 // Waiting releases the gate so the writer can finish the pair or its rollback.
-                while (_isWriting) Monitor.Wait(_lifetimeGate);
+                while (_isWriting)
+                {
+                    WriteDrainProbe?.Invoke();
+                    Monitor.Wait(_lifetimeGate);
+                }
             }
         }
     }
@@ -622,4 +632,5 @@ namespace TacticalDirector.ClientApp
 // | 1.8 | 2026-11-05 | — | AR-3 M1: expose the admitted career formatter to the Unity view binding, preventing duplicate default-locale construction. |
 // | 1.9 | 2026-11-18 | — | Prevent a failed preview from publishing an earlier career setup. |
 // | 1.10 | 2026-11-18 | — | Cancel the worker and drain only an admitted filesystem mutation at shutdown. |
+// | 1.11 | 2026-11-18 | — | Restore the completion error boundary and expose the writer drain checkpoint to tests. |
 #endregion
