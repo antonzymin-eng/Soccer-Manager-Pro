@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 19, 2026 — (v2.254) **Status sync: #434, #440 A′ and W13.1/W13.1c merged.** No new files. **Modified (documentation only):** `open-issues.md`, `docs/agent-guides/project-reference.md`, `match-engine-wiring-backlog.md` v1.51, `path-to-playable-roadmap.md` v1.6, `w-434-formation-duty-preflight.md` v1.7, `w-440-ball-loose-design.md` v1.9, `w-defender-marking-wiring-plan.md` v0.9, `tackle-duel-design.md` v0.8, `CHANGELOG.md`, this file.
+**Last Updated:** November 19, 2026 — (v2.255) **Career Home round scores and standings.** Adds `src/client-app/CareerFixtureResult.cs` and its Unity `.meta`. Updates the Career Home source and view model, career text, the existing Unity Career Home binding and their regression tests.
+
+**Last Updated (prior):** November 19, 2026 — (v2.254) **Status sync: #434, #440 A′ and W13.1/W13.1c merged.** No new files. **Modified (documentation only):** `open-issues.md`, `docs/agent-guides/project-reference.md`, `match-engine-wiring-backlog.md` v1.51, `path-to-playable-roadmap.md` v1.6, `w-434-formation-duty-preflight.md` v1.7, `w-440-ball-loose-design.md` v1.9, `w-defender-marking-wiring-plan.md` v0.9, `tackle-duel-design.md` v0.8, `CHANGELOG.md`, this file.
 
 **Last Updated (prior):** November 19, 2026 — (v2.253) **Career Home fixture-list paging and the #551 pinned-host run.** **New:** `src/client-app/CareerFixturePage.cs` v1.0 (+ `.meta`). **Modified:** `src/client-app/CareerScreenText.cs` v1.8, `src/match-client-unity/S0ScreensBehaviour.Career.cs` v1.8, `src/client-app/tests/CareerScreensTests.cs` v1.5, `src/client-app/tests/CareerScreenTextTests.cs` v1.3. **New evidence directory** `docs/tracking/evidence/host-ad8d4f80-20261119/` (its `SHA256SUMS` covers the rest; PNGs via Git LFS): `1x-02-list-focus-fixtures.png`, `1x-03-list-focus-after-calendar.png`, `1x-05-calendar-later-week-focus-next.png`, `1x-07-calendar-last-week.png`, `1x-paged-03-list-page2-focus-later.png`, `2x-02-list-focus-fixtures.png`, `2x-03-list-focus-after-calendar.png`, `2x-05-calendar-later-week-focus-next.png`, `2x-06-calendar-later-week-focus-after.png`, `2x-07-calendar-last-week.png`, `2x-paged-02-list-focus-fixtures.png`, `2x-paged-03-list-page2-focus-later.png`, `2x-paged-03b-list-last-page.png`, `README.md`, `build-probe-player.cs.txt`, `compile.txt`, `editmode-paged-results.xml.xz`, `editmode-results.xml.xz`, `editmode-summary.txt`, `player-1x-summary.txt`, `player-2x-summary.txt`, `player-paged-1x-summary.txt`, `player-paged-2x-summary.txt`, `schedule-probe-1x.log`, `schedule-probe-2x.log`, `schedule-probe-before.cs.txt`, `schedule-probe-paged-1x.log`, `schedule-probe-paged-2x.log`, `schedule-probe-paged.cs.txt`, `source-identity.txt`, `SHA256SUMS`. **Modified evidence:** `docs/tracking/evidence/host-cd3c7b99-20261119/` and `docs/tracking/evidence/host-5a3c310e-20261119/` (`editmode-results.xml.xz` re-exported as well-formed XML, `README.md` v1.1, `SHA256SUMS`). **Modified docs:** `docs/design/ux-detailed-plan.md` v1.39, `docs/tracking/path-to-playable-roadmap.md` v1.5, `docs/tracking/CHANGELOG-src.md` v2.241, `docs/tracking/CHANGELOG.md`, this manifest; `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` (52 registered directories). No assembly added, no removals.
 
@@ -3967,7 +3969,8 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, including save slots, the table, fixtures and calendar |
+| `CareerFixtureResult.cs` / `.meta` | Match outcome and club display names for the latest round |
+| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, including save slots, standings, scores, fixtures and calendar |
 | `tests/CareerScreenTextTests.cs` / `.meta` | Catalogue isolation, translated slot composition, row cache retention and real Home/result display |
 | `ClientCareerCoordinator.cs` | P7b worker-owned career operations, cached immutable UI views, guarded completion/navigation and shutdown |
 | `ClientCareerCoordinator.cs.meta` | Stable Unity identity for the career coordinator |
@@ -4872,6 +4875,7 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
+| 2.255 | 2026-11-19 | — | Career Home round scores and standings: add `CareerFixtureResult.cs` (+ `.meta`). |
 | 2.254 | 2026-11-19 | — | Status sync: #434, #440 A′ and W13.1/W13.1c merged; eight tracking documents updated. Documentation only. |
 | 2.251 | 2026-11-19 | — | Reconcile Career Home schedule files with PR #550 and record schedule UX acceptance criteria. |
 | 2.247 (branch-local career schedule) | 2026-11-19 | — | Inventory the C3 fixture and calendar types and their existing Career Home bindings. |

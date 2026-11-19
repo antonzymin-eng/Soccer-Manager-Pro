@@ -27,7 +27,10 @@ namespace TacticalDirector.MatchClientUnity
         private Selectable _careerHomeHeading, _careerNewHeading, _careerLoadHeading;
         private ScrollRect _careerHomeScroll, _careerNewScroll, _careerLoadScroll;
         private RectTransform _careerClubs;
-        private Text _careerSummary, _careerTable, _careerChoice;
+        private Text _careerSummary, _careerRoundResults, _careerChoice;
+        private RectTransform _careerStandings;
+        private string[] _careerTableCells;
+        private readonly List<Text[]> _careerTableRows = new List<Text[]>();
         private readonly List<Text> _careerNotices = new List<Text>();
         private readonly List<Button> _careerClubButtons = new List<Button>();
         private readonly List<Button> _careerIdleButtons = new List<Button>();
@@ -98,6 +101,7 @@ namespace TacticalDirector.MatchClientUnity
             _careerNotices.Add(_ui.Reason(h, true));
             _careerSummary = _ui.Label(h, "");
             _careerProgress = CareerControl(h, "", career.Progress, _careerHomeScroll);
+            _careerRoundResults = _ui.Label(h, "");
             BuildCareerSchedule(h);
             _ui.Label(h, C("warning"));
             for (int i = 1; i <= ClientAppConstants.CAREER_MANUAL_SLOT_COUNT; i++)
@@ -106,8 +110,55 @@ namespace TacticalDirector.MatchClientUnity
                 CareerControl(h, _careerText.Text.Format("save", "save", i), () => career.SaveTo(slot), _careerHomeScroll);
             }
             CareerControl(h, C("quit"), career.QuitToMainMenu, _careerHomeScroll);
-            _ui.Label(h, C("table"), S0UiFactory.TextStyle.Subheading);
-            _careerTable = _ui.Label(h, "");
+            _careerStandings = _ui.Column("League standings", h, 0);
+            _ui.Label(_careerStandings, C("table"), S0UiFactory.TextStyle.Subheading);
+            _careerTableCells = new string[_careerText.TableHeaders.Count];
+            Text[] headers = CreateCareerTableRow(S0UiFactory.TextStyle.Strong);
+            for (int i = 0; i < headers.Length; i++)
+                S0UiFactory.Set(headers[i], _careerText.TableHeaders[i]);
+        }
+
+        private Text[] CreateCareerTableRow(S0UiFactory.TextStyle style)
+        {
+            RectTransform row = _ui.Row("Standings row", _careerStandings, TextAnchor.UpperLeft);
+            var cells = new Text[_careerTableCells.Length];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                bool isClub = i == 1;
+                Text cell = _ui.Label(row, "", style);
+                cell.alignment = isClub ? TextAnchor.UpperLeft : TextAnchor.UpperRight;
+                var size = cell.gameObject.AddComponent<LayoutElement>();
+                size.minWidth = size.preferredWidth = 0;
+                size.flexibleWidth = isClub ? 5 : 1;
+                cells[i] = cell;
+            }
+            return cells;
+        }
+
+        private void RefreshCareerResults(in CareerHomeViewModel home)
+        {
+            string scores = _careerText.RoundResults(in home);
+            _careerRoundResults.gameObject.SetActive(scores.Length != 0);
+            S0UiFactory.Set(_careerRoundResults, scores);
+            _careerStandings.gameObject.SetActive(home.HasCareer);
+            if (!home.HasCareer)
+                return;
+
+            while (_careerTableRows.Count < home.Table.Count)
+                _careerTableRows.Add(CreateCareerTableRow(S0UiFactory.TextStyle.Body));
+
+            for (int i = 0; i < _careerTableRows.Count; i++)
+            {
+                Text[] cells = _careerTableRows[i];
+                bool visible = i < home.Table.Count;
+                cells[0].transform.parent.gameObject.SetActive(visible);
+                if (!visible)
+                    continue;
+
+                _careerText.WriteTableRow(in home, i, _careerTableCells);
+                for (int column = 0; column < cells.Length; column++)
+                    S0UiFactory.Set(cells[column], _careerTableCells[column]);
+            }
         }
 
         private void BuildCareerSchedule(RectTransform home)
@@ -222,7 +273,7 @@ namespace TacticalDirector.MatchClientUnity
             _careerProgress.interactable = home.HasCareer && !home.IsProgressBlocked && !_career.IsBusy && home.NextAction != CareerProgressAction.None;
             _ui.SetButton(_careerProgress, _careerText.Progress(home.NextAction));
             S0UiFactory.Set(_careerSummary, _careerText.Summary(in home));
-            S0UiFactory.Set(_careerTable, _careerText.Table(in home));
+            RefreshCareerResults(in home);
             RefreshCareerSchedule(screen, in home);
             NewCareerViewModel preview = _career.NewCareer;
             int clubs = preview.Clubs == null ? 0 : preview.Clubs.Count;
@@ -283,4 +334,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.6 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
 // | 1.7 | 2026-11-19 | — | Keep keyboard focus in the calendar at the first and last week. |
 // | 1.8 | 2026-11-19 | — | Page the fixture list (Earlier / Upcoming / Later fixtures) so every row is reachable by keyboard at 200% text scale; share the boundary focus rule with week paging. |
+// | 1.9 | 2026-11-19 | — | Render round scores and aligned league standings from the cached snapshot. |
 #endregion

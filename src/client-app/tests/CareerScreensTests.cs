@@ -16,7 +16,9 @@ using System.Linq;
 
 using NUnit.Framework;
 
+using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.SeasonSave;
 using TacticalDirector.TacticalInstructions;
 using TacticalDirector.UiFramework;
@@ -237,6 +239,7 @@ namespace TacticalDirector.ClientApp.Tests
             CareerHomeViewModel again = source.Project();
             Assert.AreSame(first.Table, again.Table, "no rebuild without an operation.");
             Assert.AreSame(first.Fixtures, again.Fixtures);
+            Assert.IsEmpty(first.LatestRoundResults);
 
             CareerTestSupport.ProgressUntil(holder.Current, CareerProgressAction.PlayMatchday);
             holder.Current.Progress();
@@ -254,6 +257,9 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsFalse(after.Fixtures[1].IsPlayed);
             Assert.AreEqual(after.Fixtures[1].OpponentId, after.NextOpponentId);
             Assert.AreEqual(after.Fixtures[1].WorldDay, after.NextFixtureDay);
+            AssertRoundResults(after, holder.Current);
+            Assert.AreSame(after.LatestRoundResults, source.Project().LatestRoundResults);
+            Assert.IsEmpty(first.LatestRoundResults);
         }
 
         /// <summary>Verifies that switching to a resumed career refreshes a previously cached schedule.</summary>
@@ -279,6 +285,95 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.IsTrue(resumed.Calendar.FieldsEqual(saved.Calendar));
             CollectionAssert.AreEqual(saved.Fixtures, resumed.Fixtures);
             Assert.IsTrue(resumed.Fixtures[0].IsPlayed);
+            CollectionAssert.AreEqual(saved.Table, resumed.Table);
+            Assert.IsEmpty(resumed.LatestRoundResults);
+            CollectionAssert.AreEqual(saved.LatestRoundResults.Select(row => row.Result),
+                later.LatestRoundResults.Select(row => row.Result), "Advancing a day leaves the latest scores visible.");
+
+            CareerTestSupport.ProgressUntil(holder.Current, CareerProgressAction.PlayMatchday);
+            holder.Current.Progress();
+            AssertRoundResults(source.Project(), holder.Current);
+        }
+
+        [Test]
+        public void CareerHome_UsesTheNewSeasonAfterRoundIndicesRestart()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            var source = new CareerHomeSource(holder);
+
+            CareerTestSupport.ProgressUntil(session, CareerProgressAction.StartNextSeason);
+            int previousSeasonOutcomes = session.Loop.MatchOutcomes.Count;
+            Assert.Greater(previousSeasonOutcomes, 0);
+            MatchResult oldFirstRound = session.Loop.MatchOutcomes[0];
+            Assert.AreEqual(0, oldFirstRound.RoundIndex);
+            session.Progress();
+            CareerHomeViewModel newSeason = source.Project();
+            Assert.AreEqual(1, newSeason.SeasonNumber);
+            Assert.AreEqual(previousSeasonOutcomes, session.Loop.MatchOutcomes.Count);
+            Assert.IsEmpty(newSeason.LatestRoundResults);
+
+            CareerTestSupport.ProgressUntil(session, CareerProgressAction.PlayMatchday);
+            session.Progress();
+            CareerHomeViewModel newFirstRound = source.Project();
+            AssertRoundResults(newFirstRound, session);
+            Assert.Greater(newFirstRound.LatestRoundResults[0].Result.WorldDay, oldFirstRound.WorldDay);
+            Assert.AreEqual(previousSeasonOutcomes + newFirstRound.LatestRoundResults.Count, session.Loop.MatchOutcomes.Count);
+        }
+
+        [Test]
+        public void CareerHome_SkipsAnInterruptedRoundUntilItCompletes()
+        {
+            const ulong seed = CareerTestSupport.WORLD_SEED;
+            League league = LeagueBootstrap.Generate(seed, 4);
+            var loop = new SeasonLoop(new WorldStore(1, seed), league.CreateSeason(0), RoundResolutionMode.QuickSimAll);
+            loop.AdvanceToNextFixtureDay();
+            MatchResult[] first = loop.AdvanceAndPlayNextRound(league);
+            loop.AdvanceToNextFixtureDay();
+
+            Fixture blocked = loop.State.Fixtures.Where(fixture => fixture.RoundIndex == 1).ElementAt(1);
+            Assert.Throws<ArgumentException>(() => loop.AdvanceAndPlayNextRound(new MissingRoster(league, blocked.HomeClubId)));
+            Assert.AreEqual(1, loop.NextRoundIndex);
+            Assert.AreEqual(first.Length + 1, loop.MatchOutcomes.Count, "One fixture in the unfinished round emitted a result.");
+            MatchResult partial = loop.MatchOutcomes[first.Length];
+            Assert.AreEqual(1, partial.RoundIndex);
+            CollectionAssert.AreEqual(first, CareerHomeSource.ProjectRoundResults(league, loop).Select(row => row.Result));
+
+            MatchResult[] remaining = loop.AdvanceAndPlayNextRound(league);
+            Assert.AreEqual(2, loop.NextRoundIndex);
+            CollectionAssert.AreEqual(new[] { partial, remaining.Single() },
+                CareerHomeSource.ProjectRoundResults(league, loop).Select(row => row.Result));
+        }
+
+        private static void AssertRoundResults(in CareerHomeViewModel view, CareerSession session)
+        {
+            int index = view.RoundsPlayed - 1;
+            uint day = view.Calendar.DayOfRound(index);
+            MatchResult[] expected = session.Loop.MatchOutcomes.Where(result => result.WorldDay == day).ToArray();
+            Assert.AreEqual(session.Loop.State.ClubCount / 2, expected.Length);
+            CollectionAssert.AreEqual(expected, view.LatestRoundResults.Select(row => row.Result));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(index, view.LatestRoundResults[i].Result.RoundIndex);
+                Assert.AreEqual(session.ClubName(expected[i].HomeClubId), view.LatestRoundResults[i].HomeClubName);
+                Assert.AreEqual(session.ClubName(expected[i].AwayClubId), view.LatestRoundResults[i].AwayClubName);
+            }
+        }
+
+        private sealed class MissingRoster : ISquadProvider
+        {
+            private readonly League _league;
+            private readonly int _club;
+
+            internal MissingRoster(League league, int club)
+            {
+                _league = league;
+                _club = club;
+            }
+
+            public Squad ResolveByClubId(int clubId) => clubId == _club ? null : _league.ResolveByClubId(clubId);
         }
 
         [Test]
@@ -432,4 +527,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.3     | 2026-11-19 | —      | Verify schedule projection, refresh and resume.                |
 // | 1.4     | 2026-11-19 | —      | Verify calendar paging across the season.                     |
 // | 1.5     | 2026-11-19 | —      | Verify fixture paging coverage, bounds and the current page.  |
+// | 1.6     | 2026-11-19 | —      | Lock round scores through resume, rollover and fixture retry. |
 #endregion

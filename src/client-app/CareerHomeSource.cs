@@ -24,7 +24,7 @@ namespace TacticalDirector.ClientApp
     /// (<see cref="SeasonLoop.State"/>, <see cref="SeasonLoop.CurrentWorldDay"/>), #41's availability
     /// read, and the session's own change record.
     /// <para>
-    /// <b>Allocation.</b> A fresh projection allocates (table copy, names, fixture list). It is rebuilt when the
+    /// <b>Allocation.</b> A fresh projection allocates (table, fixtures, and scores). It is rebuilt when the
     /// active session, its <see cref="CareerSession.Revision"/>, or its busy state changes. Otherwise <see cref="Project"/>
     /// returns the cached value. #30 has no other writer than the session (FR-SN-032), so the revision
     /// is a complete change signal.
@@ -32,6 +32,9 @@ namespace TacticalDirector.ClientApp
     /// </summary>
     public sealed class CareerHomeSource : IViewModelSource<CareerHomeViewModel>
     {
+        private static readonly ReadOnlyCollection<CareerFixtureResult> EMPTY_RESULTS =
+            Array.AsReadOnly(Array.Empty<CareerFixtureResult>());
+
         private readonly CareerSessionHolder _holder;
         private CareerSession _cachedSession;
         private int _cachedRevision;
@@ -144,8 +147,47 @@ namespace TacticalDirector.ClientApp
                 session.LastAutosaveError,
                 table,
                 new ReadOnlyCollection<string>(names),
+                ProjectRoundResults(session.League, loop),
                 fixtures.AsReadOnly(),
                 calendar);
+        }
+
+        internal static ReadOnlyCollection<CareerFixtureResult> ProjectRoundResults(League league, SeasonLoop loop)
+        {
+            SeasonCalendar calendar = loop.State.Calendar;
+            int round = calendar.NextRoundIndex - 1;
+            if (round < 0)
+            {
+                return EMPTY_RESULTS;
+            }
+
+            ReadOnlyCollection<MatchResult> outcomes = loop.MatchOutcomes;
+            if (outcomes.Count == 0)
+            {
+                return EMPTY_RESULTS;
+            }
+
+            uint matchday = calendar.DayOfRound(round);
+            var results = new List<CareerFixtureResult>();
+            // The cursor excludes an unfinished round. The day distinguishes repeated round indices
+            // because the outcome stream retains previous seasons and is ordered by world day.
+            for (int i = outcomes.Count - 1; i >= 0; i--)
+            {
+                MatchResult result = outcomes[i];
+                if (result.WorldDay < matchday)
+                {
+                    break;
+                }
+
+                if (result.WorldDay == matchday && result.RoundIndex == round)
+                {
+                    results.Add(new CareerFixtureResult(in result,
+                        league.ClubAt(result.HomeClubId).Name, league.ClubAt(result.AwayClubId).Name));
+                }
+            }
+
+            results.Reverse();
+            return results.AsReadOnly();
         }
 
         private static int CountInjured(SeasonLoop loop, int clubId)
@@ -175,4 +217,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): revision-cached Career Home source.  |
 // | 1.1     | 2026-11-19 | —      | Project the managed club's dated fixture list and calendar.    |
+// | 1.2     | 2026-11-19 | —      | Project scores from the latest completed round.                |
 #endregion
