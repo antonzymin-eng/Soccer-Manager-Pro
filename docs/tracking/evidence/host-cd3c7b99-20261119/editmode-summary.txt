@@ -1,0 +1,26 @@
+# EditMode run — clean worktree at cd3c7b99, batch mode
+command: Unity.exe -batchmode -nographics -projectPath <worktree> -runTests -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.SeasonSave.Tests" -testResults editmode-results.xml
+start: 2026-11-19T04:47:26Z  end: 2026-11-19T05:02:26Z  (exit=0)
+test-run: total=844 passed=837 failed=0 inconclusive=0 skipped=7 duration=887.5s nunit=3.5.0.0
+
+TacticalDirector.ClientApp.Tests.dll: total=285 passed=282 failed=0 skipped=3
+TacticalDirector.SeasonSave.Tests.dll: total=559 passed=555 failed=0 skipped=4
+
+Named cases:
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownBeforeWriteAdmissionPreservesThePairAndAllowsDeterministicReplay: Passed (0.3s)
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownDoesNotWaitForReadOnlyProjection: Passed (0.0s)
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownDuringLoadCannotInvalidateAReplacementSave: Passed (0.0s)
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownSkipsQueuedInitializationAndSuppressesItsCompletion: Passed (0.0s)
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownWaitsForAnAdmittedPairToCommitOrRollBack(False): Passed (0.2s)
+  TacticalDirector.ClientApp.Tests.ClientCareerCoordinatorTests.ShutdownWaitsForAnAdmittedPairToCommitOrRollBack(True): Passed (0.2s)
+  TacticalDirector.SeasonSave.Tests.SeasonLoopTests.sim_CancelledManagedRoundReplaysExactlyFromThePreRoundSave: Passed (194.3s)
+  ClientCareerCoordinatorTests: 47 cases, results=['Passed']
+
+Skipped (all opt-in diagnostics gated by environment variables):
+  TacticalDirector.ClientApp.Tests.S0MovementDiagnosticTests.S0MovementDiagnostic_ReportsPlayerTravelAndSpread — Set TD_MOVEMENT_DIAGNOSTIC=1 to run the S0 player-movement measurement.
+  TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs — Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+  TacticalDirector.ClientApp.Tests.S0SimThroughputDiagnosticTests.S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit — Set TD_SIM_THROUGHPUT_DIAGNOSTIC=1 to run the Gate-J J-05 S0 sim-throughput benchmark.
+  TacticalDirector.SeasonSave.Tests.CareerDriftDiagnosticTests.CareerDriftDiagnostic_ReportsClubStrengthAndRegenQualityOverSeasons — Set TD_CAREER_DRIFT=1 to run the ERR-028-026 multi-season career drift measurement.
+  TacticalDirector.SeasonSave.Tests.EngineScoringDiagnosticTests.EngineScoringDiagnostic_ReportsWhatAMatchActuallyDoes — Set TD_ENGINE_DIAGNOSTIC=1 to run the ERR-030-014 characterisation (one full match).
+  TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Corpus_GeneratesTheRequestedSlice — Set TD_CALIBRATION_SAMPLES (plus optional TD_CALIBRATION_DELTA_FROM / _TO / _OUT) to generate an A4a corpus slice. Each sample is a full ~2-minute engine match.
+  TacticalDirector.SeasonSave.Tests.RoundResolutionCalibrationHarnessTests.Pilot_ExtremeDifferentialsAreDistinguishable — Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).

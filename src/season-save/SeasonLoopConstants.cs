@@ -2,6 +2,7 @@
 // Created:  2026-07-25
 // Modified: 2026-07-27
 // Modified: 2026-08-12 (A4a: the three round-resolution [GT]s FITTED against the engine corpus)
+// Modified: 2026-11-18 (Catalogue the round cancellation interval.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 Appendix A (constant catalogue); §3.2 (points);
 //           §3.1.1 (permutation seed); §3.5 (boundary roll); Code Standards #20
@@ -226,6 +227,14 @@ namespace TacticalDirector.SeasonSave
             Config.GetFloat("season-save", "QuickSimLambdaMax", 6.0f);
         #endregion
 
+        #region EST
+        /// <summary>
+        /// [EST] Complete engine ticks between reads of the career shutdown token.
+        /// Validate stop latency and polling cost on the pinned host.
+        /// </summary>
+        internal const int ROUND_CANCELLATION_POLL_TICKS = 64;
+        #endregion
+
         /// <summary>
         /// Reads a strictly-positive day-count <c>[GT]</c> value, refusing a non-positive one at the
         /// point of READ rather than letting it wrap. <c>GameplayConfig</c> has no unsigned getter, so a
@@ -283,4 +292,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | own noise floor at 18/bucket; ERR-030-034 the engine is Poisson-  |
 // |         |            |        | over-dispersed at z=+5.4, which is a model-FAMILY gap no re-fit   |
 // |         |            |        | of these three closes). Locked by RoundResolutionFitLockTests.    |
+// | 1.5 | 2026-11-18 | — | Catalogue the matchday cancellation polling interval. |
 #endregion

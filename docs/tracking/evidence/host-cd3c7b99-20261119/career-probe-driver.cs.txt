@@ -1,0 +1,137 @@
+// Scratch host-validation driver. Never committed. Active only with -careerProbe <setup|continue> -probeDir <dir>.
+// Clicks the same UGUI buttons a player would; writes progress markers so the harness can act from outside.
+using System;
+using System.IO;
+using UnityEngine;
+using UnityEngine.UI;
+
+public sealed class CareerProbe : MonoBehaviour
+{
+    private string _mode, _dir;
+    private int _phase, _wait, _dayClicks;
+    private float _sinceLast;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Boot()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string mode = null, dir = null;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "-careerProbe") mode = args[i + 1];
+            if (args[i] == "-probeDir") dir = args[i + 1];
+        }
+        if (mode == null || dir == null) return;
+        Application.runInBackground = true;
+        var go = new GameObject("CareerProbe");
+        DontDestroyOnLoad(go);
+        var probe = go.AddComponent<CareerProbe>();
+        probe._mode = mode;
+        probe._dir = dir;
+        probe.Mark("boot mode=" + mode);
+    }
+
+    private void Mark(string s) => File.AppendAllText(Path.Combine(_dir, "player-probe.log"),
+        DateTime.UtcNow.ToString("o") + " frame=" + Time.frameCount + " " + s + Environment.NewLine);
+
+    private static Button Find(string label)
+    {
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && t.text == label) return b;
+        }
+        return null;
+    }
+
+    private static bool Busy()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.text.StartsWith("Working...", StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    private static string Summary()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+            if (t.isActiveAndEnabled && t.text.Contains("| Season ")) return t.text.Replace("\n", " / ");
+        return "(no summary)";
+    }
+
+    private bool Click(string label)
+    {
+        Button b = Find(label);
+        if (b == null || !b.interactable) return false;
+        Mark("click '" + label + "'");
+        b.onClick.Invoke();
+        _wait = 0;
+        return true;
+    }
+
+    private void OnApplicationQuit() => Mark("OnApplicationQuit (probe)");
+
+    private void Update()
+    {
+        if (++_wait < 5 || Busy()) return;
+        if (_mode == "setup") Setup();
+        else if (_mode == "continue") Continue();
+    }
+
+    private void Setup()
+    {
+        switch (_phase)
+        {
+            case 0: if (Click("New career")) _phase = 1; break;
+            case 1:
+                foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+                {
+                    var t = b.GetComponentInChildren<Text>();
+                    if (b.isActiveAndEnabled && b.interactable && t != null && t.text.StartsWith("Select ", StringComparison.Ordinal))
+                    { if (Click(t.text)) _phase = 2; break; }
+                }
+                break;
+            case 2: if (Click("Start career")) _phase = 3; break;
+            case 3:
+                if (Find("Resolve matchday (on Career Home)") != null) { _phase = 4; break; }
+                if (_dayClicks < 40 && Click("Advance one day")) _dayClicks++;
+                break;
+            case 4: if (Click("Save to manual slot 1")) _phase = 5; break;
+            case 5:
+                Mark("READY " + Summary());
+                File.WriteAllText(Path.Combine(_dir, "ready.flag"), "ready");
+                _phase = 6;
+                break;
+            case 6:
+                if (!File.Exists(Path.Combine(_dir, "go.flag"))) return;
+                if (Click("Resolve matchday (on Career Home)"))
+                {
+                    File.WriteAllText(Path.Combine(_dir, "started.flag"), DateTime.UtcNow.ToString("o"));
+                    _phase = 7;
+                }
+                break;
+            case 7: Mark("ROUND COMPLETED BEFORE CLOSE " + Summary()); _phase = 8; break;
+        }
+    }
+
+    private void Continue()
+    {
+        switch (_phase)
+        {
+            case 0: if (Click("Continue career")) _phase = 1; break;
+            case 1:
+                if (Find("Resolve matchday (on Career Home)") == null) return;
+                Mark("CONTINUED " + Summary());
+                if (Click("Resolve matchday (on Career Home)")) _phase = 2;
+                break;
+            case 2:
+                Mark("ROUND COMPLETE " + Summary());
+                File.WriteAllText(Path.Combine(_dir, "done.flag"), DateTime.UtcNow.ToString("o"));
+                _phase = 3;
+                break;
+            case 3:
+                _sinceLast += Time.unscaledDeltaTime;
+                if (_sinceLast > 1f) { Mark("Application.Quit"); _phase = 4; Application.Quit(); }
+                break;
+        }
+    }
+}

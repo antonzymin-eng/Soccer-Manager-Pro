@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
+// Modified: 2026-11-18 (Managed matchday cancellation and replay.)
 // Modified: 2026-10-20 (AR round 5 S-L3 — the constructor KD-4 test asserts ParamName "season" — v1.8)
 //           2026-10-18 (#31 T1 — call sites carry the transfers block)
 //           Prior: 2026-09-10 (#40 T1b, ERR-030-049 — the Save call site passes the new required finance
@@ -24,6 +25,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading;
 
 using NUnit.Framework;
 
@@ -31,6 +33,7 @@ using TacticalDirector.ClubFinances;
 using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
@@ -279,6 +282,98 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.IsTrue(matched);
             Assert.IsNull(loop.ActiveMatch, "No engine is booted on the quick-sim path.");
+        }
+
+        [Test]
+        public void ManagedRoundCancellation_DiscardsTheActiveEngineAfterCompletedTicks()
+        {
+            SeasonLoop loop = NewManagedCareer();
+            CancelAfterEarlierFixtureAndEngineTicks(loop);
+        }
+
+        [Test]
+        [Timeout(7200000)]
+        public void sim_CancelledManagedRoundReplaysExactlyFromThePreRoundSave()
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                SeasonLoop uninterrupted = NewManagedCareer();
+                SeasonSaveManager.Save(uninterrupted, null, path);
+                byte[] checkpoint = File.ReadAllBytes(path);
+
+                SeasonLoop interrupted = ResumeManagedCareer(path);
+                CancelAfterEarlierFixtureAndEngineTicks(interrupted);
+                CollectionAssert.AreEqual(checkpoint, File.ReadAllBytes(path));
+                SeasonLoop resumed = ResumeManagedCareer(path);
+
+                MatchResult[] expected = uninterrupted.AdvanceAndPlayNextRound();
+                using var lifetime = new CancellationTokenSource();
+                MatchResult[] actual = resumed.AdvanceAndPlayNextRound(lifetime.Token);
+                Assert.AreEqual(2, actual.Length);
+                Assert.AreEqual(1, resumed.EnginePlayedFixtures);
+                CollectionAssert.AreEqual(expected, actual);
+                CollectionAssert.AreEqual(uninterrupted.Snapshot(), resumed.Snapshot());
+                SeasonSaveManager.Save(uninterrupted, null, path);
+                byte[] expectedSave = File.ReadAllBytes(path);
+                SeasonSaveManager.Save(resumed, null, path);
+                CollectionAssert.AreEqual(expectedSave, File.ReadAllBytes(path));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static SeasonLoop NewManagedCareer()
+        {
+            League league = FourClubLeague();
+            SeasonState season = league.CreateSeason(0);
+            int[] firstRound = season.UnplayedFixtureIndicesInRound(0);
+            Assert.AreEqual(2, firstRound.Length);
+            int managedClub = season.FixtureAt(firstRound[1]).HomeClubId;
+
+            var world = new WorldStore(ManagerId, WorldSeed);
+            int[] clubs = league.ClubIds();
+            Squad[] squads = Array.ConvertAll(clubs, league.ResolveByClubId);
+            ProgressionEngine progression = ProgressionEngine.SeedFrom(squads, world.CurrentWorldTick);
+            var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), clubs, injuryOccurrenceEnabled: true);
+            SeasonLoop loop = league.CreateLoop(world, managedClub, RoundResolutionMode.ManagedThroughEngine,
+                careerOrNull: career, progressionOrNull: progression, disciplineOrNull: new DisciplineState());
+            loop.AdvanceToNextFixtureDay();
+            return loop;
+        }
+
+        private static SeasonLoop ResumeManagedCareer(string path)
+        {
+            SeasonSaveContents save = SeasonSaveManager.Load(path);
+            Assert.IsNull(save.Match);
+            var career = PlayerCareerStates.FromBlocks(save.TrainingClubs, save.MedicalClubs,
+                save.AppearanceClubs, injuryOccurrenceEnabled: true);
+            return SeasonLoop.Restore(save.World, SeasonStateCodec.Encode(save.Season),
+                RoundResolutionMode.ManagedThroughEngine, career, null, save.Progression,
+                save.Discipline, save.Finances, save.Transfers);
+        }
+
+        private static void CancelAfterEarlierFixtureAndEngineTicks(SeasonLoop loop)
+        {
+            using var stop = new CancellationTokenSource();
+            int checkpoints = 0;
+            loop.RoundCancellationCheckpointProbe = () =>
+            {
+                Assert.AreEqual(1, ++checkpoints, "The engine must stop at the checkpoint that requested cancellation.");
+                Assert.AreEqual(1, loop.MatchOutcomes.Count, "A quick fixture must have applied before cancellation.");
+                Assert.Greater(loop.ActiveMatch.CurrentTick, 0UL);
+                Assert.IsFalse(loop.ActiveMatch.MatchEnded);
+                stop.Cancel();
+            };
+
+            var cancelled = Assert.Throws<OperationCanceledException>(() => loop.AdvanceAndPlayNextRound(stop.Token));
+            Assert.AreEqual(stop.Token, cancelled.CancellationToken);
+            Assert.IsNull(loop.ActiveMatch);
+            Assert.AreEqual(0, loop.EnginePlayedFixtures, "A cancelled match must not count as played.");
+            Assert.AreEqual(0, loop.State.Calendar.NextRoundIndex);
+            Assert.AreEqual(1, loop.MatchOutcomes.Count, "Only the earlier fixture applied to the discarded loop.");
         }
 
         [Test]
@@ -718,4 +813,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | nothing else this suite can pass. No assertion or intent change.  |
 // | 1.7 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call site passes transfersOrNull: null. |
 // | 1.8 | 2026-10-20 | — | AR round 5 S-L3: Constructor_WorldPastThePendingFixtureDay_FailsLoud also asserts ex.ParamName == "season" (the shared RequireCursorInvariant reports the caller's offending argument). |
+// | 1.9 | 2026-11-18 | — | Verify a real in-match cancellation and serialized replay identity from the pre-round save. |
 #endregion

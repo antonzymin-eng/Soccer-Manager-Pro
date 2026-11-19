@@ -1,0 +1,76 @@
+# SHA-256 of every career save directory snapshot (file names relative to the careers folder)
+
+## snap-PRE
+6edfbde2bbc1165ff34ed85de1e88844ffeeda1a86c0c3b8945e528777f2207e  autosave.slot
+d38b55f24357074e52cb78ce419232af8c4b181e01cc49a69b8fbe682190bdc5  autosave.tdsave
+fb7b4f5e4e7f9060d041b384443ec5be0b49797b42e04e405522478628ec6c56  manual-1.slot
+bc8276119263d6c668cd4ebf435437ea1a789cfe2e3ce1c40b31115b014b0d24  manual-1.tdsave
+
+## snap-UNINT
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+fb7b4f5e4e7f9060d041b384443ec5be0b49797b42e04e405522478628ec6c56  manual-1.slot
+bc8276119263d6c668cd4ebf435437ea1a789cfe2e3ce1c40b31115b014b0d24  manual-1.tdsave
+
+## snap-RESUMED
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+fb7b4f5e4e7f9060d041b384443ec5be0b49797b42e04e405522478628ec6c56  manual-1.slot
+bc8276119263d6c668cd4ebf435437ea1a789cfe2e3ce1c40b31115b014b0d24  manual-1.tdsave
+
+## snap-TRIALA
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+fb7b4f5e4e7f9060d041b384443ec5be0b49797b42e04e405522478628ec6c56  manual-1.slot
+bc8276119263d6c668cd4ebf435437ea1a789cfe2e3ce1c40b31115b014b0d24  manual-1.tdsave
+a62b42a162f3819a6ac3e0479f92fee408edf666e3225183a2b8b92513ad0523  manual-2.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  manual-2.tdsave
+
+## snap-TRIALB
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+fb7b4f5e4e7f9060d041b384443ec5be0b49797b42e04e405522478628ec6c56  manual-1.slot
+bc8276119263d6c668cd4ebf435437ea1a789cfe2e3ce1c40b31115b014b0d24  manual-1.tdsave
+a62b42a162f3819a6ac3e0479f92fee408edf666e3225183a2b8b92513ad0523  manual-2.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  manual-2.tdsave
+e578f300a39e53cc1d14c71994fdc545ed27614ba3ede2beea12c7dceeaf4610  manual-3.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  manual-3.tdsave
+
+## snap-PICKER-INPUT
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+621f6e40e12dc0b892339ced85ad119fea6935322d49d4d5d2a65e25a6d5fcae  manual-2.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  manual-2.tdsave
+e578f300a39e53cc1d14c71994fdc545ed27614ba3ede2beea12c7dceeaf4610  manual-3.slot
+5a3d0957a7e2f457fa7192128e4b4b3d72f682d7c746c14c7d9e29b9304e3840  manual-3.tdsave
+
+## snap-EDITOR-FINAL
+ac8677bcbda8f1eaa58e9447739afb788c60d69b76bf393fe4fc4d162fa6797c  autosave.slot
+c6192fd649143d2919916e29dfb9668fc2ed5a8035541740dc9dc4bf85a3fb5d  autosave.tdsave
+621f6e40e12dc0b892339ced85ad119fea6935322d49d4d5d2a65e25a6d5fcae  manual-2.slot
+e578f300a39e53cc1d14c71994fdc545ed27614ba3ede2beea12c7dceeaf4610  manual-3.slot
+5a3d0957a7e2f457fa7192128e4b4b3d72f682d7c746c14c7d9e29b9304e3840  manual-3.tdsave
+
+## snap-PLAYER-PRE
+fa3887f3c58b7cfe07be2d217a9e35116dd469fe167523172f765881f91a5374  autosave.slot
+a627d6d103187d9eb8e85ceb87aedb9a72a96e9ab42d0c0008bb18b64f8ac2f3  autosave.tdsave
+2295dfacdeeed4ca7184061b8d39f1e5bf340f353bcf7d7169530799e3f57ce4  manual-1.slot
+bd72484c8924c64a80d82ac763cb7fd6c56cfa3586bff3eade487f9a07db26db  manual-1.tdsave
+
+## snap-PLAYER-RESUMED-A
+8ffe0fa3eb3ffcda784a5b59447122232c7bfc0edbe52f4b877b201ed83fe460  autosave.slot
+bc57dceaeb4f0d57658ef3010b2739ee1db56387a9f6dd6bd99f6252422814b5  autosave.tdsave
+2295dfacdeeed4ca7184061b8d39f1e5bf340f353bcf7d7169530799e3f57ce4  manual-1.slot
+bd72484c8924c64a80d82ac763cb7fd6c56cfa3586bff3eade487f9a07db26db  manual-1.tdsave
+
+## snap-PLAYER-RESUMED-B
+8ffe0fa3eb3ffcda784a5b59447122232c7bfc0edbe52f4b877b201ed83fe460  autosave.slot
+bc57dceaeb4f0d57658ef3010b2739ee1db56387a9f6dd6bd99f6252422814b5  autosave.tdsave
+2295dfacdeeed4ca7184061b8d39f1e5bf340f353bcf7d7169530799e3f57ce4  manual-1.slot
+bd72484c8924c64a80d82ac763cb7fd6c56cfa3586bff3eade487f9a07db26db  manual-1.tdsave
+
+## Comparisons
+Editor: save dir after Stop mid-matchday (run 2) vs snap-PRE: 068678e2 — identical (checked immediately after the stop, before run 3)
+Editor: snap-RESUMED == snap-UNINT (all four files byte-identical)
+Player: snap-PLAYER-RESUMED-A == snap-PLAYER-RESUMED-B (all four files byte-identical)
+Player: save dir after WM_CLOSE mid-matchday == snap-PLAYER-PRE (checked before RESUMED-A launched)

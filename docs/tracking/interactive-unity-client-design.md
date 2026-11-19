@@ -1,6 +1,8 @@
 # Interactive Unity Client — High-Level Implementation Plan
 
-**Last Updated:** November 5, 2026 (v0.42 — T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage.)
+**Last Updated:** November 18, 2026 (v0.43 — §5-P7 cooperative career shutdown and write admission.)
+
+**Last Updated (prior):** November 5, 2026 (v0.42 — T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage.)
 
 > **Created:** 2026-07-23
 > **Status:** DESIGN SUPPLEMENT — plan adversarial-review CONVERGED (AR-1 3H+2M+1L → AR-2 0H+0M+3L →
@@ -821,9 +823,16 @@ rate band, corpus fit or perf baseline is perturbed.
    verify initialization, visibility, focus, cached bindings and worker behavior in Unity. Do not call raw career
    sources while work runs. Disable navigation/mutation while `IsBusy` (Home's cached
    `IsProgressBlocked` changes immediately), show persistent `LastError`/autosave errors, and preserve
-   incompatible/damaged/empty slot states. Initialization may be retried after failure. Shutdown waits
-   for an accepted synchronous #30 operation; it must not abort a writer. Runtime UGUI validation, localized S1
+   incompatible/damaged/empty slot states. Initialization may be retried after failure. For current
+   shutdown behavior, see the November 18 entry below. Runtime UGUI validation, localized S1
    copy, focus/reflow, pseudo-locale/scale checks and pinned-host compile/runtime remain outstanding.
+   **November 18 shutdown implementation:** the UI stops publication and closes writer admission
+   before requesting cancellation. The worker abandons unfinished matchdays at #30's checkpoints.
+   Shutdown waits for an already admitted slot transaction through commit or rollback. This includes
+   storage recovery and damaged-sidecar invalidation. The detached worker retains its state until exit.
+   The tracked scene keeps career opt-in until the pinned host passes compile, Play, close and Stop
+   checks. See the [design and acceptance cases](career-shutdown-cancellation-design.md).
+
    Gate-A audit v0.4 prepares an unadopted delta. [Recruitment brief](../design/ux-s1-recruitment.md)
    records recruitment **deferred by the user November 3**, with no contacts or confirmations.
    S1 testers run at Gate G after a complete current-PM-2 Gate-F prototype,
@@ -1172,6 +1181,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.43 | 2026-11-18 | §5-P7 cooperative career shutdown, discard of unfinished rounds and writer admission. Pinned host acceptance remains open. |
 | 0.42 | 2026-11-05 | T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage. |
 | 0.41 | 2026-11-05 | §5-P8 brought up to the code after two review rounds (`c1b43e0`, `b57c6cf`): `TransferResult` / `LastTransferResult` replaces `LastTransferOutcome`; `TransferOfferCheck` + `TransferOfferIssue` typed refusals (closed window refused at the coordinator, the session still throws); wage bound 0..50,000,000 (ERR-031-016 filed Open) and fee/length rules; independent projections with `LastProjectionError`; `SquadCount`, saturated wage line, `IsWageBillTracked`, `L` money type; D-P8-1 fog condition on #32; "no framework change" superseded by ERR-038-006 (#38 Appendix C.2); Unity shell rejection recorded as the known limitation; ClientApp 252 / 0 / 3. |
 | 0.40 | 2026-11-05 | §5-P8 host-free half landed: screen ids 8/9, four moves, `CareerSession.SubmitTransfer`, `TransferMarketSource` / `ClubFinancesSource`, coordinator operation and copy; tests recorded. Unity pages pending P7b host compile. |
