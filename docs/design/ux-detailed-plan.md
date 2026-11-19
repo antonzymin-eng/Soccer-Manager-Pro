@@ -1,9 +1,10 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** November 5, 2026 (v1.37 — T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged.)
+**Last Updated:** November 19, 2026 (v1.38 — Career Home schedule UX acceptance criteria.)
+**Last Updated (prior):** November 5, 2026 (v1.37 — T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged.)
 **Last Updated (prior):** November 4, 2026\
-**Version:** 1.37\
+**Version:** 1.38\
 **Status:** PLAN — ACCEPTED BY THE PROJECT OWNER September 9, 2026; F0–F4 + S0 A–F COMPLETE; G PASS FOR v0.5; H PASS FOR v0.2; I PASS — IMPLEMENTATION HANDOFF; S0 J TECHNICAL REVIEW FAIL October 19; FIXES J-01/J-02/J-04 LANDED October 22; J-05 LANDED October 30 (PR #520); S0 GATE J PASS AND ACCEPTED BY THE OWNER October 30, 2026\
 **Parent:** [`ux-high-level-plan.md`](ux-high-level-plan.md)  
 **Release target:** owner-played PM-2 with PM-1 as prerequisite; Early Access is not currently planned (roadmap D-14).
@@ -802,6 +803,15 @@ The Home/Season surface should answer:
 
 Candidate modules are admitted only when their data is `LIVE`/`DESIGNABLE` or explicitly future-labelled.
 
+### Schedule candidate
+
+Career Home presents fixture and calendar rows as read-only text. Keyboard focus moves through
+Schedule, Fixtures, Calendar and the week controls. In pinned-host S1 validation, use keyboard only
+to find the next opponent, date and venue, then browse a later week and return to the current week.
+Verify that the rows remain readable at 100% and 200% text scale and that focus stays visible.
+Record whether finding and reading fixtures requires individually focusable rows before closing the
+schedule UX item.
+
 ## 7.6 S1 usability tasks
 
 **November 4 owner scope amendment (roadmap D-11):** interactive career matches and coach
@@ -1146,3 +1156,4 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.35 | October 30, 2026 | S0 Gate J **ACCEPTED**: the B8/B10 re-capture and an uninterrupted I-Q15 pass on the H v0.2 skin (October 29), the owner's wording approval and J-04 visual acceptance (October 28) and J-05 (PR #520, merged `642294d1`; 10× at 601–602 ticks/s) completed §7 of [`p5b-real-client-acceptance.md`](../tracking/p5b-real-client-acceptance.md); the owner signed off on October 30 (record v0.15 §19). |
 | 1.36 | November 4, 2026 | Apply owner D-11 deferral of interactive career/delegation until staff; current S1 retains all eight tasks with readiness inspection, Home round/result feedback and between-round save/resume. Update current D-14 release-target pointer. No gate verdict or prior approval/evidence changed. |
 | 1.37 | 2026-11-05 | T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged. |
+| 1.38 | November 19, 2026 | Record the Career Home schedule candidate and its pinned-host keyboard and text-scale acceptance checks. |

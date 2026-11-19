@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerHomeSource.cs
 // Created:  2026-10-18
-// Modified: 2026-10-18
+// Modified: 2026-11-19
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (Career Home), UI / Client Framework
 //           #38 §3.1 (FR-UI-002/006/007/008), Season & Competition Loop #30 FR-SN-033, Injuries &
@@ -9,6 +9,7 @@
 //           revision so a per-frame poll allocates nothing between operations.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using TacticalDirector.PlayerDatabase;
@@ -23,8 +24,8 @@ namespace TacticalDirector.ClientApp
     /// (<see cref="SeasonLoop.State"/>, <see cref="SeasonLoop.CurrentWorldDay"/>), #41's availability
     /// read, and the session's own change record.
     /// <para>
-    /// <b>Allocation.</b> A fresh projection allocates (table copy, names). It is rebuilt only when the
-    /// active session or its <see cref="CareerSession.Revision"/> changes; otherwise <see cref="Project"/>
+    /// <b>Allocation.</b> A fresh projection allocates (table copy, names, fixture list). It is rebuilt when the
+    /// active session, its <see cref="CareerSession.Revision"/>, or its busy state changes. Otherwise <see cref="Project"/>
     /// returns the cached value. #30 has no other writer than the session (FR-SN-032), so the revision
     /// is a complete change signal.
     /// </para>
@@ -80,26 +81,30 @@ namespace TacticalDirector.ClientApp
             }
 
             bool hasNext = false;
-            int opponent = 0;
-            bool isHome = false;
-            int nextRound = calendar.NextRoundIndex;
-            uint nextDay = 0;
-            if (!calendar.IsSeasonComplete)
+            CareerFixtureView next = default;
+            var fixtures = new List<CareerFixtureView>(calendar.RoundCount);
+            for (int i = 0; i < state.FixtureCount; i++)
             {
-                ReadOnlyCollection<Fixture> fixtures = state.Fixtures;
-                for (int i = 0; i < fixtures.Count; i++)
+                Fixture fixture = state.FixtureAt(i);
+                if (!fixture.Involves(managed))
                 {
-                    Fixture f = fixtures[i];
-                    if (f.RoundIndex == nextRound && !f.Played && f.Involves(managed))
-                    {
-                        hasNext = true;
-                        isHome = f.HomeClubId == managed;
-                        opponent = isHome ? f.AwayClubId : f.HomeClubId;
-                        nextDay = calendar.DayOfRound(nextRound);
-                        break;
-                    }
+                    continue;
+                }
+
+                bool isHome = fixture.HomeClubId == managed;
+                int opponent = isHome ? fixture.AwayClubId : fixture.HomeClubId;
+                var row = new CareerFixtureView(fixture.RoundIndex, calendar.DayOfRound(fixture.RoundIndex),
+                    opponent, session.ClubName(opponent), isHome, fixture.Played);
+                fixtures.Add(row);
+
+                if (!hasNext && row.RoundIndex == calendar.NextRoundIndex && !row.IsPlayed)
+                {
+                    hasNext = true;
+                    next = row;
                 }
             }
+
+            fixtures.Sort(static (left, right) => left.RoundIndex.CompareTo(right.RoundIndex));
 
             CareerChange change = session.LastChange;
             string lastOpponent = string.Empty;
@@ -126,11 +131,11 @@ namespace TacticalDirector.ClientApp
                 board.JobSecurityPerMille,
                 CountInjured(loop, managed),
                 hasNext,
-                opponent,
-                hasNext ? session.ClubName(opponent) : string.Empty,
-                isHome,
-                nextRound,
-                nextDay,
+                next.OpponentId,
+                next.OpponentName,
+                next.IsHome,
+                calendar.NextRoundIndex,
+                next.WorldDay,
                 CareerProgress.DaysUntilNextMatchday(loop),
                 CareerProgress.NextAction(loop),
                 session.IsBusy,
@@ -138,7 +143,9 @@ namespace TacticalDirector.ClientApp
                 lastOpponent,
                 session.LastAutosaveError,
                 table,
-                new ReadOnlyCollection<string>(names));
+                new ReadOnlyCollection<string>(names),
+                fixtures.AsReadOnly(),
+                calendar);
         }
 
         private static int CountInjured(SeasonLoop loop, int clubId)
@@ -167,4 +174,5 @@ namespace TacticalDirector.ClientApp
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): revision-cached Career Home source.  |
+// | 1.1     | 2026-11-19 | —      | Project the managed club's dated fixture list and calendar.    |
 #endregion

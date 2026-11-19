@@ -1,6 +1,7 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-2: T6: clamp displayed headroom and format full uint window close day.)
+// Modified: 2026-11-19
+// Modified (prior): 2026-11-05 (AR-2: T6: clamp displayed headroom and format full uint window close day.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -46,6 +47,14 @@ namespace TacticalDirector.ClientApp
             R("change.DayAdvanced", "Day advanced"), R("change.RoundPlayed", "Round resolved"), R("change.SeasonRolled", "New season started"),
             R("row", "{0}. {1} | Played {2}, W {3}, D {4}, L {5}, GF {6}, GA {7}, points {8}", "ISIIIIIII"),
             R("autosave.error", "Autosave failed: {0}", "S"),
+            R("schedule", "Schedule"), R("schedule.list", "Fixtures"), R("schedule.calendar", "Calendar"),
+            R("schedule.previous", "Previous week"), R("schedule.current", "Current week"), R("schedule.next", "Next week"),
+            R("schedule.week", "Days {0} to {1}", "LL"),
+            R("schedule.day", "Day {0}", "L"), R("schedule.today", "Day {0} (today)", "L"),
+            R("schedule.fixture", "{0} | {1} ({2}) | {3}", "SSSS"),
+            R("schedule.free", "{0} | No club fixture", "S"),
+            R("schedule.empty", "No fixtures are scheduled for your club this season."),
+            R("schedule.played", "Played"), R("schedule.matchday", "Matchday"), R("schedule.upcoming", "Upcoming"),
             // §5-P8 Transfers / Club Finances (ux-s2-transfers-finances.md §3–§4). Money slots are L (non-negative
             // long) end to end: #31 accepts any non-negative wage, so an amount above int.MaxValue is legal data and
             // must format, never throw (H1).
@@ -137,6 +146,86 @@ namespace TacticalDirector.ClientApp
             s.AppendLine().Append(home.HasNextFixture ? Text.Format("next", "next", home.NextOpponentName,
                 Label(home.NextFixtureIsHome ? "home.venue" : "away.venue"), checked((int)home.NextFixtureDay), home.DaysUntilNextMatchday) : Label("complete"));
             return s.ToString();
+        }
+
+        /// <summary>The managed club's chronological schedule, with opponent, venue and fixture status.</summary>
+        public string FixtureList(in CareerHomeViewModel home)
+        {
+            if (!home.HasCareer)
+            {
+                return "";
+            }
+
+            if (home.Fixtures.Count == 0)
+            {
+                return Label("schedule.empty");
+            }
+
+            var text = new StringBuilder();
+            for (int i = 0; i < home.Fixtures.Count; i++)
+            {
+                CareerFixtureView fixture = home.Fixtures[i];
+                string cell = "schedule.list." + i;
+                if (i > 0)
+                {
+                    text.AppendLine();
+                }
+                text.Append(FixtureLine(cell, ScheduleDay(cell, fixture.WorldDay, home.WorldDay),
+                    in fixture, home.WorldDay));
+            }
+
+            return text.ToString();
+        }
+
+        /// <summary>One calendar week with all club fixtures and dates without a club fixture.</summary>
+        public string Calendar(in CareerHomeViewModel home, in CareerCalendarWeek week)
+        {
+            if (!home.HasCareer)
+            {
+                return "";
+            }
+
+            var text = new StringBuilder(Text.Format("schedule.week", "schedule.week", (long)week.FirstDay, (long)week.LastDay));
+            int fixtureIndex = 0;
+            while (fixtureIndex < home.Fixtures.Count && home.Fixtures[fixtureIndex].WorldDay < week.FirstDay)
+            {
+                fixtureIndex++;
+            }
+
+            for (uint day = week.FirstDay; ; day++)
+            {
+                string cell = "schedule.calendar." + (day - week.FirstDay);
+                string label = ScheduleDay(cell, day, home.WorldDay);
+                int firstFixture = fixtureIndex;
+                while (fixtureIndex < home.Fixtures.Count && home.Fixtures[fixtureIndex].WorldDay == day)
+                {
+                    CareerFixtureView fixture = home.Fixtures[fixtureIndex++];
+                    text.AppendLine().Append(FixtureLine(cell + "." + (fixtureIndex - firstFixture), label, in fixture, home.WorldDay));
+                }
+
+                if (firstFixture == fixtureIndex)
+                {
+                    text.AppendLine().Append(Text.Format(cell, "schedule.free", label));
+                }
+
+                if (day == week.LastDay)
+                {
+                    break;
+                }
+            }
+
+            return text.ToString();
+        }
+
+        private string ScheduleDay(string cell, uint day, uint currentDay) =>
+            Text.Format(cell + ".day", day == currentDay ? "schedule.today" : "schedule.day", (long)day);
+
+        private string FixtureLine(string cell, string day, in CareerFixtureView fixture, uint currentDay)
+        {
+            string venue = Label(fixture.IsHome ? "home.venue" : "away.venue");
+            string status = Label(fixture.IsPlayed ? "schedule.played" :
+                fixture.WorldDay == currentDay ? "schedule.matchday" : "schedule.upcoming");
+            return Text.Format(cell, "schedule.fixture", day, fixture.OpponentName, venue, status);
         }
         /// <summary>Window line for the Transfers header (§5-P8).</summary>
         public string Window(in TransferMarketViewModel market) => market.IsWindowOpen
@@ -289,4 +378,5 @@ namespace TacticalDirector.ClientApp
 // | 1.4 | 2026-11-05 | — | M2: transfer.issue.* roles + Issue(). M3: Result(in TransferResult, in market). M8: SquadDepleted copy names the complete starting eleven. L5: wage-bill line gated on IsWageBillTracked (finance.wagebill.tracked role). |
 // | 1.5 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.6 | 2026-11-05 | — | T6: clamp displayed headroom and format full uint window close day. |
+// | 1.7 | 2026-11-19 | — | Localize schedule rows, fixture status and calendar week navigation. |
 #endregion
