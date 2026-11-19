@@ -1,6 +1,10 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 19, 2026 — (v2.250) **Career branch merges main `a78a9a7a`.** Both sides' manifest entries kept, newest first; the branch's v2.244–v2.246 labels duplicate main's and are branch-local records. **Modified by the merge resolution:** `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md`, this manifest and `tools/tests/test_evidence_manifests.py` (50 registered directories). No path added or removed by the merge itself.
+**Last Updated:** November 19, 2026 — (v2.251) **Career schedule integrates PR #550.** Preserves the startup and shutdown records and inventories the schedule controls, snapshot tests and UX acceptance criteria.
+
+**Last Updated (prior):** November 19, 2026 — (v2.247, branch-local career schedule) **C3 Career Home schedule.** Adds `src/client-app/CareerFixtureView.cs` and `CareerCalendarWeek.cs` with Unity metas. Updates `CareerHomeSource.cs`, `CareerHomeViewModel.cs`, `CareerScreenText.cs`, their career tests, `src/match-client-unity/S0ScreensBehaviour.Career.cs`, `CHANGELOG-src.md`, the source version pointer in `CHANGELOG.md`, the C3 roadmap row and this manifest.
+
+**Last Updated (prior):** November 19, 2026 — (v2.250) **Career branch merges main `a78a9a7a`.** Both sides' manifest entries kept, newest first; the branch's v2.244–v2.246 labels duplicate main's and are branch-local records. **Modified by the merge resolution:** `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md`, this manifest and `tools/tests/test_evidence_manifests.py` (50 registered directories). No path added or removed by the merge itself.
 
 **Last Updated (prior):** November 19, 2026 — (v2.249) **Pinned-host career shutdown and startup run at `cd3c7b99`.** **New evidence directory** `docs/tracking/evidence/host-cd3c7b99-20261119/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `career-probe-driver.cs.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`, `editor-play-transcript.txt`, `player-transcript.txt`, `save-hashes.txt`, `source-identity.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` (46 registered directories), `docs/tracking/career-shutdown-cancellation-design.md` v0.4 → v0.5, `docs/tracking/open-issues.md`, `docs/agent-guides/project-reference.md` (51 / 76), `docs/tracking/CHANGELOG.md` and this manifest. No `src/` change, no assembly added, no removals.
 
@@ -3905,7 +3909,7 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 
 | File | Purpose |
 |------|---------|
-| `S0ScreensBehaviour.Career.cs` / `.meta` | Opt-in career UGUI bindings over cached worker snapshots, sharing S0 focus/layout |
+| `S0ScreensBehaviour.Career.cs` / `.meta` | Opt-in career UGUI bindings over cached worker snapshots, including the fixture list and weekly calendar |
 | `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine in the landed #470 foundation |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
 | `ClientShellBehaviour.cs` | LANDED #470 at f276f700; foundation v1.3, host-fact/visibility/event binding with inactive-ancestor refusal; Main Menu ↔ Tactics Setup only; pinned compile 0 errors and ClientApp.Tests 26/26 recorded; full lifecycle/screens remain due |
@@ -3957,7 +3961,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, per-slot/table formatting and cached output |
+| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, including save slots, the table, fixtures and calendar |
 | `tests/CareerScreenTextTests.cs` / `.meta` | Catalogue isolation, translated slot composition, row cache retention and real Home/result display |
 | `ClientCareerCoordinator.cs` | P7b worker-owned career operations, cached immutable UI views, guarded completion/navigation and shutdown |
 | `ClientCareerCoordinator.cs.meta` | Stable Unity identity for the career coordinator |
@@ -4016,10 +4020,12 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
-| `CareerHomeViewModel.cs` | Career Home projection (§7.5: changed / attention / next / progress + table) |
+| `CareerHomeViewModel.cs` | Career Home snapshot with club context, league table, dated fixtures and round calendar |
 | `CareerHomeViewModel.cs.meta` | Stable Unity asset identity |
 | `CareerHomeSource.cs` | Revision-cached Career Home source |
 | `CareerHomeSource.cs.meta` | Stable Unity asset identity |
+| `CareerFixtureView.cs` / `.meta` | Immutable opponent, world day, venue and played state for one club fixture |
+| `CareerCalendarWeek.cs` / `.meta` | Seven-day world-calendar paging bounded by the current season and current week |
 | `NewCareerViewModel.cs` | New Career projection (generated clubs + selection) |
 | `NewCareerViewModel.cs.meta` | Stable Unity asset identity |
 | `NewCareerSetup.cs` | New Career source + Prepare/Select/Start (C4) |
@@ -4372,7 +4378,7 @@ spec — where one and a spec under `docs/specs/` disagree, the spec wins.
 | `docs/tracking/p5b-lifecycle-validation.md` | v0.5 implementation/evidence record; pinned-host validation (compile, EditMode, certified full-match outcome, Play-mode lifecycle) passed October 7, 2026 |
 | `docs/tracking/p5b-lifecycle-identity-plan.md` | v0.2 source-audited consumed implementation plan at f276f700: lifecycle, authored/frame identity, analytics, renderer Attach/detach, explicit report acknowledgement, teardown and pre-merge evidence; implementation pending |
 | `docs/tracking/localization-l2-plan.md` | v0.8 L2 implementation/evidence record: Q1–Q4 selected, seven source/two test files, ERR-049-005/006 resolved together; merged via #487, pinned Unity compile + Localization EditMode 67/67 passed post-merge on main `93de60f6` (October 9, 2026) |
-| `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.37: November 5 S2 transfer/finance status refreshed (LIVE host-free / HOST-UNVERIFIED); prior v1.36: November 4 owner scope keeps all eight S1 tasks on Home readiness/round/result/save flow; interactive career play is deferred until staff. Prior v1.35: S0 Gate J passed and accepted by the owner October 30, 2026 (J-05 landed through PR #520). v1.34: S0 Gate-J fixes J-01/J-02/J-04 landed October 22, CONDITIONAL PASS. v1.33: S0 Gate-J technical review FAIL October 19 (J-01/J-02; owner items J-04/J-05). Earlier (v1.32): P5b screens merged to main (#489, `1c8366d`); next step is the pinned-host run against main; v1.31: complete P5b screen candidate; next pinned-host validation after the consumed lifecycle/identity implementation planned, L2-dependent screens and Gate J remain due |
+| `docs/design/ux-detailed-plan.md` | Detailed UX execution plan v1.38, including Career Home schedule keyboard and text-scale acceptance. November 5 S2 transfer/finance status refreshed (LIVE host-free / HOST-UNVERIFIED); prior v1.36: November 4 owner scope keeps all eight S1 tasks on Home readiness/round/result/save flow; interactive career play is deferred until staff. Prior v1.35: S0 Gate J passed and accepted by the owner October 30, 2026 (J-05 landed through PR #520). v1.34: S0 Gate-J fixes J-01/J-02/J-04 landed October 22, CONDITIONAL PASS. v1.33: S0 Gate-J technical review FAIL October 19 (J-01/J-02; owner items J-04/J-05). Earlier (v1.32): P5b screens merged to main (#489, `1c8366d`); next step is the pinned-host run against main; v1.31: complete P5b screen candidate; next pinned-host validation after the consumed lifecycle/identity implementation planned, L2-dependent screens and Gate J remain due |
 | `docs/design/ux-baseline-evidence.md` | F1 output — baseline capability/evidence pack against the tree (v0.3, Sep 6, 2026) |
 | `docs/design/ux-experience-architecture.md` | F2 output — current vs. target experience architecture, held separate (v0.1, Sep 6, 2026) |
 | `docs/design/ux-shared-system.md` | F3 output — the shared S0/S1 interaction system (v0.4, Sep 11, 2026; v0.4 removes the stale moving-phase claim and delegates current status to the execution authority); explicitly not a component library and not a runtime API, and its 1366/1920×1080/2560 cases are validation cases, not platform-support promises |
@@ -4860,6 +4866,8 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
+| 2.251 | 2026-11-19 | — | Reconcile Career Home schedule files with PR #550 and record schedule UX acceptance criteria. |
+| 2.247 (branch-local career schedule) | 2026-11-19 | — | Inventory the C3 fixture and calendar types and their existing Career Home bindings. |
 | 2.246 | 2026-11-18 | — | #440 A′: characterization and pinned-host Unity evidence folders. |
 | 2.245 | 2026-11-18 | — | A′ / ERR-014-011: one new test file; #14 §3.6.5.8 spec, code and trackers. |
 | 2.244 | 2026-11-18 | — | #440 D1 recorded (`w-440-ball-loose-design.md` v1.6, `tackle-duel-design.md` v0.7); PR #544 merges main. Documentation and merge only. |

@@ -1,6 +1,8 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-18
+// Modified: 2026-11-19
+// Modified (prior): 2026-11-18
+// Modified (prior): 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
 // Purpose:  Career UGUI adapter over cached coordinator snapshots; no worker or domain-state reads.
@@ -34,6 +36,14 @@ namespace TacticalDirector.MatchClientUnity
         private ScreenId _careerLastScreen;
         private Selectable _careerFocusReturn;
         private string _careerUiError;
+        private RectTransform _careerSchedule, _careerWeekControls;
+        private Button _careerScheduleToggle, _careerFixtures, _careerCalendar;
+        private Button _careerPreviousWeek, _careerCurrentWeek, _careerNextWeek;
+        private Text _careerScheduleText;
+        private bool _isCareerScheduleOpen, _isCareerCalendarSelected;
+        private int _careerScheduleSeason = -1;
+        private uint? _careerCalendarDay;
+        private CareerCalendarWeek _careerWeek;
 
         private string C(string role) => _careerText.Label(role);
         private Button CareerControl(Transform parent, string text, Action action, ScrollRect scroll,
@@ -85,6 +95,7 @@ namespace TacticalDirector.MatchClientUnity
             _careerNotices.Add(_ui.Reason(h, true));
             _careerSummary = _ui.Label(h, "");
             _careerProgress = CareerControl(h, "", career.Progress, _careerHomeScroll);
+            BuildCareerSchedule(h);
             _ui.Label(h, C("warning"));
             for (int i = 1; i <= ClientAppConstants.CAREER_MANUAL_SLOT_COUNT; i++)
             {
@@ -94,6 +105,77 @@ namespace TacticalDirector.MatchClientUnity
             CareerControl(h, C("quit"), career.QuitToMainMenu, _careerHomeScroll);
             _ui.Label(h, C("table"), S0UiFactory.TextStyle.Subheading);
             _careerTable = _ui.Label(h, "");
+        }
+
+        private void BuildCareerSchedule(RectTransform home)
+        {
+            _careerScheduleToggle = CareerControl(home, C("schedule"),
+                () => _isCareerScheduleOpen = !_isCareerScheduleOpen, _careerHomeScroll);
+            _careerSchedule = _ui.Panel("Career schedule", home);
+            _careerFixtures = CareerControl(_careerSchedule, C("schedule.list"),
+                () => _isCareerCalendarSelected = false, _careerHomeScroll);
+            _careerCalendar = CareerControl(_careerSchedule, C("schedule.calendar"),
+                () => _isCareerCalendarSelected = true, _careerHomeScroll);
+            _careerWeekControls = _ui.Column("Calendar navigation", _careerSchedule, 0);
+            _careerPreviousWeek = CareerControl(_careerWeekControls, C("schedule.previous"),
+                () => _careerCalendarDay = _careerWeek.PreviousWeek, _careerHomeScroll);
+            _careerCurrentWeek = CareerControl(_careerWeekControls, C("schedule.current"),
+                () => _careerCalendarDay = null, _careerHomeScroll);
+            _careerNextWeek = CareerControl(_careerWeekControls, C("schedule.next"),
+                () => _careerCalendarDay = _careerWeek.NextWeek, _careerHomeScroll);
+            _careerScheduleText = _ui.Label(_careerSchedule, "");
+            _careerSchedule.gameObject.SetActive(false);
+        }
+
+        private void RefreshCareerSchedule(ScreenId screen, in CareerHomeViewModel home)
+        {
+            if (!home.HasCareer)
+            {
+                _isCareerScheduleOpen = false;
+                _isCareerCalendarSelected = false;
+                _careerScheduleSeason = -1;
+            }
+
+            bool showSchedule = screen == ClientScreens.CareerHome && home.HasCareer && _isCareerScheduleOpen;
+            _careerScheduleToggle.interactable = home.HasCareer && _career.IsInitialized && !_career.IsBusy;
+            _ui.SetSelected(_careerScheduleToggle, _isCareerScheduleOpen);
+            _careerSchedule.gameObject.SetActive(showSchedule);
+            if (!showSchedule)
+            {
+                return;
+            }
+
+            if (home.SeasonNumber != _careerScheduleSeason)
+            {
+                _careerScheduleSeason = home.SeasonNumber;
+                _careerCalendarDay = null;
+            }
+
+            _ui.SetSelected(_careerFixtures, !_isCareerCalendarSelected);
+            _ui.SetSelected(_careerCalendar, _isCareerCalendarSelected);
+            _careerWeekControls.gameObject.SetActive(_isCareerCalendarSelected);
+            if (_isCareerCalendarSelected)
+            {
+                _careerWeek = CareerCalendarWeek.At(in home, _careerCalendarDay ?? home.WorldDay);
+                bool canBrowse = _career.IsInitialized && !_career.IsBusy;
+                bool hasPreviousWeek = _careerWeek.PreviousWeek != _careerWeek.FirstDay;
+                bool hasNextWeek = _careerWeek.NextWeek != _careerWeek.FirstDay;
+                GameObject selected = EventSystem.current?.currentSelectedGameObject;
+                _careerPreviousWeek.interactable = canBrowse && hasPreviousWeek;
+                _careerNextWeek.interactable = canBrowse && hasNextWeek;
+                S0UiFactory.Set(_careerScheduleText, _careerText.Calendar(in home, in _careerWeek));
+
+                // Keep focus in the calendar when paging disables the selected button.
+                if (canBrowse && ((!hasPreviousWeek && selected == _careerPreviousWeek.gameObject) ||
+                                  (!hasNextWeek && selected == _careerNextWeek.gameObject)))
+                {
+                    Focus(_careerCurrentWeek);
+                }
+            }
+            else
+            {
+                S0UiFactory.Set(_careerScheduleText, _careerText.FixtureList(in home));
+            }
         }
 
         private Selectable CareerHeading(ScreenId screen) => screen == ClientScreens.CareerHome ? _careerHomeHeading :
@@ -118,6 +200,7 @@ namespace TacticalDirector.MatchClientUnity
             _ui.SetButton(_careerProgress, _careerText.Progress(home.NextAction));
             S0UiFactory.Set(_careerSummary, _careerText.Summary(in home));
             S0UiFactory.Set(_careerTable, _careerText.Table(in home));
+            RefreshCareerSchedule(screen, in home);
             NewCareerViewModel preview = _career.NewCareer;
             int clubs = preview.Clubs == null ? 0 : preview.Clubs.Count;
             while (_careerClubButtons.Count < clubs)
@@ -174,4 +257,6 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.3 | 2026-11-05 | — | AR-3 M1: display labels use the same admitted CareerScreenText instance as coordinator failure copy. |
 // | 1.4 | 2026-11-18 | — | Keep career feedback and recovery controls near the heading and hide unpopulated slot rows. |
 // | 1.5 | 2026-11-18 | — | Follow the club list with Start, retain the pending Retry control and restore focus after same-screen work. |
+// | 1.6 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
+// | 1.7 | 2026-11-19 | — | Keep keyboard focus in the calendar at the first and last week. |
 #endregion

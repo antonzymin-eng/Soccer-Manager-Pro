@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerHomeViewModel.cs
 // Created:  2026-10-18
-// Modified: 2026-11-03
+// Modified: 2026-11-19
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (Career Home), ux-detailed-plan.md
 //           §7.5 (information hierarchy), ux-experience-architecture.md §5–§7, Season & Competition
@@ -8,6 +8,7 @@
 // Purpose:  The immutable Career Home projection: what changed, what needs attention, what is next,
 //           and how to progress — every field read from a LIVE #30/#41 surface, nothing synthesized.
 
+using System;
 using System.Collections.ObjectModel;
 
 using TacticalDirector.SeasonSave;
@@ -63,7 +64,7 @@ namespace TacticalDirector.ClientApp
         /// <summary>Managed-club players currently injured (#41 <c>IsAvailable</c> false).</summary>
         public readonly int InjuredPlayerCount;
 
-        /// <summary>True when the season has an unplayed round for the managed club.</summary>
+        /// <summary>True when the next league round has an unplayed fixture for the managed club.</summary>
         public readonly bool HasNextFixture;
 
         /// <summary>The next opponent's club id (valid when <see cref="HasNextFixture"/>).</summary>
@@ -105,7 +106,15 @@ namespace TacticalDirector.ClientApp
         /// <summary>Display names parallel to <see cref="Table"/> (row i's club name).</summary>
         public readonly ReadOnlyCollection<string> TableClubNames;
 
+        /// <summary>The managed club's dated fixtures in chronological order.</summary>
+        public readonly ReadOnlyCollection<CareerFixtureView> Fixtures;
+
+        /// <summary>The season's world-day schedule, including league rounds when the managed club has a bye.</summary>
+        public readonly SeasonCalendar Calendar;
+
         /// <summary>Constructs a populated view model.</summary>
+        /// <exception cref="ArgumentNullException"><paramref name="fixtures"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="calendar"/> has no rounds.</exception>
         public CareerHomeViewModel(
             int managedClubId,
             string managedClubName,
@@ -132,8 +141,17 @@ namespace TacticalDirector.ClientApp
             string lastResultOpponentName,
             string autosaveError,
             ReadOnlyCollection<LeagueTableRow> table,
-            ReadOnlyCollection<string> tableClubNames)
+            ReadOnlyCollection<string> tableClubNames,
+            ReadOnlyCollection<CareerFixtureView> fixtures,
+            SeasonCalendar calendar)
         {
+            Fixtures = fixtures ?? throw new ArgumentNullException(nameof(fixtures));
+            if (calendar.RoundCount == 0)
+            {
+                throw new ArgumentException("A career schedule requires a round calendar.", nameof(calendar));
+            }
+
+            Calendar = calendar;
             HasCareer = true;
             ManagedClubId = managedClubId;
             ManagedClubName = managedClubName ?? string.Empty;
@@ -172,7 +190,7 @@ namespace TacticalDirector.ClientApp
                 HasNextFixture, NextOpponentId, NextOpponentName, NextFixtureIsHome,
                 NextFixtureRoundIndex, NextFixtureDay, DaysUntilNextMatchday, NextAction,
                 blocked, LastChange, LastResultOpponentName, AutosaveError,
-                Table, TableClubNames);
+                Table, TableClubNames, Fixtures, Calendar);
 
         /// <summary>True once every round is played (the boundary roll is next).</summary>
         public bool IsSeasonComplete => HasCareer && RoundsPlayed >= RoundCount;
@@ -183,4 +201,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): the Career Home projection.          |
 // | 1.1     | 2026-11-03 | —      | Copy cached Home with the UI operation-blocked flag.           |
+// | 1.2     | 2026-11-19 | —      | Require the fixture list and calendar on every active snapshot. |
 #endregion

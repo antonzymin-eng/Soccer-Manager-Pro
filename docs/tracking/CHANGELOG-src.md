@@ -14,7 +14,11 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 19, 2026 — (v2.239 — **Career branch `feat/c3-c4-career-shell` merges main `a78a9a7a` (PR #544, PR #549 A′ / `ERR-014-011`).** No `src` conflict: main's `match-engine` / `defensive-ai` files and the branch's `client-app` / `season-save` / `match-client-unity` files are disjoint. The branch's v2.235–v2.236 labels duplicate main's and are branch-local career records. No behaviour change from the merge; pinned Unity compile of the merged tree not yet recorded.)
+> **Last Updated:** November 19, 2026 — **v2.240 — Career Home schedule integrated with PR #550.** Schedule, view selection and week navigation use the shared career controls and busy focus handling. The coordinator tests cover scheduled fixtures alongside cooperative shutdown.
+
+> **Last Updated (prior):** November 19, 2026 (UTC) — **v2.237 (branch-local career schedule) — Career Home schedule (C3).** `CareerHomeSource` projects the managed club’s saved fixtures with opponent, venue, world day and played status. `CareerHomeViewModel` requires fixtures and a calendar and carries them across the existing coordinator’s busy snapshot. The opt-in Unity career binding uses the coordinator’s `CareerScreenText` for the fixture list and seven-day world calendar. Added tests cover the saved schedule, worker publication and localized matchday status. Pinned Unity validation is pending.
+
+> **Last Updated (prior):** November 19, 2026 — (v2.239 — **Career branch `feat/c3-c4-career-shell` merges main `a78a9a7a` (PR #544, PR #549 A′ / `ERR-014-011`).** No `src` conflict: main's `match-engine` / `defensive-ai` files and the branch's `client-app` / `season-save` / `match-client-unity` files are disjoint. The branch's v2.235–v2.236 labels duplicate main's and are branch-local career records. No behaviour change from the merge; pinned Unity compile of the merged tree not yet recorded.)
 
 > **Last Updated (prior):** November 18, 2026 — (v2.238 — **Career shutdown review follow-up and full Linux gate.** Review commit `b412780c` catalogs the 64-tick interval, verifies shutdown reaches the admitted-writer wait, and restores completion error handling. The review working tree passed `TD_APPROVAL_BASE_REF=origin/main bash tools/run-tests-local.sh --pr` across all 37 suites with **4,778 passed, 0 failed, and 227 skipped**. The only subsequent source edit moved the constant into the catalogue's EST region. The configured coverage fallback disabled instrumentation because the 22-assembly scope exceeded the limit of eight. Pinned Unity 6000.4.9f1 checks and owner sign-off on FR-SN-012 remain open.)
 
@@ -2949,6 +2953,8 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.240 | 2026-11-19 | — | Integrate Career Home schedule controls and snapshot tests with PR #550. |
+| 2.237 (branch-local career schedule) | 2026-11-19 | — | C3 Career Home schedule from the saved-season projection, with fixture list and weekly calendar in the opt-in Unity view. |
 | 2.239 | 2026-11-19 | — | Merge main `a78a9a7a` into the career branch: no `src` conflict; the branch's duplicate v2.235–v2.236 labels are branch-local career records. No behaviour change from the merge. |
 | 2.238 | 2026-11-18 | — | Record the shutdown review fixes and full Linux PR gate result, including the coverage fallback. |
 | 2.237 | 2026-11-18 | — | Cooperative round cancellation and career save admission. Add Linux race and replay tests and pinned-host timing markers. |

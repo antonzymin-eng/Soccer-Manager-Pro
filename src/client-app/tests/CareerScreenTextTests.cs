@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreenTextTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-04
+// Modified: 2026-11-19
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; Localization #49; Code Standards #20
 // Purpose:  Validate career display semantics and shared formatter isolation/admission.
@@ -104,10 +104,44 @@ namespace TacticalDirector.ClientApp.Tests
             StringAssert.Contains("Last result:", text.Summary(home));
             Assert.AreEqual("Resolve matchday (on Career Home)", text.Progress(CareerProgressAction.PlayMatchday));
         }
+
+        /// <summary>Both schedule views format fixture data through the same authored locale.</summary>
+        [Test]
+        public void ScheduleViewsUseLocalizedRowsAndRefreshFixtureStatus()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            holder.Set(session);
+            var source = new CareerHomeSource(holder);
+            var text = new CareerScreenText(new[]
+            {
+                new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.schedule.fixture"), "{1} ({2}) / {3} / {0}"),
+                new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.schedule.upcoming"), "[Upcoming]")
+            }, new LocaleId("qps-ploc"));
+
+            CareerHomeViewModel home = source.Project();
+            CareerFixtureView fixture = home.Fixtures[0];
+            CareerCalendarWeek week = CareerCalendarWeek.At(in home, fixture.WorldDay);
+            string expected = fixture.OpponentName + " (" + (fixture.IsHome ? "home" : "away") +
+                ") / [Upcoming] / Day " + fixture.WorldDay;
+            StringAssert.Contains(expected, text.FixtureList(home));
+            StringAssert.Contains(expected, text.Calendar(home, week));
+            StringAssert.Contains("No club fixture", text.Calendar(home, week));
+
+            CareerTestSupport.ProgressUntil(session, CareerProgressAction.PlayMatchday);
+            home = source.Project();
+            StringAssert.Contains("Matchday / Day " + fixture.WorldDay + " (today)", text.Calendar(home, week));
+            session.Progress();
+            home = source.Project();
+            StringAssert.Contains("Played / Day " + fixture.WorldDay, text.FixtureList(home));
+            StringAssert.Contains("Played / Day " + fixture.WorldDay, text.Calendar(home, week));
+        }
     }
 }
 #region VersionHistory
 // | Version | Date | Author | Notes |
 // | 1.0 | 2026-11-03 | — | Career copy isolation, pseudo-locale schemas, save states and real Home/result text. |
 // | 1.1 | 2026-11-04 | — | Cover translated slot composition, per-row caching and neutral/release-checkpoint copy. |
+// | 1.2 | 2026-11-19 | — | Cover localized list and calendar rows and their matchday and played states. |
 #endregion
