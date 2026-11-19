@@ -1,0 +1,230 @@
+2026-11-19T23:21:31.3836510Z frame=30 boot window=1902210 screen=1280x720
+2026-11-19T23:21:31.3982922Z frame=31 click 'New career'
+2026-11-19T23:21:31.4402784Z frame=42 click 'Select Thorncliff United'
+2026-11-19T23:21:31.4595529Z frame=48 click 'Start career'
+2026-11-19T23:21:31.6995181Z frame=162 CAREER HOME focus='Career home'
+2026-11-19T23:21:31.7192883Z frame=162 screenshot 01-career-home.bmp 1280x720
+2026-11-19T23:21:31.7339086Z frame=168 key#1 Tab -> focus 'Advance one day' [inView, ring] rows=none
+2026-11-19T23:21:31.7463465Z frame=174 key#2 Tab -> focus 'Schedule' [inView, ring] rows=none
+2026-11-19T23:21:31.7643105Z frame=180 key#3 Enter -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.7792005Z frame=190 SCHEDULE after opening (default view):
+Fixtures 1 to 8 of 38
+Day 7 | Eastvale Athletic (home) | Upcoming
+Day 14 | Carrowmore City (away) | Upcoming
+Day 21 | Quarrywood Town (home) | Upcoming
+Day 28 | Northgate United (away) | Upcoming
+Day 35 | Juniper Park FC (home) | Upcoming
+Day 42 | Kesgrave Rovers (away) | Upcoming
+Day 49 | Redmarsh Rovers (home) | Upcoming
+Day 56 | Granton Wanderers (home) | Upcoming
+--- end
+2026-11-19T23:21:31.7893144Z frame=196 key#4 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8086002Z frame=196 screenshot 02-list-focus-fixtures.bmp 1280x720
+2026-11-19T23:21:31.8195422Z frame=202 key#5 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8308242Z frame=208 key#6 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8442563Z frame=214 key#7 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8569687Z frame=220 key#8 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8705683Z frame=226 key#9 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8835669Z frame=232 key#10 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.8970206Z frame=238 key#11 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9113314Z frame=244 key#12 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9212313Z frame=250 key#13 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9326161Z frame=256 key#14 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9449912Z frame=262 key#15 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9553325Z frame=268 key#16 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9670951Z frame=274 key#17 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:31.9686178Z frame=274 PAGE 1 'Fixtures 1 to 8 of 38
+': rows fully visible at some stop in the Tab cycle 9 of 9
+2026-11-19T23:21:31.9804350Z frame=280 key#18 Enter -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0108721Z frame=297 key#19 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0216830Z frame=303 key#20 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0346168Z frame=309 key#21 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0485539Z frame=315 key#22 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0613876Z frame=321 key#23 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0725670Z frame=327 key#24 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0831757Z frame=333 key#25 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.0947655Z frame=339 key#26 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1045442Z frame=345 key#27 Tab -> focus 'Earlier fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1159165Z frame=351 key#28 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1288832Z frame=357 key#29 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1298870Z frame=357 PAGE 2 'Fixtures 9 to 16 of 38
+': rows fully visible at some stop in the Tab cycle 9 of 9
+2026-11-19T23:21:32.1461021Z frame=357 screenshot 03-list-page2-focus-later.bmp 1280x720
+2026-11-19T23:21:32.1580871Z frame=363 key#30 Enter -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1848646Z frame=380 key#31 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.1973538Z frame=386 key#32 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2115857Z frame=392 key#33 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2230154Z frame=398 key#34 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2382912Z frame=404 key#35 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2501984Z frame=410 key#36 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2625292Z frame=416 key#37 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2726937Z frame=422 key#38 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2843445Z frame=428 key#39 Tab -> focus 'Earlier fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.2968933Z frame=434 key#40 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3072276Z frame=440 key#41 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3082340Z frame=440 PAGE 3 'Fixtures 17 to 24 of 38
+': rows fully visible at some stop in the Tab cycle 9 of 9
+2026-11-19T23:21:32.3194387Z frame=446 key#42 Enter -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3483486Z frame=463 key#43 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3617168Z frame=469 key#44 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3776543Z frame=475 key#45 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.3911957Z frame=481 key#46 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4055541Z frame=487 key#47 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4157058Z frame=493 key#48 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4277025Z frame=499 key#49 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4389725Z frame=505 key#50 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4495971Z frame=511 key#51 Tab -> focus 'Earlier fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4603282Z frame=517 key#52 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4722650Z frame=523 key#53 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.4722650Z frame=523 PAGE 4 'Fixtures 25 to 32 of 38
+': rows fully visible at some stop in the Tab cycle 9 of 9
+2026-11-19T23:21:32.4887344Z frame=529 key#54 Enter -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5163882Z frame=546 key#55 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5282461Z frame=552 key#56 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5382233Z frame=558 key#57 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5517295Z frame=564 key#58 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5670127Z frame=570 key#59 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5785806Z frame=576 key#60 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5884509Z frame=582 key#61 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.5995716Z frame=588 key#62 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.6126034Z frame=594 key#63 Tab -> focus 'Earlier fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.6234282Z frame=600 key#64 Tab -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7] clipped=[] of 7 renderedLines=7 wrappedRows=0
+2026-11-19T23:21:32.6244273Z frame=600 PAGE 5 'Fixtures 33 to 38 of 38
+': rows fully visible at some stop in the Tab cycle 7 of 7
+2026-11-19T23:21:32.6264528Z frame=600 LIST PAGING pages=5 incompletePages=0 lastPageFocus='Upcoming fixtures' laterInteractable=False
+2026-11-19T23:21:32.6279288Z frame=600 SCHEDULE list, last page:
+Fixtures 33 to 38 of 38
+Day 231 | Dunhaven United (away) | Upcoming
+Day 238 | Pendleton City (home) | Upcoming
+Day 245 | Marlow Heath (away) | Upcoming
+Day 252 | Oakenfield FC (home) | Upcoming
+Day 259 | Stanbury Athletic (home) | Upcoming
+Day 266 | Langmere Athletic (away) | Upcoming
+--- end
+2026-11-19T23:21:32.6441703Z frame=600 screenshot 03b-list-last-page.bmp 1280x720
+2026-11-19T23:21:32.6615772Z frame=607 key#65 Enter -> focus 'Upcoming fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.6774012Z frame=617 SCHEDULE list, back to upcoming page:
+Fixtures 1 to 8 of 38
+Day 7 | Eastvale Athletic (home) | Upcoming
+Day 14 | Carrowmore City (away) | Upcoming
+Day 21 | Quarrywood Town (home) | Upcoming
+Day 28 | Northgate United (away) | Upcoming
+Day 35 | Juniper Park FC (home) | Upcoming
+Day 42 | Kesgrave Rovers (away) | Upcoming
+Day 49 | Redmarsh Rovers (home) | Upcoming
+Day 56 | Granton Wanderers (home) | Upcoming
+--- end
+2026-11-19T23:21:32.6789129Z frame=617 back on upcoming page: Earlier fixtures interactable=False
+2026-11-19T23:21:32.6896445Z frame=623 key#66 Tab -> focus 'Later fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7019860Z frame=629 key#67 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7174267Z frame=635 key#68 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7374145Z frame=641 key#69 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7529121Z frame=647 key#70 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7669795Z frame=653 key#71 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7807095Z frame=659 key#72 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.7914319Z frame=665 key#73 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.8025104Z frame=671 key#74 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8,9] clipped=[] of 9 renderedLines=9 wrappedRows=0
+2026-11-19T23:21:32.8188620Z frame=677 key#75 Enter -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.8338053Z frame=687 SCHEDULE calendar, current week:
+Days 0 to 6
+Day 0 (today) | No club fixture
+Day 1 | No club fixture
+Day 2 | No club fixture
+Day 3 | No club fixture
+Day 4 | No club fixture
+Day 5 | No club fixture
+Day 6 | No club fixture
+--- end
+2026-11-19T23:21:32.8502682Z frame=687 screenshot 04-calendar-current-week.bmp 1280x720
+2026-11-19T23:21:32.8623196Z frame=693 key#76 Tab -> focus 'Current week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.8720397Z frame=699 key#77 Tab -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.8854391Z frame=705 key#78 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.9134006Z frame=721 key#79 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.9285421Z frame=731 SCHEDULE calendar, two weeks ahead:
+Days 14 to 20
+Day 14 | Carrowmore City (away) | Upcoming
+Day 15 | No club fixture
+Day 16 | No club fixture
+Day 17 | No club fixture
+Day 18 | No club fixture
+Day 19 | No club fixture
+Day 20 | No club fixture
+--- end
+2026-11-19T23:21:32.9285421Z frame=731 after paging, focus on Next week: fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.9456460Z frame=731 screenshot 05-calendar-later-week-focus-next.bmp 1280x720
+2026-11-19T23:21:32.9551116Z frame=737 key#80 Tab -> focus 'Save to manual slot 1' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.9719405Z frame=737 screenshot 06-calendar-later-week-focus-after.bmp 1280x720
+2026-11-19T23:21:32.9824178Z frame=743 key#81 Tab -> focus 'Save to manual slot 2' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:32.9943205Z frame=749 key#82 Tab -> focus 'Save to manual slot 3' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0070331Z frame=755 key#83 Tab -> focus 'Return to Main Menu (without saving)' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0202971Z frame=761 key#84 Tab -> focus 'Advance one day' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0308960Z frame=767 key#85 Tab -> focus 'Schedule' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0437933Z frame=773 key#86 Tab -> focus 'Fixtures' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0448324Z frame=773 CALENDAR MODE week rows ever visible during the Tab cycle: 8 of 8
+2026-11-19T23:21:33.0552094Z frame=779 key#87 Tab -> focus 'Calendar' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0658318Z frame=785 key#88 Tab -> focus 'Previous week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0781293Z frame=791 key#89 Tab -> focus 'Current week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.0887779Z frame=797 key#90 Enter -> focus 'Current week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1044093Z frame=807 SCHEDULE calendar, back to current week:
+Days 0 to 6
+Day 0 (today) | No club fixture
+Day 1 | No club fixture
+Day 2 | No club fixture
+Day 3 | No club fixture
+Day 4 | No club fixture
+Day 5 | No club fixture
+Day 6 | No club fixture
+--- end
+2026-11-19T23:21:33.1053518Z frame=807 at current (first) week: Previous week interactable=False
+2026-11-19T23:21:33.1157668Z frame=813 key#91 Tab -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1282326Z frame=819 key#92 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1468828Z frame=829 key#93 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1636256Z frame=839 key#94 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1813631Z frame=849 key#95 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.1985569Z frame=859 key#96 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.2157624Z frame=869 key#97 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.2328560Z frame=879 key#98 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.2495761Z frame=889 key#99 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.2661603Z frame=899 key#100 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.2830150Z frame=909 key#101 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3015616Z frame=919 key#102 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3188349Z frame=929 key#103 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3375617Z frame=939 key#104 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3546590Z frame=949 key#105 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3722406Z frame=959 key#106 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.3911582Z frame=969 key#107 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4108745Z frame=979 key#108 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4287731Z frame=989 key#109 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4472853Z frame=999 key#110 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4645985Z frame=1009 key#111 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4818655Z frame=1019 key#112 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.4984052Z frame=1029 key#113 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.5159275Z frame=1039 key#114 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.5329082Z frame=1049 key#115 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.5486396Z frame=1059 key#116 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.5655144Z frame=1069 key#117 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.5833321Z frame=1079 key#118 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6005379Z frame=1089 key#119 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6193390Z frame=1099 key#120 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6356492Z frame=1109 key#121 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6530699Z frame=1119 key#122 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6699008Z frame=1129 key#123 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.6872575Z frame=1139 key#124 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7051508Z frame=1149 key#125 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7220823Z frame=1159 key#126 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7404074Z frame=1169 key#127 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7572348Z frame=1179 key#128 Enter -> focus 'Next week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7771606Z frame=1189 key#129 Enter -> focus 'Current week' [inView, ring] fullRows=[1,2,3,4,5,6,7,8] clipped=[] of 8 renderedLines=8 wrappedRows=0
+2026-11-19T23:21:33.7859039Z frame=1193 paged 38 weeks; Next week interactable=False; focus after the last page='Current week'
+2026-11-19T23:21:33.7874704Z frame=1193 SCHEDULE calendar, last week:
+Days 266 to 272
+Day 266 | Langmere Athletic (away) | Upcoming
+Day 267 | No club fixture
+Day 268 | No club fixture
+Day 269 | No club fixture
+Day 270 | No club fixture
+Day 271 | No club fixture
+Day 272 | No club fixture
+--- end
+2026-11-19T23:21:33.8109097Z frame=1193 screenshot 07-calendar-last-week.bmp 1280x720
+2026-11-19T23:21:33.8118740Z frame=1193 DONE keys=129

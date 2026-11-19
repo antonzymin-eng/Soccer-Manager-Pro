@@ -1,0 +1,11 @@
+# Clean batch-mode import of main ad8d4f80 (src identical to the #551 merge 62b60429) in a fresh sparse worktree (no Library).
+command: Unity.exe -batchmode -nographics -quit -projectPath <scratch>/wt-551
+start: 2026-11-19T22:03:49Z
+end/exit: exit=0 2026-11-19T22:05:04Z
+tundra: *** Tundra build success (29.50 seconds), 1150 items updated, 1203 evaluated
+error CS lines: 0
+TacticalDirector assemblies built: 75 (asmdefs under src: 75)
+warning CS (unique):
+  Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+  Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(172,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+  Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(180,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'

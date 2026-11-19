@@ -117,3 +117,4 @@ before the run, and were moved out afterwards.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | 2026-11-19 | Created: merged-main compile and EditMode, player close during save, steady-state allocations, throughput and result identity. |
+| 1.1 | 2026-11-19 | `editmode-results.xml.xz` re-exported as well-formed XML: the `<scratch>` path placeholder is now XML-escaped. Test content and counts are unchanged. |
