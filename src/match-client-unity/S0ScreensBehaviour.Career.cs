@@ -37,7 +37,8 @@ namespace TacticalDirector.MatchClientUnity
         private Selectable _careerFocusReturn;
         private string _careerUiError;
         private RectTransform _careerSchedule, _careerWeekControls;
-        private Button _careerScheduleToggle, _careerFixtures, _careerCalendar, _careerPreviousWeek, _careerNextWeek;
+        private Button _careerScheduleToggle, _careerFixtures, _careerCalendar;
+        private Button _careerPreviousWeek, _careerCurrentWeek, _careerNextWeek;
         private Text _careerScheduleText;
         private bool _isCareerScheduleOpen, _isCareerCalendarSelected;
         private int _careerScheduleSeason = -1;
@@ -118,7 +119,7 @@ namespace TacticalDirector.MatchClientUnity
             _careerWeekControls = _ui.Column("Calendar navigation", _careerSchedule, 0);
             _careerPreviousWeek = CareerControl(_careerWeekControls, C("schedule.previous"),
                 () => _careerCalendarDay = _careerWeek.PreviousWeek, _careerHomeScroll);
-            CareerControl(_careerWeekControls, C("schedule.current"),
+            _careerCurrentWeek = CareerControl(_careerWeekControls, C("schedule.current"),
                 () => _careerCalendarDay = null, _careerHomeScroll);
             _careerNextWeek = CareerControl(_careerWeekControls, C("schedule.next"),
                 () => _careerCalendarDay = _careerWeek.NextWeek, _careerHomeScroll);
@@ -157,9 +158,19 @@ namespace TacticalDirector.MatchClientUnity
             {
                 _careerWeek = CareerCalendarWeek.At(in home, _careerCalendarDay ?? home.WorldDay);
                 bool canBrowse = _career.IsInitialized && !_career.IsBusy;
-                _careerPreviousWeek.interactable = canBrowse && _careerWeek.PreviousWeek != _careerWeek.FirstDay;
-                _careerNextWeek.interactable = canBrowse && _careerWeek.NextWeek != _careerWeek.FirstDay;
+                bool hasPreviousWeek = _careerWeek.PreviousWeek != _careerWeek.FirstDay;
+                bool hasNextWeek = _careerWeek.NextWeek != _careerWeek.FirstDay;
+                GameObject selected = EventSystem.current?.currentSelectedGameObject;
+                _careerPreviousWeek.interactable = canBrowse && hasPreviousWeek;
+                _careerNextWeek.interactable = canBrowse && hasNextWeek;
                 S0UiFactory.Set(_careerScheduleText, _careerText.Calendar(in home, in _careerWeek));
+
+                // Keep focus in the calendar when paging disables the selected button.
+                if (canBrowse && ((!hasPreviousWeek && selected == _careerPreviousWeek.gameObject) ||
+                                  (!hasNextWeek && selected == _careerNextWeek.gameObject)))
+                {
+                    Focus(_careerCurrentWeek);
+                }
             }
             else
             {
@@ -247,4 +258,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.4 | 2026-11-18 | — | Keep career feedback and recovery controls near the heading and hide unpopulated slot rows. |
 // | 1.5 | 2026-11-18 | — | Follow the club list with Start, retain the pending Retry control and restore focus after same-screen work. |
 // | 1.6 | 2026-11-19 | — | Bind a schedule disclosure to cached Career Home fixtures and calendar. |
+// | 1.7 | 2026-11-19 | — | Keep keyboard focus in the calendar at the first and last week. |
 #endregion
