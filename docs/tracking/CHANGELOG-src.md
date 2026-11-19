@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 18, 2026 — (v2.237 — **Cooperative career shutdown on the branch.** The #30 owned-squad round accepts a shutdown token and stops at complete-tick and fixture checkpoints. The career worker discards unfinished state. Disposal drains only an admitted filesystem mutation, including two-file commit or rollback. Linux ClientApp passed 281 and skipped three diagnostics with the long demo comparison excluded. Focused SeasonSave checks and a real-engine replay comparison passed. Pinned Unity acceptance and timing remain open.)
+> **Last Updated:** November 18, 2026 — (v2.238 — **Career shutdown review follow-up and full Linux gate.** Review commit `b412780c` catalogs the 64-tick interval, verifies shutdown reaches the admitted-writer wait, and restores completion error handling. The review working tree passed `TD_APPROVAL_BASE_REF=origin/main bash tools/run-tests-local.sh --pr` across all 37 suites with **4,778 passed, 0 failed, and 227 skipped**. The only subsequent source edit moved the constant into the catalogue's EST region. The configured coverage fallback disabled instrumentation because the 22-assembly scope exceeded the limit of eight. Pinned Unity 6000.4.9f1 checks and owner sign-off on FR-SN-012 remain open.)
+
+> **Last Updated (prior):** November 18, 2026 — (v2.237 — **Cooperative career shutdown on the branch.** The #30 owned-squad round accepts a shutdown token and stops at complete-tick and fixture checkpoints. The career worker discards unfinished state. Disposal drains only an admitted filesystem mutation, including two-file commit or rollback. Linux ClientApp passed 281 and skipped three diagnostics with the long demo comparison excluded. Focused SeasonSave checks and a real-engine replay comparison passed. Pinned Unity acceptance and timing remain open.)
 
 > **Last Updated (prior):** November 18, 2026 — (v2.236 — **Career startup remains opt-in.** The tracked build scene disables career startup pending safe shutdown and pinned Unity acceptance. The shutdown design is a draft. At `fabac94e`, Linux ClientApp passed 276, failed 0 and skipped three diagnostics with `S0DemoFixtureComparisonTests` excluded. The full PR gate was outside that run. The 60-second pre-commit timeout preceded a one-commit bypass. Pinned Unity verification remains open.)
 
@@ -2934,6 +2936,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.238 | 2026-11-18 | — | Record the shutdown review fixes and full Linux PR gate result, including the coverage fallback. |
 | 2.237 | 2026-11-18 | — | Cooperative round cancellation and career save admission. Add Linux race and replay tests and pinned-host timing markers. |
 | 2.236 | 2026-11-18 | — | Keep the tracked career scene opt-in. Record earlier Linux evidence and the open Unity checks. |
 | 2.235 | 2026-11-18 | — | Career menu startup, preview recovery, single-scan slot selection, and busy focus follow-up. Unity host checks pending. |
