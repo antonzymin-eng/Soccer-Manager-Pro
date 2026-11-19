@@ -1,7 +1,7 @@
 # #440 BallLoose — Stage A investigation and proposed choices
 
 Created November 9, 2026. Purpose: freeze episode measurement, collect within-frame
-ownership chronology and present a concrete gameplay choice. Version 1.8.
+ownership chronology and present a concrete gameplay choice. Version 1.9.
 Status: Stage A measured. **Owner decision D1 (November 18, 2026) cuts #440 to A′** ([tackle duel note §7](tackle-duel-design.md#7-owner-decisions)): a geometry-derived knock plus a one-frame carrier fence, accepted by correctness tests only. The Stage B experiment, its 25% caps and the fixed 2.5 m/s knock are withdrawn; their sections below are kept as the historical record. No A′ gameplay code exists yet.
 Branch `codex/440-ball-loose`; source baseline `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 #434 remains a separate draft; Stage A therefore measures main, not its unmerged head.
@@ -48,6 +48,8 @@ touch, loose pickup and keeper hand contact, which meets this note's audit contr
 pinned Unity (`evidence/host-a-prime-e3029d1a-20261118/`) are done: 0/29 same-frame regains after A′ against 24/24
 before, but the carrier still re-collects within 24 frames in 18 of 29 episodes. That deferral is reported, not
 gated; whether the knock is enough of a dispossession belongs to calibration and B′.
+
+**Merged November 19, 2026 (UTC):** PR #544 (`ea631129`), then PR #549 (`a78a9a7a`). GitHub CI on #549's final head passed; the pinned-host run at `e3029d1a` covers the merged source. Football acceptance of tackles stays with B′, pending the owner's D2 and D4.
 
 **Next (as decided).** A′ amends #14 §3.6.5 through `err-file-and-backprop` (new ERR; spec and code in one
 commit). It is behaviour-changing, so it must not land inside an open measurement window, and it
@@ -533,4 +535,5 @@ no merge or tuning is implied by an experimental pass.
 | 1.6 | November 18, 2026 | Owner decision D1 (tackle duel note §7): #440 cut to A′, a geometry-derived knock plus the one-frame fence, accepted by correctness tests only. New D1 section records what is adopted, withdrawn and kept; Stage B experiment, 25% caps, coverage floor, team warning, breach rule and fixed 2.5 m/s knock withdrawn. Superseded sections keep their headings and text as history. Stage A definitions and evidence unchanged. Branch merged with main `4cdb4823`. No code. |
 
 | 1.7 | November 18, 2026 | A′ implemented as `ERR-014-011` (#14 §3.6.5.8): geometry knock and frame-local carrier fence on first touch, pickup and keeper hands; correctness tests in `MatchEngineBallLooseReleaseTests`. Characterization and pinned Unity pending. |
+| 1.9 | November 19, 2026 | A′ merged: PR #544 (`ea631129`) then PR #549 (`a78a9a7a`), November 19 UTC. Status only. |
 | 1.8 | November 18, 2026 | A′ characterization (D1, descriptive) and pinned-host Unity recorded: 0/29 same-frame regains, regain mostly deferred (18/29 by f+24); Unity compile clean, MatchEngine and DefensiveAI 0 failed. |

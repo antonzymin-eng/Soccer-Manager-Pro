@@ -1,11 +1,12 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026 · **Version:** 0.8 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
+> **Created:** November 10, 2026 · **Version:** 0.9 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
 > **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
 > retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
 > formation/Duty scoring sensitivity.
 > **Base facts:** main `d4b026aa`. Draft PR #543 is `origin/codex/434-formation-duty` (unmerged).
 > Work lands as ordered commits on `claude/great-sagan-rpcmhp`; no PR unless the owner asks.
+> **Merge status (November 19, 2026):** PR #543 merged November 16 (`75485fca`); this branch merged in PR #547 (`d290d844`, November 16). §3's diagnosis has no recorded result.
 > **Toolchain:** SDK 8.0.133 / runtime 8.0.33 is available here for compile/test gates only
 > (`bash tools/dotnet-ci/run-gate.sh --fast --test-filter <f>`). The frozen lane (SDK 8.0.426 / CLR 8.0.32,
 > six-seed captures) exists only in the #543 owner's environment. Nothing in this plan was compiled,
@@ -689,4 +690,5 @@ acquisition/closure/boundary/restore/determinism, and the identity probe.
 | 0.5 | 2026-11-10 | — | W13.0 landing note: the ERR-014-007 gap (§2). No design change. |
 | 0.6 | 2026-11-12 | — | W13.1 review amendment: §4.3 Invariant 4 order is 1 → 3 → 4 → 2 when armed (1 → 2 → 3 off), §4.2 range of L corrected to 110.4 m. Landed with the code (ERR-014-010 review amendment). No other design change. |
 | 0.7 | 2026-11-12 | — | Implementation status: §9 commits ⑤–⑧ (W13.1 and W13.1c) landed on branch `claude/great-sagan-rpcmhp`, switched off by default; ⑨ close-out recorded in the wiring backlog W13 (v1.42), open-issues and the changelogs. §10 measurement, the frozen-lane identity, Unity compile, stand-off calibration and the flip (OD-2) remain pending. No design change. |
+| 0.9 | 2026-11-19 | — | Merge status: PR #543 and PR #547 merged November 16, 2026; §3 diagnosis has no recorded result. No design change. |
 | 0.8 | 2026-11-13 | — | Landing-check status (§8 evidence for option b): W13.0 D1/D2 merged to main in PR #545; on `6491de79` the switch-off build equals main `39de4662` on every per-tick digest of six full frozen-corpus matches with an armed control that differs (non-certifying .NET 8.0.425, `evidence/w13-switch-off-neutrality-20261113/`), and pinned Unity compile plus MatchEngine / DefensiveAI / DecisionTree EditMode passed (`evidence/host-w13-6491de79-20261113/`). The frozen-lane identity is still owed. No design change. |
