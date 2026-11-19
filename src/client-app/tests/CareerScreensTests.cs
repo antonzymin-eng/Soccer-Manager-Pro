@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreensTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-27
+// Modified: 2026-11-19
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7, UI / Client Framework #38 §3.1
 //           (FR-UI-006) and Appendix C (season dispatcher, F3), Code Standards #20
@@ -12,6 +12,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 
 using NUnit.Framework;
 
@@ -33,6 +34,81 @@ namespace TacticalDirector.ClientApp.Tests
 
             Assert.IsFalse(vm.HasCareer);
             Assert.AreEqual(CareerProgressAction.None, vm.NextAction);
+        }
+
+        /// <summary>Verifies the club's fixtures against the stored schedule and its round dates.</summary>
+        [Test]
+        public void CareerHome_ProjectsOnlyManagedFixturesWithTheirCalendarDays()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(session);
+            CareerHomeViewModel vm = new CareerHomeSource(holder).Project();
+
+            SeasonState state = session.Loop.State;
+            Assert.AreEqual(session.Loop.CurrentWorldDay, vm.WorldDay);
+            Assert.IsTrue(vm.Calendar.FieldsEqual(state.Calendar));
+
+            int found = 0;
+            foreach (Fixture fixture in state.Fixtures.OrderBy(fixture => fixture.RoundIndex))
+            {
+                if (!fixture.Involves(session.ManagedClubId))
+                {
+                    continue;
+                }
+
+                CareerFixtureView row = vm.Fixtures[found];
+                bool isHome = fixture.HomeClubId == session.ManagedClubId;
+                int opponent = isHome ? fixture.AwayClubId : fixture.HomeClubId;
+                Assert.AreEqual(fixture.RoundIndex, row.RoundIndex);
+                Assert.AreEqual(state.Calendar.DayOfRound(fixture.RoundIndex), row.WorldDay);
+                Assert.AreEqual(opponent, row.OpponentId);
+                Assert.AreEqual(session.ClubName(opponent), row.OpponentName);
+                Assert.AreEqual(isHome, row.IsHome);
+                Assert.IsFalse(row.IsPlayed);
+                if (found > 0)
+                {
+                    Assert.Greater(row.WorldDay, vm.Fixtures[found - 1].WorldDay);
+                }
+
+                found++;
+            }
+
+            Assert.Greater(found, 0);
+            Assert.AreEqual(found, vm.Fixtures.Count);
+        }
+
+        /// <summary>Verifies that the calendar can reach the last fixture and stops at the season bounds.</summary>
+        [Test]
+        public void CareerCalendar_PagesThroughTheCurrentSeasonOnWorldDays()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            holder.Set(CareerTestSupport.StartQuick(temp.Slots));
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            CareerCalendarWeek first = CareerCalendarWeek.At(in home, home.WorldDay);
+            Assert.AreEqual(first.FirstDay, first.PreviousWeek);
+            Assert.AreEqual(0U, first.FirstDay % CareerCalendarWeek.DAYS_PER_WEEK);
+            Assert.LessOrEqual(first.FirstDay, home.WorldDay);
+            Assert.GreaterOrEqual(first.LastDay, home.WorldDay);
+
+            CareerCalendarWeek second = CareerCalendarWeek.At(in home, first.NextWeek);
+            Assert.AreEqual(first.LastDay + 1, second.FirstDay);
+            Assert.AreEqual(first.FirstDay, second.PreviousWeek);
+
+            uint lastFixture = home.Fixtures[home.Fixtures.Count - 1].WorldDay;
+            CareerCalendarWeek last = CareerCalendarWeek.At(in home, uint.MaxValue);
+            Assert.LessOrEqual(last.FirstDay, lastFixture);
+            Assert.GreaterOrEqual(last.LastDay, lastFixture);
+            Assert.AreEqual(last.FirstDay, last.NextWeek);
+        }
+
+        /// <summary>Verifies that a calendar week cannot be requested before a career is published.</summary>
+        [Test]
+        public void CareerCalendar_RequiresAnActiveCareer()
+        {
+            Assert.Throws<ArgumentException>(() => CareerCalendarWeek.At(default, 0));
         }
 
         [Test]
@@ -88,6 +164,7 @@ namespace TacticalDirector.ClientApp.Tests
             CareerHomeViewModel first = source.Project();
             CareerHomeViewModel again = source.Project();
             Assert.AreSame(first.Table, again.Table, "no rebuild without an operation.");
+            Assert.AreSame(first.Fixtures, again.Fixtures);
 
             CareerTestSupport.ProgressUntil(holder.Current, CareerProgressAction.PlayMatchday);
             holder.Current.Progress();
@@ -100,6 +177,36 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(first.NextOpponentName, after.LastResultOpponentName,
                 "the result reported is against the opponent the previous projection announced.");
             Assert.AreEqual(1, after.ManagedRow.Played);
+            Assert.IsFalse(first.Fixtures[0].IsPlayed, "previously returned fixtures remain snapshots.");
+            Assert.IsTrue(after.Fixtures[0].IsPlayed);
+            Assert.IsFalse(after.Fixtures[1].IsPlayed);
+            Assert.AreEqual(after.Fixtures[1].OpponentId, after.NextOpponentId);
+            Assert.AreEqual(after.Fixtures[1].WorldDay, after.NextFixtureDay);
+        }
+
+        /// <summary>Verifies that switching to a resumed career refreshes a previously cached schedule.</summary>
+        [Test]
+        public void CareerHome_ProjectsSavedCalendarAndPlayedFixturesAfterResume()
+        {
+            using var temp = new TempSlots();
+            CareerSession original = CareerTestSupport.StartQuick(temp.Slots);
+            var holder = new CareerSessionHolder();
+            holder.Set(original);
+            var source = new CareerHomeSource(holder);
+            CareerTestSupport.ProgressUntil(original, CareerProgressAction.PlayMatchday);
+            original.Progress();
+            CareerHomeViewModel saved = source.Project();
+            original.Progress();
+            CareerHomeViewModel later = source.Project();
+            Assert.Greater(later.WorldDay, saved.WorldDay);
+
+            holder.Set(CareerSession.Resume(temp.Slots, CareerSaveSlot.Autosave, RoundResolutionMode.QuickSimAll));
+            CareerHomeViewModel resumed = source.Project();
+
+            Assert.AreEqual(saved.WorldDay, resumed.WorldDay);
+            Assert.IsTrue(resumed.Calendar.FieldsEqual(saved.Calendar));
+            CollectionAssert.AreEqual(saved.Fixtures, resumed.Fixtures);
+            Assert.IsTrue(resumed.Fixtures[0].IsPlayed);
         }
 
         [Test]
@@ -250,4 +357,6 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | so Continue falls back; a refused Incompatible slot is kept.   |
 // | 1.2     | 2026-10-27 | —      | PR 519 review 4: the corrupt slot's set-aside sidecar cannot   |
 // |         |            |        | be restored over the save it no longer describes.              |
+// | 1.3     | 2026-11-19 | —      | Verify schedule projection, refresh and resume.                |
+// | 1.4     | 2026-11-19 | —      | Verify calendar paging across the season.                     |
 #endregion

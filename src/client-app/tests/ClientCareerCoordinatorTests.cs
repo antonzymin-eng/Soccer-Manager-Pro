@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/ClientCareerCoordinatorTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-05 (AR-3 M1: assert one localized career formatter is retained for binding.)
+// Modified: 2026-11-19
+// Modified (prior): 2026-11-05 (AR-3 M1: assert one localized career formatter is retained for binding.)
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (P7b), §5-P8, Code Standards #20
 // Purpose:  Lock worker/UI ownership, cached publication, guarded navigation, persistence and failure recovery.
@@ -820,8 +821,11 @@ namespace TacticalDirector.ClientApp.Tests
             var source = (IViewModelSource<CareerHomeViewModel>)h.Flow.CurrentRegistration.ViewModelSource;
             Assert.AreEqual(before.WorldDay, source.Project().WorldDay);
             Assert.AreSame(before.Table, source.Project().Table);
+            Assert.AreSame(before.Fixtures, source.Project().Fixtures);
+            Assert.IsTrue(before.Calendar.FieldsEqual(source.Project().Calendar));
             h.RunWorker();
             Assert.AreEqual(before.WorldDay, source.Project().WorldDay, "No live source polling after worker mutation.");
+            Assert.AreSame(before.Fixtures, source.Project().Fixtures);
             h.Career.Refresh();
             Assert.IsFalse(source.Project().IsProgressBlocked);
             Assert.Greater(source.Project().WorldDay, before.WorldDay);
@@ -840,9 +844,13 @@ namespace TacticalDirector.ClientApp.Tests
                 h.Flow.CurrentRegistration.Dispatcher.Dispatch(in day);
                 h.Finish();
             }
+            CareerHomeViewModel matchday = h.Career.Home;
             h.Career.Progress();
             h.Finish();
             Assert.AreEqual(1, h.Career.Home.RoundsPlayed);
+            Assert.IsFalse(matchday.Fixtures[0].IsPlayed);
+            Assert.IsTrue(h.Career.Home.Fixtures[0].IsPlayed);
+            Assert.AreEqual(1, h.Career.Home.Calendar.NextRoundIndex);
             Assert.IsTrue(h.Career.Home.LastChange.HasManagedResult);
             Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current, "D-P7-6 does not exist yet.");
         }
@@ -1086,4 +1094,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.8 | 2026-11-05 | — | AR-1 M1: resume a current-format optional-empty #31 save; assert typed unavailability, stale wired cache independence and unchanged serialized state. |
 // | 1.9 | 2026-11-05 | — | AR-2 M1: four Continue/Load cases covering empty #40 migration, nondefault populated preservation, complete finance state, market projections and accepted offers. |
 // | 1.10 | 2026-11-05 | — | AR-3 M1: localized career formatter identity is retained and exposed for the Unity binding. |
+// | 1.11 | 2026-11-19 | — | Verify pending and completed worker publication carries dated fixtures. |
 #endregion

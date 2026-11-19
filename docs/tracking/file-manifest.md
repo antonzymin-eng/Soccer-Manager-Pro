@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 18, 2026 — (v2.246) **#440 A′ evidence.** **New:** `docs/tracking/evidence/ball-loose-a-prime-char-20261118/` (README, `char_run.py`, `char_analyze.py`, `characterization.json`, two episode CSVs, per-arm/per-seed run records, `SHA256SUMS`) and `docs/tracking/evidence/host-a-prime-e3029d1a-20261118/` (README, compile and EditMode receipts, redacted Editor logs, NUnit XML, `SHA256SUMS`). **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (two contracts), `tools/tests/test_evidence_manifests.py` (49 registered directories), `w-440-ball-loose-design.md` v1.8, `CHANGELOG.md`, `match-engine-wiring-backlog.md` v1.50, `open-issues.md`, `path-to-playable-roadmap.md` v1.1 and this manifest.
+**Last Updated:** November 19, 2026 — (v2.247) **C3 Career Home schedule.** Adds `src/client-app/CareerFixtureView.cs` and `CareerCalendarWeek.cs` with Unity metas. Updates `CareerHomeSource.cs`, `CareerHomeViewModel.cs`, `CareerScreenText.cs`, their career tests, `src/match-client-unity/S0ScreensBehaviour.Career.cs`, `CHANGELOG-src.md`, the source version pointer in `CHANGELOG.md`, the C3 roadmap row and this manifest.
+
+**Last Updated (prior):** November 18, 2026 — (v2.246) **#440 A′ evidence.** **New:** `docs/tracking/evidence/ball-loose-a-prime-char-20261118/` (README, `char_run.py`, `char_analyze.py`, `characterization.json`, two episode CSVs, per-arm/per-seed run records, `SHA256SUMS`) and `docs/tracking/evidence/host-a-prime-e3029d1a-20261118/` (README, compile and EditMode receipts, redacted Editor logs, NUnit XML, `SHA256SUMS`). **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` (two contracts), `tools/tests/test_evidence_manifests.py` (49 registered directories), `w-440-ball-loose-design.md` v1.8, `CHANGELOG.md`, `match-engine-wiring-backlog.md` v1.50, `open-issues.md`, `path-to-playable-roadmap.md` v1.1 and this manifest.
 
 **Last Updated (prior):** November 18, 2026 — (v2.245) **A′ / `ERR-014-011` (#440).** **New:** `src/match-engine/tests/MatchEngineBallLooseReleaseTests.cs` (+ `.meta`). **Modified:** `src/defensive-ai/TackleOutcomeResolver.cs`, `src/defensive-ai/DefensiveAIConstants.cs`, `src/defensive-ai/Tests/TackleOutcomeResolverTests.cs`, `src/match-engine/MatchEngine.cs`, `src/match-engine/MatchEngine.KeeperHandlingLaw.cs`, `docs/specs/defensive-ai/section-3.md` v0.15, `docs/specs/defensive-ai/section-6.md` v0.6, `docs/tracking/spec-error-log.md` v3.09, `w-440-ball-loose-design.md` v1.7, `CHANGELOG.md`, `CHANGELOG-src.md` v2.236, `match-engine-wiring-backlog.md` v1.49, `open-issues.md`, `path-to-playable-roadmap.md` v1.0 and this manifest.
 
@@ -3891,7 +3893,7 @@ findings (H1-H6, M1-M22, L1-L13) for what that review caught.
 
 | File | Purpose |
 |------|---------|
-| `S0ScreensBehaviour.Career.cs` / `.meta` | Opt-in career UGUI bindings over cached worker snapshots, sharing S0 focus/layout |
+| `S0ScreensBehaviour.Career.cs` / `.meta` | Opt-in career UGUI bindings over cached worker snapshots, including the fixture list and weekly calendar |
 | `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references ClientApp + UiFramework + MatchClientCore + MatchViewer + MatchEngine in the landed #470 foundation |
 | `README.md` | The Editor-setup document `MatchClientBehaviour.cs`'s type doc defers to — the 8-slot prefab contract as a table (incl. the M22 stroked-vs-filled split), Active Input Handling, the host transform's identity-scale/rotation requirement, the team-colour palette, and the shim-gate exclusion |
 | `ClientShellBehaviour.cs` | LANDED #470 at f276f700; foundation v1.3, host-fact/visibility/event binding with inactive-ancestor refusal; Main Menu ↔ Tactics Setup only; pinned compile 0 errors and ClientApp.Tests 26/26 recorded; full lifecycle/screens remain due |
@@ -3943,7 +3945,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `ClientShellWiringFault.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
 | `ClientShellWiringValidator.cs` | v1.1: pure missing/duplicate/nested/contained/inactive-ancestor/saved-active validation; real Unity consumer on #470 |
 | `ClientShellWiringValidator.cs.meta` | Stable Unity asset identity for the corresponding foundation source |
-| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, per-slot/table formatting and cached output |
+| `CareerScreenText.cs` / `.meta` | Isolated typed/localizable career copy, including save slots, the table, fixtures and calendar |
 | `tests/CareerScreenTextTests.cs` / `.meta` | Catalogue isolation, translated slot composition, row cache retention and real Home/result display |
 | `ClientCareerCoordinator.cs` | P7b worker-owned career operations, cached immutable UI views, guarded completion/navigation and shutdown |
 | `ClientCareerCoordinator.cs.meta` | Stable Unity identity for the career coordinator |
@@ -4002,10 +4004,12 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
-| `CareerHomeViewModel.cs` | Career Home projection (§7.5: changed / attention / next / progress + table) |
+| `CareerHomeViewModel.cs` | Career Home snapshot with club context, league table, dated fixtures and round calendar |
 | `CareerHomeViewModel.cs.meta` | Stable Unity asset identity |
 | `CareerHomeSource.cs` | Revision-cached Career Home source |
 | `CareerHomeSource.cs.meta` | Stable Unity asset identity |
+| `CareerFixtureView.cs` / `.meta` | Immutable opponent, world day, venue and played state for one club fixture |
+| `CareerCalendarWeek.cs` / `.meta` | Seven-day world-calendar paging bounded by the current season and current week |
 | `NewCareerViewModel.cs` | New Career projection (generated clubs + selection) |
 | `NewCareerViewModel.cs.meta` | Stable Unity asset identity |
 | `NewCareerSetup.cs` | New Career source + Prepare/Select/Start (C4) |
@@ -4846,6 +4850,7 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
+| 2.247 | 2026-11-19 | — | Inventory the C3 fixture and calendar types and their existing Career Home bindings. |
 | 2.246 | 2026-11-18 | — | #440 A′: characterization and pinned-host Unity evidence folders. |
 | 2.245 | 2026-11-18 | — | A′ / ERR-014-011: one new test file; #14 §3.6.5.8 spec, code and trackers. |
 | 2.244 | 2026-11-18 | — | #440 D1 recorded (`w-440-ball-loose-design.md` v1.6, `tackle-duel-design.md` v0.7); PR #544 merges main. Documentation and merge only. |
