@@ -2,9 +2,9 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.4
+**Version:** 0.5
 
-**Status:** Implemented on the career branch. Pinned-host acceptance pending.
+**Status:** Implemented on the career branch. Pinned-host acceptance mostly recorded at `cd3c7b99`; four checks remain (see Implementation status).
 
 **Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft. On November 19, 2026 the owner approved the resulting #30 FR-SN-012 wording (`section-2.md` v2.5, recorded at v2.6).
 
@@ -51,8 +51,9 @@ Record the time from cancellation request to the round worker acknowledging it a
 The first implementation acquires the permit at entry to the existing `CareerSaveSlots.Write`
 transaction. Unity Profiler markers `SeasonSave.Encode` and `CareerSaveSlots.Write` expose separate
 encoding and admitted-write timings for the pinned run. Dispose drains admitted writes and leaves
-cancelled or read-only work to unwind under worker ownership. There are no measured pinned-host
-timings yet.
+cancelled or read-only work to unwind under worker ownership.
+
+The [pinned-host run at `cd3c7b99`](evidence/host-cd3c7b99-20261119/README.md) recorded acceptance item 4 in part. Editor Stop during the managed match took 219 ms and player window close 717 ms; both left the saves byte-identical to the pre-round snapshot. Resumed rounds matched an uninterrupted run byte for byte. Dispose waited 4.8 ms and 22.8 ms for admitted writes, which committed with matching digests. Per-frame marker readings were 1.2–15.5 ms for `SeasonSave.Encode` and 16.5–40.9 ms for `CareerSaveSlots.Write`. Still due: player close during a save, the refused-before-admission case live (covered in EditMode), steady-state allocations, and a throughput comparison with the pre-cancellation path. The polling cost is therefore not yet measured.
 
 ## Acceptance
 
@@ -67,6 +68,7 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.5 | 2026-11-19 | Record the pinned-host run at `cd3c7b99`: stop latencies, byte-identical resume, admitted-write waits and marker timings. Four acceptance-item-4 checks remain. |
 | 0.4 | 2026-11-19 | Record owner approval of the #30 FR-SN-012 cancellation wording. Pinned-host acceptance remains due. |
 | 0.3 | 2026-11-18 | Record the implementation and the encoding and write-phase markers. Pinned-host measurements remain due. |
 | 0.2 | 2026-11-18 | Keep the scene opt-in. Measure cancellation completion and encoding before changing the shutdown wait policy or extracting save preparation. |

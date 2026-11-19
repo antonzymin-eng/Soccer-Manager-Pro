@@ -1,0 +1,27 @@
+# Source identity — pinned-host Unity run at cd3c7b99 (feat/c3-c4-career-shell)
+# Tree hashes are those of the commit. Compile and EditMode ran in a fresh detached worktree with no Library.
+
+commit: cd3c7b993868465dcb201a0f2ab3320bff38e751
+parent: d85949b21231a8fa82e37a2e060c7e4607b6fa2e (d85949b2, "Record full Linux gate for career shutdown")
+code commit: b412780c ("Address career shutdown review findings"); d85949b2 and cd3c7b99 change only docs
+tree repo: ebb10bb0cf723dbe3fd299f7407f125ab50f3272
+tree src: a9d97e87c15e3fa9f71e379e3612d7e20a719a8f
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 7f23fb73ad31cf86f070118b03db5b7f6c1a5b04
+src tree unchanged since b412780c: yes
+unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11
+Assets/Scripts: directory junction -> <worktree>/src (created after checkout; deliberately untracked)
+Library present before compile: no
+compile: 2026-11-19T04:16:37Z – 04:17:52Z
+EditMode: 2026-11-19T04:47:26Z – 05:02:26Z
+worktree modifications during compile and EditMode: none (the two later changes below were made at 05:34–05:35Z)
+
+# Player build only (05:35:04Z – 05:36:08Z), from the same worktree:
+#   M  Assets/Scenes/Scene.unity                    _enableCareer: 0 -> 1 (README checklist step 1 opt-in)
+#   ?? Assets/CareerProbe/CareerProbe.cs (+ .meta)   scratch driver, copied here as career-probe-driver.cs.txt
+#   M  ProjectSettings/UnityConnectSettings.asset   m_Enabled 0 -> 1, written by Unity during the build itself
+# None of these were committed.
+
+# Editor Play checks ran in the owner's open editor on the main checkout, fast-forwarded to cd3c7b99
+# (git status clean before and after); career was enabled on the in-memory scene only and never saved.

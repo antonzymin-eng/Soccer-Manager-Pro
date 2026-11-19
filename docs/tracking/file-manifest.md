@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 19, 2026 — (v2.248) Recorded owner approval of #30 FR-SN-012 in `docs/specs/season-competition-loop/section-2.md` v2.6 and `docs/tracking/career-shutdown-cancellation-design.md` v0.4. No path added or removed. **Modified:** those two files, `CHANGELOG.md` and this manifest.
+**Last Updated:** November 19, 2026 — (v2.249) **Pinned-host career shutdown and startup run at `cd3c7b99`.** **New evidence directory** `docs/tracking/evidence/host-cd3c7b99-20261119/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `career-probe-driver.cs.txt`, `compile.txt`, `editmode-results.xml.xz`, `editmode-summary.txt`, `editor-play-transcript.txt`, `player-transcript.txt`, `save-hashes.txt`, `source-identity.txt`. **Modified:** `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` (46 registered directories), `docs/tracking/career-shutdown-cancellation-design.md` v0.4 → v0.5, `docs/tracking/open-issues.md`, `docs/agent-guides/project-reference.md` (51 / 76), `docs/tracking/CHANGELOG.md` and this manifest. No `src/` change, no assembly added, no removals.
+
+**Last Updated (prior):** November 19, 2026 — (v2.248) Recorded owner approval of #30 FR-SN-012 in `docs/specs/season-competition-loop/section-2.md` v2.6 and `docs/tracking/career-shutdown-cancellation-design.md` v0.4. No path added or removed. **Modified:** those two files, `CHANGELOG.md` and this manifest.
 
 **Last Updated (prior):** November 18, 2026 — (v2.247) Implemented career shutdown admission and round cancellation in existing ClientApp and SeasonSave files. Updated #30 §§2, 3 and 5, the career design and the pinned-host checklist. No paths added or removed.
 

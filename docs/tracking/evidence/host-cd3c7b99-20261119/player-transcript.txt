@@ -1,0 +1,52 @@
+# Player transcript — Windows player built from the worktree (cd3c7b99 + scene _enableCareer: 1 + scratch driver career-probe-driver.cs)
+# Launched with -screen-fullscreen 0 -screen-width 1024 -screen-height 768. Window close = Process.CloseMainWindow (WM_CLOSE).
+
+## harness.log
+2026-11-19T05:36:31.8167883Z launched setup pid=58584
+2026-11-19T05:36:38.1518176Z ready.flag seen; snapshotting pre-round saves
+2026-11-19T05:36:38.2923433Z matchday started; waiting 40 s
+2026-11-19T05:37:18.3090505Z WM_CLOSE via CloseMainWindow hwnd=4916724
+2026-11-19T05:37:19.0319923Z close sent=True exited=True close->exit_ms=717.1 exitCode=0
+2026-11-19T05:37:45.0461357Z launched continue (RESUMED-A) pid=9096
+2026-11-19T05:40:43.0916171Z round complete (RESUMED-A) after 178 s
+2026-11-19T05:40:44.5430393Z player exited=True exitCode=0 (RESUMED-A)
+2026-11-19T05:40:56.0953211Z launched continue (RESUMED-B) pid=32136
+2026-11-19T05:43:58.7285211Z round complete (RESUMED-B) after 182.6 s
+2026-11-19T05:44:00.2904150Z player exited=True exitCode=0 (RESUMED-B)
+
+## player-probe.log (driver inside the player)
+2026-11-19T05:36:37.2004191Z frame=0 boot mode=setup
+2026-11-19T05:36:37.7854520Z frame=5 click 'New career'
+2026-11-19T05:36:37.8178503Z frame=16 click 'Select Thorncliff United'
+2026-11-19T05:36:37.8361281Z frame=21 click 'Start career'
+2026-11-19T05:36:37.9882564Z frame=134 click 'Advance one day'
+2026-11-19T05:36:38.0078432Z frame=139 click 'Advance one day'
+2026-11-19T05:36:38.0272001Z frame=144 click 'Advance one day'
+2026-11-19T05:36:38.0443444Z frame=149 click 'Advance one day'
+2026-11-19T05:36:38.0649804Z frame=154 click 'Advance one day'
+2026-11-19T05:36:38.0826497Z frame=159 click 'Advance one day'
+2026-11-19T05:36:38.1007432Z frame=164 click 'Advance one day'
+2026-11-19T05:36:38.1197603Z frame=170 click 'Save to manual slot 1'
+2026-11-19T05:36:38.1470208Z frame=180 READY Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38 / Last action: Day advanced / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Kesgrave Rovers (home), day 7, in 0 days.
+2026-11-19T05:36:38.1866194Z frame=210 click 'Resolve matchday (on Career Home)'
+2026-11-19T05:37:18.3196750Z frame=39986 OnApplicationQuit (probe)
+2026-11-19T05:37:48.5881486Z frame=0 boot mode=continue
+2026-11-19T05:37:49.1715004Z frame=5 click 'Continue career'
+2026-11-19T05:37:49.3379462Z frame=125 CONTINUED Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38 / Last action: Career resumed / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Kesgrave Rovers (home), day 7, in 0 days.
+2026-11-19T05:37:49.3389529Z frame=125 click 'Resolve matchday (on Career Home)'
+2026-11-19T05:40:42.8036752Z frame=165176 ROUND COMPLETE Thorncliff United | Season 1, day 7 | Position 20 | Rounds 1/38 / Last action: Round resolved / Last result: Thorncliff United 1 - 5 Kesgrave Rovers / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ironbridge United (away), day 14, in 7 days.
+2026-11-19T05:40:43.7977859Z frame=166227 Application.Quit
+2026-11-19T05:40:43.7992995Z frame=166228 OnApplicationQuit (probe)
+2026-11-19T05:40:59.7374367Z frame=0 boot mode=continue
+2026-11-19T05:41:00.3232493Z frame=5 click 'Continue career'
+2026-11-19T05:41:00.4778236Z frame=122 CONTINUED Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38 / Last action: Career resumed / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Kesgrave Rovers (home), day 7, in 0 days.
+2026-11-19T05:41:00.4793407Z frame=122 click 'Resolve matchday (on Career Home)'
+2026-11-19T05:43:58.5887439Z frame=167235 ROUND COMPLETE Thorncliff United | Season 1, day 7 | Position 20 | Rounds 1/38 / Last action: Round resolved / Last result: Thorncliff United 1 - 5 Kesgrave Rovers / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ironbridge United (away), day 14, in 7 days.
+2026-11-19T05:43:59.5818167Z frame=168212 Application.Quit
+2026-11-19T05:43:59.5858658Z frame=168213 OnApplicationQuit (probe)
+
+## exceptions in player logs
+player-RESUMED-A.log: 0
+player-RESUMED-B.log: 0
+player-probe.log: 0
+player-setup.log: 0
