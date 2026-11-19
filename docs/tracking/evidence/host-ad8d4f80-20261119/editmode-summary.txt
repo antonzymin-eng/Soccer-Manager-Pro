@@ -1,0 +1,13 @@
+# EditMode, main ad8d4f80, Unity 6000.4.9f1 batch mode in the compile worktree.
+command: Unity.exe -batchmode -nographics -projectPath <scratch>/wt-551 -runTests -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.UiFramework.Tests"
+start: 2026-11-19T22:05:04Z
+end/exit: exit=0 2026-11-19T22:11:57Z
+
+assembly                                 total  passed  failed  skipped
+TacticalDirector.ClientApp.Tests.dll       290     287       0        3
+TacticalDirector.UiFramework.Tests.dll      52      52       0        0
+all                                        342     339       0        3
+
+CareerScreensTests 13/13, CareerScreenTextTests 11/11, ClientCareerCoordinatorTests 47/47 passed.
+Skipped (existing opt-in diagnostics): S0MovementDiagnostic_ReportsPlayerTravelAndSpread,
+S0SimThroughput_Paced_ReportsDeliveredTicksPerSecondAtLadderRungs, S0SimThroughput_Unpaced_ReportsTicksPerSecondAndCostSplit.

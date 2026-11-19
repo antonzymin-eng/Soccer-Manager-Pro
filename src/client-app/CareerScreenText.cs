@@ -50,6 +50,9 @@ namespace TacticalDirector.ClientApp
             R("schedule", "Schedule"), R("schedule.list", "Fixtures"), R("schedule.calendar", "Calendar"),
             R("schedule.previous", "Previous week"), R("schedule.current", "Current week"), R("schedule.next", "Next week"),
             R("schedule.week", "Days {0} to {1}", "LL"),
+            R("schedule.page", "Fixtures {0} to {1} of {2}", "III"),
+            R("schedule.page.previous", "Earlier fixtures"), R("schedule.page.current", "Upcoming fixtures"),
+            R("schedule.page.next", "Later fixtures"),
             R("schedule.day", "Day {0}", "L"), R("schedule.today", "Day {0} (today)", "L"),
             R("schedule.fixture", "{0} | {1} ({2}) | {3}", "SSSS"),
             R("schedule.free", "{0} | No club fixture", "S"),
@@ -148,29 +151,27 @@ namespace TacticalDirector.ClientApp
             return s.ToString();
         }
 
-        /// <summary>The managed club's chronological schedule, with opponent, venue and fixture status.</summary>
-        public string FixtureList(in CareerHomeViewModel home)
+        /// <summary>One page of the managed club's chronological schedule: a position heading, then each
+        /// fixture's day, opponent, venue and status.</summary>
+        public string FixtureList(in CareerHomeViewModel home, in CareerFixturePage page)
         {
             if (!home.HasCareer)
             {
                 return "";
             }
 
-            if (home.Fixtures.Count == 0)
+            if (page.Count == 0)
             {
                 return Label("schedule.empty");
             }
 
-            var text = new StringBuilder();
-            for (int i = 0; i < home.Fixtures.Count; i++)
+            var text = new StringBuilder(Text.Format("schedule.page", "schedule.page",
+                page.First + 1, page.First + page.Count, page.Total));
+            for (int i = page.First; i < page.First + page.Count; i++)
             {
                 CareerFixtureView fixture = home.Fixtures[i];
-                string cell = "schedule.list." + i;
-                if (i > 0)
-                {
-                    text.AppendLine();
-                }
-                text.Append(FixtureLine(cell, ScheduleDay(cell, fixture.WorldDay, home.WorldDay),
+                string cell = "schedule.list." + (i - page.First);
+                text.AppendLine().Append(FixtureLine(cell, ScheduleDay(cell, fixture.WorldDay, home.WorldDay),
                     in fixture, home.WorldDay));
             }
 
@@ -379,4 +380,5 @@ namespace TacticalDirector.ClientApp
 // | 1.5 | 2026-11-05 | — | T2: visible projection errors and consistent failed-entry rollback. |
 // | 1.6 | 2026-11-05 | — | T6: clamp displayed headroom and format full uint window close day. |
 // | 1.7 | 2026-11-19 | — | Localize schedule rows, fixture status and calendar week navigation. |
+// | 1.8 | 2026-11-19 | — | Page the fixture list with a position heading (keyboard reach at 200% text scale). |
 #endregion

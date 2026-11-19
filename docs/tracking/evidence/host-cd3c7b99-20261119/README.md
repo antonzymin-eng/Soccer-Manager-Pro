@@ -108,3 +108,4 @@ between steps. No project asset, scene or setting in the repository was modified
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | 2026-11-19 | Created: pinned-host compile, EditMode, Editor Play and player shutdown evidence for `cd3c7b99`. |
+| 1.1 | 2026-11-19 | `editmode-results.xml.xz` re-exported as well-formed XML: the `<scratch>` path placeholder is now XML-escaped. Test content and counts are unchanged. |

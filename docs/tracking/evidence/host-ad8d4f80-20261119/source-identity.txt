@@ -1,0 +1,25 @@
+# Source identity — pinned-host Unity run for the #551 Career Home schedule
+
+commit tested: ad8d4f80be9754441de0cb3869ea901a403b93ad (main after #552; documentation-only over #551)
+#551 merge: 62b6042985fae739da19f65b1cd3fda74809c2a8
+src, Assets, Packages, ProjectSettings: identical between 62b60429 and ad8d4f80 (git diff --quiet)
+tree src: 7e759bb7ea908da63a931ea65c864ef8c660136f
+tree Assets: 7f23fb73ad31cf86f070118b03db5b7f6c1a5b04
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11 (owner's host)
+worktree: sparse (everything except docs/tracking/evidence/), no Library before the import
+Assets/Scripts: directory junction -> <worktree>/src (created after checkout; deliberately untracked)
+
+# Development players (two builds), uncommitted changes in the worktree:
+#   M  Assets/Scenes/Scene.unity   _enableCareer: 0 -> 1; _textScale: 1 (build 1x) or 2 (build 2x)
+#   ?? Assets/ZzProbe/ScheduleProbe.cs              scratch driver (schedule-probe.cs.txt)
+#   ?? Assets/ZzBench/Editor/BuildProbePlayer.cs    development build script (build-probe-player.cs.txt)
+# Players ran windowed at 1280x720 with -scheduleProbe; nothing was committed.
+
+# Paging candidate (this PR): the same worktree with this PR's src changes applied before committing.
+#   tree src: ce194427299ae4b7e69f96ddecf0eb170fdb88eb (the src tree of the commit that adds this evidence)
+#   EditMode (ClientApp.Tests + UiFramework.Tests) and both development players were rebuilt from it.
+
+# Strict re-run (review follow-up): players rebuilt from commit 8f39ffe8 (same tree src ce194427) with the
+# rendered-line-bounds probe; its logs, screenshots and probe source replace the first paged run's.

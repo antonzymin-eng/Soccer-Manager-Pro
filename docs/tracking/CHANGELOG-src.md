@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 19, 2026 — **v2.240 — Career Home schedule integrated with PR #550.** Schedule, view selection and week navigation use the shared career controls and busy focus handling. The coordinator tests cover scheduled fixtures alongside cooperative shutdown.
+> **Last Updated:** November 19, 2026 — **v2.241 — Career Home fixture list paged.** New `src/client-app/CareerFixturePage.cs` v1.0 (+ `.meta`): a fixed-size page of the managed club's fixtures by index, `[FIXED] FIXTURES_PER_PAGE = 8`, `Current` (page holding the next unplayed fixture, or the last page) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.8: `FixtureList(in home, in page)` replaces the unpaged overload and opens with a *Fixtures {first} to {last} of {total}* heading; new roles `schedule.page`, `schedule.page.previous` (*Earlier fixtures*), `schedule.page.current` (*Upcoming fixtures*), `schedule.page.next` (*Later fixtures*). `S0ScreensBehaviour.Career.cs` v1.8: a *Fixture navigation* column with the three controls, shown when Fixtures is selected; the page resets to the current one on a new season; week and fixture paging share `RefreshSchedulePaging`, which moves focus from a disabled end control to the current-page control. Tests: `CareerScreensTests` v1.5 (+3: page coverage and bounds, current page follows play, career required) and `CareerScreenTextTests` v1.3 (+1: heading, page rows, labels; the localized-row test uses a page). Unity 6000.4.9f1 on the pinned host: ClientApp.Tests + UiFramework.Tests 343 passed / 0 failed / 3 skipped; development players at 100% and 200% text scale reach every fixture by keyboard.
+
+> **Last Updated (prior):** November 19, 2026 — **v2.240 — Career Home schedule integrated with PR #550.** Schedule, view selection and week navigation use the shared career controls and busy focus handling. The coordinator tests cover scheduled fixtures alongside cooperative shutdown.
 
 > **Last Updated (prior):** November 19, 2026 (UTC) — **v2.237 (branch-local career schedule) — Career Home schedule (C3).** `CareerHomeSource` projects the managed club’s saved fixtures with opponent, venue, world day and played status. `CareerHomeViewModel` requires fixtures and a calendar and carries them across the existing coordinator’s busy snapshot. The opt-in Unity career binding uses the coordinator’s `CareerScreenText` for the fixture list and seven-day world calendar. Added tests cover the saved schedule, worker publication and localized matchday status. Pinned Unity validation is pending.
 
@@ -2953,6 +2955,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.241 | 2026-11-19 | — | Page the Career Home fixture list (`CareerFixturePage`) for keyboard reach at 200% text scale. |
 | 2.240 | 2026-11-19 | — | Integrate Career Home schedule controls and snapshot tests with PR #550. |
 | 2.237 (branch-local career schedule) | 2026-11-19 | — | C3 Career Home schedule from the saved-season projection, with fixture list and weekly calendar in the opt-in Unity view. |
 | 2.239 | 2026-11-19 | — | Merge main `a78a9a7a` into the career branch: no `src` conflict; the branch's duplicate v2.235–v2.236 labels are branch-local career records. No behaviour change from the merge. |
