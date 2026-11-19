@@ -1,0 +1,29 @@
+# Source identity — pinned-host Unity run on merged main 5a3c310e (PR #550 merge)
+
+commit: 5a3c310e4fe3551e0edbdbecdfe42f6bb7363003 (Merge pull request #550 from antonzymin-eng/feat/c3-c4-career-shell)
+tree repo: 3a6f5bb340d6adcf1c9ece8254b58abeb8671c33
+tree src: ac973d93d9267f604513cf18db4e40fbdf232725
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 7f23fb73ad31cf86f070118b03db5b7f6c1a5b04
+unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11 (owner's host)
+Assets/Scripts: directory junction -> <worktree>/src (created after checkout; deliberately untracked)
+
+# Compile and EditMode: fresh detached worktree <scratch>/wt-main, no Library before the import,
+# git status clean throughout.
+
+# Throughput bench: separate sparse worktree <scratch>/wt-bench (Assets, Packages, ProjectSettings, src only),
+# checked out in turn at each arm; the only addition was the untracked Editor script
+# Assets/ZzBench/Editor/CareerRoundBench.cs (copied here as career-round-bench.cs.txt).
+#   PRE  52466c28f46898e660187e2da5ab9470da7dfc23  src 76782efb543e541c6e4fa4f6e869e77c3c5ae5e1
+#        (parent of 64b8427e "Cancel unfinished career rounds during shutdown"; no cancellation polling)
+#   POST b412780c16341515f8c430140f22d998fddaaf23  src a9d97e87c15e3fa9f71e379e3612d7e20a719a8f
+#        (cancellation and review fixes; same src tree as the cd3c7b99 run)
+#   The two arms differ only in the 10 src files of 64b8427e and b412780c; neither touches the match engine.
+
+# Development player: wt-bench checked out at 5a3c310e (src ac973d93...), then, uncommitted:
+#   M  Assets/Scenes/Scene.unity                   _enableCareer: 0 -> 1 (README checklist step 1 opt-in)
+#   ?? Assets/ZzProbe/CareerProbe.cs (+ .meta)       scratch driver, copied here as career-probe-driver.cs.txt
+#   ?? Assets/ZzBench/Editor/BuildProbePlayer.cs     BuildOptions.Development build script (build-probe-player.cs.txt)
+#   M  ProjectSettings/UnityConnectSettings.asset  m_Enabled 0 -> 1, written by Unity during the build itself
+# None of these were committed. Three builds were made; see player-transcript.txt.

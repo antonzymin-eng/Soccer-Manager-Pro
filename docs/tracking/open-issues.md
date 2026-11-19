@@ -1,6 +1,8 @@
 # Open Issues
 
-**Last Updated:** November 19, 2026 — Record the pinned-host career run at `cd3c7b99` against the startup and shutdown entries; both stay open with their remaining checks named. Add the save-digest-on-load finding. 51 active / 76 archived.
+**Last Updated:** November 19, 2026 (later) — Close and archive `career-shutdown-main-thread-wait`: the [merged-main run at `5a3c310e`](evidence/host-5a3c310e-20261119/README.md) recorded the last acceptance-item-4 checks. 50 active / 77 archived.
+
+**Last Updated (prior):** November 19, 2026 — Record the pinned-host career run at `cd3c7b99` against the startup and shutdown entries; both stay open with their remaining checks named. Add the save-digest-on-load finding. 51 active / 76 archived.
 
 **Last Updated (prior):** November 18, 2026 — Career shutdown implementation is on the branch. Pinned Unity acceptance remains open. 50 active / 76 archived.
 
@@ -78,7 +80,7 @@ history by the original convention; they were not merged.
 
 <a id="career-shutdown-main-thread-wait"></a>
 
-- **P7b career shutdown — implementation on branch, pinned-host acceptance MOSTLY RECORDED; OPEN.** *Since November 4, 2026; updated November 19, 2026.* The original `ClientCareerCoordinator.Dispose` joined the full synchronous round on the Unity main thread. The owner selected cooperative stop, discard of the unfinished in-memory round, and protection of an admitted save through completion or rollback. The branch now implements that lifetime and suppresses late publication. The tracked scene remains opt-in. **Recorded at `cd3c7b99`** ([evidence](evidence/host-cd3c7b99-20261119/README.md)): Unity 6000.4.9f1 clean compile, 0 `error CS`; ClientApp and SeasonSave EditMode 837 passed / 0 failed / 7 skipped, including all 47 `ClientCareerCoordinatorTests` and the engine-backed cancelled-round replay. Editor Stop about 40 s into the managed match took 219 ms; player window close took 717 ms to exit with code 0. Both left the save directory byte-identical to the pre-round snapshot, and resuming replayed the round to byte-identical saves (Editor against an uninterrupted reference; player twice from the same bytes). Quit after write admission waited 4.8 ms and 22.8 ms in Dispose, and both pairs committed with matching digests. Per-frame marker readings: `SeasonSave.Encode` 1.2–15.5 ms and `CareerSaveSlots.Write` 16.5–40.9 ms. **Still due before close** (design acceptance item 4): player window close during a save; the refused-before-admission case live (EditMode-covered only); steady-state allocations; and a match-throughput comparison against the pre-cancellation path. Per-call write timings need a Profiler capture, since the per-frame recorder splits saves that cross frames. [Design and acceptance](career-shutdown-cancellation-design.md).
+**Closed record:** P7b career shutdown cancellation, accepted on the pinned host November 19, 2026; [archived entry](open-issues-resolved.md#career-shutdown-main-thread-wait).
 
 <a id="career-save-body-not-verified-on-load"></a>
 

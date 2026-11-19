@@ -2,9 +2,9 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.5
+**Version:** 0.6
 
-**Status:** Implemented on the career branch. Pinned-host acceptance mostly recorded at `cd3c7b99`; four checks remain (see Implementation status).
+**Status:** Implemented and merged (PR #550, `5a3c310e`). Pinned-host acceptance recorded November 19, 2026; the [open issue](open-issues-resolved.md#career-shutdown-main-thread-wait) is closed. Career startup remains opt-in under its own startup issue.
 
 **Purpose:** Resolve the [P7b shutdown wait](open-issues.md#career-shutdown-main-thread-wait) before the career shell becomes the default in a merged build. The owner’s November 18, 2026 instruction was “do 1 to 3 together,” referring to cooperative cancellation, discard of unfinished work, and protection of an in-flight save transaction. This is a product direction. The lifetime and storage design is still a draft. On November 19, 2026 the owner approved the resulting #30 FR-SN-012 wording (`section-2.md` v2.5, recorded at v2.6).
 
@@ -55,6 +55,8 @@ cancelled or read-only work to unwind under worker ownership.
 
 The [pinned-host run at `cd3c7b99`](evidence/host-cd3c7b99-20261119/README.md) recorded acceptance item 4 in part. Editor Stop during the managed match took 219 ms and player window close 717 ms; both left the saves byte-identical to the pre-round snapshot. Resumed rounds matched an uninterrupted run byte for byte. Dispose waited 4.8 ms and 22.8 ms for admitted writes, which committed with matching digests. Per-frame marker readings were 1.2–15.5 ms for `SeasonSave.Encode` and 16.5–40.9 ms for `CareerSaveSlots.Write`. Still due: player close during a save, the refused-before-admission case live (covered in EditMode), steady-state allocations, and a throughput comparison with the pre-cancellation path. The polling cost is therefore not yet measured.
 
+The [merged-main run at `5a3c310e`](evidence/host-5a3c310e-20261119/README.md) recorded those checks, apart from the live refused-before-admission case. Unity compiled cleanly, and ClientApp and SeasonSave EditMode passed 837 / 0 failed / 7 skipped on the A′ engine. In four player window closes during a manual save, quit began while the temporary file existed. Each pair committed before Unity's `quitting` event, and the process exited 182–324 ms after the quit request. The main thread allocated nothing per frame in every steady state, including a running round, with a positive control for the counter. A managed round took 114.2 s mean before polling and 113.6 s after, inside run-to-run spread, and all twelve rounds were result-identical. A click admits the write in its own frame, so the refused-before-admission case stays covered by its EditMode test only.
+
 ## Acceptance
 
 1. **Cancel after work has started.** Use deterministic test barriers, with a fixture known to resolve before the managed match. Cancel after at least one previous fixture has applied and after the real engine has completed ticks inside the managed match. Verify worker exit before the engine reaches full time, no report or navigation publication, and byte-identical pre-existing save and sidecar. Check slot sequence, latest-slot choice and absence of new temporary or backup files. Keep the bytes in the checkpoint as the replay input.
@@ -68,6 +70,7 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.6 | 2026-11-19 | Record the merged-main run: player close during a save, steady-state allocations, throughput and result identity. Acceptance recorded; issue closed. |
 | 0.5 | 2026-11-19 | Record the pinned-host run at `cd3c7b99`: stop latencies, byte-identical resume, admitted-write waits and marker timings. Four acceptance-item-4 checks remain. |
 | 0.4 | 2026-11-19 | Record owner approval of the #30 FR-SN-012 cancellation wording. Pinned-host acceptance remains due. |
 | 0.3 | 2026-11-18 | Record the implementation and the encoding and write-phase markers. Pinned-host measurements remain due. |

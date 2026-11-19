@@ -72,6 +72,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-ea84be27-20261103": ("manifest", FULL_MANIFEST),
     "host-1d3cebf3-20261105": ("manifest", FULL_MANIFEST),
     "host-cd3c7b99-20261119": ("manifest", FULL_MANIFEST),
+    "host-5a3c310e-20261119": ("manifest", FULL_MANIFEST),
     "career-drift-20261104": ("manifest", FULL_MANIFEST),
     "5p8-ar2-20261105": ("manifest", FULL_MANIFEST),
     "header441-reachability-20261020": ("manifest", FULL_MANIFEST),

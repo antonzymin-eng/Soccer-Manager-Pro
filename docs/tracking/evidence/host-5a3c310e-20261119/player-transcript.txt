@@ -1,0 +1,409 @@
+# Development-player runs from merged main 5a3c310e with _enableCareer=1 and the probe driver (not committed).
+# Builds: build 1 ran ALLOC and SQ1; build 2 (adds main-thread GC.Alloc recorder and quit hooks) ran SQ2-SQ4, VERIFY
+# and ALLOC2; build 3 (adds the control mode only) ran CONTROL. career-probe-driver.cs.txt is build 3.
+# t= values in the probe log and watcher logs share one in-process Stopwatch per launch.
+
+## harness.log
+2026-11-19T19:19:00.8816894Z launched alloc (ALLOC) pid=74116
+2026-11-19T19:22:35.2225238Z exited (ALLOC) after 214.5 s exitCode=0
+2026-11-19T19:22:35.2892182Z   autosave.slot 403
+2026-11-19T19:22:35.2917725Z   autosave.tdsave 116803
+2026-11-19T19:22:35.2932925Z   manual-1.slot 404
+2026-11-19T19:22:35.2947989Z   manual-1.tdsave 116787
+2026-11-19T19:23:02.6928600Z launched savequit (SQ1) pid=36804
+2026-11-19T19:23:07.4210302Z exited (SQ1) after 4.8 s exitCode=0
+2026-11-19T19:23:07.4780437Z   autosave.slot 403
+2026-11-19T19:23:07.4804876Z   autosave.tdsave 116803
+2026-11-19T19:23:07.4830165Z   manual-1.slot 404
+2026-11-19T19:23:07.4845361Z   manual-1.tdsave 116787
+2026-11-19T19:23:07.4855351Z   manual-2.slot 403
+2026-11-19T19:23:07.4879140Z   manual-2.tdsave 116803
+2026-11-19T19:24:49.6786584Z launched savequit (SQ2) pid=53536
+2026-11-19T19:24:56.3230133Z exitTime=2026-11-19T19:24:56.2892544Z exited (SQ2) after 6.8 s exitCode=0
+2026-11-19T19:24:56.4146864Z launched savequit (SQ3) pid=41040
+2026-11-19T19:25:00.9686153Z exitTime=2026-11-19T19:25:00.9484684Z exited (SQ3) after 4.6 s exitCode=0
+2026-11-19T19:25:01.0156896Z launched savequit (SQ4) pid=43388
+2026-11-19T19:25:05.5593217Z exitTime=2026-11-19T19:25:05.5380383Z exited (SQ4) after 4.6 s exitCode=0
+2026-11-19T19:25:36.6325947Z launched verify (VERIFY) pid=46336
+2026-11-19T19:25:42.1003278Z exitTime=2026-11-19T19:25:42.0646808Z exited (VERIFY) after 5.6 s exitCode=0
+2026-11-19T19:26:10.3492431Z launched alloc (ALLOC2) pid=33480
+2026-11-19T19:29:45.9195535Z exitTime=2026-11-19T19:29:45.8677256Z exited (ALLOC2) after 215.7 s exitCode=0
+2026-11-19T19:29:45.9698322Z   autosave.slot 404
+2026-11-19T19:29:45.9708383Z   autosave.tdsave 116822
+2026-11-19T19:29:45.9728400Z   manual-1.slot 404
+2026-11-19T19:29:45.9748778Z   manual-1.tdsave 116774
+2026-11-19T19:30:36.1018266Z launched control (CONTROL) pid=46968
+2026-11-19T19:30:46.3138388Z exitTime=2026-11-19T19:30:46.2787862Z exited (CONTROL) after 10.3 s exitCode=0
+2026-11-19T19:30:46.3581482Z   autosave.slot 404
+2026-11-19T19:30:46.3596582Z   autosave.tdsave 116822
+2026-11-19T19:30:46.3607984Z   manual-1.slot 404
+2026-11-19T19:30:46.3628080Z   manual-1.tdsave 116774
+
+## player-probe.log
+2026-11-19T19:19:06.8933543Z t=9.1ms frame=0 boot mode=alloc development=True recorderValid=True/True
+2026-11-19T19:19:08.2455001Z t=1353.9ms frame=724 SAMPLE main-menu-idle frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0
+2026-11-19T19:19:08.2525390Z t=1361.2ms frame=729 click 'New career'
+2026-11-19T19:19:08.2997257Z t=1408.5ms frame=740 click 'Select Thorncliff United'
+2026-11-19T19:19:08.3159901Z t=1424.8ms frame=745 click 'Start career'
+2026-11-19T19:19:08.4909943Z t=1600.0ms frame=852 click 'Advance one day'
+2026-11-19T19:19:08.5233622Z t=1632.0ms frame=857 click 'Advance one day'
+2026-11-19T19:19:08.5470742Z t=1655.7ms frame=862 click 'Advance one day'
+2026-11-19T19:19:08.5674728Z t=1675.8ms frame=867 click 'Advance one day'
+2026-11-19T19:19:08.5876146Z t=1696.4ms frame=872 click 'Advance one day'
+2026-11-19T19:19:08.6110255Z t=1719.6ms frame=877 click 'Advance one day'
+2026-11-19T19:19:08.6314168Z t=1740.4ms frame=882 click 'Advance one day'
+2026-11-19T19:19:08.6618973Z t=1770.8ms frame=888 click 'Save to manual slot 1'
+2026-11-19T19:19:08.6898323Z t=1799.0ms frame=894 MATCHDAY Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38
+ / Last action: Day advanced
+ / Injured players: 1. Board target: position 10 or better. Objective off track.
+ / Next: Eastvale Athletic (away), day 7, in 0 days.
+2026-11-19T19:19:09.4178362Z t=2526.1ms frame=1613 SAMPLE career-home-idle-before-round frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0
+2026-11-19T19:19:09.4248983Z t=2533.4ms frame=1618 click 'Resolve matchday (on Career Home)'
+2026-11-19T19:19:09.4426456Z t=2551.8ms frame=1623 round busy
+2026-11-19T19:19:10.2225243Z t=3331.4ms frame=2342 SAMPLE round-in-progress frames=600 gcBytesTotal=2072616 gcBytesMax=469170 framesWithAlloc=106 gcAllocCount=31346 mainThreadBytes=0 mainThreadFramesWithAlloc=0
+2026-11-19T19:22:33.1790867Z t=206286.6ms frame=160760 ROUND COMPLETE Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Round resolved
+ / Last result: Eastvale Athletic 1 - 6 Thorncliff United
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days.
+2026-11-19T19:22:33.9841544Z t=207092.1ms frame=161479 SAMPLE career-home-idle-after-round frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0
+2026-11-19T19:22:33.9903461Z t=207098.5ms frame=161484 ALLOC DONE
+2026-11-19T19:22:34.9911838Z t=208098.6ms frame=162373 Application.Quit
+2026-11-19T19:22:35.0124020Z t=208120.6ms frame=162374 OnApplicationQuit (probe) files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 
+2026-11-19T19:23:06.3825677Z t=10.0ms frame=0 boot mode=savequit development=True recorderValid=True/True
+2026-11-19T19:23:06.9696385Z t=589.3ms frame=5 click 'Continue career'
+2026-11-19T19:23:07.1646600Z t=784.4ms frame=108 CONTINUED Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days. files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 
+2026-11-19T19:23:07.1687951Z t=789.7ms frame=108 window=329424
+2026-11-19T19:23:07.1728339Z t=792.6ms frame=108 click 'Save to manual slot 2'
+2026-11-19T19:23:07.1784185Z t=798.7ms frame=108 save clicked files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 
+2026-11-19T19:23:07.2273988Z t=847.6ms frame=121 OnApplicationQuit (probe) files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:24:55.1217527Z t=12.8ms frame=0 boot mode=savequit mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:24:55.7216121Z t=605.1ms frame=5 click 'Continue career'
+2026-11-19T19:24:55.9237049Z t=808.0ms frame=114 CONTINUED Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days. files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:24:55.9277080Z t=811.5ms frame=114 window=722640
+2026-11-19T19:24:55.9302545Z t=814.1ms frame=114 click 'Save to manual slot 2'
+2026-11-19T19:24:55.9378005Z t=821.5ms frame=114 save clicked files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:24:55.9656522Z t=849.7ms frame=126 wantsToQuit files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 manual-2.tdsave.tmp.tmp:116803 
+2026-11-19T19:24:55.9681728Z t=852.5ms frame=126 OnApplicationQuit (probe) files=(FileNotFoundException)
+2026-11-19T19:24:55.9911079Z t=874.8ms frame=126 quitting files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:24:59.9420071Z t=12.9ms frame=0 boot mode=savequit mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:25:00.5186296Z t=583.1ms frame=5 click 'Continue career'
+2026-11-19T19:25:00.7064235Z t=771.1ms frame=101 CONTINUED Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days. files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:00.7100592Z t=774.7ms frame=101 window=591526
+2026-11-19T19:25:00.7136611Z t=777.5ms frame=101 click 'Save to manual slot 2'
+2026-11-19T19:25:00.7212360Z t=785.1ms frame=101 save clicked files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:00.7503918Z t=814.0ms frame=112 wantsToQuit files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 manual-2.tdsave.tmp.tmp:116803 
+2026-11-19T19:25:00.7529379Z t=817.0ms frame=112 OnApplicationQuit (probe) files=(FileNotFoundException)
+2026-11-19T19:25:00.7794204Z t=843.8ms frame=112 quitting files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:04.5282002Z t=12.7ms frame=0 boot mode=savequit mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:25:05.1157938Z t=593.4ms frame=5 click 'Continue career'
+2026-11-19T19:25:05.3125218Z t=791.0ms frame=107 CONTINUED Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days. files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:05.3181569Z t=795.8ms frame=107 window=853712
+2026-11-19T19:25:05.3207960Z t=798.9ms frame=107 click 'Save to manual slot 2'
+2026-11-19T19:25:05.3283828Z t=806.5ms frame=107 save clicked files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:05.3562978Z t=834.5ms frame=119 wantsToQuit files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 manual-2.tdsave.tmp.tmp:116803 
+2026-11-19T19:25:05.3817700Z t=859.4ms frame=119 OnApplicationQuit (probe) files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:05.3827695Z t=861.1ms frame=119 quitting files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:40.1024904Z t=13.7ms frame=0 boot mode=verify mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:25:40.7007113Z t=605.4ms frame=5 MENU files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:40.7032302Z t=607.3ms frame=5 click 'Load career'
+2026-11-19T19:25:40.7259686Z t=630.4ms frame=10 PICKER [Manual slot 3: Empty (disabled)] [Manual slot 2: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 2] [Manual slot 1: Ready | Thorncliff United | Season 1, day 7, round 0/38, position 20] 
+2026-11-19T19:25:40.7275493Z t=631.5ms frame=10 click 'Back'
+2026-11-19T19:25:40.7385625Z t=642.5ms frame=15 click 'Continue career'
+2026-11-19T19:25:40.9186580Z t=822.7ms frame=116 CONTINUED Thorncliff United | Season 1, day 7 | Position 2 | Rounds 1/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 14, in 7 days.
+2026-11-19T19:25:41.9189776Z t=1823.0ms frame=913 Application.Quit
+2026-11-19T19:25:41.9225397Z t=1826.2ms frame=914 wantsToQuit files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:41.9256429Z t=1830.0ms frame=914 OnApplicationQuit (probe) files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:25:41.9276581Z t=1831.4ms frame=914 quitting files=autosave.slot:403 autosave.tdsave:116803 manual-1.slot:404 manual-1.tdsave:116787 manual-2.slot:403 manual-2.tdsave:116803 
+2026-11-19T19:26:13.8257206Z t=13.0ms frame=0 boot mode=alloc mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:26:15.3185462Z t=1499.2ms frame=724 SAMPLE main-menu-idle frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:26:15.3261357Z t=1506.7ms frame=729 click 'New career'
+2026-11-19T19:26:15.3817340Z t=1562.3ms frame=741 click 'Select Thorncliff United'
+2026-11-19T19:26:15.3949113Z t=1575.9ms frame=746 click 'Start career'
+2026-11-19T19:26:15.5873167Z t=1768.4ms frame=854 click 'Advance one day'
+2026-11-19T19:26:15.6148725Z t=1795.3ms frame=860 click 'Advance one day'
+2026-11-19T19:26:15.6373123Z t=1818.1ms frame=865 click 'Advance one day'
+2026-11-19T19:26:15.6570151Z t=1837.6ms frame=870 click 'Advance one day'
+2026-11-19T19:26:15.6728111Z t=1853.9ms frame=875 click 'Advance one day'
+2026-11-19T19:26:15.6916295Z t=1872.3ms frame=880 click 'Advance one day'
+2026-11-19T19:26:15.7094272Z t=1889.7ms frame=885 click 'Advance one day'
+2026-11-19T19:26:15.7261479Z t=1906.7ms frame=891 click 'Save to manual slot 1'
+2026-11-19T19:26:15.7571791Z t=1937.5ms frame=900 MATCHDAY Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38
+ / Last action: Day advanced
+ / Injured players: 1. Board target: position 10 or better. Objective off track.
+ / Next: Juniper Park FC (home), day 7, in 0 days.
+2026-11-19T19:26:16.6378714Z t=2818.1ms frame=1619 SAMPLE career-home-idle-before-round frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:26:16.6441259Z t=2824.8ms frame=1624 click 'Resolve matchday (on Career Home)'
+2026-11-19T19:26:16.6620827Z t=2843.0ms frame=1629 round busy
+2026-11-19T19:26:17.5590123Z t=3739.8ms frame=2348 SAMPLE round-in-progress frames=600 gcBytesTotal=2095977 gcBytesMax=303720 framesWithAlloc=137 gcAllocCount=31708 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:29:43.7474578Z t=209926.4ms frame=144097 ROUND COMPLETE Thorncliff United | Season 1, day 7 | Position 20 | Rounds 1/38
+ / Last action: Round resolved
+ / Last result: Thorncliff United 2 - 10 Juniper Park FC
+ / Injured players: 1. Board target: position 10 or better. Objective off track.
+ / Next: Belmont Rovers (away), day 14, in 7 days.
+2026-11-19T19:29:44.6419475Z t=210820.9ms frame=144816 SAMPLE career-home-idle-after-round frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:29:44.6480302Z t=210827.2ms frame=144821 ALLOC DONE
+2026-11-19T19:29:45.6496780Z t=211828.6ms frame=145615 Application.Quit
+2026-11-19T19:29:45.6668854Z t=211847.0ms frame=145616 wantsToQuit files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+2026-11-19T19:29:45.6714382Z t=211851.1ms frame=145616 OnApplicationQuit (probe) files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+2026-11-19T19:29:45.6739447Z t=211853.0ms frame=145616 quitting files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+2026-11-19T19:30:42.7822365Z t=14.0ms frame=0 boot mode=control mainThreadGcAllocRecorder=True development=True recorderValid=True/True
+2026-11-19T19:30:44.2708589Z t=1495.9ms frame=724 SAMPLE control-main-thread-allocates frames=600 gcBytesTotal=172800 gcBytesMax=288 framesWithAlloc=600 gcAllocCount=600 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=600 mainThreadFramesWithGcAllocSample=600
+2026-11-19T19:30:45.1788973Z t=2403.1ms frame=1448 SAMPLE control-worker-thread-allocates frames=600 gcBytesTotal=152640 gcBytesMax=864 framesWithAlloc=409 gcAllocCount=530 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:30:46.0821072Z t=3306.7ms frame=2172 SAMPLE control-idle frames=600 gcBytesTotal=0 gcBytesMax=0 framesWithAlloc=0 gcAllocCount=0 mainThreadBytes=0 mainThreadFramesWithAlloc=0 mainThreadGcAllocSamples=0 mainThreadFramesWithGcAllocSample=0
+2026-11-19T19:30:46.0873839Z t=3313.0ms frame=2177 Application.Quit
+2026-11-19T19:30:46.1037037Z t=3328.4ms frame=2178 wantsToQuit files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+2026-11-19T19:30:46.1052148Z t=3329.6ms frame=2178 OnApplicationQuit (probe) files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+2026-11-19T19:30:46.1092793Z t=3334.7ms frame=2178 quitting files=autosave.slot:404 autosave.tdsave:116822 manual-1.slot:404 manual-1.tdsave:116774 
+
+## watcher log SQ1 (file overwritten by the next trial; first lines as printed in the session)
+t=826.49ms tmp-seen manual-2.tdsave.tmp.tmp WM_CLOSE posted=True
+t=828.24ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.tdsave.tmp.tmp
+t=830.24ms .. 840.24ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.tdsave.tmp
+t=842.24ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot.tmp manual-2.tdsave.tmp
+t=844.24ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot.tmp manual-2.tdsave
+t=846.24ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave
+
+## watcher log SQ2
+2026-11-19T19:24:55.9636522Z t=847.13ms tmp-seen manual-2.tdsave.tmp.tmp WM_CLOSE posted=True
+t=848.66ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp.tmp 
+t=850.66ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp.tmp 
+t=852.66ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=854.66ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=856.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=858.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=860.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=862.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=864.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=866.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.bak 
+t=868.67ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.bak manual-2.tdsave manual-2.tdsave.bak 
+t=871.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.bak manual-2.tdsave manual-2.tdsave.bak 
+t=873.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=875.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=877.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=879.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=881.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=883.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=885.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=887.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=889.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=891.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=893.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=895.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=897.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=899.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=901.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=903.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=905.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=907.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=909.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=911.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=913.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=915.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=917.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=919.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=921.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=923.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=925.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=927.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=929.36ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=931.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=933.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=935.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=937.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=939.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=941.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=943.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=945.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=947.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=949.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=951.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=953.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=955.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=957.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=959.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=961.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=963.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=965.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=967.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=969.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=971.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=973.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=975.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=977.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=979.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=981.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=983.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=985.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=987.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=989.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=991.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=993.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=995.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=997.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=999.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1001.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1003.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1005.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1007.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1009.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1011.37ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1013.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1015.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1017.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1019.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1021.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1023.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1025.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1027.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1029.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1031.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1033.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1035.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1037.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1039.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1041.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1043.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1045.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1047.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1049.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1051.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1053.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1055.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1057.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1059.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1061.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1063.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1065.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1067.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1069.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1071.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1073.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1075.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1077.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=1079.38ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+
+## watcher log SQ3
+2026-11-19T19:25:00.7478385Z t=811.44ms tmp-seen manual-2.tdsave.tmp.tmp WM_CLOSE posted=True
+t=813.43ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp.tmp 
+t=815.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp.tmp 
+t=817.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=819.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=821.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=823.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=825.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=827.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=829.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=831.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=833.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=835.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=837.63ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.bak 
+t=840.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.bak manual-2.tdsave manual-2.tdsave.bak 
+t=842.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=844.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=846.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=848.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=850.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=852.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=854.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=856.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=858.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=860.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=862.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=864.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=866.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=868.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=870.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=872.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=874.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=876.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=878.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=880.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=882.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=884.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=886.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=888.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=890.44ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=892.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=894.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=896.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=898.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=900.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=902.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=904.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=906.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=908.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=910.45ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=912.46ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=914.46ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=916.46ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+
+## watcher log SQ4
+2026-11-19T19:25:05.3547864Z t=832.29ms tmp-seen manual-2.tdsave.tmp.tmp WM_CLOSE posted=True
+t=834.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp.tmp 
+t=836.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=838.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=840.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=842.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=844.54ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave manual-2.tdsave.tmp 
+t=846.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=848.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.tmp 
+t=850.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.bak 
+t=852.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.tmp manual-2.tdsave manual-2.tdsave.bak 
+t=854.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.slot.bak manual-2.tdsave manual-2.tdsave.bak 
+t=856.62ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=859.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=861.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=863.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=865.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=867.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=869.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=871.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=873.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=875.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=877.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=879.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=881.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=883.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=885.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=887.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=889.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=891.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=893.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=895.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=897.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=899.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=901.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=903.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=905.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=907.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=909.25ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=911.26ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=913.26ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=915.26ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+t=917.26ms autosave.slot autosave.tdsave manual-1.slot manual-1.tdsave manual-2.slot manual-2.tdsave 
+
+## Exception lines per player log
+player-ALLOC.log: 30106 lines, 0 containing 'Exception'
+player-ALLOC2.log: 32657 lines, 0 containing 'Exception'
+player-CONTROL.log: 44 lines, 0 containing 'Exception'
+player-SQ1.log: 44 lines, 0 containing 'Exception'
+player-SQ2.log: 44 lines, 0 containing 'Exception'
+player-SQ3.log: 44 lines, 0 containing 'Exception'
+player-SQ4.log: 44 lines, 0 containing 'Exception'
+player-VERIFY.log: 44 lines, 0 containing 'Exception'

@@ -1,0 +1,111 @@
+// Scratch host-validation bench. Never committed. Run with
+// -executeMethod CareerRoundBench.Run -benchArm <name> -benchRuns <n> -benchOut <file>
+// Times one managed (engine-backed) round from identical pre-round save bytes, on the calling thread.
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using UnityEditor;
+using TacticalDirector.Discipline;
+using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
+using TacticalDirector.SeasonSave;
+
+public static class CareerRoundBench
+{
+    private const ulong WorldSeed = 0x5EED1EA6D0DEC0DEUL;
+    private const int ManagerId = 1;
+
+    public static void Run()
+    {
+        string arm = Arg("-benchArm", "unknown"), output = Arg("-benchOut", null);
+        int runs = int.Parse(Arg("-benchRuns", "3"));
+        int code = 0;
+        try
+        {
+            string checkpoint = Path.Combine(Path.GetTempPath(), "career-bench-" + arm + ".save");
+            SeasonLoop first = NewManagedCareer();
+            SeasonSaveManager.Save(first, null, checkpoint);
+            Write(output, "arm=" + arm + " checkpointSha256=" + Sha(File.ReadAllBytes(checkpoint))
+                + " runs=" + runs + " probeAllocCounter=" + GC.GetAllocatedBytesForCurrentThread());
+            for (int i = 0; i <= runs; i++)
+            {
+                SeasonLoop loop = Resume(checkpoint);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                long alloc0 = GC.GetAllocatedBytesForCurrentThread();
+                var watch = Stopwatch.StartNew();
+                MatchResult[] results = loop.AdvanceAndPlayNextRound();
+                watch.Stop();
+                long alloc = GC.GetAllocatedBytesForCurrentThread() - alloc0;
+                string after = Path.Combine(Path.GetTempPath(), "career-bench-" + arm + "-after.save");
+                SeasonSaveManager.Save(loop, null, after);
+                var text = new StringBuilder();
+                foreach (MatchResult r in results) text.Append(r.ToString()).Append(';');
+                Write(output, (i == 0 ? "warmup" : "run" + i) + " ms=" + watch.Elapsed.TotalMilliseconds.ToString("F1")
+                    + " allocBytes=" + alloc + " engineFixtures=" + loop.EnginePlayedFixtures
+                    + " snapshotSha256=" + Sha(loop.Snapshot()) + " saveSha256=" + Sha(File.ReadAllBytes(after))
+                    + " results=" + text);
+                File.Delete(after);
+            }
+            File.Delete(checkpoint);
+        }
+        catch (Exception exception)
+        {
+            Write(output, "ERROR " + exception);
+            code = 1;
+        }
+        EditorApplication.Exit(code);
+    }
+
+    private static SeasonLoop NewManagedCareer()
+    {
+        League league = LeagueBootstrap.Generate(WorldSeed, 4);
+        SeasonState season = league.CreateSeason(0);
+        int[] firstRound = season.UnplayedFixtureIndicesInRound(0);
+        int managedClub = season.FixtureAt(firstRound[1]).HomeClubId;
+        var world = new WorldStore(ManagerId, WorldSeed);
+        int[] clubs = league.ClubIds();
+        Squad[] squads = Array.ConvertAll(clubs, league.ResolveByClubId);
+        ProgressionEngine progression = ProgressionEngine.SeedFrom(squads, world.CurrentWorldTick);
+        var career = PlayerCareerStates.ForLeague(new ProgressionSquads(progression), clubs, injuryOccurrenceEnabled: true);
+        SeasonLoop loop = league.CreateLoop(world, managedClub, RoundResolutionMode.ManagedThroughEngine,
+            careerOrNull: career, progressionOrNull: progression, disciplineOrNull: new DisciplineState());
+        loop.AdvanceToNextFixtureDay();
+        return loop;
+    }
+
+    private static SeasonLoop Resume(string path)
+    {
+        SeasonSaveContents save = SeasonSaveManager.Load(path);
+        var career = PlayerCareerStates.FromBlocks(save.TrainingClubs, save.MedicalClubs,
+            save.AppearanceClubs, injuryOccurrenceEnabled: true);
+        return SeasonLoop.Restore(save.World, SeasonStateCodec.Encode(save.Season),
+            RoundResolutionMode.ManagedThroughEngine, career, null, save.Progression,
+            save.Discipline, save.Finances, save.Transfers);
+    }
+
+    private static string Arg(string name, string fallback)
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == name) return args[i + 1];
+        return fallback;
+    }
+
+    private static string Sha(byte[] bytes)
+    {
+        using var sha = SHA256.Create();
+        return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+    }
+
+    private static void Write(string path, string line)
+    {
+        string stamped = DateTime.UtcNow.ToString("o") + " " + line + Environment.NewLine;
+        if (path != null) File.AppendAllText(path, stamped);
+        UnityEngine.Debug.Log("[CareerRoundBench] " + line);
+    }
+}
