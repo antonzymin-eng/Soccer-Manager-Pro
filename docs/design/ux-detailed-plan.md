@@ -820,7 +820,8 @@ unpaged 38-row list sat between Calendar and the first save control, and rows 11
 without a mouse. One read-only block was therefore not enough. The owner chose paging over individually
 focusable rows. The list shows eight fixtures under a position heading, with *Earlier fixtures*, *Upcoming
 fixtures* and *Later fixtures* controls that follow the calendar's boundary-focus rule. Re-run at both
-scales, every line of every page came on screen during a Tab cycle. Rows stay read-only text. Shift+Tab, long
+scales, every line of every page was fully on screen at some stop in a Tab cycle, measured on the
+rendered line bounds. Rows stay read-only text. Shift+Tab, long
 club names and other window sizes were not verified in this run.
 
 ## 7.6 S1 usability tasks

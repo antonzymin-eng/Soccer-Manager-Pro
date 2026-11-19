@@ -151,32 +151,57 @@ public sealed class ScheduleProbe : MonoBehaviour
         return "[" + inView + (ring ? ", ring" : ", no-ring-child") + "]";
     }
 
-    // Which schedule text rows are inside the scroll viewport right now (rows are equal-height lines).
+    // Which schedule rows are FULLY inside the scroll viewport right now. Uses the rendered line bounds from the
+    // Text's own generator (wrapped rows span several rendered lines; a row counts only when every one of its
+    // rendered lines is entirely inside the viewport). Logs fully visible rows and clipped ones.
     private string VisibleRows()
     {
         Text t = ScheduleText();
         if (t == null) return "rows=none";
         var scroll = t.GetComponentInParent<ScrollRect>();
         if (scroll == null || scroll.viewport == null) return "rows=no-viewport";
-        string[] lines = t.text.Split((char)10);
-        var rect = t.rectTransform;
-        var c = new Vector3[4];
-        rect.GetWorldCorners(c);
+        Canvas.ForceUpdateCanvases();
+        string text = t.text;
+        var starts = new System.Collections.Generic.List<int> { 0 };
+        for (int i = 0; i < text.Length; i++) if (text[i] == (char)10) starts.Add(i + 1);
+        int logical = starts.Count;
+        TextGenerator gen = t.cachedTextGenerator;
+        var lines = gen.lines;
+        if (lines == null || lines.Count == 0) return "rows=no-generator-lines";
         var v = new Vector3[4];
         scroll.viewport.GetWorldCorners(v);
-        float top = c[1].y, bottom = c[0].y, h = (top - bottom) / lines.Length;
-        int first = -1, last = -1;
-        for (int i = 0; i < lines.Length; i++)
+        float unitsPerPixel = 1f / t.pixelsPerUnit;
+        var allInside = new bool[logical];
+        var anyLine = new bool[logical];
+        var anyInside = new bool[logical];
+        var renderedPerRow = new int[logical];
+        for (int i = 0; i < logical; i++) allInside[i] = true;
+        for (int k = 0; k < lines.Count; k++)
         {
-            float lineTop = top - i * h, lineBottom = top - (i + 1) * h;
-            if (lineBottom >= v[0].y - 0.5f && lineTop <= v[1].y + 0.5f)
-            {
-                if (first < 0) first = i;
-                last = i;
-                _seenRows.Add(i);
-            }
+            int row = 0;
+            while (row + 1 < logical && starts[row + 1] <= lines[k].startCharIdx) row++;
+            float topLocal = lines[k].topY * unitsPerPixel;
+            float bottomLocal = (lines[k].topY - lines[k].height) * unitsPerPixel;
+            float top = t.rectTransform.TransformPoint(new Vector3(0, topLocal, 0)).y;
+            float bottom = t.rectTransform.TransformPoint(new Vector3(0, bottomLocal, 0)).y;
+            bool inside = bottom >= v[0].y - 0.5f && top <= v[1].y + 0.5f;
+            bool touches = top >= v[0].y && bottom <= v[1].y;
+            anyLine[row] = true;
+            renderedPerRow[row]++;
+            if (!inside) allInside[row] = false;
+            if (touches) anyInside[row] = true;
         }
-        return first < 0 ? "rows=0/" + lines.Length + " visible" : "rows=" + (first + 1) + "-" + (last + 1) + "/" + lines.Length;
+        var full = new StringBuilder();
+        var clipped = new StringBuilder();
+        int wrapped = 0;
+        for (int i = 0; i < logical; i++)
+        {
+            if (renderedPerRow[i] > 1) wrapped++;
+            if (anyLine[i] && allInside[i]) { _seenRows.Add(i); full.Append(i + 1).Append(','); }
+            else if (anyInside[i]) clipped.Append(i + 1).Append(',');
+        }
+        return "fullRows=[" + full.ToString().TrimEnd(',') + "] clipped=[" + clipped.ToString().TrimEnd(',') + "] of " + logical
+            + " renderedLines=" + lines.Count + " wrappedRows=" + wrapped;
     }
 
     private IEnumerator TabTo(string label, int max = 40)
@@ -263,7 +288,7 @@ public sealed class ScheduleProbe : MonoBehaviour
             yield return TabTo(Find("Later fixtures").interactable ? "Later fixtures" : "Upcoming fixtures");
             bool complete = _seenRows.Count == lineCount;
             if (!complete) incompletePages++;
-            Mark("PAGE " + pageNumber + " '" + heading + "': lines ever visible in the Tab cycle " + _seenRows.Count + " of " + lineCount
+            Mark("PAGE " + pageNumber + " '" + heading + "': rows fully visible at some stop in the Tab cycle " + _seenRows.Count + " of " + lineCount
                 + (complete ? "" : " INCOMPLETE"));
             if (pageNumber == 2) yield return Shot("03-list-page2-focus-later");
             if (!Find("Later fixtures").interactable) break;

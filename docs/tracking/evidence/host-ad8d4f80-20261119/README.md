@@ -36,7 +36,8 @@ Two development players with Career enabled ran at 1280×720, one at 100% text s
 started a new career with clicks, then did the UX plan's task using only real key messages posted to its own
 window: Tab and Enter, through the legacy Input Manager the screens read. After every key the probe logged
 the focused control, whether its focus ring was drawn and in view, and which schedule rows were inside the
-scroll viewport.
+scroll viewport. This first, unpaged run counted a row when any part of it was on screen, assuming equal-height
+rows. That rule overstates reach, so its 23 of 38 is an upper bound. The paged re-run below uses a stricter rule.
 
 | Check | 100% | 200% |
 | --- | --- | --- |
@@ -71,12 +72,17 @@ same rule #551 applies to the calendar. Rows stay read-only text: two to three T
 The paging candidate's `src` tree (`ce194427`, recorded in `source-identity.txt`) passed ClientApp.Tests and
 UiFramework.Tests with 343 passed, 0 failed and 3 skipped, including four new paging tests. Both players were
 rebuilt from it and the probe re-ran the keyboard task. On every page it ran a full Tab cycle from *Later
-fixtures* and recorded every schedule line that came on screen.
+fixtures*. A line counts only when it is **fully** inside the viewport at some focus stop. The probe takes
+each rendered line's top and bottom from the `Text` component's own generator, so a wrapped row counts only
+when all of its rendered lines are inside together. This rule came from review; the logs and screenshots here
+are from the re-run that uses it (players rebuilt from `8f39ffe8`, same `src` tree).
 
 | Check | 100% | 200% |
 | --- | --- | --- |
 | Pages | 5 (8, 8, 8, 8, 6 fixtures) | 5 |
-| Pages where every line (heading + rows) came on screen during the Tab cycle | **5 of 5** | **5 of 5** (was 23 of 38 rows unpaged) |
+| Pages where every line (heading + rows) was fully on screen at some stop in the Tab cycle | **5 of 5** | **5 of 5** (unpaged: at most 23 of 38 rows) |
+| Where a row is only partly on screen | None at any stop | With focus on *Later fixtures*, row 6 of a page is clipped (page 2: Day 91, as in `2x-paged-03-list-page2-focus-later.png`); one Tab to *Save to manual slot 1* shows all nine lines in full |
+| Rows that wrapped onto two lines | 0 | 0 (club names in this league fit; long names were not tested) |
 | Last page: *Later fixtures* disabled, focus | Moves to *Upcoming fixtures* | Moves to *Upcoming fixtures* |
 | *Upcoming fixtures* returns to page 1; *Earlier fixtures* disabled there | Yes | Yes |
 | Calendar checks from the first run | Unchanged | Unchanged |
@@ -99,3 +105,4 @@ persistent-data path, which did not exist before the run, and were moved out aft
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | 2026-11-19 | Created: #551 schedule compile, EditMode and keyboard-only Play checks at 100% and 200% text scale, and the re-run with the paged fixture list. |
+| 1.1 | 2026-11-19 | Review follow-up: the paged run repeated with a fully-visible rule on rendered line bounds (same result, 5 of 5 pages at both scales); the two EditMode reports re-exported as well-formed XML (the `<scratch>` placeholder is now escaped). |
