@@ -1,0 +1,17 @@
+src/match-engine/MatchEngine.GoalkeeperDistribution.cs:182:                _goalkeeper.FinishDistribution(team, completed, _possessingAgentId == keeper, (int)_clock.CurrentTick);
+src/match-engine/MatchEngine.cs:799:            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:1167:            _possessingAgentId = SelectRestartTaker(
+src/match-engine/MatchEngine.cs:3428:            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:3894:                        bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:5072:            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:5149:            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:5278:                                 && _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:5441:            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+src/match-engine/MatchEngine.cs:6367:            if (_possessingAgentId == _prevPossessingAgentId)
+src/match-engine/MatchEngine.cs:7410:            // _prevPossessingAgentId == _possessingAgentId == MatchContext.PossessingAgentId holds, so both
+src/match-engine/MatchEngine.cs:7412:            _possessingAgentId = _matchContext.PossessingAgentId;
+src/match-engine/MatchEngine.cs:9175:            _possessingAgentId = agentId;
+src/match-engine/MatchEngine.cs:9329:            if (_possessingAgentId == agentId)
+src/match-engine/MatchEngine.cs:9440:            public bool IsBallPossessedBy(int agentId) => _engine._possessingAgentId == agentId;
+src/match-engine/MatchEngine.cs:9536:            public bool IsBallPossessedBy(int agentId) => _engine._possessingAgentId == agentId;
+src/match-engine/MatchEngine.cs:9888:                    if (_engine._possessingAgentId == duel.WinnerAgentId)

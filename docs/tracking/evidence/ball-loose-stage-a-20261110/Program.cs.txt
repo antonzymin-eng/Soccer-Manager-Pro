@@ -1,0 +1,119 @@
+// Created 2026-11-10. Read-only #440 Stage A runner; same production binary in both modes.
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Globalization;
+using System.Text.Json;
+using TacticalDirector.MatchEngine;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.PositioningAI;
+using TacticalDirector.TacticalInstructions;
+using TacticalDirector.EventSystem;
+using TacticalDirector.ShotMechanics;
+using UnityEngine;
+
+static class Program
+{
+    static object Field(object x,string name) => x.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(x);
+    static void Need(bool ok,string why) { if(!ok) throw new Exception(why); }
+    static TeamTactic Tactic(TacticFormation f) => new TeamTactic(Mentality.Balanced,f,Tempo.Standard,TacticWidth.Standard,
+        TacticPassing.Mixed,TacticPressing.Medium,LineOfEngagement.Standard,0.5f,TacticDefWidth.Standard,
+        TransitionPlan.HoldShape,TransitionPlan.Regroup,false,TacticTriggerMask.None,FocusPlay.Mixed,GkDistributionPolicy.SlowDown,0);
+    static BinaryWriter Writer(string path) => new BinaryWriter(new GZipStream(File.Create(path),CompressionLevel.Fastest));
+    static void V(BinaryWriter w,Vector2 p) {w.Write(p.x);w.Write(p.y);}
+    static void V(BinaryWriter w,Vector3 p) {w.Write(p.x);w.Write(p.y);w.Write(p.z);}
+    static object Vector(Vector3 v) => new{x=v.x,y=v.y,z=v.z};
+    static object EntryRow(BallLooseEpisodeObserver.Entry row) {
+        var e=row.Event;return new{sequence=row.Sequence,kind=e.Kind.ToString(),frame=e.Frame,actor=e.Actor,other=e.Other,
+            detail=e.Detail,previous=e.Previous,next=e.Next,ballPosition=Vector(e.BallPosition),ballVelocity=Vector(e.BallVelocity)};
+    }
+    static object EpisodeRow(BallLooseEpisodeObserver census,BallLooseEpisodeObserver.Episode e) => new{
+        frame=e.Frame,tackler=e.Tackler,carrier=e.Carrier,carrierTeam=e.CarrierTeam,sequence=e.Sequence,
+        sameFrameCarrierRegain=e.SameFrameCarrierRegain,frameEndOwner=e.FrameEndOwner,
+        frameEndClass=census.Classify(e.FrameEndOwner,e),outcome=e.Outcome,censorReason=e.CensorReason,endFrame=e.EndFrame,
+        opponentRecovery=e.OpponentRecovery,teammateRecovery=e.TeammateRecovery,
+        initialPosition=Vector(e.InitialPosition),initialVelocity=Vector(e.InitialVelocity),
+        frameEndPosition=Vector(e.FrameEndPosition),frameEndVelocity=Vector(e.FrameEndVelocity),
+        ownership=e.Ownership.ConvertAll(EntryRow),paths=e.Paths.ConvertAll(EntryRow)};
+    static int Main(string[] args) {
+        try {
+            CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;
+            ulong seed=ulong.Parse(args[0],NumberStyles.HexNumber);int c=int.Parse(args[1]);string mode=args[2],output=args[3];int frames=int.Parse(args[4]);
+            bool observed=mode!="plain";Need(mode=="plain"||mode=="observed","unknown observer mode");Directory.CreateDirectory(output);
+            using var log=new StreamWriter(Path.Combine(output,"engine.log"));var original=Console.Out;Console.SetOut(log);
+            Need(c==0,"Stage A uses only default main C0");
+            Environment.SetEnvironmentVariable("TD_W440_OBSERVE",observed?"1":null);
+            var e=new MatchEngine(seed);e.EnableGkHeading();
+            var census=BallLooseEpisodeObserver.AttachFromEnvironment(e);
+            Need((census!=null)==observed,"observer environment gate");
+            int[] families={c==1?1:c==3||c==9?2:0,c==2?1:c==4||c==9?2:0};
+            for(int t=0;t<2;t++) {e.SetTeamTactic(t,Tactic((TacticFormation)families[t]));Need(e.GetManagerState(t).Mode==ManagerMode.Human,"manager must be Human");}
+            if(c>=5 && c<=8) {int t=c==5||c==7?0:1;Duty duty=c<=6?Duty.Defend:Duty.Attack;for(int i=1;i<11;i++)e.SetPlayerTactic(t*11+i,new PlayerTactic(PlayerRole.Default,duty,PlayerInstructions.Default));}
+            Need(e.TestOnly_W8DistributionPolicy(0)==GkDistributionPolicy.SlowDown && e.TestOnly_W8DistributionPolicy(1)==GkDistributionPolicy.SlowDown,"shipping SlowDown");
+            var orchestrator=(TickOrchestrator)Field(e,"_orchestrator");var positioning=(PositioningAITick[])Field(e,"_positioning");
+            var ledger=Field(e,"_tickLedger");var ledgerPayload=(byte[])Field(ledger,"_payload");var offsets=(int[])Field(ledger,"_offsets");var sizes=(int[])Field(ledger,"_sizes");
+            using var digest=Writer(Path.Combine(output,"digests.bin.gz"));using var common=Writer(Path.Combine(output,"payload-hashes.bin.gz"));
+            using var trajectory=Writer(Path.Combine(output,"trajectory.bin.gz"));using var events=Writer(Path.Combine(output,"ledger.bin.gz"));using var geometry=Writer(Path.Combine(output,"geometry.bin.gz"));
+            using var teamWitness=Writer(Path.Combine(output,"team-possession.bin.gz"));
+            var receiverField=typeof(MatchEngine).GetField("_passInFlightReceiverId",BindingFlags.Instance|BindingFlags.NonPublic);
+            int schema=MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION==29?29:28;
+            long[] shots=new long[2],goals=new long[2],fouls=new long[2],possession=new long[3],teamPossession=new long[3],phase=new long[8];long live=0;
+            byte[] previous=new byte[32];var clock=System.Diagnostics.Stopwatch.StartNew();
+            for(int frame=1;frame<=frames;frame++) {
+                e.RunTick();census?.AfterTick(frame,e.PossessingAgentId,e.BallView.Position,e.BallView.Velocity);var h=orchestrator.CurrentHeader;var p=orchestrator.CurrentPayload;byte[] raw=p.PayloadBytes;
+                digest.Write(h.CurrentSnapshotDigest);Need(!string.IsNullOrEmpty(h.BuildHash),"missing BuildHash");
+                if(observed) {
+                    Need(h.PrevSnapshotDigest.AsSpan().SequenceEqual(previous),"broken previous link");
+                    using var preimage=new MemoryStream();using(var w=new BinaryWriter(preimage,System.Text.Encoding.UTF8,true)) {
+                        w.Write(DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_HEADER);w.Write(h.SchemaVersion);w.Write(h.Tick);
+                        w.Write(previous);w.Write(h.Fingerprint.ComputeDigest());w.Write(DeterministicSimConstants.DOMAIN_TAG_SNAPSHOT_PAYLOAD);w.Write(raw,0,p.BytesWritten);
+                    }
+                    Need(SHA256.HashData(preimage.ToArray()).AsSpan().SequenceEqual(h.CurrentSnapshotDigest),"independent digest mismatch");
+                    common.Write(SHA256.HashData(raw.AsSpan(0,p.BytesWritten)));
+
+                }
+                Array.Copy(h.CurrentSnapshotDigest,previous,32);
+                for(int i=0;i<22;i++) {var a=e.AgentView(i);Need(float.IsFinite(a.Position.x)&&float.IsFinite(a.Position.y),"nonfinite agent");V(trajectory,a.Position);}
+                var b=e.BallView;V(trajectory,b.Position);V(trajectory,b.Velocity);V(trajectory,b.AngularVelocity);V(trajectory,b.LastValidPosition);V(trajectory,b.LastValidVelocity);trajectory.Write((int)b.State);trajectory.Write(e.PossessingAgentId);
+                events.Write(e.TickLedgerCount);
+                for(int n=0;n<e.TickLedgerCount;n++) {
+                    byte ordinal=e.TickLedgerOrdinal(n);var eventBytes=ledgerPayload.AsSpan(offsets[n],sizes[n]);events.Write(ordinal);events.Write(sizes[n]);events.Write(eventBytes);
+                    int team=-1;
+                    if(ordinal==EventRegistry.GetOrdinal<ShotExecutedEvent>()) {team=MemoryMarshal.Read<ShotExecutedEvent>(eventBytes).TeamId;Need(team>=0&&team<2,"shot team");shots[team]++;}
+                    if(ordinal==EventRegistry.GetOrdinal<GoalAwardedEvent>()) {team=MemoryMarshal.Read<GoalAwardedEvent>(eventBytes).ScoringTeam;Need(team>=0&&team<2,"goal team");goals[team]++;}
+                    if(ordinal==EventRegistry.GetOrdinal<FoulCommittedEvent>()) {team=e.AgentTeamId(MemoryMarshal.Read<FoulCommittedEvent>(eventBytes).Offender);Need(team>=0&&team<2,"foul team");fouls[team]++;}
+                }
+                int receiver=(int)receiverField.GetValue(e);
+                int teamAgent=e.PossessingAgentId>=0?e.PossessingAgentId:receiver;
+                int teamInPossession=teamAgent>=0?e.AgentTeamId(teamAgent):-1;
+                Need(teamInPossession>=-1 && teamInPossession<2,"team possession witness");
+                teamWitness.Write(receiver);teamWitness.Write(teamInPossession);
+                if(!e.MatchEnded) {live++;possession[e.PossessingAgentId<0?2:e.AgentTeamId(e.PossessingAgentId)]++;teamPossession[teamInPossession<0?2:teamInPossession]++;}
+                if(frame%6==0 && !e.MatchEnded) {
+                    geometry.Write(frame);
+                    for(int t=0;t<2;t++) {
+                        int ph=(int)positioning[t].GetPhase();Need(ph>=0&&ph<4,"phase");phase[t*4+ph]++;geometry.Write(ph);
+                        for(int i=0;i<11;i++) {var slot=positioning[t].GetFormationSlot(t*11+i);Need(e.AgentIsSentOff(t*11+i)||float.IsFinite(slot.x)&&float.IsFinite(slot.y),"nonfinite slot");V(geometry,slot);}
+                    }
+                }
+                if(frame%54000==0) {log.Flush();File.WriteAllText(Path.Combine(output,"progress.json"),JsonSerializer.Serialize(new{frame,elapsedSeconds=clock.Elapsed.TotalSeconds}));}
+            }
+            census?.Complete(frames);
+            if(census!=null) {
+                Need(census.Episodes.Count==e.TestOnly_TackleOutcomeCounts.Loose,"BallLoose counter reconciliation");
+                using(var journal=new StreamWriter(Path.Combine(output,"chronology.jsonl")))
+                    foreach(var row in census.Journal) journal.WriteLine(JsonSerializer.Serialize(EntryRow(row)));
+                using(var episodes=new StreamWriter(Path.Combine(output,"episodes.jsonl")))
+                    foreach(var episode in census.Episodes) episodes.WriteLine(JsonSerializer.Serialize(EpisodeRow(census,episode)));
+                File.WriteAllText(Path.Combine(output,"census.json"),JsonSerializer.Serialize(new{episodes=census.Episodes.Count,
+                    engineBallLoose=e.TestOnly_TackleOutcomeCounts.Loose,ownershipChanges=census.OwnershipChanges}));
+            }
+            var summary=new{seed=seed.ToString("X16"),@case=c,mode,frames,live,shots,goals,fouls,possession,teamPossession,phase,schema,buildHash=MatchEngineBuildIdentity.BuildHash,digest=Convert.ToHexString(previous).ToLowerInvariant(),elapsedSeconds=clock.Elapsed.TotalSeconds};
+            File.WriteAllText(Path.Combine(output,"summary.json"),JsonSerializer.Serialize(summary,new JsonSerializerOptions{WriteIndented=true}));Console.SetOut(original);Console.WriteLine(JsonSerializer.Serialize(summary));return 0;
+        } catch(Exception ex) {Console.Error.WriteLine(ex);return 1;}
+    }
+}

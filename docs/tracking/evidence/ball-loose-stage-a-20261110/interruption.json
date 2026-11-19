@@ -1,0 +1,11 @@
+{
+  "cause": "Workspace capacity exhausted while scheduler created the next case directory, after seven exit-0 receipts.",
+  "recordedOriginalExit0Runs": 7,
+  "unreceiptedOriginalFullOutputs": 1,
+  "unreceiptedOutput": "unreceipted-at-interruption/observed/00000000ABCDEF12",
+  "unreceiptedExitCode": null,
+  "policy": "Reuse only receipted exit-0 results, retain the unreceipted output separately and rerun that seed/mode, finish four unstarted jobs. Same binary/runtime/input hashes and all original definitions.",
+  "primaryReceiptedFullMatches": 12,
+  "recoveryRuns": 5,
+  "totalProcessesStartedIncludingUnreceipted": 13
+}

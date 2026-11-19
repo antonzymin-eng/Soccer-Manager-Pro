@@ -1,0 +1,304 @@
+{
+  "episodes": 37,
+  "zeroVelocityReleases": 37,
+  "unchangedReleasePositions": 37,
+  "sameFrameOtherAcquisitions": 0,
+  "records": [
+    {
+      "seed": "0000000000000001",
+      "frame": 68580,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000000000001",
+      "frame": 98658,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000000000001",
+      "frame": 206664,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000000000001",
+      "frame": 272034,
+      "carrier": 19,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000000000001",
+      "frame": 292494,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000000000001",
+      "frame": 310890,
+      "carrier": 10,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 2454,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 14916,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 41268,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 42570,
+      "carrier": 14,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 96120,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 106410,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 232782,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "000000005A5A5A5A",
+      "frame": 272604,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 119202,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 142452,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 148518,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 166362,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 176484,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 247170,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0000000099887766",
+      "frame": 286974,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 13416,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 35664,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 76752,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 176814,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 191010,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000ABCDEF12",
+      "frame": 294324,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 1014,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 12336,
+      "carrier": 13,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 170826,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 217974,
+      "carrier": 10,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 218106,
+      "carrier": 7,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 221298,
+      "carrier": 17,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "00000000D1A6D05E",
+      "frame": 305622,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "frame": 118320,
+      "carrier": 18,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "frame": 160764,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    },
+    {
+      "seed": "0F1E2D3C4B5A6978",
+      "frame": 314454,
+      "carrier": 6,
+      "releasePositionEqualsTacklePosition": true,
+      "releaseVelocityExactlyZero": true,
+      "otherAcquisitionInTackleFrame": false
+    }
+  ]
+}

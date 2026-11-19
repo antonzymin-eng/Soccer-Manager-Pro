@@ -1,10 +1,13 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-18 (merge of main into #440 Stage A: version history only)
 // Modified: 2026-11-16 (merge of W13 with main: version history only)
 // Modified: 2026-11-12 (ERR-008-028 amendment: pure SelectMarkTargetSpeed helper; read-only TestOnly_Command seam)
 // Modified: 2026-11-12 (W13.1c / ERR-008-028: RunMechanicsAI writes TacticalContext.MarkTargetSpeed beside the mark target; + TestOnly_MarkTargetSpeed. No schema/RNG change; default behaviour identical)
 // Modified: 2026-11-11 (W13.1 / ERR-014-010: mark-target composition in RunMechanicsAI under MarkMovementEnabled (default off); shared TeamPossessionAgent helper; FillDefensiveSnapshot sets MarkMovementActive; + TestOnly_ArmMarkMovement / TestOnly_MarkTarget / TestOnly_PressRole. No schema/RNG change; default behaviour identical; ERR-021-010)
 // Modified: 2026-11-10 (W13.0 / ERR-014-008: + TestOnly_MarkAssignment read seam; FillDefensiveSnapshot unchanged, its frame is now the documented #14 contract. No schema/RNG change)
 // Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
+// Modified: 2026-11-10 (#440 Stage A: copied diagnostic chronology; no gameplay change)
+// Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-18 (D-07 outside-area hand contacts and carries; review: acquisition snap is not a carry)
 // Modified: 2026-10-15 (W8 B live distribution)
 // Modified: 2026-10-16 (W8 B review cleanup)
@@ -3570,6 +3573,9 @@ namespace TacticalDirector.MatchEngine
         {
             if (!_secondHalfStarted && tick >= MatchEngineConstants.HALF_TIME_BOUNDARY_TICK)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+                ObserveBallLooseStageA(BallLooseStageAKind.HalfTime);
+#endif
                 _secondHalfStarted = true;
                 // §5.Z Phase H: the second-half kickoff is taken by the team that did NOT kick off the
                 // first half (Law 8), i.e. the away team — the boot kickoff is awarded to team 0.
@@ -3589,6 +3595,9 @@ namespace TacticalDirector.MatchEngine
             // jump straight to MATCH_TICKS_TOTAL on a fresh engine must still fire both transitions.
             if (!_matchEnded && tick >= MatchEngineConstants.MATCH_TICKS_TOTAL)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+                ObserveBallLooseStageA(BallLooseStageAKind.FullTime);
+#endif
                 _matchEnded = true;
                 // An unexecuted order cannot survive full time. The view observes removal.
                 _subRequestCount = 0;
@@ -4413,6 +4422,9 @@ namespace TacticalDirector.MatchEngine
 
             float uniform = TackleDrawUniform(tackler, carrier);
             TackleOutcome outcome = TackleOutcomeResolver.Resolve(in inputs, uniform);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Tackle, tackler, carrier, (int)outcome);
+#endif
 
             // The challenge was made whatever it produced, so the cooldown arms on every branch
             // INCLUDING Missed. Arming only on success would let a defender who keeps missing
@@ -5700,6 +5712,10 @@ namespace TacticalDirector.MatchEngine
         private void RunResolvePhase()
         {
             EventBus.BeginPhase(PhaseId.Resolve);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            if (_ball.State == BallStateType.OutOfPlay)
+                ObserveBallLooseStageA(BallLooseStageAKind.OutOfPlay);
+#endif
             if (_matchEnded)
             {
                 return;
@@ -6065,6 +6081,9 @@ namespace TacticalDirector.MatchEngine
         private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue,
             bool freeSubstitutionWindow = false, bool publishSubstitutionsNow = true)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Restart, awardedTeam, detail: (int)cue);
+#endif
             ClearHandlingLawAtRestart();
             ObserveW8(W8StageAKind.Restart, awardedTeam, _possessingAgentId, cue);
             _ball = BallState.CreateAtPosition(new Vector3(
@@ -6380,6 +6399,9 @@ namespace TacticalDirector.MatchEngine
             }
 
             var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.Foul, offender, victim);
+#endif
             EventBus.Publish(in foulEvt);
 
             byte? drawnKind = DetermineCardKind(v);
@@ -6703,6 +6725,9 @@ namespace TacticalDirector.MatchEngine
             FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
             _firstTouch.ApplyTouchResult(result, context);
             ObserveW8(W8StageAKind.FirstTouch, toucher, (int)result.PossessionOutcome);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.FirstTouch, toucher, detail: (int)result.PossessionOutcome);
+#endif
 
             switch (result.PossessionOutcome)
             {
@@ -6829,6 +6854,9 @@ namespace TacticalDirector.MatchEngine
             {
                 TakeControlledPossession(claimer);
                 ObserveW8(W8StageAKind.LoosePickup, claimer);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            ObserveBallLooseStageA(BallLooseStageAKind.LoosePickup, claimer);
+#endif
             }
         }
 
@@ -9330,6 +9358,10 @@ namespace TacticalDirector.MatchEngine
             {
                 EndGoalkeeperHandEpisode(previous);
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+            if (previous != agentId)
+                ObserveBallLooseStageA(BallLooseStageAKind.Possession, previous: previous, next: agentId);
+#endif
         }
 
         /// <summary>
@@ -11393,4 +11425,6 @@ namespace TacticalDirector.MatchEngine
 // | 2.20 | 2026-11-12 | — | ERR-008-028 amendment: the marked man's speed selection extracted to the pure internal SelectMarkTargetSpeed (unit-tested); no behaviour change. |
 // | 2.21 | 2026-11-12 | — | W13.1c final pass: read-only TestOnly_Command seam (walk / jog command flips in a descriptive test). No behaviour, schema or RNG change. |
 // | 2.22 | 2026-11-16 | — | Merge main 3871c9ac (#434 / PR #543 at v2.18) into W13: both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change; MarkMovementEnabled stays false. |
+// | 2.17 (branch-local #440) | 2026-11-10 | — | #440 Stage A development-only observer at tackle/ownership/censor boundaries. No gameplay, snapshot, RNG or tuning change. |
+// | 2.23 | 2026-11-18 | — | Merge main 4cdb4823 into #440 Stage A (PR #544): both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change. |
 #endregion

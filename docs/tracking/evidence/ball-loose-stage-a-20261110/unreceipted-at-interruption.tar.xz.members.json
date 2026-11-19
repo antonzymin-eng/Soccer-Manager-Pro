@@ -1,0 +1,58 @@
+{
+  "archiveSha256": "1b28cc7a6fb97d2a431335cb1e6684c740bbf356ce2a509aefb95f77fa88f46c",
+  "archiveBytes": 84916820,
+  "files": {
+    "observed/00000000ABCDEF12/census.json": {
+      "bytes": 58,
+      "sha256": "ec9e0bae33cb550eb910c042bada46a4049cea877571fdb50f263d319824914b"
+    },
+    "observed/00000000ABCDEF12/chronology.jsonl": {
+      "bytes": 881247,
+      "sha256": "7e95e65bcec9da9c59eb025d1419d325a4f408c08dd9a842d1f61b24636a8d03"
+    },
+    "observed/00000000ABCDEF12/digests.bin.gz": {
+      "bytes": 10371173,
+      "sha256": "02f6360bce049b67ec76455fa0878550c71e1cd0b4c882a651c2901cf9b72264"
+    },
+    "observed/00000000ABCDEF12/engine.log": {
+      "bytes": 91981,
+      "sha256": "422ed7bb5dc53d411cc726e4b4369f0ced2670e8a5b8aa7f19553066d2745a04"
+    },
+    "observed/00000000ABCDEF12/episodes.jsonl": {
+      "bytes": 7365,
+      "sha256": "62ce6ee3511aae388c3116b497b6fd0a498f5bbd0aeb52f04d6ff6e9c170c0bb"
+    },
+    "observed/00000000ABCDEF12/geometry.bin.gz": {
+      "bytes": 6761490,
+      "sha256": "2075d51360db897192df67460f607d9a3b10dab3913e0a958456a2e5fbd31a71"
+    },
+    "observed/00000000ABCDEF12/ledger.bin.gz": {
+      "bytes": 109946,
+      "sha256": "3a2743b6f4e4e00be85ca3c675f4e6f7489348b4dabf5a344d605a0cbfb7722a"
+    },
+    "observed/00000000ABCDEF12/payload-hashes.bin.gz": {
+      "bytes": 10371173,
+      "sha256": "03cf64a3b02af2c7c905d5c9a9bc26e566876f8939a1283a9c19684962c4e82f"
+    },
+    "observed/00000000ABCDEF12/progress.json": {
+      "bytes": 44,
+      "sha256": "90fc526cf0a089247b6486bb5c4eb7a47170dd2e837cf096ec44235b8a2a222d"
+    },
+    "observed/00000000ABCDEF12/runner.log": {
+      "bytes": 447,
+      "sha256": "71009ea88b98c10ee75f5967d0c706e16f8a1657ae170adcbc6157ddff00ce10"
+    },
+    "observed/00000000ABCDEF12/summary.json": {
+      "bytes": 625,
+      "sha256": "eea53f76fd0ed256d5f102eb36b9998b905b328786fced6ad8f10a3f814d62c6"
+    },
+    "observed/00000000ABCDEF12/team-possession.bin.gz": {
+      "bytes": 29213,
+      "sha256": "fe914b8ff6d48f0dcfddbaa4d55ac72cffaec816550c695343baa4e5f2fef5f1"
+    },
+    "observed/00000000ABCDEF12/trajectory.bin.gz": {
+      "bytes": 57318545,
+      "sha256": "515372a5d412e5050863e8a09d1e86c4f6f3395e5633437711d5198b3a4c0384"
+    }
+  }
+}

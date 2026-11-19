@@ -1,0 +1,8 @@
+test_bit_patterns_and_block_boundaries_match_with_both_decoders (test_retained_trace_store.TraceStoreTests.test_bit_patterns_and_block_boundaries_match_with_both_decoders) ... ok
+test_corruption_is_rejected_before_originals_are_deleted (test_retained_trace_store.TraceStoreTests.test_corruption_is_rejected_before_originals_are_deleted) ... ok
+test_roundtrip_retains_raw_bytes_and_empty_unwritten_stream (test_retained_trace_store.TraceStoreTests.test_roundtrip_retains_raw_bytes_and_empty_unwritten_stream) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.107s
+
+OK

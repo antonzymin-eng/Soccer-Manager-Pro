@@ -25,6 +25,7 @@ LFS_POINTER_RE = re.compile(
 DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "formation-duty-20261109": ("manifest", FULL_MANIFEST),
     "host-formation-duty-75d62186-20261110": ("manifest", FULL_MANIFEST),
+    "ball-loose-stage-a-20261110": ("manifest", FULL_MANIFEST),
     "v210-rolling": ("manifest", FULL_MANIFEST),
     "pr420-owner-held-isolation": ("manifest", FULL_MANIFEST),
     "foul-card-six-seed": ("manifest", FULL_MANIFEST),
@@ -50,6 +51,7 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-w8c-fdbbff5a-20261106": ("manifest", FULL_MANIFEST),
     "w13-switch-off-neutrality-20261113": ("manifest", FULL_MANIFEST),
     "host-w13-6491de79-20261113": ("manifest", FULL_MANIFEST),
+    "host-w440-b6545169-20261112": ("manifest", FULL_MANIFEST),
     "host-w8b-e58577de-20261017": ("manifest", FULL_MANIFEST),
     "host-d07-a7800579-20261018": ("manifest", FULL_MANIFEST),
     "d07-six-seed-census-20261018": ("manifest", FULL_MANIFEST),

@@ -1,6 +1,6 @@
 # Tackle duel — design note (scaling back #440, proposing a richer duel)
 
-> **Created:** November 16, 2026 · **Version:** 0.6 · **Status:** DRAFT — design supplement, not an
+> **Created:** November 16, 2026 · **Version:** 0.7 · **Status:** DRAFT — design supplement, not an
 > approved spec. Nothing here is implemented, measured or authorized. Every constant below is a
 > proposal, and every decision in §7 is the owner's.
 > **Purpose:** The owner reviewed #440 Stage B and judged the tackle model a poor fit for real
@@ -415,7 +415,7 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
 
 | ID | Decision | Recommendation |
 |---|---|---|
-| D1 | Cut #440 to A′: geometry-derived knock plus one-frame fence, with correctness acceptance only. This withdraws the Stage B 48-run experiment and its 25 % caps. | **Yes.** PR #544's Stage A instrument and evidence stay valuable as the before-baseline. |
+| D1 | Cut #440 to A′: geometry-derived knock plus one-frame fence, with correctness acceptance only. This withdraws the Stage B 48-run experiment and its 25 % caps. | **Yes.** PR #544's Stage A instrument and evidence stay valuable as the before-baseline. **Owner approved, November 18, 2026**; recorded in `w-440-ball-loose-design.md` v1.6 (PR #544). |
 | D2 | Approve slim B′ (Duel v2, §5) for a design-to-spec pass on #14 §3.6.5, including §5.4's closing-speed commitment, which replaces `cos(approachAngle)`. | **Yes, after A′.** |
 | D3 | *Withdrawn in v0.5.* Slim B′ has no intent draw, so no draw-site decision is needed. | — |
 | D4 | Source for numeric realism bands (foul share by approach side, clean-win rate, lunge outcomes). | Owner to name acceptable data. Until then, signs only. |
@@ -426,6 +426,7 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.7 | November 18, 2026 | — | §7: D1 approved by the owner and recorded in `w-440-ball-loose-design.md` v1.6 (PR #544). D2 and D4–D6 remain open. No formula change. |
 | 0.6 | November 18, 2026 | — | Codex review of v0.5 at `1079bf9c` (one P2). §4's 0.01 m facing fallback reversed `n` for a tackler directly in front, a probability cliff (P(Foul) 0.0387 → 0.1132) that contradicted §6's continuity. §5.2 adds a near-coincident fade: side of approach and closing speed blend to neutral below `APPROACH_BLEND_M` (new, 0.10 m `[GT]`), so B′ adds seven `[GT]` constants. §4 limits the fallback to the A′ knock direction; §5.4 and §6 use effective closing speed `c̃`. Worked examples unchanged. New near-coincident sweeps (7.7 million sign evaluations, 2.4 million continuity pairs, separations from 0) found no violation and no jump. §3 updated. |
 | 0.5 | November 16, 2026 | — | Owner review: B′ judged overbuilt. §5 is rewritten as a slim duel on today's §3.6.5 skeleton, with the same eligibility, one target and one draw. It adds side-of-approach exposure, heavy touch as exposure (new `TOUCH_EXPOSE_K` 0.10 s/m), closing-speed commitment and timing, and keeps the existing Aggression term as the man-first lean. Withdrawn: the virtual ball point, two-target geometry, reach taper and drawn intent: 12 constants withdrawn and one added (`TOUCH_EXPOSE_K`), so B′'s new `[GT]` constants fall from 17 to 6, plus one `[CROSS]`. Kept from the reviews: closing-speed commitment, the set-speed-conditional lunge sign and continuity. The from-behind sign now holds per attempt. §3 and §7 are updated, and D3 is withdrawn. Three new worked examples; sign sweeps run on the v0.5 formulas found no violation. |
 | 0.4 | November 16, 2026 | — | Third Codex review of PR #548 (two P2 findings). (1) §5.6: `cleanShare` carries the ball-reach weight `ρ_b`, so no challenge wins a ball out of reach, whatever the intent. The reviewer's case (ball 1.128 m away, P(BallWon) 7.14 %) now gives 0. (2) §5.3: v0.3's hard intent forcing at 1 m is replaced by continuous reach weights `ρ` (new `REACH_TAPER_M` 0.25 m `[GT]`, proposed). Intent `π_m` is `m` reweighted by reachability, and `engage` is scaled by `ρ_ch`, so P(Missed) → 1 at the eligibility edge. The reviewer's 0.9999 m / 1.0001 m pair (14.48 % → 16.64 %) now gives 16.64 % on both sides. Worked example 2 and the §6 counterexample figures are regenerated. Sweeps: 2.6 million sign evaluations and 17 million continuity pairs, with no violation; the steepest response at body separations of at least 0.3 m is under 8 % per metre. |
