@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-11-20 (ERR-010-005: composed header-trigger approach-condition regressions, home/away)
 // Modified: 2026-09-22 (W3: Head-wins-Hand event provenance retains mixed-duel id)
 // Modified: 2026-09-22 (W3: composed home/away Head-wins-Hand route through real #10 geometry)
 // Modified: 2026-09-22 (W3: mirrored home/away claim lifecycle + composed real Hand-contact tests)
@@ -731,6 +732,138 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(team, committed.TeamId, "The committed header carries the heading agent's team.");
         }
 
+        // ── ERR-010-005: §4.2 approach condition (the ball must not be moving away) ────────
+        //
+        // #441 §6.7: 1,600 of 1,702 pass-attributed header commits were by the passer, a median nine
+        // frames after the kick, because the trigger ignored §4.2's "moving toward them". These run the
+        // real tactical drive (TryCommitHeaderIntents) and observe Heading #10's own Commit sample, for a
+        // home and an away passer, each with its attack direction mirrored.
+
+        private static readonly Vector2 PasserSpot = new Vector2(52.5f, 34f);
+
+        private static int FirstOutfieldAgentOfTeam(MatchEngine engine, int team)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (!engine.AgentIsGoalkeeper(i) && engine.AgentTeamId(i) == team)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private static int SecondOutfieldAgentOfTeam(MatchEngine engine, int team, int first)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (i != first && !engine.AgentIsGoalkeeper(i) && engine.AgentTeamId(i) == team)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>Stages a loose airborne ball and the listed agents, parks everyone else 20+ m away,
+        /// runs one real tactical drive and returns the agents Heading #10 recorded a Commit for.</summary>
+        private static List<int> CommitsAfterStagedFlight(
+            MatchEngine engine, Vector3 ballPosition, Vector3 ballVelocity, params (int agent, Vector2 at)[] staged)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                var far = AgentState.CreateAtPosition(new Vector2(10f + i, 5f), Vector2.right);
+                engine.TestOnly_SetAgent(i, in far);
+            }
+            foreach ((int agent, Vector2 at) in staged)
+            {
+                var placed = AgentState.CreateAtPosition(at, Vector2.right);
+                engine.TestOnly_SetAgent(agent, in placed);
+            }
+
+            var commits = new List<int>();
+            engine.TestOnly_Heading.TestOnly_ReachabilityObserver = sample =>
+            {
+                if (sample.Kind == HeadingReachabilityKind.Commit)
+                {
+                    commits.Add(sample.AgentId);
+                }
+            };
+            engine.TestOnly_ForceBallLoose(ballPosition, ballVelocity);
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_Heading.TestOnly_ReachabilityObserver = null;
+            return commits;
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_BallMovingAwayFromPasser_DoesNotCommitPasser(int team)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int passer = FirstOutfieldAgentOfTeam(engine, team);
+            Assert.GreaterOrEqual(passer, 0);
+
+            // Nine frames after a pass struck in the passer's attack direction (+x home, −x away): the
+            // ball is 0.4 m ahead at 0.8 m, travelling away at 15 m/s and still rising. Pre-fix this
+            // committed the passer, the #441 §6.7 pattern.
+            float dir = team == 0 ? 1f : -1f;
+            var ball = new Vector3(PasserSpot.x + 0.4f * dir, PasserSpot.y, 0.8f);
+            var velocity = new Vector3(15f * dir, 0f, 3f);
+
+            List<int> commits = CommitsAfterStagedFlight(engine, ball, velocity, (passer, PasserSpot));
+
+            CollectionAssert.DoesNotContain(commits, passer,
+                "A ball travelling away from the passer must not commit the passer to a header (ERR-010-005).");
+            Assert.AreEqual(0, commits.Count, "No other agent is within head range, so nothing commits.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_BallApproachingAgent_StillCommits(int team)
+        {
+            // Control for the test above: the same geometry with the flight reversed is a ball arriving
+            // at the agent, which §4.2 must still commit. Guards against a fix that disables the trigger.
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int agent = FirstOutfieldAgentOfTeam(engine, team);
+            Assert.GreaterOrEqual(agent, 0);
+
+            float dir = team == 0 ? 1f : -1f;
+            var ball = new Vector3(PasserSpot.x + 0.4f * dir, PasserSpot.y, 0.8f);
+            var velocity = new Vector3(-15f * dir, 0f, 3f);
+
+            List<int> commits = CommitsAfterStagedFlight(engine, ball, velocity, (agent, PasserSpot));
+
+            CollectionAssert.AreEqual(new[] { agent }, commits,
+                "A ball arriving at the only agent in head range must commit that agent.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_PasserNearer_ApproachedTeammateCommits(int team)
+        {
+            // The passer is nearer the ball (0.5 m) than the teammate it is travelling toward (1.0 m).
+            // Pre-fix the nearest-only rule chose the passer; the approached teammate is the candidate.
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int passer = FirstOutfieldAgentOfTeam(engine, team);
+            int receiver = SecondOutfieldAgentOfTeam(engine, team, passer);
+            Assert.GreaterOrEqual(passer, 0);
+            Assert.GreaterOrEqual(receiver, 0);
+
+            float dir = team == 0 ? 1f : -1f;
+            var ball = new Vector3(PasserSpot.x + 0.5f * dir, PasserSpot.y, 1.0f);
+            var velocity = new Vector3(10f * dir, 0f, 0f);
+            var receiverSpot = new Vector2(PasserSpot.x + 1.5f * dir, PasserSpot.y);
+
+            List<int> commits = CommitsAfterStagedFlight(
+                engine, ball, velocity, (passer, PasserSpot), (receiver, receiverSpot));
+
+            CollectionAssert.AreEqual(new[] { receiver }, commits,
+                "The approached teammate, not the nearer passer, must receive the header commit.");
+        }
+
         [Test]
         public void DistinctSquad_SaveCommitsRosterGoalkeeperAttrs()
         {
@@ -926,4 +1059,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.7     | 2026-09-22 | —      | W3: mirrored composed Head-wins-Hand test stages only elapsed jump history, then requires #10's real current-frame contact geometry to qualify the Head; winner mutates through Heading while the GK claim terminates DisturbedInDuel with no possession. |
 // | 1.8     | 2026-09-22 | —      | W3 event provenance: the mirrored mixed contest drains HeaderExecutedEvent and requires ContestedDuelId == W3 duel/frame id, preventing winner suppression from falsely reporting an uncontested header. |
 // | 1.9     | 2026-09-23 | —      | ERR-011-014: possession hard-cancels an active claim immediately; a pre-tactical loose ball cannot revive the stale Hand participant. |
+// | 1.10    | 2026-11-20 | —      | ERR-010-005: composed regressions through the real tactical drive and #10's Commit sample, home and away: a ball moving away from the passer commits nobody (failed pre-fix), the approached teammate beats a nearer passer (failed pre-fix), and a reversed flight still commits (control). |
 #endregion

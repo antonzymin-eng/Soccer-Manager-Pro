@@ -318,6 +318,35 @@ _heading.CommitIntent(agentId, intent, attrs, _ball, CurrentFrame)
 `_heading.Update` then runs the two-pass eligibility/contact resolution and, on a successful header,
 applies the new ball velocity via the ball adapter.
 
+**Approach condition — "moving toward them" (made explicit 2026-11-20, `ERR-010-005`).** The trigger
+runs on the 10 Hz tactical stride (`DriveGkHeadingTactical` → `TryCommitHeaderIntents`, KD-17). With
+`p_b` the ball position, `v_b` its velocity and `p_i` agent *i*'s position, all in pitch metres and m/s,
+agent *i* is a candidate only when every condition holds:
+
+| Condition | Formula | Units / range |
+|---|---|---|
+| Ball loose and airborne | no possessing agent, and `p_b.z ≥ HeaderTriggerMinBallHeightM` (0.5 m) | m, `z ≥ 0` |
+| Active outfielder | not a goalkeeper, not sent off | — |
+| Within head range | `d_i² = (p_i.x − p_b.x)² + (p_i.y − p_b.y)² ≤ HeaderTriggerRangeM²` (1.5 m) | m², `[0, 2.25]` |
+| **Ball not moving away** | `c_i = v_b.x · (p_i.x − p_b.x) + v_b.y · (p_i.y − p_b.y) ≥ 0` | m²/s, unbounded sign |
+
+Among candidates the smallest `d_i²` wins; an exact tie goes to the later index. `c_i = 0` (a ball
+directly overhead, one with no horizontal motion, or one crossing the agent's line at right angles)
+stays eligible. The approach test is horizontal only: a ball dropping onto a player is still
+"toward" them. No constant is added; the threshold is the sign itself, `[FIXED]` at 0.
+
+*Worked example (the #441 §6.7 pattern).* A home passer at `(52.5, 34)` strikes a pass along +x. Nine
+frames later the ball is at `(52.9, 34, 0.8)` with `v_b = (15, 0, 3)` m/s. `d² = 0.16 m²` is in range,
+but `c = 15 · (52.5 − 52.9) + 0 = −6 m²/s < 0`, so the passer is not a candidate. A teammate at
+`(54.0, 34)` has `d² = 1.21 m²` and `c = 15 · 1.1 = 16.5 m²/s ≥ 0`, so the teammate is selected even
+though the passer is nearer. The away side mirrors on x: `v_b = (−15, 0, 3)` at `(52.1, 34, 0.8)` gives
+`c = −15 · 0.4 = −6 m²/s` for the passer at `(52.5, 34)`.
+
+Before `ERR-010-005` the implementation (`GkHeadingIntentSource.NearestHeaderCandidate`) checked range
+and height only. On the six frozen seeds at `ceb0384a`, 1,600 of 1,702 pass-attributed commits were by
+the passer, a median nine frames after the kick
+([#441 §6.7](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)).
+
 **KD-7**: at most one header intent per agent per airborne-ball episode (a per-agent latch cleared when
 the ball leaves head range or is possessed). Committing to only the single nearest eligible agent per
 tick keeps the trigger conservative and avoids 22 simultaneous headers.
@@ -632,6 +661,18 @@ All three sites in §4.2a above corrected to name the true `dz`-dependent formul
 is unchanged in substance (the out-of-range branch is still what nearly every own-half clearance hits),
 only its angle is no longer misdescribed as a constant 45°. Documentation only — no code or behaviour
 change; `HeadingAim.ComputeAimDirection` was already correct.
+
+## 9f. §4.2 approach condition (2026-11-20) — `ERR-010-005`, spec + code same commit
+
+§4.2 has required the ball to be "moving toward them" since this supplement was written, but gave no
+formula, and `NearestHeaderCandidate` (landed 2026-07-22) implemented range and height only. The
+#441 current-main census found the consequence: 1,600 of 1,702 pass-attributed header commits were by
+the passer of that pass. §4.2 now states the condition as `v_b,xy · (p_i − p_b)_xy ≥ 0` with units,
+range and a worked example, and the code applies it. Locks: `GkHeadingIntentSourceTests` (pure, both
+attack directions) and `MatchEngineGkHeadingTests` composed regressions through the real tactical drive
+and #10's Commit sample, home and away; the moving-away and nearer-passer cases fail on the pre-fix
+code. No new constant, cross-tick state, schema version, RNG stream, domain tag or draw site. The
+GK/Heading flag is on by default, so trajectories change wherever a header commit changes.
 
 ## 10. Adversarial review log
 
