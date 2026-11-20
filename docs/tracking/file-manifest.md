@@ -1,6 +1,6 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 20, 2026 — (v2.262) **Owner decision D-16 (UI Toolkit).** **New:** `docs/tracking/ui-toolkit-presentation-design.md` v0.4 (DRAFT design supplement). **Modified (documentation only):** `path-to-playable-roadmap.md` v1.10, `CHANGELOG.md`, `.claude/skills/adversarial-review/SKILL.md` (design-supplement count 66 → 67). v2.260–v2.261 are held by open PR #559. Adds the supplement's Tracking Documents row.
+**Last Updated:** November 20, 2026 — (v2.262) **Owner decision D-16 (UI Toolkit).** **New:** `docs/tracking/ui-toolkit-presentation-design.md` v0.5 (DRAFT design supplement). **Modified (documentation only):** `path-to-playable-roadmap.md` v1.10, `CHANGELOG.md`, `.claude/skills/adversarial-review/SKILL.md` (design-supplement count 66 → 67). v2.260–v2.261 are held by open PR #559. Adds the supplement's Tracking Documents row.
 
 **Last Updated (prior):** November 20, 2026 — (v2.259) **#441 evidence cleanup.** Adds `docs/tracking/evidence/header441-current-main-20261120/precommit-index-tree.txt` and updates the package's `README.md` and `SHA256SUMS`. Updates `match-engine-wiring-backlog.md` v1.53, its maintained pointers in `open-issues.md`, and `CHANGELOG.md`.
 
@@ -4277,7 +4277,7 @@ account: `docs/tracking/spec-error-log.md` v2.39.
 | `docs/tracking/branch-cleanup-disposition.md` | v0.5 audited branch dispositions (October 30 A3.4 author reconciliation; independent review still open), provenance archive messages and gates, plus the executed record: owner authorization, verified annotated archive tags, eight lease-protected deletions and post-delete remote checks; deferred-work reviewer assignments open |
 | `docs/tracking/PROGRESS.md` | Stage progress, milestones, and current status notes |
 | `docs/tracking/spec-error-log.md` | Cross-spec error tracking (`ERR-*`) |
-| `docs/tracking/ui-toolkit-presentation-design.md` | UI Toolkit presentation track v0.4 (DRAFT, November 20, 2026; design supplement, not an approved spec). Records owner decision D-16 (UI Toolkit for menus and management screens, UGUI for the match pitch) Q1 (start now, alongside PM-2) and Q5 (PM-2 fallback rules); open questions Q2–Q4, phases T0a–T5. |
+| `docs/tracking/ui-toolkit-presentation-design.md` | UI Toolkit presentation track v0.5 (DRAFT, November 20, 2026; design supplement, not an approved spec). Records owner decision D-16 (UI Toolkit for menus and management screens, UGUI for the match pitch) Q1 (start now, alongside PM-2), Q5 and Q6 (PM-2 fallback rules); open questions Q2–Q4, phases T0a–T5. |
 | `docs/tracking/tackle-duel-design.md` | Tackle duel design note v0.8 (DRAFT, November 16, 2026, revised November 19; D1 approved and A′ merged in PR #549; design supplement, not an approved spec). Scales #440 back to a geometry-derived BallLoose knock plus a one-frame carrier fence (A′); proposes a slim Duel v2 for #14 §3.6.5 (side of approach, heavy touch as exposure, timing via closing speed; same eligibility, one target, one draw) (B′); defers a carried-ball/touch model (C′). Proposed `[GT]` constants with worked examples; owner decisions D1–D6. Only A′ is implemented. |
 | `docs/tracking/w-defender-marking-wiring-plan.md` | W13 defender-marking wiring plan v0.9 (APPROVED FOR IMPLEMENTATION). W13.0 merged in PR #545; W13.1 and W13.1c merged in PR #547 (switched off by default); §3 diagnosis has no recorded result |
 | `docs/tracking/spec-error-log-err012-addendum.md` | ERR-012 addendum details |
@@ -4896,7 +4896,7 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
-| 2.262 | 2026-11-20 | — | Owner decision D-16: new `docs/tracking/ui-toolkit-presentation-design.md` v0.4 (DRAFT design supplement). Documentation only. |
+| 2.262 | 2026-11-20 | — | Owner decision D-16: new `docs/tracking/ui-toolkit-presentation-design.md` v0.5 (DRAFT design supplement). Documentation only. |
 | 2.256 | 2026-11-20 | — | Career on at startup: pinned-host evidence `host-52d1f000-20261120`. |
 | 2.255 | 2026-11-19 | — | Career Home round scores and standings: add `CareerFixtureResult.cs` (+ `.meta`). |
 | 2.254 | 2026-11-19 | — | Status sync: #434, #440 A′ and W13.1/W13.1c merged; eight tracking documents updated. Documentation only. |
