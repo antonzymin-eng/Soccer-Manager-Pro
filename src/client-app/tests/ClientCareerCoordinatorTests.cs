@@ -846,13 +846,27 @@ namespace TacticalDirector.ClientApp.Tests
             }
             CareerHomeViewModel matchday = h.Career.Home;
             h.Career.Progress();
-            h.Finish();
+            Assert.AreSame(matchday.LatestRoundResults, h.Career.Home.LatestRoundResults);
+            h.RunWorker();
+            Assert.AreSame(matchday.LatestRoundResults, h.Career.Home.LatestRoundResults,
+                "The worker's outcomes stay private until the client publishes them.");
+            h.Career.Refresh();
             Assert.AreEqual(1, h.Career.Home.RoundsPlayed);
             Assert.IsFalse(matchday.Fixtures[0].IsPlayed);
             Assert.IsTrue(h.Career.Home.Fixtures[0].IsPlayed);
             Assert.AreEqual(1, h.Career.Home.Calendar.NextRoundIndex);
             Assert.IsTrue(h.Career.Home.LastChange.HasManagedResult);
+            Assert.AreEqual(h.Career.Home.Table.Count / 2, h.Career.Home.LatestRoundResults.Count);
+            foreach (CareerFixtureResult fixture in h.Career.Home.LatestRoundResults)
+                Assert.AreEqual(h.Career.Home.Calendar.DayOfRound(0), fixture.Result.WorldDay);
             Assert.AreEqual(ClientScreens.CareerHome, h.Flow.Current, "D-P7-6 does not exist yet.");
+
+            var published = h.Career.Home.LatestRoundResults;
+            h.Career.Progress();
+            Assert.IsTrue(h.Career.Home.IsProgressBlocked);
+            Assert.AreSame(published, h.Career.Home.LatestRoundResults);
+            h.Finish();
+            CollectionAssert.AreEqual(published, h.Career.Home.LatestRoundResults);
         }
 
         [Test]
@@ -1329,4 +1343,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.12 | 2026-11-18 | — | Exercise queued cancellation, write admission and rollback races, and replay from unchanged slots. |
 // | 1.13 | 2026-11-18 | — | Observe actual writer drain entry before asserting that shutdown waits. |
 // | 1.14 | 2026-11-19 | — | Verify pending and completed worker publication carries dated fixtures. |
+// | 1.15 | 2026-11-19 | — | Keep scorelines private until matchday completion is published. |
 #endregion

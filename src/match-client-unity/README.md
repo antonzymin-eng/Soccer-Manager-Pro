@@ -368,11 +368,18 @@ To validate in an isolated host checkout:
    Saves live under `Application.persistentDataPath/careers`; seed entropy enters only at the host boundary.
 5. During queued/running progress, confirm busy feedback and disabled changes/navigation, including
    the demo action; no duplicate operation or UI hang. Matchday still resolves on Career Home.
-6. Verify the actual updated result/table after a round, autosave failure feedback, manual-save retry,
-   damaged/incompatible slots, and repeat new/load/quit cycles.
+6. Resolve two consecutive matchdays. Verify the score block shows all fixtures from the latest
+   completed round as soon as progress finishes, and the table refreshes with the scores. Check the
+   order, points and goal difference against the matchday outcomes, including a negative goal
+   difference. Continue from a save and verify that the standings restore and scores return after the
+   next completed round. Check autosave failure feedback, manual-save retry, damaged/incompatible
+   slots, and repeated new/load/quit cycles.
 7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, focus return after a successful save, visible feedback on failure, the smallest
    desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
-   career labels. All career pages use the existing wrapped/scrolled factory and shared focus rings.
+   career labels. At the smallest supported layout and 200% text scale, verify that all ten standings
+   columns align with their headers, long club names wrap without clipping or overlap, and the entire
+   scores block is readable when scrolled. All career pages use the existing wrapped/scrolled factory
+   and shared focus rings.
 8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content
    identity and report return behavior are preserved. No Career Home → Match or Report → Career Home
    edge is granted; the D-P7-6 contract remains PROPOSED.

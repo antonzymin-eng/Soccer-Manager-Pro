@@ -106,6 +106,9 @@ namespace TacticalDirector.ClientApp
         /// <summary>Display names parallel to <see cref="Table"/> (row i's club name).</summary>
         public readonly ReadOnlyCollection<string> TableClubNames;
 
+        /// <summary>Available scorelines from the latest completed round of the current season, in fixture order.</summary>
+        public readonly ReadOnlyCollection<CareerFixtureResult> LatestRoundResults;
+
         /// <summary>The managed club's dated fixtures in chronological order.</summary>
         public readonly ReadOnlyCollection<CareerFixtureView> Fixtures;
 
@@ -113,7 +116,7 @@ namespace TacticalDirector.ClientApp
         public readonly SeasonCalendar Calendar;
 
         /// <summary>Constructs a populated view model.</summary>
-        /// <exception cref="ArgumentNullException"><paramref name="fixtures"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="fixtures"/> or <paramref name="latestRoundResults"/> is null.</exception>
         /// <exception cref="ArgumentException"><paramref name="calendar"/> has no rounds.</exception>
         public CareerHomeViewModel(
             int managedClubId,
@@ -142,9 +145,11 @@ namespace TacticalDirector.ClientApp
             string autosaveError,
             ReadOnlyCollection<LeagueTableRow> table,
             ReadOnlyCollection<string> tableClubNames,
+            ReadOnlyCollection<CareerFixtureResult> latestRoundResults,
             ReadOnlyCollection<CareerFixtureView> fixtures,
             SeasonCalendar calendar)
         {
+            LatestRoundResults = latestRoundResults ?? throw new ArgumentNullException(nameof(latestRoundResults));
             Fixtures = fixtures ?? throw new ArgumentNullException(nameof(fixtures));
             if (calendar.RoundCount == 0)
             {
@@ -190,7 +195,7 @@ namespace TacticalDirector.ClientApp
                 HasNextFixture, NextOpponentId, NextOpponentName, NextFixtureIsHome,
                 NextFixtureRoundIndex, NextFixtureDay, DaysUntilNextMatchday, NextAction,
                 blocked, LastChange, LastResultOpponentName, AutosaveError,
-                Table, TableClubNames, Fixtures, Calendar);
+                Table, TableClubNames, LatestRoundResults, Fixtures, Calendar);
 
         /// <summary>True once every round is played (the boundary roll is next).</summary>
         public bool IsSeasonComplete => HasCareer && RoundsPlayed >= RoundCount;
@@ -202,4 +207,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-18 | —      | Initial creation (§5-P7): the Career Home projection.          |
 // | 1.1     | 2026-11-03 | —      | Copy cached Home with the UI operation-blocked flag.           |
 // | 1.2     | 2026-11-19 | —      | Require the fixture list and calendar on every active snapshot. |
+// | 1.3     | 2026-11-19 | —      | Require round scores and retain them in the busy snapshot.     |
 #endregion

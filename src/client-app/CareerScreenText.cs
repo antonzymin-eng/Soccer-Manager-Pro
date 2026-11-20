@@ -7,6 +7,8 @@
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
 
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 using TacticalDirector.Localization;
@@ -45,7 +47,12 @@ namespace TacticalDirector.ClientApp
             R("changed", "Last action: {0}", "S"), R("change.None", "No recent action"),
             R("change.Started", "Career started"), R("change.Resumed", "Career resumed"),
             R("change.DayAdvanced", "Day advanced"), R("change.RoundPlayed", "Round resolved"), R("change.SeasonRolled", "New season started"),
-            R("row", "{0}. {1} | Played {2}, W {3}, D {4}, L {5}, GF {6}, GA {7}, points {8}", "ISIIIIIII"),
+            R("results", "Round {0} results", "I"), R("results.score", "{0} {1} - {2} {3}", "SIIS"),
+            R("club.managed", "{0} (you)", "S"),
+            R("table.position", "Pos"), R("table.club", "Club"), R("table.played", "P"),
+            R("table.won", "W"), R("table.drawn", "D"), R("table.lost", "L"),
+            R("table.goals_for", "GF"), R("table.goals_against", "GA"),
+            R("table.goal_difference", "GD"), R("table.points", "Pts"),
             R("autosave.error", "Autosave failed: {0}", "S"),
             R("schedule", "Schedule"), R("schedule.list", "Fixtures"), R("schedule.calendar", "Calendar"),
             R("schedule.previous", "Previous week"), R("schedule.current", "Current week"), R("schedule.next", "Next week"),
@@ -107,9 +114,17 @@ namespace TacticalDirector.ClientApp
             var rows = new TemplateCatalogue.StaticRow[Roles.Length];
             for (int i = 0; i < rows.Length; i++) rows[i] = new TemplateCatalogue.StaticRow(Roles[i].Key, Roles[i].BasePattern);
             Text = new S0TextFormatter(Roles, "ui.career.", new TemplateCatalogue(LocaleId.BaseLocale, rows), selectedRows, locale);
+            TableHeaders = Array.AsReadOnly(new[]
+            {
+                Label("table.position"), Label("table.club"), Label("table.played"), Label("table.won"),
+                Label("table.drawn"), Label("table.lost"), Label("table.goals_for"), Label("table.goals_against"),
+                Label("table.goal_difference"), Label("table.points")
+            });
         }
         /// <summary>The admitted typed formatter, sharing the S0 formatting rules but no S0 content.</summary>
         public S0TextFormatter Text { get; }
+        /// <summary>Localized column headers in the order used by <see cref="WriteTableRow"/>.</summary>
+        public IReadOnlyList<string> TableHeaders { get; }
         /// <summary>Static localized career label.</summary>
         public string Label(string role) => Text.Label(role);
         /// <summary>Current primary action label; no interactive career edge is promised.</summary>
@@ -135,7 +150,7 @@ namespace TacticalDirector.ClientApp
             var s = new StringBuilder(Text.Format("overview", "overview", home.ManagedClubName, home.SeasonNumber + 1,
                 checked((int)home.WorldDay), home.LeaguePosition, home.RoundsPlayed, home.RoundCount));
             s.AppendLine().Append(Text.Format("changed", "changed", Label("change." + home.LastChange.Kind)));
-            if (home.LastChange.HasManagedResult)
+            if (home.LastChange.HasManagedResult && home.LatestRoundResults.Count == 0)
             {
                 MatchResult result = home.LastChange.ManagedResult;
                 // MatchResult stores goals, not a second presentation score authority.
@@ -149,6 +164,28 @@ namespace TacticalDirector.ClientApp
             s.AppendLine().Append(home.HasNextFixture ? Text.Format("next", "next", home.NextOpponentName,
                 Label(home.NextFixtureIsHome ? "home.venue" : "away.venue"), checked((int)home.NextFixtureDay), home.DaysUntilNextMatchday) : Label("complete"));
             return s.ToString();
+        }
+
+        /// <summary>Latest completed round heading and scorelines, or empty until scores are available.</summary>
+        public string RoundResults(in CareerHomeViewModel home)
+        {
+            if (!home.HasCareer || home.LatestRoundResults.Count == 0)
+            {
+                return "";
+            }
+
+            var text = new StringBuilder(Text.Format("results", "results", home.RoundsPlayed));
+            for (int i = 0; i < home.LatestRoundResults.Count; i++)
+            {
+                CareerFixtureResult fixture = home.LatestRoundResults[i];
+                string cell = "results.score." + i;
+                text.AppendLine().Append(Text.Format(cell, "results.score",
+                    ClubName(cell + ".home", fixture.Result.HomeClubId, fixture.HomeClubName, home.ManagedClubId),
+                    fixture.Result.HomeGoals, fixture.Result.AwayGoals,
+                    ClubName(cell + ".away", fixture.Result.AwayClubId, fixture.AwayClubName, home.ManagedClubId)));
+            }
+
+            return text.ToString();
         }
 
         /// <summary>One page of the managed club's chronological schedule: a position heading, then each
@@ -354,20 +391,26 @@ namespace TacticalDirector.ClientApp
             throw new ArgumentException("Club " + clubId + " is not in the market's club rows.", nameof(clubId));
         }
 
-        /// <summary>Table in the owning source's position order, without inferred statistics.</summary>
-        public string Table(in CareerHomeViewModel home)
+        /// <summary>Writes one standings row to a buffer sized for <see cref="TableHeaders"/>.</summary>
+        public void WriteTableRow(in CareerHomeViewModel home, int index, string[] cells)
         {
-            var s = new StringBuilder();
-            if (home.Table == null) return "";
-            for (int i = 0; i < home.Table.Count; i++)
-            {
-                LeagueTableRow row = home.Table[i];
-                if (i > 0) s.AppendLine();
-                s.Append(Text.Format("table.row." + i, "row", i + 1, home.TableClubNames[i], row.Played, row.Won, row.Drawn,
-                    row.Lost, row.GoalsFor, row.GoalsAgainst, row.Points));
-            }
-            return s.ToString();
+            LeagueTableRow row = home.Table[index];
+            cells[0] = TableNumber(index + 1);
+            cells[1] = ClubName("table.club." + index, row.ClubId, home.TableClubNames[index], home.ManagedClubId);
+            cells[2] = TableNumber(row.Played);
+            cells[3] = TableNumber(row.Won);
+            cells[4] = TableNumber(row.Drawn);
+            cells[5] = TableNumber(row.Lost);
+            cells[6] = TableNumber(row.GoalsFor);
+            cells[7] = TableNumber(row.GoalsAgainst);
+            cells[8] = TableNumber(row.GoalDifference);
+            cells[9] = TableNumber(row.Points);
         }
+
+        private static string TableNumber(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+        private string ClubName(string cell, int clubId, string name, int managedClubId) =>
+            clubId == managedClubId ? Text.Format(cell, "club.managed", name) : name;
     }
 }
 #region VersionHistory
@@ -381,4 +424,5 @@ namespace TacticalDirector.ClientApp
 // | 1.6 | 2026-11-05 | — | T6: clamp displayed headroom and format full uint window close day. |
 // | 1.7 | 2026-11-19 | — | Localize schedule rows, fixture status and calendar week navigation. |
 // | 1.8 | 2026-11-19 | — | Page the fixture list with a position heading (keyboard reach at 200% text scale). |
+// | 1.9 | 2026-11-19 | — | Localize completed-round scores and format standings columns. |
 #endregion

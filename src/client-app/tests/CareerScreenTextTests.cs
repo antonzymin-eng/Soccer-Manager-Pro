@@ -6,6 +6,7 @@
 // Purpose:  Validate career display semantics and shared formatter isolation/admission.
 
 using System;
+using System.Globalization;
 
 using NUnit.Framework;
 
@@ -97,12 +98,55 @@ namespace TacticalDirector.ClientApp.Tests
             CareerHomeViewModel home = source.Project();
             StringAssert.Contains(home.ManagedClubName, text.Summary(home));
             StringAssert.Contains(home.NextOpponentName, text.Summary(home));
-            StringAssert.Contains(home.TableClubNames[0], text.Table(home));
+            var cells = new string[text.TableHeaders.Count];
+            text.WriteTableRow(in home, 0, cells);
+            StringAssert.Contains(home.TableClubNames[0], cells[1]);
+            Assert.IsEmpty(text.RoundResults(in home));
             CareerTestSupport.ProgressUntil(holder.Require(), CareerProgressAction.PlayMatchday);
             holder.Require().Progress();
             home = source.Project();
-            StringAssert.Contains("Last result:", text.Summary(home));
+            StringAssert.StartsWith("Round 1 results", text.RoundResults(in home));
             Assert.AreEqual("Resolve matchday (on Career Home)", text.Progress(CareerProgressAction.PlayMatchday));
+
+            int differenceColumn = text.TableHeaders.Count - 2;
+            Assert.AreEqual("GD", text.TableHeaders[differenceColumn]);
+            bool hasNegative = false;
+            for (int i = 0; i < home.Table.Count; i++)
+            {
+                text.WriteTableRow(in home, i, cells);
+                Assert.AreEqual(home.Table[i].GoalDifference.ToString(CultureInfo.InvariantCulture), cells[differenceColumn]);
+                Assert.AreEqual(home.Table[i].Points.ToString(CultureInfo.InvariantCulture), cells[differenceColumn + 1]);
+                hasNegative |= home.Table[i].GoalDifference < 0;
+            }
+            Assert.IsTrue(hasNegative, "The test must exercise a signed goal difference.");
+        }
+
+        [Test]
+        public void RoundResultsRenderEveryScorelineThroughTheCareerLocale()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            holder.Set(session);
+            CareerTestSupport.ProgressUntil(session, CareerProgressAction.PlayMatchday);
+            session.Progress();
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            var text = new CareerScreenText(new[]
+            {
+                new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.results"), "[Results {0}]"),
+                new TemplateCatalogue.StaticRow(new LocalizationKey("ui.career.results.score"), "{3} {2}:{1} {0}")
+            }, new LocaleId("qps-ploc"));
+
+            string[] lines = text.RoundResults(in home).Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            Assert.AreEqual("[Results 1]", lines[0]);
+            Assert.AreEqual(home.LatestRoundResults.Count + 1, lines.Length);
+            for (int i = 0; i < home.LatestRoundResults.Count; i++)
+            {
+                CareerFixtureResult fixture = home.LatestRoundResults[i];
+                string homeClub = fixture.HomeClubName + (fixture.Result.HomeClubId == home.ManagedClubId ? " (you)" : "");
+                string awayClub = fixture.AwayClubName + (fixture.Result.AwayClubId == home.ManagedClubId ? " (you)" : "");
+                Assert.AreEqual($"{awayClub} {fixture.Result.AwayGoals}:{fixture.Result.HomeGoals} {homeClub}", lines[i + 1]);
+            }
         }
 
         /// <summary>The fixture list shows one page under a heading that says where it is in the season.</summary>
@@ -173,4 +217,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1 | 2026-11-04 | — | Cover translated slot composition, per-row caching and neutral/release-checkpoint copy. |
 // | 1.2 | 2026-11-19 | — | Cover localized list and calendar rows and their matchday and played states. |
 // | 1.3 | 2026-11-19 | — | Cover the paged fixture list, its position heading and paging labels. |
+// | 1.4 | 2026-11-19 | — | Verify localized scorelines and signed goal differences. |
 #endregion
