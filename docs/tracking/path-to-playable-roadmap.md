@@ -1,6 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 20, 2026 — v1.10: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md). (v1.9 is held by open PRs.)
+**Last Updated:** November 20, 2026 — v1.10: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
+
+**Last Updated (prior):** November 20, 2026 — v1.9: Step 9 and the engine lane now cite the [post-C #441 diagnosis](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026). #441 remains open and gates W9.
 
 **Last Updated (prior):** November 20, 2026 — v1.8: C4 complete. Career startup checks 6–8 passed on the pinned host ([`52d1f000`](evidence/host-52d1f000-20261120/README.md)) and the tracked scene now starts with Career on. C4 row updated.
 
@@ -373,18 +375,17 @@ was already met at `5d112bab` on October 7; its exactly-once feedback, F-05 tele
 | 6 / engine baseline | ✅ **Frozen October 13, 2026 at `3974b78`** ([w8-stage-a-baseline-results.md](w8-stage-a-baseline-results.md), last section; `evidence/pre-b-anchor-3974b78-20261013/`): Linux .NET lane, frozen `520ba31c` W8 instrument, per-tick stall check clean. Step 2a is closed; settle pre-B behavior scope, land any selected pre-B changes independently, then freeze latest pre-B anchor | ~~D-03/D-04/D-05~~ decided October 10, 2026 with no pre-B behavior change; any relevant invalidator (substitution census done October 10: no affected requests) | Frozen seeds, outcome counts and fingerprints; baseline includes only the agreed pre-B behavior set |
 | 7 / W8 B | ✅ **Landed October 18, 2026 (UTC), PR #511, merge `c0ffd0d2`.** Six-policy canonical distribution and approved own-release law/avoidance; A→B, LongKick and restricted-spell records retained | Final-head Linux CI `39063246052` passed at `a43bbc1c`; pinned Unity `e58577de` met; #466 obligations closed; **no #7/#8 reaction gate** | Post-law six digests adopted as B→C baseline; exact keeper-release touch/team follow-up remains a C measurement requirement |
 | 8 / W8 C | ✅ **Landed November 6, 2026, PR #542, merge `d4b026aa`.** #11 Law-12 hand-control offence and snapshot v28; [implementation and paired comparison](w8-c-implementation-results.md) complete | Step 7, approved C contract, D-07 and re-handling dispositions met; exact touch/team comparison complete. Pinned-host compile and whole MatchEngine EditMode passed at `fdbbff5a`: 939 passed / 0 failed / 16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)) | Exact-boundary/area/restart/restore locks, compile and isolated B→C evidence complete |
-| 9 / engine fidelity | Develop #441 reachability independently of W8 C now; land after C measurement and before W9; implement W9 and W10; land owner-included #434/#440 fixes separately | W9: resolved #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. D-05 places #434/#440 after B→C; each landing has its own host slot | Included behavior is reachable, tested and separately attributable |
+| 9 / engine fidelity | Use the [post-C #441 diagnosis](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) to resolve Heading reachability before W9; implement W9 and W10 in their governed order | W9: resolved #441 and D-06. W10: #7/#8/#11 reaction corrections and closed B→C evidence. The engine lane below records the D-05 landings of #434 formation/Duty and #440 A′ | Included behavior is reachable, tested and separately attributable |
 | 10 / engine and quick-sim | Freeze the **D-08 selected PM-2 engine anchor**, complete its included calibration, then recapture A4a/refit under [KD-7/KD-7a/KD-8](league-bootstrap-design.md) | Selected scope complete; D-09 shape disposition; declared compute slot | Current corpus, mean/shape verdicts, governed model and deterministic locks match that anchor. **Revised November 3, 2026 (D-08/D-09/D-14):** before PM-2, only a recapture and KD-8 mean-bar check (refit only on failure); the freeze, governed refit and D-09 resolution move to the depth phase |
 | 11 / PM-2 | C3/C4 converge: new game, fixtures, Career Home round resolution and result feedback, table/suspensions/board objectives, 38 rounds and save/resume | Client/season criteria in §1; D-08/D-09 and fit valid for selected anchor (revised November 3: mean bar passes on the PM-2 engine, D-09 shape limitation stated); final-head host acceptance | Existing playable-season criteria pass; D-10 save-compatibility decision is recorded |
 | 12 / PM-3 and maintenance | Multi-season progression, finances, training, medical, transfers, retirement/regeneration; localization/#488 and #19 A3.4 continue in parallel | Owning career contracts and host slots; release evidence follows acceptance | Multi-season acceptance, then stability/performance evidence; release evidence is parked by D-14 (November 3, 2026) |
 
-#441's corrected local measurement and limits are in
-[`header-reachability-441-counters.md` §6.4–§6.5](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census),
-with [preserved evidence](evidence/header441-reachability-20261020/README.md).
-One geometric passage has two starts that are not selectable under the existing 10 Hz/first-eligible-start
-contract on the observed trajectories. Delaying take-off by one or two physics frames is a possible
-#10 timing-contract change, without composed contact proof. The first local zero is withdrawn;
-these pre-C measurements do not resolve #441 or waive the W9 prerequisite.
+The [November 20 #441 rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) used #526's integrated
+diagnostics on main after W8 C, #434 and #440 A′. One missed arrival had a geometric witness
+on a tactical stride. The composed stride-aligned replay failed early. An experimental
+off-stride start produced a header. #441 remains open and gates W9. The [October pre-C
+census](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census)
+remains historical evidence.
 
 **Step 7 landing — October 18, 2026 (UTC):** PR #511 merged as `c0ffd0d25c5d17699397c5eb30252aa344db266c` after final-head CI passed at `a43bbc1c` ([run 39063246052](https://github.com/antonzymin-eng/Soccer-Manager-Pro/actions/runs/39063246052)). Governing Unity validation remains the source-equivalent `e58577de` host record. **Roadmap step 7 is landed.** Runtime trees match the validated host source; the seven EventSystem failures remain a separate live issue. The post-law baseline and limitations are owned by [results v1.5](w8-b-implementation-results.md).
 
@@ -567,7 +568,7 @@ decided.
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
-5. **#441, then W9/W10 (S/M, then conditional M/L).** #441 uses #526's integrated diagnostics; a
+5. **#441, then W9/W10 (S/M, then conditional M/L).** See the [#441 post-C diagnosis](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026). A
    gameplay repair needs a failing-before/passing-after composed regression. W9 after #441 and D-06;
    W10 after B→C closes. None of these blocks PM-2 (D-08).
 
@@ -984,7 +985,8 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
-| v1.10 | November 20, 2026 | Record owner decision D-16 (UI Toolkit for menus and management screens; UGUI for the match pitch) in the decision register and §7; link the new design supplement. Owner answered Q1: the migration starts now, alongside PM-2; career-lane item 4 note added. v1.9 is held by open PRs. |
+| v1.10 | November 20, 2026 | Record owner decision D-16 (UI Toolkit for menus and management screens; UGUI for the match pitch) in the decision register and §7; link the new design supplement. Owner answered Q1: the migration starts now, alongside PM-2; career-lane item 4 note added. |
+| v1.9 | November 20, 2026 | Step 9 and the engine lane point at the current #441 evidence after W8 C, #434 and #440 A′. W9 still depends on #441. |
 | v1.8 | November 20, 2026 | C4 complete: career startup checks 6–8 passed on the pinned host; Career on at startup. |
 | v1.7 | November 19, 2026 | Record Career Home round scores and the goal-difference column under C3, with pinned-host validation pending. |
 | v1.6 | November 19, 2026 | Status sync: #434 and #440 A′ merged; step 3 complete. |
