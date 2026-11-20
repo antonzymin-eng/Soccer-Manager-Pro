@@ -370,7 +370,7 @@ step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 - **Non-default formation/Duty sensitivity — player-facing controls blocked until marking is fixed and validated.** *Owning record: [open-issues.md](../tracking/open-issues.md#formation-duty-player-control-blocker).*
 
 - **#31 accepts any non-negative wage and relates none to #40's `WageBudget` (ERR-031-016). OPEN; owner decision.** *Owning record: [open-issues.md](../tracking/open-issues.md#transfer-wage-unbounded); client guard in place, #31 text untouched.*
-- **P7b career startup scene — pinned-host acceptance partly recorded. OPEN.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-startup-unity-acceptance); keyboard, layout, text-scale and PM-1 journey checks remain due.*
+- **P7b career startup scene — pinned-host checklist recorded; OPEN on a standings keyboard-reach finding.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-startup-unity-acceptance); owner decision on standings keyboard reach and an untested 2560×1440 layout remain.*
 - **Career save body is not checked against its sidecar digest on load. OPEN; triage.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-save-body-not-verified-on-load).*
 - **Spec #20 D5 — pinned Unity compiler language-version evidence remains open.** *Owning record: [open-issues.md](../tracking/open-issues.md#spec20-unity-language-evidence); working C# 9.0 ceiling remains active.*
 - **Players run about 12 km a match but stay within a few metres of one spot; keepers run as far as outfield players. MEASURED ON THREE SEEDS, CAUSE NOT LOCALIZED, NOT TUNED.** *Owning record: [open-issues.md](../tracking/open-issues.md#engine-players-hold-small-area).*

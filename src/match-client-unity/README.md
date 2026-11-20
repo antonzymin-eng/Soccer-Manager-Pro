@@ -353,8 +353,9 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 
 The build scene, `Assets/Scenes/Scene.unity`, assigns inactive Career Home, New Career and
 Load Career roots under the active shell. It starts in demo mode because `_enableCareer`
-is off. Unity 6000.4.9f1 compile and Play validation are pending for this change. The
-PR #539 host receipt covers the earlier source and scene.
+is off. The pinned-host runs at `cd3c7b99` (items 1–5) and `52d1f000` (items 6–8, including the
+round scores and standings) cover this checklist; see `open-issues.md#career-startup-unity-acceptance`
+for what remains open.
 
 To validate in an isolated host checkout:
 

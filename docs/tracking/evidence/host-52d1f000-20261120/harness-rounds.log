@@ -1,0 +1,60 @@
+2026-11-20T14:55:58.5565900Z launched rounds (rounds) pid=81476 1366x768
+2026-11-20T15:12:07.8367088Z exited (rounds) after 969.5 s exitCode=0
+2026-11-20T15:12:08.2070306Z   autosave.slot 404 5A1C243276958AAB
+2026-11-20T15:12:08.2203711Z   autosave.tdsave 116844 7E23802EB7FFB79E
+2026-11-20T15:12:08.2273741Z   manual-1.slot 405 53F55DA8EB6BEAA0
+2026-11-20T15:12:08.2394288Z   manual-1.tdsave 116860 91A9DAA7692145F1
+2026-11-20T15:12:08.2516628Z   manual-2.slot 405 B67879C6161E3B19
+2026-11-20T15:12:08.2603078Z   manual-2.tdsave 116860 91A9DAA7692145F1
+2026-11-20T15:12:08.2711585Z   manual-3.slot 405 4D50A42BE4D06889
+2026-11-20T15:12:08.2809021Z   manual-3.tdsave 116860 91A9DAA7692145F1
+2026-11-20T15:12:10.8068959Z launched resume (resume) pid=78988 1366x768
+2026-11-20T15:17:45.3591913Z exited (resume) after 335 s exitCode=0
+2026-11-20T15:17:45.5105113Z   autosave.slot 404 B56AEC8EE3EE327C
+2026-11-20T15:17:45.5161314Z   autosave.tdsave 116808 137DE1EA4A02FBB0
+2026-11-20T15:17:45.5206747Z   manual-1.slot 405 27EE3ED12099BAEF
+2026-11-20T15:17:45.5257009Z   manual-1.tdsave 116908 BBA5934ED6CB6B66
+2026-11-20T15:17:45.5297514Z   manual-2.slot 405 B67879C6161E3B19
+2026-11-20T15:17:45.5327921Z   manual-3.slot 407 919E855B749BAB7E
+2026-11-20T15:17:45.5383792Z   manual-3.tdsave 116860 91A9DAA7692145F1
+2026-11-20T15:17:46.3542591Z launched cycle (cycle1) pid=21416 1366x768
+2026-11-20T15:17:51.7780298Z exited (cycle1) after 5.7 s exitCode=0
+2026-11-20T15:17:51.9556541Z   autosave.slot 404 B56AEC8EE3EE327C
+2026-11-20T15:17:51.9607605Z   autosave.tdsave 116808 137DE1EA4A02FBB0
+2026-11-20T15:17:51.9657999Z   manual-1.slot 405 27EE3ED12099BAEF
+2026-11-20T15:17:51.9729154Z   manual-1.tdsave 116908 BBA5934ED6CB6B66
+2026-11-20T15:17:51.9800093Z   manual-2.slot 405 B67879C6161E3B19
+2026-11-20T15:17:51.9841836Z   manual-3.slot 407 919E855B749BAB7E
+2026-11-20T15:17:51.9912751Z   manual-3.tdsave 116860 91A9DAA7692145F1
+2026-11-20T15:17:52.8734344Z launched cycle (cycle2) pid=63724 1366x768
+2026-11-20T15:17:58.6426346Z exited (cycle2) after 6 s exitCode=0
+2026-11-20T15:17:58.8124355Z   autosave.slot 404 B56AEC8EE3EE327C
+2026-11-20T15:17:58.8185662Z   autosave.tdsave 116808 137DE1EA4A02FBB0
+2026-11-20T15:17:58.8262121Z   manual-1.slot 405 27EE3ED12099BAEF
+2026-11-20T15:17:58.8348611Z   manual-1.tdsave 116908 BBA5934ED6CB6B66
+2026-11-20T15:17:58.8484638Z   manual-2.slot 405 B67879C6161E3B19
+2026-11-20T15:17:58.8540378Z   manual-3.slot 407 919E855B749BAB7E
+2026-11-20T15:17:58.8631605Z   manual-3.tdsave 116860 91A9DAA7692145F1
+
+# save-directory damage applied between the rounds and resume runs
+== harness damage 2026-11-20T15:12:08Z
+total 468
+-rw-r--r-- 1 owner owner    404 Nov 20 07:05 autosave.slot
+-rw-r--r-- 1 owner owner 116844 Nov 20 07:05 autosave.tdsave
+-rw-r--r-- 1 owner owner    405 Nov 20 07:12 manual-1.slot
+-rw-r--r-- 1 owner owner 116860 Nov 20 07:12 manual-1.tdsave
+-rw-r--r-- 1 owner owner    405 Nov 20 07:12 manual-2.slot
+-rw-r--r-- 1 owner owner 116860 Nov 20 07:12 manual-2.tdsave
+-rw-r--r-- 1 owner owner    405 Nov 20 07:12 manual-3.slot
+-rw-r--r-- 1 owner owner 116860 Nov 20 07:12 manual-3.tdsave
+removed '%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe A/careers/manual-2.tdsave'
+format=999
+sequence=3
+total 352
+-rw-r--r-- 1 owner owner    404 Nov 20 07:05 autosave.slot
+-rw-r--r-- 1 owner owner 116844 Nov 20 07:05 autosave.tdsave
+-rw-r--r-- 1 owner owner    405 Nov 20 07:12 manual-1.slot
+-rw-r--r-- 1 owner owner 116860 Nov 20 07:12 manual-1.tdsave
+-rw-r--r-- 1 owner owner    405 Nov 20 07:12 manual-2.slot
+-rw-r--r-- 1 owner owner    407 Nov 20 07:12 manual-3.slot
+-rw-r--r-- 1 owner owner 116860 Nov 20 07:12 manual-3.tdsave

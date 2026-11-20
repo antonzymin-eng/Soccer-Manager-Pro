@@ -1,0 +1,28 @@
+# Source identity — pinned-host Unity run of the P7b career checklist items 6-8 and the #554 Career Home change
+
+commit tested: 52d1f0003012a3be60e9f5345610451632577eee (main; merge of #555)
+#554 code commit: 1a8c28cde2d5a59c8a956c0026202a8dbd41e324 (latest-round scores and goal difference on Career Home)
+src, Assets, Packages, ProjectSettings: identical between c8ac82d0 and 52d1f000 (git diff --quiet);
+  c8ac82d0 changed only src/match-client-unity/README.md after 1a8c28cd
+tree src: 4db2b694aa2268b265e99ee0db74793ac79a7cad
+tree Assets: 7f23fb73ad31cf86f070118b03db5b7f6c1a5b04
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11 (owner's host); display 1920x1080
+worktree: sparse (everything except docs/tracking/evidence/), no Library before the import
+Assets/Scripts: directory junction -> <worktree>/src (created after checkout; deliberately untracked)
+
+# Development players, uncommitted changes in the worktree (none committed):
+#   ?? Assets/ZzProbe/CareerAcceptProbe.cs          scratch driver (career-accept-probe.cs.txt)
+#   ?? Assets/ZzBench/Editor/BuildProbePlayer.cs     development build script (build-probe-player.cs.txt);
+#                                                    sets PlayerSettings.productName per player so each has
+#                                                    its own persistentDataPath save directory
+#   M  Assets/Scenes/Scene.unity                     _enableCareer and _textScale per player (below)
+#   M  ProjectSettings/*.asset                       productName / connect settings written by the build
+# Player   Career  text scale  copy                                   used for
+#   A      on      1 (100%)    shipped                                item 6: rounds, resume, relaunch cycles
+#   E      on      1 (100%)    shipped                                item 7 at 100%; item 8 Career on
+#   B      on      2 (200%)    shipped                                item 7 at 200%
+#   C      on      2 (200%)    long-copy-patch.py.txt applied to src  item 7 at 200% with long names + expanded copy
+#   D      off     1 (100%)    shipped                                item 8 Career off
+# Player C's src patch (club-name suffix + 40% pseudo-expansion of ui.career.* patterns) was reverted after its build.

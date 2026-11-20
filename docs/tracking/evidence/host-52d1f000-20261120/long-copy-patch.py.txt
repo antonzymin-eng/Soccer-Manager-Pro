@@ -1,0 +1,20 @@
+# Scratch harness substitution for the long-name / expanded-copy player. Never committed.
+# 1) Every club name gains a long, realistic suffix (names enter no digest; ClubNameCatalogue remarks).
+# 2) Every ui.career.* base pattern is pseudo-expanded: "[" + text + " " + "~" * (40% of length, at least 2) + "]".
+import re, sys
+root = sys.argv[1]
+names = root + "/src/season-save/ClubNameCatalogue.cs"
+text = open(names, encoding="utf-8", newline="").read()
+def lengthen(m):
+    return '"' + m.group(1) + ' Metropolitan & District Athletic Association"'
+start = text.index("s_names =")
+end = text.index("};", start)
+body = re.sub(r'"([^"]+)"', lengthen, text[start:end])
+open(names, "w", encoding="utf-8", newline="").write(text[:start] + body + text[end:])
+copy = root + "/src/client-app/CareerScreenText.cs"
+text = open(copy, encoding="utf-8", newline="").read()
+old = 'new S0TextRole("ui.career.", key, text, types);'
+assert old in text
+new = 'new S0TextRole("ui.career.", key, "[" + text + " " + new string(\'~\', System.Math.Max(2, text.Length * 2 / 5)) + "]", types);'
+open(copy, "w", encoding="utf-8", newline="").write(text.replace(old, new))
+print("patched")

@@ -1,0 +1,25 @@
+2026-11-20T15:18:02.5359366Z frame=30 boot mode=pm1 window=11011748 screen=1920x1080 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe D\careers
+2026-11-20T15:18:02.6162659Z frame=41 INFO career entries on the Main Menu: False
+2026-11-20T15:18:02.6208916Z frame=41 dumped texts '01-main-menu'
+2026-11-20T15:18:02.7086403Z frame=41 screenshot pm1-01-main-menu.bmp 1920x1080
+2026-11-20T15:18:02.7137076Z frame=42 click 'Play a demo match'
+2026-11-20T15:18:02.9641535Z frame=77 dumped texts '02-tactics-setup'
+2026-11-20T15:18:03.0360471Z frame=77 screenshot pm1-02-tactics-setup.bmp 1920x1080
+2026-11-20T15:18:03.0401735Z frame=78 click 'Start match'
+2026-11-20T15:18:04.4788433Z frame=144 dumped texts '03-match-view-start'
+2026-11-20T15:18:04.5575655Z frame=144 screenshot pm1-03-match-view.bmp 1920x1080
+2026-11-20T15:27:04.7196765Z frame=51606 INFO match played to full time in 540 s
+2026-11-20T15:27:05.1869556Z frame=51666 dumped texts '04-match-view-full-time'
+2026-11-20T15:27:05.2981077Z frame=51666 screenshot pm1-04-full-time.bmp 1920x1080
+2026-11-20T15:27:05.3042222Z frame=51667 click 'View match report'
+2026-11-20T15:27:05.5347114Z frame=51702 dumped texts '05-report'
+2026-11-20T15:27:05.6381598Z frame=51702 screenshot pm1-05-report.bmp 1920x1080
+2026-11-20T15:27:05.6407082Z frame=51703 click 'Return to main menu'
+2026-11-20T15:27:05.8298238Z frame=51738 PASS Report returns to the Main Menu with the demo available
+2026-11-20T15:27:05.8364693Z frame=51738 PASS career entries on the Main Menu after the report: False
+2026-11-20T15:27:05.8406573Z frame=51738 dumped texts '06-main-menu-after-report'
+2026-11-20T15:27:05.8472943Z frame=51739 click 'Play a demo match'
+2026-11-20T15:27:06.0974050Z frame=51774 PASS a second demo reaches Tactics Setup
+2026-11-20T15:27:06.1063539Z frame=51775 click 'Back'
+2026-11-20T15:27:06.2122206Z frame=51790 PASS Back from Tactics Setup returns to the Main Menu
+2026-11-20T15:27:06.2170613Z frame=51790 DONE mode=pm1 pass=4 fail=0 keys=0
